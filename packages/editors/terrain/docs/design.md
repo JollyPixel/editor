@@ -22,8 +22,9 @@ in [collaboration](./collaboration.md); how brushes write is in
 
 The world is a sparse grid of chunks, 64 m on a side. Chunk `(x, z)` covers
 `[x × 64, (x + 1) × 64)` on X and the same on Z. A chunk exists only once
-someone creates it, by adding it next to an existing one or by sculpting
-across an edge. Removing a chunk deletes its data. A new terrain starts with
+someone adds it with the Chunks tool, next to an existing one; see
+[Chunks tool](./brush.md#chunks-tool). Brushes never create chunks. Removing a
+chunk deletes its data. A new terrain starts with
 one flat chunk at `(0, 0)`, and removing the last chunk is refused.
 
 Chunk coordinates lie in `[-128, 127]` on each axis, 16 km per side, so the
@@ -95,6 +96,16 @@ Refining a chunk resamples its heights bilinearly, so the surface does not
 move. Coarsening keeps every second or fourth sample and loses the detail in
 between. The edge shared with a coarser neighbour has to match it, which is
 done with morphing (see below), not by changing the data.
+
+A tier is set from the Detail mode of the [Chunks tool](./brush.md#chunks-tool).
+The command carries the heights and holes it replaced, so undoing a
+coarsening brings the detail back exactly. A ×4 chunk puts 256 KB of heights
+in that undo step.
+
+The view keeps one height array and one hole array per tier, each with its own
+pool of layers, and the lookup texture also gives each chunk's tier. Memory
+follows the tiers in use: an unrefined terrain allocates nothing for ×2 and
+×4.
 
 ## LoD
 
@@ -187,12 +198,29 @@ never empty. It is rebuilt incrementally from the chunks that change.
 
 ### Points of interest
 
-A point of interest is a volume placed by a designer, such as a mountain seen
-from far away. It has:
+A point of interest is a set of chunks picked by a designer, such as a
+mountain seen from far away. It has:
 
-- an LoD bias, so its chunks are refined earlier than distance alone would;
-- a minimum detail level kept at any distance;
+- a name;
+- an LoD bias, a factor from 1 to 8, 2 by default, that multiplies the LoD
+  distance bands over its chunks, so they are refined earlier than distance
+  alone would;
+- a minimum detail level kept at any distance, from 0 (the 32 m leaf) to 5
+  (the 1024 m region root), 3 by default (256 m nodes);
 - a priority for streaming its chunks in.
+
+A chunk can belong to several points of interest; the largest bias, the
+finest minimum level and the highest priority apply.
+
+The stream keeps the chunks of every point of interest loaded at any
+distance, so the minimum level is drawn from their heights, not from the
+overview. They fill the layers the stream circle leaves free, highest priority
+first and nearest first within a priority; a chunk that finds no free layer
+falls back to the overview.
+
+The Points of interest pane lists them with their settings. Selecting one
+tints its chunks, and its "Edit chunks" toggle lets a click or drag add
+chunks to it, Ctrl+click remove them.
 
 Points of interest are part of the asset.
 
@@ -228,6 +256,11 @@ finer grid.
 - A coarse LoD cell is dropped when any quad under it is a hole.
 - Heights and splat under a hole are kept. Filling the hole brings the surface
   back as it was.
+- Refining a chunk turns each hole quad into the 4 or 16 quads under it.
+  Coarsening makes a quad a hole when any finer quad under it is one, so an
+  opening never closes by accident.
+- The overview ignores holes. A hole on a chunk that is not loaded is not
+  drawn; holes are meant as cave openings, too small to show from that far.
 
 Accepted drawbacks:
 
@@ -248,8 +281,8 @@ Accepted drawbacks:
 | Tier | 1, 2 or 4 | One value |
 
 Tiers multiply the height and hole sizes. The splat resolution does not
-change with the tier. Heights and splat are stored as two asset parts per
-chunk.
+change with the tier. Heights, splat and holes are stored as three asset
+parts per chunk; a chunk without holes has no hole part.
 
 On the GPU, heights live in one `R32F` texture array with a layer per chunk,
 so a node spanning many chunks is still one draw. A 256×256 lookup texture,
@@ -264,6 +297,19 @@ and column, and gives the normals, which blend the gradients of four samples,
 their neighbours across the edge. An edit on an edge tile also rewrites the
 matching strip of the neighbour's apron. Where no neighbour exists, the apron repeats the chunk's outer row,
 which leaves a flat 1 m strip along the edge of the world.
+
+## Import and export
+
+Both work on a rectangle of chunks, the whole terrain by default.
+
+- **Heightmap.** A 16-bit PNG or RAW at the resolution of a chosen tier.
+  Values map the exported range, lowest to highest height, which is written to
+  a sidecar JSON and shown in the dialog. Import asks for the target rectangle
+  and the height range, creates the chunks it lacks, and is one undo step.
+- **Splat map.** One grayscale PNG per material used in the rectangle, named
+  after the material, 0 to 255 per texel. Import matches masks to materials by
+  name, or lets the user pick, and keeps the four strongest materials per
+  texel, scaled to sum to 255.
 
 ## Packages
 
@@ -300,6 +346,6 @@ which leaves a flat 1 m strip along the edge of the world.
 This package, laid out like the voxel-map editor:
 
 - `boot/`, `document/`, `state/`, `scene/`, `shell/`, `shared/`.
-- `features/{sculpt,paint,holes,materials,tiers,poi,overlays,importExport}/`,
+- `features/{sculpt,paint,holes,materials,chunks,poi,overlays,importExport}/`,
   each split into `model/`, `interaction/`, `rendering/`, `toolbar/` and
   `collaboration/` as needed.

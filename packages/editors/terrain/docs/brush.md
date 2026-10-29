@@ -2,13 +2,15 @@
 
 How the local brush aims, shapes and writes. What peers see is in
 [collaboration](./collaboration.md). The code will live in
-`src/features/sculpt/`, `src/features/holes/` and `src/features/paint/`.
+`src/features/sculpt/`, `src/features/holes/`, `src/features/paint/` and
+`src/features/chunks/`.
 
 ## Settings
 
-The toolbar picks one tool at a time: raise and lower, smooth, flatten or
-paint. They share one ring and these settings, except strength, which the
-sculpt tools share and paint keeps on its own:
+The toolbar picks one tool at a time: raise and lower, smooth, flatten, ramp,
+terrace, paint, holes or chunks. The brushes share one ring and these
+settings, except strength, which the sculpt tools share and paint keeps on its
+own:
 
 - `size`: radius in metres, 0.5 to 128. Ctrl+wheel resizes.
 - `strength`: 0 to 1, for the sculpt tools; `paintStrength` for paint, 0.5
@@ -24,7 +26,8 @@ Every change is saved in the browser and comes back after a reload.
 
 The mouse ray is cast against the displayed heights, not the meshes, so it
 hits the full-detail surface whatever LoD is drawn. Hole cells do not stop the
-ray. With nothing hit, the brush has no target and hides.
+ray, except with the hole tool: it hits the heights kept under a hole, so Fill
+can aim at the opening. With nothing hit, the brush has no target and hides.
 
 ## Pipeline
 
@@ -50,8 +53,8 @@ tiles over it, never a peer's live preview. They sample in world space from a co
 before the stamp, so smooth and flatten see across chunk edges. A read where
 no chunk exists clamps to the nearest sample of a neighbouring chunk, and is 0
 when no neighbour exists. Writes stay inside
-existing chunks: until a commit can carry `chunk-added` with its patch, the part
-of a stamp over empty ground is dropped. Written heights are clamped to
+existing chunks: the part of a stamp over empty ground is dropped, and the
+[Chunks tool](#chunks-tool) adds ground. Written heights are clamped to
 `[-4096, 4096]` m.
 
 ## Sculpt brushes
@@ -66,16 +69,41 @@ of a stamp over empty ground is dropped. Written heights are clamped to
   height under the cursor, rounded to the centimetre. Both settings are saved
   with the others.
 - **Ramp.** Drag from A to B. Samples within `size` of the segment move toward
-  the line from A's height to B's, with the falloff across its width. Written
-  on release, as one stroke.
+  the line from the surface height under A to the height under B, by
+  `weight × strength`, with the falloff across its width. Written once on
+  release, as one stroke.
 - **Terrace.** Moves each sample toward the nearest multiple of a step
-  height, set in the toolbar.
+  height, set in the toolbar and 2 m by default, at the same rate as flatten.
+  A sharpness setting blends from soft steps to flat ledges.
 
 ## Hole brush
 
 Two modes: **cut** and **fill**. Ctrl inverts the mode while held. The brush
 uses the same footprint, with no falloff: a quad is cut or filled when its
 centre lies inside the radius. Heights under a hole are kept.
+
+Holes reach peers and the saved asset as `holes-patched` commits on the
+stroke commit cadence, as paint does; there are no live hole patches. A
+stroke is one undo step. The Holes overlay turns on while the tool is
+selected.
+
+## Chunks tool
+
+Works on whole chunks, in one of three modes:
+
+- **Add.** A ghost outline shows the chunk under the cursor on empty ground,
+  aimed at a plane at the height of the nearest neighbour's edge, or 0. A
+  click or a drag adds chunks next to existing ones, with their edges seeded
+  from the neighbours.
+- **Remove.** A click or a drag removes the chunks under it. Removing the last
+  chunk is refused.
+- **Detail.** Sets the chunks under a click or a drag to the tier picked in
+  the toolbar, ×1, ×2 or ×4.
+
+Ctrl swaps Add and Remove while held. A drag is one undo step. Undoing an Add
+removes its chunks, refused once a peer has edited one of them; undoing a
+Remove brings back their heights, splat and holes. The chunk grid overlay
+turns on while the tool is selected.
 
 ## Paint brush
 

@@ -132,6 +132,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   studio offers it on an asset, and the palette asks to replace a dropped
   image whose texture already exists, which repaints every terrain using it.
   M3 is complete.
+- **M4 grilling: done** (2026-10-29). Holes are a third part per chunk,
+  committed like paint and absent from the overview; the hole tool's ray hits
+  the kept heights. A Chunks tool adds, removes and refines chunks, so
+  brushes never create them. Tiers keep one GPU array each, and their undo
+  restores the replaced heights. Points of interest are chunk sets kept
+  loaded at any distance. See [brush](./docs/brush.md),
+  [design](./docs/design.md) and [collaboration](./docs/collaboration.md).
 - **Next:** M4, starting with the hole brush.
 
 Tick a box when its item lands, and move **Next** along with it.
@@ -198,14 +205,16 @@ chunks yet.
 
 ## M4: Rest of V1
 
-- [ ] Hole brush, cut and fill.
-- [ ] Resolution tiers ×2 and ×4, with seam morphing.
-- [ ] Points of interest: LoD bias and minimum detail at distance.
-- [ ] Ramp and terrace brushes.
-- [ ] Strokes that cross into empty ground create the chunk in the same
-  commit.
-- [ ] Heightmap and splat map import and export.
+- [ ] Hole brush, cut and fill: the `<x>_<z>_holes` part, `holes-patched`
+  commits, the mask drawn in the view, and the tool.
 - [ ] Debug overlay for holes.
+- [ ] Chunks tool: add and remove chunks by click or drag, one undo step.
+- [ ] Resolution tiers ×2 and ×4, with seam morphing, set from the Chunks
+  tool's Detail mode.
+- [ ] Points of interest: chunk sets with an LoD bias and a minimum detail
+  level, kept loaded at any distance, edited in their pane.
+- [ ] Ramp and terrace brushes.
+- [ ] Heightmap and splat map import and export.
 
 ## Not planned for V1
 
