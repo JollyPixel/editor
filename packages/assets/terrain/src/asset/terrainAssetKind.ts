@@ -50,7 +50,7 @@ import {
   correctTerrainCommand
 } from "../network/TerrainCorrection.ts";
 import {
-  chunkPartIds,
+  listedChunkPartIds,
   outsideCommand,
   touchedParts
 } from "../network/chunkParts.ts";
@@ -140,8 +140,7 @@ export function terrainAssetKind(
         [TERRAIN_PART_EXTENSION]: "application/octet-stream"
       },
       touched: touchedParts,
-      list: (manifest) => TERRAIN_FILE.decode(manifest).chunks
-        .flatMap(({ x, z }) => chunkPartIds(new ChunkCoord(x, z))),
+      list: (manifest) => TERRAIN_FILE.decode(manifest).chunks.flatMap(listedChunkPartIds),
       load: (state, partId, content) => {
         if (!loadChunkPart(state, partId, content)) {
           throw new InvalidAssetFileError(

@@ -47,6 +47,18 @@ export const splatTilePatchesSchema = z.array(splatTilePatchSchema).check(
   z.maxLength(MAX_PATCH_TILES)
 );
 
+export const holeTilePatchSchema = z.object({
+  x: kChunkCoordinate,
+  z: kChunkCoordinate,
+  tile: z.int().check(z.gte(0), z.lt(CHUNK_TILE_COUNT)),
+  holes: z.string()
+});
+
+export const holeTilePatchesSchema = z.array(holeTilePatchSchema).check(
+  z.minLength(1),
+  z.maxLength(MAX_PATCH_TILES)
+);
+
 export const TERRAIN_TEXTURE_SIZES = [512, 1024, 2048] as const;
 export const MAX_TERRAIN_MATERIALS = 32;
 export const TERRAIN_MATERIAL_ACTIONS = [
@@ -86,7 +98,9 @@ export const chunkEntrySchema = z.object({
   overview: z.optional(z.string()),
   materials: z.optional(z.string()),
   heights: z.optional(z.string()),
-  splat: z.optional(z.string())
+  splat: z.optional(z.string()),
+  holes: z.optional(z.string()),
+  hasHoles: z.optional(z.literal(true))
 });
 
 export const terrainManifestSchema = z.object({
@@ -104,7 +118,8 @@ export const terrainCommandSchema = z.discriminatedUnion("action", [
     x: kChunkCoordinate,
     z: kChunkCoordinate,
     heights: z.string(),
-    splat: z.optional(z.string())
+    splat: z.optional(z.string()),
+    holes: z.optional(z.string())
   }),
   commandVariant("chunk-removed", {
     x: kChunkCoordinate,
@@ -115,6 +130,9 @@ export const terrainCommandSchema = z.discriminatedUnion("action", [
   }),
   commandVariant("splat-patched", {
     tiles: splatTilePatchesSchema
+  }),
+  commandVariant("holes-patched", {
+    tiles: holeTilePatchesSchema
   }),
   commandVariant("material-added", {
     material: terrainMaterialSchema

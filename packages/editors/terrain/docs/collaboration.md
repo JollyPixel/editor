@@ -136,10 +136,12 @@ asset parts to `@jolly-pixel/asset-server`:
 - A kind handler declares parts: binary files in a folder beside the asset
   file, `<asset>.parts/`. For a terrain, three parts per chunk: its heights,
   `<x>_<z>`, its splat, `<x>_<z>_splat`, and its holes, `<x>_<z>_holes`,
-  absent while the chunk has none. A client subscribes to all three. The
-  chunk loads as soon as its heights arrive, painted with the overview's
-  materials until its splat arrives; a splat that arrives first waits for
-  the heights. A terrain saved before splat parts existed loads as Ground and
+  absent while the chunk has none. The chunk's manifest entry holds
+  `hasHoles: true` while that part exists, since the server lists parts from
+  the manifest alone. A client subscribes to all three and gets `null` for a
+  hole part that does not exist. The chunk loads as soon as its heights
+  arrive, painted with the overview's materials until its splat arrives; a
+  splat or hole mask that arrives first waits for the heights. A terrain saved before splat parts existed loads as Ground and
   writes them on its next save.
 - The join snapshot holds the manifest, the materials, the points of interest and
   the overview map. Chunks are not in it.

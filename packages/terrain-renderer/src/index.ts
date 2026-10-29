@@ -14,6 +14,11 @@ export {
 } from "./terrain/OverviewMap.ts";
 export type { SampleBlock } from "./terrain/SampleBlock.ts";
 export {
+  HOLE_BYTES,
+  HOLE_TILE_BYTES,
+  type HoleMask
+} from "./terrain/HoleMask.ts";
+export {
   dominantSlot,
   isValidSplat,
   SPLAT_CHANNELS,

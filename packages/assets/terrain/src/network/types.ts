@@ -5,6 +5,7 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import type {
   chunkEntrySchema,
+  holeTilePatchSchema,
   materialPropertiesSchema,
   splatTilePatchSchema,
   terrainCommandSchema,
@@ -17,6 +18,7 @@ import type {
 
 export type EncodedTilePatch = network.Infer<typeof tilePatchSchema>;
 export type EncodedSplatTilePatch = network.Infer<typeof splatTilePatchSchema>;
+export type EncodedHoleTilePatch = network.Infer<typeof holeTilePatchSchema>;
 export type ChunkEntry = network.Infer<typeof chunkEntrySchema>;
 export type TerrainManifest = network.Infer<typeof terrainManifestSchema>;
 export type TerrainSnapshot = TerrainManifest;

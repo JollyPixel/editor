@@ -25,6 +25,7 @@ import {
   parseChunkPart
 } from "./chunkParts.ts";
 import { decodeHeights } from "./heights.ts";
+import { decodeHoles } from "./holes.ts";
 import { decodeSplat } from "./splat.ts";
 import type {
   ChunkEntry,
@@ -251,16 +252,27 @@ export class TerrainPartsRoom implements Room<
       if (part === null || typeof encoded !== "string") {
         continue;
       }
-      if (part.channel === "heights") {
-        const heights = decodeHeights(encoded);
-        if (heights !== null) {
-          this.#stream.received(part.coord, heights);
+      switch (part.channel) {
+        case "heights": {
+          const heights = decodeHeights(encoded);
+          if (heights !== null) {
+            this.#stream.received(part.coord, heights);
+          }
+          break;
         }
-      }
-      else {
-        const splat = decodeSplat(encoded);
-        if (splat !== null) {
-          this.#stream.receivedSplat(part.coord, splat);
+        case "splat": {
+          const splat = decodeSplat(encoded);
+          if (splat !== null) {
+            this.#stream.receivedSplat(part.coord, splat);
+          }
+          break;
+        }
+        case "holes": {
+          const holes = decodeHoles(encoded);
+          if (holes !== null) {
+            this.#stream.receivedHoles(part.coord, holes);
+          }
+          break;
         }
       }
     }

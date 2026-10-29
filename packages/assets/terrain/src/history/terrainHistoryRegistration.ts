@@ -5,6 +5,10 @@ import {
   type HistoryRegistration,
   type KeyedGuardEntry
 } from "@jolly-pixel/history";
+import type {
+  TerrainChunk,
+  TileCoord
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import type {
@@ -34,6 +38,7 @@ const kLabels: Readonly<Record<TerrainCommand["action"], string>> = {
   "chunk-removed": "Remove chunk",
   "heights-patched": "Sculpt",
   "splat-patched": "Paint",
+  "holes-patched": "Edit holes",
   "material-added": "Add material",
   "material-updated": "Edit material",
   "material-removed": "Remove material",
@@ -97,16 +102,8 @@ function readWriteRef(
     case "tile": {
       const { tile } = ref;
       const chunk = terrain.chunk(tile.chunk);
-      if (chunk === undefined) {
-        return undefined;
-      }
-      if (ref.channel === "heights") {
-        return Array.from(chunk.tileHeights(tile.x, tile.z));
-      }
 
-      const splat = chunk.splat.tile(tile.x, tile.z);
-
-      return [...splat.indices, ...splat.weights];
+      return chunk === undefined ? undefined : readTile(chunk, ref.channel, tile);
     }
     case "material": {
       const material = materials.material(ref.id);
@@ -118,6 +115,24 @@ function readWriteRef(
     }
     case "texture-size":
       return materials.textureSize;
+  }
+}
+
+function readTile(
+  chunk: TerrainChunk,
+  channel: ChunkChannel,
+  tile: TileCoord
+): number[] {
+  switch (channel) {
+    case "heights":
+      return Array.from(chunk.tileHeights(tile.x, tile.z));
+    case "splat": {
+      const splat = chunk.splat.tile(tile.x, tile.z);
+
+      return [...splat.indices, ...splat.weights];
+    }
+    case "holes":
+      return Array.from(chunk.holes.tile(tile.x, tile.z));
   }
 }
 
@@ -133,11 +148,18 @@ function compactTilePatches(
     "splat",
     commands.flatMap((command) => (command.action === "splat-patched" ? command.tiles : []))
   );
+  const holes = latestTiles(
+    "holes",
+    commands.flatMap((command) => (command.action === "holes-patched" ? command.tiles : []))
+  );
   for (const batch of patchBatches(heights)) {
     kept.push({ action: "heights-patched", tiles: batch });
   }
   for (const batch of patchBatches(splat)) {
     kept.push({ action: "splat-patched", tiles: batch });
+  }
+  for (const batch of patchBatches(holes)) {
+    kept.push({ action: "holes-patched", tiles: batch });
   }
 
   return kept;

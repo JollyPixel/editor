@@ -19,6 +19,7 @@ export interface ChunkSource {
 export type TerrainStreamEvents = {
   loaded: (coord: ChunkCoord) => void;
   splatLoaded: (coord: ChunkCoord) => void;
+  holesLoaded: (coord: ChunkCoord) => void;
   unloaded: (coord: ChunkCoord) => void;
 };
 
@@ -28,6 +29,7 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
   #centre: ChunkCoord | null = null;
   #subscribed = new Map<ChunkKey, ChunkCoord>();
   #earlySplat = new Map<ChunkKey, SplatTexels>();
+  #earlyHoles = new Map<ChunkKey, Uint8Array>();
 
   constructor(
     terrain: Terrain
@@ -89,6 +91,7 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
       if (!this.#terrain.knows(coord) || !within(centre, coord, kUnloadRadius)) {
         this.#subscribed.delete(coord.key);
         this.#earlySplat.delete(coord.key);
+        this.#earlyHoles.delete(coord.key);
         dropped.push(coord);
       }
     }
@@ -123,8 +126,10 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
     }
 
     const splat = this.#earlySplat.get(coord.key);
+    const holes = this.#earlyHoles.get(coord.key);
     this.#earlySplat.delete(coord.key);
-    this.#terrain.loadChunk(coord, heights, splat);
+    this.#earlyHoles.delete(coord.key);
+    this.#terrain.loadChunk(coord, heights, splat, holes);
     this.emit("loaded", coord);
   }
 
@@ -143,6 +148,23 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
 
     this.#terrain.loadSplat(coord, splat);
     this.emit("splatLoaded", coord);
+  }
+
+  receivedHoles(
+    coord: ChunkCoord,
+    holes: Uint8Array
+  ): void {
+    if (!this.#subscribed.has(coord.key) || !this.#terrain.knows(coord)) {
+      return;
+    }
+    if (!this.#terrain.has(coord)) {
+      this.#earlyHoles.set(coord.key, holes);
+
+      return;
+    }
+
+    this.#terrain.loadHoles(coord, holes);
+    this.emit("holesLoaded", coord);
   }
 }
 

@@ -139,7 +139,12 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   restores the replaced heights. Points of interest are chunk sets kept
   loaded at any distance. See [brush](./docs/brush.md),
   [design](./docs/design.md) and [collaboration](./docs/collaboration.md).
-- **Next:** M4, starting with the hole brush.
+- **Hole data: done** (2026-10-29). Each chunk holds a hole mask, one bit
+  per quad, stored as its `<x>_<z>_holes` part while it has holes and changed
+  by `holes-patched` commits on their own channel. Far members receive
+  nothing of them, and undoing a chunk's removal brings its holes back.
+  Nothing cuts or draws them yet.
+- **Next:** draw the hole mask in the view, then the hole tool.
 
 Tick a box when its item lands, and move **Next** along with it.
 

@@ -25,6 +25,7 @@ import {
 } from "#src/network/client.ts";
 import { terrainPeers } from "../helpers/peers.ts";
 import {
+  cutHoles,
   heights,
   networkCommand,
   paint,
@@ -96,9 +97,17 @@ describe("terrain streaming", () => {
       document.stream.follow(chunkAt(10));
       assert.deepEqual(room.sent.at(-1), {
         action: "subscribe-parts",
-        parts: ["10_0", "10_0_splat", "9_0", "9_0_splat", "11_0", "11_0_splat", "12_0", "12_0_splat"]
+        parts: [
+          "10_0", "10_0_splat", "10_0_holes",
+          "9_0", "9_0_splat", "9_0_holes",
+          "11_0", "11_0_splat", "11_0_holes",
+          "12_0", "12_0_splat", "12_0_holes"
+        ]
       });
-      assert.deepEqual(room.sent.at(-2), { action: "unsubscribe-parts", parts: ["0_0", "0_0_splat"] });
+      assert.deepEqual(
+        room.sent.at(-2),
+        { action: "unsubscribe-parts", parts: ["0_0", "0_0_splat", "0_0_holes"] }
+      );
       await route();
 
       assert.deepEqual(loaded(document.terrain), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
@@ -153,6 +162,22 @@ describe("terrain streaming", () => {
       assert.deepEqual([splat.dominantSlot(0, 0), splat.dominantSlot(32, 32)], [6, 9]);
     }
   );
+
+  test("a far peer receives nothing of a hole cut, and loading the chunk brings its holes", async(t) => {
+    const { server, join, route } = await stripPeers(t);
+    const far = await join("B", { streamCentre: chunkAt(12) });
+    const received: TerrainCommand[] = [];
+    far.document.on("change", ({ command }) => received.push(command));
+
+    await server.receive("X", networkCommand(cutHoles(1, 0, { [kOverviewTile]: true }), { clientId: "X" }));
+    await route();
+    assert.deepEqual(received, []);
+
+    far.document.stream.follow(chunkAt(1));
+    await route();
+    const { holes } = far.preview.terrain.chunk(chunkAt(1))!;
+    assert.deepEqual([holes.isHole(0, 0), holes.isHole(16, 0)], [true, false]);
+  });
 
   test(
     "the preview shows an unloaded chunk as its overview and reports each change to the view",

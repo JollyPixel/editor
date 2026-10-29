@@ -1,8 +1,9 @@
 // Import Third-party Dependencies
-import type {
-  ChunkCoord,
-  TerrainChunk,
-  TerrainReader
+import {
+  HOLE_BYTES,
+  type ChunkCoord,
+  type TerrainChunk,
+  type TerrainReader
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
@@ -47,11 +48,24 @@ const kCodecs: Readonly<Record<ChunkChannel, ChunkPartCodec>> = {
 
       return true;
     }
+  },
+  holes: {
+    encode: (chunk) => (chunk.holes.empty ? null : chunk.holes.copy()),
+    load: ({ terrain }, coord, content) => {
+      if (content.length !== HOLE_BYTES) {
+        return false;
+      }
+      if (terrain.has(coord)) {
+        terrain.loadHoles(coord, content);
+      }
+
+      return true;
+    }
   }
 };
 
 interface ChunkPartCodec {
-  encode(chunk: TerrainChunk): Uint8Array;
+  encode(chunk: TerrainChunk): Uint8Array | null;
   load(
     model: TerrainModel,
     coord: ChunkCoord,

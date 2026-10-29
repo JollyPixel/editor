@@ -7,6 +7,10 @@ import {
 
 // Import Internal Dependencies
 import {
+  currentHoleTilePatches,
+  decodeHoleTilePatch
+} from "./holes.ts";
+import {
   currentSplatTilePatches,
   decodeSplatTilePatch
 } from "./splat.ts";
@@ -17,14 +21,15 @@ import {
 import type { TerrainCommand } from "./types.ts";
 
 // CONSTANTS
-export const CHUNK_CHANNELS = ["heights", "splat"] as const;
+export const CHUNK_CHANNELS = ["heights", "splat", "holes"] as const;
 const kChannels = {
   "heights-patched": "heights",
-  "splat-patched": "splat"
+  "splat-patched": "splat",
+  "holes-patched": "holes"
 } as const satisfies Record<TilePatchAction, ChunkChannel>;
 
 export type ChunkChannel = typeof CHUNK_CHANNELS[number];
-export type TilePatchAction = "heights-patched" | "splat-patched";
+export type TilePatchAction = "heights-patched" | "splat-patched" | "holes-patched";
 export type TilePatchCommand = Extract<TerrainCommand, { action: TilePatchAction; }>;
 
 export interface PatchTile {
@@ -66,6 +71,8 @@ export function decodableTiles(
       return new Set(command.tiles.filter((tile) => decodeTilePatch(tile) !== null));
     case "splat-patched":
       return new Set(command.tiles.filter((tile) => decodeSplatTilePatch(tile) !== null));
+    case "holes-patched":
+      return new Set(command.tiles.filter((tile) => decodeHoleTilePatch(tile) !== null));
   }
 }
 
@@ -78,5 +85,7 @@ export function currentTiles(
       return { action: command.action, tiles: currentTilePatches(terrain, command.tiles) };
     case "splat-patched":
       return { action: command.action, tiles: currentSplatTilePatches(terrain, command.tiles) };
+    case "holes-patched":
+      return { action: command.action, tiles: currentHoleTilePatches(terrain, command.tiles) };
   }
 }

@@ -27,7 +27,8 @@ import type {
 const kTextureSizeKey = "terrain:texture-size";
 const kChannelTags: Readonly<Record<ChunkChannel, string>> = {
   heights: "h",
-  splat: "s"
+  splat: "s",
+  holes: "x"
 };
 
 export type TerrainWriteRef =

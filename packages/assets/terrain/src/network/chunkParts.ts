@@ -16,13 +16,17 @@ import {
   tileChannel,
   type ChunkChannel
 } from "./tilePatchCommands.ts";
-import type { TerrainCommand } from "./types.ts";
+import type {
+  ChunkEntry,
+  TerrainCommand
+} from "./types.ts";
 
 // CONSTANTS
-const kPartIdPattern = /^(-?\d+)_(-?\d+)(_splat)?$/;
+const kPartIdPattern = /^(-?\d+)_(-?\d+)(?:_(splat|holes))?$/;
 const kPartSuffixes: Readonly<Record<ChunkChannel, string>> = {
   heights: "",
-  splat: "_splat"
+  splat: "_splat",
+  holes: "_holes"
 };
 const kOverviewTiles = new Set(
   Array.from({ length: CHUNK_TILE_COUNT }, (_, index) => index)
@@ -56,8 +60,18 @@ export function parseChunkPart(
     null :
     {
       coord: new ChunkCoord(Number(match[1]), Number(match[2])),
-      channel: match[3] === undefined ? "heights" : "splat"
+      channel: CHUNK_CHANNELS.find((channel) => channel === match[3]) ?? "heights"
     };
+}
+
+export function listedChunkPartIds(
+  { x, z, hasHoles }: ChunkEntry
+): string[] {
+  const coord = new ChunkCoord(x, z);
+
+  return CHUNK_CHANNELS
+    .filter((channel) => channel !== "holes" || hasHoles === true)
+    .map((channel) => chunkPartId(coord, channel));
 }
 
 export function touchedChunks(
@@ -97,6 +111,9 @@ export function outsideCommand<TCommand extends TerrainCommand>(
 ): TCommand | null {
   if (!isTilePatchCommand(command)) {
     return command;
+  }
+  if (command.action === "holes-patched") {
+    return null;
   }
 
   const outside = filterTiles(command, ({ tile }) => kOverviewTiles.has(tile));

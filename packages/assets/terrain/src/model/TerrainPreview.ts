@@ -24,6 +24,7 @@ import type {
 export type TerrainPreviewEvents = {
   tilesChanged: (tiles: readonly TileCoord[]) => void;
   splatChanged: (tiles: readonly TileCoord[]) => void;
+  holesChanged: (tiles: readonly TileCoord[]) => void;
   chunkAdded: (coord: ChunkCoord) => void;
   chunkRemoved: (coord: ChunkCoord) => void;
   overviewChanged: (coords: readonly ChunkCoord[]) => void;
@@ -112,6 +113,9 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
         this.#overviewChanged(unloadedChunks(this.#document.terrain, tiles));
         break;
       }
+      case "holes-patched":
+        this.#copyHoles(patchedTiles(command));
+        break;
     }
   };
 
@@ -125,6 +129,12 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     coord: ChunkCoord
   ): void => {
     this.#copySplat(chunkTiles(coord));
+  };
+
+  #onHolesLoaded = (
+    coord: ChunkCoord
+  ): void => {
+    this.#copyHoles(chunkTiles(coord));
   };
 
   #onUnloaded = (
@@ -177,6 +187,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     document.on("reset", this.#onReset);
     document.stream.on("loaded", this.#onLoaded);
     document.stream.on("splatLoaded", this.#onSplatLoaded);
+    document.stream.on("holesLoaded", this.#onHolesLoaded);
     document.stream.on("unloaded", this.#onUnloaded);
   }
 
@@ -261,6 +272,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     this.#document.off("reset", this.#onReset);
     this.#document.stream.off("loaded", this.#onLoaded);
     this.#document.stream.off("splatLoaded", this.#onSplatLoaded);
+    this.#document.stream.off("holesLoaded", this.#onHolesLoaded);
     this.#document.stream.off("unloaded", this.#onUnloaded);
     this.#layers.clear();
     this.removeAllListeners();
@@ -288,7 +300,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
         );
       }
       else {
-        terrain.addChunk(coord, chunk.copyHeights(), chunk.splat.copy());
+        terrain.addChunk(coord, chunk.copyHeights(), chunk.splat.copy(), chunk.holes.copy());
       }
     }
   }
@@ -304,7 +316,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     const wasLoaded = this.#displayed.has(coord);
     for (const terrain of this.#terrains()) {
       terrain.removeChunk(coord);
-      terrain.addChunk(coord, confirmed.copyHeights(), confirmed.splat.copy());
+      terrain.addChunk(coord, confirmed.copyHeights(), confirmed.splat.copy(), confirmed.holes.copy());
     }
     const surviving = [...this.#layers].flatMap(([owner, layer]) => Array.from(layer.values())
       .filter(({ patch }) => patch.tile.chunk.equals(coord))
@@ -359,6 +371,26 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     }
     if (changed.length > 0) {
       this.emit("splatChanged", changed);
+    }
+  }
+
+  #copyHoles(
+    tiles: readonly TileCoord[]
+  ): void {
+    const changed = tiles.filter(({ chunk }) => this.#displayed.has(chunk));
+    for (const tile of changed) {
+      const holes = this.#document.terrain.chunk(tile.chunk)?.holes.tile(tile.x, tile.z);
+      if (holes === undefined) {
+        continue;
+      }
+      for (const terrain of this.#terrains()) {
+        if (terrain.has(tile.chunk)) {
+          terrain.writeHoleTile(tile, holes);
+        }
+      }
+    }
+    if (changed.length > 0) {
+      this.emit("holesChanged", changed);
     }
   }
 

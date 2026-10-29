@@ -15,6 +15,10 @@ import {
 // Import Internal Dependencies
 import { touchedChunks } from "../network/chunkParts.ts";
 import { encodeHeights } from "../network/heights.ts";
+import {
+  encodeHoleTilePatch,
+  type HoleTilePatch
+} from "../network/holes.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import {
   encodeMaterials,
@@ -65,6 +69,10 @@ export interface ChunkImage {
    * The encoded splat map of a loaded chunk.
    */
   readonly splat?: string;
+  /**
+   * The encoded hole mask of a loaded chunk that has holes.
+   */
+  readonly holes?: string;
   /**
    * The encoded overview samples of an unloaded chunk.
    */
@@ -205,6 +213,17 @@ export class TerrainDocument extends CommandDocument<
     );
   }
 
+  patchHoles(
+    patches: Iterable<HoleTilePatch>
+  ): boolean {
+    return this.#commitBatches(
+      this.#loaded(patches).map(encodeHoleTilePatch),
+      (tiles) => {
+        return { action: "holes-patched", tiles };
+      }
+    );
+  }
+
   #loaded<TPatch extends { readonly tile: TileCoord; }>(
     patches: Iterable<TPatch>
   ): TPatch[] {
@@ -274,6 +293,7 @@ function invertCommand(
     }
     case "heights-patched":
     case "splat-patched":
+    case "holes-patched":
       return [currentTiles(terrain, command)];
   }
 }
@@ -339,10 +359,16 @@ function restoreImages(
 
 function restoredEntry(
   current: ChunkEntry | undefined,
-  { x, z, heights, splat, overview, materials }: ChunkImage
+  { x, z, heights, splat, holes, overview, materials }: ChunkImage
 ): ChunkEntry | null {
   if (heights !== null) {
-    return { x, z, heights, ...(splat === undefined ? {} : { splat }) };
+    return {
+      x,
+      z,
+      heights,
+      ...(splat === undefined ? {} : { splat }),
+      ...(holes === undefined ? {} : { holes })
+    };
   }
   if (overview === undefined) {
     return null;
