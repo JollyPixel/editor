@@ -96,6 +96,7 @@ export class TerrainView {
       heights: this.#textures.heights,
       splatIndices: this.#textures.splatIndices,
       splatWeights: this.#textures.splatWeights,
+      holes: this.#textures.holes,
       lookup: this.#textures.lookup,
       overview: this.#textures.overview,
       overviewMaterials: this.#textures.overviewMaterials,
@@ -212,6 +213,13 @@ export class TerrainView {
     tiles: Iterable<TileCoord>
   ): void {
     this.#textures.splatChanged(tiles);
+    this.#requestFrame();
+  }
+
+  holesChanged(
+    tiles: Iterable<TileCoord>
+  ): void {
+    this.#textures.holesChanged(tiles);
     this.#requestFrame();
   }
 

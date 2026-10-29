@@ -144,7 +144,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   by `holes-patched` commits on their own channel. Far members receive
   nothing of them, and undoing a chunk's removal brings its holes back.
   Nothing cuts or draws them yet.
-- **Next:** draw the hole mask in the view, then the hole tool.
+- **Hole rendering: done** (2026-10-29). The view uploads each loaded chunk's
+  mask as a max pyramid and discards a pixel whose LoD cell holds a hole, so
+  an opening shows at every level and a filled one closes. Peers' cuts and
+  fills show at each commit.
+- **Next:** the hole tool, cut and fill.
 
 Tick a box when its item lands, and move **Next** along with it.
 

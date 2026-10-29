@@ -251,9 +251,11 @@ To check before starting: compute and indirect draw support in three.js's
 One bit per base-grid quad marks a hole. On a refined chunk, holes follow the
 finer grid.
 
-- The fragment shader discards hole cells. Near levels also drop them from the
-  index buffer.
-- A coarse LoD cell is dropped when any quad under it is a hole.
+- The fragment shader discards hole cells. Near levels could also drop them
+  from the index buffer; V1 does not.
+- A coarse LoD cell is dropped when any quad under it is a hole. The view
+  uploads each chunk's mask as a max pyramid, 128×64 bytes per layer, so the
+  test is one texture read at the cell size of the node's spacing.
 - Heights and splat under a hole are kept. Filling the hole brings the surface
   back as it was.
 - Refining a chunk turns each hole quad into the 4 or 16 quads under it.

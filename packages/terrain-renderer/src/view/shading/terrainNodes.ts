@@ -14,6 +14,7 @@ import {
   dFdx,
   dFdy,
   Discard,
+  exp2,
   float,
   floor,
   Fn,
@@ -49,6 +50,10 @@ import {
   APRON_MARGIN,
   APRON_SIZE
 } from "../textures/heightApron.ts";
+import {
+  HOLE_PYRAMID_LEVELS,
+  HOLE_PYRAMID_WIDTH
+} from "../textures/holePyramid.ts";
 import {
   LOOKUP_SIZE,
   OVERVIEW_TEXTURE_SIZE
@@ -89,6 +94,7 @@ type Vec2Node = Node<"vec2">;
 
 export interface TerrainTextures extends SplatTextures, MaterialSurfaceTextures {
   heights: THREE.DataArrayTexture;
+  holes: THREE.DataArrayTexture;
   lookup: THREE.DataTexture;
   overview: THREE.DataTexture;
 }
@@ -340,6 +346,17 @@ export function createTerrainShading(
   const line = float(1).sub(min(min(lineDistance.x, lineDistance.y), float(1)));
   const level = log2(varying(spacing, "vTerrainSpacing"));
   const levelColor = cos(level.mul(1.1).add(vec3(0, 2.1, 4.2))).mul(0.5).add(0.5);
+  const holeCellSize = exp2(clamp(round(level), 0, HOLE_PYRAMID_LEVELS - 1));
+  const holeCell = floor(local.div(holeCellSize));
+  const holeTexel = vec2(
+    holeCell.x.add(float(HOLE_PYRAMID_WIDTH).sub(float(HOLE_PYRAMID_WIDTH).div(holeCellSize))),
+    holeCell.y
+  );
+  const inHole = fragmentLayer.greaterThanEqual(int(0)).and(
+    textureLoad(textures.holes, ivec2(holeTexel))
+      .depth(select(fragmentLayer.lessThan(int(0)), int(0), fragmentLayer)).x
+      .greaterThan(0.5)
+  );
   function overlayIs(
     mode: TerrainOverlay
   ) {
@@ -349,6 +366,7 @@ export function createTerrainShading(
   const splatColor = splatOverlay(layers, highlight);
   material.colorNode = Fn(() => {
     Discard(chunkKnown(fragmentChunk).not());
+    Discard(inHole);
     const color = albedo.toVar();
     If(overlayIs("lod"), () => {
       color.assign(mix(color, levelColor, kLevelTint));

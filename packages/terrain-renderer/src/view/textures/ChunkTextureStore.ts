@@ -30,6 +30,12 @@ import {
   writeApron,
   type ApronRegion
 } from "./heightApron.ts";
+import {
+  HOLE_PYRAMID_HEIGHT,
+  HOLE_PYRAMID_TEXELS,
+  HOLE_PYRAMID_WIDTH,
+  writeHolePyramid
+} from "./holePyramid.ts";
 
 // CONSTANTS
 export const MAX_CHUNK_LAYERS = 256;
@@ -52,6 +58,7 @@ export class ChunkTextureStore {
   readonly heights: THREE.DataArrayTexture;
   readonly splatIndices: THREE.DataArrayTexture;
   readonly splatWeights: THREE.DataArrayTexture;
+  readonly holes: THREE.DataArrayTexture;
   readonly lookup: THREE.DataTexture;
   readonly overview: THREE.DataTexture;
   readonly overviewMaterials: THREE.DataTexture;
@@ -75,6 +82,15 @@ export class ChunkTextureStore {
     configureNearest(this.heights);
     this.splatIndices = createSplatArray();
     this.splatWeights = createSplatArray();
+    this.holes = new THREE.DataArrayTexture(
+      new Uint8Array(HOLE_PYRAMID_TEXELS * MAX_CHUNK_LAYERS),
+      HOLE_PYRAMID_WIDTH,
+      HOLE_PYRAMID_HEIGHT,
+      MAX_CHUNK_LAYERS
+    );
+    this.holes.format = THREE.RedFormat;
+    this.holes.type = THREE.UnsignedByteType;
+    configureNearest(this.holes);
 
     this.lookup = new THREE.DataTexture(
       new Float32Array(LOOKUP_SIZE * LOOKUP_SIZE * kLookupComponents),
@@ -151,6 +167,7 @@ export class ChunkTextureStore {
     this.#writeLookup(coord, layer + 1, 1);
     this.#writeOverview(coord);
     this.#writeSplat(coord);
+    this.#writeHoles(coord);
     this.#writeAprons(affectedAprons(coord, CHUNK_RECT));
   }
 
@@ -224,10 +241,23 @@ export class ChunkTextureStore {
     }
   }
 
+  holesChanged(
+    tiles: Iterable<TileCoord>
+  ): void {
+    const chunks = new Map<ChunkKey, ChunkCoord>();
+    for (const { chunk } of tiles) {
+      chunks.set(chunk.key, chunk);
+    }
+    for (const coord of chunks.values()) {
+      this.#writeHoles(coord);
+    }
+  }
+
   dispose(): void {
     this.heights.dispose();
     this.splatIndices.dispose();
     this.splatWeights.dispose();
+    this.holes.dispose();
     this.lookup.dispose();
     this.overview.dispose();
     this.overviewMaterials.dispose();
@@ -323,6 +353,24 @@ export class ChunkTextureStore {
       array.addLayerUpdate(layer);
       array.needsUpdate = true;
     }
+  }
+
+  #writeHoles(
+    coord: ChunkCoord
+  ): void {
+    const layer = this.#layers.get(coord.key);
+    const chunk = this.#terrain.chunk(coord);
+    if (layer === undefined || chunk === undefined) {
+      return;
+    }
+
+    const data = this.holes.image.data as Uint8Array;
+    writeHolePyramid(
+      chunk.holes,
+      data.subarray(layer * HOLE_PYRAMID_TEXELS, (layer + 1) * HOLE_PYRAMID_TEXELS)
+    );
+    this.holes.addLayerUpdate(layer);
+    this.holes.needsUpdate = true;
   }
 
   #writeAprons(

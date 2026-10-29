@@ -262,7 +262,13 @@ export class TerrainEditorScene extends Systems.Scene {
   ): void {
     const listeners: Pick<
       TerrainPreviewEvents,
-      "tilesChanged" | "splatChanged" | "chunkAdded" | "chunkRemoved" | "overviewChanged" | "reset"
+      | "tilesChanged"
+      | "splatChanged"
+      | "holesChanged"
+      | "chunkAdded"
+      | "chunkRemoved"
+      | "overviewChanged"
+      | "reset"
     > = {
       tilesChanged: (tiles) => {
         view.tilesChanged(tiles);
@@ -270,6 +276,7 @@ export class TerrainEditorScene extends Systems.Scene {
         this.world.invalidate();
       },
       splatChanged: (tiles) => view.splatChanged(tiles),
+      holesChanged: (tiles) => view.holesChanged(tiles),
       chunkAdded: (coord) => view.chunkAdded(coord),
       chunkRemoved: (coord) => view.chunkRemoved(coord),
       overviewChanged: (coords) => view.overviewChanged(coords),
@@ -280,6 +287,7 @@ export class TerrainEditorScene extends Systems.Scene {
     };
     preview.on("tilesChanged", listeners.tilesChanged);
     preview.on("splatChanged", listeners.splatChanged);
+    preview.on("holesChanged", listeners.holesChanged);
     preview.on("chunkAdded", listeners.chunkAdded);
     preview.on("chunkRemoved", listeners.chunkRemoved);
     preview.on("overviewChanged", listeners.overviewChanged);
@@ -287,6 +295,7 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#disposables.push(() => {
       preview.off("tilesChanged", listeners.tilesChanged);
       preview.off("splatChanged", listeners.splatChanged);
+      preview.off("holesChanged", listeners.holesChanged);
       preview.off("chunkAdded", listeners.chunkAdded);
       preview.off("chunkRemoved", listeners.chunkRemoved);
       preview.off("overviewChanged", listeners.overviewChanged);
