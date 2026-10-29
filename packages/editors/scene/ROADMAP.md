@@ -35,6 +35,20 @@ snapshotted. The engine skips any cycle that gets through anyway.
 - **Release leases** of scenes no instance references any more; today they
   stay open until the editor closes.
 
+## Anchors
+
+Cut 1 built on 2026-10-28. A component can publish anchors, and an actor with
+`anchor` hangs from one of its parent's. The voxel map publishes the layers and
+objects marked "Anchor" in the voxel-map editor. The hierarchy shows anchors as
+read-only rows under their actor: drop an actor on one, or add a child to it
+from its menu. An anchor the map no longer has shows as "Missing anchor", and
+its actors sit at the parent's origin until it comes back.
+
+- **Viewport markers** for the anchors of the selected actor, and picking them.
+- **Show in voxel map** from an anchor row.
+- **More providers.** Voxel-model nodes, so a sword can hang from a hand, and
+  the actors of a prefab instance.
+
 ## Scripts
 
 v1 scripts name a behavior the game registers. A script asset will fill

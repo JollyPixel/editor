@@ -161,6 +161,7 @@ describe("parseVoxelWorld", () => {
     ["layer 0: id is not a string", worldWith({})],
     ["layer \"l1\": visible is not a boolean", worldWith(layerWith({ visible: "yes" }))],
     ["layer \"l1\": compositing is not", worldWith(layerWith({ compositing: "multiply" }))],
+    ["layer \"l1\": anchor is not a boolean", worldWith(layerWith({ anchor: "yes" }))],
     ["layer \"l1\": position is not a coordinate", worldWith(layerWith({
       position: { x: "1", y: 0, z: 0 }
     }))],

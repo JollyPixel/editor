@@ -50,6 +50,12 @@ interface SceneActorFile {
   };
   components: SceneComponentFile[];
   prefab?: AssetReferenceData; // a scene expanded under this actor
+  anchor?: SceneAnchorFile; // a place on a component of the parent
+}
+
+interface SceneAnchorFile {
+  component: string; // id of a component of the parent
+  key: string;
 }
 
 interface SceneComponentFile {
@@ -107,6 +113,42 @@ type ScenePrefabFile = Pick<SceneFile, "actors">;
 its instances include, nested ones too, once each. `sceneId` names `file`, so
 an instance of it is never yielded again. `NO_SCENE_PREFABS` finds no scene.
 
+## Anchors
+
+A component can publish anchors: named places inside the asset it draws, such
+as a layer or an object of a voxel map. An actor with `anchor` hangs from one
+of them instead of from its parent's origin, and follows it when the asset
+moves it.
+
+```ts
+interface ComponentAnchors {
+  list(): Iterable<ComponentAnchor>;
+  subscribe(listener: () => void): () => void;
+}
+
+interface ComponentAnchor {
+  key: string; // unique within the component, stable across asset edits
+  label: string;
+  kind: string; // such as "layer" or "object"
+  pose: {
+    position: Vector3JSON; // relative to the component's actor
+    rotation: Vector3JSON; // Euler angles in degrees, XYZ order
+  };
+}
+```
+
+- The actor stays a child of its parent in the actor tree. Its `object3D`
+  sits under a socket that `SceneInstance` keeps on the parent's `object3D`
+  at the anchor's pose, so its `transform` is relative to the anchor. The
+  socket goes away once no actor hangs from it.
+- `subscribe` calls the listener when an anchor is added, removed or moved.
+  Every socket of the component then takes the new pose.
+- When the parent's component does not list the anchor, or is not built, the
+  socket sits at the parent's origin. The actor keeps its `anchor` and goes
+  back to the anchor once it exists again.
+- Inside a [prefab instance](#prefab-instances), `anchor.component` gets the
+  same path id as the component it names.
+
 ## Component definitions
 
 One definition per component `type`:
@@ -125,6 +167,7 @@ interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
   apply?(component: TComponent, data: TData): void;
   owns?(component: Component): component is TComponent;
   capture?(component: TComponent): JSONObject;
+  anchors?(component: TComponent): ComponentAnchors;
 }
 
 interface ComponentContext<TAssets> {
@@ -149,6 +192,8 @@ interface ComponentContext<TAssets> {
   `THREE.ColorRepresentation` into the
   `"#rrggbb"` form `ComponentData.color` reads. See
   [Saving a running scene](#saving-a-running-scene).
+- `anchors` returns the [anchors](#anchors) of a component it built. It is
+  called once per built component.
 - `assets` maps each asset slot the component reads to its `AssetType`. The
   filled slots are loaded before the scene activates.
 - In edit mode a definition builds nothing that runs the game: the camera
@@ -189,6 +234,8 @@ definition declares for it. Returns `null` for an empty or missing slot.
 - `apply(component, type, data): boolean` patches a live component through
   its definition's `apply` and remembers `data` as the component's latest.
   Returns `false` when the definition has no `apply`.
+- `anchors(component): ComponentAnchors | null` returns the anchors of a
+  component it built, or `null` when its definition has no `anchors`.
 - `capture(component): SceneComponentFile | null` writes a live component
   back as a file entry. See
   [Saving a running scene](#saving-a-running-scene).
@@ -247,6 +294,7 @@ What a capture holds:
   those built from a file, those created at runtime, those of appended
   scenes, and persistent ones. Ids are `actor.persistentId`.
 - The local transform, name and visibility of each actor.
+- The `anchor` of an actor that hangs from one.
 - A prefab instance as the actors it expanded, with their path ids and no
   `prefab` field: loading the save rebuilds them without the referenced scene.
 - For a component built from a scene file by the same `ComponentDefinitions`:
@@ -289,6 +337,7 @@ interface SceneInstanceComponent {
 type SceneInstanceEvents = {
   componentBuilt: (built: SceneInstanceComponent) => void;
   componentDropped: (component: Component) => void;
+  anchorsChange: () => void;
 };
 ```
 
@@ -300,6 +349,26 @@ skipped at once.
 `null`. An expanded actor or component goes by its path id. `actorId(object)` returns the file id of the actor whose `object3D` is
 `object`, or `null`; it does not search ancestors. `components()` iterates
 the built components.
+
+`SceneInstance` is a `SceneAnchorsReader`:
+
+```ts
+interface SceneAnchorsReader {
+  anchors(actorId: string): IterableIterator<SceneActorAnchor>;
+  findAnchor(actorId: string, anchor: SceneAnchorFile): ComponentAnchor | null;
+}
+
+interface SceneActorAnchor {
+  component: string;
+  anchor: ComponentAnchor;
+}
+```
+
+`anchors(actorId)` iterates the anchors of the actor's built components.
+`findAnchor(actorId, anchor)` returns the anchor a `SceneAnchorFile` names,
+or `null` when the component is not the actor's or does not list it.
+`anchorsChange` fires when a component with anchors is built or dropped, and
+when its anchors change.
 
 ### add(actors): void
 
@@ -315,6 +384,7 @@ root. The parent may come from the same call or an earlier one.
   mode only. So is a `null` from `create`, without a warning.
 - Transforms are written to `actor.object3D` directly.
 - An actor with `prefab` gets its scene's actors built under it.
+- An actor with `anchor` is placed on that anchor of its parent.
 
 ### refresh(sceneId): void
 
@@ -327,10 +397,11 @@ changes.
 Destroys the actor and its subtree, and forgets their ids and components.
 Emits `componentDropped` for each component it forgets.
 
-### reparent(id, parentId): void
+### reparent(id, parentId, anchor?): void
 
 Moves the actor under the actor of `parentId`, or to the root for `null`,
-keeping its local transform.
+keeping its local transform. With `anchor`, the actor hangs from that anchor
+of the new parent; without it, from the parent's origin.
 
 ### write(id, { name, visible, transform }): void
 

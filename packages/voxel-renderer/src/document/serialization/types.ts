@@ -22,6 +22,7 @@ export interface VoxelChunkJSON {
 }
 
 export interface VoxelLayerMetadataJSON {
+  anchor?: boolean;
   compositing?: "replace" | "composite";
   id: string;
   name: string;

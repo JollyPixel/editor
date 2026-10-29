@@ -6,6 +6,7 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
   assetReferenceSchema,
   sceneActorSchema,
+  sceneAnchorSchema,
   sceneCommandSchema,
   sceneComponentSchema,
   sceneEnvironmentPatchSchema,
@@ -36,8 +37,10 @@ export type SceneTransformJSON = network.Infer<typeof sceneTransformSchema>;
 export type SceneTransformPatch = network.Infer<typeof sceneTransformPatchSchema>;
 export type SceneTransformField = keyof SceneTransformJSON;
 export type AssetReferenceJSON = network.Infer<typeof assetReferenceSchema>;
+export type SceneAnchorJSON = network.Infer<typeof sceneAnchorSchema>;
 export type SceneComponentJSON = network.Infer<typeof sceneComponentSchema>;
 export type SceneActorJSON = network.Infer<typeof sceneActorSchema>;
+export type SceneActorPlacement = Pick<SceneActorJSON, "parentId" | "anchor">;
 export type SceneFogJSON = network.Infer<typeof sceneFogSchema>;
 export type SceneEnvironmentJSON = network.Infer<typeof sceneEnvironmentSchema>;
 export type SceneEnvironmentPatch = network.Infer<typeof sceneEnvironmentPatchSchema>;

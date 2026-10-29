@@ -140,4 +140,81 @@ describe("VoxelMapDefinition", () => {
       [["Roof", true]]
     );
   });
+
+  it("anchors only the layers and objects marked as anchors", () => {
+    const probe = makeMapSource();
+    const { world } = probe.source.document;
+    world.updateLayer("Ground", { anchor: true });
+    world.setLayerPosition("Ground", { x: 4, y: 2, z: 0 });
+    world.objectLayers.add("Points");
+    world.objectLayers.addObject("Points", {
+      id: "spawn",
+      name: "Spawn",
+      x: 1,
+      y: 3,
+      z: 5,
+      width: 2,
+      height: 4,
+      rotation: 90,
+      visible: true,
+      anchor: true
+    });
+    world.objectLayers.addObject("Points", {
+      id: "rock",
+      name: "Rock",
+      x: 0,
+      y: 0,
+      z: 0,
+      visible: true
+    });
+    const { definition, renderer } = createMap(probe.source);
+    assert.ok(renderer);
+
+    assert.deepStrictEqual([...definition.anchors(renderer).list()], [
+      {
+        key: `layer:${world.getLayer("Ground")!.id}`,
+        label: "Ground",
+        kind: "layer",
+        pose: {
+          position: { x: 4, y: 2, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 }
+        }
+      },
+      {
+        key: "object:spawn",
+        label: "Spawn",
+        kind: "object",
+        pose: {
+          position: { x: 2, y: 3, z: 7 },
+          rotation: { x: 0, y: 90, z: 0 }
+        }
+      }
+    ]);
+  });
+
+  it("notifies anchor listeners of layer and object changes, not voxel edits", () => {
+    const probe = makeMapSource();
+    const { world } = probe.source.document;
+    world.updateLayer("Ground", { anchor: true });
+    const { definition, renderer } = createMap(probe.source);
+    assert.ok(renderer);
+    const anchors = definition.anchors(renderer);
+    let notified = 0;
+    const unsubscribe = anchors.subscribe(() => notified++);
+
+    world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+    assert.strictEqual(notified, 0);
+
+    world.setLayerPosition("Ground", { x: 0, y: 6, z: 0 });
+    assert.strictEqual(notified, 1);
+    assert.deepStrictEqual(
+      [...anchors.list()].map(({ pose }) => pose.position),
+      [{ x: 0, y: 6, z: 0 }]
+    );
+
+    unsubscribe();
+    world.updateLayer("Ground", { anchor: false });
+    assert.strictEqual(notified, 1);
+    assert.deepStrictEqual([...anchors.list()], []);
+  });
 });

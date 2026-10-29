@@ -151,7 +151,8 @@ export class SceneEditorScene extends Systems.Scene {
       history,
       selection,
       components,
-      assetSlots
+      assetSlots,
+      anchors: binding
     });
     const gizmo = new GizmoSettings();
     world
@@ -222,6 +223,7 @@ export class SceneEditorScene extends Systems.Scene {
 
     this.#editing.resolve({
       document,
+      anchors: binding,
       components,
       presets: new ActorPresetMenu(components),
       history,

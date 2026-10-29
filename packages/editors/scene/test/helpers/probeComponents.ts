@@ -43,13 +43,35 @@ const kRebuilt: Systems.ComponentDefinition<string, Probe> = {
   create: (actor, label) => actor.addComponentAndGet(Probe, { label })
 };
 
+const kSpawn: Systems.ComponentAnchor = {
+  key: "object:spawn",
+  label: "Spawn",
+  kind: "object",
+  pose: {
+    position: { x: 5, y: 0, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 }
+  }
+};
+
+const kAnchored: Systems.ComponentDefinition<string, Probe> = {
+  type: "Anchored",
+  parse: parseLabel,
+  create: (actor, label) => actor.addComponentAndGet(Probe, { label }),
+  anchors: () => {
+    return {
+      list: () => [kSpawn],
+      subscribe: () => () => undefined
+    };
+  }
+};
+
 export function createProbeBinding(
   document: SceneDocument,
   prefabs?: PrefabScenes
 ) {
   return createSceneBinding(
     document,
-    new Systems.ComponentDefinitions().register(kPatched, kRebuilt),
+    new Systems.ComponentDefinitions().register(kPatched, kRebuilt, kAnchored),
     prefabs
   );
 }

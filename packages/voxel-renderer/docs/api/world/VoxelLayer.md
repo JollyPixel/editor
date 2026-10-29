@@ -28,6 +28,7 @@ optional `id`.
 | --- | --- | --- | --- |
 | `compositing` | `"composite" \| "replace"` | `"composite"` | How the layer covers lower layers in the same cell. |
 | `visible` | `boolean` | `true` | Saved visibility. |
+| `anchor` | `boolean` | `false` | Lets a scene attach actors to the layer origin. See [anchors](../engine/VoxelMapDefinition.md#anchors). |
 | `properties` | `Record<string, any>` | `{}` | Free-form layer data. |
 
 `"composite"` lets only a block whose opaque shape fills the whole cell hide
@@ -46,6 +47,7 @@ collision.
 | `position` | `VoxelCoord` | World position of the layer origin. |
 | `visible` | `boolean` | Saved visibility. |
 | `compositing` | `"composite" \| "replace"` | See [options](#options). |
+| `anchor` | `boolean` | See [options](#options). |
 | `properties` | `Record<string, any>` | Free-form layer data. |
 | `chunkSize` | `number` | Read-only. |
 | `voxelCount` | `number` | Read-only. Stored voxels. |

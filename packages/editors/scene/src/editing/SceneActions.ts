@@ -1,8 +1,11 @@
 // Import Third-party Dependencies
 import type {
   AddActorOptions,
+  SceneActorPlacement,
+  SceneAnchorJSON,
   SceneDocument
 } from "@jolly-pixel/asset.scene/client";
+import type { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import type { SceneComponents } from "../components/SceneComponents.ts";
@@ -18,9 +21,8 @@ import { rebaseTransform } from "../scene/sceneTransform.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
 import type { SceneAssetSlots } from "./SceneEditing.ts";
 
-export interface ActorMove {
+export interface ActorMove extends SceneActorPlacement {
   id: string;
-  parentId: string | null;
   beforeId?: string;
 }
 
@@ -30,6 +32,7 @@ export interface SceneActionsOptions {
   selection: SelectionStore;
   components: Pick<SceneComponents, "assetSlots">;
   assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
+  anchors: Pick<Systems.SceneAnchorsReader, "findAnchor">;
 }
 
 export class SceneActions {
@@ -38,6 +41,7 @@ export class SceneActions {
   #selection: SelectionStore;
   #components: Pick<SceneComponents, "assetSlots">;
   #assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
+  #anchors: Pick<Systems.SceneAnchorsReader, "findAnchor">;
 
   constructor(
     options: SceneActionsOptions
@@ -47,11 +51,13 @@ export class SceneActions {
     this.#selection = options.selection;
     this.#components = options.components;
     this.#assetSlots = options.assetSlots;
+    this.#anchors = options.anchors;
   }
 
   async addActor(
     preset: ActorPreset,
-    parentId: string | null
+    parentId: string | null,
+    anchor?: SceneAnchorJSON
   ): Promise<string | null> {
     const components = await preset.createComponents(
       (type) => this.#pickAssets(type)
@@ -69,12 +75,14 @@ export class SceneActions {
         preset.label :
         this.#assetSlots.name(firstAsset),
       parentId,
+      anchor,
       components
     });
   }
 
   async addInstance(
-    parentId: string | null
+    parentId: string | null,
+    anchor?: SceneAnchorJSON
   ): Promise<string | null> {
     const prefab = await this.#assetSlots.pickScene();
     if (prefab === null) {
@@ -84,6 +92,7 @@ export class SceneActions {
     return this.#add({
       name: this.#assetSlots.name(prefab),
       parentId,
+      anchor,
       prefab
     });
   }
@@ -143,9 +152,9 @@ export class SceneActions {
     moves: readonly ActorMove[]
   ): void {
     this.#history.record(SCENE_HISTORY_SCOPE, "Move actor", () => {
-      for (const { id, parentId, beforeId } of moves) {
-        this.#document.move(id, parentId, {
-          transform: rebaseTransform(this.#document.tree, id, parentId),
+      for (const { id, beforeId, ...placement } of moves) {
+        this.#document.move(id, placement, {
+          transform: rebaseTransform(this.#document.tree, this.#anchors, id, placement),
           ...beforeId === undefined ? {} : { beforeId }
         });
       }
@@ -155,12 +164,12 @@ export class SceneActions {
   #add(
     options: AddActorOptions & { parentId: string | null; }
   ): string | null {
-    const { parentId } = options;
+    const { parentId, anchor, ...rest } = options;
+    const placed = parentId !== null && this.#document.tree.has(parentId);
     const id = this.#document.addActor({
-      ...options,
-      parentId: parentId !== null && this.#document.tree.has(parentId) ?
-        parentId :
-        null
+      ...rest,
+      parentId: placed ? parentId : null,
+      ...placed && anchor !== undefined ? { anchor } : {}
     });
     if (id !== null) {
       this.#selection.select([id]);

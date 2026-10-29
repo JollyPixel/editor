@@ -110,6 +110,7 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
   light: THREE.Texture | null = null;
 
   #words: Uint32Array<ArrayBuffer>;
+  #bounds: THREE.Box3;
 
   constructor(
     options: PulledChunkGeometryOptions
@@ -163,8 +164,19 @@ export class PulledChunkGeometry extends THREE.InstancedBufferGeometry {
     this.setAttribute("normal", kCornerNormals);
     this.setIndex(kQuadIndex);
     this.instanceCount = faceCount;
-    this.boundingBox = bounds.clone();
-    this.boundingSphere = bounds.getBoundingSphere(new THREE.Sphere());
+    this.#bounds = bounds.clone();
+    this.computeBoundingBox();
+    this.computeBoundingSphere();
+  }
+
+  override computeBoundingBox(): void {
+    this.boundingBox ??= new THREE.Box3();
+    this.boundingBox.copy(this.#bounds);
+  }
+
+  override computeBoundingSphere(): void {
+    this.boundingSphere ??= new THREE.Sphere();
+    this.#bounds.getBoundingSphere(this.boundingSphere);
   }
 
   copyCornerTo(

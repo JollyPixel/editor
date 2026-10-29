@@ -31,6 +31,7 @@ interface CellImage {
 interface LayerImage {
   readonly name: string;
   readonly visible: boolean;
+  readonly anchor: boolean;
   readonly compositing: VoxelLayer["compositing"];
   readonly properties: Record<string, unknown>;
   readonly rank: string;
@@ -316,6 +317,9 @@ function previousOptions(
   if (options.visible !== undefined) {
     previous.visible = image.visible;
   }
+  if (options.anchor !== undefined) {
+    previous.anchor = image.anchor;
+  }
   if (options.compositing !== undefined) {
     previous.compositing = image.compositing;
   }
@@ -332,6 +336,7 @@ function captureLayerImage(
   return {
     name: layer.name,
     visible: layer.visible,
+    anchor: layer.anchor,
     compositing: layer.compositing,
     properties: structuredClone(layer.properties),
     rank: layer.rank,

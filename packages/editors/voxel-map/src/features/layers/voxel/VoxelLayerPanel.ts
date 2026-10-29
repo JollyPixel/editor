@@ -8,8 +8,12 @@ import {
   type VoxelLayerCommand,
   type VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
-import { FieldBinding } from "@jolly-pixel/ui";
+import {
+  FieldBinding,
+  type JollyChangeDetail
+} from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/vector3";
 
@@ -151,6 +155,16 @@ export class VoxelLayerPanel extends LitElement {
 
       ${this.#renderPosition()}
 
+      <jolly-checkbox
+        align="end"
+        label="Anchor"
+        description="Lets a scene attach actors to the layer origin"
+        description-display="tooltip"
+        ?disabled=${!this.writable}
+        .value=${this._layer.anchor}
+        @jolly-change=${this.#onAnchorChange}
+      ></jolly-checkbox>
+
       ${keyed(this.layerName, html`
         <custom-properties-editor
           .properties=${this._layer.properties}
@@ -222,6 +236,14 @@ export class VoxelLayerPanel extends LitElement {
     }
 
     world.rebaseLayer(layerName, this._contentOrigin);
+  }
+
+  #onAnchorChange(
+    event: CustomEvent<JollyChangeDetail<boolean>>
+  ): void {
+    if (this.layerName !== null) {
+      this.world.updateLayer(this.layerName, { anchor: event.detail.value });
+    }
   }
 
   #onPropertiesChange(

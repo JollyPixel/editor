@@ -49,6 +49,11 @@ export const assetReferenceSchema = z.object({
   kind: z.string()
 });
 
+export const sceneAnchorSchema = z.object({
+  component: kIdSchema,
+  key: kIdSchema
+});
+
 export const componentDataSchema = z.record(z.string(), kJSONValueSchema);
 
 export const componentAssetsSchema = z.record(
@@ -70,7 +75,8 @@ export const sceneActorSchema = z.object({
   visible: z.boolean(),
   transform: sceneTransformSchema,
   components: z.array(sceneComponentSchema),
-  prefab: z.optional(assetReferenceSchema)
+  prefab: z.optional(assetReferenceSchema),
+  anchor: z.optional(sceneAnchorSchema)
 });
 
 export const sceneFogSchema = z.discriminatedUnion("kind", [
@@ -123,6 +129,7 @@ export const sceneCommandSchema = z.discriminatedUnion("action", [
     id: kIdSchema,
     parentId: kNullableIdSchema,
     transform: sceneTransformSchema,
+    anchor: z.optional(sceneAnchorSchema),
     beforeId: kBeforeIdSchema
   }),
   commandVariant("actor-renamed", {

@@ -16,6 +16,11 @@ export interface VoxelObjectJSON {
   visible: boolean;
   color?: string;
   locked?: boolean;
+  /**
+   * Whether a scene can attach actors to the object.
+   * @default false
+   */
+  anchor?: boolean;
   properties?: VoxelObjectProperties;
 }
 

@@ -46,9 +46,15 @@ describe("scene history", () => {
       components: [component("d1")]
     })],
     ["removing an actor with children", (document) => document.remove("A")],
-    ["moving an actor", (document) => document.move("C", "A", {
+    ["moving an actor", (document) => document.move("C", { parentId: "A" }, {
       transform: SceneTransform.create({ position: { x: 1, y: 2, z: 3 } }),
       beforeId: "B"
+    })],
+    ["moving an actor onto an anchor", (document) => document.move("C", {
+      parentId: "A",
+      anchor: { component: "mesh", key: "object:spawn" }
+    }, {
+      transform: SceneTransform.create()
     })],
     ["renaming an actor", (document) => document.rename("B", "Bee")],
     ["hiding an actor", (document) => document.changeVisibility("B", false)],
@@ -87,6 +93,19 @@ describe("scene history", () => {
       assert.deepEqual(document.tree.toJSON(), after);
     });
   }
+
+  test("undo of a move off an anchor puts the actor back on it", () => {
+    const { document, history } = setup();
+    const anchor = { component: "mesh", key: "object:spawn" };
+    document.move("B", { parentId: "A", anchor }, { transform: SceneTransform.create() });
+
+    history.record(kScope, null, () => document.move("B", { parentId: "A" }, {
+      transform: SceneTransform.create()
+    }));
+    assert.ok(history.undo(kScope));
+
+    assert.deepEqual(document.tree.actor("B")?.anchor, anchor);
+  });
 
   test("refuses to undo an actor added before a peer edited its component", () => {
     const { document, history } = setup();

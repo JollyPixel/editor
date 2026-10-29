@@ -6,6 +6,7 @@ import {
 
 // Import Internal Dependencies
 import { VoxelRenderer } from "./VoxelRenderer.ts";
+import { VoxelMapAnchors } from "./VoxelMapAnchors.ts";
 import {
   VOXEL_MAP_ASSET,
   type VoxelMapSource
@@ -93,6 +94,12 @@ export class VoxelMapDefinition implements Systems.ComponentDefinition<
     for (const [layerName, visible] of Object.entries(data.layers)) {
       layerVisibility.override(layerName, visible);
     }
+  }
+
+  anchors(
+    renderer: VoxelRenderer
+  ): VoxelMapAnchors {
+    return new VoxelMapAnchors(renderer.document);
   }
 }
 

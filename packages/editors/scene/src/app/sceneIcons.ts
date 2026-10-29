@@ -91,6 +91,25 @@ registerIcon("actor-prefab", svg`
   />
 `, { tone: "coral" });
 
+registerIcon("actor-anchor", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="5"
+    r="2.25"
+    stroke="currentColor"
+    stroke-width="1.75"
+  />
+  <path
+    d="M12 7.25V21M8 11h8M4.5 14a7.5 7 0 0 0 15 0"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
 registerIcon("actor-camera", svg`
   <rect
     class="tone-fill"

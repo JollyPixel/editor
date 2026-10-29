@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import type {
+  SceneActorPlacement,
   SceneTransformJSON,
   SceneTreeReader,
   Vector3JSON
@@ -9,22 +10,30 @@ import { Systems } from "@jolly-pixel/engine";
 
 // CONSTANTS
 const kPrecision = 1e6;
+const kUnitScale = {
+  x: 1,
+  y: 1,
+  z: 1
+};
 
 type TransformTree = Pick<SceneTreeReader, "peekActor" | "ancestorIds">;
+type AnchorPoses = Pick<Systems.SceneAnchorsReader, "findAnchor">;
 
 export function rebaseTransform(
   tree: TransformTree,
+  anchors: AnchorPoses,
   id: string,
-  parentId: string | null
+  placement: SceneActorPlacement
 ): SceneTransformJSON {
   const pose = {
     position: new THREE.Vector3(),
     quaternion: new THREE.Quaternion(),
     scale: new THREE.Vector3()
   };
-  worldMatrix(tree, parentId)
+  worldMatrix(tree, anchors, placement.parentId)
+    .multiply(placementMatrix(anchors, placement))
     .invert()
-    .multiply(worldMatrix(tree, id))
+    .multiply(worldMatrix(tree, anchors, id))
     .decompose(pose.position, pose.quaternion, pose.scale);
 
   return decomposePose(pose);
@@ -44,6 +53,7 @@ export function decomposePose(
 
 function worldMatrix(
   tree: TransformTree,
+  anchors: AnchorPoses,
   id: string | null
 ): THREE.Matrix4 {
   const matrix = new THREE.Matrix4();
@@ -55,11 +65,27 @@ function worldMatrix(
   for (const actorId of [id, ...tree.ancestorIds(id)]) {
     const actor = tree.peekActor(actorId);
     if (actor !== undefined) {
-      matrix.premultiply(Systems.composeSceneTransform(actor.transform, local));
+      matrix
+        .premultiply(Systems.composeSceneTransform(actor.transform, local))
+        .premultiply(placementMatrix(anchors, actor));
     }
   }
 
   return matrix;
+}
+
+function placementMatrix(
+  anchors: AnchorPoses,
+  placement: SceneActorPlacement
+): THREE.Matrix4 {
+  const { parentId, anchor } = placement;
+  const pose = parentId === null || anchor === undefined ?
+    undefined :
+    anchors.findAnchor(parentId, anchor)?.pose;
+
+  return pose === undefined ?
+    new THREE.Matrix4() :
+    Systems.composeSceneTransform({ ...pose, scale: kUnitScale }, new THREE.Matrix4());
 }
 
 function rounded(

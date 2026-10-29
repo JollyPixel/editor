@@ -114,7 +114,7 @@ All layers, top of the stack first.
 
 #### `updateLayer(name: string, update: VoxelLayerUpdate): boolean`
 
-Changes `name`, `visible`, `compositing` or `properties`. A taken name gets a
+Changes `name`, `visible`, `anchor`, `compositing` or `properties`. A taken name gets a
 ` (n)` suffix. Returns `false` for an unknown layer.
 
 #### `removeLayer(name: string): boolean`
@@ -387,6 +387,7 @@ interface VoxelObjectJSON {
   visible: boolean;
   color?: string;
   locked?: boolean;
+  anchor?: boolean; // false; a scene can attach actors to the object
   properties?: Record<string, string | number | boolean>;
 }
 

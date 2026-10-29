@@ -24,6 +24,8 @@ import type {
   AssetReferenceJSON,
   JSONObject,
   SceneActorJSON,
+  SceneActorPlacement,
+  SceneAnchorJSON,
   SceneCommand,
   SceneComponentJSON,
   SceneEnvironmentPatch,
@@ -48,11 +50,15 @@ export interface AddActorOptions {
   transform?: Partial<SceneTransformJSON>;
   components?: readonly SceneComponentJSON[];
   prefab?: AssetReferenceJSON;
+  /**
+   * An anchor of a component of the parent.
+   */
+  anchor?: SceneAnchorJSON;
 }
 
 export interface MoveActorOptions {
   /**
-   * The transform relative to the new parent.
+   * The transform relative to the new parent, or to its anchor.
    */
   transform: SceneTransformJSON;
   /**
@@ -96,7 +102,8 @@ export class SceneDocument extends CommandDocument<
       visible = true,
       transform,
       components = [],
-      prefab
+      prefab,
+      anchor
     } = options;
     const added = this.addSubtree([{
       id,
@@ -105,7 +112,8 @@ export class SceneDocument extends CommandDocument<
       visible,
       transform: SceneTransform.create(transform),
       components: [...components],
-      ...prefab === undefined ? {} : { prefab: { ...prefab } }
+      ...prefab === undefined ? {} : { prefab: { ...prefab } },
+      ...anchor === undefined ? {} : { anchor: { ...anchor } }
     }], beforeId);
 
     return added ? id : null;
@@ -155,14 +163,17 @@ export class SceneDocument extends CommandDocument<
 
   move(
     id: string,
-    parentId: string | null,
+    placement: SceneActorPlacement,
     options: MoveActorOptions
   ): boolean {
+    const { parentId, anchor } = placement;
+
     return this.commit({
       action: "actor-moved",
       id,
       parentId,
       transform: options.transform,
+      ...anchor === undefined ? {} : { anchor: { ...anchor } },
       ...withBefore(options.beforeId)
     });
   }

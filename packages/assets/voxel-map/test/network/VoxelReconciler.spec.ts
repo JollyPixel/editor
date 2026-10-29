@@ -108,15 +108,16 @@ describe("VoxelReconciler", () => {
     assert.strictEqual(document.world.getLayer("L4"), undefined);
   });
 
-  test("reverts a rename and a visibility change to the previous values", () => {
+  test("reverts a rename, a visibility and an anchor change to the previous values", () => {
     const { document, reconciler, pending } = setup();
     const layer = document.world.getLayer("L1")!;
 
-    document.world.updateLayer("L1", { name: "Floor", visible: false });
+    document.world.updateLayer("L1", { name: "Floor", visible: false, anchor: true });
 
     assert.strictEqual(reconciler.revert(pending), true);
     assert.strictEqual(layer.name, "L1");
     assert.strictEqual(layer.visible, true);
+    assert.strictEqual(layer.anchor, false);
   });
 
   test("reverts a layer position and a clone", () => {

@@ -9,6 +9,7 @@ import type {
   SceneComponentFile
 } from "../SceneFile.ts";
 import { readSceneTransform } from "../sceneTransform.ts";
+import { AnchorSocket } from "./SceneAnchors.ts";
 
 export function captureSceneActors(
   tree: ActorTree<any>,
@@ -21,13 +22,15 @@ export function captureSceneActors(
       continue;
     }
 
+    const socket = actor.object3D.parent;
     files.push({
       id: actor.persistentId,
       name: actor.name,
       parentId: parent?.persistentId ?? null,
       visible: actor.object3D.visible,
       transform: readSceneTransform(actor.object3D),
-      components: captureComponents(actor, components)
+      components: captureComponents(actor, components),
+      ...socket instanceof AnchorSocket ? { anchor: { ...socket.anchor } } : {}
     });
   }
 

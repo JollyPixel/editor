@@ -151,7 +151,7 @@ describe("scene room", () => {
     const client = connectClient(server, "C");
     client.deliver();
 
-    client.document.move("C", null, {
+    client.document.move("C", { parentId: null }, {
       transform: SceneTransform.create(),
       beforeId: "A"
     });

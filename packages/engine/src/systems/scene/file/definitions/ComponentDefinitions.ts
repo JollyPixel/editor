@@ -11,6 +11,7 @@ import {
   type SceneMode,
   ComponentAssets
 } from "./ComponentDefinition.ts";
+import type { ComponentAnchors } from "./ComponentAnchors.ts";
 import type {
   JSONObject,
   SceneComponentFile,
@@ -54,7 +55,9 @@ export class ComponentDefinitions {
     entry: SceneComponentFile,
     options: ComponentBuildOptions
   ): Component | null {
-    const definition = this.#definitions.get(entry.type);
+    const definition = this.#definitions.get(
+      entry.type
+    );
     if (definition === undefined) {
       return null;
     }
@@ -98,6 +101,19 @@ export class ComponentDefinitions {
     }
 
     return true;
+  }
+
+  anchors(
+    component: Component
+  ): ComponentAnchors | null {
+    const built = this.#built.get(component);
+    if (built === undefined) {
+      return null;
+    }
+
+    return this.#definitions.get(
+      built.type
+    )?.anchors?.(component) ?? null;
   }
 
   capture(

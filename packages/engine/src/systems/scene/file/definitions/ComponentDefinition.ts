@@ -8,6 +8,7 @@ import type {
 import type { Actor } from "../../../../actor/Actor.ts";
 import type { Component } from "../../../../components/types.ts";
 import type { JSONObject } from "../SceneFile.ts";
+import type { ComponentAnchors } from "./ComponentAnchors.ts";
 
 export type SceneMode = "edit" | "play";
 
@@ -85,4 +86,7 @@ export interface ComponentDefinition<
   capture?(
     component: TComponent
   ): JSONObject;
+  anchors?(
+    component: TComponent
+  ): ComponentAnchors;
 }

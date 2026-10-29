@@ -99,6 +99,7 @@ export function captureVoxelLayer(
     rank: layer.rank,
     position: { ...layer.position },
     properties: { ...layer.properties },
+    ...layer.anchor ? { anchor: true } : {},
     chunks
   };
 }

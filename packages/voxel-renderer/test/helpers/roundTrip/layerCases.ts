@@ -25,7 +25,7 @@ export const LAYER_CASES: RoundTripCase[] = [
   {
     name: "updates a layer",
     seed: ground,
-    act: (world) => world.updateLayer("Ground", { visible: false }),
+    act: (world) => world.updateLayer("Ground", { visible: false, anchor: true }),
     actions: ["updated"]
   },
   {

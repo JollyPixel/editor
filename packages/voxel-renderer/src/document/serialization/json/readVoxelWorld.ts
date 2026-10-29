@@ -54,6 +54,7 @@ function readVoxelLayer(
     rank: layer.rank,
     position: layer.position,
     properties: layer.properties,
+    ...layer.anchor ? { anchor: true } : {},
     chunks: readVoxelChunks(layer.palette, layer.chunks)
   };
 }

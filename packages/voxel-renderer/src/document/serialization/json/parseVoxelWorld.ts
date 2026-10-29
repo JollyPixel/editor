@@ -286,6 +286,11 @@ function assertLayerOptions(
     fail("compositing is not \"replace\" or \"composite\"");
   }
 
+  const anchor = readField(value, "anchor");
+  if (anchor !== undefined && typeof anchor !== "boolean") {
+    fail("anchor is not a boolean");
+  }
+
   const position = readField(value, "position");
   if (position !== undefined && !isCoordinate(position)) {
     fail("position is not a coordinate");
