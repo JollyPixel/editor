@@ -7,6 +7,17 @@ export function slotIndex(
   return index === -1 ? ids.length : index;
 }
 
+export function insertedBefore<T extends { id: string; }>(
+  entries: readonly T[],
+  entry: T,
+  beforeId: string | undefined
+): T[] {
+  const placed = [...entries];
+  placed.splice(slotIndex(entries.map(({ id }) => id), beforeId), 0, entry);
+
+  return placed;
+}
+
 export function findNextId(
   ids: readonly string[],
   id: string

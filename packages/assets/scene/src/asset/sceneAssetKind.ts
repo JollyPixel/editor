@@ -26,6 +26,7 @@ import {
   compactSceneFileSchema,
   expandSceneFile
 } from "./sceneFile.ts";
+import { SceneFootprint } from "../model/SceneFootprint.ts";
 import {
   SceneTree,
   type SceneTreeOptions
@@ -34,10 +35,7 @@ import {
   sceneCommandProtocol,
   sceneSnapshotSchema
 } from "../network/SceneCommand.schema.ts";
-import { sceneConflictKeys } from "../network/SceneCommandKeys.ts";
 import type {
-  AssetReferenceJSON,
-  SceneActorJSON,
   SceneCommand,
   SceneNetworkCommand,
   SceneSnapshot
@@ -77,10 +75,10 @@ export class SceneState {
     return this.#tree.accepts(command);
   }
 
-  conflictKeys(
+  footprint(
     command: SceneCommand
-  ): string[] {
-    return sceneConflictKeys(command, this.#tree.erasedBy(command));
+  ): SceneFootprint {
+    return SceneFootprint.capture(this.#tree, command);
   }
 
   applyCommand(
@@ -90,43 +88,13 @@ export class SceneState {
   }
 
   dependencies(): AssetReferenceData[] {
-    const references = new Map<string, AssetReferenceData>();
-    for (const actor of this.#tree.actors()) {
-      for (const reference of actorReferences(actor)) {
-        references.set(`${reference.kind}:${reference.id}`, {
-          id: reference.id,
-          kind: reference.kind
-        });
-      }
-    }
-
-    return [...references.values()];
+    return this.#tree.references();
   }
 
   rebind(
     idMap: ReadonlyMap<string, string>
   ): void {
-    const file = this.toJSON();
-
-    this.load({
-      ...file,
-      actors: file.actors.map((actor) => {
-        return {
-          ...actor,
-          ...actor.prefab === undefined ? {} : { prefab: remapReference(actor.prefab, idMap) },
-          components: actor.components.map((component) => {
-            return {
-              ...component,
-              assets: Object.fromEntries(
-                Object.entries(component.assets).map(
-                  ([slot, reference]) => [slot, reference === null ? null : remapReference(reference, idMap)]
-                )
-              )
-            };
-          })
-        };
-      })
-    });
+    this.#tree.rebind(idMap);
   }
 
   snapshot(): SceneSnapshot {
@@ -215,7 +183,9 @@ export function sceneAssetKind(
           ...arbitrated(state, {
             accepts: (scene, command) => scene.accepts(command),
             writes: (command, scene) => {
-              return { keys: scene?.conflictKeys(command) ?? sceneConflictKeys(command, []) };
+              const footprint = scene?.footprint(command) ?? SceneFootprint.unknown(command);
+
+              return { keys: footprint.conflictRefs().map((ref) => ref.key) };
             }
           })
         };
@@ -229,24 +199,3 @@ export const ASSET_KINDS: AssetKindPackage<SceneAssetKindOptions> = {
   optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
   handlers: (options) => [sceneAssetKind(options)]
 };
-
-function actorReferences(
-  actor: SceneActorJSON
-): AssetReferenceJSON[] {
-  return [
-    ...actor.prefab === undefined ? [] : [actor.prefab],
-    ...actor.components.flatMap(
-      ({ assets }) => Object.values(assets).filter((reference) => reference !== null)
-    )
-  ];
-}
-
-function remapReference(
-  reference: AssetReferenceJSON,
-  idMap: ReadonlyMap<string, string>
-): AssetReferenceJSON {
-  return {
-    ...reference,
-    id: idMap.get(reference.id) ?? reference.id
-  };
-}

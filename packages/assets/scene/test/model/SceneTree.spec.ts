@@ -88,6 +88,13 @@ describe("SceneTree.accepts", () => {
       transform: kTransform,
       beforeId: "C"
     }, true],
+    ["a move before an actor of another parent", {
+      action: "actor-moved",
+      id: "C",
+      parentId: null,
+      transform: kTransform,
+      beforeId: "B"
+    }, false],
     ["a component id already used", {
       action: "component-added",
       actorId: "C",
@@ -266,6 +273,16 @@ describe("SceneTree.copySubtree", () => {
 
     assert.strictEqual(tree.copySubtree("A")[0].name, "Box (2)");
     assert.deepEqual(tree.copySubtree("missing"), []);
+  });
+
+  test("skips copy names a sibling already uses", () => {
+    const tree = loadedTree([
+      actor("A", { name: "Box" }),
+      actor("B", { name: "Box (1)" }),
+      actor("C", { name: "Box (2)", parentId: "A" })
+    ]);
+
+    assert.strictEqual(tree.copySubtree("A")[0].name, "Box (2)");
   });
 });
 

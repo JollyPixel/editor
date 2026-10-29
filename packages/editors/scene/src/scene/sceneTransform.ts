@@ -16,7 +16,7 @@ const kUnitScale = {
   z: 1
 };
 
-type TransformTree = Pick<SceneTreeReader, "peekActor" | "ancestorIds">;
+type TransformTree = Pick<SceneTreeReader, "actor" | "ancestorIds">;
 type AnchorPoses = Pick<Systems.SceneAnchorsReader, "findAnchor">;
 
 export function rebaseTransform(
@@ -63,7 +63,7 @@ function worldMatrix(
 
   const local = new THREE.Matrix4();
   for (const actorId of [id, ...tree.ancestorIds(id)]) {
-    const actor = tree.peekActor(actorId);
+    const actor = tree.actor(actorId);
     if (actor !== undefined) {
       matrix
         .premultiply(Systems.composeSceneTransform(actor.transform, local))

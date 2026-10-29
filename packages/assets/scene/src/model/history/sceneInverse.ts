@@ -5,15 +5,12 @@ import {
 } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
+import { ComponentChange } from "../ComponentChange.ts";
+import { ownedCopy } from "../ownedCopy.ts";
+import { SceneEnvironment } from "../SceneEnvironment.ts";
 import { SceneTransform } from "../SceneTransform.ts";
-import { SCENE_ENVIRONMENT_FIELDS } from "../sceneEnvironment.ts";
 import type { SceneTreeReader } from "../SceneTree.ts";
-import type {
-  JSONObject,
-  SceneCommand,
-  SceneEnvironmentPatch,
-  SceneTransformPatch
-} from "../../network/types.ts";
+import type { SceneCommand } from "../../network/types.ts";
 
 export function invert(
   tree: SceneTreeReader,
@@ -29,7 +26,7 @@ export function invert(
     case "actor-removed":
       return [{
         action: "actor-added",
-        actors: tree.subtreeFrom(command.id),
+        actors: ownedCopy(tree.subtree(command.id)),
         ...withBefore(tree.findNextSibling(command.id))
       }];
 
@@ -60,13 +57,12 @@ export function invert(
 
     case "actor-transformed": {
       const { transform } = existing(tree.actor(command.id), "actor", command.id);
-      const patch: SceneTransformPatch = Object.fromEntries(
-        SceneTransform.FIELDS
-          .filter((field) => Object.hasOwn(command.transform, field))
-          .map((field) => [field, transform[field]])
-      );
 
-      return [{ action: "actor-transformed", id: command.id, transform: patch }];
+      return [{
+        action: "actor-transformed",
+        id: command.id,
+        transform: SceneTransform.patch(command.transform).revert(transform)
+      }];
     }
 
     case "component-added":
@@ -80,7 +76,7 @@ export function invert(
       return [{
         action: "component-added",
         actorId: command.actorId,
-        component: existing(tree.component(command.id), "component", command.id),
+        component: ownedCopy(existing(tree.component(command.id), "component", command.id)),
         ...withBefore(tree.findNextComponent(command.id))
       }];
 
@@ -94,23 +90,8 @@ export function invert(
 
     case "component-changed": {
       const { data } = existing(tree.component(command.id), "component", command.id);
-      const previous: JSONObject = {};
-      const unset: string[] = [];
-      for (const key of [...Object.keys(command.data), ...command.unset ?? []]) {
-        if (Object.hasOwn(data, key)) {
-          previous[key] = data[key];
-        }
-        else {
-          unset.push(key);
-        }
-      }
 
-      return [{
-        action: "component-changed",
-        id: command.id,
-        data: previous,
-        ...unset.length === 0 ? {} : { unset }
-      }];
+      return [new ComponentChange(command).revert(data).toCommand(command.id)];
     }
 
     case "component-assets-changed": {
@@ -125,16 +106,11 @@ export function invert(
       }];
     }
 
-    case "environment-changed": {
-      const environment = tree.environment;
-      const patch: SceneEnvironmentPatch = Object.fromEntries(
-        SCENE_ENVIRONMENT_FIELDS
-          .filter((field) => Object.hasOwn(command.environment, field))
-          .map((field) => [field, environment[field]])
-      );
-
-      return [{ action: "environment-changed", environment: patch }];
-    }
+    case "environment-changed":
+      return [{
+        action: "environment-changed",
+        environment: SceneEnvironment.patch(command.environment).revert(tree.environment)
+      }];
   }
 }
 

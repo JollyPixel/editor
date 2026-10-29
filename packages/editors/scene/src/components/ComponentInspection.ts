@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
-import type {
+import {
   ComponentChange,
-  JSONObject,
-  JSONValue,
-  SceneComponentJSON
+  type JSONObject,
+  type JSONValue,
+  type SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
 import type {
   FormRow,
@@ -54,22 +54,22 @@ export class ComponentInspection {
     const [key, nested] = row.path;
     if (nested === undefined) {
       return next === fallback ?
-        { unset: [key] } :
-        { data: { [key]: next } };
+        new ComponentChange({ unset: [key] }) :
+        new ComponentChange({ data: { [key]: next } });
     }
 
     const parent = row.control === "choice" && row.resets === true ?
       {} :
       this.#storedObject(key);
 
-    return {
+    return new ComponentChange({
       data: {
         [key]: {
           ...parent,
           [nested]: next
         }
       }
-    };
+    });
   }
 
   #storedObject(

@@ -10,9 +10,11 @@ import { CommandHistory } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import {
+  ComponentChange,
   SceneDocument,
   sceneHistoryRegistration,
-  SceneTransform
+  SceneTransform,
+  type SceneImage
 } from "#src/index.ts";
 import {
   actor,
@@ -67,10 +69,13 @@ describe("scene history", () => {
     })],
     ["removing a component", (document) => document.removeComponent("light")],
     ["reordering a component", (document) => document.moveComponent("mesh", "light")],
-    ["changing and unsetting component fields", (document) => document.changeComponent("light", {
-      data: { intensity: 3, range: 5 },
-      unset: ["color"]
-    })],
+    ["changing and unsetting component fields", (document) => document.changeComponent(
+      "light",
+      new ComponentChange({
+        data: { intensity: 3, range: 5 },
+        unset: ["color"]
+      })
+    )],
     ["filling an asset slot", (document) => document.changeComponentAssets("light", {
       cookie: { id: "texture-1", kind: "pixelart" }
     })],
@@ -93,6 +98,19 @@ describe("scene history", () => {
       assert.deepEqual(document.tree.toJSON(), after);
     });
   }
+
+  test("rewinds pending edits to the actors they found", () => {
+    const { document } = setup();
+    const before = document.tree.toJSON();
+    const images: SceneImage[] = [];
+    document.on("change", (change) => images.push(change.image));
+
+    assert.ok(document.rename("B", "Bee"));
+    assert.ok(document.transform("B", { position: { x: 1, y: 2, z: 3 } }));
+    document.revert(images);
+
+    assert.deepEqual(document.tree.toJSON(), before);
+  });
 
   test("undo of a move off an anchor puts the actor back on it", () => {
     const { document, history } = setup();
@@ -133,9 +151,9 @@ describe("scene history", () => {
 
   test("undoes one component field while keeping a peer's edit of another", () => {
     const { document, history } = setup();
-    history.record(kScope, null, () => document.changeComponent("light", {
+    history.record(kScope, null, () => document.changeComponent("light", new ComponentChange({
       data: { intensity: 3 }
-    }));
+    })));
 
     document.applyRemote({ action: "component-changed", id: "light", data: { color: "#ff0000" } }, "peer");
 

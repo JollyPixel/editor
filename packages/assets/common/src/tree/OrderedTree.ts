@@ -65,7 +65,13 @@ export class OrderedTree<T extends OrderedTreeEntry> {
   listChildren(
     parentId: string | null
   ): T[] {
-    return this.#childIds(parentId).map((id) => structuredClone(this.#entries.get(id)!));
+    return this.peekChildren(parentId).map((entry) => structuredClone(entry));
+  }
+
+  peekChildren(
+    parentId: string | null
+  ): Readonly<T>[] {
+    return this.#childIds(parentId).map((id) => this.#entries.get(id)!);
   }
 
   findNextSibling(

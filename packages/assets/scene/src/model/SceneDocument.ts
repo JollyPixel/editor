@@ -10,15 +10,14 @@ import {
 } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
-import type { ComponentChange } from "./componentChange.ts";
+import type { ComponentChange } from "./ComponentChange.ts";
 import { SceneTree, type SceneTreeReader } from "./SceneTree.ts";
 import { SceneTransform } from "./SceneTransform.ts";
 import { invert } from "./history/sceneInverse.ts";
 import {
   captureSceneImage,
   restoreSceneImages,
-  type SceneImage,
-  type SceneImages
+  type SceneImage
 } from "./history/sceneImages.ts";
 import type {
   AssetReferenceJSON,
@@ -34,7 +33,7 @@ import type {
   SceneTransformPatch
 } from "../network/types.ts";
 
-export type { SceneImage, SceneImages };
+export type { SceneImage };
 
 export type SceneChange = CommandChange<SceneCommand, SceneImage>;
 
@@ -245,14 +244,7 @@ export class SceneDocument extends CommandDocument<
     id: string,
     change: ComponentChange
   ): boolean {
-    const unset = [...change.unset ?? []];
-
-    return this.commit({
-      action: "component-changed",
-      id,
-      data: change.data ?? {},
-      ...unset.length === 0 ? {} : { unset }
-    });
+    return this.commit(change.toCommand(id));
   }
 
   changeComponentAssets(

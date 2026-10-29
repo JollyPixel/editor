@@ -9,7 +9,7 @@ import {
 import { repeat } from "lit/directives/repeat.js";
 import type {
   AssetReferenceJSON,
-  SceneActorJSON,
+  SceneActorView,
   SceneComponentJSON,
   SceneTransformField,
   SceneTransformPatch
@@ -165,13 +165,15 @@ export class InspectorPanel extends LitElement {
 
     return html`
       ${this.#renderActor(editing, actor)}
-      ${actor.prefab === undefined ? this.#renderComponents(editing, actor) : nothing}
+      ${editing.document.tree.canHoldComponents(actor.id) ?
+        this.#renderComponents(editing, actor) :
+        nothing}
     `;
   }
 
   #renderComponents(
     editing: SceneEditing,
-    actor: SceneActorJSON
+    actor: SceneActorView
   ): TemplateResult {
     return html`
       <jolly-separator label="Components">
@@ -212,7 +214,7 @@ export class InspectorPanel extends LitElement {
 
   #renderActor(
     editing: SceneEditing,
-    actor: SceneActorJSON
+    actor: SceneActorView
   ): TemplateResult {
     const { document } = editing;
 
@@ -257,7 +259,7 @@ export class InspectorPanel extends LitElement {
 
   #renderTransform(
     draft: SceneDraft,
-    actor: SceneActorJSON
+    actor: SceneActorView
   ): TemplateResult {
     const field = this.#transformField;
     const current = draft.transform(actor)[field];

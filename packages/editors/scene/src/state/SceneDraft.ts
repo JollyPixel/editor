@@ -1,8 +1,7 @@
 // Import Third-party Dependencies
 import {
-  applyComponentChange,
-  type ComponentChange,
-  type SceneActorJSON,
+  ComponentChange,
+  type SceneActorView,
   type SceneChange,
   type SceneComponentJSON,
   type SceneDocument,
@@ -58,7 +57,7 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
   }
 
   transform(
-    actor: SceneActorJSON
+    actor: SceneActorView
   ): SceneTransformJSON {
     return {
       ...actor.transform,
@@ -73,7 +72,7 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
 
     return change === undefined ? entry : {
       ...entry,
-      data: applyComponentChange(entry.data, change)
+      data: change.applyTo(entry.data)
     };
   }
 
@@ -137,7 +136,7 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
   ): void {
     this.#components.delete(id);
     if (!this.#document.changeComponent(id, change)) {
-      this.#view.previewComponent(id, {});
+      this.#view.previewComponent(id, ComponentChange.NONE);
     }
     this.emit("change");
   }

@@ -9,7 +9,7 @@ import type {
   Object3D,
   Vector3Like
 } from "three";
-import type { SceneActorJSON } from "@jolly-pixel/asset.scene/client";
+import type { SceneActorView } from "@jolly-pixel/asset.scene/client";
 import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
@@ -38,7 +38,7 @@ export function resolveEditor(
 export async function findActor(
   page: Page,
   name: string
-): Promise<SceneActorJSON | null> {
+): Promise<SceneActorView | null> {
   const editor = await resolveEditor(page);
 
   return editor.evaluate(({ editing }, actorName) => {
