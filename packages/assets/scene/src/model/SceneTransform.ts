@@ -1,7 +1,10 @@
 // Import Internal Dependencies
+import { FieldPatch } from "./FieldPatch.ts";
 import type {
   SceneTransformField,
   SceneTransformJSON,
+  SceneTransformPatch,
+  SceneTransformView,
   Vector3JSON
 } from "../network/types.ts";
 
@@ -34,17 +37,23 @@ export class SceneTransform {
   ): Partial<SceneTransformJSON> {
     return Object.fromEntries(
       SceneTransform.FIELDS
-        .filter((field) => !sameVector(transform[field], kIdentity[field]))
+        .filter((field) => !SceneTransform.#sameVector(transform[field], kIdentity[field]))
         .map((field) => [field, { ...transform[field] }])
     );
   }
-}
 
-function sameVector(
-  left: Vector3JSON,
-  right: Vector3JSON
-): boolean {
-  return left.x === right.x &&
-    left.y === right.y &&
-    left.z === right.z;
+  static patch(
+    transform: SceneTransformPatch
+  ): FieldPatch<SceneTransformView> {
+    return new FieldPatch<SceneTransformView>(SceneTransform.FIELDS, transform);
+  }
+
+  static #sameVector(
+    left: Vector3JSON,
+    right: Vector3JSON
+  ): boolean {
+    return left.x === right.x &&
+      left.y === right.y &&
+      left.z === right.z;
+  }
 }

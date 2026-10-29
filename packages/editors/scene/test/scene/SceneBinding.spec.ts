@@ -5,8 +5,9 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three";
 import {
-  createSceneEnvironment,
+  ComponentChange,
   SceneDocument,
+  SceneEnvironment,
   type SceneEnvironmentJSON
 } from "@jolly-pixel/asset.scene/client";
 
@@ -73,8 +74,8 @@ describe("SceneBinding", () => {
     const patched = binding.component("patched");
     const rebuilt = binding.component("rebuilt");
 
-    document.changeComponent("patched", { data: { label: "b" } });
-    document.changeComponent("rebuilt", { data: { label: "b" } });
+    document.changeComponent("patched", new ComponentChange({ data: { label: "b" } }));
+    document.changeComponent("rebuilt", new ComponentChange({ data: { label: "b" } }));
 
     assert.strictEqual(binding.component("patched"), patched);
     assert.strictEqual((patched as Probe).label, "b");
@@ -134,7 +135,7 @@ describe("SceneBinding", () => {
     const oldId = document.addActor({ name: "Old" })!;
     const { binding, sceneManager, environments } = createProbeBinding(document);
     const foggy: SceneEnvironmentJSON = {
-      ...createSceneEnvironment(),
+      ...SceneEnvironment.create(),
       fog: { kind: "exp2", color: "#ffffff", density: 0.1 }
     };
 
@@ -190,14 +191,14 @@ describe("SceneBinding", () => {
     const patched = binding.component("patched") as Probe;
     const rebuilt = binding.component("rebuilt") as Probe;
 
-    binding.previewComponent("patched", { data: { label: "b" } });
-    binding.previewComponent("rebuilt", { data: { label: "b" } });
+    binding.previewComponent("patched", new ComponentChange({ data: { label: "b" } }));
+    binding.previewComponent("rebuilt", new ComponentChange({ data: { label: "b" } }));
     assert.strictEqual(patched.label, "b");
     assert.strictEqual(binding.component("rebuilt"), rebuilt);
     assert.strictEqual(rebuilt.label, "a");
     assert.deepEqual(document.tree.component("patched")?.data, { label: "a" });
 
-    binding.previewComponent("patched", { unset: ["label"] });
+    binding.previewComponent("patched", new ComponentChange({ unset: ["label"] }));
     assert.strictEqual(patched.label, "none");
   });
 
@@ -253,7 +254,7 @@ describe("SceneBinding", () => {
     });
     binding.on("componentDropped", (component) => live.delete(component));
 
-    document.changeComponent("rebuilt", { data: { label: "b" } });
+    document.changeComponent("rebuilt", new ComponentChange({ data: { label: "b" } }));
     assert.deepEqual([...live], [binding.component("rebuilt")]);
 
     document.remove(actorId);

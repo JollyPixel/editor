@@ -6,8 +6,8 @@ import {
   type Component
 } from "@jolly-pixel/engine";
 import {
-  applyComponentChange,
-  type ComponentChange,
+  ComponentChange,
+  ownedCopy,
   type SceneActorJSON,
   type SceneAnchorJSON,
   type SceneChange,
@@ -306,7 +306,7 @@ export class SceneBinding
     for (const id of ids) {
       const file = tree.actor(id);
       if (file !== undefined) {
-        files.push(file);
+        files.push(ownedCopy(file));
       }
     }
 
@@ -325,7 +325,7 @@ export class SceneBinding
   #reparent(
     id: string
   ): void {
-    const file = this.#document.tree.peekActor(id);
+    const file = this.#document.tree.actor(id);
     if (file !== undefined) {
       this.#instance.reparent(id, file.parentId, file.anchor);
       this.#syncActor(id);
@@ -336,7 +336,7 @@ export class SceneBinding
     id: string,
     patch: SceneTransformPatch = {}
   ): void {
-    const file = this.#document.tree.peekActor(id);
+    const file = this.#document.tree.actor(id);
     if (file === undefined) {
       return;
     }
@@ -361,13 +361,13 @@ export class SceneBinding
       return;
     }
 
-    this.#instance.rebuildComponent(ownerId, entry);
+    this.#instance.rebuildComponent(ownerId, ownedCopy(entry));
   }
 
   #changeComponent(
     id: string
   ): void {
-    if (!this.#applyComponent(id, {})) {
+    if (!this.#applyComponent(id, ComponentChange.NONE)) {
       this.#rebuildComponent(id);
     }
   }
@@ -381,7 +381,7 @@ export class SceneBinding
     return entry !== undefined && this.#instance.applyComponent(
       id,
       entry.type,
-      applyComponentChange(entry.data, change)
+      ownedCopy(change.applyTo(entry.data))
     );
   }
 }

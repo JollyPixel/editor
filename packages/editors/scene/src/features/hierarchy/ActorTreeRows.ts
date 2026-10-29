@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type {
-  SceneActorJSON,
+  SceneActorView,
   SceneAnchorJSON,
   SceneTreeReader
 } from "@jolly-pixel/asset.scene/client";
@@ -36,22 +36,23 @@ type RowNode = TreeNode<AnchorRow>;
 interface ActorSections {
   anchors: RowNode[];
   actors: RowNode[];
+  closed: boolean;
 }
 
 export class ActorTreeRows {
   static readonly EMPTY = new ActorTreeRows();
 
   static read(
-    tree: Pick<SceneTreeReader, "actorIds" | "peekActor">,
+    tree: Pick<SceneTreeReader, "actorIds" | "actor" | "canContain">,
     marks: PeerMarkMap<string>,
     components: Pick<SceneComponents, "actorIcon">,
     anchors: ActorAnchors
   ): ActorTreeRows {
     const rows = new ActorTreeRows();
     for (const id of tree.actorIds()) {
-      const actor = tree.peekActor(id);
+      const actor = tree.actor(id);
       if (actor !== undefined) {
-        rows.#add(actor, marks, components, anchors);
+        rows.#add(actor, !tree.canContain(id), marks, components, anchors);
       }
     }
     rows.#seal();
@@ -90,8 +91,13 @@ export class ActorTreeRows {
   accepts(
     detail: JollyReparentDetail
   ): boolean {
-    return !detail.movedIds.some((id) => this.anchorRow(id) !== null) &&
-      (detail.where === "inside" || this.anchorRow(detail.targetId) === null);
+    if (detail.movedIds.some((id) => this.anchorRow(id) !== null)) {
+      return false;
+    }
+
+    return detail.where === "inside" ?
+      this.#sections.get(detail.targetId)?.closed !== true :
+      this.anchorRow(detail.targetId) === null;
   }
 
   moves(
@@ -114,7 +120,8 @@ export class ActorTreeRows {
   }
 
   #add(
-    actor: Readonly<SceneActorJSON>,
+    actor: SceneActorView,
+    closed: boolean,
     marks: PeerMarkMap<string>,
     components: Pick<SceneComponents, "actorIcon">,
     anchors: ActorAnchors
@@ -129,7 +136,8 @@ export class ActorTreeRows {
           anchor
         )
       ),
-      actors: []
+      actors: [],
+      closed
     });
 
     const parent = actor.parentId === null ?
@@ -226,7 +234,7 @@ function anchorNode(
 }
 
 function actorNode(
-  actor: Readonly<SceneActorJSON>,
+  actor: SceneActorView,
   marks: PeerMarkMap<string>,
   components: Pick<SceneComponents, "actorIcon">
 ): RowNode {

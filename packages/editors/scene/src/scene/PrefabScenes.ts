@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
+import {
+  ownedCopy,
+  type SceneDocument
+} from "@jolly-pixel/asset.scene/client";
 import type { AssetLease } from "@jolly-pixel/editor.host";
 import type { Systems } from "@jolly-pixel/engine";
 import { Emitter } from "@openally/emitt";
@@ -40,7 +43,7 @@ export class PrefabScenes
 
     return scene === null ?
       null :
-      { actors: [...scene.lease.document.tree.actors()] };
+      { actors: ownedCopy([...scene.lease.document.tree.actors()]) };
   }
 
   dispose(): void {

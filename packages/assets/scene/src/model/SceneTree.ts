@@ -1,64 +1,62 @@
 // Import Third-party Dependencies
 import {
   findNextId,
+  insertedBefore,
   InvalidEntryError,
-  OrderedTree,
-  slotIndex
+  OrderedTree
 } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import { SCENE_KIND } from "../asset/scene.ts";
 import type {
-  JSONObject,
+  AssetReferenceJSON,
   SceneActorJSON,
+  SceneActorPlacement,
+  SceneActorView,
   SceneCommand,
-  SceneComponentJSON,
-  SceneEnvironmentJSON,
+  SceneComponentView,
+  SceneEnvironmentView,
   SceneSnapshot
 } from "../network/types.ts";
-import { applyComponentChange } from "./componentChange.ts";
-import { createSceneEnvironment } from "./sceneEnvironment.ts";
+import { ComponentChange } from "./ComponentChange.ts";
+import { ComponentOwners } from "./ComponentOwners.ts";
+import { ownedCopy } from "./ownedCopy.ts";
+import { SceneEnvironment } from "./SceneEnvironment.ts";
+import { SceneTransform } from "./SceneTransform.ts";
+import {
+  actorReferences,
+  rebindActor
+} from "./sceneReferences.ts";
 import { copySubtree } from "./subtreeCopy.ts";
 
 // CONSTANTS
 export const COMPONENT_DATA_MAX_LENGTH = 65_536;
-
-type SceneTreeEntry = "actor" | "component";
 
 export type SceneTreeReader = Pick<
   SceneTree,
   | "size"
   | "environment"
   | "has"
-  | "isInstance"
+  | "canContain"
+  | "canHoldComponents"
   | "actor"
-  | "peekActor"
   | "actors"
   | "actorIds"
   | "ancestorIds"
   | "findNextSibling"
-  | "subtreeFrom"
+  | "subtree"
   | "copySubtree"
   | "topmostIds"
   | "component"
-  | "peekComponent"
   | "componentOwner"
   | "findNextComponent"
-  | "erasedBy"
   | "toJSON"
 >;
-
-interface TreeProblem {
-  entry: SceneTreeEntry;
-  id: string;
-  reason: string;
-}
 
 interface ActorListContext {
   hasActor(id: string): boolean;
   hasComponent(id: string): boolean;
-  isOuterParent(actor: SceneActorJSON, index: number): boolean;
-  isOuterInstance(id: string): boolean;
+  isOuterParent(actor: SceneActorView, index: number): boolean;
   isOwnScene(sceneId: string): boolean;
 }
 
@@ -67,9 +65,12 @@ export interface SceneTreeOptions {
 }
 
 export class SceneTree {
-  #actors = new OrderedTree<SceneActorJSON>({ entry: "actor" });
-  #owners = new Map<string, string>();
-  #environment: SceneEnvironmentJSON = createSceneEnvironment();
+  #actors = new OrderedTree<SceneActorView>({
+    entry: "actor",
+    canContain: (actor) => !isPrefabInstance(actor)
+  });
+  #owners = new ComponentOwners();
+  #environment: SceneEnvironmentView = SceneEnvironment.create();
   #sceneId: string | null;
 
   constructor(
@@ -82,8 +83,8 @@ export class SceneTree {
     return this.#actors.size;
   }
 
-  get environment(): SceneEnvironmentJSON {
-    return structuredClone(this.#environment);
+  get environment(): SceneEnvironmentView {
+    return this.#environment;
   }
 
   has(
@@ -92,28 +93,28 @@ export class SceneTree {
     return this.#actors.has(id);
   }
 
-  isInstance(
+  canContain(
     id: string | null
   ): boolean {
-    return id !== null && this.#actors.peek(id)?.prefab !== undefined;
+    return this.#actors.isParent(id);
+  }
+
+  canHoldComponents(
+    id: string
+  ): boolean {
+    const actor = this.#actors.peek(id);
+
+    return actor !== undefined && !isPrefabInstance(actor);
   }
 
   actor(
     id: string
-  ): SceneActorJSON | undefined {
-    const actor = this.#actors.peek(id);
-
-    return actor === undefined ? undefined : structuredClone(actor);
-  }
-
-  peekActor(
-    id: string
-  ): Readonly<SceneActorJSON> | undefined {
+  ): SceneActorView | undefined {
     return this.#actors.peek(id);
   }
 
-  actors(): IterableIterator<SceneActorJSON> {
-    return this.#actors.values();
+  actors(): IterableIterator<SceneActorView> {
+    return this.#actors.scan();
   }
 
   * actorIds(): IterableIterator<string> {
@@ -134,16 +135,25 @@ export class SceneTree {
     return this.#actors.findNextSibling(id);
   }
 
-  subtreeFrom(
+  subtree(
     id: string
-  ): SceneActorJSON[] {
-    return this.#actors.subtreeFrom(id);
+  ): SceneActorView[] {
+    return this.#actors.peekSubtree(id);
   }
 
   copySubtree(
     id: string
   ): SceneActorJSON[] {
-    return copySubtree(this.#actors.peekSubtree(id));
+    const source = this.#actors.peekSubtree(id);
+    const [root] = source;
+    if (root === undefined) {
+      return [];
+    }
+    const siblingNames = new Set(
+      this.#actors.peekChildren(root.parentId).map(({ name }) => name)
+    );
+
+    return copySubtree(source, siblingNames);
   }
 
   topmostIds(
@@ -159,15 +169,7 @@ export class SceneTree {
 
   component(
     id: string
-  ): SceneComponentJSON | undefined {
-    const component = this.peekComponent(id);
-
-    return component === undefined ? undefined : structuredClone(component);
-  }
-
-  peekComponent(
-    id: string
-  ): Readonly<SceneComponentJSON> | undefined {
+  ): SceneComponentView | undefined {
     return this.#peekOwner(id)?.components.find(
       (component) => component.id === id
     );
@@ -176,7 +178,7 @@ export class SceneTree {
   componentOwner(
     id: string
   ): string | undefined {
-    return this.#owners.get(id);
+    return this.#owners.owner(id);
   }
 
   findNextComponent(
@@ -190,19 +192,25 @@ export class SceneTree {
     return findNextId(owner.components.map((component) => component.id), id);
   }
 
-  erasedBy(
-    command: SceneCommand
-  ): Readonly<SceneActorJSON>[] {
-    switch (command.action) {
-      case "actor-removed":
-        return this.#actors.peekSubtree(command.id);
-      case "component-removed": {
-        const owner = this.#actors.peek(command.actorId);
-
-        return owner === undefined ? [] : [owner];
+  references(): AssetReferenceJSON[] {
+    const references = new Map<string, AssetReferenceJSON>();
+    for (const actor of this.#actors.scan()) {
+      for (const { id, kind } of actorReferences(actor)) {
+        references.set(`${kind}:${id}`, {
+          id,
+          kind
+        });
       }
-      default:
-        return [];
+    }
+
+    return [...references.values()];
+  }
+
+  rebind(
+    idMap: ReadonlyMap<string, string>
+  ): void {
+    for (const id of this.actorIds()) {
+      this.#actors.update(id, (actor) => rebindActor(actor, idMap));
     }
   }
 
@@ -234,19 +242,15 @@ export class SceneTree {
       case "actor-transformed":
         return this.#actors.has(command.id);
       case "actor-moved":
-        return this.#actors.has(command.id) &&
-          (command.anchor === undefined || command.parentId !== null) &&
-          this.#actors.isParent(command.parentId) &&
-          !this.isInstance(command.parentId) &&
-          !this.#actors.isWithin(command.parentId, command.id);
+        return !isAnchorWithoutParent(command) &&
+          this.#actors.canMove(command.id, command.parentId, command.beforeId);
       case "component-added":
-        return this.#actors.has(command.actorId) &&
-          !this.isInstance(command.actorId) &&
+        return this.canHoldComponents(command.actorId) &&
           !this.#owners.has(command.component.id) &&
           fitsDataLimit(command.component.data);
       case "component-removed":
       case "component-moved":
-        return this.#owners.get(command.id) === command.actorId;
+        return this.#owners.owns(command.actorId, command.id);
       case "component-changed":
         return this.#canChangeComponent(command);
       case "component-assets-changed":
@@ -266,9 +270,7 @@ export class SceneTree {
 
       case "actor-removed":
         for (const actor of this.#actors.remove(command.id)) {
-          for (const component of actor.components) {
-            this.#owners.delete(component.id);
-          }
+          this.#owners.forget(actor);
         }
         break;
 
@@ -309,10 +311,7 @@ export class SceneTree {
         this.#actors.update(command.id, (actor) => {
           return {
             ...actor,
-            transform: {
-              ...actor.transform,
-              ...structuredClone(command.transform)
-            }
+            transform: SceneTransform.patch(command.transform).applyTo(actor.transform)
           };
         });
         break;
@@ -328,7 +327,7 @@ export class SceneTree {
             )
           };
         });
-        this.#owners.set(command.component.id, command.actorId);
+        this.#owners.add(command.component.id, command.actorId);
         break;
 
       case "component-removed":
@@ -360,7 +359,7 @@ export class SceneTree {
         this.#updateComponent(command.id, (component) => {
           return {
             ...component,
-            data: applyComponentChange(component.data, command)
+            data: new ComponentChange(command).applyTo(component.data)
           };
         });
         break;
@@ -378,10 +377,7 @@ export class SceneTree {
         break;
 
       case "environment-changed":
-        this.#environment = {
-          ...this.#environment,
-          ...structuredClone(command.environment)
-        };
+        this.#environment = SceneEnvironment.patch(command.environment).applyTo(this.#environment);
         break;
     }
   }
@@ -393,11 +389,10 @@ export class SceneTree {
       hasActor: () => false,
       hasComponent: () => false,
       isOuterParent: (actor) => actor.parentId === null,
-      isOuterInstance: () => false,
       isOwnScene: () => false
     });
     if (problem !== null) {
-      throw new InvalidEntryError(problem.entry, problem.id, problem.reason);
+      throw problem;
     }
 
     this.clear();
@@ -408,20 +403,20 @@ export class SceneTree {
   clear(): void {
     this.#actors.clear();
     this.#owners.clear();
-    this.#environment = createSceneEnvironment();
+    this.#environment = SceneEnvironment.create();
   }
 
   toJSON(): SceneSnapshot {
-    return {
-      environment: this.environment,
-      actors: [...this.actors()]
-    };
+    return ownedCopy({
+      environment: this.#environment,
+      actors: [...this.#actors.scan()]
+    });
   }
 
   #peekOwner(
     componentId: string
-  ): Readonly<SceneActorJSON> | undefined {
-    const ownerId = this.#owners.get(componentId);
+  ): SceneActorView | undefined {
+    const ownerId = this.#owners.owner(componentId);
 
     return ownerId === undefined ? undefined : this.#actors.peek(ownerId);
   }
@@ -454,18 +449,17 @@ export class SceneTree {
   ): boolean {
     return beforeId === undefined || (
       beforeId !== id &&
-      this.#owners.get(beforeId) === actorId
+      this.#owners.owns(actorId, beforeId)
     );
   }
 
   #canAdd(
-    actors: readonly SceneActorJSON[]
+    actors: readonly SceneActorView[]
   ): boolean {
     return actors.length > 0 && findActorListProblem(actors, {
       hasActor: (id) => this.#actors.has(id),
       hasComponent: (id) => this.#owners.has(id),
-      isOuterParent: (actor, index) => index === 0 && this.#actors.isParent(actor.parentId),
-      isOuterInstance: (id) => this.isInstance(id),
+      isOuterParent: (actor, index) => index === 0 && this.canContain(actor.parentId),
       isOwnScene: (sceneId) => sceneId === this.#sceneId
     }) === null;
   }
@@ -473,37 +467,29 @@ export class SceneTree {
   #canChangeComponent(
     command: Extract<SceneCommand, { action: "component-changed"; }>
   ): boolean {
-    const component = this.peekComponent(command.id);
-    const unset = command.unset ?? [];
-    const keys = Object.keys(command.data);
-    if (
-      component === undefined ||
-      keys.length + unset.length === 0 ||
-      unset.some((key) => Object.hasOwn(command.data, key))
-    ) {
-      return false;
-    }
+    const component = this.component(command.id);
+    const change = ComponentChange.parse(command);
 
-    return fitsDataLimit(applyComponentChange(component.data, command));
+    return component !== undefined &&
+      change !== null &&
+      fitsDataLimit(change.applyTo(component.data));
   }
 
   #insert(
-    actors: readonly SceneActorJSON[],
+    actors: readonly SceneActorView[],
     beforeId: string | undefined
   ): void {
     for (const [index, actor] of actors.entries()) {
       this.#actors.add(actor, index === 0 ? beforeId : undefined);
-      for (const component of actor.components) {
-        this.#owners.set(component.id, actor.id);
-      }
+      this.#owners.register(actor);
     }
   }
 
   #updateComponent(
     id: string,
-    change: (component: SceneComponentJSON) => SceneComponentJSON
+    change: (component: SceneComponentView) => SceneComponentView
   ): void {
-    const ownerId = this.#owners.get(id);
+    const ownerId = this.#owners.owner(id);
     if (ownerId === undefined) {
       return;
     }
@@ -519,56 +505,63 @@ export class SceneTree {
   }
 }
 
+function isPrefabInstance(
+  actor: SceneActorView
+): boolean {
+  return actor.prefab !== undefined;
+}
+
+function isAnchorWithoutParent(
+  placement: Readonly<SceneActorPlacement>
+): boolean {
+  return placement.anchor !== undefined && placement.parentId === null;
+}
+
 function fitsDataLimit(
-  data: JSONObject
+  data: SceneComponentView["data"]
 ): boolean {
   return JSON.stringify(data).length <= COMPONENT_DATA_MAX_LENGTH;
 }
 
 function findActorListProblem(
-  actors: readonly SceneActorJSON[],
+  actors: readonly SceneActorView[],
   context: ActorListContext
-): TreeProblem | null {
-  const actorIds = new Set<string>();
-  const instanceIds = new Set<string>();
+): InvalidEntryError | null {
+  const listed = new Map<string, SceneActorView>();
   const componentIds = new Set<string>();
   for (const [index, actor] of actors.entries()) {
-    if (context.hasActor(actor.id) || actorIds.has(actor.id)) {
-      return problem("actor", actor.id, "is listed twice");
+    if (context.hasActor(actor.id) || listed.has(actor.id)) {
+      return new InvalidEntryError("actor", actor.id, "is listed twice");
     }
-    const listedParent = actor.parentId !== null && actorIds.has(actor.parentId);
-    if (!listedParent && !context.isOuterParent(actor, index)) {
-      return problem("actor", actor.id, `has no parent ${actor.parentId} before it`);
+    const parent = actor.parentId === null ? undefined : listed.get(actor.parentId);
+    if (parent === undefined && !context.isOuterParent(actor, index)) {
+      return new InvalidEntryError("actor", actor.id, `has no parent ${actor.parentId} before it`);
     }
-    if (actor.anchor !== undefined && actor.parentId === null) {
-      return problem("actor", actor.id, "has an anchor but no parent");
+    if (isAnchorWithoutParent(actor)) {
+      return new InvalidEntryError("actor", actor.id, "has an anchor but no parent");
     }
-    if (
-      actor.parentId !== null &&
-      (instanceIds.has(actor.parentId) || context.isOuterInstance(actor.parentId))
-    ) {
-      return problem("actor", actor.id, "is a child of a prefab instance");
+    if (parent !== undefined && isPrefabInstance(parent)) {
+      return new InvalidEntryError("actor", actor.id, "is a child of a prefab instance");
     }
     if (actor.prefab !== undefined) {
       if (actor.prefab.kind !== SCENE_KIND) {
-        return problem("actor", actor.id, "has a prefab that is not a scene");
+        return new InvalidEntryError("actor", actor.id, "has a prefab that is not a scene");
       }
       if (actor.components.length > 0) {
-        return problem("actor", actor.id, "is a prefab instance with components");
+        return new InvalidEntryError("actor", actor.id, "is a prefab instance with components");
       }
       if (context.isOwnScene(actor.prefab.id)) {
-        return problem("actor", actor.id, "is an instance of its own scene");
+        return new InvalidEntryError("actor", actor.id, "is an instance of its own scene");
       }
-      instanceIds.add(actor.id);
     }
-    actorIds.add(actor.id);
+    listed.set(actor.id, actor);
 
     for (const component of actor.components) {
       if (context.hasComponent(component.id) || componentIds.has(component.id)) {
-        return problem("component", component.id, "is listed twice");
+        return new InvalidEntryError("component", component.id, "is listed twice");
       }
       if (!fitsDataLimit(component.data)) {
-        return problem(
+        return new InvalidEntryError(
           "component",
           component.id,
           `has data over ${COMPONENT_DATA_MAX_LENGTH} characters`
@@ -579,27 +572,4 @@ function findActorListProblem(
   }
 
   return null;
-}
-
-function problem(
-  entry: SceneTreeEntry,
-  id: string,
-  reason: string
-): TreeProblem {
-  return {
-    entry,
-    id,
-    reason
-  };
-}
-
-function insertedBefore<T extends { id: string; }>(
-  entries: readonly T[],
-  entry: T,
-  beforeId: string | undefined
-): T[] {
-  const placed = [...entries];
-  placed.splice(slotIndex(entries.map(({ id }) => id), beforeId), 0, entry);
-
-  return placed;
 }

@@ -7,7 +7,7 @@ import {
   type TemplateResult
 } from "lit";
 import {
-  switchFogKind,
+  SceneEnvironment,
   type SceneEnvironmentJSON,
   type SceneEnvironmentPatch,
   type SceneFogJSON,
@@ -181,7 +181,7 @@ export class ScenePanel extends LitElement {
           .options=${kFogKinds}
           .value=${environment.fog.kind}
           @jolly-change=${(event: ChangeEvent<SceneFogKind>) => commit({
-            fog: switchFogKind(environment.fog, event.detail.value)
+            fog: SceneEnvironment.switchFog(environment.fog, event.detail.value)
           })}
         ></jolly-select>
         ${renderFogFields(

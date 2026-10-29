@@ -1,5 +1,4 @@
 export * from "./types.ts";
-export * from "./SceneCommandKeys.ts";
 export * from "./sceneDocumentKind.ts";
 export * from "../model/index.ts";
 export {

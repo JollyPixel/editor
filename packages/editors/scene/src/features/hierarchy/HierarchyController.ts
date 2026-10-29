@@ -276,7 +276,7 @@ export class HierarchyController {
     return MenuSession.forRow(
       HierarchyController.#rowEntries(
         editing.presets,
-        !editing.document.tree.isInstance(id)
+        editing.document.tree.canContain(id)
       ),
       () => editing.document.tree.has(id),
       (action) => this.#runRow(action, id)

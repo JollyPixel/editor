@@ -2,19 +2,24 @@
 import { randomId } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
-import type { SceneActorJSON } from "../network/types.ts";
+import type {
+  SceneActorJSON,
+  SceneActorView
+} from "../network/types.ts";
+import { ownedCopy } from "./ownedCopy.ts";
 
 // CONSTANTS
 const kCopySuffix = /^(?<base>.*) \((?<count>\d+)\)$/;
 
 export function copySubtree(
-  source: readonly Readonly<SceneActorJSON>[]
+  source: readonly SceneActorView[],
+  siblingNames: ReadonlySet<string>
 ): SceneActorJSON[] {
   const ids = new Map<string, string>();
   const componentIds = new Map<string, string>();
 
   return source.map((actor, index) => {
-    const copy = structuredClone(actor);
+    const copy = ownedCopy<SceneActorJSON>(actor);
     const id = randomId();
     ids.set(actor.id, id);
     const components = copy.components.map((component) => {
@@ -30,7 +35,7 @@ export function copySubtree(
     return {
       ...copy,
       id,
-      name: index === 0 ? copyName(actor.name) : actor.name,
+      name: index === 0 ? copyName(actor.name, siblingNames) : actor.name,
       parentId: actor.parentId === null ?
         null :
         ids.get(actor.parentId) ?? actor.parentId,
@@ -46,12 +51,15 @@ export function copySubtree(
 }
 
 function copyName(
-  name: string
+  name: string,
+  siblingNames: ReadonlySet<string>
 ): string {
-  const match = kCopySuffix.exec(name);
-  if (match?.groups === undefined) {
-    return `${name} (1)`;
+  const groups = kCopySuffix.exec(name)?.groups;
+  const base = groups === undefined ? name : groups.base;
+  let count = groups === undefined ? 1 : Number(groups.count) + 1;
+  while (siblingNames.has(`${base} (${count})`)) {
+    count++;
   }
 
-  return `${match.groups.base} (${Number(match.groups.count) + 1})`;
+  return `${base} (${count})`;
 }

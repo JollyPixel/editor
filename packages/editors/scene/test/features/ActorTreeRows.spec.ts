@@ -98,6 +98,22 @@ describe("ActorTreeRows", () => {
 
     assert.strictEqual(row.icon, PREFAB_ICON);
   });
+
+  test("refuses a drop inside a prefab instance but keeps a drop beside it", () => {
+    const document = new SceneDocument();
+    const houseId = document.addActor({ name: "House", prefab: { id: "house", kind: "scene" } })!;
+    const crateId = document.addActor({ name: "Crate" })!;
+
+    const rows = ActorTreeRows.read(
+      document.tree,
+      new Map(),
+      createSceneComponents(),
+      kNoAnchors
+    );
+
+    assert.strictEqual(rows.accepts({ movedIds: [crateId], targetId: houseId, where: "inside" }), false);
+    assert.strictEqual(rows.accepts({ movedIds: [crateId], targetId: houseId, where: "above" }), true);
+  });
 });
 
 describe("ActorTreeRows anchors", () => {

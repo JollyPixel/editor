@@ -4,8 +4,9 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  createSceneEnvironment,
-  SceneDocument
+  ComponentChange,
+  SceneDocument,
+  SceneEnvironment
 } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
@@ -66,16 +67,16 @@ describe("SceneDraft", () => {
       return document.tree.component("probe")!;
     }
 
-    draft.editComponent("probe", { data: { label: "b" } });
+    draft.editComponent("probe", new ComponentChange({ data: { label: "b" } }));
     assert.strictEqual(probe.label, "b");
     assert.deepEqual(draft.component(stored()).data, { label: "b" });
 
-    draft.commitComponent("probe", {});
+    draft.commitComponent("probe", ComponentChange.NONE);
     assert.strictEqual(probe.label, "a");
     assert.deepEqual(draft.component(stored()).data, { label: "a" });
 
-    draft.editComponent("probe", { data: { label: "c" } });
-    draft.commitComponent("probe", { data: { label: "c" } });
+    draft.editComponent("probe", new ComponentChange({ data: { label: "c" } }));
+    draft.commitComponent("probe", new ComponentChange({ data: { label: "c" } }));
     assert.deepEqual(stored().data, { label: "c" });
     assert.deepEqual(draft.component(stored()).data, { label: "c" });
   });
@@ -86,7 +87,7 @@ describe("SceneDraft", () => {
 
     draft.editEnvironment({ background: "#ff0000" });
     document.load({
-      environment: createSceneEnvironment(),
+      environment: SceneEnvironment.create(),
       actors: []
     });
 

@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { SceneDocument } from "@jolly-pixel/asset.scene/client";
+import {
+  ownedCopy,
+  SceneDocument
+} from "@jolly-pixel/asset.scene/client";
 import {
   ActorComponent,
   Systems,
@@ -108,7 +111,7 @@ describe("SelectionHighlight", () => {
 
     document.load({
       environment: document.tree.environment,
-      actors: [document.tree.actor(id)!]
+      actors: [ownedCopy(document.tree.actor(id)!)]
     });
 
     assert.strictEqual(outlined(id), true);

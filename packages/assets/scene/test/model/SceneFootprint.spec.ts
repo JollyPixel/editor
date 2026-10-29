@@ -6,10 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  sceneConflictKeys,
-  sceneWriteKeys
-} from "#src/network/SceneCommandKeys.ts";
+import { SceneFootprint } from "#src/model/SceneFootprint.ts";
 import { SceneTransform } from "#src/model/SceneTransform.ts";
 import type { SceneCommand } from "#src/network/types.ts";
 import {
@@ -18,6 +15,12 @@ import {
   loadedTree,
   sampleActors
 } from "../helpers/scene.ts";
+
+function conflictKeys(
+  footprint: SceneFootprint
+): string[] {
+  return footprint.conflictRefs().map((ref) => ref.key);
+}
 
 function transformKeys(
   id: string
@@ -41,7 +44,7 @@ function actorKeys(
   ];
 }
 
-describe("sceneConflictKeys", () => {
+describe("SceneFootprint.conflictRefs", () => {
   const cases: [SceneCommand, string[]][] = [
     [{ action: "actor-added", actors: [actor("D")] }, []],
     [{ action: "actor-renamed", id: "A", name: "X" }, ["name:A"]],
@@ -73,13 +76,13 @@ describe("sceneConflictKeys", () => {
 
   for (const [command, expected] of cases) {
     test(`keys ${command.action} by ${expected.join(", ") || "nothing"}`, () => {
-      assert.deepEqual(sceneConflictKeys(command, []), expected);
+      assert.deepEqual(conflictKeys(SceneFootprint.unknown(command)), expected);
     });
   }
 
   test("keys an actor removal by every value of the subtree it erases", () => {
     const command: SceneCommand = { action: "actor-removed", id: "A" };
-    const keys = sceneConflictKeys(command, loadedTree(sampleActors()).erasedBy(command));
+    const keys = conflictKeys(SceneFootprint.capture(loadedTree(sampleActors()), command));
 
     assert.deepEqual(keys, [
       ...actorKeys("A"),
@@ -92,7 +95,7 @@ describe("sceneConflictKeys", () => {
 
   test("keys a component removal by its list and the values it erases", () => {
     const command: SceneCommand = { action: "component-removed", actorId: "A", id: "light" };
-    const keys = sceneConflictKeys(command, loadedTree(sampleActors()).erasedBy(command));
+    const keys = conflictKeys(SceneFootprint.capture(loadedTree(sampleActors()), command));
 
     assert.deepEqual(keys, [
       "components:A",
@@ -100,28 +103,5 @@ describe("sceneConflictKeys", () => {
       "component:light:color",
       "component-asset:light:cookie"
     ]);
-  });
-});
-
-describe("sceneWriteKeys", () => {
-  const structural: SceneCommand[] = [
-    { action: "actor-added", actors: [actor("D")] },
-    { action: "actor-removed", id: "A" },
-    { action: "actor-moved", id: "A", parentId: null, transform: SceneTransform.create() },
-    { action: "component-added", actorId: "A", component: component("c") },
-    { action: "component-removed", actorId: "A", id: "c" },
-    { action: "component-moved", actorId: "A", id: "c" }
-  ];
-
-  for (const command of structural) {
-    test(`leaves ${command.action} to a rebase`, () => {
-      assert.equal(sceneWriteKeys(command), null);
-    });
-  }
-
-  test("keys a value write as the room does", () => {
-    const command: SceneCommand = { action: "component-changed", id: "c", data: { a: 1 } };
-
-    assert.deepEqual(sceneWriteKeys(command), sceneConflictKeys(command, []));
   });
 });

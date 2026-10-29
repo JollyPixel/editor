@@ -7,9 +7,10 @@ import {
   LIGHT_DEFAULTS,
   MESH_GEOMETRY_DEFAULTS
 } from "@jolly-pixel/engine";
-import type {
-  JSONObject,
-  SceneComponentJSON
+import {
+  ComponentChange,
+  type JSONObject,
+  type SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
@@ -71,10 +72,10 @@ describe("ComponentInspection", () => {
     const inspection = inspect("Light", { kind: "point", intensity: 3 });
     const intensity = rowAt(inspection, "intensity");
 
-    assert.deepEqual(inspection.edit(intensity, 2), { data: { intensity: 2 } });
+    assert.deepEqual(inspection.edit(intensity, 2), new ComponentChange({ data: { intensity: 2 } }));
     assert.deepEqual(
       inspection.edit(intensity, LIGHT_DEFAULTS.intensity),
-      { unset: ["intensity"] }
+      new ComponentChange({ unset: ["intensity"] })
     );
   });
 
@@ -83,7 +84,7 @@ describe("ComponentInspection", () => {
 
     assert.deepEqual(
       inspection.edit(rowAt(inspection, "geometry", "widthSegments"), 8),
-      { data: { geometry: { kind: "sphere", radius: 2, widthSegments: 8 } } }
+      new ComponentChange({ data: { geometry: { kind: "sphere", radius: 2, widthSegments: 8 } } })
     );
   });
 
@@ -92,7 +93,7 @@ describe("ComponentInspection", () => {
 
     assert.deepEqual(
       inspection.edit(rowAt(inspection, "geometry", "kind"), "torus"),
-      { data: { geometry: { kind: "torus" } } }
+      new ComponentChange({ data: { geometry: { kind: "torus" } } })
     );
   });
 
