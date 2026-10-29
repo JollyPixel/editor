@@ -12,6 +12,7 @@ import type { ApiRoute } from "./common.ts";
 export const PROJECT_URL_PATH = "/api/project/";
 export const KINDS_SECTION = "kinds";
 export const ACCESS_SECTION = "access";
+export const KIND_FILTER_SECTION = "kindFilter";
 export const PROJECT_ROUTES = {
   rights: {
     method: "GET",
@@ -32,6 +33,14 @@ export const PROJECT_ROUTES = {
   replaceAccess: {
     method: "PUT",
     path: `settings/${ACCESS_SECTION}`
+  },
+  kindFilter: {
+    method: "GET",
+    path: KIND_FILTER_SECTION
+  },
+  replaceKindFilter: {
+    method: "PUT",
+    path: `settings/${KIND_FILTER_SECTION}`
   }
 } as const satisfies Record<string, ApiRoute>;
 export const SHARE_RIGHT = "studio.$share";
@@ -118,14 +127,23 @@ export const accessChangeSchema = z.object({
   renamedRoles: z.record(z.string().min(1), z.string().min(1))
 });
 
+export const kindFilterSchema = z.object({
+  hidden: z.array(z.string().min(1))
+});
+
 export const projectSettingsReplySchema = z.object({
   name: z.string(),
   editors: z.array(z.string()),
   kinds: z.array(kindPackageSchema),
+  kindFilter: kindFilterSchema,
   access: accessSectionSchema.optional()
 });
 
-export const settingsSectionSchema = z.enum([KINDS_SECTION, ACCESS_SECTION]);
+export const settingsSectionSchema = z.enum([
+  KINDS_SECTION,
+  ACCESS_SECTION,
+  KIND_FILTER_SECTION
+]);
 
 export type ProjectReply = z.infer<typeof projectReplySchema>;
 export type KindOptions = z.infer<typeof kindOptionsSchema>;
@@ -139,6 +157,7 @@ export type KindOptionSection = z.infer<typeof kindOptionSectionSchema>;
 export type KindPackageSettings = z.infer<typeof kindPackageSchema>;
 export type AccessSection = z.infer<typeof accessSectionSchema>;
 export type AccessChange = z.infer<typeof accessChangeSchema>;
+export type KindFilterSection = z.infer<typeof kindFilterSchema>;
 export type ProjectSettingsReply = z.infer<typeof projectSettingsReplySchema>;
 export type SettingsSectionName = z.infer<typeof settingsSectionSchema>;
 export type Right = z.infer<typeof rightSchema>;

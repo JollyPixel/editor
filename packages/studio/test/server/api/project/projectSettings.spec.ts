@@ -117,6 +117,30 @@ describe("/api/project/settings", () => {
     });
   });
 
+  test("shows the kind filter to every account but lets only studio.$settings edit it", async() => {
+    await using backend = await serveBackend();
+    const admin = await settingsClient(backend, "Alice");
+    const member = await settingsClient(backend, "Bob");
+
+    await admin.replaceKindFilter({
+      hidden: ["voxelmodel"]
+    });
+
+    assert.deepEqual((await member.kindFilter()).hidden, ["voxelmodel"]);
+    await assert.rejects(member.replaceKindFilter({
+      hidden: []
+    }), {
+      name: "ApiRequestError",
+      status: 403
+    });
+    await assert.rejects(admin.replaceKindFilter({
+      hidden: ["unknown"]
+    }), {
+      name: "ApiRequestError",
+      status: 400
+    });
+  });
+
   test("answers 400 for invalid kind options and 409 for a role an account holds", async() => {
     await using backend = await serveBackend();
     const admin = await settingsClient(backend, "Alice");

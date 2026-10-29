@@ -22,6 +22,7 @@ import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
+import { AssetKindSet } from "../catalog/AssetKindSet.ts";
 import { ChangeController } from "./ChangeController.ts";
 import {
   STUDIO_USER_CHANGE,
@@ -307,6 +308,7 @@ export class Studio extends LitElement {
     this._assets = {
       catalog,
       kinds: session.kinds,
+      kindFilter: user.online ? user.project : null,
       shares: user.online ? user.shares : null,
       browserState: this.#browserState
     };
@@ -396,6 +398,7 @@ export class Studio extends LitElement {
               .scopes=${this.#scopes}
               .user=${user}
               .catalog=${this._assets?.catalog ?? null}
+              .kinds=${this._assets?.kinds ?? AssetKindSet.EMPTY}
               .browserState=${this.#browserState}
               @avatar-change=${this.#replaceAvatar}
             ></studio-settings>

@@ -12,6 +12,7 @@ import type {
   AccessChange,
   ProjectSettingsReply
 } from "../../../shared/api/project.ts";
+import { KindFilter } from "../../../shared/KindFilter.ts";
 import { ProjectRights } from "../../../shared/ProjectRights.ts";
 import { SettingsDraftController } from "../../../src/shell/settings/project/SettingsDraftController.ts";
 
@@ -28,6 +29,9 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
     name: "project",
     editors: [],
     kinds: [],
+    kindFilter: {
+      hidden: []
+    },
     access: {
       defaultRole: "spectator",
       roles: {
@@ -41,6 +45,7 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
   const project = new StudioProjectSettings({
     read: async() => reply,
     replaceKinds: async() => reply,
+    replaceKindFilter: async() => reply,
     replaceAccess: async({ access }: AccessChange) => {
       reply = {
         ...reply,
@@ -56,7 +61,7 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
     editSettings: true,
     audit: true,
     manageAccess: true
-  }));
+  }), KindFilter.NONE);
   await project.load();
   const controller = new SettingsDraftController(kHost, {
     saved: (data) => (data.access === undefined ? null : AccessDraft.from(data.access)),

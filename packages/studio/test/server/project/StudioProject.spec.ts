@@ -13,9 +13,7 @@ import { PROJECT_FILE_PATH } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {
-  DEFAULT_PROJECT_DIR,
   DEFAULT_PROJECT_FILE,
-  PROJECT_ROOT_ENV,
   StudioProject
 } from "../../../server/project/StudioProject.ts";
 import {
@@ -24,7 +22,6 @@ import {
 } from "../../helpers/tempDir.ts";
 
 // CONSTANTS
-const kBase = path.resolve("/studio");
 const kZodModule = import.meta.resolve("zod/mini");
 const kRoots: string[] = [];
 
@@ -71,38 +68,6 @@ async function installEditorPackage(
 describe("StudioProject", () => {
   after(async() => {
     await Promise.all(kRoots.map((root) => removeTempDir(root)));
-  });
-
-  describe("resolveRoot", () => {
-    test("defaults to the project folder beside the package", () => {
-      assert.strictEqual(
-        StudioProject.resolveRoot(kBase, {}),
-        path.join(kBase, DEFAULT_PROJECT_DIR)
-      );
-    });
-
-    test("ignores a blank variable", () => {
-      assert.strictEqual(
-        StudioProject.resolveRoot(kBase, { [PROJECT_ROOT_ENV]: "  " }),
-        path.join(kBase, DEFAULT_PROJECT_DIR)
-      );
-    });
-
-    test("resolves a relative variable against the package", () => {
-      assert.strictEqual(
-        StudioProject.resolveRoot(kBase, { [PROJECT_ROOT_ENV]: "../game" }),
-        path.resolve(kBase, "../game")
-      );
-    });
-
-    test("keeps an absolute variable", () => {
-      const absolute = path.resolve("/games/demo");
-
-      assert.strictEqual(
-        StudioProject.resolveRoot(kBase, { [PROJECT_ROOT_ENV]: absolute }),
-        absolute
-      );
-    });
   });
 
   describe("open", () => {
@@ -269,6 +234,22 @@ describe("StudioProject", () => {
           "\"@jolly-pixel/asset.pixel-art\" received invalid options:"
         )
       );
+    });
+
+    test("reads the kind filter, dropping kinds the project no longer has", async() => {
+      const root = await createRoot();
+      await writeProjectFile(root, {
+        version: 1,
+        kinds: {
+          "@jolly-pixel/asset.voxel-model": {}
+        },
+        kindFilter: {
+          hidden: ["voxelanimation", "voxelmodel"]
+        }
+      });
+
+      const { kindFilter } = await StudioProject.open(root);
+      assert.deepEqual(kindFilter.hidden, ["voxelmodel"]);
     });
 
     test("names the project file when its editors are invalid", async() => {

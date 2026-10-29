@@ -8,8 +8,10 @@ import { AttachmentDisposition } from "../../../shared/AttachmentDisposition.ts"
 import {
   PROJECT_ROUTES,
   accessChangeSchema,
+  kindFilterSchema,
   kindOptionsSchema,
   type AccessChange,
+  type KindFilterSection,
   type KindOptions,
   type ProjectReply
 } from "../../../shared/api/project.ts";
@@ -32,6 +34,10 @@ interface ReplaceAccessRoute {
   Body: AccessChange;
 }
 
+interface ReplaceKindFilterRoute {
+  Body: KindFilterSection;
+}
+
 export async function projectRoutes(
   app: FastifyInstance,
   options: ProjectRoutesOptions
@@ -42,7 +48,9 @@ export async function projectRoutes(
     archive: archiveRoute,
     settings: settingsRoute,
     replaceKinds,
-    replaceAccess
+    replaceAccess,
+    kindFilter,
+    replaceKindFilter
   } = PROJECT_ROUTES;
 
   app.route({
@@ -90,6 +98,23 @@ export async function projectRoutes(
       body: accessChangeSchema
     },
     handler: (request) => settings.replaceAccess(
+      signedInAccount(request),
+      request.body
+    )
+  });
+  app.route({
+    method: kindFilter.method,
+    url: kindFilter.path,
+    handler: () => settings.kindFilter()
+  });
+  app.route<ReplaceKindFilterRoute>({
+    method: replaceKindFilter.method,
+    url: replaceKindFilter.path,
+    bodyLimit: kMaxSettingsBytes,
+    schema: {
+      body: kindFilterSchema
+    },
+    handler: (request) => settings.replaceKindFilter(
       signedInAccount(request),
       request.body
     )

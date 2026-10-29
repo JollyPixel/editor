@@ -17,13 +17,16 @@ import { StudioAccess } from "./StudioAccess.ts";
 import type { StudioProject } from "./StudioProject.ts";
 import {
   ACCESS_SECTION,
+  KIND_FILTER_SECTION,
   KINDS_SECTION,
   type AccessChange,
   type AccessSection,
+  type KindFilterSection,
   type KindOptions,
   type KindPackageSettings,
   type ProjectSettingsReply
 } from "../../shared/api/project.ts";
+import { KindFilter } from "../../shared/KindFilter.ts";
 import type { ProjectRights } from "../../shared/ProjectRights.ts";
 import { InvalidSettingsError } from "./errors/InvalidSettingsError.ts";
 import { RoleInUseError } from "./errors/RoleInUseError.ts";
@@ -79,7 +82,8 @@ export class ProjectSettings {
       editors: Array.from(this.#project.editors, (editor) => editor.package),
       kinds: this.#project.kinds.packages.map(
         (kindPackage) => this.#kindPackage(kindPackage)
-      )
+      ),
+      kindFilter: this.kindFilter()
     };
     if (rights.allows("manageAccess")) {
       data.access = this.#project.access.toJSON();
@@ -105,6 +109,47 @@ export class ProjectSettings {
     return this.#serialize(account, async() => {
       this.rights(account).require("manageAccess");
       await this.#replaceAccess(account.id, change);
+    });
+  }
+
+  kindFilter(): KindFilterSection {
+    return this.#project.kindFilter.toJSON();
+  }
+
+  replaceKindFilter(
+    account: Account,
+    kindFilter: KindFilterSection
+  ): Promise<ProjectSettingsReply> {
+    return this.#serialize(account, async() => {
+      this.rights(account).require("editSettings");
+      await this.#replaceKindFilter(account.id, KindFilter.from(kindFilter));
+    });
+  }
+
+  async #replaceKindFilter(
+    actorId: string,
+    next: KindFilter
+  ): Promise<void> {
+    const known = new Set(
+      this.#project.kinds.descriptors().map((descriptor) => descriptor.kind)
+    );
+    const unknown = next.hidden.find((kind) => !known.has(kind));
+    if (unknown !== undefined) {
+      throw new InvalidSettingsError(
+        `"${unknown}" is not an asset kind of the project`
+      );
+    }
+    const previous = this.#project.kindFilter;
+    if (next.equals(previous)) {
+      return;
+    }
+
+    await this.#project.file.replace(KIND_FILTER_SECTION, next.toJSON());
+    this.#project.replaceKindFilter(next);
+    this.#audit.recordSettings(actorId, {
+      section: KIND_FILTER_SECTION,
+      before: previous.toJSON(),
+      after: next.toJSON()
     });
   }
 

@@ -45,7 +45,8 @@ import { askConversion } from "./askConversion.ts";
 import { assetOpenEvent } from "./assetOpen.ts";
 import {
   AssetTreeView,
-  type AssetDropQuestions
+  type AssetDropQuestions,
+  type KindFilterSource
 } from "./AssetTreeView.ts";
 import {
   assetMenu,
@@ -64,6 +65,7 @@ const kDropQuestions: AssetDropQuestions = {
 export interface AssetBrowserOptions {
   catalog: CatalogClient;
   kinds: AssetKindSet;
+  kindFilter: KindFilterSource | null;
   shares: StudioShareLinks | null;
   browserState: BrowserState;
 }
@@ -364,6 +366,7 @@ export class AssetBrowser extends LitElement {
     this.#view = options === null ? null : new AssetTreeView({
       catalog: options.catalog,
       kinds: options.kinds,
+      kindFilter: options.kindFilter,
       browserState: options.browserState,
       prompts: {
         open: (assetId) => this.#open(assetId),

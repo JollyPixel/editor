@@ -34,6 +34,8 @@ import {
 } from "../../catalog/AssetTreeModel.ts";
 import { DroppedFile } from "../../browser/DroppedFile.ts";
 import type { BrowserState } from "../../browser/BrowserState.ts";
+import { KIND_FILTER_CHANGE } from "../../project/StudioProjectSettings.ts";
+import { KindFilter } from "../../../shared/KindFilter.ts";
 import {
   AssetCommands,
   type AssetCommandCatalog,
@@ -96,9 +98,17 @@ export interface AssetActionPrompts {
   pickFile(accept: readonly string[]): Promise<File | null>;
 }
 
+export interface KindFilterSource extends EventTarget {
+  readonly kindFilter: KindFilter;
+}
+
 export interface AssetTreeViewOptions {
   catalog: AssetTreeCatalog;
   kinds: AssetKindSet;
+  /**
+   * The project's kind filter; `null` offers every kind.
+   */
+  kindFilter: KindFilterSource | null;
   browserState: AssetTreeState;
   /**
    * What the actions need from the page: dialogs, inline rename, opening.
@@ -115,6 +125,7 @@ export interface AssetTreeViewOptions {
 export class AssetTreeView {
   #catalog: AssetTreeCatalog;
   #kinds: AssetKindSet;
+  #kindFilter: KindFilterSource | null;
   #browserState: AssetTreeState;
   #prompts: AssetActionPrompts;
   #commands: AssetCommands;
@@ -126,6 +137,7 @@ export class AssetTreeView {
   #layout = CatalogLayout.EMPTY;
   #kind: string;
   #kindOptions: readonly JollyOption<string>[] = [kAllKinds];
+  #recordKinds: ReadonlySet<string> = new Set();
   #expanded: ReadonlySet<string>;
   #selected: readonly string[] = [];
   #pendingLabels: ReadonlyMap<string, string> = new Map();
@@ -138,6 +150,7 @@ export class AssetTreeView {
   ) {
     this.#catalog = options.catalog;
     this.#kinds = options.kinds;
+    this.#kindFilter = options.kindFilter;
     this.#browserState = options.browserState;
     this.#prompts = options.prompts;
     this.#onChange = options.onChange;
@@ -151,6 +164,10 @@ export class AssetTreeView {
     this.#expanded = options.browserState.expandedFolders;
     this.#catalog.on("change", this.#onCatalogChange);
     this.#catalog.on("dependencies", this.#onDependenciesChange);
+    this.#kindFilter?.addEventListener(
+      KIND_FILTER_CHANGE,
+      this.#onKindFilterChange
+    );
     this.refresh();
   }
 
@@ -415,6 +432,10 @@ export class AssetTreeView {
   dispose(): void {
     this.#catalog.off("change", this.#onCatalogChange);
     this.#catalog.off("dependencies", this.#onDependenciesChange);
+    this.#kindFilter?.removeEventListener(
+      KIND_FILTER_CHANGE,
+      this.#onKindFilterChange
+    );
   }
 
   #expand(
@@ -502,20 +523,24 @@ export class AssetTreeView {
     }
   }
 
+  #offerKinds(): void {
+    const kindFilter = this.#kindFilter?.kindFilter ?? KindFilter.NONE;
+    this.#kindOptions = [
+      kAllKinds,
+      ...this.#kinds.toOptions().filter(({ value }) => value === this.#kind || (
+        this.#recordKinds.has(value) && kindFilter.shows(value)
+      ))
+    ];
+  }
+
   #rebuild(): void {
     const records = [...this.#catalog.records()];
     const folderNames = [...this.#catalog.folders()];
     this.#layout = new CatalogLayout(records, folderNames);
     this.#stale = false;
 
-    const shownKinds = new Set(records.map((record) => record.kind));
-    shownKinds.add(this.#kind);
-    this.#kindOptions = [
-      kAllKinds,
-      ...this.#kinds.toOptions().filter(
-        (option) => shownKinds.has(option.value)
-      )
-    ];
+    this.#recordKinds = new Set(records.map((record) => record.kind));
+    this.#offerKinds();
 
     const model = new AssetTreeModel(records, {
       presenter: this.#kinds,
@@ -564,6 +589,11 @@ export class AssetTreeView {
 
   readonly #onDependenciesChange = (): void => {
     this.#stale = true;
+    this.#onChange();
+  };
+
+  readonly #onKindFilterChange = (): void => {
+    this.#offerKinds();
     this.#onChange();
   };
 }

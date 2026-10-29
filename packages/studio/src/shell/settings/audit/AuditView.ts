@@ -55,11 +55,6 @@ export class AuditView extends LitElement {
       align-items: end;
     }
 
-    .dates {
-      display: flex;
-      gap: var(--jolly-space-2);
-    }
-
     label {
       display: flex;
       flex-direction: column;
@@ -69,6 +64,9 @@ export class AuditView extends LitElement {
     }
 
     input[type="date"] {
+      box-sizing: border-box;
+      width: 100%;
+      min-width: 0;
       padding: var(--jolly-space-1);
       border: 1px solid var(--jolly-border);
       border-radius: var(--jolly-radius-sm);
@@ -245,28 +243,26 @@ export class AuditView extends LitElement {
             });
           }}
         ></jolly-select>
-        <div class="dates">
-          <label>From
-            <input
-              type="date"
-              data-filter="from"
-              .value=${data.from ?? ""}
-              @change=${(event: Event) => {
-                void pages.filter({ from: (event.target as HTMLInputElement).value });
-              }}
-            >
-          </label>
-          <label>To
-            <input
-              type="date"
-              data-filter="to"
-              .value=${data.to ?? ""}
-              @change=${(event: Event) => {
-                void pages.filter({ to: (event.target as HTMLInputElement).value });
-              }}
-            >
-          </label>
-        </div>
+        <label>From
+          <input
+            type="date"
+            data-filter="from"
+            .value=${data.from ?? ""}
+            @change=${(event: Event) => {
+              void pages.filter({ from: (event.target as HTMLInputElement).value });
+            }}
+          >
+        </label>
+        <label>To
+          <input
+            type="date"
+            data-filter="to"
+            .value=${data.to ?? ""}
+            @change=${(event: Event) => {
+              void pages.filter({ to: (event.target as HTMLInputElement).value });
+            }}
+          >
+        </label>
         <jolly-button
           data-action="refresh"
           ?disabled=${pages.loading}
