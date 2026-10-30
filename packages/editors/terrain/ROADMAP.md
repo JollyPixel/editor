@@ -162,8 +162,15 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   grey where the click would be refused, and the chunk borders show while
   the tool is selected. A drag works on every chunk the cursor crosses and
   undoes as one step. The Detail mode waits for the resolution tiers.
-- **Next:** resolution tiers ×2 and ×4, set from the Chunks tool's Detail
-  mode.
+- **Tier data: done** (2026-10-30). A chunk holds its heights and hole mask
+  at ×1, ×2 or ×4, and `tier-changed` moves it between them: refining keeps
+  the drawn surface, coarsening keeps every second or fourth sample, and the
+  undo brings the replaced heights and holes back. Tiles carry their tier,
+  so a patch made at the old tier is refused and answered with the chunk's
+  current tier. The view and the brushes still read a refined chunk's 1 m
+  samples, and nothing in the editor changes a tier yet.
+- **Next:** tier rendering: one height and hole array per tier, the extra
+  quadtree levels, and morphing at a coarser neighbour's edge.
 
 Tick a box when its item lands, and move **Next** along with it.
 

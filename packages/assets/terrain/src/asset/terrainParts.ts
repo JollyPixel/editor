@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import {
-  HOLE_BYTES,
+  tierOfHoleBytes,
   type ChunkCoord,
   type TerrainChunk,
   type TerrainReader
@@ -10,7 +10,7 @@ import {
 import type { TerrainModel } from "../model/TerrainModel.ts";
 import { parseChunkPart } from "../network/chunkParts.ts";
 import {
-  decodeHeightBytes,
+  decodeChunkHeightBytes,
   encodeHeightBytes
 } from "../network/heights.ts";
 import {
@@ -24,7 +24,7 @@ const kCodecs: Readonly<Record<ChunkChannel, ChunkPartCodec>> = {
   heights: {
     encode: (chunk) => encodeHeightBytes(chunk.copyHeights()),
     load: ({ terrain }, coord, content) => {
-      const heights = decodeHeightBytes(content);
+      const heights = decodeChunkHeightBytes(content);
       if (heights === null) {
         return false;
       }
@@ -52,10 +52,11 @@ const kCodecs: Readonly<Record<ChunkChannel, ChunkPartCodec>> = {
   holes: {
     encode: (chunk) => (chunk.holes.empty ? null : chunk.holes.copy()),
     load: ({ terrain }, coord, content) => {
-      if (content.length !== HOLE_BYTES) {
+      const tier = tierOfHoleBytes(content.length);
+      if (tier === null) {
         return false;
       }
-      if (terrain.has(coord)) {
+      if (terrain.chunk(coord)?.tier === tier) {
         terrain.loadHoles(coord, content);
       }
 

@@ -8,6 +8,7 @@ import {
 
 // Import Internal Dependencies
 import { isMaterialCommand } from "../model/materialCommands.ts";
+import { patchTileCoord } from "./patchTile.ts";
 import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
 import {
   CHUNK_CHANNELS,
@@ -97,6 +98,9 @@ export function touchedParts(
   command: TerrainCommand
 ): string[] {
   const chunks = touchedChunks(command);
+  if (command.action === "tier-changed") {
+    return chunks.flatMap((coord) => [chunkPartId(coord, "heights"), chunkPartId(coord, "holes")]);
+  }
   if (!isTilePatchCommand(command)) {
     return chunks.flatMap(chunkPartIds);
   }
@@ -109,6 +113,9 @@ export function touchedParts(
 export function outsideCommand<TCommand extends TerrainCommand>(
   command: TCommand
 ): TCommand | null {
+  if (command.action === "tier-changed") {
+    return null;
+  }
   if (!isTilePatchCommand(command)) {
     return command;
   }
@@ -116,7 +123,15 @@ export function outsideCommand<TCommand extends TerrainCommand>(
     return null;
   }
 
-  const outside = filterTiles(command, ({ tile }) => kOverviewTiles.has(tile));
+  const outside = filterTiles(command, (tile) => {
+    if (command.action === "splat-patched") {
+      return kOverviewTiles.has(tile.tile);
+    }
+
+    const coord = patchTileCoord(tile);
+
+    return coord !== null && isOverviewTile(coord);
+  });
 
   return outside.tiles.length === 0 ? null : outside;
 }

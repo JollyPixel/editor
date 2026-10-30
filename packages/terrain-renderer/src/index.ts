@@ -14,8 +14,22 @@ export {
 } from "./terrain/OverviewMap.ts";
 export type { SampleBlock } from "./terrain/SampleBlock.ts";
 export {
+  CHUNK_TIERS,
+  chunkResolution,
+  chunkSampleCount,
+  isChunkTier,
+  tierOfSampleCount,
+  type ChunkTier
+} from "./terrain/chunkTier.ts";
+export {
+  resampleHeights,
+  resampleHoles
+} from "./terrain/chunkResample.ts";
+export {
   HOLE_BYTES,
   HOLE_TILE_BYTES,
+  holeBytes,
+  tierOfHoleBytes,
   type HoleMask
 } from "./terrain/HoleMask.ts";
 export {
@@ -47,6 +61,9 @@ export {
   TILE_SAMPLES,
   TILES_PER_CHUNK,
   TileCoord,
+  tileCount,
+  tilesPerSide,
+  type TileArea,
   type TileKey,
   type TilePatch
 } from "./terrain/TileCoord.ts";

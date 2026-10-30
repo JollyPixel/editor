@@ -26,7 +26,8 @@ correction.
 A height patch is cut into 16×16 tiles, a hole patch into 16×16 quad tiles
 and a splat patch into 32×32 texel tiles, so a chunk at ×1 has 4×4 of each.
 A refined chunk has 8×8 or 16×16 height and hole tiles. Each tile
-carries its chunk, its index in the chunk (`z × 4 + x`) and its new values. A
+carries its chunk, its index in the chunk (`z × tiles per side + x`), its
+tier when it is ×2 or ×4, and its new values. A
 commit holds at most 1024 tiles. The author's document captures the values
 the stroke replaced when it commits, and builds the inverse for undo from
 them.
@@ -39,9 +40,11 @@ compressed one by one.
 ### Collision keys
 
 Each tile has the key `chunk:<x>,<z>:<channel>:<tile>`, where the channel is
-`h`, `s` or `x` (holes). `chunk-added` and `chunk-removed` hold the key
-`chunk:<x>,<z>` and every tile key of their chunk, so undoing a chunk's
-creation is refused once someone has sculpted it. Two commands collide when
+`h`, `s` or `x` (holes), followed by the tier on a refined chunk: `h2` or
+`x4`. `chunk-added` and `chunk-removed` hold the key `chunk:<x>,<z>`,
+`chunk:<x>,<z>:tier` and every tile key of their chunk at every tier, so
+undoing a chunk's creation is refused once someone has sculpted it. Two
+commands collide when
 they share a key. A collision resolves last write wins: the later command is
 admitted and overwrites the tile.
 
@@ -49,7 +52,9 @@ Heights, splat and holes use separate channels, so a peer painting a tile
 never refuses another sculpting it, and the reverse.
 
 `tier-changed` holds `chunk:<x>,<z>:tier` and every height and hole tile key
-of its chunk at both tiers. A point-of-interest command is keyed like a
+of its chunk at every tier. An undo checks those tiles: only the ones at the
+chunk's current tier hold values, so a peer's sculpt after the change refuses
+it. A point-of-interest command is keyed like a
 material command, under `poi:<id>`.
 
 `material-updated` holds `material:<id>:<field>` for each field it changes,
@@ -138,7 +143,8 @@ asset parts to `@jolly-pixel/asset-server`:
   `<x>_<z>`, its splat, `<x>_<z>_splat`, and its holes, `<x>_<z>_holes`,
   absent while the chunk has none. The chunk's manifest entry holds
   `hasHoles: true` while that part exists, since the server lists parts from
-  the manifest alone. A client subscribes to all three and gets `null` for a
+  the manifest alone, and its `tier` when it is ×2 or ×4, so the parts load
+  in any order. A client subscribes to all three and gets `null` for a
   hole part that does not exist. The chunk loads as soon as its heights
   arrive, painted with the overview's materials until its splat arrives; a
   splat or hole mask that arrives first waits for the heights. A terrain saved before splat parts existed loads as Ground and
@@ -181,12 +187,13 @@ decides which chunks are loaded.
   subscribes to it when it lies within the radius, and unloads it otherwise.
 - The room sends `heights-patched` whole to the members subscribed to its
   chunks. The others receive `outside(command)`: the same command cut down to
-  the tiles that hold overview samples, tiles 0, 2, 8 and 10 of each chunk,
+  the tiles that hold overview samples, tiles 0, 2, 8 and 10 of a ×1 chunk,
   or nothing when no such tile changed. `splat-patched` is cut the same way,
   since the same tile indices hold the overview's dominant materials. A client
   applies the tiles of an unloaded chunk to its overview only. The overview
-  ignores holes, so the others receive nothing of `holes-patched`, and only
-  the overview tiles of `tier-changed`. `chunk-added`, `chunk-removed`, the
+  ignores holes, so the others receive nothing of `holes-patched`. A tier
+  change keeps every overview sample, so they receive nothing of
+  `tier-changed` either. `chunk-added`, `chunk-removed`, the
   material and the point-of-interest commands go to every member.
 - The chunks of every point of interest stay subscribed at any distance, in
   the layers the stream circle leaves free; see
@@ -204,7 +211,9 @@ A collision alone never refuses a commit, since the later one wins. A commit
 is refused, in whole or in part, when:
 
 - a tile's chunk was removed in the meantime;
-- a tile's chunk changed tier, so the patch no longer matches its grid;
+- a tile's chunk changed tier, so the patch no longer matches its grid; when
+  nothing else answers the author, the correction is a `tier-changed` with
+  the chunk's current heights and holes;
 - a tile holds a height that is not finite or lies outside `[-4096, 4096]` m;
 - the author lacks the right to edit the terrain.
 

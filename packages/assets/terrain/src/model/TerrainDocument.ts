@@ -7,6 +7,7 @@ import {
 import {
   ChunkCoord,
   type ChunkKey,
+  type ChunkTier,
   type TerrainReader,
   type TileCoord,
   type TilePatch
@@ -25,6 +26,10 @@ import {
   encodeSplatTilePatch,
   type SplatTilePatch
 } from "../network/splat.ts";
+import {
+  currentTier,
+  resampledTier
+} from "../network/tierCommands.ts";
 import { currentTiles } from "../network/tilePatchCommands.ts";
 import { encodeTilePatch } from "../network/tilePatches.ts";
 import type {
@@ -207,6 +212,21 @@ export class TerrainDocument extends CommandDocument<
     return this.commit({ action: "chunk-removed", x, z });
   }
 
+  changeTier(
+    x: number,
+    z: number,
+    tier: ChunkTier
+  ): boolean {
+    const coord = new ChunkCoord(x, z);
+    if (this.terrain.chunk(coord)?.tier !== tier) {
+      const command = resampledTier(this.terrain, coord, tier);
+
+      return command !== null && this.commit(command);
+    }
+
+    return false;
+  }
+
   patchTiles(
     patches: Iterable<TilePatch>
   ): boolean {
@@ -306,6 +326,11 @@ function invertCommand(
       return chunk === undefined ?
         [] :
         [{ action: "chunk-added", ...loadedChunkEntry(chunk) }];
+    }
+    case "tier-changed": {
+      const chunk = terrain.chunk(new ChunkCoord(command.x, command.z));
+
+      return chunk === undefined ? [] : [currentTier(chunk)];
     }
     case "heights-patched":
     case "splat-patched":

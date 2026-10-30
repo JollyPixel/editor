@@ -253,7 +253,7 @@ function marchChunk(
   hitHoles: boolean
 ): TerrainHit | null {
   const { origin: start, direction } = ray;
-  const { holes } = quads.chunk;
+  const { chunk } = quads;
   const origin = quads.chunk.coord.originSample;
   const last = { x: origin.x + CHUNK_SAMPLES - 1, z: origin.z + CHUNK_SAMPLES - 1 };
   let quadX = clamp(Math.floor(start.x + direction.x * enter), origin.x, last.x);
@@ -266,7 +266,7 @@ function marchChunk(
   let northBlock = boundary(start.z, direction.z, quadZ);
 
   while (quadX >= origin.x && quadX <= last.x && quadZ >= origin.z && quadZ <= last.z) {
-    const solid = hitHoles || !holes.isHole(quadX - origin.x, quadZ - origin.z);
+    const solid = hitHoles || !chunk.holeAt(quadX - origin.x, quadZ - origin.z);
     const hit = solid ? hitQuad(quads.triangles(quadX, quadZ), ray) : null;
     if (hit !== null) {
       return hit;

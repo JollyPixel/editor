@@ -3,6 +3,13 @@ import {
   CHUNK_SAMPLES,
   type ChunkCoord
 } from "./ChunkCoord.ts";
+import {
+  CHUNK_TIERS,
+  chunkResolution,
+  chunkSampleCount,
+  tierOfSampleCount,
+  type ChunkTier
+} from "./chunkTier.ts";
 import { HoleMask } from "./HoleMask.ts";
 import { SplatMap } from "./SplatMap.ts";
 import {
@@ -15,7 +22,7 @@ export const HEIGHT_RANGE = {
   min: -4096,
   max: 4096
 } as const;
-export const CHUNK_SAMPLE_COUNT = CHUNK_SAMPLES * CHUNK_SAMPLES;
+export const CHUNK_SAMPLE_COUNT = chunkSampleCount(1);
 
 export function isValidHeight(
   height: number
@@ -28,7 +35,7 @@ export function isValidHeight(
 export function isValidHeights(
   heights: Float32Array
 ): boolean {
-  return heights.length === CHUNK_SAMPLE_COUNT &&
+  return tierOfSampleCount(heights.length) !== null &&
     heights.every(isValidHeight);
 }
 
@@ -39,6 +46,8 @@ export interface HeightRange {
 
 export class TerrainChunk {
   readonly coord: ChunkCoord;
+  readonly tier: ChunkTier;
+  readonly resolution: number;
   readonly splat: SplatMap;
   readonly holes: HoleMask;
 
@@ -50,18 +59,24 @@ export class TerrainChunk {
     coord: ChunkCoord,
     heights: Float32Array = new Float32Array(CHUNK_SAMPLE_COUNT),
     splat: SplatMap = new SplatMap(),
-    holes: HoleMask = new HoleMask()
+    holes?: HoleMask
   ) {
-    if (!isValidHeights(heights)) {
+    const tier = tierOfSampleCount(heights.length);
+    if (tier === null || !heights.every(isValidHeight)) {
       throw new RangeError(
-        `Chunk ${coord.key} needs ${CHUNK_SAMPLE_COUNT} finite heights within ` +
+        `Chunk ${coord.key} needs ${CHUNK_TIERS.map(chunkSampleCount).join(", ")} finite heights within ` +
         `[${HEIGHT_RANGE.min}, ${HEIGHT_RANGE.max}].`
       );
     }
+    if (holes !== undefined && holes.tier !== tier) {
+      throw new RangeError(`Chunk ${coord.key} is at x${tier}, its hole mask at x${holes.tier}.`);
+    }
 
     this.coord = coord;
+    this.tier = tier;
+    this.resolution = chunkResolution(tier);
     this.splat = splat;
-    this.holes = holes;
+    this.holes = holes ?? HoleMask.empty(tier);
     this.#origin = coord.originSample;
     this.#heights = heights.slice();
     this.#heightRange = measureRange(this.#heights);
@@ -75,7 +90,30 @@ export class TerrainChunk {
     localX: number,
     localZ: number
   ): number {
-    return this.#heights[localZ * CHUNK_SAMPLES + localX];
+    return this.sample(localX * this.tier, localZ * this.tier);
+  }
+
+  sample(
+    gridX: number,
+    gridZ: number
+  ): number {
+    return this.#heights[gridZ * this.resolution + gridX];
+  }
+
+  holeAt(
+    localX: number,
+    localZ: number
+  ): boolean {
+    const { tier } = this;
+    for (let dz = 0; dz < tier; dz++) {
+      for (let dx = 0; dx < tier; dx++) {
+        if (this.holes.isHole(localX * tier + dx, localZ * tier + dz)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   nearestHeight(
@@ -111,7 +149,7 @@ export class TerrainChunk {
   ): Float32Array {
     const heights = new Float32Array(TILE_SAMPLE_COUNT);
     for (let row = 0; row < TILE_SAMPLES; row++) {
-      const start = (tileZ * TILE_SAMPLES + row) * CHUNK_SAMPLES + tileX * TILE_SAMPLES;
+      const start = (tileZ * TILE_SAMPLES + row) * this.resolution + tileX * TILE_SAMPLES;
       heights.set(this.#heights.subarray(start, start + TILE_SAMPLES), row * TILE_SAMPLES);
     }
 
@@ -133,7 +171,7 @@ export class TerrainChunk {
     for (let row = 0; row < TILE_SAMPLES; row++) {
       this.#heights.set(
         heights.subarray(row * TILE_SAMPLES, (row + 1) * TILE_SAMPLES),
-        (tileZ * TILE_SAMPLES + row) * CHUNK_SAMPLES + tileX * TILE_SAMPLES
+        (tileZ * TILE_SAMPLES + row) * this.resolution + tileX * TILE_SAMPLES
       );
     }
     this.#heightRange = measureRange(this.#heights);

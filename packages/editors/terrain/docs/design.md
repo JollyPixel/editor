@@ -92,9 +92,12 @@ WebGPU has no tessellation stage, so extra detail is stored, not generated. A
 chunk can be refined to ×2 (128², 0.5 m) or ×4 (256², 0.25 m). Brushes then
 edit the finer grid, and the quadtree has extra levels over that chunk.
 
-Refining a chunk resamples its heights bilinearly, so the surface does not
-move. Coarsening keeps every second or fourth sample and loses the detail in
-between. The edge shared with a coarser neighbour has to match it, which is
+Refining a chunk does not move the surface. It doubles the grid once or
+twice: a new sample on an edge takes the mean of the edge's two ends, and one
+at a quad's centre the mean of the ends of that quad's diagonal, so the new
+samples lie on the triangles drawn before. Samples past the far edge come
+from the neighbours' heights. Coarsening keeps every second or fourth sample
+and loses the detail in between. The edge shared with a coarser neighbour has to match it, which is
 done with morphing (see below), not by changing the data.
 
 A tier is set from the Detail mode of the [Chunks tool](./brush.md#chunks-tool).

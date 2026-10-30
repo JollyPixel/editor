@@ -17,10 +17,7 @@ import {
   SPLAT_TEXELS
 } from "../../terrain/SplatMap.ts";
 import type { TerrainReader } from "../../terrain/Terrain.ts";
-import {
-  TILE_SAMPLES,
-  type TileCoord
-} from "../../terrain/TileCoord.ts";
+import type { TileCoord } from "../../terrain/TileCoord.ts";
 import {
   affectedAprons,
   APRON_SIZE,
@@ -213,10 +210,12 @@ export class ChunkTextureStore {
   ): void {
     const regions: ApronRegion[] = [];
     for (const tile of tiles) {
+      const { x, z, size } = tile.area;
       const samples = {
-        ...tile.localSample,
-        width: TILE_SAMPLES,
-        depth: TILE_SAMPLES
+        x,
+        z,
+        width: size,
+        depth: size
       };
       if (this.#layers.has(tile.chunk.key)) {
         regions.push(...affectedAprons(tile.chunk, samples));
@@ -366,7 +365,7 @@ export class ChunkTextureStore {
 
     const data = this.holes.image.data as Uint8Array;
     writeHolePyramid(
-      chunk.holes,
+      { isHole: (quadX, quadZ) => chunk.holeAt(quadX, quadZ) },
       data.subarray(layer * HOLE_PYRAMID_TEXELS, (layer + 1) * HOLE_PYRAMID_TEXELS)
     );
     this.holes.addLayerUpdate(layer);

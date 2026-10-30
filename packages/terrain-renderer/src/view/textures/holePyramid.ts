@@ -18,7 +18,7 @@ export function holeLevelOffset(
 }
 
 export function writeHolePyramid(
-  holes: HoleMask,
+  holes: Pick<HoleMask, "isHole">,
   target: Uint8Array
 ): void {
   for (let quadZ = 0; quadZ < HOLE_QUADS; quadZ++) {

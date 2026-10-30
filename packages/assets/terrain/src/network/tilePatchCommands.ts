@@ -1,11 +1,15 @@
 // Import Third-party Dependencies
 import {
   ChunkCoord,
-  TileCoord,
-  type TerrainReader
+  type TerrainReader,
+  type TileCoord
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import {
+  patchTileCoord,
+  type PatchTile
+} from "./patchTile.ts";
 import {
   currentHoleTilePatches,
   decodeHoleTilePatch
@@ -32,11 +36,7 @@ export type ChunkChannel = typeof CHUNK_CHANNELS[number];
 export type TilePatchAction = "heights-patched" | "splat-patched" | "holes-patched";
 export type TilePatchCommand = Extract<TerrainCommand, { action: TilePatchAction; }>;
 
-export interface PatchTile {
-  readonly x: number;
-  readonly z: number;
-  readonly tile: number;
-}
+export type { PatchTile };
 
 export function isTilePatchCommand<TCommand extends TerrainCommand>(
   command: TCommand
@@ -53,7 +53,22 @@ export function tileChannel(
 export function patchedTiles(
   command: TilePatchCommand
 ): TileCoord[] {
-  return command.tiles.map(({ x, z, tile }) => TileCoord.fromIndex(new ChunkCoord(x, z), tile));
+  return command.tiles.flatMap((tile) => patchTileCoord(tile) ?? []);
+}
+
+export function fitsChunk(
+  terrain: Pick<TerrainReader, "chunk" | "knows">,
+  command: TilePatchCommand,
+  tile: PatchTile
+): boolean {
+  const coord = new ChunkCoord(tile.x, tile.z);
+  if (!terrain.knows(coord)) {
+    return false;
+  }
+
+  const chunk = terrain.chunk(coord);
+
+  return command.action === "splat-patched" || chunk === undefined || chunk.tier === (tile.tier ?? 1);
 }
 
 export function filterTiles<TCommand extends TilePatchCommand>(

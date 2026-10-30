@@ -5,8 +5,10 @@ import {
   withCommandHeader
 } from "@jolly-pixel/network";
 import {
+  CHUNK_TIERS,
   LOOKUP_SIZE,
   MATERIAL_SLOT_COUNT,
+  tileCount,
   TILES_PER_CHUNK
 } from "@jolly-pixel/terrain.renderer";
 import * as z from "zod/mini";
@@ -22,11 +24,15 @@ const kChunkCoordinate = z.int().check(
   z.gte(CHUNK_COORDINATE_RANGE.min),
   z.lte(CHUNK_COORDINATE_RANGE.max)
 );
+const kChunkTier = z.literal(CHUNK_TIERS);
+const kRefinedTier = z.optional(z.literal([2, 4]));
+const kRefinedTileIndex = z.int().check(z.gte(0), z.lt(tileCount(4)));
 
 export const tilePatchSchema = z.object({
   x: kChunkCoordinate,
   z: kChunkCoordinate,
-  tile: z.int().check(z.gte(0), z.lt(CHUNK_TILE_COUNT)),
+  tile: kRefinedTileIndex,
+  tier: kRefinedTier,
   heights: z.string()
 });
 
@@ -50,7 +56,8 @@ export const splatTilePatchesSchema = z.array(splatTilePatchSchema).check(
 export const holeTilePatchSchema = z.object({
   x: kChunkCoordinate,
   z: kChunkCoordinate,
-  tile: z.int().check(z.gte(0), z.lt(CHUNK_TILE_COUNT)),
+  tile: kRefinedTileIndex,
+  tier: kRefinedTier,
   holes: z.string()
 });
 
@@ -100,7 +107,8 @@ export const chunkEntrySchema = z.object({
   heights: z.optional(z.string()),
   splat: z.optional(z.string()),
   holes: z.optional(z.string()),
-  hasHoles: z.optional(z.literal(true))
+  hasHoles: z.optional(z.literal(true)),
+  tier: kRefinedTier
 });
 
 export const terrainManifestSchema = z.object({
@@ -124,6 +132,13 @@ export const terrainCommandSchema = z.discriminatedUnion("action", [
   commandVariant("chunk-removed", {
     x: kChunkCoordinate,
     z: kChunkCoordinate
+  }),
+  commandVariant("tier-changed", {
+    x: kChunkCoordinate,
+    z: kChunkCoordinate,
+    tier: kChunkTier,
+    heights: z.string(),
+    holes: z.optional(z.string())
   }),
   commandVariant("heights-patched", {
     tiles: tilePatchesSchema

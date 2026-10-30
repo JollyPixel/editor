@@ -1,13 +1,17 @@
 // Import Third-party Dependencies
 import {
-  CHUNK_SAMPLES,
-  overviewSamples
+  chunkResolution,
+  overviewSamples,
+  tierOfSampleCount
 } from "@jolly-pixel/terrain.renderer";
 
 export function chunkOverview(
   heights: Float32Array
 ): Float32Array {
+  const tier = tierOfSampleCount(heights.length) ?? 1;
+  const resolution = chunkResolution(tier);
+
   return overviewSamples({
-    height: (localX, localZ) => heights[localZ * CHUNK_SAMPLES + localX]
+    height: (localX, localZ) => heights[localZ * tier * resolution + localX * tier]
   });
 }

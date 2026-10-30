@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
-import type {
-  ChunkCoord,
-  ChunkKey,
-  SplatTexels,
-  Terrain
+import {
+  holeBytes,
+  tierOfSampleCount,
+  type ChunkCoord,
+  type ChunkKey,
+  type SplatTexels,
+  type Terrain
 } from "@jolly-pixel/terrain.renderer";
 import { Emitter } from "@openally/emitt";
 
@@ -129,7 +131,8 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
     const holes = this.#earlyHoles.get(coord.key);
     this.#earlySplat.delete(coord.key);
     this.#earlyHoles.delete(coord.key);
-    this.#terrain.loadChunk(coord, heights, splat, holes);
+    const fits = holes !== undefined && holeBytes(tierOfSampleCount(heights.length)!) === holes.length;
+    this.#terrain.loadChunk(coord, heights, splat, fits ? holes : undefined);
     this.emit("loaded", coord);
   }
 
@@ -160,6 +163,10 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
     if (!this.#terrain.has(coord)) {
       this.#earlyHoles.set(coord.key, holes);
 
+      return;
+    }
+
+    if (holeBytes(this.#terrain.chunk(coord)!.tier) !== holes.length) {
       return;
     }
 

@@ -36,6 +36,7 @@ const kDefaultId = "terrain";
 const kLabels: Readonly<Record<TerrainCommand["action"], string>> = {
   "chunk-added": "Add chunk",
   "chunk-removed": "Remove chunk",
+  "tier-changed": "Change detail",
   "heights-patched": "Sculpt",
   "splat-patched": "Paint",
   "holes-patched": "Edit holes",
@@ -99,11 +100,16 @@ function readWriteRef(
   switch (ref.kind) {
     case "chunk":
       return terrain.has(ref.chunk);
+    case "tier":
+      return terrain.chunk(ref.chunk)?.tier;
     case "tile": {
       const { tile } = ref;
       const chunk = terrain.chunk(tile.chunk);
+      if (chunk === undefined || (ref.channel !== "splat" && chunk.tier !== tile.tier)) {
+        return undefined;
+      }
 
-      return chunk === undefined ? undefined : readTile(chunk, ref.channel, tile);
+      return readTile(chunk, ref.channel, tile);
     }
     case "material": {
       const material = materials.material(ref.id);
@@ -171,7 +177,7 @@ function latestTiles<TTile extends PatchTile>(
 ): TTile[] {
   const latest = new Map<string, TTile>();
   for (const tile of tiles) {
-    latest.set(terrainTileKey(channel, tile.x, tile.z, tile.tile), tile);
+    latest.set(terrainTileKey(channel, tile.x, tile.z, tile.tile, tile.tier), tile);
   }
 
   return [...latest.values()];

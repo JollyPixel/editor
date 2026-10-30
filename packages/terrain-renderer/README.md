@@ -28,9 +28,6 @@ $ pnpm --filter @jolly-pixel/terrain.renderer lint
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.
 
-With `overlay` set to `"chunks"` or `"lod"`, or `revealChunks` set to `true`
-over any other overlay, a line is drawn on every chunk border.
-
 ## License
 
 MIT
