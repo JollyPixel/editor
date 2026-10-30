@@ -25,6 +25,15 @@ export {
 } from "./TerrainCommand.schema.ts";
 export * from "../model/TerrainPreview.ts";
 export type { ChunkContents } from "../model/TerrainStream.ts";
+export {
+  chunksInRect,
+  MAX_EXCHANGE_IMAGE_SIDE,
+  readHeightGrid,
+  readSplatMasks,
+  type HeightGrid,
+  type ImportRefusal,
+  type SplatMask
+} from "../model/terrainExchange.ts";
 export * from "../history/terrainHistoryRegistration.ts";
 export {
   TERRAIN_EXTENSION,

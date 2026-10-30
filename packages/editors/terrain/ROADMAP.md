@@ -211,7 +211,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   8-bit and 16-bit grayscale PNG and 16-bit RAW, maps heights to samples over a
   range, and fits a grid of another size to a rectangle of chunks. Nothing in
   the editor calls them yet.
-- **Next:** importing and exporting a rectangle of chunks in the document.
+- **Rectangle import and export: done** (2026-10-30). `TerrainDocument`
+  imports heights and splat masks over a rectangle as one undo step, adding
+  the chunks it lacks and moving the others to the chosen tier, loaded or not.
+  `readHeightGrid` and `readSplatMasks` build what export writes. No UI yet.
+- **Next:** the Import and export pane.
 
 Tick a box when its item lands, and move **Next** along with it.
 

@@ -92,7 +92,7 @@ export function decodableTiles(
 }
 
 export function currentTiles(
-  terrain: TerrainReader,
+  terrain: Pick<TerrainReader, "chunk">,
   command: TilePatchCommand
 ): TilePatchCommand {
   switch (command.action) {

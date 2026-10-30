@@ -345,11 +345,16 @@ Both work on a rectangle of chunks, the whole terrain by default.
   image of another size is stretched over the rectangle bilinearly, and an odd
   side is read as a closing row, so a 1025 px map fits 1024 samples exactly.
   An 8-bit PNG spans the same range, a colour PNG gives its first channel, and
-  palette and interlaced PNGs are refused.
+  palette and interlaced PNGs are refused. The image's top row is the lowest Z.
+  Importing at another tier moves each chunk to that tier and keeps its holes;
+  a rectangle is refused when it leaves the coordinate range, passes the chunk
+  cap, or would add chunks touching no existing one. Ground the rectangle has
+  no chunk for exports at the lowest height.
 - **Splat map.** One grayscale PNG per material used in the rectangle, named
   after the material, 0 to 255 per texel. Import matches masks to materials by
   name, or lets the user pick, and keeps the four strongest materials per
-  texel, scaled to sum to 255.
+  texel, scaled to sum to 255. A texel no mask covers stays as it was, and
+  import paints only chunks that exist.
 
 A rectangle can reach past the stream radius. `TerrainStream.read` returns
 the contents of any chunk: a loaded one from memory, the others by subscribing

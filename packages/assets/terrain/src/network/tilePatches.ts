@@ -36,7 +36,7 @@ export function decodeTilePatch(
 }
 
 export function currentTilePatches(
-  terrain: TerrainReader,
+  terrain: Pick<TerrainReader, "chunk">,
   tiles: Iterable<EncodedTilePatch>
 ): EncodedTilePatch[] {
   const current: EncodedTilePatch[] = [];

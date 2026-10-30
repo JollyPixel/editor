@@ -29,8 +29,8 @@ export {
   HOLE_BYTES,
   HOLE_TILE_BYTES,
   holeBytes,
-  tierOfHoleBytes,
-  type HoleMask
+  HoleMask,
+  tierOfHoleBytes
 } from "./terrain/HoleMask.ts";
 export {
   dominantSlot,
@@ -49,8 +49,8 @@ export {
   CHUNK_SAMPLE_COUNT,
   HEIGHT_RANGE,
   isValidHeight,
-  type HeightRange,
-  type TerrainChunk
+  TerrainChunk,
+  type HeightRange
 } from "./terrain/TerrainChunk.ts";
 export {
   Terrain,

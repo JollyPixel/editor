@@ -69,7 +69,7 @@ export function decodeHoleTilePatch(
 }
 
 export function currentHoleTilePatches(
-  terrain: TerrainReader,
+  terrain: Pick<TerrainReader, "chunk">,
   tiles: Iterable<EncodedHoleTilePatch>
 ): EncodedHoleTilePatch[] {
   const current: EncodedHoleTilePatch[] = [];

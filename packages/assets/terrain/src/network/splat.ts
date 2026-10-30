@@ -104,7 +104,7 @@ export function decodeSplatTilePatch(
 }
 
 export function currentSplatTilePatches(
-  terrain: TerrainReader,
+  terrain: Pick<TerrainReader, "chunk">,
   tiles: Iterable<EncodedSplatTilePatch>
 ): EncodedSplatTilePatch[] {
   const current: EncodedSplatTilePatch[] = [];
