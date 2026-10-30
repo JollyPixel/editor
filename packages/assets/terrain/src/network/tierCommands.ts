@@ -29,7 +29,7 @@ export function currentTier(
 }
 
 export function resampledTier(
-  terrain: Pick<TerrainReader, "chunk" | "sampleAt">,
+  terrain: TerrainReader,
   coord: ChunkCoord,
   tier: ChunkTier
 ): TierChangedCommand | null {

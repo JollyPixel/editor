@@ -8,6 +8,10 @@ import {
   resampleHeights,
   resampleHoles
 } from "#src/terrain/chunkResample.ts";
+import {
+  chunkResolution,
+  chunkSampleCount
+} from "#src/terrain/chunkTier.ts";
 import { HoleMask } from "#src/terrain/HoleMask.ts";
 import { CHUNK_SAMPLE_COUNT } from "#src/terrain/TerrainChunk.ts";
 import { Terrain } from "#src/terrain/Terrain.ts";
@@ -48,6 +52,20 @@ function holeBits(
 }
 
 describe("resampleHeights", () => {
+  test("refining x2 to x4 keeps the surface along an edge shared with a x2 neighbour", () => {
+    const terrain = new Terrain();
+    terrain.addChunk(kChunk, new Float32Array(chunkSampleCount(2)));
+    const neighbour = new Float32Array(chunkSampleCount(2));
+    neighbour[chunkResolution(2)] = 8;
+    terrain.addChunk(new ChunkCoord(1, 0), neighbour);
+    const expected = surfaceHeight(terrain, 63.75, 0.5);
+
+    const heights = resampleHeights(terrain, kChunk, 4);
+
+    assert.equal(expected, 4);
+    assert.equal(heights[2 * chunkResolution(4) + chunkResolution(4) - 1], expected);
+  });
+
   test("refining keeps the drawn surface in place, at x2 and x4", () => {
     const terrain = bumpyTerrain();
     for (const tier of [2, 4] as const) {

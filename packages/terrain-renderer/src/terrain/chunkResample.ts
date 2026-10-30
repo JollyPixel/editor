@@ -8,13 +8,14 @@ import {
   holeBytes,
   type HoleMask
 } from "./HoleMask.ts";
+import { pointHeight } from "./pointHeight.ts";
 import { quadDiagonal } from "./quadDiagonal.ts";
 import type { TerrainReader } from "./Terrain.ts";
 
 type GridHeight = (gridX: number, gridZ: number) => number;
 
 export function resampleHeights(
-  terrain: Pick<TerrainReader, "chunk" | "sampleAt">,
+  terrain: TerrainReader,
   coord: ChunkCoord,
   tier: ChunkTier
 ): Float32Array {
@@ -45,7 +46,7 @@ export function resampleHeights(
     const spacing = 1 / current;
     heights = doubleGrid(resolution, (gridX, gridZ) => (gridX < resolution && gridZ < resolution ?
       source[gridZ * resolution + gridX] :
-      beyondHeight(terrain, origin.x + gridX * spacing, origin.z + gridZ * spacing)));
+      pointHeight(terrain, origin.x + gridX * spacing, origin.z + gridZ * spacing)));
     current *= 2;
   }
 
@@ -109,21 +110,6 @@ function midpointHeight(
   return quadDiagonal(x, z) === "main" ?
     (source(x, z) + source(x + 1, z + 1)) / 2 :
     (source(x + 1, z) + source(x, z + 1)) / 2;
-}
-
-function beyondHeight(
-  terrain: Pick<TerrainReader, "sampleAt">,
-  x: number,
-  z: number
-): number {
-  const x0 = Math.floor(x);
-  const z0 = Math.floor(z);
-  const fx = x - x0;
-  const fz = z - z0;
-  const near = terrain.sampleAt(x0, z0) * (1 - fx) + terrain.sampleAt(x0 + 1, z0) * fx;
-  const far = terrain.sampleAt(x0, z0 + 1) * (1 - fx) + terrain.sampleAt(x0 + 1, z0 + 1) * fx;
-
-  return near * (1 - fz) + far * fz;
 }
 
 function anyHole(
