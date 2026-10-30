@@ -169,8 +169,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   so a patch made at the old tier is refused and answered with the chunk's
   current tier. The view and the brushes still read a refined chunk's 1 m
   samples, and nothing in the editor changes a tier yet.
-- **Next:** tier rendering: one height and hole array per tier, the extra
-  quadtree levels, and morphing at a coarser neighbour's edge.
+- **Tier rendering: done** (2026-10-30). The view keeps a height and hole
+  array per tier, the ×2 and ×4 ones grown on demand, and draws a refined
+  chunk on its own grid, with one or two quadtree levels under its leaves.
+  Its edge with a coarser neighbour follows the neighbour's grid, so the two
+  meet without a gap, and its holes open at its quad size.
+- **Next:** the Chunks tool's Detail mode, with brushes, the brush ray and
+  height queries on a refined chunk's grid.
 
 Tick a box when its item lands, and move **Next** along with it.
 

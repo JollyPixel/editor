@@ -7,6 +7,7 @@ import type { HeightRange } from "../../terrain/TerrainChunk.ts";
 import type { TerrainReader } from "../../terrain/Terrain.ts";
 import type { Point3 } from "../../math/point3.ts";
 import {
+  finestLevel,
   LodRanges,
   REGION_SIZE
 } from "./LodRanges.ts";
@@ -182,7 +183,7 @@ class SelectionWalk {
     if (!this.#visible(bounds)) {
       return "handled";
     }
-    if (level === 0 || !this.#within(bounds, this.#ranges.range(level - 1))) {
+    if (level <= this.#finestLevel(x, z, level) || !this.#within(bounds, this.#ranges.range(level - 1))) {
       this.#selected.push({ level, x, z, size, bounds });
 
       return "handled";
@@ -212,6 +213,20 @@ class SelectionWalk {
     }
 
     return "handled";
+  }
+
+  #finestLevel(
+    x: number,
+    z: number,
+    level: number
+  ): number {
+    if (level > 0) {
+      return 0;
+    }
+
+    const tier = this.#terrain.chunk(ChunkCoord.containing(x, z))?.tier ?? 1;
+
+    return finestLevel(tier);
   }
 
   #within(

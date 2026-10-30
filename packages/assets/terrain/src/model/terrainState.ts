@@ -318,19 +318,22 @@ export function loadTerrainManifest(
     }
     listed.add(coord.key);
 
+    const heights = chunk.heights === undefined ?
+      new Float32Array(chunkSampleCount(chunk.tier ?? 1)) :
+      chunkHeightsOrThrow(chunk.heights, coord);
+
     return {
       coord,
-      heights: chunk.heights === undefined ?
-        new Float32Array(chunkSampleCount(chunk.tier ?? 1)) :
-        chunkHeightsOrThrow(chunk.heights, coord),
-      splat: chunk.splat === undefined ? undefined : splatOrThrow(chunk.splat, coord)
+      heights,
+      splat: chunk.splat === undefined ? undefined : splatOrThrow(chunk.splat, coord),
+      holes: chunk.holes === undefined ? undefined : holesOrThrow(chunk.holes, coord, heights)
     };
   });
 
   const materials = loadedMaterials(manifest);
   terrain.clear();
-  for (const { coord, heights, splat } of chunks) {
-    terrain.addChunk(coord, heights, splat);
+  for (const { coord, heights, splat, holes } of chunks) {
+    terrain.addChunk(coord, heights, splat, holes);
   }
   model.materials.load(materials.materials(), materials.textureSize);
 }

@@ -89,7 +89,9 @@ export class TerrainView {
     this.#terrain = terrain;
     this.#requestFrame = requestFrame;
     this.selection = new QuadtreeSelection(terrain, ranges);
-    this.#textures = new ChunkTextureStore(terrain);
+    this.#textures = new ChunkTextureStore(terrain, {
+      replaced: (tier, arrays) => this.#shading.refinedArrays(tier, arrays)
+    });
     this.#materials = new MaterialTextureStore({
       copier: textureCopier,
       replaced: (arrays) => this.#shading.materialArrays(arrays)
@@ -99,6 +101,10 @@ export class TerrainView {
       splatIndices: this.#textures.splatIndices,
       splatWeights: this.#textures.splatWeights,
       holes: this.#textures.holes,
+      refined: {
+        2: this.#textures.refinedArrays(2),
+        4: this.#textures.refinedArrays(4)
+      },
       lookup: this.#textures.lookup,
       overview: this.#textures.overview,
       overviewMaterials: this.#textures.overviewMaterials,

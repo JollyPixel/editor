@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { CHUNK_SAMPLES, ChunkCoord } from "#src/terrain/ChunkCoord.ts";
+import { resampleHeights } from "#src/terrain/chunkResample.ts";
 import { OVERVIEW_SAMPLE_COUNT } from "#src/terrain/OverviewMap.ts";
 import { CHUNK_SAMPLE_COUNT } from "#src/terrain/TerrainChunk.ts";
 import { Terrain } from "#src/terrain/Terrain.ts";
@@ -146,6 +147,33 @@ describe("QuadtreeSelection", () => {
     }
 
     assert.ok(skirted > 0 && bare > 0);
+  });
+
+  test("refined chunks near the camera get finer levels, one node per point, skirted at changes", () => {
+    const terrain = stripTerrain(4);
+    for (const [x, tier] of [[1, 4], [2, 2]] as const) {
+      const coord = new ChunkCoord(x, 0);
+      terrain.changeTier(coord, resampleHeights(terrain, coord, tier));
+    }
+    const nodes = new QuadtreeSelection(terrain).select({ x: 126, y: 4, z: 32 });
+
+    assert.deepEqual(
+      [nodesAt(nodes, 60, 32)[0].level, nodesAt(nodes, 110, 32)[0].level, nodesAt(nodes, 130, 32)[0].level],
+      [0, -2, -1]
+    );
+    for (let z = 0.5; z < CHUNK_SAMPLES; z += 1) {
+      for (let x = 0.5; x < CHUNK_SAMPLES * 4; x += 1) {
+        assert.equal(nodesAt(nodes, x, z).length, 1, `point (${x}, ${z})`);
+      }
+    }
+    for (const node of nodes) {
+      for (const { bit, outward } of SKIRT_EDGES) {
+        const expected = nodes.some(
+          (other) => other.level !== node.level && acrossEdge(node, other, outward)
+        );
+        assert.equal((node.skirts & bit) !== 0, expected, `edge ${bit} at (${node.x}, ${node.z})`);
+      }
+    }
   });
 
   test("chunks beyond the coarsest range are not drawn", () => {

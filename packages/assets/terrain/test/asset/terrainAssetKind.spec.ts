@@ -8,12 +8,15 @@ import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
 import {
   CHUNK_SAMPLE_COUNT,
   ChunkCoord,
+  chunkSampleCount,
+  holeBytes,
   OVERVIEW_SAMPLE_COUNT
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
   encodeHeights,
+  encodeHoles,
   TERRAIN_FILE,
   decodeHeights,
   decodeMaterials,
@@ -113,17 +116,30 @@ describe("terrain asset kind", () => {
     );
   });
 
-  test("a document may hold a chunk's heights inline", () => {
+  test("a document may hold a chunk's heights and holes inline, at any tier", () => {
     const handler = terrainAssetKind();
+    const holes = new Uint8Array(holeBytes(2));
+    holes[0] = 1;
     const content = TERRAIN_FILE.encode({
       version: TERRAIN_FILE_VERSION,
-      chunks: [{ x: 0, z: 0, heights: heights(3) }]
+      chunks: [
+        { x: 0, z: 0, heights: heights(3) },
+        {
+          x: 1,
+          z: 0,
+          tier: 2,
+          heights: encodeHeights(new Float32Array(chunkSampleCount(2)).fill(5)),
+          holes: encodeHoles(holes)
+        }
+      ]
     });
 
     const model = handler.create("asset");
     handler.load(model, content);
 
+    const refined = model.terrain.chunk(new ChunkCoord(1, 0))!;
     assert.ok(model.terrain.chunk(new ChunkCoord(0, 0))!.copyHeights().every((height) => height === 3));
+    assert.deepEqual([refined.tier, refined.sample(127, 127), refined.holes.isHole(0, 0)], [2, 5, true]);
   });
 
   test("a part that is not a chunk of valid heights is refused", () => {

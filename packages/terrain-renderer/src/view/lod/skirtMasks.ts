@@ -2,7 +2,7 @@
 import { LEAF_NODE_SIZE } from "./LodRanges.ts";
 
 // CONSTANTS
-const kCellSize = LEAF_NODE_SIZE / 2;
+const kProbeOffset = LEAF_NODE_SIZE / 2 ** 8;
 const kEdgeProbes = [0.125, 0.375, 0.625, 0.875];
 const kKeySpan = 2 ** 24;
 const kKeyOffset = kKeySpan / 2;
@@ -72,7 +72,7 @@ function edgeOutside(
   size: number,
   direction: number
 ): number {
-  return direction < 0 ? start - kCellSize / 2 : start + size + kCellSize / 2;
+  return direction < 0 ? start - kProbeOffset : start + size + kProbeOffset;
 }
 
 function alignedKey(

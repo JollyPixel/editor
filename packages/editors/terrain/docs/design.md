@@ -98,7 +98,12 @@ at a quad's centre the mean of the ends of that quad's diagonal, so the new
 samples lie on the triangles drawn before. Samples past the far edge come
 from the neighbours' heights. Coarsening keeps every second or fourth sample
 and loses the detail in between. The edge shared with a coarser neighbour has to match it, which is
-done with morphing (see below), not by changing the data.
+done with morphing, not by changing the data: on a chunk's west and south
+edges, where the neighbour across has a coarser tier, the vertex shader reads
+the edge along the neighbour's grid, interpolating between its samples, so
+the finer side draws the same straight segments as the coarser one. The east
+and north edges belong to the neighbour, whose samples a finer node reads
+the same way.
 
 A tier is set from the Detail mode of the [Chunks tool](./brush.md#chunks-tool).
 The command carries the heights and holes it replaced, so undoing a
@@ -108,7 +113,8 @@ in that undo step.
 The view keeps one height array and one hole array per tier, each with its own
 pool of layers, and the lookup texture also gives each chunk's tier. Memory
 follows the tiers in use: an unrefined terrain allocates nothing for ×2 and
-×4.
+×4, whose arrays start with four layers and double as chunks are refined. The
+splat array keeps one layer per loaded chunk whatever its tier.
 
 ## LoD
 
@@ -131,7 +137,8 @@ The view uses CDLOD:
   replace the grid later.
 - Near the boundary of a level, vertices morph toward the coarser level's
   positions, so levels meet without cracks or popping. The morph runs over
-  the last 30% of each level's distance band.
+  the last 30% of each level's distance band. The levels under the leaves of
+  a refined chunk, 16 m and 8 m nodes, are drawn within 40 m and 20 m.
 - Morphing moves heights, not positions. A vertex the coarser level drops
   keeps its X and Z and blends toward the average height of two neighbours:
   the ends of the coarse edge it sits on, or, for the centre of a coarse
@@ -291,15 +298,16 @@ Tiers multiply the height and hole sizes. The splat resolution does not
 change with the tier. Heights, splat and holes are stored as three asset
 parts per chunk; a chunk without holes has no hole part.
 
-On the GPU, heights live in one `R32F` texture array with a layer per chunk,
-so a node spanning many chunks is still one draw. A 256×256 lookup texture,
+On the GPU, heights live in an `R32F` texture array per tier with a layer per
+chunk, so a node spanning many chunks is still one draw. A 256×256 lookup texture,
 indexed by chunk coordinates modulo 256, gives each chunk's layer and its own
 coordinates, which rejects a chunk 256 away that shares the slot. Splat and
 hole maps will follow the same layout. An edit re-uploads the layers it
 changed.
 
-A layer is 68×68 at ×1: the chunk's own samples plus a two-sample apron on
-every side, copied from the neighbours. The apron gives the mesh its last row
+A layer is 68×68 at ×1, 132×132 at ×2 and 260×260 at ×4: the chunk's own
+samples plus a two-sample apron on every side, copied from the neighbours, or
+interpolated on a neighbour's own grid when the tiers differ. The apron gives the mesh its last row
 and column, and gives the normals, which blend the gradients of four samples,
 their neighbours across the edge. An edit on an edge tile also rewrites the
 matching strip of the neighbour's apron. Where no neighbour exists, the apron repeats the chunk's outer row,
