@@ -18,7 +18,10 @@ import {
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import type { TerrainStream } from "../model/TerrainStream.ts";
+import type {
+  ChunkContents,
+  TerrainStream
+} from "../model/TerrainStream.ts";
 import {
   chunkPartId,
   chunkPartIds,
@@ -44,6 +47,14 @@ interface PendingSnapshot {
   readonly held: (TerrainServerMessage | AssetRoomPartsMessage)[];
 }
 
+interface ChunkRead {
+  readonly coords: readonly ChunkCoord[];
+  readonly waiting: Set<string>;
+  readonly parts: Map<string, unknown>;
+  readonly resolve: (contents: ChunkContents[]) => void;
+  readonly reject: (reason: Error) => void;
+}
+
 export class TerrainPartsRoom implements Room<
   TerrainNetworkCommand,
   TerrainServerMessage
@@ -53,11 +64,13 @@ export class TerrainPartsRoom implements Room<
   #listeners = new Set<(message: TerrainServerMessage) => void>();
   #clientId: string | null;
   #pending: PendingSnapshot | null = null;
+  #reads = new Set<ChunkRead>();
 
   #onMessage = (
     message: unknown
   ): void => {
     if (isPartsMessage(message)) {
+      this.#settleReads(message);
       this.#receiveParts(message);
     }
     else if (isSnapshotMessage(message)) {
@@ -77,6 +90,9 @@ export class TerrainPartsRoom implements Room<
       this.#clientId = this.#room.clientId;
       if (rejoined) {
         this.#request(ASSET_ROOM_SUBSCRIBE_PARTS, [...this.#stream.subscribed()]);
+        for (const { coords } of this.#reads) {
+          this.#request(ASSET_ROOM_SUBSCRIBE_PARTS, coords);
+        }
       }
     }
   };
@@ -90,7 +106,8 @@ export class TerrainPartsRoom implements Room<
     this.#clientId = room.clientId;
     stream.connect({
       subscribe: (coords) => this.#request(ASSET_ROOM_SUBSCRIBE_PARTS, coords),
-      unsubscribe: (coords) => this.#request(ASSET_ROOM_UNSUBSCRIBE_PARTS, coords)
+      unsubscribe: (coords) => this.#request(ASSET_ROOM_UNSUBSCRIBE_PARTS, coords),
+      read: (coords) => this.#read(coords)
     });
   }
 
@@ -190,6 +207,46 @@ export class TerrainPartsRoom implements Room<
       this.#room.off("message", this.#onMessage);
       this.#room.off("sync", this.#onSync);
       this.#pending = null;
+      for (const read of this.#reads) {
+        read.reject(new Error("The terrain room closed before its chunks arrived."));
+      }
+      this.#reads.clear();
+    }
+  }
+
+  #read(
+    coords: readonly ChunkCoord[]
+  ): Promise<ChunkContents[]> {
+    const { promise, resolve, reject } = Promise.withResolvers<ChunkContents[]>();
+    this.#reads.add({
+      coords,
+      waiting: new Set(coords.flatMap(chunkPartIds)),
+      parts: new Map(),
+      resolve,
+      reject
+    });
+    this.#request(ASSET_ROOM_SUBSCRIBE_PARTS, coords);
+
+    return promise;
+  }
+
+  #settleReads(
+    message: AssetRoomPartsMessage
+  ): void {
+    for (const read of [...this.#reads]) {
+      for (const [partId, encoded] of Object.entries(message.parts)) {
+        if (read.waiting.delete(partId)) {
+          read.parts.set(partId, encoded);
+        }
+      }
+      if (read.waiting.size === 0) {
+        this.#reads.delete(read);
+        this.#request(
+          ASSET_ROOM_UNSUBSCRIBE_PARTS,
+          read.coords.filter((coord) => !this.#stream.isSubscribed(coord))
+        );
+        read.resolve(read.coords.flatMap((coord) => chunkContents(coord, read.parts)));
+      }
     }
   }
 
@@ -323,6 +380,30 @@ export class TerrainPartsRoom implements Room<
       listener(message);
     }
   }
+}
+
+function chunkContents(
+  coord: ChunkCoord,
+  parts: ReadonlyMap<string, unknown>
+): ChunkContents[] {
+  const heights = decodedPart(parts.get(chunkPartId(coord, "heights")), decodeChunkHeights);
+  const splat = decodedPart(parts.get(chunkPartId(coord, "splat")), decodeSplat);
+
+  return heights === null || splat === null ?
+    [] :
+    [{
+      coord,
+      heights,
+      splat,
+      holes: decodedPart(parts.get(chunkPartId(coord, "holes")), decodeChunkHoles) ?? undefined
+    }];
+}
+
+function decodedPart<TPart>(
+  encoded: unknown,
+  decode: (encoded: string) => TPart | null
+): TPart | null {
+  return typeof encoded === "string" ? decode(encoded) : null;
 }
 
 function isPartsMessage(

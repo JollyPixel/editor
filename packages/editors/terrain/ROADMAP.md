@@ -204,7 +204,10 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   toward the straight line between the heights under its ends, as one stroke;
   a guide shows the segment and its width while dragging. Ramp and terrace
   brushes are complete.
-- **Next:** heightmap and splat map import and export.
+- **Chunk reads: done** (2026-10-30). `TerrainStream.read` returns the
+  heights, splat and holes of any chunk, fetching an unloaded one's parts in
+  batches without loading it. First part of import and export.
+- **Next:** the heightmap and splat map codecs, 16-bit PNG and RAW.
 
 Tick a box when its item lands, and move **Next** along with it.
 

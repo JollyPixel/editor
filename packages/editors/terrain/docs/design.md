@@ -347,6 +347,15 @@ Both work on a rectangle of chunks, the whole terrain by default.
   name, or lets the user pick, and keeps the four strongest materials per
   texel, scaled to sum to 255.
 
+A rectangle can reach past the stream radius. `TerrainStream.read` returns
+the contents of any chunk: a loaded one from memory, the others by subscribing
+to their parts in batches of 64 chunks and unsubscribing once they arrive, so
+they never take a view layer. Import reads the chunks it replaces this way, so
+its undo step holds their old contents whether or not they are loaded. Undo
+follows the rule strokes do: the step is skipped when a chunk it touches is
+loaded or unloaded differently from when it was made, since a chunk not loaded
+cannot show what peers did to it.
+
 ## Packages
 
 ### `@jolly-pixel/asset.terrain`

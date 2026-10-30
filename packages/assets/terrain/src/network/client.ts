@@ -24,6 +24,7 @@ export {
   TERRAIN_TEXTURE_SIZES
 } from "./TerrainCommand.schema.ts";
 export * from "../model/TerrainPreview.ts";
+export type { ChunkContents } from "../model/TerrainStream.ts";
 export * from "../history/terrainHistoryRegistration.ts";
 export {
   TERRAIN_EXTENSION,

@@ -16,10 +16,19 @@ import type { TerrainPointsOfInterestReader } from "./TerrainPointsOfInterest.ts
 // CONSTANTS
 export const STREAM_RADIUS = 8;
 const kUnloadRadius = STREAM_RADIUS + 1;
+const kReadBatch = 64;
+
+export interface ChunkContents {
+  readonly coord: ChunkCoord;
+  readonly heights: Float32Array;
+  readonly splat: SplatTexels;
+  readonly holes: Uint8Array | undefined;
+}
 
 export interface ChunkSource {
   subscribe(coords: readonly ChunkCoord[]): void;
   unsubscribe(coords: readonly ChunkCoord[]): void;
+  read(coords: readonly ChunkCoord[]): Promise<ChunkContents[]>;
 }
 
 export type TerrainStreamEvents = {
@@ -135,6 +144,30 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
         this.#terrain.unloadChunk(coord);
         this.emit("unloaded", coord);
       }
+    }
+  }
+
+  async* read(
+    coords: Iterable<ChunkCoord>
+  ): AsyncIterableIterator<ChunkContents> {
+    const unloaded: ChunkCoord[] = [];
+    for (const coord of coords) {
+      const chunk = this.#terrain.chunk(coord);
+      if (chunk !== undefined) {
+        yield {
+          coord,
+          heights: chunk.copyHeights(),
+          splat: chunk.splat.copy(),
+          holes: chunk.holes.empty ? undefined : chunk.holes.copy()
+        };
+      }
+      else if (this.#terrain.knows(coord)) {
+        unloaded.push(coord);
+      }
+    }
+
+    for (let start = 0; start < unloaded.length; start += kReadBatch) {
+      yield* await this.#source?.read(unloaded.slice(start, start + kReadBatch)) ?? [];
     }
   }
 
