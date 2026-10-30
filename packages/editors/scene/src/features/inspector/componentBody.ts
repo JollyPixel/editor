@@ -30,7 +30,7 @@ import type { ScriptPropertiesChangeDetail } from "./ScriptPropertiesEditor.ts";
 
 export type ComponentBodyContext = Pick<
   SceneEditing,
-  "document" | "components" | "assetSlots" | "draft"
+  "writes" | "components" | "assetSlots" | "draft"
 >;
 
 interface RowEdit {
@@ -143,7 +143,7 @@ function renderAssetSlots(
   slots: Readonly<Record<string, AssetType<unknown>>>,
   context: ComponentBodyContext
 ): TemplateResult[] {
-  const { assetSlots, document } = context;
+  const { assetSlots, writes } = context;
 
   return Object.entries(slots).map(([slot, type]) => {
     const reference = entry.assets[slot] ?? null;
@@ -151,12 +151,12 @@ function renderAssetSlots(
     async function pick(): Promise<void> {
       const picked = await assetSlots.pick(type, reference);
       if (picked !== null) {
-        document.changeComponentAssets(entry.id, { [slot]: picked });
+        writes.changeComponentAssets(entry.id, { [slot]: picked });
       }
     }
     function clear(event: ChangeEvent<string | null>): void {
       if (event.detail.value === null) {
-        document.changeComponentAssets(entry.id, { [slot]: null });
+        writes.changeComponentAssets(entry.id, { [slot]: null });
       }
     }
     function open(): void {

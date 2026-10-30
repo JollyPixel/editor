@@ -43,6 +43,31 @@ export interface SceneAnchorFile {
   key: string;
 }
 
+export interface SceneActorOverrideFile {
+  name?: string;
+  visible?: boolean;
+  transform?: Partial<SceneTransformFile>;
+}
+
+export interface SceneComponentOverrideFile {
+  /**
+   * Top-level fields that replace those of the component data.
+   */
+  data?: JSONObject;
+  assets?: Record<string, AssetReferenceData | null>;
+}
+
+export interface SceneOverridesFile {
+  /**
+   * Keyed by the path of the actor below the instance.
+   */
+  actors?: Record<string, SceneActorOverrideFile>;
+  /**
+   * Keyed by the path of the component below the instance.
+   */
+  components?: Record<string, SceneComponentOverrideFile>;
+}
+
 export interface SceneActorFile {
   id: string;
   name: string;
@@ -54,9 +79,13 @@ export interface SceneActorFile {
   transform: SceneTransformFile;
   components: SceneComponentFile[];
   /**
-   * Reserved for prefab instances.
+   * A scene expanded under this actor.
    */
   prefab?: AssetReferenceData;
+  /**
+   * Changes to the actors `prefab` expands.
+   */
+  overrides?: SceneOverridesFile;
   anchor?: SceneAnchorFile;
 }
 

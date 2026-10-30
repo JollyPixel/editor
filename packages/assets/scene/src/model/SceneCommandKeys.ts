@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { ComponentChange } from "./ComponentChange.ts";
+import { OverrideChange } from "./OverrideChange.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
 import { SceneTransform } from "./SceneTransform.ts";
 import { SceneValueRef } from "./SceneValueRef.ts";
@@ -28,6 +29,14 @@ export function sceneWriteRefs(
       return Object.keys(command.assets).map(
         (slot) => SceneValueRef.componentAsset(command.id, slot)
       );
+    case "actor-overridden":
+    case "component-overridden": {
+      const change = OverrideChange.from(command);
+
+      return change.fields().map(
+        (field) => SceneValueRef.override(command.id, change.group, command.path, field)
+      );
+    }
     case "environment-changed":
       return SceneEnvironment.patch(command.environment).fields().map(
         (field) => SceneValueRef.environment(field)

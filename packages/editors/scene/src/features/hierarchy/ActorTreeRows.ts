@@ -4,7 +4,7 @@ import type {
   SceneAnchorJSON,
   SceneTreeReader
 } from "@jolly-pixel/asset.scene/client";
-import type { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/engine";
 import {
   resolveReparentMoves,
   type JollyReparentDetail,
@@ -18,6 +18,7 @@ import {
 // Import Internal Dependencies
 import type { SceneComponents } from "../../components/SceneComponents.ts";
 import type { ActorMove } from "../../editing/SceneActions.ts";
+import type { SceneLiveView } from "../../editing/SceneEditing.ts";
 
 // CONSTANTS
 export const PREFAB_ICON = "actor-prefab";
@@ -25,6 +26,7 @@ export const ANCHOR_ICON = "actor-anchor";
 const kMissingAnchor = "The anchor is gone from the asset; its actors sit at the parent's origin";
 
 type ActorAnchors = Pick<Systems.SceneAnchorsReader, "anchors">;
+type LiveActors = ActorAnchors & Pick<SceneLiveView, "expandedActors">;
 
 export interface AnchorRow {
   ownerId: string;
@@ -46,13 +48,20 @@ export class ActorTreeRows {
     tree: Pick<SceneTreeReader, "actorIds" | "actor" | "canContain">,
     marks: PeerMarkMap<string>,
     components: Pick<SceneComponents, "actorIcon">,
-    anchors: ActorAnchors
+    live: LiveActors
   ): ActorTreeRows {
     const rows = new ActorTreeRows();
     for (const id of tree.actorIds()) {
       const actor = tree.actor(id);
-      if (actor !== undefined) {
-        rows.#add(actor, !tree.canContain(id), marks, components, anchors);
+      if (actor === undefined) {
+        continue;
+      }
+
+      rows.#add(actor, !tree.canContain(id), marks, components, live);
+      if (actor.prefab !== undefined) {
+        for (const inner of live.expandedActors(id)) {
+          rows.#add(inner, true, marks, components, live);
+        }
       }
     }
     rows.#seal();
@@ -70,6 +79,12 @@ export class ActorTreeRows {
     id: string
   ): AnchorRow | null {
     return this.#nodes.get(id)?.data ?? null;
+  }
+
+  isInner(
+    id: string
+  ): boolean {
+    return Systems.InstancePath.parse(this.anchorRow(id)?.ownerId ?? id) !== null;
   }
 
   ids(): IterableIterator<string> {
@@ -91,7 +106,10 @@ export class ActorTreeRows {
   accepts(
     detail: JollyReparentDetail
   ): boolean {
-    if (detail.movedIds.some((id) => this.anchorRow(id) !== null)) {
+    if (
+      this.isInner(detail.targetId) ||
+      detail.movedIds.some((id) => this.anchorRow(id) !== null || this.isInner(id))
+    ) {
       return false;
     }
 

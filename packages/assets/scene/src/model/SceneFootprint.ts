@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+import { overrideFields } from "./OverrideChange.ts";
 import { sceneWriteRefs } from "./SceneCommandKeys.ts";
 import type { SceneTreeReader } from "./SceneTree.ts";
 import { SceneTransform } from "./SceneTransform.ts";
@@ -34,6 +35,8 @@ export class SceneFootprint {
       case "actor-renamed":
       case "actor-visibility":
       case "actor-transformed":
+      case "actor-overridden":
+      case "component-overridden":
         return SceneFootprint.#actor(command, tree.actor(command.id));
       case "component-added":
       case "component-removed":
@@ -94,7 +97,10 @@ export class SceneFootprint {
           actorRefs(command.id) :
           this.actors.flatMap((actor) => [
             ...actorRefs(actor.id),
-            ...actor.components.flatMap(componentRefs)
+            ...actor.components.flatMap(componentRefs),
+            ...overrideFields(actor.overrides).map(
+              ({ group, path, field }) => SceneValueRef.override(actor.id, group, path, field)
+            )
           ]);
       case "actor-moved":
         return [
@@ -119,6 +125,8 @@ export class SceneFootprint {
       case "actor-transformed":
       case "component-changed":
       case "component-assets-changed":
+      case "actor-overridden":
+      case "component-overridden":
       case "environment-changed":
         return sceneWriteRefs(command) ?? [];
     }

@@ -1,5 +1,9 @@
 // Import Internal Dependencies
-import type { SceneFile } from "./SceneFile.ts";
+import { PrefabOverrides } from "./PrefabOverrides.ts";
+import type {
+  SceneActorFile,
+  SceneFile
+} from "./SceneFile.ts";
 
 export type ScenePrefabFile = Pick<SceneFile, "actors">;
 
@@ -13,27 +17,35 @@ export const NO_SCENE_PREFABS: ScenePrefabs = {
   find: () => null
 };
 
-export function* includedSceneFiles(
-  file: Readonly<ScenePrefabFile>,
+export function expandedSceneActors(
+  actors: Iterable<SceneActorFile>,
   prefabs: ScenePrefabs,
   sceneId?: string
-): IterableIterator<Readonly<ScenePrefabFile>> {
-  const visited = new Set(sceneId === undefined ? [] : [sceneId]);
-  const files = [file];
+): IterableIterator<SceneActorFile> {
+  return expand(actors, prefabs, sceneId === undefined ? [] : [sceneId]);
+}
 
-  for (const next of files) {
-    yield next;
+function* expand(
+  actors: Iterable<SceneActorFile>,
+  prefabs: ScenePrefabs,
+  chain: readonly string[]
+): IterableIterator<SceneActorFile> {
+  for (const actor of actors) {
+    yield actor;
 
-    for (const { prefab } of next.actors) {
-      if (prefab === undefined || visited.has(prefab.id)) {
-        continue;
-      }
-      visited.add(prefab.id);
+    const { prefab } = actor;
+    if (prefab === undefined || chain.includes(prefab.id)) {
+      continue;
+    }
 
-      const included = prefabs.find(prefab.id);
-      if (included !== null) {
-        files.push(included);
-      }
+    const scene = prefabs.find(prefab.id);
+    if (scene !== null) {
+      const overrides = PrefabOverrides.from(actor.overrides);
+      yield* expand(
+        scene.actors.map((file) => overrides.scope(file, actor.id)),
+        prefabs,
+        [...chain, prefab.id]
+      );
     }
   }
 }

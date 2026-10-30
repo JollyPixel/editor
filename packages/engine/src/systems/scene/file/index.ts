@@ -1,4 +1,5 @@
 // Import Internal Dependencies
+export * from "./InstancePath.ts";
 export * from "./SceneFile.ts";
 export * from "./ScenePrefabs.ts";
 export * from "./definitions/ComponentAnchors.ts";

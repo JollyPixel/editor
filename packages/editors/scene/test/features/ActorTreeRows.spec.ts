@@ -13,19 +13,24 @@ import {
   ANCHOR_ICON,
   PREFAB_ICON
 } from "../../src/features/hierarchy/ActorTreeRows.ts";
+import type { SceneLiveView } from "../../src/editing/SceneEditing.ts";
 import { createSceneComponents } from "../helpers/sceneComponents.ts";
 
+type LiveRows = Pick<SceneLiveView, "anchors" | "expandedActors">;
+
 // CONSTANTS
-const kNoAnchors: Pick<Systems.SceneAnchorsReader, "anchors"> = {
-  anchors: () => [].values()
+const kNoAnchors: LiveRows = {
+  anchors: () => [].values(),
+  expandedActors: () => [].values()
 };
 const kSpawn = { component: "map", key: "object:spawn" };
 
 function mapAnchors(
   mapId: string,
   keys: string[]
-): Pick<Systems.SceneAnchorsReader, "anchors"> {
+): LiveRows {
   return {
+    expandedActors: () => [].values(),
     anchors: (actorId) => (actorId === mapId ? keys : []).map((key): Systems.SceneActorAnchor => {
       return {
         component: "map",
@@ -114,7 +119,56 @@ describe("ActorTreeRows", () => {
     assert.strictEqual(rows.accepts({ movedIds: [crateId], targetId: houseId, where: "inside" }), false);
     assert.strictEqual(rows.accepts({ movedIds: [crateId], targetId: houseId, where: "above" }), true);
   });
+
+  test("lists the expanded actors under their instance and refuses any drop onto or out of them", () => {
+    const document = new SceneDocument();
+    const houseId = document.addActor({ name: "House", prefab: { id: "house", kind: "scene" } })!;
+    const crateId = document.addActor({ name: "Crate" })!;
+    const doorId = `${houseId}/door`;
+    const knobId = `${houseId}/door/knob`;
+    const expanded = new Map([[houseId, [
+      { ...actorFile(doorId, houseId, "Front door"), prefab: { id: "door", kind: "scene" } },
+      actorFile(knobId, doorId, "Knob")
+    ]]]);
+
+    const rows = ActorTreeRows.read(document.tree, new Map(), createSceneComponents(), {
+      ...kNoAnchors,
+      expandedActors: (instanceId) => (expanded.get(instanceId) ?? []).values()
+    });
+
+    const [house] = rows.roots;
+    const [door] = house.children!;
+    assert.deepEqual(
+      [door.id, door.label, door.icon, door.renamable],
+      [doorId, "Front door", PREFAB_ICON, true]
+    );
+    assert.deepEqual(door.children?.map(({ id }) => id), [knobId]);
+    assert.strictEqual(rows.isInner(knobId), true);
+    assert.strictEqual(rows.isInner(houseId), false);
+    assert.strictEqual(rows.accepts({ movedIds: [crateId], targetId: doorId, where: "above" }), false);
+    assert.strictEqual(rows.accepts({ movedIds: [knobId], targetId: crateId, where: "inside" }), false);
+    assert.deepEqual([...rows.ancestorIds(knobId)], [doorId, houseId]);
+  });
 });
+
+function actorFile(
+  id: string,
+  parentId: string,
+  name: string
+): Systems.SceneActorFile {
+  return {
+    id,
+    name,
+    parentId,
+    visible: true,
+    transform: {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 }
+    },
+    components: []
+  };
+}
 
 describe("ActorTreeRows anchors", () => {
   test("lists a component's anchors ahead of the child actors and nests anchored actors under them", () => {

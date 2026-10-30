@@ -43,6 +43,7 @@ export type AssetTreeNode = TreeNode<AssetNodeData>;
 export interface AssetKindPresenter {
   kindIcon(kind: string): IconName | undefined;
   kindDetail(kind: string): string | undefined;
+  kindExtension(kind: string): string | undefined;
 }
 
 export interface AssetDependencies {
@@ -102,12 +103,14 @@ export class AssetTreeModel {
   #assets = new Map<string, AssetLeafData>();
   #companions: AssetCompanions;
   #dependencies: AssetDependencies | undefined;
+  #presenter: AssetKindPresenter | undefined;
 
   constructor(
     records: Iterable<AssetRecordData>,
     options: AssetTreeOptions = {}
   ) {
     this.nodes = [];
+    this.#presenter = options.presenter;
     for (const record of records) {
       this.#assets.set(record.id, {
         type: "asset",
@@ -225,7 +228,7 @@ export class AssetTreeModel {
     }
 
     const to = data.type === "asset" ?
-      data.path.withNameKeepingExtension(name) :
+      data.path.withNameKeepingExtension(name, this.#keptExtension(data)) :
       data.path.withName(name);
     if (to.equals(data.path)) {
       return null;
@@ -358,6 +361,16 @@ export class AssetTreeModel {
       to,
       renames
     };
+  }
+
+  #keptExtension(
+    asset: AssetLeafData
+  ): string {
+    const extension = this.#presenter?.kindExtension(asset.kind) ?? "";
+
+    return extension !== "" && asset.path.name.endsWith(extension) ?
+      extension :
+      asset.path.extension;
   }
 
   #ownerLeaf(

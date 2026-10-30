@@ -10,11 +10,12 @@ import {
 
 // Import Internal Dependencies
 import { SelectionStore } from "../../src/state/SelectionStore.ts";
+import { NO_EXPANDED_ACTORS } from "../helpers/expandedActors.ts";
 
 describe("SelectionStore", () => {
   test("drops the actors the document removes or loses in a reset", () => {
     const document = new SceneDocument();
-    const selection = new SelectionStore(document);
+    const selection = new SelectionStore(document, NO_EXPANDED_ACTORS);
     const first = document.addActor({ name: "First" })!;
     const second = document.addActor({ name: "Second" })!;
     selection.select([first, second]);
@@ -30,7 +31,7 @@ describe("SelectionStore", () => {
   });
 
   test("toggles an actor in as the primary selection and back out", () => {
-    const selection = new SelectionStore(new SceneDocument());
+    const selection = new SelectionStore(new SceneDocument(), NO_EXPANDED_ACTORS);
     selection.select(["a"]);
 
     selection.toggle("b");

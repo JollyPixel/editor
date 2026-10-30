@@ -11,6 +11,7 @@ import {
 
 // Import Internal Dependencies
 import type { ComponentChange } from "./ComponentChange.ts";
+import type { OverrideChange } from "./OverrideChange.ts";
 import { SceneTree, type SceneTreeReader } from "./SceneTree.ts";
 import { SceneTransform } from "./SceneTransform.ts";
 import { invert } from "./history/sceneInverse.ts";
@@ -256,6 +257,12 @@ export class SceneDocument extends CommandDocument<
       id,
       assets
     });
+  }
+
+  override(
+    change: OverrideChange
+  ): boolean {
+    return this.commit(change.toCommand());
   }
 
   changeEnvironment(

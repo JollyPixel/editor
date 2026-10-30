@@ -36,7 +36,7 @@ class ModelComponent extends ActorComponent {
 }
 
 function createModelSetup() {
-  const assets = createSceneAssets(["knight"]);
+  const assets = createSceneAssets(["knight", "mage"]);
   const { type } = assets.reference("knight");
   const definition: ComponentDefinition<null, ModelComponent, { model: string; }> = {
     type: "Model",
@@ -106,6 +106,33 @@ describe("Systems.FileScene", () => {
     const [hero] = castle.children;
     assert.ok(scene.assets.some((reference) => reference.equals(assets.reference("knight"))));
     assert.strictEqual(hero.getComponent(ModelComponent)!.model, "knight");
+  });
+
+  test("declares and builds the asset an instance override puts in a slot", async() => {
+    const { sm, assets, components, file } = createModelSetup();
+    const kind = assets.reference("mage").type.kind.value;
+    const scene = new FileScene("level", createSceneFile([
+      createActorFile("castle", {
+        prefab: { id: "keep", kind: "scene" },
+        overrides: { components: { model: { assets: { model: { id: "mage", kind } } } } }
+      })
+    ]), {
+      components,
+      prefabs: {
+        find: () => {
+          return { actors: file.actors };
+        }
+      }
+    });
+
+    const load = sm.loadScene(scene);
+    assets.loader.resolve("mage");
+    await load.done;
+    sm.beginFrame();
+
+    const [hero] = sm.tree.children[0].children;
+    assert.ok(scene.assets.some((reference) => reference.equals(assets.reference("mage"))));
+    assert.strictEqual(hero.getComponent(ModelComponent)!.model, "mage");
   });
 
   test("captures a prefab instance as the actors it expanded", async() => {

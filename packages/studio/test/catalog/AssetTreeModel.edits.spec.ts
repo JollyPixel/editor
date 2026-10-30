@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import type { AssetRecordData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import { AssetKindSet } from "../../src/catalog/AssetKindSet.ts";
 import { AssetPath } from "../../src/catalog/AssetPath.ts";
 import {
   AssetTreeModel,
@@ -74,6 +75,32 @@ describe("AssetTreeModel empty folders", () => {
     assert.equal(relocation?.type, "folder");
     assert.equal(relocation?.to.toString(), "levels");
     assert.deepEqual(relocation?.renames, []);
+  });
+
+  test("keeps the kind extension once when the name holds other dots", () => {
+    const model = new AssetTreeModel([
+      {
+        id: "scene",
+        kind: "scene",
+        path: "scenes/level.v2.scene.json"
+      }
+    ], {
+      presenter: new AssetKindSet({
+        kinds: [
+          {
+            kind: "scene",
+            label: "Scene",
+            extension: ".scene.json"
+          }
+        ],
+        editable: []
+      })
+    });
+    const scene = assetNodeId("scene");
+
+    assert.equal(model.planRename(scene, "forest")?.to.toString(), "scenes/forest.scene.json");
+    assert.equal(model.planRename(scene, "forest.scene.json")?.to.toString(), "scenes/forest.scene.json");
+    assert.equal(model.planRename(scene, "forest.v3")?.to.toString(), "scenes/forest.v3.scene.json");
   });
 
   test("tags an asset relocation with its node type", () => {

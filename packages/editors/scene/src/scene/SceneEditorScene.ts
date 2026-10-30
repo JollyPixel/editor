@@ -29,6 +29,8 @@ import {
 } from "./PrefabScenes.ts";
 import type { SceneComponents } from "../components/SceneComponents.ts";
 import { SceneCollaboration } from "../collaboration/SceneCollaboration.ts";
+import { ActorWrites } from "../editing/ActorWrites.ts";
+import { InstanceOverrides } from "../editing/InstanceOverrides.ts";
 import { SceneActions } from "../editing/SceneActions.ts";
 import { ActorPresetMenu } from "../features/hierarchy/model/ActorPresetMenu.ts";
 import type {
@@ -139,12 +141,14 @@ export class SceneEditorScene extends Systems.Scene {
       sceneId: this.#options.sceneId
     });
     teardown.defer(() => binding.dispose());
+    const writes = new ActorWrites(document);
     const draft = new SceneDraft({
       document,
-      view: binding
+      view: binding,
+      writes
     });
     teardown.defer(() => draft.dispose());
-    const selection = new SelectionStore(document);
+    const selection = new SelectionStore(document, binding);
     teardown.defer(() => selection.dispose());
     const actions = new SceneActions({
       document,
@@ -173,6 +177,7 @@ export class SceneEditorScene extends Systems.Scene {
       scene,
       binding,
       document,
+      writes,
       selection,
       settings: gizmo
     });
@@ -223,7 +228,14 @@ export class SceneEditorScene extends Systems.Scene {
 
     this.#editing.resolve({
       document,
-      anchors: binding,
+      live: binding,
+      writes,
+      overrides: new InstanceOverrides({
+        document,
+        history,
+        live: binding,
+        prefabs
+      }),
       components,
       presets: new ActorPresetMenu(components),
       history,

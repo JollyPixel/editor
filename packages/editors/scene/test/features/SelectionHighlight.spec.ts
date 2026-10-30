@@ -48,7 +48,7 @@ function createHighlight() {
     document,
     new Systems.ComponentDefinitions().register(kBox)
   );
-  const selection = new SelectionStore(document);
+  const selection = new SelectionStore(document, binding);
   const presence = new PresenceStore();
   presence.peers = [kPeer];
   function addActor(

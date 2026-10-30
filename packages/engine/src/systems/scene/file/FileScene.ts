@@ -8,7 +8,7 @@ import { captureSceneActors } from "./live/sceneCapture.ts";
 import { SceneEnvironment } from "./live/SceneEnvironment.ts";
 import type { SceneFile } from "./SceneFile.ts";
 import {
-  includedSceneFiles,
+  expandedSceneActors,
   NO_SCENE_PREFABS,
   type ScenePrefabs
 } from "./ScenePrefabs.ts";
@@ -47,10 +47,9 @@ export class FileScene<
     } = options;
 
     super(name, {
-      assets: Array.from(
-        includedSceneFiles(file, prefabs, sceneId),
-        (included) => [...components.assets(included)]
-      ).flat()
+      assets: components.assets({
+        actors: [...expandedSceneActors(file.actors, prefabs, sceneId)]
+      })
     });
     this.file = file;
     this.#components = components;

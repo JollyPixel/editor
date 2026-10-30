@@ -50,6 +50,7 @@ interface SceneActorFile {
   };
   components: SceneComponentFile[];
   prefab?: AssetReferenceData; // a scene expanded under this actor
+  overrides?: SceneOverridesFile; // changes to the actors `prefab` expands
   anchor?: SceneAnchorFile; // a place on a component of the parent
 }
 
@@ -107,11 +108,60 @@ type ScenePrefabFile = Pick<SceneFile, "actors">;
   collide. A nested instance adds one segment per level.
 - A scene already being expanded on the way down is skipped with a warning,
   so a cycle stops instead of recursing.
-- Instances are read-only: nothing writes back to the referenced scene.
+- Nothing writes back to the referenced scene.
 
-`includedSceneFiles(file, prefabs, sceneId?)` yields `file`, then every scene
-its instances include, nested ones too, once each. `sceneId` names `file`, so
-an instance of it is never yielded again. `NO_SCENE_PREFABS` finds no scene.
+`expandedSceneActors(actors, prefabs, sceneId?)` yields each actor of
+`actors`, followed by the actors its instance expands, nested instances
+included, with path ids and overrides applied. `sceneId` names the scene of
+`actors`, so an instance of it is never expanded. `NO_SCENE_PREFABS` finds no
+scene.
+
+`InstancePath` reads and builds path ids.
+
+```ts
+class InstancePath {
+  static join(instanceId: string, path: string): string;
+  static parse(id: string): InstancePath | null; // null for an id with no /
+
+  readonly instanceId: string; // the outermost instance: "a" in "a/b/c"
+  readonly path: string; // the rest: "b/c"
+  get ownerId(): string; // the instance that expanded it: "a/b"
+}
+```
+
+### Overrides
+
+`overrides` changes what an instance expands without touching the referenced
+scene.
+
+```ts
+interface SceneOverridesFile {
+  actors?: Record<string, SceneActorOverrideFile>; // keyed by path
+  components?: Record<string, SceneComponentOverrideFile>; // keyed by path
+}
+
+interface SceneActorOverrideFile {
+  name?: string;
+  visible?: boolean;
+  transform?: Partial<SceneTransformFile>;
+}
+
+interface SceneComponentOverrideFile {
+  data?: JSONObject; // top-level fields that replace the component's
+  assets?: Record<string, AssetReferenceData | null>;
+}
+```
+
+- A path is the expanded id without the instance id: `door` for the actor
+  `door` of the referenced scene, `room/lamp` for the actor `lamp` of the
+  nested instance `room`.
+- An actor override replaces the name, the visibility and each transform
+  field it sets. A component override replaces the top-level data fields
+  and asset slots it sets.
+- Overrides under a nested instance's path are handed down to it and win,
+  field by field, over the overrides the referenced scene gives that
+  instance.
+- A path the referenced scene does not have is ignored.
 
 ## Anchors
 
@@ -264,8 +314,9 @@ class FileScene<TContext> extends Scene<TContext> {
 
 - Its `assets` are the definitions' assets, loaded by
   [`SceneManager`](scene-manager.md) like any scene. With `prefabs`, they
-  include the assets of every scene its instances include, so `prefabs` must
-  find each of those scenes when the `FileScene` is constructed.
+  include the assets of every actor its instances expand, overridden slots
+  included, so `prefabs` must find each of those scenes when the `FileScene`
+  is constructed.
 - `sceneId` is the asset id of `file`. Pass it so a prefab cycle back to this
   scene stops at once, as in the editor, instead of one level down.
 - `awake()` builds the actors in play mode and applies the environment.
@@ -391,6 +442,32 @@ root. The parent may come from the same call or an earlier one.
 Destroys what every instance of `sceneId` expanded, nested instances
 included, and expands them again from `prefabs`. Call it when that scene
 changes.
+
+### override(instanceId, overrides): void
+
+Gives a built instance new [overrides](#overrides), or none for `undefined`.
+The expanded actors take the new name, visibility and transform in place. A
+component whose override changed is patched through its definition's
+`apply`, and rebuilt when the definition has none or an asset slot changed.
+The other components are kept.
+
+### expandedActors(instanceId): IterableIterator\<SceneActorFile\>
+
+Yields the files of the actors built under an instance, nested instances
+included, in tree order, with path ids and overrides applied.
+
+### expandedActor(id): SceneActorFile | null
+
+### expandedComponent(id): SceneComponentFile | null
+
+Return the file of the expanded actor, or of the built component, with that
+path id, as the latest overrides leave it. Both return `null` for an id that
+no instance expanded.
+
+### prefabSceneIds(): IterableIterator\<string\>
+
+Yields the scene id of every instance built, nested ones included, once
+each. An editor releases the scenes this no longer yields.
 
 ### remove(id): void
 

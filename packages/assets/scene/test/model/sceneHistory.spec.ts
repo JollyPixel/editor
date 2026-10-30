@@ -11,6 +11,7 @@ import { CommandHistory } from "@jolly-pixel/history";
 // Import Internal Dependencies
 import {
   ComponentChange,
+  OverrideChange,
   SceneDocument,
   sceneHistoryRegistration,
   SceneTransform,
@@ -28,7 +29,13 @@ const kScope = "scene";
 
 function setup() {
   const document = new SceneDocument();
-  document.load(snapshot(sampleActors()));
+  document.load(snapshot([
+    ...sampleActors(),
+    actor("P", {
+      prefab: { id: "house", kind: "scene" },
+      overrides: { actors: { door: { name: "Old door" } } }
+    })
+  ]));
   const history = new CommandHistory<typeof kScope>();
   history.register(sceneHistoryRegistration(document, { scope: kScope }));
 
@@ -81,7 +88,26 @@ describe("scene history", () => {
     })],
     ["changing the environment", (document) => document.changeEnvironment({
       fog: { kind: "exp2", color: "#ffffff", density: 0.1 }
-    })]
+    })],
+    ["overriding and unsetting fields of an inner actor", (document) => document.override(
+      OverrideChange.actor({
+        id: "P",
+        path: "door",
+        set: { transform: { position: { x: 1, y: 0, z: 0 } } },
+        unset: ["name"]
+      })
+    )],
+    ["overriding a component inside a nested instance", (document) => document.override(
+      OverrideChange.component({
+        id: "P",
+        path: "room/lamp",
+        set: {
+          data: { intensity: 2 },
+          assets: { cookie: { id: "texture-1", kind: "pixelart" } }
+        }
+      })
+    )],
+    ["removing a prefab instance with overrides", (document) => document.remove("P")]
   ];
 
   for (const [name, edit] of edits) {
@@ -162,5 +188,43 @@ describe("scene history", () => {
       intensity: 1,
       color: "#ff0000"
     });
+  });
+
+  test("undoes one override field while keeping a peer's override of another", () => {
+    const { document, history } = setup();
+    history.record(kScope, null, () => document.override(OverrideChange.actor({
+      id: "P",
+      path: "door",
+      set: { visible: false }
+    })));
+
+    document.applyRemote({
+      action: "actor-overridden",
+      id: "P",
+      path: "door",
+      set: { name: "Peer door" }
+    }, "peer");
+
+    assert.ok(history.undo(kScope));
+    assert.deepEqual(document.tree.actor("P")?.overrides?.actors?.door, { name: "Peer door" });
+  });
+
+  test("refuses to undo an override a peer rewrote", () => {
+    const { document, history } = setup();
+    history.record(kScope, null, () => document.override(OverrideChange.actor({
+      id: "P",
+      path: "window",
+      set: { name: "Mine" }
+    })));
+
+    document.applyRemote({
+      action: "actor-overridden",
+      id: "P",
+      path: "window",
+      set: { name: "Theirs" }
+    }, "peer");
+
+    assert.equal(history.undo(kScope), false);
+    assert.deepEqual(document.tree.actor("P")?.overrides?.actors?.window, { name: "Theirs" });
   });
 });

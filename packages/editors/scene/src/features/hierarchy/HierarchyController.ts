@@ -9,6 +9,7 @@ import {
   type JollyToggleExpandDetail,
   type JollyToggleVisibleDetail,
   type MenuEntry,
+  type MenuItem,
   type TreeNode
 } from "@jolly-pixel/ui";
 import type {
@@ -18,6 +19,7 @@ import type {
 } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
+import type { ActorRole } from "../../editing/InstanceOverrides.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import {
   ActorTreeRows,
@@ -27,14 +29,46 @@ import type { AddActorAction } from "./model/ActorPreset.ts";
 import type { ActorPresetMenu } from "./model/ActorPresetMenu.ts";
 import { TreeExpansion } from "./TreeExpansion.ts";
 
+// CONSTANTS
+const kOverrideItems = {
+  "revert-overrides": {
+    id: "revert-overrides",
+    label: "Revert overrides",
+    icon: "revert"
+  },
+  "apply-to-prefab": {
+    id: "apply-to-prefab",
+    label: "Apply overrides to prefab",
+    icon: "asset-export"
+  }
+} satisfies { [TAction in OverrideAction]: MenuItem<TAction>; };
+const kOverrideActions: Readonly<Record<ActorRole, readonly OverrideAction[]>> = {
+  own: [],
+  instance: ["revert-overrides", "apply-to-prefab"],
+  inner: ["revert-overrides"]
+};
+
 export interface HierarchyView {
   beginRename(id: string): void;
 }
 
 type AddAction = AddActorAction | "add-instance";
-type RowAction = "rename" | "duplicate" | "delete" | AddAction;
+type OverrideAction = "revert-overrides" | "apply-to-prefab";
+type RowAction = "rename" | "duplicate" | "delete" | OverrideAction | AddAction;
 
 export class HierarchyController {
+  static #overrideEntries(
+    role: ActorRole,
+    overridden: boolean
+  ): MenuEntry<OverrideAction>[] {
+    return kOverrideActions[role].map((action) => {
+      return {
+        ...kOverrideItems[action],
+        disabled: !overridden
+      };
+    });
+  }
+
   static #addEntries(
     presets: ActorPresetMenu
   ): MenuEntry<AddAction>[] {
@@ -50,28 +84,39 @@ export class HierarchyController {
   }
 
   static #rowEntries(
-    presets: ActorPresetMenu,
-    canAddChild: boolean
+    editing: SceneEditing,
+    id: string,
+    role: ActorRole
   ): MenuEntry<RowAction>[] {
+    const rename: MenuItem<RowAction> = {
+      id: "rename",
+      label: "Rename",
+      icon: "action-rename"
+    };
+    const overrides = HierarchyController.#overrideEntries(
+      role,
+      editing.overrides.actorOverridden(id)
+    );
+    if (role === "inner") {
+      return [rename, "separator", ...overrides];
+    }
+
     return [
       {
         id: "group:add-child",
         label: "Add child",
         icon: "plus",
-        disabled: !canAddChild,
-        items: HierarchyController.#addEntries(presets)
+        disabled: !editing.document.tree.canContain(id),
+        items: HierarchyController.#addEntries(editing.presets)
       },
       "separator",
-      {
-        id: "rename",
-        label: "Rename",
-        icon: "action-rename"
-      },
+      rename,
       {
         id: "duplicate",
         label: "Duplicate",
         icon: "action-duplicate"
       },
+      ...overrides.length === 0 ? [] : ["separator" as const, ...overrides],
       "separator",
       {
         id: "delete",
@@ -108,7 +153,7 @@ export class HierarchyController {
         editing.document.tree,
         editing.presence.selections,
         editing.components,
-        editing.anchors
+        editing.live
       );
     }
     this.#host.requestUpdate();
@@ -145,7 +190,7 @@ export class HierarchyController {
         document,
         selection,
         presence,
-        anchors
+        live
       } = editing;
       this.#rebuild();
 
@@ -154,7 +199,8 @@ export class HierarchyController {
         document.subscribe("reset", this.#rebuild),
         selection.subscribe("change", this.#onSelection),
         presence.subscribe("selectionsChange", this.#rebuild),
-        anchors.subscribe("anchorsChange", this.#rebuild)
+        live.subscribe("anchorsChange", this.#rebuild),
+        live.subscribe("actorsChange", this.#rebuild)
       ];
     });
   }
@@ -206,7 +252,7 @@ export class HierarchyController {
   readonly handleRename = (
     event: CustomEvent<JollyRenameDetail>
   ): void => {
-    this.#connection.current?.document.rename(
+    this.#connection.current?.writes.rename(
       event.detail.id,
       event.detail.name
     );
@@ -215,7 +261,7 @@ export class HierarchyController {
   readonly handleToggleVisible = (
     event: CustomEvent<JollyToggleVisibleDetail>
   ): void => {
-    this.#connection.current?.document.changeVisibility(
+    this.#connection.current?.writes.changeVisibility(
       event.detail.id,
       event.detail.visible
     );
@@ -263,22 +309,21 @@ export class HierarchyController {
     }
     const row = this.#rows.anchorRow(id);
     if (row !== null) {
-      return MenuSession.forRow(
-        HierarchyController.#addEntries(editing.presets),
-        () => editing.document.tree.has(row.ownerId),
-        (action) => this.#add(action, row.ownerId, row.anchor)
-      );
+      return this.#rows.isInner(id) ?
+        MenuSession.EMPTY :
+        MenuSession.forRow(
+          HierarchyController.#addEntries(editing.presets),
+          () => editing.document.tree.has(row.ownerId),
+          (action) => this.#add(action, row.ownerId, row.anchor)
+        );
     }
     if (!editing.selection.has(id)) {
       editing.selection.select([id]);
     }
 
     return MenuSession.forRow(
-      HierarchyController.#rowEntries(
-        editing.presets,
-        editing.document.tree.canContain(id)
-      ),
-      () => editing.document.tree.has(id),
+      HierarchyController.#rowEntries(editing, id, editing.overrides.role(id)),
+      () => editing.overrides.exists(id),
       (action) => this.#runRow(action, id)
     );
   }
@@ -296,6 +341,12 @@ export class HierarchyController {
         break;
       case "delete":
         this.deleteSelected();
+        break;
+      case "revert-overrides":
+        this.#connection.current?.overrides.revertActor(id);
+        break;
+      case "apply-to-prefab":
+        this.#connection.current?.overrides.applyToPrefab(id);
         break;
       default:
         await this.#add(action, id);

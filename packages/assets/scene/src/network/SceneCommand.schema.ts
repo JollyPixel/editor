@@ -14,6 +14,7 @@ import type { JSONValue } from "./types.ts";
 const kIdSchema = z.string().check(z.minLength(1));
 const kNullableIdSchema = z.nullable(kIdSchema);
 const kBeforeIdSchema = z.optional(kIdSchema);
+const kPathSchema = z.string().check(z.regex(/^[^/]+(?:\/[^/]+)*$/));
 const kHexColorSchema = z.string().check(z.regex(/^#[0-9a-fA-F]{6}$/));
 
 const kJSONValueSchema: z.ZodMiniType<JSONValue> = z.lazy(() => z.union([
@@ -68,6 +69,28 @@ export const sceneComponentSchema = z.object({
   assets: componentAssetsSchema
 });
 
+const kActorOverrideFieldSchema = z.keyof(z.object({
+  name: z.string(),
+  visible: z.boolean(),
+  ...kTransformShape
+}));
+
+export const sceneActorOverrideSchema = z.strictObject({
+  name: z.optional(z.string()),
+  visible: z.optional(z.boolean()),
+  transform: z.optional(z.partial(z.strictObject(kTransformShape)))
+});
+
+export const sceneComponentOverrideSchema = z.strictObject({
+  data: z.optional(componentDataSchema),
+  assets: z.optional(componentAssetsSchema)
+});
+
+export const sceneOverridesSchema = z.strictObject({
+  actors: z.optional(z.record(kPathSchema, sceneActorOverrideSchema)),
+  components: z.optional(z.record(kPathSchema, sceneComponentOverrideSchema))
+});
+
 export const sceneActorSchema = z.object({
   id: kIdSchema,
   name: z.string(),
@@ -76,6 +99,7 @@ export const sceneActorSchema = z.object({
   transform: sceneTransformSchema,
   components: z.array(sceneComponentSchema),
   prefab: z.optional(assetReferenceSchema),
+  overrides: z.optional(sceneOverridesSchema),
   anchor: z.optional(sceneAnchorSchema)
 });
 
@@ -166,6 +190,21 @@ export const sceneCommandSchema = z.discriminatedUnion("action", [
   commandVariant("component-assets-changed", {
     id: kIdSchema,
     assets: minProperties(componentAssetsSchema, 1)
+  }),
+  commandVariant("actor-overridden", {
+    id: kIdSchema,
+    path: kPathSchema,
+    set: z.optional(sceneActorOverrideSchema),
+    unset: z.optional(z.array(kActorOverrideFieldSchema))
+  }),
+  commandVariant("component-overridden", {
+    id: kIdSchema,
+    path: kPathSchema,
+    set: z.optional(sceneComponentOverrideSchema),
+    unset: z.optional(z.strictObject({
+      data: z.optional(z.array(z.string())),
+      assets: z.optional(z.array(z.string()))
+    }))
   }),
   commandVariant("environment-changed", {
     environment: sceneEnvironmentPatchSchema
