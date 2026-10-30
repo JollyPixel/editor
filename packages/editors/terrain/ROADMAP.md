@@ -207,7 +207,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Chunk reads: done** (2026-10-30). `TerrainStream.read` returns the
   heights, splat and holes of any chunk, fetching an unloaded one's parts in
   batches without loading it. First part of import and export.
-- **Next:** the heightmap and splat map codecs, 16-bit PNG and RAW.
+- **Heightmap codecs: done** (2026-10-30). `terrain.renderer` reads and writes
+  8-bit and 16-bit grayscale PNG and 16-bit RAW, maps heights to samples over a
+  range, and fits a grid of another size to a rectangle of chunks. Nothing in
+  the editor calls them yet.
+- **Next:** importing and exporting a rectangle of chunks in the document.
 
 Tick a box when its item lands, and move **Next** along with it.
 

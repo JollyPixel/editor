@@ -67,6 +67,27 @@ export {
   type TileKey,
   type TilePatch
 } from "./terrain/TileCoord.ts";
+export {
+  expandHeights,
+  fitGrid,
+  measureHeights,
+  parseHeightmapSidecar,
+  quantizeHeights,
+  type ChunkRect,
+  type GridSize,
+  type HeightmapSidecar
+} from "./io/heightmap.ts";
+export { InvalidImageError } from "./io/errors/InvalidImageError.ts";
+export {
+  decodePng,
+  encodePng,
+  type GrayDepth,
+  type GrayImage
+} from "./io/png.ts";
+export {
+  decodeRaw,
+  encodeRaw
+} from "./io/raw.ts";
 export { pointHeight } from "./terrain/pointHeight.ts";
 export {
   raycastTerrain,

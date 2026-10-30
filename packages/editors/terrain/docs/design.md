@@ -341,7 +341,11 @@ Both work on a rectangle of chunks, the whole terrain by default.
 - **Heightmap.** A 16-bit PNG or RAW at the resolution of a chosen tier.
   Values map the exported range, lowest to highest height, which is written to
   a sidecar JSON and shown in the dialog. Import asks for the target rectangle
-  and the height range, creates the chunks it lacks, and is one undo step.
+  and the height range, creates the chunks it lacks, and is one undo step. An
+  image of another size is stretched over the rectangle bilinearly, and an odd
+  side is read as a closing row, so a 1025 px map fits 1024 samples exactly.
+  An 8-bit PNG spans the same range, a colour PNG gives its first channel, and
+  palette and interlaced PNGs are refused.
 - **Splat map.** One grayscale PNG per material used in the rectangle, named
   after the material, 0 to 255 per texel. Import matches masks to materials by
   name, or lets the user pick, and keeps the four strongest materials per
