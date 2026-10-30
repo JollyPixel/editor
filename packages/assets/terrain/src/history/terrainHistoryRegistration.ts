@@ -69,7 +69,9 @@ export function terrainHistoryRegistration<TScope extends string>(
     keys: terrainHistoryKeys(document),
     resolveScope: () => scope,
     label: ({ command }) => kLabels[command.action],
-    compact: compactTilePatches
+    compact: (commands) => (commands.every((command) => document.isPaired(command)) ?
+      [...commands] :
+      compactTilePatches(commands))
   };
 }
 

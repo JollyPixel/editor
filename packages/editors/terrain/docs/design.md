@@ -361,11 +361,13 @@ downloads on its own, so a browser may ask once to allow several downloads.
 A rectangle can reach past the stream radius. `TerrainStream.read` returns
 the contents of any chunk: a loaded one from memory, the others by subscribing
 to their parts in batches of 64 chunks and unsubscribing once they arrive, so
-they never take a view layer. Import reads the chunks it replaces this way, so
-its undo step holds their old contents whether or not they are loaded. Undo
-follows the rule strokes do: the step is skipped when a chunk it touches is
-loaded or unloaded differently from when it was made, since a chunk not loaded
-cannot show what peers did to it.
+they never take a view layer. Import reads the chunks it replaces this way and
+builds its commands and their inverses together, so undo and redo work whether
+or not a chunk is loaded. A plan is checked when it commits: if the rectangle's
+chunks or their tiers changed since the read, nothing is written. Undo follows
+the rule strokes do: the step is skipped when a chunk it touches is loaded or
+unloaded differently from when it was made, since a chunk not loaded cannot
+show what peers did to it.
 
 ## Packages
 

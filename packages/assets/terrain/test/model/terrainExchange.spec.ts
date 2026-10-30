@@ -1,35 +1,27 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test,
-  type TestContext
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import { CommandHistory } from "@jolly-pixel/history";
 import {
   chunkResolution,
   ChunkCoord,
+  chunkSampleCount,
   HOLE_BYTES,
-  SPLAT_CHANNELS,
-  SPLAT_TEXELS,
   type ChunkRect,
   type ChunkTier
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import { encodeHoles } from "#src/index.ts";
+import {
+  encodeHeights,
+  encodeHoles
+} from "#src/index.ts";
 import {
   chunksInRect,
-  readHeightGrid,
-  readSplatMasks,
-  terrainHistoryRegistration,
-  type ChunkContents,
-  type SplatMask
+  readHeightGrid
 } from "#src/network/client.ts";
-import { terrainPeers } from "../helpers/peers.ts";
+import { stripPeers } from "../helpers/exchange.ts";
 import {
   heights,
   networkCommand
@@ -37,42 +29,6 @@ import {
 
 // CONSTANTS
 const kFar = new ChunkCoord(12, 0);
-const kStrip = 13;
-
-function stripPeers(
-  t: TestContext
-) {
-  const peers = terrainPeers();
-  t.after(peers.dispose);
-  for (let x = 1; x < kStrip; x++) {
-    peers.server.receive("X", networkCommand(
-      { action: "chunk-added", x, z: 0, heights: heights(x) },
-      { clientId: "X" }
-    ));
-  }
-  const peer = peers.join("A");
-  const history = new CommandHistory<"terrain">();
-  history.register(terrainHistoryRegistration(peer.document, { scope: "terrain" }));
-
-  async function read(
-    rect: ChunkRect
-  ): Promise<ChunkContents[]> {
-    const coords = chunksInRect(rect);
-    const collected: ChunkContents[] = [];
-    const reading = (async() => {
-      for await (const chunk of peer.document.stream.read(coords)) {
-        collected.push(chunk);
-      }
-    })();
-    await setImmediate();
-    peers.route();
-    await reading;
-
-    return collected;
-  }
-
-  return { ...peers, ...peer, history, read };
-}
 
 function flatGrid(
   rect: ChunkRect,
@@ -80,15 +36,6 @@ function flatGrid(
   height: number
 ): Float32Array {
   return new Float32Array(rect.columns * rect.rows * chunkResolution(tier) ** 2).fill(height);
-}
-
-function mask(
-  slot: number,
-  weight: number
-): SplatMask {
-  const samples = new Uint16Array(SPLAT_TEXELS ** 2).fill(weight);
-
-  return { slot, image: { width: SPLAT_TEXELS, height: SPLAT_TEXELS, depth: 8, samples } };
 }
 
 describe("terrain heightmap import", () => {
@@ -158,6 +105,60 @@ describe("terrain heightmap import", () => {
     assert.equal(document.terrain.overview.samples(kFar)![0], kFar.x);
   });
 
+  test("undoing a tier change on a loaded chunk restores the chunks imported beside it", async(t) => {
+    const { server, route, document, history, read } = stripPeers(t);
+    const beside = new ChunkCoord(2, 0);
+    const refined = encodeHeights(new Float32Array(chunkSampleCount(2)).fill(2));
+    server.receive("X", networkCommand(
+      { action: "tier-changed", x: beside.x, z: 0, tier: 2, heights: refined },
+      { clientId: "X" }
+    ));
+    route();
+    const rect = { x: 1, z: 0, columns: 2, rows: 1 };
+
+    const before = await read(rect);
+    history.record("terrain", null, () => document.importHeights(rect, 2, flatGrid(rect, 2, 50), before));
+    route();
+    assert.equal(history.undo("terrain"), true);
+    route();
+
+    assert.equal(server.state.terrain.chunk(new ChunkCoord(1, 0))?.tier, 1);
+    assert.equal(server.state.terrain.chunk(beside)?.sample(100, 100), 2);
+  });
+
+  test("redo brings an import back on unloaded chunks and on a new one, and undoes again", async(t) => {
+    const { server, route, document, history, read } = stripPeers(t);
+    const rect = { x: 11, z: 0, columns: 3, rows: 1 };
+    const created = new ChunkCoord(13, 0);
+    const before = await read(rect);
+    history.record("terrain", null, () => document.importHeights(rect, 1, flatGrid(rect, 1, 50), before));
+    route();
+
+    history.undo("terrain");
+    route();
+    assert.equal(history.redo("terrain"), true);
+    route();
+    assert.equal(server.state.terrain.chunk(kFar)?.height(3, 3), 50);
+    assert.equal(server.state.terrain.chunk(created)?.height(3, 3), 50);
+
+    assert.equal(history.undo("terrain"), true);
+    route();
+    assert.equal(server.state.terrain.chunk(kFar)?.height(3, 3), kFar.x);
+    assert.equal(server.state.terrain.knows(created), false);
+  });
+
+  test("an import whose chunks changed since they were read writes nothing", async(t) => {
+    const { server, route, document, read } = stripPeers(t);
+    const rect = { x: 1, z: 0, columns: 2, rows: 1 };
+    const before = await read(rect);
+    server.receive("X", networkCommand({ action: "chunk-removed", x: 2, z: 0 }, { clientId: "X" }));
+    route();
+
+    assert.equal(document.importHeights(rect, 1, flatGrid(rect, 1, 50), before), false);
+    route();
+    assert.equal(server.state.terrain.chunk(new ChunkCoord(1, 0))?.height(3, 3), 1);
+  });
+
   test("refuses a rectangle that cannot be placed", (t) => {
     const { document } = stripPeers(t);
 
@@ -201,53 +202,3 @@ describe("terrain heightmap import", () => {
   });
 });
 
-describe("terrain splat import", () => {
-  test("keeps the four strongest materials, scaled to 255, and undoes on an unloaded chunk", async(t) => {
-    const { server, route, document, history, read } = stripPeers(t);
-    const rect = { x: kFar.x, z: 0, columns: 1, rows: 1 };
-    const masks = [mask(1, 10), mask(2, 100), mask(3, 60), mask(4, 40), mask(5, 20)];
-
-    const before = await read(rect);
-    history.record("terrain", "Import splat", () => document.importSplat(rect, masks, before));
-    route();
-
-    const { indices, weights } = server.state.terrain.chunk(kFar)!.splat.copy();
-    assert.deepEqual([...indices.subarray(0, SPLAT_CHANNELS)], [2, 3, 4, 5]);
-    assert.equal(weights.subarray(0, SPLAT_CHANNELS).reduce((sum, weight) => sum + weight, 0), 255);
-    assert.equal(document.terrain.overview.materials(kFar)![0], 2);
-
-    assert.equal(history.undo("terrain"), true);
-    route();
-    assert.equal(server.state.terrain.chunk(kFar)!.splat.dominantSlot(0, 0), 0);
-  });
-
-  test("leaves a texel with no mask as it was", async(t) => {
-    const { server, route, document, history, read } = stripPeers(t);
-    const rect = { x: kFar.x, z: 0, columns: 1, rows: 1 };
-    const masks = [mask(2, 0)];
-    masks[0].image.samples[1] = 200;
-
-    const before = await read(rect);
-    history.record("terrain", null, () => document.importSplat(rect, masks, before));
-    route();
-
-    const { splat } = server.state.terrain.chunk(kFar)!;
-    assert.equal(splat.dominantSlot(0, 0), 0);
-    assert.equal(splat.dominantSlot(1, 0), 2);
-  });
-
-  test("exports one mask per painted material, with its weights", async(t) => {
-    const { read } = stripPeers(t);
-    const rect = { x: kFar.x, z: 0, columns: 1, rows: 1 };
-    const before = await read(rect);
-
-    async function* chunks() {
-      yield* before;
-    }
-    const masks = await readSplatMasks(chunks(), rect);
-
-    assert.deepEqual(masks.map(({ slot }) => slot), [0]);
-    assert.equal(masks[0].image.samples[0], 255);
-    assert.equal(masks[0].image.width, SPLAT_TEXELS);
-  });
-});
