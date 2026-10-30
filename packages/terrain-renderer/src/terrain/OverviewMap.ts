@@ -170,8 +170,8 @@ export class OverviewMap implements OverviewReader {
     let changed = false;
     for (let row = 0; row < OVERVIEW_SAMPLES; row++) {
       for (let column = 0; column < OVERVIEW_SAMPLES; column++) {
-        const localX = column * OVERVIEW_SPACING - tileX;
-        const localZ = row * OVERVIEW_SPACING - tileZ;
+        const localX = column * OVERVIEW_SPACING * tile.tier - tileX;
+        const localZ = row * OVERVIEW_SPACING * tile.tier - tileZ;
         if (localX >= 0 && localX < TILE_SAMPLES && localZ >= 0 && localZ < TILE_SAMPLES) {
           entry.samples[row * OVERVIEW_SAMPLES + column] = heights[localZ * TILE_SAMPLES + localX];
           changed = true;
@@ -243,6 +243,7 @@ export function isOverviewTile(
   tile: TileCoord
 ): boolean {
   const { x, z } = tile.localSample;
+  const spacing = OVERVIEW_SPACING * tile.tier;
 
-  return x % OVERVIEW_SPACING === 0 && z % OVERVIEW_SPACING === 0;
+  return x % spacing === 0 && z % spacing === 0;
 }

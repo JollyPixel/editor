@@ -15,6 +15,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
+import type { BrushTool } from "#src/state/SculptSettings.ts";
 import {
   captureCanvas,
   type CanvasPixels
@@ -72,6 +73,29 @@ export class TerrainPage {
     }, [sampleX, sampleZ, options.confirmed ?? false, CHUNK_SAMPLES, SPLAT_TEXELS] as const);
   }
 
+  holeAt(
+    sampleX: number,
+    sampleZ: number
+  ): Promise<boolean | null> {
+    return this.page.evaluate(([x, z, chunkSamples]) => {
+      const { terrain } = window.terrainEditor!.document;
+      const chunkX = Math.floor(x / chunkSamples);
+      const chunkZ = Math.floor(z / chunkSamples);
+      const chunk = [...terrain.chunks()].find(({ coord }) => coord.x === chunkX && coord.z === chunkZ);
+
+      return chunk === undefined ? null : chunk.holes.isHole(
+        Math.floor(x) - chunkX * chunkSamples,
+        Math.floor(z) - chunkZ * chunkSamples
+      );
+    }, [sampleX, sampleZ, CHUNK_SAMPLES] as const);
+  }
+
+  async selectTool(
+    tool: BrushTool
+  ): Promise<void> {
+    await this.page.locator(`terrain-sculpt-toolbar jolly-tool-button[data-tool=${tool}]`).click();
+  }
+
   async selectMaterial(
     materialName: string
   ): Promise<void> {
@@ -81,7 +105,7 @@ export class TerrainPage {
   async paintWith(
     materialName: string
   ): Promise<void> {
-    await this.page.locator("terrain-sculpt-toolbar jolly-tool-button[data-tool=paint]").click();
+    await this.selectTool("paint");
     await this.selectMaterial(materialName);
   }
 
@@ -107,6 +131,40 @@ export class TerrainPage {
   ): Promise<void> {
     await this.page.locator(`terrain-overlay-toolbar jolly-tool-button[data-overlay=${overlay}]`).click();
     await nextFrames(this.page);
+  }
+
+  pointOfInterestChunks(): Promise<string[]> {
+    return this.page.evaluate(() => {
+      const [point] = window.terrainEditor!.document.pointsOfInterest.pointsOfInterest();
+
+      return point === undefined ? [] : point.chunks.map(({ x, z }) => `${x},${z}`);
+    });
+  }
+
+  chunkTier(
+    chunkX: number,
+    chunkZ: number
+  ): Promise<number | null> {
+    return this.page.evaluate(([x, z]) => {
+      const { terrain } = window.terrainEditor!.document;
+      const chunk = [...terrain.chunks()].find(({ coord }) => coord.x === x && coord.z === z);
+
+      return chunk?.tier ?? null;
+    }, [chunkX, chunkZ]);
+  }
+
+  confirmedSample(
+    chunkX: number,
+    chunkZ: number,
+    gridX: number,
+    gridZ: number
+  ): Promise<number | null> {
+    return this.page.evaluate(([x, z, sampleX, sampleZ]) => {
+      const { terrain } = window.terrainEditor!.document;
+      const chunk = [...terrain.chunks()].find(({ coord }) => coord.x === x && coord.z === z);
+
+      return chunk?.sample(sampleX, sampleZ) ?? null;
+    }, [chunkX, chunkZ, gridX, gridZ]);
   }
 
   chunkLoaded(
@@ -143,7 +201,24 @@ export class TerrainPage {
     };
   }
 
-  async sculptAt(
+  async dragBrush(
+    from: { x: number; z: number; },
+    to: { x: number; z: number; },
+    whileHeld?: () => Promise<void>
+  ): Promise<void> {
+    const start = await this.#clientPoint(from.x, from.z);
+    const end = await this.#clientPoint(to.x, to.z);
+    await this.page.mouse.move(start.x, start.y);
+    await this.page.mouse.down();
+    await nextFrames(this.page, 2);
+    await this.page.mouse.move(end.x, end.y, { steps: 8 });
+    await nextFrames(this.page, 2);
+    await whileHeld?.();
+    await this.page.mouse.up();
+    await nextFrames(this.page, 2);
+  }
+
+  async clickAt(
     sampleX: number,
     sampleZ: number
   ): Promise<void> {

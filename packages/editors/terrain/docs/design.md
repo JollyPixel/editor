@@ -22,8 +22,9 @@ in [collaboration](./collaboration.md); how brushes write is in
 
 The world is a sparse grid of chunks, 64 m on a side. Chunk `(x, z)` covers
 `[x × 64, (x + 1) × 64)` on X and the same on Z. A chunk exists only once
-someone creates it, by adding it next to an existing one or by sculpting
-across an edge. Removing a chunk deletes its data. A new terrain starts with
+someone adds it with the Chunks tool, next to an existing one; see
+[Chunks tool](./brush.md#chunks-tool). Brushes never create chunks. Removing a
+chunk deletes its data. A new terrain starts with
 one flat chunk at `(0, 0)`, and removing the last chunk is refused.
 
 Chunk coordinates lie in `[-128, 127]` on each axis, 16 km per side, so the
@@ -91,10 +92,29 @@ WebGPU has no tessellation stage, so extra detail is stored, not generated. A
 chunk can be refined to ×2 (128², 0.5 m) or ×4 (256², 0.25 m). Brushes then
 edit the finer grid, and the quadtree has extra levels over that chunk.
 
-Refining a chunk resamples its heights bilinearly, so the surface does not
-move. Coarsening keeps every second or fourth sample and loses the detail in
-between. The edge shared with a coarser neighbour has to match it, which is
-done with morphing (see below), not by changing the data.
+Refining a chunk does not move the surface. It doubles the grid once or
+twice: a new sample on an edge takes the mean of the edge's two ends, and one
+at a quad's centre the mean of the ends of that quad's diagonal, so the new
+samples lie on the triangles drawn before. Samples past the far edge come
+from the neighbours' heights. Coarsening keeps every second or fourth sample
+and loses the detail in between. The edge shared with a coarser neighbour has to match it, which is
+done with morphing, not by changing the data: on a chunk's west and south
+edges, where the neighbour across has a coarser tier, the vertex shader reads
+the edge along the neighbour's grid, interpolating between its samples, so
+the finer side draws the same straight segments as the coarser one. The east
+and north edges belong to the neighbour, whose samples a finer node reads
+the same way.
+
+A tier is set from the Detail mode of the [Chunks tool](./brush.md#chunks-tool).
+The command carries the heights and holes it replaced, so undoing a
+coarsening brings the detail back exactly. A ×4 chunk puts 256 KB of heights
+in that undo step.
+
+The view keeps one height array and one hole array per tier, each with its own
+pool of layers, and the lookup texture also gives each chunk's tier. Memory
+follows the tiers in use: an unrefined terrain allocates nothing for ×2 and
+×4, whose arrays start with four layers and double as chunks are refined. The
+splat array keeps one layer per loaded chunk whatever its tier.
 
 ## LoD
 
@@ -117,7 +137,8 @@ The view uses CDLOD:
   replace the grid later.
 - Near the boundary of a level, vertices morph toward the coarser level's
   positions, so levels meet without cracks or popping. The morph runs over
-  the last 30% of each level's distance band.
+  the last 30% of each level's distance band. The levels under the leaves of
+  a refined chunk, 16 m and 8 m nodes, are drawn within 40 m and 20 m.
 - Morphing moves heights, not positions. A vertex the coarser level drops
   keeps its X and Z and blends toward the average height of two neighbours:
   the ends of the coarse edge it sits on, or, for the centre of a coarse
@@ -138,9 +159,11 @@ The view uses CDLOD:
 
 `TerrainView.overlay` switches the surface between `none`, `chunks`, which
 draws a one-pixel line on every chunk border, `lod`, which adds a tint per
-LoD level, `slope`, described below, and `splat`, described in
-[texture](./texture.md#overlays). A uniform selects the mode, so switching
-does not recompile the shader.
+LoD level, `slope`, described below, `splat`, described in
+[texture](./texture.md#overlays), and `holes`, which draws hole cells instead
+of discarding them; `revealHoles` does the same over any other mode, and
+`revealChunks` draws the chunk borders over any other mode. Uniforms
+select the mode, so switching does not recompile the shader.
 
 ### Slope overlay
 
@@ -187,14 +210,52 @@ never empty. It is rebuilt incrementally from the chunks that change.
 
 ### Points of interest
 
-A point of interest is a volume placed by a designer, such as a mountain seen
-from far away. It has:
+A point of interest is a set of chunks picked by a designer, such as a
+mountain seen from far away. It has:
 
-- an LoD bias, so its chunks are refined earlier than distance alone would;
-- a minimum detail level kept at any distance;
-- a priority for streaming its chunks in.
+- a name;
+- an LoD bias, a factor from 1 to 8, 2 by default, that multiplies the LoD
+  distance bands over its chunks, so they are refined earlier than distance
+  alone would;
+- a minimum detail level kept at any distance, from 0 (the 32 m leaf) to 5
+  (the 1024 m region root), 3 by default (256 m nodes);
+- a priority for streaming its chunks in, from 0 to 9, 0 by default, the
+  highest first.
 
-Points of interest are part of the asset.
+A chunk can belong to several points of interest; the largest bias, the
+finest minimum level and the highest priority apply.
+
+The stream keeps the chunks of every point of interest loaded at any
+distance, so the minimum level is drawn from their heights, not from the
+overview. They fill the layers the stream circle leaves free, highest priority
+first and nearest first within a priority; a chunk that finds no free layer
+falls back to the overview. The circle's share counts every known chunk out to
+the unload radius, loaded or not, so the camera moving never needs more than
+the 256 layers. A chunk takes the highest priority of the points of interest
+naming it, and the choice is made again whenever the camera enters another
+chunk or a point of interest changes.
+
+In the quadtree, a node takes the largest bias and the finest minimum level
+of the point-of-interest chunks under it. Its distance bands and its morph
+band are multiplied by the bias. A node coarser than the minimum level is
+refined whatever its distance, and a node past its range, even past the
+coarsest range, is still drawn at the minimum level when no node above it
+can draw it. Two nodes of different biases meet with skirts, as nodes of
+different levels do, since their morph bands differ.
+
+The Points of interest pane lists them with their chunk counts; Add creates
+one named "Point of interest N" and selects it. Selecting one tints its
+chunks amber and shows its name, LoD bias, minimum detail and priority, each
+edit one undo step. Its "Edit chunks" toggle lets a click or drag on the
+terrain add chunks to it, Ctrl+click remove them, a drag being one undo step;
+a ghost outlines the chunk under the cursor, and the brushes and the Chunks
+tool rest while the toggle is on. Removing the point of interest ends the
+editing.
+
+Points of interest are part of the asset: the manifest lists them, at most
+64, each with its chunks, and the join snapshot carries them to every member.
+A point of interest may name chunks that do not exist, such as ones removed
+since; they are skipped wherever its chunks are used.
 
 ## Future tessellation
 
@@ -223,11 +284,18 @@ To check before starting: compute and indirect draw support in three.js's
 One bit per base-grid quad marks a hole. On a refined chunk, holes follow the
 finer grid.
 
-- The fragment shader discards hole cells. Near levels also drop them from the
-  index buffer.
-- A coarse LoD cell is dropped when any quad under it is a hole.
+- The fragment shader discards hole cells. Near levels could also drop them
+  from the index buffer; V1 does not.
+- A coarse LoD cell is dropped when any quad under it is a hole. The view
+  uploads each chunk's mask as a max pyramid, 128×64 bytes per layer, so the
+  test is one texture read at the cell size of the node's spacing.
 - Heights and splat under a hole are kept. Filling the hole brings the surface
   back as it was.
+- Refining a chunk turns each hole quad into the 4 or 16 quads under it.
+  Coarsening makes a quad a hole when any finer quad under it is one, so an
+  opening never closes by accident.
+- The overview ignores holes. A hole on a chunk that is not loaded is not
+  drawn; holes are meant as cave openings, too small to show from that far.
 
 Accepted drawbacks:
 
@@ -248,22 +316,58 @@ Accepted drawbacks:
 | Tier | 1, 2 or 4 | One value |
 
 Tiers multiply the height and hole sizes. The splat resolution does not
-change with the tier. Heights and splat are stored as two asset parts per
-chunk.
+change with the tier. Heights, splat and holes are stored as three asset
+parts per chunk; a chunk without holes has no hole part.
 
-On the GPU, heights live in one `R32F` texture array with a layer per chunk,
-so a node spanning many chunks is still one draw. A 256×256 lookup texture,
+On the GPU, heights live in an `R32F` texture array per tier with a layer per
+chunk, so a node spanning many chunks is still one draw. A 256×256 lookup texture,
 indexed by chunk coordinates modulo 256, gives each chunk's layer and its own
 coordinates, which rejects a chunk 256 away that shares the slot. Splat and
 hole maps will follow the same layout. An edit re-uploads the layers it
 changed.
 
-A layer is 68×68 at ×1: the chunk's own samples plus a two-sample apron on
-every side, copied from the neighbours. The apron gives the mesh its last row
+A layer is 68×68 at ×1, 132×132 at ×2 and 260×260 at ×4: the chunk's own
+samples plus a two-sample apron on every side, copied from the neighbours, or
+interpolated on a neighbour's own grid when the tiers differ. The apron gives the mesh its last row
 and column, and gives the normals, which blend the gradients of four samples,
 their neighbours across the edge. An edit on an edge tile also rewrites the
 matching strip of the neighbour's apron. Where no neighbour exists, the apron repeats the chunk's outer row,
 which leaves a flat 1 m strip along the edge of the world.
+
+## Import and export
+
+Both work on a rectangle of chunks, the whole terrain by default, from the
+Import and export pane. An image side stops at 16384 px. Each exported file
+downloads on its own, so a browser may ask once to allow several downloads.
+
+- **Heightmap.** A 16-bit PNG or RAW at the resolution of a chosen tier.
+  Values map the exported range, lowest to highest height, which is written to
+  a sidecar JSON and shown in the dialog. Import asks for the target rectangle
+  and the height range, creates the chunks it lacks, and is one undo step. An
+  image of another size is stretched over the rectangle bilinearly, and an odd
+  side is read as a closing row, so a 1025 px map fits 1024 samples exactly.
+  An 8-bit PNG spans the same range, a colour PNG gives its first channel, and
+  palette and interlaced PNGs are refused. The image's top row is the lowest Z.
+  Importing at another tier moves each chunk to that tier and keeps its holes;
+  a rectangle is refused when it leaves the coordinate range, passes the chunk
+  cap, or would add chunks touching no existing one. Ground the rectangle has
+  no chunk for exports at the lowest height.
+- **Splat map.** One grayscale PNG per material used in the rectangle, named
+  after the material, 0 to 255 per texel. Import matches masks to materials by
+  name, or lets the user pick, and keeps the four strongest materials per
+  texel, scaled to sum to 255. A texel no mask covers stays as it was, and
+  import paints only chunks that exist.
+
+A rectangle can reach past the stream radius. `TerrainStream.read` returns
+the contents of any chunk: a loaded one from memory, the others by subscribing
+to their parts in batches of 64 chunks and unsubscribing once they arrive, so
+they never take a view layer. Import reads the chunks it replaces this way and
+builds its commands and their inverses together, so undo and redo work whether
+or not a chunk is loaded. A plan is checked when it commits: if the rectangle's
+chunks or their tiers changed since the read, nothing is written. Undo follows
+the rule strokes do: the step is skipped when a chunk it touches is loaded or
+unloaded differently from when it was made, since a chunk not loaded cannot
+show what peers did to it.
 
 ## Packages
 
@@ -297,9 +401,18 @@ which leaves a flat 1 m strip along the edge of the world.
 
 ### `@jolly-pixel/editor.terrain`
 
-This package, laid out like the voxel-map editor:
+This package:
 
-- `boot/`, `document/`, `state/`, `scene/`, `shell/`, `shared/`.
-- `features/{sculpt,paint,holes,materials,tiers,poi,overlays,importExport}/`,
-  each split into `model/`, `interaction/`, `rendering/`, `toolbar/` and
-  `collaboration/` as needed.
+- `boot/`: the editor's entry; it creates the `TerrainEditing` stores, loads
+  the scene and mounts the shell.
+- `editing/`: the `TerrainEditing` contract the scene and shell share.
+- `shell/`: everything that reaches the page, from toolbars to panels.
+- `access/`: room rights per capability.
+- `keybindings/`, with `preferences.ts` at the root: rebindable shortcuts.
+- `state/`: stores shared by features, such as the tool settings and the
+  selected material.
+- `scene/`, `shared/`.
+- `features/{brush,sculpt,paint,holes,materials,chunks,poi,overlays,exchange}/`,
+  each split into `model/`, `rendering/`, `toolbar/`, `panel/` and
+  `collaboration/` as needed. `brush/` holds what every brush tool shares;
+  `sculpt/` holds the height tools.

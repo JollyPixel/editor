@@ -34,6 +34,156 @@ registerIcon("sculpt-paint", svg`
   />
 `, { tone: "pink" });
 
+registerIcon("sculpt-holes", svg`
+  <path
+    class="tone-fill"
+    d="M8 15h8v5H8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 15h6v5h8v-5h6"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M5 9c2-2 4-3 7-3s5 1 7 3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.25"
+    stroke-opacity="0.5"
+    stroke-linecap="round"
+  />
+`, { tone: "violet" });
+
+registerIcon("holes-cut", svg`
+  <path
+    class="tone-fill"
+    d="M8 15h8v5H8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 15h6v5h8v-5h6M12 3v8M9 8l3 3 3-3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });
+
+registerIcon("holes-fill", svg`
+  <path
+    class="tone-fill"
+    d="M8 15h8v5H8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 15h20M12 11V3M9 6l3-3 3 3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });
+
+registerIcon("sculpt-chunks", svg`
+  <path
+    class="tone-fill"
+    d="M3 3h9v9H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 3h18v18H3ZM12 3v18M3 12h18"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("chunks-add", svg`
+  <path
+    class="tone-fill"
+    d="M3 3h12v12H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 3h12v12H3ZM19 14v8M15 18h8"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("chunks-remove", svg`
+  <path
+    class="tone-fill"
+    d="M3 3h12v12H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 3h12v12H3ZM15 18h8"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("chunks-detail", svg`
+  <path
+    class="tone-fill"
+    d="M3 3h18v18H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 3h18v18H3ZM9 3v18M15 3v18M3 9h18M3 15h18"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("sculpt-terrace", svg`
+  <path
+    class="tone-fill"
+    d="M2 20h20v-4h-5v-4h-5V8H7V4H2Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 4h5v4h5v4h5v4h5M2 20h20"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "lime" });
+
+registerIcon("sculpt-ramp", svg`
+  <path
+    class="tone-fill"
+    d="M2 20h20V8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 20h20V8ZM5 10l5-3M10 7l-1 2.5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "lime" });
+
 registerIcon("sculpt-smooth", svg`
   <path
     d="M2 16l3-5 3 6 3-8 3 7 3-4 3 5 2-2"

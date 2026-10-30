@@ -14,6 +14,25 @@ export {
 } from "./terrain/OverviewMap.ts";
 export type { SampleBlock } from "./terrain/SampleBlock.ts";
 export {
+  CHUNK_TIERS,
+  chunkResolution,
+  chunkSampleCount,
+  isChunkTier,
+  tierOfSampleCount,
+  type ChunkTier
+} from "./terrain/chunkTier.ts";
+export {
+  resampleHeights,
+  resampleHoles
+} from "./terrain/chunkResample.ts";
+export {
+  HOLE_BYTES,
+  HOLE_TILE_BYTES,
+  holeBytes,
+  HoleMask,
+  tierOfHoleBytes
+} from "./terrain/HoleMask.ts";
+export {
   dominantSlot,
   isValidSplat,
   SPLAT_CHANNELS,
@@ -30,8 +49,8 @@ export {
   CHUNK_SAMPLE_COUNT,
   HEIGHT_RANGE,
   isValidHeight,
-  type HeightRange,
-  type TerrainChunk
+  TerrainChunk,
+  type HeightRange
 } from "./terrain/TerrainChunk.ts";
 export {
   Terrain,
@@ -42,12 +61,38 @@ export {
   TILE_SAMPLES,
   TILES_PER_CHUNK,
   TileCoord,
+  tileCount,
+  tilesPerSide,
+  type TileArea,
   type TileKey,
   type TilePatch
 } from "./terrain/TileCoord.ts";
 export {
+  expandHeights,
+  fitGrid,
+  measureHeights,
+  parseHeightmapSidecar,
+  quantizeHeights,
+  type ChunkRect,
+  type GridSize,
+  type HeightmapSidecar
+} from "./io/heightmap.ts";
+export { InvalidImageError } from "./io/errors/InvalidImageError.ts";
+export {
+  decodePng,
+  encodePng,
+  type GrayDepth,
+  type GrayImage
+} from "./io/png.ts";
+export {
+  decodeRaw,
+  encodeRaw
+} from "./io/raw.ts";
+export { pointHeight } from "./terrain/pointHeight.ts";
+export {
   raycastTerrain,
   surfaceHeight,
+  type RaycastOptions,
   type TerrainHit,
   type TerrainRay
 } from "./terrain/terrainSurface.ts";
@@ -56,6 +101,7 @@ export {
   LodRanges,
   type LodRangesOptions
 } from "./view/lod/LodRanges.ts";
+export type { LodFocusArea } from "./view/lod/LodFocus.ts";
 export type {
   NodeBounds,
   SelectedNode
@@ -74,7 +120,10 @@ export {
   TerrainView,
   type TerrainViewOptions
 } from "./view/TerrainView.ts";
-export { LOOKUP_SIZE } from "./view/textures/ChunkTextureStore.ts";
+export {
+  LOOKUP_SIZE,
+  MAX_CHUNK_LAYERS
+} from "./view/textures/ChunkTextureStore.ts";
 export {
   DEFAULT_MATERIAL_TEXTURE_SIZE,
   MATERIAL_MAPS,

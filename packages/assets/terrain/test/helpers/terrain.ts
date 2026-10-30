@@ -3,6 +3,7 @@ import type { NetworkCommandHeader } from "@jolly-pixel/network";
 import {
   CHUNK_SAMPLE_COUNT,
   ChunkCoord,
+  HOLE_TILE_BYTES,
   SPLAT_TILE_TEXEL_COUNT,
   TILE_SAMPLE_COUNT,
   TileCoord,
@@ -14,6 +15,7 @@ import {
 import {
   DEFAULT_MATERIAL_PROPERTIES,
   encodeHeights,
+  encodeHoleTilePatch,
   encodeSplatTilePatch,
   type TerrainCommand,
   type TerrainMaterialData,
@@ -50,6 +52,26 @@ export function paint(
     tiles: Object.entries(tiles).map(([index, slot]) => encodeSplatTilePatch({
       tile: TileCoord.fromIndex(new ChunkCoord(x, z), Number(index)),
       splat: splatTile(slot)
+    }))
+  };
+}
+
+export function holeTile(
+  cut: boolean
+): Uint8Array {
+  return new Uint8Array(HOLE_TILE_BYTES).fill(cut ? 0xff : 0);
+}
+
+export function cutHoles(
+  x: number,
+  z: number,
+  tiles: Record<number, boolean>
+): TerrainCommand {
+  return {
+    action: "holes-patched",
+    tiles: Object.entries(tiles).map(([index, cut]) => encodeHoleTilePatch({
+      tile: TileCoord.fromIndex(new ChunkCoord(x, z), Number(index)),
+      holes: holeTile(cut)
     }))
   };
 }

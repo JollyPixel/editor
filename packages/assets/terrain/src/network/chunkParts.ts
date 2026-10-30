@@ -2,13 +2,13 @@
 import {
   ChunkCoord,
   isOverviewTile,
-  TileCoord,
   type ChunkKey
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import { isMaterialCommand } from "../model/materialCommands.ts";
-import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
+import { isPoiCommand } from "../model/poiCommands.ts";
+import { patchTileCoord } from "./patchTile.ts";
 import {
   CHUNK_CHANNELS,
   filterTiles,
@@ -16,18 +16,18 @@ import {
   tileChannel,
   type ChunkChannel
 } from "./tilePatchCommands.ts";
-import type { TerrainCommand } from "./types.ts";
+import type {
+  ChunkEntry,
+  TerrainCommand
+} from "./types.ts";
 
 // CONSTANTS
-const kPartIdPattern = /^(-?\d+)_(-?\d+)(_splat)?$/;
+const kPartIdPattern = /^(-?\d+)_(-?\d+)(?:_(splat|holes))?$/;
 const kPartSuffixes: Readonly<Record<ChunkChannel, string>> = {
   heights: "",
-  splat: "_splat"
+  splat: "_splat",
+  holes: "_holes"
 };
-const kOverviewTiles = new Set(
-  Array.from({ length: CHUNK_TILE_COUNT }, (_, index) => index)
-    .filter((index) => isOverviewTile(TileCoord.fromIndex(new ChunkCoord(0, 0), index)))
-);
 
 export interface ChunkPart {
   readonly coord: ChunkCoord;
@@ -56,14 +56,24 @@ export function parseChunkPart(
     null :
     {
       coord: new ChunkCoord(Number(match[1]), Number(match[2])),
-      channel: match[3] === undefined ? "heights" : "splat"
+      channel: CHUNK_CHANNELS.find((channel) => channel === match[3]) ?? "heights"
     };
+}
+
+export function listedChunkPartIds(
+  { x, z, hasHoles }: ChunkEntry
+): string[] {
+  const coord = new ChunkCoord(x, z);
+
+  return CHUNK_CHANNELS
+    .filter((channel) => channel !== "holes" || hasHoles === true)
+    .map((channel) => chunkPartId(coord, channel));
 }
 
 export function touchedChunks(
   command: TerrainCommand
 ): ChunkCoord[] {
-  if (isMaterialCommand(command)) {
+  if (isMaterialCommand(command) || isPoiCommand(command)) {
     return [];
   }
   if (!isTilePatchCommand(command)) {
@@ -83,6 +93,9 @@ export function touchedParts(
   command: TerrainCommand
 ): string[] {
   const chunks = touchedChunks(command);
+  if (command.action === "tier-changed") {
+    return chunks.flatMap((coord) => [chunkPartId(coord, "heights"), chunkPartId(coord, "holes")]);
+  }
   if (!isTilePatchCommand(command)) {
     return chunks.flatMap(chunkPartIds);
   }
@@ -95,11 +108,21 @@ export function touchedParts(
 export function outsideCommand<TCommand extends TerrainCommand>(
   command: TCommand
 ): TCommand | null {
+  if (command.action === "tier-changed") {
+    return null;
+  }
   if (!isTilePatchCommand(command)) {
     return command;
   }
+  if (command.action === "holes-patched") {
+    return null;
+  }
 
-  const outside = filterTiles(command, ({ tile }) => kOverviewTiles.has(tile));
+  const outside = filterTiles(command, (tile) => {
+    const coord = patchTileCoord(tile);
+
+    return coord !== null && isOverviewTile(coord);
+  });
 
   return outside.tiles.length === 0 ? null : outside;
 }

@@ -200,4 +200,6 @@ peers.
   Shows what is painted where, whatever the images look like.
 - **Chunk grid.** Chunk edges and coordinates.
 - **LoD.** One colour per level.
-- **Holes.** Hole cells, outlined, with the surface under them shown.
+- **Holes.** Hole cells, tinted and outlined cell by cell, with the surface
+  under them shown. The hole tool shows them this way while selected, over
+  whichever overlay is on.

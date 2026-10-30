@@ -7,9 +7,15 @@ import type { HeightRange } from "../../terrain/TerrainChunk.ts";
 import type { TerrainReader } from "../../terrain/Terrain.ts";
 import type { Point3 } from "../../math/point3.ts";
 import {
+  finestLevel,
   LodRanges,
   REGION_SIZE
 } from "./LodRanges.ts";
+import {
+  LodFocus,
+  type LodFocusArea,
+  type NodeFocus
+} from "./LodFocus.ts";
 import { skirtMasks } from "./skirtMasks.ts";
 
 // CONSTANTS
@@ -39,8 +45,13 @@ export interface SelectedNode {
   readonly size: number;
   readonly bounds: NodeBounds;
   /**
+   * Factor on the level's distance bands, from the points of interest under
+   * the node; 1 elsewhere.
+   */
+  readonly bias: number;
+  /**
    * One bit per edge, in `SKIRT_EDGES` order, set where a node of another
-   * level lies across the edge.
+   * level or bias lies across the edge.
    */
   readonly skirts: number;
 }
@@ -63,6 +74,7 @@ interface WalkFrame {
   readonly visible: (bounds: NodeBounds) => boolean;
   readonly selected: WalkedNode[];
   readonly bounds: Map<string, CachedBounds>;
+  readonly focus: (x: number, z: number, size: number) => NodeFocus;
 }
 type WalkResult = "handled" | "outOfRange";
 
@@ -76,6 +88,8 @@ export class QuadtreeSelection {
   #terrain: TerrainReader;
   #bounds = new Map<string, CachedBounds>();
   #regions: { x: number; z: number; }[] | null = null;
+  #focus = new LodFocus();
+  #focusByNode = new Map<string, NodeFocus>();
 
   constructor(
     terrain: TerrainReader,
@@ -83,6 +97,13 @@ export class QuadtreeSelection {
   ) {
     this.#terrain = terrain;
     this.ranges = ranges;
+  }
+
+  focusOn(
+    areas: Iterable<LodFocusArea>
+  ): void {
+    this.#focus = new LodFocus(areas);
+    this.#focusByNode.clear();
   }
 
   invalidate(
@@ -115,7 +136,17 @@ export class QuadtreeSelection {
       camera,
       visible: options.visible ?? (() => true),
       selected,
-      bounds: this.#bounds
+      bounds: this.#bounds,
+      focus: (x, z, size) => {
+        const key = `${x},${z},${size}`;
+        let focus = this.#focusByNode.get(key);
+        if (focus === undefined) {
+          focus = this.#focus.over(x, z, size);
+          this.#focusByNode.set(key, focus);
+        }
+
+        return focus;
+      }
     });
     this.#regions ??= this.#knownRegions();
     for (const region of this.#regions) {
@@ -152,6 +183,7 @@ class SelectionWalk {
   #visible: (bounds: NodeBounds) => boolean;
   #selected: WalkedNode[];
   #bounds: Map<string, CachedBounds>;
+  #focus: WalkFrame["focus"];
 
   constructor(
     terrain: TerrainReader,
@@ -164,26 +196,37 @@ class SelectionWalk {
     this.#visible = frame.visible;
     this.#selected = frame.selected;
     this.#bounds = frame.bounds;
+    this.#focus = frame.focus;
   }
 
   node(
     x: number,
     z: number,
-    level: number
+    level: number,
+    uncovered = true
   ): WalkResult {
     const size = this.#ranges.nodeSize(level);
     const bounds = this.#nodeBounds(x, z, size);
     if (bounds === null) {
       return "handled";
     }
-    if (!this.#within(bounds, this.#ranges.range(level))) {
+
+    const { bias, minLevel } = this.#focus(x, z, size);
+    const inRange = this.#within(bounds, this.#ranges.range(level) * bias);
+    if (!inRange && (!Number.isFinite(minLevel) || (level <= minLevel && !uncovered))) {
       return "outOfRange";
     }
     if (!this.#visible(bounds)) {
       return "handled";
     }
-    if (level === 0 || !this.#within(bounds, this.#ranges.range(level - 1))) {
-      this.#selected.push({ level, x, z, size, bounds });
+
+    const refine = level > minLevel || (
+      inRange &&
+      level > this.#finestLevel(x, z, level) &&
+      this.#within(bounds, this.#ranges.range(level - 1) * bias)
+    );
+    if (!refine) {
+      this.#selected.push({ level, x, z, size, bounds, bias });
 
       return "handled";
     }
@@ -195,7 +238,7 @@ class SelectionWalk {
       [x, z + half],
       [x + half, z + half]
     ]) {
-      if (this.node(childX, childZ, level - 1) === "handled") {
+      if (this.node(childX, childZ, level - 1, !inRange || level > minLevel) === "handled" || !inRange) {
         continue;
       }
 
@@ -206,12 +249,27 @@ class SelectionWalk {
           x: childX,
           z: childZ,
           size: half,
-          bounds: quarter
+          bounds: quarter,
+          bias: this.#focus(childX, childZ, half).bias
         });
       }
     }
 
     return "handled";
+  }
+
+  #finestLevel(
+    x: number,
+    z: number,
+    level: number
+  ): number {
+    if (level > 0) {
+      return 0;
+    }
+
+    const tier = this.#terrain.chunk(ChunkCoord.containing(x, z))?.tier ?? 1;
+
+    return finestLevel(tier);
   }
 
   #within(

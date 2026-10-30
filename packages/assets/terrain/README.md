@@ -4,7 +4,7 @@
 
 ## 📌 About
 
-Private asset workspace for `.terrain.json` heightfield terrains (kind `terrain`), stored as a chunk list with one heights part and one splat part per chunk. Terrains are edited in `@jolly-pixel/editor.terrain`.
+Private asset workspace for `.terrain.json` heightfield terrains (kind `terrain`), stored as a chunk list with a heights part and a splat part per chunk, plus a holes part for each chunk that has holes. Terrains are edited in `@jolly-pixel/editor.terrain`.
 
 Browser code imports `@jolly-pixel/asset.terrain/client`; the package root and `@jolly-pixel/asset.terrain/server` pull in server dependencies.
 

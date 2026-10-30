@@ -1,7 +1,16 @@
+// Import Internal Dependencies
+import type { ChunkTier } from "../../terrain/chunkTier.ts";
+
 // CONSTANTS
 export const LEAF_NODE_SIZE = 32;
 export const LOD_LEVELS = 6;
 export const REGION_SIZE = LEAF_NODE_SIZE * 2 ** (LOD_LEVELS - 1);
+
+export function finestLevel(
+  tier: ChunkTier
+): number {
+  return -Math.log2(tier);
+}
 
 export interface LodRangesOptions {
   /**
@@ -59,7 +68,7 @@ export class LodRanges {
   morphStart(
     level: number
   ): number {
-    const near = level === 0 ? 0 : this.range(level - 1);
+    const near = level <= 0 ? 0 : this.range(level - 1);
 
     return near + (this.range(level) - near) * (1 - this.morphRatio);
   }

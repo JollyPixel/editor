@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { KeyBindingSettings } from "@jolly-pixel/controls";
 import {
   OrbitFlyCamera,
   Systems,
@@ -7,6 +8,7 @@ import {
 import { PeerFrustums } from "@jolly-pixel/editor.host";
 import type { Room } from "@jolly-pixel/network/client";
 import {
+  isPoiCommand,
   TerrainInterest,
   TerrainLiveReceiver,
   TerrainLiveSender,
@@ -25,19 +27,27 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
+  canUseTool,
+  type TerrainAccessSource
+} from "../access/TerrainAccess.ts";
+import type { TerrainEditing } from "../editing/TerrainEditing.ts";
+import {
   decodeMaterialImage,
   MaterialTextures
 } from "../features/materials/rendering/MaterialTextures.ts";
-import type { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
+import type { MaterialSelection } from "../state/MaterialSelection.ts";
 import type { TextureLeases } from "../features/materials/model/TextureLeases.ts";
-import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
-import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
-import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
-import { SculptBrush } from "../features/sculpt/SculptBrush.ts";
-import {
-  bindHistoryShortcuts,
-  type TerrainHistory
-} from "../shared/terrainHistory.ts";
+import { ChunkDragTool } from "../features/chunks/ChunkDragTool.ts";
+import { chunkToolStrategy } from "../features/chunks/chunkToolStrategy.ts";
+import type { PoiSelection } from "../features/poi/model/PoiSelection.ts";
+import { poiChunkStrategy } from "../features/poi/poiChunkStrategy.ts";
+import { PeerBrushRings } from "../features/brush/collaboration/PeerBrushRings.ts";
+import type { SculptSettings } from "../state/SculptSettings.ts";
+import type { OverlaySettings } from "../state/OverlaySettings.ts";
+import { SculptBrush } from "../features/brush/SculptBrush.ts";
+import type { TerrainAction } from "../keybindings/terrainActions.ts";
+import { terrainShortcuts } from "../keybindings/terrainShortcuts.ts";
+import type { TerrainHistory } from "../shared/terrainHistory.ts";
 
 // CONSTANTS
 const kCameraPreset: OrbitFlyCameraOptions = {
@@ -52,15 +62,19 @@ const kCameraPreset: OrbitFlyCameraOptions = {
   maxMoveSpeed: 400
 };
 
-export interface TerrainEditorSceneOptions {
-  document: TerrainDocument;
-  sculpt: SculptSettings;
-  overlaySettings: OverlaySettings;
-  history: TerrainHistory;
-  room: Room;
-  leases: TextureLeases;
-  selection: MaterialSelection;
-}
+export type TerrainEditorSceneOptions = Pick<
+  TerrainEditing,
+  | "document"
+  | "sculpt"
+  | "overlaySettings"
+  | "history"
+  | "room"
+  | "leases"
+  | "selection"
+  | "poiSelection"
+  | "access"
+  | "keyBindings"
+>;
 
 interface TerrainSceneParts {
   readonly camera: OrbitFlyCamera;
@@ -69,6 +83,8 @@ interface TerrainSceneParts {
   readonly live: TerrainLiveSender;
   readonly peerRings: PeerBrushRings;
   readonly brush: SculptBrush;
+  readonly chunkTool: ChunkDragTool;
+  readonly poiTool: ChunkDragTool;
   readonly frustums: PeerFrustums;
 }
 
@@ -80,6 +96,9 @@ export class TerrainEditorScene extends Systems.Scene {
   #room: Room;
   #leases: TextureLeases;
   #selection: MaterialSelection;
+  #poiSelection: PoiSelection;
+  #access: TerrainAccessSource;
+  #keyBindings: KeyBindingSettings<TerrainAction>;
   #parts: TerrainSceneParts | null = null;
   #cameraPosition = new THREE.Vector3();
   #disposables: Array<() => void> = [];
@@ -95,6 +114,9 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#room = options.room;
     this.#leases = options.leases;
     this.#selection = options.selection;
+    this.#poiSelection = options.poiSelection;
+    this.#access = options.access;
+    this.#keyBindings = options.keyBindings;
   }
 
   get view(): TerrainView {
@@ -145,6 +167,7 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#bindOverlaySettings(view);
+    this.#bindPointsOfInterest(view);
     const materialTextures = new MaterialTextures({
       document: this.#document,
       view,
@@ -154,6 +177,12 @@ export class TerrainEditorScene extends Systems.Scene {
     });
     this.#disposables.push(() => materialTextures.dispose());
 
+    const poiSelection = this.#poiSelection;
+    const access = this.#access;
+    const sculpt = this.#sculpt;
+    function toolResting(): boolean {
+      return poiSelection.editing || !canUseTool(access.current, sculpt.options.tool);
+    }
     const peerRings = this.world
       .createActor("peer-brush-rings")
       .addComponentAndGet(PeerBrushRings, {
@@ -170,7 +199,34 @@ export class TerrainEditorScene extends Systems.Scene {
         selection: this.#selection,
         history: this.#history,
         camera: camera.camera,
-        rings: peerRings
+        rings: peerRings,
+        paused: toolResting
+      });
+    const chunkTool = this.world
+      .createActor("chunk-tool")
+      .addComponentAndGet(ChunkDragTool, {
+        preview,
+        camera: camera.camera,
+        strategy: chunkToolStrategy({
+          document: this.#document,
+          preview,
+          settings: this.#sculpt,
+          history: this.#history,
+          paused: toolResting
+        })
+      });
+    const poiTool = this.world
+      .createActor("poi-chunk-tool")
+      .addComponentAndGet(ChunkDragTool, {
+        preview,
+        camera: camera.camera,
+        strategy: poiChunkStrategy({
+          document: this.#document,
+          preview,
+          selection: this.#poiSelection,
+          history: this.#history,
+          paused: () => !access.current.has("pointsOfInterest")
+        })
       });
     const frustums = this.world
       .createActor("peer-frustums")
@@ -178,11 +234,15 @@ export class TerrainEditorScene extends Systems.Scene {
         room,
         camera: camera.camera
       });
-    this.#disposables.push(bindHistoryShortcuts(this.world.input.keyboard, this.#history));
+    this.#disposables.push(
+      this.#keyBindings.bind(this.world.input.keyboard, terrainShortcuts(this.#history))
+    );
 
     this.#bindPreview(preview, view, () => {
       peerRings.refresh();
       brush.terrainChanged();
+      chunkTool.terrainChanged();
+      poiTool.terrainChanged();
     });
     this.#parts = {
       camera,
@@ -191,6 +251,8 @@ export class TerrainEditorScene extends Systems.Scene {
       live,
       peerRings,
       brush,
+      chunkTool,
+      poiTool,
       frustums
     };
   }
@@ -216,7 +278,9 @@ export class TerrainEditorScene extends Systems.Scene {
   }
 
   override destroy(): void {
-    this.#parts?.brush.endStroke();
+    this.#parts?.brush.interruptStroke();
+    this.#parts?.chunkTool.endDrag();
+    this.#parts?.poiTool.endDrag();
     for (const dispose of this.#disposables.splice(0).reverse()) {
       dispose();
     }
@@ -244,6 +308,15 @@ export class TerrainEditorScene extends Systems.Scene {
     applyOverlaySettings();
     this.#disposables.push(overlaySettings.subscribe("change", applyOverlaySettings));
 
+    const sculpt = this.#sculpt;
+    function revealForTool(): void {
+      const { tool } = sculpt.options;
+      view.revealHoles = tool === "holes";
+      view.revealChunks = tool === "chunks";
+    }
+    revealForTool();
+    this.#disposables.push(sculpt.subscribe("change", revealForTool));
+
     const terrain = this.#document;
     const selection = this.#selection;
     function highlightSelected(): void {
@@ -255,6 +328,33 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#disposables.push(selection.subscribe("change", highlightSelected));
   }
 
+  #bindPointsOfInterest(
+    view: TerrainView
+  ): void {
+    const document = this.#document;
+    const selection = this.#poiSelection;
+    function focus(): void {
+      view.focusOn(document.pointsOfInterest.pointsOfInterest());
+      highlight();
+    }
+    function highlight(): void {
+      const { selected } = selection;
+      const point = selected === null ? undefined : document.pointsOfInterest.pointOfInterest(selected);
+      const chunks = point?.chunks ?? [];
+      view.highlightChunks(chunks.map(({ x, z }) => new ChunkCoord(x, z)));
+    }
+    focus();
+    this.#disposables.push(
+      document.subscribe("change", ({ command }) => {
+        if (isPoiCommand(command)) {
+          focus();
+        }
+      }),
+      document.subscribe("reset", focus),
+      selection.subscribe("change", highlight)
+    );
+  }
+
   #bindPreview(
     preview: TerrainPreview,
     view: TerrainView,
@@ -262,7 +362,13 @@ export class TerrainEditorScene extends Systems.Scene {
   ): void {
     const listeners: Pick<
       TerrainPreviewEvents,
-      "tilesChanged" | "splatChanged" | "chunkAdded" | "chunkRemoved" | "overviewChanged" | "reset"
+      | "tilesChanged"
+      | "splatChanged"
+      | "holesChanged"
+      | "chunkAdded"
+      | "chunkRemoved"
+      | "overviewChanged"
+      | "reset"
     > = {
       tilesChanged: (tiles) => {
         view.tilesChanged(tiles);
@@ -270,6 +376,7 @@ export class TerrainEditorScene extends Systems.Scene {
         this.world.invalidate();
       },
       splatChanged: (tiles) => view.splatChanged(tiles),
+      holesChanged: (tiles) => view.holesChanged(tiles),
       chunkAdded: (coord) => view.chunkAdded(coord),
       chunkRemoved: (coord) => view.chunkRemoved(coord),
       overviewChanged: (coords) => view.overviewChanged(coords),
@@ -280,6 +387,7 @@ export class TerrainEditorScene extends Systems.Scene {
     };
     preview.on("tilesChanged", listeners.tilesChanged);
     preview.on("splatChanged", listeners.splatChanged);
+    preview.on("holesChanged", listeners.holesChanged);
     preview.on("chunkAdded", listeners.chunkAdded);
     preview.on("chunkRemoved", listeners.chunkRemoved);
     preview.on("overviewChanged", listeners.overviewChanged);
@@ -287,6 +395,7 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#disposables.push(() => {
       preview.off("tilesChanged", listeners.tilesChanged);
       preview.off("splatChanged", listeners.splatChanged);
+      preview.off("holesChanged", listeners.holesChanged);
       preview.off("chunkAdded", listeners.chunkAdded);
       preview.off("chunkRemoved", listeners.chunkRemoved);
       preview.off("overviewChanged", listeners.overviewChanged);

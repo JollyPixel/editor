@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
 import {
   CHUNK_SAMPLE_COUNT,
-  isValidHeight
+  chunkSampleCount,
+  isValidHeight,
+  tierOfSampleCount
 } from "@jolly-pixel/terrain.renderer";
 import {
   decodeBase64,
@@ -38,6 +40,22 @@ export function decodeHeightBytes(
   }
 
   return heights.every(isValidHeight) ? heights : null;
+}
+
+export function decodeChunkHeightBytes(
+  bytes: Uint8Array
+): Float32Array | null {
+  const tier = tierOfSampleCount(bytes.byteLength / kBytesPerHeight);
+
+  return tier === null ? null : decodeHeightBytes(bytes, chunkSampleCount(tier));
+}
+
+export function decodeChunkHeights(
+  encoded: string
+): Float32Array | null {
+  const bytes = decodeBase64(encoded);
+
+  return bytes === null ? null : decodeChunkHeightBytes(bytes);
 }
 
 export function encodeHeights(

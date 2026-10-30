@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { mockAssetRoom } from "@jolly-pixel/asset-server/testing";
 import {
   ChunkCoord,
+  HOLE_BYTES,
   OVERVIEW_SAMPLE_COUNT,
   SPLAT_TEXEL_COUNT,
   TileCoord,
@@ -15,6 +16,7 @@ import {
 // Import Internal Dependencies
 import {
   encodeHeights,
+  encodeHoles,
   encodeSplat,
   encodeTilePatch,
   type TerrainNetworkCommand,
@@ -86,7 +88,7 @@ describe("TerrainPartsRoom", () => {
     const { room, document, deliver } = joinedPeer();
 
     deliver(manifest(1));
-    assert.deepEqual(room.sent, [{ action: "subscribe-parts", parts: ["0_0", "0_0_splat"] }]);
+    assert.deepEqual(room.sent, [{ action: "subscribe-parts", parts: ["0_0", "0_0_splat", "0_0_holes"] }]);
     assert.deepEqual([document.terrain.knows(kNear), document.terrain.knows(kFar)], [true, true]);
     assert.equal(document.terrain.size, 0);
 
@@ -125,15 +127,17 @@ describe("TerrainPartsRoom", () => {
     assert.equal(document.terrain.has(kNear), false);
   });
 
-  test("a splat part that arrives before its heights is applied when the chunk loads", () => {
+  test("splat and hole parts that arrive before their heights are applied when the chunk loads", () => {
     const { document, deliver } = joinedPeer();
     deliver(manifest(1));
 
     const splat = encodeSplat(uniformSplat(SPLAT_TEXEL_COUNT, 5));
-    deliver({ type: "parts", version: 1, parts: { "0_0_splat": splat } });
+    const holes = encodeHoles(new Uint8Array(HOLE_BYTES).fill(0xff));
+    deliver({ type: "parts", version: 1, parts: { "0_0_splat": splat, "0_0_holes": holes } });
     assert.equal(document.terrain.has(kNear), false);
     deliver(parts(1, 4));
 
+    assert.equal(document.terrain.chunk(kNear)!.holes.isHole(10, 10), true);
     assert.equal(document.terrain.chunk(kNear)!.splat.dominantSlot(10, 10), 5);
     assert.deepEqual([...document.terrain.overview.materials(kNear)!], [5, 5, 5, 5]);
   });
@@ -146,6 +150,6 @@ describe("TerrainPartsRoom", () => {
     Object.assign(room, { clientId: "A-2" });
     room.emit("sync", { self: "A-2", clientIds: ["A-2"] });
 
-    assert.deepEqual(room.sent, [{ action: "subscribe-parts", parts: ["0_0", "0_0_splat"] }]);
+    assert.deepEqual(room.sent, [{ action: "subscribe-parts", parts: ["0_0", "0_0_splat", "0_0_holes"] }]);
   });
 });

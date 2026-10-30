@@ -5,6 +5,10 @@ import {
   type HistoryRegistration,
   type KeyedGuardEntry
 } from "@jolly-pixel/history";
+import type {
+  TerrainChunk,
+  TileCoord
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import type {
@@ -21,9 +25,13 @@ import {
   type TerrainWriteRef
 } from "../network/TerrainCommandKeys.ts";
 import {
+  channelOfAction,
   isTilePatchCommand,
+  TILE_PATCH_ACTIONS,
   type ChunkChannel,
-  type PatchTile
+  type PatchTile,
+  type TilePatchAction,
+  type TilePatchCommand
 } from "../network/tilePatchCommands.ts";
 import type { TerrainCommand } from "../network/types.ts";
 
@@ -32,12 +40,17 @@ const kDefaultId = "terrain";
 const kLabels: Readonly<Record<TerrainCommand["action"], string>> = {
   "chunk-added": "Add chunk",
   "chunk-removed": "Remove chunk",
+  "tier-changed": "Change detail",
   "heights-patched": "Sculpt",
   "splat-patched": "Paint",
+  "holes-patched": "Edit holes",
   "material-added": "Add material",
   "material-updated": "Edit material",
   "material-removed": "Remove material",
-  "texture-size-changed": "Change texture size"
+  "texture-size-changed": "Change texture size",
+  "poi-added": "Add point of interest",
+  "poi-updated": "Edit point of interest",
+  "poi-removed": "Remove point of interest"
 };
 
 export interface TerrainHistoryRegistrationOptions<TScope extends string> {
@@ -60,7 +73,9 @@ export function terrainHistoryRegistration<TScope extends string>(
     keys: terrainHistoryKeys(document),
     resolveScope: () => scope,
     label: ({ command }) => kLabels[command.action],
-    compact: compactTilePatches
+    compact: (commands) => (commands.every((command) => document.isPaired(command)) ?
+      [...commands] :
+      compactTilePatches(commands))
   };
 }
 
@@ -88,25 +103,27 @@ function guardEntries(
 }
 
 function readWriteRef(
-  { terrain, materials }: TerrainModelReader,
+  { terrain, materials, pointsOfInterest }: TerrainModelReader,
   ref: TerrainWriteRef
 ): unknown {
   switch (ref.kind) {
+    case "poi": {
+      const point = pointsOfInterest.pointOfInterest(ref.id);
+
+      return ref.field === null ? point !== undefined : point?.[ref.field];
+    }
     case "chunk":
       return terrain.has(ref.chunk);
+    case "tier":
+      return terrain.chunk(ref.chunk)?.tier;
     case "tile": {
       const { tile } = ref;
       const chunk = terrain.chunk(tile.chunk);
-      if (chunk === undefined) {
+      if (chunk === undefined || (ref.channel !== "splat" && chunk.tier !== tile.tier)) {
         return undefined;
       }
-      if (ref.channel === "heights") {
-        return Array.from(chunk.tileHeights(tile.x, tile.z));
-      }
 
-      const splat = chunk.splat.tile(tile.x, tile.z);
-
-      return [...splat.indices, ...splat.weights];
+      return readTile(chunk, ref.channel, tile);
     }
     case "material": {
       const material = materials.material(ref.id);
@@ -121,36 +138,51 @@ function readWriteRef(
   }
 }
 
+function readTile(
+  chunk: TerrainChunk,
+  channel: ChunkChannel,
+  tile: TileCoord
+): number[] {
+  switch (channel) {
+    case "heights":
+      return Array.from(chunk.tileHeights(tile.x, tile.z));
+    case "splat": {
+      const splat = chunk.splat.tile(tile.x, tile.z);
+
+      return [...splat.indices, ...splat.weights];
+    }
+    case "holes":
+      return Array.from(chunk.holes.tile(tile.x, tile.z));
+  }
+}
+
 function compactTilePatches(
   commands: readonly TerrainCommand[]
 ): TerrainCommand[] {
-  const kept: TerrainCommand[] = commands.filter((command) => !isTilePatchCommand(command));
-  const heights = latestTiles(
-    "heights",
-    commands.flatMap((command) => (command.action === "heights-patched" ? command.tiles : []))
-  );
-  const splat = latestTiles(
-    "splat",
-    commands.flatMap((command) => (command.action === "splat-patched" ? command.tiles : []))
-  );
-  for (const batch of patchBatches(heights)) {
-    kept.push({ action: "heights-patched", tiles: batch });
-  }
-  for (const batch of patchBatches(splat)) {
-    kept.push({ action: "splat-patched", tiles: batch });
-  }
-
-  return kept;
+  return [
+    ...commands.filter((command) => !isTilePatchCommand(command)),
+    ...TILE_PATCH_ACTIONS.flatMap((action) => latestTileBatches(commands, action))
+  ];
 }
 
-function latestTiles<TTile extends PatchTile>(
-  channel: ChunkChannel,
-  tiles: readonly TTile[]
-): TTile[] {
-  const latest = new Map<string, TTile>();
-  for (const tile of tiles) {
-    latest.set(terrainTileKey(channel, tile.x, tile.z, tile.tile), tile);
+function latestTileBatches(
+  commands: readonly TerrainCommand[],
+  action: TilePatchAction
+): TilePatchCommand[] {
+  const latest = new Map<string, PatchTile>();
+  for (const command of commands) {
+    if (isTilePatchCommand(command) && command.action === action) {
+      const tiles: readonly PatchTile[] = command.tiles;
+      for (const tile of tiles) {
+        latest.set(terrainTileKey(channelOfAction(action), tile.x, tile.z, tile.tile, tile.tier), tile);
+      }
+    }
   }
 
-  return [...latest.values()];
+  const batches: TilePatchCommand[] = [];
+  for (const tiles of patchBatches([...latest.values()])) {
+    batches.push({ action, tiles } as TilePatchCommand);
+  }
+
+  return batches;
 }

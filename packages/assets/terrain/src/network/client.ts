@@ -1,5 +1,6 @@
 export * from "./types.ts";
 export * from "./heights.ts";
+export * from "./holes.ts";
 export * from "./splat.ts";
 export * from "./tilePatches.ts";
 export * from "./TerrainInterest.ts";
@@ -12,11 +13,27 @@ export * from "../model/TerrainDocument.ts";
 export * from "../model/TerrainMaterials.ts";
 export { isMaterialCommand } from "../model/materialCommands.ts";
 export * from "../model/TerrainModel.ts";
+export * from "../model/TerrainPointsOfInterest.ts";
+export { isPoiCommand } from "../model/poiCommands.ts";
 export {
+  MAX_POINTS_OF_INTEREST,
   MAX_TERRAIN_MATERIALS,
+  POI_LOD_BIAS,
+  POI_MIN_LEVEL,
+  POI_PRIORITY,
   TERRAIN_TEXTURE_SIZES
 } from "./TerrainCommand.schema.ts";
 export * from "../model/TerrainPreview.ts";
+export type { ChunkContents } from "../model/TerrainStream.ts";
+export {
+  chunksInRect,
+  MAX_EXCHANGE_IMAGE_SIDE,
+  readHeightGrid,
+  readSplatMasks,
+  type HeightGrid,
+  type ImportRefusal,
+  type SplatMask
+} from "../model/terrainExchange.ts";
 export * from "../history/terrainHistoryRegistration.ts";
 export {
   TERRAIN_EXTENSION,

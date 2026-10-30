@@ -14,7 +14,7 @@ import {
   MaterialPalette,
   type TextureConflict
 } from "#src/features/materials/model/MaterialPalette.ts";
-import { MaterialSelection } from "#src/features/materials/model/MaterialSelection.ts";
+import { MaterialSelection } from "#src/state/MaterialSelection.ts";
 import {
   createTerrainHistory,
   TERRAIN_HISTORY_SCOPE

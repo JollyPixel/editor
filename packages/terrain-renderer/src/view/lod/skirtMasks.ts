@@ -2,7 +2,7 @@
 import { LEAF_NODE_SIZE } from "./LodRanges.ts";
 
 // CONSTANTS
-const kCellSize = LEAF_NODE_SIZE / 2;
+const kProbeOffset = LEAF_NODE_SIZE / 2 ** 8;
 const kEdgeProbes = [0.125, 0.375, 0.625, 0.875];
 const kKeySpan = 2 ** 24;
 const kKeyOffset = kKeySpan / 2;
@@ -19,6 +19,7 @@ export interface NodeArea {
   readonly x: number;
   readonly z: number;
   readonly size: number;
+  readonly bias?: number;
 }
 
 export function skirtMasks(
@@ -56,7 +57,8 @@ export function skirtMasks(
         const z = outZ === 0 ? node.z + along * node.size : edgeOutside(node.z, node.size, outZ);
         const neighbour = nodeAt(x, z);
 
-        return neighbour !== undefined && neighbour.level !== node.level;
+        return neighbour !== undefined &&
+          (neighbour.level !== node.level || (neighbour.bias ?? 1) !== (node.bias ?? 1));
       });
       if (differs) {
         mask |= bit;
@@ -72,7 +74,7 @@ function edgeOutside(
   size: number,
   direction: number
 ): number {
-  return direction < 0 ? start - kCellSize / 2 : start + size + kCellSize / 2;
+  return direction < 0 ? start - kProbeOffset : start + size + kProbeOffset;
 }
 
 function alignedKey(

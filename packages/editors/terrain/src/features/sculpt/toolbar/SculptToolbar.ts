@@ -10,8 +10,12 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
+import type { ShortcutLabels } from "@jolly-pixel/controls";
 import type { HistoryScopeState } from "@jolly-pixel/history";
-import { HEIGHT_RANGE } from "@jolly-pixel/terrain.renderer";
+import {
+  CHUNK_TIERS,
+  HEIGHT_RANGE
+} from "@jolly-pixel/terrain.renderer";
 import {
   FieldBinding,
   SubscriptionController
@@ -23,17 +27,32 @@ import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
 import {
+  canUseTool,
+  TERRAIN_CAPABILITIES,
+  type TerrainAccess
+} from "../../../access/TerrainAccess.ts";
+import type { TerrainAction } from "../../../keybindings/terrainActions.ts";
+import {
+  CHUNK_MODES,
+  type ChunkMode
+} from "../../chunks/model/ChunkDrag.ts";
+import {
+  HOLE_MODES,
+  type HoleMode
+} from "../../holes/model/holeStamp.ts";
+import {
   FALLOFF_CURVES,
   type FalloffCurve
-} from "../model/falloff.ts";
+} from "../../brush/model/falloff.ts";
 import {
   BRUSH_SIZE,
   BRUSH_TOOLS,
   STRENGTH_OPTIONS,
+  TERRACE_STEP,
   type BrushTool,
   type SculptOptions,
   type SculptSettings
-} from "../model/SculptSettings.ts";
+} from "../../../state/SculptSettings.ts";
 import {
   TERRAIN_HISTORY_SCOPE,
   type TerrainHistory
@@ -47,7 +66,20 @@ const kToolLabels: Readonly<Record<BrushTool, string>> = {
   raise: "Raise and lower (right button lowers)",
   smooth: "Smooth",
   flatten: "Flatten",
-  paint: "Paint the selected material (Ctrl+click picks one)"
+  terrace: "Terrace",
+  ramp: "Ramp (drag from one end to the other)",
+  paint: "Paint the selected material (Ctrl+click picks one)",
+  holes: "Cut and fill holes (Ctrl inverts)",
+  chunks: "Add, remove and refine chunks (Ctrl swaps add and remove)"
+};
+const kChunkModeLabels: Readonly<Record<ChunkMode, string>> = {
+  add: "Add chunks",
+  remove: "Remove chunks",
+  detail: "Set the chunks' detail"
+};
+const kHoleModeLabels: Readonly<Record<HoleMode, string>> = {
+  cut: "Cut holes",
+  fill: "Fill holes"
 };
 const kFalloffLabels: Readonly<Record<FalloffCurve, string>> = {
   smooth: "Smooth",
@@ -67,6 +99,12 @@ export class SculptToolbar extends LitElement {
   @property({ attribute: false })
   declare history: TerrainHistory | null;
 
+  @property({ attribute: false })
+  declare access: TerrainAccess;
+
+  @property({ attribute: false })
+  declare shortcuts: ShortcutLabels<TerrainAction> | null;
+
   #size = new FieldBinding<number>(this, {
     read: () => this.settings?.options.size ?? BRUSH_SIZE.min,
     write: (size) => this.settings?.update({ size })
@@ -76,18 +114,31 @@ export class SculptToolbar extends LitElement {
     read: () => {
       const options = this.settings?.options;
 
-      return options === undefined ? 0 : Math.round(options[STRENGTH_OPTIONS[options.tool]] * 100);
+      const key = options === undefined ? null : STRENGTH_OPTIONS[options.tool];
+
+      return options === undefined || key === null ? 0 : Math.round(options[key] * 100);
     },
     write: (percent) => {
       const settings = this.settings;
-      if (settings === null) {
+      const key = settings === null ? null : STRENGTH_OPTIONS[settings.options.tool];
+      if (settings === null || key === null) {
         return;
       }
 
       const changes: Partial<SculptOptions> = {};
-      changes[STRENGTH_OPTIONS[settings.options.tool]] = percent / 100;
+      changes[key] = percent / 100;
       settings.update(changes);
     }
+  });
+
+  #terraceStep = new FieldBinding<number>(this, {
+    read: () => this.settings?.options.terraceStep ?? TERRACE_STEP.min,
+    write: (terraceStep) => this.settings?.update({ terraceStep })
+  });
+
+  #terraceSharpness = new FieldBinding<number>(this, {
+    read: () => Math.round((this.settings?.options.terraceSharpness ?? 0) * 100),
+    write: (percent) => this.settings?.update({ terraceSharpness: percent / 100 })
   });
 
   #flattenHeight = new FieldBinding<number>(this, {
@@ -113,6 +164,8 @@ export class SculptToolbar extends LitElement {
     super();
     this.settings = null;
     this.history = null;
+    this.access = TERRAIN_CAPABILITIES.full;
+    this.shortcuts = null;
   }
 
   protected override willUpdate(
@@ -132,7 +185,7 @@ export class SculptToolbar extends LitElement {
       return nothing;
     }
 
-    const { tool, falloff } = settings.options;
+    const { tool } = settings.options;
 
     return html`
       <jolly-rail orientation="horizontal" floating role="toolbar" aria-label="Sculpt">
@@ -144,66 +197,149 @@ export class SculptToolbar extends LitElement {
               icon=${`sculpt-${option}`}
               label=${kToolLabels[option]}
               ?active=${option === tool}
+              ?disabled=${!canUseTool(this.access, option)}
               @click=${() => settings.update({ tool: option })}
             ></jolly-tool-button>
           `)}
         </div>
-        <div class="group divided" role="group" aria-label="Brush settings">
-          <jolly-tool-button
-            data-tool="size"
-            flyout-side="above"
-            label=${`Size ${formatMetres(this.#size.value)} (Ctrl + wheel)`}
-          >
-            <span class="value">${Math.round(this.#size.value)}</span>
-            <jolly-slider
-              slot="flyout"
-              orientation="vertical"
-              min=${BRUSH_SIZE.min}
-              max=${BRUSH_SIZE.max}
-              step="0.5"
-              .value=${this.#size.value}
-              @jolly-input=${this.#size.input}
-              @jolly-change=${this.#size.commit}
-            ></jolly-slider>
-          </jolly-tool-button>
-          <jolly-tool-button
-            data-tool="strength"
-            flyout-side="above"
-            label=${`Strength ${this.#strength.value}%`}
-          >
-            <span class="value">${this.#strength.value}</span>
-            <jolly-slider
-              slot="flyout"
-              orientation="vertical"
-              min="0"
-              max="100"
-              step="1"
-              .value=${this.#strength.value}
-              @jolly-input=${this.#strength.input}
-              @jolly-change=${this.#strength.commit}
-            ></jolly-slider>
-          </jolly-tool-button>
-          <jolly-tool-button
-            data-tool="falloff"
-            data-value=${falloff}
-            flyout-side="above"
-            icon=${`falloff-${falloff}`}
-            label=${`Falloff: ${kFalloffLabels[falloff]}`}
-          >
-            ${FALLOFF_CURVES.filter((curve) => curve !== falloff).map((curve) => html`
-              <jolly-tool-button
-                slot="flyout"
-                data-value=${curve}
-                flyout-side="left"
-                icon=${`falloff-${curve}`}
-                label=${kFalloffLabels[curve]}
-                @click=${() => settings.update({ falloff: curve })}
-              ></jolly-tool-button>
-            `)}
-          </jolly-tool-button>
-        </div>
+        ${tool === "chunks" ? this.#renderChunkMode(settings) : this.#renderBrushSettings(settings)}
         ${tool === "flatten" ? this.#renderFlattenTarget(settings) : nothing}
+        ${tool === "terrace" ? this.#renderTerrace() : nothing}
+        ${tool === "holes" ? this.#renderHoleMode(settings) : nothing}
       </jolly-rail>
+    `;
+  }
+
+  #renderBrushSettings(
+    settings: SculptSettings
+  ): TemplateResult {
+    const { tool } = settings.options;
+
+    return html`
+      <div class="group divided" role="group" aria-label="Brush settings">
+        <jolly-tool-button
+          data-tool="size"
+          flyout-side="above"
+          label=${`Size ${formatMetres(this.#size.value)} (Ctrl + wheel)`}
+        >
+          <span class="value">${Math.round(this.#size.value)}</span>
+          <jolly-slider
+            slot="flyout"
+            orientation="vertical"
+            min=${BRUSH_SIZE.min}
+            max=${BRUSH_SIZE.max}
+            step="0.5"
+            .value=${this.#size.value}
+            @jolly-input=${this.#size.input}
+            @jolly-change=${this.#size.commit}
+          ></jolly-slider>
+        </jolly-tool-button>
+        ${STRENGTH_OPTIONS[tool] === null ? nothing : this.#renderStrength(settings)}
+      </div>
+    `;
+  }
+
+  #renderChunkMode(
+    settings: SculptSettings
+  ): TemplateResult {
+    const { chunkMode } = settings.options;
+
+    return html`
+      <div class="group divided" role="group" aria-label="Chunk mode">
+        ${CHUNK_MODES.map((mode) => html`
+          <jolly-tool-button
+            data-tool=${`chunks-${mode}`}
+            icon=${`chunks-${mode}`}
+            label=${kChunkModeLabels[mode]}
+            ?active=${mode === chunkMode}
+            @click=${() => settings.update({ chunkMode: mode })}
+          ></jolly-tool-button>
+        `)}
+      </div>
+      ${chunkMode === "detail" ? this.#renderChunkTier(settings) : nothing}
+    `;
+  }
+
+  #renderChunkTier(
+    settings: SculptSettings
+  ): TemplateResult {
+    const { chunkTier } = settings.options;
+
+    return html`
+      <div class="group divided" role="group" aria-label="Detail">
+        ${CHUNK_TIERS.map((tier) => html`
+          <jolly-tool-button
+            data-tool=${`chunks-tier-${tier}`}
+            label=${`Detail ×${tier}, ${1 / tier} m between samples`}
+            ?active=${tier === chunkTier}
+            @click=${() => settings.update({ chunkTier: tier })}
+          ><span class="value">×${tier}</span></jolly-tool-button>
+        `)}
+      </div>
+    `;
+  }
+
+  #renderStrength(
+    settings: SculptSettings
+  ): TemplateResult {
+    const { falloff } = settings.options;
+
+    return html`
+      <jolly-tool-button
+        data-tool="strength"
+        flyout-side="above"
+        label=${`Strength ${this.#strength.value}%`}
+      >
+        <span class="value">${this.#strength.value}</span>
+        <jolly-slider
+          slot="flyout"
+          orientation="vertical"
+          min="0"
+          max="100"
+          step="1"
+          .value=${this.#strength.value}
+          @jolly-input=${this.#strength.input}
+          @jolly-change=${this.#strength.commit}
+        ></jolly-slider>
+      </jolly-tool-button>
+      <jolly-tool-button
+        data-tool="falloff"
+        data-value=${falloff}
+        flyout-side="above"
+        icon=${`falloff-${falloff}`}
+        label=${`Falloff: ${kFalloffLabels[falloff]}`}
+      >
+        ${FALLOFF_CURVES.filter((curve) => curve !== falloff).map((curve) => html`
+          <jolly-tool-button
+            slot="flyout"
+            data-value=${curve}
+            flyout-side="left"
+            icon=${`falloff-${curve}`}
+            label=${kFalloffLabels[curve]}
+            @click=${() => settings.update({ falloff: curve })}
+          ></jolly-tool-button>
+        `)}
+      </jolly-tool-button>
+    `;
+  }
+
+  #renderHoleMode(
+    settings: SculptSettings
+  ): TemplateResult {
+    const { holeMode } = settings.options;
+
+    return html`
+      <div class="group divided" role="group" aria-label="Hole mode">
+        ${HOLE_MODES.map((mode) => html`
+          <jolly-tool-button
+            data-tool=${`holes-${mode}`}
+            icon=${`holes-${mode}`}
+            label=${kHoleModeLabels[mode]}
+            ?active=${mode === holeMode}
+            @click=${() => settings.update({ holeMode: mode })}
+          ></jolly-tool-button>
+        `)}
+      </div>
     `;
   }
 
@@ -246,6 +382,47 @@ export class SculptToolbar extends LitElement {
     `;
   }
 
+  #renderTerrace(): TemplateResult {
+    return html`
+      <div class="group divided" role="group" aria-label="Terrace">
+        <jolly-tool-button
+          data-tool="terrace-step"
+          flyout-side="above"
+          label=${`Step height ${formatMetres(this.#terraceStep.value)}`}
+        >
+          <span class="value">${Number(this.#terraceStep.value.toFixed(1))}</span>
+          <jolly-number
+            slot="flyout"
+            label="Step height (m)"
+            min=${TERRACE_STEP.min}
+            max=${TERRACE_STEP.max}
+            step="0.25"
+            .value=${this.#terraceStep.value}
+            @jolly-input=${this.#terraceStep.input}
+            @jolly-change=${this.#terraceStep.commit}
+          ></jolly-number>
+        </jolly-tool-button>
+        <jolly-tool-button
+          data-tool="terrace-sharpness"
+          flyout-side="above"
+          label=${`Sharpness ${this.#terraceSharpness.value}%: soft steps to flat ledges`}
+        >
+          <span class="value">${this.#terraceSharpness.value}</span>
+          <jolly-slider
+            slot="flyout"
+            orientation="vertical"
+            min="0"
+            max="100"
+            step="1"
+            .value=${this.#terraceSharpness.value}
+            @jolly-input=${this.#terraceSharpness.input}
+            @jolly-change=${this.#terraceSharpness.commit}
+          ></jolly-slider>
+        </jolly-tool-button>
+      </div>
+    `;
+  }
+
   #renderHistory(): TemplateResult | typeof nothing {
     const history = this.history;
     if (history === null) {
@@ -259,7 +436,7 @@ export class SculptToolbar extends LitElement {
         <jolly-tool-button
           data-tool="undo"
           icon="undo"
-          label="Undo (Ctrl+Z)"
+          label=${this.shortcuts?.label("Undo", "edit.undo") ?? "Undo"}
           .count=${state.undoCount}
           ?disabled=${state.undoCount === 0}
           @click=${() => history.undo(TERRAIN_HISTORY_SCOPE)}
@@ -267,7 +444,7 @@ export class SculptToolbar extends LitElement {
         <jolly-tool-button
           data-tool="redo"
           icon="redo"
-          label="Redo (Ctrl+Y)"
+          label=${this.shortcuts?.label("Redo", "edit.redo") ?? "Redo"}
           .count=${state.redoCount}
           ?disabled=${state.redoCount === 0}
           @click=${() => history.redo(TERRAIN_HISTORY_SCOPE)}

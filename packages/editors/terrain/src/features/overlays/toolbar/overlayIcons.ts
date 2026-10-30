@@ -72,3 +72,18 @@ registerIcon("overlay-splat", svg`
     stroke-linejoin="round"
   />
 `, { tone: "amber" });
+
+registerIcon("overlay-holes", svg`
+  <path
+    class="tone-fill"
+    d="M8 8h8v8H8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M4 4h16v16H4ZM8 8h8v8H8Z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });

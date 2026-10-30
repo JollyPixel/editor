@@ -6,10 +6,12 @@ import {
 
 // Import Internal Dependencies
 import { terrainTileKey } from "./TerrainCommandKeys.ts";
+import { currentTier } from "./tierCommands.ts";
 import {
   currentTiles,
   decodableTiles,
   filterTiles,
+  fitsChunk,
   isTilePatchCommand,
   tileChannel,
   type PatchTile,
@@ -33,7 +35,7 @@ export function admissibleTiles(
   const decodable = decodableTiles(command);
   const admitted = filterTiles(
     command,
-    (tile) => state.knows(new ChunkCoord(tile.x, tile.z)) && decodable.has(tile)
+    (tile) => fitsChunk(state, command, tile) && decodable.has(tile)
   );
   if (admitted.tiles.length === command.tiles.length) {
     return command;
@@ -67,15 +69,22 @@ export function correctTerrainCommand(
   }
 
   const missing = refused.tiles.find(({ x, z }) => !state.knows(new ChunkCoord(x, z)));
+  if (missing !== undefined) {
+    return { clientId, seq, timestamp, action: "chunk-removed", x: missing.x, z: missing.z };
+  }
 
-  return missing === undefined ?
+  const changed = refused.tiles
+    .map(({ x, z }) => state.chunk(new ChunkCoord(x, z)))
+    .find((chunk) => chunk !== undefined);
+
+  return changed === undefined ?
     null :
-    { clientId, seq, timestamp, action: "chunk-removed", x: missing.x, z: missing.z };
+    { clientId, seq, timestamp, ...currentTier(changed) };
 }
 
 function tileKey(
   command: TilePatchCommand,
-  { x, z, tile }: PatchTile
+  { x, z, tile, tier }: PatchTile
 ): string {
-  return terrainTileKey(tileChannel(command), x, z, tile);
+  return terrainTileKey(tileChannel(command), x, z, tile, tier);
 }

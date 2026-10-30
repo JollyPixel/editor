@@ -11,19 +11,23 @@ correction.
 |---|---|
 | `heights-patched` | Tile patches of height samples |
 | `splat-patched` | Tile patches of splat indices and weights |
-| `holePatch` | Tile patches of the hole mask |
-| `chunk-added` | A chunk coordinate, its seeded heights and, when undoing a removal, its splat |
+| `holes-patched` | Tile patches of the hole mask |
+| `chunk-added` | A chunk coordinate, its seeded heights and, when undoing a removal, its splat and holes |
 | `chunk-removed` | A chunk coordinate |
-| `setTier` | A chunk coordinate and its new tier |
+| `tier-changed` | A chunk coordinate, its new tier, and its heights and holes at that tier |
 | `material-added` | A material, with its ID and slot |
 | `material-updated` | A material ID and only the fields that changed |
 | `material-removed` | A material ID |
 | `texture-size-changed` | The terrain's material texture size |
-| Point-of-interest commands | Create, update, delete |
+| `poi-added` | A point of interest, with its ID |
+| `poi-updated` | A point-of-interest ID and only the fields that changed |
+| `poi-removed` | A point-of-interest ID |
 
-A height patch is cut into 16×16 tiles and a splat patch into 32×32 texel
-tiles, so a chunk at ×1 has 4×4 of each. Each tile
-carries its chunk, its index in the chunk (`z × 4 + x`) and its new values. A
+A height patch is cut into 16×16 tiles, a hole patch into 16×16 quad tiles
+and a splat patch into 32×32 texel tiles, so a chunk at ×1 has 4×4 of each.
+A refined chunk has 8×8 or 16×16 height and hole tiles. Each tile
+carries its chunk, its index in the chunk (`z × tiles per side + x`), its
+tier when it is ×2 or ×4, and its new values. A
 commit holds at most 1024 tiles. The author's document captures the values
 the stroke replaced when it commits, and builds the inverse for undo from
 them.
@@ -36,14 +40,22 @@ compressed one by one.
 ### Collision keys
 
 Each tile has the key `chunk:<x>,<z>:<channel>:<tile>`, where the channel is
-`h`, `s` or `x` (holes). `chunk-added` and `chunk-removed` hold the key
-`chunk:<x>,<z>` and every tile key of their chunk, so undoing a chunk's
-creation is refused once someone has sculpted it. Two commands collide when
+`h`, `s` or `x` (holes), followed by the tier on a refined chunk: `h2` or
+`x4`. `chunk-added` and `chunk-removed` hold the key `chunk:<x>,<z>`,
+`chunk:<x>,<z>:tier` and every tile key of their chunk at every tier, so
+undoing a chunk's creation is refused once someone has sculpted it. Two
+commands collide when
 they share a key. A collision resolves last write wins: the later command is
 admitted and overwrites the tile.
 
-Heights and splat use separate channels, so a peer painting a tile never
-refuses another sculpting it, and the reverse.
+Heights, splat and holes use separate channels, so a peer painting a tile
+never refuses another sculpting it, and the reverse.
+
+`tier-changed` holds `chunk:<x>,<z>:tier` and every height and hole tile key
+of its chunk at every tier. An undo checks those tiles: only the ones at the
+chunk's current tier hold values, so a peer's sculpt after the change refuses
+it. A point-of-interest command is keyed like a
+material command, under `poi:<id>`.
 
 `material-updated` holds `material:<id>:<field>` for each field it changes,
 so two peers renaming a material and changing its tiling both land.
@@ -127,11 +139,15 @@ writes it as one file. A large terrain does not fit that model, so V1 adds
 asset parts to `@jolly-pixel/asset-server`:
 
 - A kind handler declares parts: binary files in a folder beside the asset
-  file, `<asset>.parts/`. For a terrain, two parts per chunk: its heights,
-  `<x>_<z>`, and its splat, `<x>_<z>_splat`. A client subscribes to both. The
-  chunk loads as soon as its heights arrive, painted with the overview's
-  materials until its splat arrives; a splat that arrives first waits for
-  the heights. A terrain saved before splat parts existed loads as Ground and
+  file, `<asset>.parts/`. For a terrain, three parts per chunk: its heights,
+  `<x>_<z>`, its splat, `<x>_<z>_splat`, and its holes, `<x>_<z>_holes`,
+  absent while the chunk has none. The chunk's manifest entry holds
+  `hasHoles: true` while that part exists, since the server lists parts from
+  the manifest alone, and its `tier` when it is ×2 or ×4, so the parts load
+  in any order. A client subscribes to all three and gets `null` for a
+  hole part that does not exist. The chunk loads as soon as its heights
+  arrive, painted with the overview's materials until its splat arrives; a
+  splat or hole mask that arrives first waits for the heights. A terrain saved before splat parts existed loads as Ground and
   writes them on its next save.
 - The join snapshot holds the manifest, the materials, the points of interest and
   the overview map. Chunks are not in it.
@@ -171,11 +187,17 @@ decides which chunks are loaded.
   subscribes to it when it lies within the radius, and unloads it otherwise.
 - The room sends `heights-patched` whole to the members subscribed to its
   chunks. The others receive `outside(command)`: the same command cut down to
-  the tiles that hold overview samples, tiles 0, 2, 8 and 10 of each chunk,
+  the tiles that hold overview samples, tiles 0, 2, 8 and 10 of a ×1 chunk,
   or nothing when no such tile changed. `splat-patched` is cut the same way,
   since the same tile indices hold the overview's dominant materials. A client
-  applies the tiles of an unloaded chunk to its overview only. `chunk-added`,
-  `chunk-removed` and the material commands go to every member.
+  applies the tiles of an unloaded chunk to its overview only. The overview
+  ignores holes, so the others receive nothing of `holes-patched`. A tier
+  change keeps every overview sample, so they receive nothing of
+  `tier-changed` either. `chunk-added`, `chunk-removed`, the
+  material and the point-of-interest commands go to every member.
+- The chunks of every point of interest stay subscribed at any distance, in
+  the layers the stream circle leaves free; see
+  [points of interest][poi].
 - A chunk without a part reply yet, or unloaded while it has pending
   commands, stays consistent: the reply carries the heights at its version,
   and a pending patch replayed on an unloaded chunk updates the overview.
@@ -189,7 +211,9 @@ A collision alone never refuses a commit, since the later one wins. A commit
 is refused, in whole or in part, when:
 
 - a tile's chunk was removed in the meantime;
-- a tile's chunk changed tier, so the patch no longer matches its grid;
+- a tile's chunk changed tier, so the patch no longer matches its grid; when
+  nothing else answers the author, the correction is a `tier-changed` with
+  the chunk's current heights and holes;
 - a tile holds a height that is not finite or lies outside `[-4096, 4096]` m;
 - the author lacks the right to edit the terrain.
 
@@ -232,7 +256,21 @@ Hole cuts and fills are patches like any other, so they undo the same way.
 Since heights under a hole are kept, filling a hole restores the surface
 exactly.
 
+A tier change undoes with a `tier-changed` back to the old tier, carrying the
+heights and holes it replaced. A Chunks tool drag undoes with the inverse of
+each chunk it added or removed, as one step.
+
+## Access
+
+Room rights follow the commands. `src/access/TerrainAccess.ts` groups them
+into capabilities: heights, paint, holes, chunks (with tiers), materials and
+points of interest. A capability needs write access to all its commands.
+Tools and panels without one rest and show as disabled, and importing a
+heightmap needs both heights and chunks, since it can add chunks and change
+tiers. A refused command is reported in the activity log.
+
 <!-- Reference-style links for DRYness -->
 
 [asset-parts]: ../../../asset-server/architecture/AssetParts.md
 [world]: ./design.md#world-and-chunks
+[poi]: ./design.md#points-of-interest

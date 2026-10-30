@@ -132,7 +132,94 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   studio offers it on an asset, and the palette asks to replace a dropped
   image whose texture already exists, which repaints every terrain using it.
   M3 is complete.
-- **Next:** M4, starting with the hole brush.
+- **M4 grilling: done** (2026-10-29). Holes are a third part per chunk,
+  committed like paint and absent from the overview; the hole tool's ray hits
+  the kept heights. A Chunks tool adds, removes and refines chunks, so
+  brushes never create them. Tiers keep one GPU array each, and their undo
+  restores the replaced heights. Points of interest are chunk sets kept
+  loaded at any distance. See [brush](./docs/brush.md),
+  [design](./docs/design.md) and [collaboration](./docs/collaboration.md).
+- **Hole data: done** (2026-10-29). Each chunk holds a hole mask, one bit
+  per quad, stored as its `<x>_<z>_holes` part while it has holes and changed
+  by `holes-patched` commits on their own channel. Far members receive
+  nothing of them, and undoing a chunk's removal brings its holes back.
+  Nothing cuts or draws them yet.
+- **Hole rendering: done** (2026-10-29). The view uploads each loaded chunk's
+  mask as a max pyramid and discards a pixel whose LoD cell holds a hole, so
+  an opening shows at every level and a filled one closes. Peers' cuts and
+  fills show at each commit.
+- **Hole tool: done** (2026-10-29). Cut and Fill in the toolbar, Ctrl
+  inverting while held; a quad changes when its centre lies inside the
+  radius. The tool's ray hits the heights kept under a hole, other tools aim
+  through it. A stroke shows at once, commits on the stroke cadence and undoes
+  as one step.
+- **Holes overlay: done** (2026-10-29). The Holes overlay draws hole cells
+  over the surface kept under them, tinted and outlined cell by cell. The
+  hole tool shows them the same way while selected, over whichever overlay is
+  on, so its cuts and fills stay visible.
+- **Chunks tool: done** (2026-10-30). Add and Remove in the brush toolbar,
+  Ctrl swapping them for the next press. A ghost outlines the target chunk,
+  grey where the click would be refused, and the chunk borders show while
+  the tool is selected. A drag works on every chunk the cursor crosses and
+  undoes as one step. The Detail mode waits for the resolution tiers.
+- **Tier data: done** (2026-10-30). A chunk holds its heights and hole mask
+  at ×1, ×2 or ×4, and `tier-changed` moves it between them: refining keeps
+  the drawn surface, coarsening keeps every second or fourth sample, and the
+  undo brings the replaced heights and holes back. Tiles carry their tier,
+  so a patch made at the old tier is refused and answered with the chunk's
+  current tier. The view and the brushes still read a refined chunk's 1 m
+  samples, and nothing in the editor changes a tier yet.
+- **Tier rendering: done** (2026-10-30). The view keeps a height and hole
+  array per tier, the ×2 and ×4 ones grown on demand, and draws a refined
+  chunk on its own grid, with one or two quadtree levels under its leaves.
+  Its edge with a coarser neighbour follows the neighbour's grid, so the two
+  meet without a gap, and its holes open at its quad size.
+- **Detail mode: done** (2026-10-30). The Chunks tool's Detail mode sets the
+  chunks under a click or a drag to ×1, ×2 or ×4, as one undo step. The
+  sculpt and hole brushes work on each chunk's own grid, and the brush ray
+  and height queries follow the grid as drawn, edges with coarser chunks
+  included. Resolution tiers are complete.
+- **Point-of-interest data: done** (2026-10-30). A terrain holds up to 64
+  points of interest, each a name, an LoD bias, a minimum detail level, a
+  streaming priority and its chunks. `poi-added`, `poi-updated` and
+  `poi-removed` change them, keyed per field, and undo field by field; the
+  manifest saves them. Nothing streams, draws or edits them yet.
+- **Point-of-interest streaming: done** (2026-10-30). The chunks of every
+  point of interest stay subscribed at any distance, in the layers the stream
+  circle leaves free, highest priority first and nearest first; the others
+  fall back to the overview.
+- **Point-of-interest rendering: done** (2026-10-30). Nodes over a point of
+  interest's chunks have their distance and morph bands multiplied by its
+  bias, and are drawn at its minimum level or finer at any distance, past the
+  coarsest range included.
+- **Points of interest pane: done** (2026-10-30). The pane lists, adds,
+  edits and removes them; the selected one's chunks are tinted, and its
+  "Edit chunks" toggle adds chunks by click or drag, Ctrl+click removing
+  them, while the brushes rest. Points of interest are complete.
+- **Terrace brush: done** (2026-10-30). The Terrace tool moves the ground
+  toward a staircase of a set step height, its sharpness blending from soft
+  steps to flat ledges, at flatten's rate.
+- **Ramp brush: done** (2026-10-30). The Ramp tool takes a drag from A to B
+  and, on release, pulls the ground within the brush size of the segment
+  toward the straight line between the heights under its ends, as one stroke;
+  a guide shows the segment and its width while dragging. Ramp and terrace
+  brushes are complete.
+- **Chunk reads: done** (2026-10-30). `TerrainStream.read` returns the
+  heights, splat and holes of any chunk, fetching an unloaded one's parts in
+  batches without loading it. First part of import and export.
+- **Heightmap codecs: done** (2026-10-30). `terrain.renderer` reads and writes
+  8-bit and 16-bit grayscale PNG and 16-bit RAW, maps heights to samples over a
+  range, and fits a grid of another size to a rectangle of chunks. Nothing in
+  the editor calls them yet.
+- **Rectangle import and export: done** (2026-10-30). `TerrainDocument`
+  imports heights and splat masks over a rectangle as one undo step, adding
+  the chunks it lacks and moving the others to the chosen tier, loaded or not.
+  `readHeightGrid` and `readSplatMasks` build what export writes. No UI yet.
+- **Import and export pane: done** (2026-10-30). The pane exports a rectangle's
+  heightmap with its sidecar and one mask per painted material. Choosing a
+  heightmap fills the rectangle, detail and heights from its sidecar, and
+  masks that match no material by name ask for one.
+- **M4: done** (2026-10-30). V1's planned milestones are complete.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -198,14 +285,16 @@ chunks yet.
 
 ## M4: Rest of V1
 
-- [ ] Hole brush, cut and fill.
-- [ ] Resolution tiers ×2 and ×4, with seam morphing.
-- [ ] Points of interest: LoD bias and minimum detail at distance.
-- [ ] Ramp and terrace brushes.
-- [ ] Strokes that cross into empty ground create the chunk in the same
-  commit.
-- [ ] Heightmap and splat map import and export.
-- [ ] Debug overlay for holes.
+- [x] Hole brush, cut and fill: the `<x>_<z>_holes` part, `holes-patched`
+  commits, the mask drawn in the view, and the tool.
+- [x] Debug overlay for holes.
+- [x] Chunks tool: add and remove chunks by click or drag, one undo step.
+- [x] Resolution tiers ×2 and ×4, with seam morphing, set from the Chunks
+  tool's Detail mode.
+- [x] Points of interest: chunk sets with an LoD bias and a minimum detail
+  level, kept loaded at any distance, edited in their pane.
+- [x] Ramp and terrace brushes.
+- [x] Heightmap and splat map import and export.
 
 ## Not planned for V1
 

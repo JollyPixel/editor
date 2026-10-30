@@ -14,6 +14,7 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import type { HoleTilePatch } from "../network/holes.ts";
 import type { SplatTilePatch } from "../network/splat.ts";
 import { patchedTiles } from "../network/tilePatchCommands.ts";
 import type {
@@ -24,6 +25,7 @@ import type {
 export type TerrainPreviewEvents = {
   tilesChanged: (tiles: readonly TileCoord[]) => void;
   splatChanged: (tiles: readonly TileCoord[]) => void;
+  holesChanged: (tiles: readonly TileCoord[]) => void;
   chunkAdded: (coord: ChunkCoord) => void;
   chunkRemoved: (coord: ChunkCoord) => void;
   overviewChanged: (coords: readonly ChunkCoord[]) => void;
@@ -112,6 +114,12 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
         this.#overviewChanged(unloadedChunks(this.#document.terrain, tiles));
         break;
       }
+      case "holes-patched":
+        this.#copyHoles(patchedTiles(command));
+        break;
+      case "tier-changed":
+        this.#chunkLoaded(new ChunkCoord(command.x, command.z));
+        break;
     }
   };
 
@@ -125,6 +133,13 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     coord: ChunkCoord
   ): void => {
     this.#copySplat(chunkTiles(coord));
+  };
+
+  #onHolesLoaded = (
+    coord: ChunkCoord
+  ): void => {
+    const tier = this.#document.terrain.chunk(coord)?.tier;
+    this.#copyHoles(tier === undefined ? [] : TileCoord.all(coord, tier));
   };
 
   #onUnloaded = (
@@ -145,7 +160,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
 
   #onReset = (): void => {
     const settled = this.#forget(
-      ({ tile }) => !this.#document.terrain.has(tile.chunk)
+      ({ tile }) => this.#document.terrain.chunk(tile.chunk)?.tier !== tile.tier
     );
     for (const terrain of this.#terrains()) {
       this.#mirror(terrain);
@@ -177,6 +192,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     document.on("reset", this.#onReset);
     document.stream.on("loaded", this.#onLoaded);
     document.stream.on("splatLoaded", this.#onSplatLoaded);
+    document.stream.on("holesLoaded", this.#onHolesLoaded);
     document.stream.on("unloaded", this.#onUnloaded);
   }
 
@@ -221,6 +237,30 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     }
   }
 
+  writeHoles(
+    patches: Iterable<HoleTilePatch>
+  ): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    const written: TileCoord[] = [];
+    for (const { tile, holes } of patches) {
+      if (this.#displayed.chunk(tile.chunk)?.tier !== tile.tier) {
+        continue;
+      }
+      for (const terrain of this.#terrains()) {
+        if (terrain.has(tile.chunk)) {
+          terrain.writeHoleTile(tile, holes);
+        }
+      }
+      written.push(tile);
+    }
+    if (written.length > 0) {
+      this.emit("holesChanged", written);
+    }
+  }
+
   beginStroke(): TerrainStroke {
     if (this.#stroke !== null) {
       throw new Error("A local stroke is already in progress: end or cancel it first.");
@@ -261,6 +301,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     this.#document.off("reset", this.#onReset);
     this.#document.stream.off("loaded", this.#onLoaded);
     this.#document.stream.off("splatLoaded", this.#onSplatLoaded);
+    this.#document.stream.off("holesLoaded", this.#onHolesLoaded);
     this.#document.stream.off("unloaded", this.#onUnloaded);
     this.#layers.clear();
     this.removeAllListeners();
@@ -288,7 +329,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
         );
       }
       else {
-        terrain.addChunk(coord, chunk.copyHeights(), chunk.splat.copy());
+        terrain.addChunk(coord, chunk.copyHeights(), chunk.splat.copy(), chunk.holes.copy());
       }
     }
   }
@@ -302,9 +343,10 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     }
 
     const wasLoaded = this.#displayed.has(coord);
+    const outdated = this.#forget(({ tile }) => tile.chunk.equals(coord) && tile.tier !== confirmed.tier);
     for (const terrain of this.#terrains()) {
       terrain.removeChunk(coord);
-      terrain.addChunk(coord, confirmed.copyHeights(), confirmed.splat.copy());
+      terrain.addChunk(coord, confirmed.copyHeights(), confirmed.splat.copy(), confirmed.holes.copy());
     }
     const surviving = [...this.#layers].flatMap(([owner, layer]) => Array.from(layer.values())
       .filter(({ patch }) => patch.tile.chunk.equals(coord))
@@ -316,6 +358,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
       this.#displayed.writeTile(patch.tile, patch.heights);
       this.#strokeTerrain(owner)?.writeTile(patch.tile, patch.heights);
     }
+    this.#strokeSettled(outdated);
     if (wasLoaded) {
       this.emit("tilesChanged", chunkTiles(coord));
     }
@@ -362,6 +405,27 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     }
   }
 
+  #copyHoles(
+    tiles: readonly TileCoord[]
+  ): void {
+    const changed = tiles.filter((tile) => this.#displayed.chunk(tile.chunk)?.tier === tile.tier &&
+      this.#document.terrain.chunk(tile.chunk)?.tier === tile.tier);
+    for (const tile of changed) {
+      const holes = this.#document.terrain.chunk(tile.chunk)?.holes.tile(tile.x, tile.z);
+      if (holes === undefined) {
+        continue;
+      }
+      for (const terrain of this.#terrains()) {
+        if (terrain.has(tile.chunk)) {
+          terrain.writeHoleTile(tile, holes);
+        }
+      }
+    }
+    if (changed.length > 0) {
+      this.emit("holesChanged", changed);
+    }
+  }
+
   #isActive(
     owner: symbol
   ): boolean {
@@ -386,7 +450,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
           `[${HEIGHT_RANGE.min}, ${HEIGHT_RANGE.max}].`
         );
       }
-      if (this.#displayed.has(tile.chunk)) {
+      if (this.#displayed.chunk(tile.chunk)?.tier === tile.tier) {
         accepted.push({
           tile,
           heights: heights.slice()
@@ -519,7 +583,7 @@ export class TerrainPreview extends Emitter<TerrainPreviewEvents> {
     for (const tile of tiles) {
       const shown = terrain.chunk(tile.chunk);
       const confirmed = this.#document.terrain.chunk(tile.chunk);
-      if (shown === undefined || confirmed === undefined) {
+      if (shown?.tier !== tile.tier || confirmed?.tier !== tile.tier) {
         continue;
       }
 

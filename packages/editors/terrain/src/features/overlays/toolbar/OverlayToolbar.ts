@@ -24,7 +24,7 @@ import "@jolly-pixel/ui/elements/slider";
 import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
-import type { OverlaySettings } from "../model/OverlaySettings.ts";
+import type { OverlaySettings } from "../../../state/OverlaySettings.ts";
 import { viewportToolbarStyles } from "../../../shared/toolbar.styles.ts";
 import "./overlayIcons.ts";
 
@@ -34,7 +34,8 @@ const kOverlayLabels: Readonly<Record<TerrainOverlay, string>> = {
   chunks: "Chunk grid",
   lod: "LoD levels",
   slope: "Slope",
-  splat: "Painted materials"
+  splat: "Painted materials",
+  holes: "Holes"
 };
 
 @customElement("terrain-overlay-toolbar")

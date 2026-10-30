@@ -11,13 +11,13 @@ import {
   TERRAIN_HISTORY_SCOPE,
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
-import { stampStrength } from "./brushRate.ts";
-import type { BrushPress } from "./BrushToolHandler.ts";
-import { CommitCadence } from "./CommitCadence.ts";
+import { stampStrength } from "../../brush/model/brushRate.ts";
+import type { BrushPress } from "../../brush/model/BrushToolHandler.ts";
+import { CommitCadence } from "../../brush/model/CommitCadence.ts";
 import type {
   SculptOptions,
   SculptSettings
-} from "./SculptSettings.ts";
+} from "../../../state/SculptSettings.ts";
 import {
   sculptStamp,
   type SculptStamp,
@@ -26,7 +26,7 @@ import {
 import {
   StampSpacer,
   type GroundPoint
-} from "./StampSpacer.ts";
+} from "../../brush/model/StampSpacer.ts";
 
 export interface SculptStrokeOptions {
   preview: Pick<TerrainPreview, "beginStroke">;
@@ -140,6 +140,13 @@ export class SculptStroke {
         return {
           ...footprint,
           tool: "smooth"
+        };
+      case "terrace":
+        return {
+          ...footprint,
+          tool: "terrace",
+          step: options.terraceStep,
+          sharpness: options.terraceSharpness
         };
     }
   }

@@ -10,8 +10,8 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import type { MaterialSelection } from "../materials/model/MaterialSelection.ts";
-import type { BrushToolHandler } from "../sculpt/model/BrushToolHandler.ts";
+import type { MaterialSelection } from "../../state/MaterialSelection.ts";
+import type { BrushToolHandler } from "../brush/model/BrushToolHandler.ts";
 import {
   PaintStroke,
   type PaintStrokeOptions

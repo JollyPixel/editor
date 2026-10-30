@@ -5,6 +5,11 @@ import {
   type ChunkKey
 } from "../../terrain/ChunkCoord.ts";
 import {
+  chunkResolution,
+  type ChunkTier
+} from "../../terrain/chunkTier.ts";
+import { pointHeight } from "../../terrain/pointHeight.ts";
+import {
   BORDER_SAMPLES,
   type SampleBlock
 } from "../../terrain/SampleBlock.ts";
@@ -115,6 +120,35 @@ export function writeApron(
           apron[row + localX] = source.height(origin.x + localX, origin.z + localZ);
         }
       }
+    }
+  }
+}
+
+export function apronSize(
+  tier: ChunkTier
+): number {
+  return chunkResolution(tier) + APRON_MARGIN * 2;
+}
+
+export function writeFineApron(
+  terrain: TerrainReader,
+  coord: ChunkCoord,
+  apron: Float32Array
+): void {
+  const chunk = terrain.chunk(coord);
+  if (chunk === undefined) {
+    return;
+  }
+
+  const { tier, resolution } = chunk;
+  const size = apronSize(tier);
+  const origin = coord.originSample;
+  for (let gridZ = -APRON_MARGIN; gridZ < resolution + APRON_MARGIN; gridZ++) {
+    const row = (gridZ + APRON_MARGIN) * size + APRON_MARGIN;
+    for (let gridX = -APRON_MARGIN; gridX < resolution + APRON_MARGIN; gridX++) {
+      apron[row + gridX] = gridX >= 0 && gridZ >= 0 && gridX < resolution && gridZ < resolution ?
+        chunk.sample(gridX, gridZ) :
+        pointHeight(terrain, origin.x + gridX / tier, origin.z + gridZ / tier);
     }
   }
 }

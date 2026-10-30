@@ -1,10 +1,13 @@
 // Import Third-party Dependencies
 import {
-  CHUNK_SAMPLE_COUNT,
+  chunkSampleCount,
   ChunkCoord,
   DEFAULT_MATERIAL_TEXTURE_SIZE,
+  holeBytes,
   OVERVIEW_SAMPLE_COUNT,
   SplatMap,
+  tierOfSampleCount,
+  type ChunkTier,
   type SplatTexels,
   type TerrainChunk,
   type TerrainReader,
@@ -15,9 +18,16 @@ import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import {
+  decodeChunkHeights,
   decodeHeights,
   encodeHeights
 } from "../network/heights.ts";
+import {
+  decodeHoles,
+  decodeHoleTilePatch,
+  encodeHoles,
+  type HoleTilePatch
+} from "../network/holes.ts";
 import {
   decodeMaterials,
   decodeSplat,
@@ -26,8 +36,21 @@ import {
   encodeSplat,
   type SplatTilePatch
 } from "../network/splat.ts";
+import {
+  CHUNK_COORDINATE_RANGE,
+  MAX_TERRAIN_CHUNKS
+} from "../network/TerrainCommand.schema.ts";
 import { decodeTilePatch } from "../network/tilePatches.ts";
 import { chunkOverview } from "./chunkOverview.ts";
+import {
+  acceptsPoiCommand,
+  applyPoiCommand,
+  isPoiCommand
+} from "./poiCommands.ts";
+import {
+  TerrainPointsOfInterest,
+  type TerrainPointsOfInterestReader
+} from "./TerrainPointsOfInterest.ts";
 import {
   acceptsMaterialCommand,
   applyMaterialCommand,
@@ -50,13 +73,14 @@ import type {
 } from "../network/types.ts";
 
 // CONSTANTS
-export const MAX_TERRAIN_CHUNKS = 4096;
+export { MAX_TERRAIN_CHUNKS };
 
 export interface LoadedChunkEntry {
   readonly x: number;
   readonly z: number;
   readonly heights: string;
   readonly splat: string;
+  readonly holes?: string;
 }
 
 type TerrainEdit =
@@ -65,10 +89,18 @@ type TerrainEdit =
     readonly coord: ChunkCoord;
     readonly heights: Float32Array;
     readonly splat: SplatTexels | undefined;
+    readonly holes: Uint8Array | undefined;
   }
   | {
     readonly action: "chunk-removed";
     readonly coord: ChunkCoord;
+  }
+  | {
+    readonly action: "tier-changed";
+    readonly coord: ChunkCoord;
+    readonly tier: ChunkTier;
+    readonly heights: Float32Array;
+    readonly holes: Uint8Array | undefined;
   }
   | {
     readonly action: "heights-patched";
@@ -77,6 +109,10 @@ type TerrainEdit =
   | {
     readonly action: "splat-patched";
     readonly patches: readonly SplatTilePatch[];
+  }
+  | {
+    readonly action: "holes-patched";
+    readonly patches: readonly HoleTilePatch[];
   };
 
 export function acceptsTerrainCommand(
@@ -85,6 +121,9 @@ export function acceptsTerrainCommand(
 ): boolean {
   if (isMaterialCommand(command)) {
     return acceptsMaterialCommand(model.materials, command);
+  }
+  if (isPoiCommand(command)) {
+    return acceptsPoiCommand(model.pointsOfInterest, command);
   }
 
   const { terrain } = model;
@@ -95,15 +134,37 @@ export function acceptsTerrainCommand(
 
   switch (edit.action) {
     case "chunk-added":
-      return !terrain.knows(edit.coord) &&
-        terrain.overview.size < MAX_TERRAIN_CHUNKS &&
-        (terrain.overview.size === 0 || terrain.touches(edit.coord));
+      return acceptsChunkAdd(terrain, edit.coord);
     case "chunk-removed":
-      return terrain.knows(edit.coord) && terrain.overview.size > 1;
+      return acceptsChunkRemoval(terrain, edit.coord);
+    case "tier-changed":
+      return terrain.knows(edit.coord);
     case "heights-patched":
+    case "holes-patched":
+      return edit.patches.every(({ tile }) => terrain.knows(tile.chunk) &&
+        (terrain.chunk(tile.chunk)?.tier ?? tile.tier) === tile.tier);
     case "splat-patched":
       return edit.patches.every(({ tile }) => terrain.knows(tile.chunk));
   }
+}
+
+export function acceptsChunkAdd(
+  terrain: TerrainReader,
+  coord: ChunkCoord
+): boolean {
+  const { min, max } = CHUNK_COORDINATE_RANGE;
+
+  return [coord.x, coord.z].every((value) => value >= min && value <= max) &&
+    !terrain.knows(coord) &&
+    terrain.overview.size < MAX_TERRAIN_CHUNKS &&
+    (terrain.overview.size === 0 || terrain.touches(coord));
+}
+
+export function acceptsChunkRemoval(
+  terrain: TerrainReader,
+  coord: ChunkCoord
+): boolean {
+  return terrain.knows(coord) && terrain.overview.size > 1;
 }
 
 export function applyTerrainCommand(
@@ -113,6 +174,11 @@ export function applyTerrainCommand(
 ): void {
   if (isMaterialCommand(command)) {
     applyMaterialCommand(model.materials, command);
+
+    return;
+  }
+  if (isPoiCommand(command)) {
+    applyPoiCommand(model.pointsOfInterest, command);
 
     return;
   }
@@ -126,7 +192,7 @@ export function applyTerrainCommand(
   switch (edit.action) {
     case "chunk-added":
       if (loads(edit.coord)) {
-        terrain.addChunk(edit.coord, edit.heights, edit.splat);
+        terrain.addChunk(edit.coord, edit.heights, edit.splat, edit.holes);
       }
       else {
         terrain.addUnloadedChunk(
@@ -138,6 +204,11 @@ export function applyTerrainCommand(
       break;
     case "chunk-removed":
       terrain.removeChunk(edit.coord);
+      break;
+    case "tier-changed":
+      if (terrain.has(edit.coord)) {
+        terrain.changeTier(edit.coord, edit.heights, edit.holes);
+      }
       break;
     case "heights-patched":
       for (const { tile, heights } of edit.patches) {
@@ -159,6 +230,13 @@ export function applyTerrainCommand(
         }
       }
       break;
+    case "holes-patched":
+      for (const { tile, holes } of edit.patches) {
+        if (terrain.has(tile.chunk)) {
+          terrain.writeHoleTile(tile, holes);
+        }
+      }
+      break;
   }
 }
 
@@ -175,19 +253,34 @@ function terrainEdit(
 
     return patches === null ? null : { action: command.action, patches };
   }
+  if (command.action === "holes-patched") {
+    const patches = uniquePatches(command.tiles, decodeHoleTilePatch);
+
+    return patches === null ? null : { action: command.action, patches };
+  }
 
   const coord = new ChunkCoord(command.x, command.z);
   if (command.action === "chunk-removed") {
     return { action: "chunk-removed", coord };
   }
 
-  const heights = decodeHeights(command.heights);
-  const splat = command.splat === undefined ? undefined : decodeSplat(command.splat);
-  if (heights === null || splat === null) {
+  const heights = decodeChunkHeights(command.heights);
+  const tier = heights === null ? null : tierOfSampleCount(heights.length);
+  if (heights === null || tier === null) {
     return null;
   }
 
-  return { action: "chunk-added", coord, heights, splat };
+  const holes = command.holes === undefined ? undefined : decodeHoles(command.holes, holeBytes(tier));
+  if (holes === null) {
+    return null;
+  }
+  if (command.action === "tier-changed") {
+    return command.tier === tier ? { action: "tier-changed", coord, tier, heights, holes } : null;
+  }
+
+  const splat = command.splat === undefined ? undefined : decodeSplat(command.splat);
+
+  return splat === null ? null : { action: "chunk-added", coord, heights, splat, holes };
 }
 
 function uniquePatches<TEncoded, TPatch extends { readonly tile: TileCoord; }>(
@@ -209,7 +302,7 @@ function uniquePatches<TEncoded, TPatch extends { readonly tile: TileCoord; }>(
 }
 
 export function terrainSnapshot(
-  { terrain, materials }: TerrainModelReader
+  { terrain, materials, pointsOfInterest }: TerrainModelReader
 ): TerrainSnapshot {
   return {
     chunks: Array.from(terrain.overview.coords(), (coord) => {
@@ -218,18 +311,28 @@ export function terrainSnapshot(
       return chunk === undefined ? overviewEntry(terrain, coord) : loadedChunkEntry(chunk);
     }),
     materials: materials.materials(),
-    textureSize: materials.textureSize
+    textureSize: materials.textureSize,
+    ...listedPointsOfInterest(pointsOfInterest)
   };
 }
 
 export function terrainManifest(
-  { terrain, materials }: TerrainModelReader
+  { terrain, materials, pointsOfInterest }: TerrainModelReader
 ): TerrainManifest {
   return {
     chunks: Array.from(terrain.overview.coords(), (coord) => overviewEntry(terrain, coord)),
     materials: materials.materials(),
-    textureSize: materials.textureSize
+    textureSize: materials.textureSize,
+    ...listedPointsOfInterest(pointsOfInterest)
   };
+}
+
+function listedPointsOfInterest(
+  points: TerrainPointsOfInterestReader
+): Pick<TerrainManifest, "pointsOfInterest"> {
+  const listed = points.pointsOfInterest();
+
+  return listed.length === 0 ? {} : { pointsOfInterest: listed };
 }
 
 export function loadTerrainManifest(
@@ -245,21 +348,26 @@ export function loadTerrainManifest(
     }
     listed.add(coord.key);
 
+    const heights = chunk.heights === undefined ?
+      new Float32Array(chunkSampleCount(chunk.tier ?? 1)) :
+      chunkHeightsOrThrow(chunk.heights, coord);
+
     return {
       coord,
-      heights: chunk.heights === undefined ?
-        new Float32Array(CHUNK_SAMPLE_COUNT) :
-        decodedOrThrow(chunk.heights, CHUNK_SAMPLE_COUNT, coord),
-      splat: chunk.splat === undefined ? undefined : splatOrThrow(chunk.splat, coord)
+      heights,
+      splat: chunk.splat === undefined ? undefined : splatOrThrow(chunk.splat, coord),
+      holes: chunk.holes === undefined ? undefined : holesOrThrow(chunk.holes, coord, heights)
     };
   });
 
   const materials = loadedMaterials(manifest);
+  const points = loadedPointsOfInterest(manifest);
   terrain.clear();
-  for (const { coord, heights, splat } of chunks) {
-    terrain.addChunk(coord, heights, splat);
+  for (const { coord, heights, splat, holes } of chunks) {
+    terrain.addChunk(coord, heights, splat, holes);
   }
   model.materials.load(materials.materials(), materials.textureSize);
+  model.pointsOfInterest.load(points.pointsOfInterest());
 }
 
 export function loadTerrainSnapshot(
@@ -273,11 +381,14 @@ export function loadTerrainSnapshot(
       undefined :
       materialsOrThrow(chunk.materials, coord);
     if (chunk.heights !== undefined) {
+      const heights = chunkHeightsOrThrow(chunk.heights, coord);
+
       return {
         coord,
         materials,
-        heights: decodedOrThrow(chunk.heights, CHUNK_SAMPLE_COUNT, coord),
-        splat: chunk.splat === undefined ? undefined : splatOrThrow(chunk.splat, coord)
+        heights,
+        splat: chunk.splat === undefined ? undefined : splatOrThrow(chunk.splat, coord),
+        holes: chunk.holes === undefined ? undefined : holesOrThrow(chunk.holes, coord, heights)
       };
     }
 
@@ -291,10 +402,11 @@ export function loadTerrainSnapshot(
   });
 
   const materials = loadedMaterials(snapshot);
+  const points = loadedPointsOfInterest(snapshot);
   terrain.clear();
   for (const chunk of chunks) {
     if ("heights" in chunk) {
-      terrain.addChunk(chunk.coord, chunk.heights, chunk.splat);
+      terrain.addChunk(chunk.coord, chunk.heights, chunk.splat, chunk.holes);
       if (chunk.splat === undefined && chunk.materials !== undefined) {
         terrain.overview.writeMaterials(chunk.coord, chunk.materials);
       }
@@ -304,6 +416,16 @@ export function loadTerrainSnapshot(
     }
   }
   model.materials.load(materials.materials(), materials.textureSize);
+  model.pointsOfInterest.load(points.pointsOfInterest());
+}
+
+function loadedPointsOfInterest(
+  { pointsOfInterest = [] }: TerrainManifest
+): TerrainPointsOfInterest {
+  const loaded = new TerrainPointsOfInterest();
+  loaded.load(pointsOfInterest);
+
+  return loaded;
 }
 
 export function loadedChunkEntry(
@@ -313,7 +435,8 @@ export function loadedChunkEntry(
     x: chunk.coord.x,
     z: chunk.coord.z,
     heights: encodeHeights(chunk.copyHeights()),
-    splat: encodeSplat(chunk.splat.copy())
+    splat: encodeSplat(chunk.splat.copy()),
+    ...(chunk.holes.empty ? {} : { holes: encodeHoles(chunk.holes.copy()) })
   };
 }
 
@@ -321,12 +444,42 @@ function overviewEntry(
   terrain: TerrainReader,
   coord: ChunkCoord
 ): ChunkEntry {
+  const chunk = terrain.chunk(coord);
+  const tier = chunk?.tier ?? 1;
+
   return {
     x: coord.x,
     z: coord.z,
     overview: encodeHeights(terrain.overview.samples(coord)!),
-    materials: encodeMaterials(terrain.overview.materials(coord)!)
+    materials: encodeMaterials(terrain.overview.materials(coord)!),
+    ...(chunk === undefined || chunk.holes.empty ? {} : { hasHoles: true }),
+    ...(tier === 1 ? {} : { tier })
   };
+}
+
+function chunkHeightsOrThrow(
+  encoded: string,
+  coord: ChunkCoord
+): Float32Array {
+  const heights = decodeChunkHeights(encoded);
+  if (heights === null) {
+    throw new InvalidEntryError("chunk", coord.key, "has invalid heights");
+  }
+
+  return heights;
+}
+
+function holesOrThrow(
+  encoded: string,
+  coord: ChunkCoord,
+  heights: Float32Array
+): Uint8Array {
+  const holes = decodeHoles(encoded, holeBytes(tierOfSampleCount(heights.length)!));
+  if (holes === null) {
+    throw new InvalidEntryError("chunk", coord.key, "has an invalid hole mask");
+  }
+
+  return holes;
 }
 
 function splatOrThrow(

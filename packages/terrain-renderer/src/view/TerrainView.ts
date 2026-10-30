@@ -10,6 +10,7 @@ import {
   LEAF_NODE_SIZE,
   LodRanges
 } from "./lod/LodRanges.ts";
+import type { LodFocusArea } from "./lod/LodFocus.ts";
 import {
   QuadtreeSelection,
   type SelectedNode
@@ -65,6 +66,8 @@ export class TerrainView {
   #requestFrame: () => void;
   #shading: TerrainShading;
   #overlay: TerrainOverlay = "none";
+  #revealHoles = false;
+  #revealChunks = false;
   #walkableSlope = DEFAULT_WALKABLE_SLOPE;
   #highlightedMaterial: number | null = null;
   #textures: ChunkTextureStore;
@@ -87,7 +90,9 @@ export class TerrainView {
     this.#terrain = terrain;
     this.#requestFrame = requestFrame;
     this.selection = new QuadtreeSelection(terrain, ranges);
-    this.#textures = new ChunkTextureStore(terrain);
+    this.#textures = new ChunkTextureStore(terrain, {
+      replaced: (tier, arrays) => this.#shading.refinedArrays(tier, arrays)
+    });
     this.#materials = new MaterialTextureStore({
       copier: textureCopier,
       replaced: (arrays) => this.#shading.materialArrays(arrays)
@@ -96,6 +101,11 @@ export class TerrainView {
       heights: this.#textures.heights,
       splatIndices: this.#textures.splatIndices,
       splatWeights: this.#textures.splatWeights,
+      holes: this.#textures.holes,
+      refined: {
+        2: this.#textures.refinedArrays(2),
+        4: this.#textures.refinedArrays(4)
+      },
       lookup: this.#textures.lookup,
       overview: this.#textures.overview,
       overviewMaterials: this.#textures.overviewMaterials,
@@ -122,6 +132,30 @@ export class TerrainView {
     this.#requestFrame();
   }
 
+  get revealHoles(): boolean {
+    return this.#revealHoles;
+  }
+
+  set revealHoles(
+    revealed: boolean
+  ) {
+    this.#revealHoles = revealed;
+    this.#shading.revealHoles(revealed);
+    this.#requestFrame();
+  }
+
+  get revealChunks(): boolean {
+    return this.#revealChunks;
+  }
+
+  set revealChunks(
+    revealed: boolean
+  ) {
+    this.#revealChunks = revealed;
+    this.#shading.revealChunks(revealed);
+    this.#requestFrame();
+  }
+
   get highlightedMaterial(): number | null {
     return this.#highlightedMaterial;
   }
@@ -131,6 +165,20 @@ export class TerrainView {
   ) {
     this.#highlightedMaterial = slot;
     this.#shading.highlightSlot(slot);
+    this.#requestFrame();
+  }
+
+  focusOn(
+    areas: Iterable<LodFocusArea>
+  ): void {
+    this.selection.focusOn(areas);
+    this.#requestFrame();
+  }
+
+  highlightChunks(
+    coords: Iterable<ChunkCoord>
+  ): void {
+    this.#textures.highlight(coords);
     this.#requestFrame();
   }
 
@@ -212,6 +260,13 @@ export class TerrainView {
     tiles: Iterable<TileCoord>
   ): void {
     this.#textures.splatChanged(tiles);
+    this.#requestFrame();
+  }
+
+  holesChanged(
+    tiles: Iterable<TileCoord>
+  ): void {
+    this.#textures.holesChanged(tiles);
     this.#requestFrame();
   }
 
@@ -324,7 +379,12 @@ class NodeBatch {
     nodes.forEach((node, index) => {
       const spacing = ranges.nodeSize(node.level) / NODE_RESOLUTION;
       data.setXYZW(index, node.x, node.z, spacing, spacing);
-      morph.setXYZ(index, ranges.morphStart(node.level), ranges.morphEnd(node.level), node.skirts);
+      morph.setXYZ(
+        index,
+        ranges.morphStart(node.level) * node.bias,
+        ranges.morphEnd(node.level) * node.bias,
+        node.skirts
+      );
     });
     data.needsUpdate = true;
     morph.needsUpdate = true;

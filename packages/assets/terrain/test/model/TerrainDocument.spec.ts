@@ -29,4 +29,16 @@ describe("TerrainDocument", () => {
     assert.notEqual(added, null);
     assert.deepEqual(terrainSnapshot(document), original);
   });
+
+  test("a chunk past the coordinate range is refused before it is committed", () => {
+    const document = new TerrainDocument();
+    document.load({ chunks: [{ x: 127, z: 0 }] });
+    let changes = 0;
+    document.on("change", () => changes++);
+
+    assert.equal(document.canAddChunk(126, 0), true);
+    assert.equal(document.canAddChunk(128, 0), false);
+    assert.equal(document.addChunk(128, 0), false);
+    assert.equal(changes, 0);
+  });
 });

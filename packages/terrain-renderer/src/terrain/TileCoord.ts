@@ -4,6 +4,7 @@ import {
   ChunkCoord,
   type ChunkKey
 } from "./ChunkCoord.ts";
+import type { ChunkTier } from "./chunkTier.ts";
 
 // CONSTANTS
 export const TILE_SAMPLES = 16;
@@ -20,10 +21,29 @@ export interface TilePatch {
   readonly heights: Float32Array;
 }
 
+export interface TileArea {
+  readonly x: number;
+  readonly z: number;
+  readonly size: number;
+}
+
+export function tilesPerSide(
+  tier: ChunkTier
+): number {
+  return TILES_PER_CHUNK * tier;
+}
+
+export function tileCount(
+  tier: ChunkTier
+): number {
+  return tilesPerSide(tier) ** 2;
+}
+
 export class TileCoord {
   readonly chunk: ChunkCoord;
   readonly x: number;
   readonly z: number;
+  readonly tier: ChunkTier;
 
   static containing(
     sampleX: number,
@@ -41,29 +61,42 @@ export class TileCoord {
 
   static fromIndex(
     chunk: ChunkCoord,
-    index: number
+    index: number,
+    tier: ChunkTier = 1
   ): TileCoord {
-    return new TileCoord(chunk, index % TILES_PER_CHUNK, Math.floor(index / TILES_PER_CHUNK));
+    const side = tilesPerSide(tier);
+
+    return new TileCoord(chunk, index % side, Math.floor(index / side), tier);
+  }
+
+  static all(
+    chunk: ChunkCoord,
+    tier: ChunkTier = 1
+  ): TileCoord[] {
+    return Array.from({ length: tileCount(tier) }, (_, index) => TileCoord.fromIndex(chunk, index, tier));
   }
 
   constructor(
     chunk: ChunkCoord,
     x: number,
-    z: number
+    z: number,
+    tier: ChunkTier = 1
   ) {
-    if (!isTileIndex(x) || !isTileIndex(z)) {
+    const side = tilesPerSide(tier);
+    if (!isTileIndex(x, side) || !isTileIndex(z, side)) {
       throw new RangeError(
-        `Tile coordinates must be integers in [0, ${TILES_PER_CHUNK - 1}], got (${x}, ${z}).`
+        `Tile coordinates at x${tier} must be integers in [0, ${side - 1}], got (${x}, ${z}).`
       );
     }
 
     this.chunk = chunk;
     this.x = x;
     this.z = z;
+    this.tier = tier;
   }
 
   get index(): number {
-    return this.z * TILES_PER_CHUNK + this.x;
+    return this.z * tilesPerSide(this.tier) + this.x;
   }
 
   get key(): TileKey {
@@ -76,10 +109,17 @@ export class TileCoord {
       z: this.z * TILE_SAMPLES
     };
   }
+
+  get area(): TileArea {
+    const size = TILE_SAMPLES / this.tier;
+
+    return { x: this.x * size, z: this.z * size, size };
+  }
 }
 
 function isTileIndex(
-  value: number
+  value: number,
+  side: number
 ): boolean {
-  return Number.isInteger(value) && value >= 0 && value < TILES_PER_CHUNK;
+  return Number.isInteger(value) && value >= 0 && value < side;
 }

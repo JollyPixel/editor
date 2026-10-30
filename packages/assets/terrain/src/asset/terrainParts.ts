@@ -1,15 +1,16 @@
 // Import Third-party Dependencies
-import type {
-  ChunkCoord,
-  TerrainChunk,
-  TerrainReader
+import {
+  tierOfHoleBytes,
+  type ChunkCoord,
+  type TerrainChunk,
+  type TerrainReader
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import type { TerrainModel } from "../model/TerrainModel.ts";
 import { parseChunkPart } from "../network/chunkParts.ts";
 import {
-  decodeHeightBytes,
+  decodeChunkHeightBytes,
   encodeHeightBytes
 } from "../network/heights.ts";
 import {
@@ -23,7 +24,7 @@ const kCodecs: Readonly<Record<ChunkChannel, ChunkPartCodec>> = {
   heights: {
     encode: (chunk) => encodeHeightBytes(chunk.copyHeights()),
     load: ({ terrain }, coord, content) => {
-      const heights = decodeHeightBytes(content);
+      const heights = decodeChunkHeightBytes(content);
       if (heights === null) {
         return false;
       }
@@ -47,11 +48,25 @@ const kCodecs: Readonly<Record<ChunkChannel, ChunkPartCodec>> = {
 
       return true;
     }
+  },
+  holes: {
+    encode: (chunk) => (chunk.holes.empty ? null : chunk.holes.copy()),
+    load: ({ terrain }, coord, content) => {
+      const tier = tierOfHoleBytes(content.length);
+      if (tier === null) {
+        return false;
+      }
+      if (terrain.chunk(coord)?.tier === tier) {
+        terrain.loadHoles(coord, content);
+      }
+
+      return true;
+    }
   }
 };
 
 interface ChunkPartCodec {
-  encode(chunk: TerrainChunk): Uint8Array;
+  encode(chunk: TerrainChunk): Uint8Array | null;
   load(
     model: TerrainModel,
     coord: ChunkCoord,

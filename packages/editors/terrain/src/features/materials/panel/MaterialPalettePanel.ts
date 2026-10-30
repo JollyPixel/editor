@@ -38,13 +38,17 @@ import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/toggle";
 
 // Import Internal Dependencies
+import {
+  TERRAIN_CAPABILITIES,
+  type TerrainAccess
+} from "../../../access/TerrainAccess.ts";
 import type {
   MaterialPalette,
   TextureFile
 } from "../model/MaterialPalette.ts";
-import type { MaterialSelection } from "../model/MaterialSelection.ts";
+import type { MaterialSelection } from "../../../state/MaterialSelection.ts";
 import type { MaterialThumbnails } from "../model/MaterialThumbnails.ts";
-import type { OverlaySettings } from "../../overlays/model/OverlaySettings.ts";
+import type { OverlaySettings } from "../../../state/OverlaySettings.ts";
 import "./materialIcons.ts";
 
 // CONSTANTS
@@ -263,6 +267,9 @@ export class MaterialPalettePanel extends LitElement {
   @property({ attribute: false })
   declare context: MaterialPaletteContext | null;
 
+  @property({ attribute: false })
+  declare access: TerrainAccess;
+
   @property({ type: Boolean, reflect: true })
   declare dropping: boolean;
 
@@ -285,6 +292,7 @@ export class MaterialPalettePanel extends LitElement {
   constructor() {
     super();
     this.context = null;
+    this.access = TERRAIN_CAPABILITIES.full;
     this.dropping = false;
     this.busy = false;
     this.addEventListener("dragover", this.#onDragOver);
@@ -311,10 +319,12 @@ export class MaterialPalettePanel extends LitElement {
     const { document, selection } = context;
     const materials = document.materials.materials();
     const selected = materials.find(({ id }) => id === selection.selected);
+    const editable = this.access.has("materials");
 
     return html`
       <jolly-select
         label="Texture size"
+        ?disabled=${!editable}
         .options=${TERRAIN_TEXTURE_SIZES.map((size) => {
           return { value: size, label: `${size} px` };
         })}
@@ -326,7 +336,7 @@ export class MaterialPalettePanel extends LitElement {
         <button
           class="swatch add"
           title="Add a material from a texture"
-          ?disabled=${this.busy}
+          ?disabled=${this.busy || !editable}
           @click=${() => this.#run(() => context.palette.addFromPicker())}
         >
           <div class="tile">+</div>
@@ -385,7 +395,7 @@ export class MaterialPalettePanel extends LitElement {
     const techniques = kTechniques.filter(({ technique }) => material[technique]);
 
     return html`
-      <div class="details">
+      <div class="details" ?inert=${!this.access.has("materials")}>
         <div class="heading">
           <div class="preview" style=${albedo === null ? "" : `background-image: url(${albedo})`}></div>
           <jolly-text
@@ -530,7 +540,7 @@ export class MaterialPalettePanel extends LitElement {
     event: DragEvent
   ): void => {
     this.dropping = false;
-    if (event.defaultPrevented || this.context === null) {
+    if (event.defaultPrevented || this.context === null || !this.access.has("materials")) {
       return;
     }
 

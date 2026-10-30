@@ -4,6 +4,9 @@ import {
   ChunkCoord,
   type ChunkKey
 } from "./ChunkCoord.ts";
+import { resampleHoles } from "./chunkResample.ts";
+import { tierOfSampleCount } from "./chunkTier.ts";
+import { HoleMask } from "./HoleMask.ts";
 import {
   OverviewMap,
   overviewSamples,
@@ -77,13 +80,14 @@ export class Terrain implements TerrainReader {
   addChunk(
     coord: ChunkCoord,
     heights: Float32Array = this.seedHeights(coord),
-    splat: SplatTexels = uniformSplat(SPLAT_TEXEL_COUNT)
+    splat: SplatTexels = uniformSplat(SPLAT_TEXEL_COUNT),
+    holes?: Uint8Array
   ): TerrainChunk {
     if (this.knows(coord)) {
       throw new Error(`Chunk ${coord.key} already exists.`);
     }
 
-    return this.#load(coord, heights, splat);
+    return this.#load(coord, heights, splat, holes);
   }
 
   addUnloadedChunk(
@@ -101,13 +105,38 @@ export class Terrain implements TerrainReader {
   loadChunk(
     coord: ChunkCoord,
     heights: Float32Array,
-    splat?: SplatTexels
+    splat?: SplatTexels,
+    holes?: Uint8Array
   ): TerrainChunk {
     if (!this.knows(coord)) {
       throw new Error(`Chunk ${coord.key} does not exist.`);
     }
 
-    return this.#load(coord, heights, splat ?? this.#chunks.get(coord.key)?.splat.copy());
+    const loaded = this.#chunks.get(coord.key);
+    const tier = tierOfSampleCount(heights.length);
+    const kept = loaded === undefined || tier === null ?
+      undefined :
+      resampleHoles(loaded.holes, tier);
+
+    return this.#load(
+      coord,
+      heights,
+      splat ?? loaded?.splat.copy(),
+      holes ?? kept
+    );
+  }
+
+  changeTier(
+    coord: ChunkCoord,
+    heights: Float32Array,
+    holes?: Uint8Array
+  ): TerrainChunk {
+    const loaded = this.#chunks.get(coord.key);
+    if (loaded === undefined) {
+      throw new Error(`Chunk ${coord.key} is not loaded.`);
+    }
+
+    return this.loadChunk(coord, heights, loaded.splat.copy(), holes);
   }
 
   loadSplat(
@@ -121,6 +150,18 @@ export class Terrain implements TerrainReader {
 
     chunk.splat.load(splat);
     this.overview.writeMaterials(coord, chunk.splat.overviewMaterials());
+  }
+
+  loadHoles(
+    coord: ChunkCoord,
+    holes: Uint8Array
+  ): void {
+    const chunk = this.#chunks.get(coord.key);
+    if (chunk === undefined) {
+      throw new Error(`Chunk ${coord.key} is not loaded.`);
+    }
+
+    chunk.holes.load(holes);
   }
 
   unloadChunk(
@@ -156,6 +197,7 @@ export class Terrain implements TerrainReader {
       throw new Error(`Chunk ${tile.chunk.key} does not exist.`);
     }
 
+    assertTier(chunk, tile);
     const previous = chunk.tileHeights(tile.x, tile.z);
     chunk.writeTile(tile.x, tile.z, heights);
     this.overview.writeTile(tile, heights);
@@ -201,6 +243,22 @@ export class Terrain implements TerrainReader {
     return this.overview.writeTileMaterial(tile, dominantSlot(splat, 0));
   }
 
+  writeHoleTile(
+    tile: TileCoord,
+    holes: Uint8Array
+  ): Uint8Array {
+    const chunk = this.#chunks.get(tile.chunk.key);
+    if (chunk === undefined) {
+      throw new Error(`Chunk ${tile.chunk.key} does not exist.`);
+    }
+
+    assertTier(chunk, tile);
+    const previous = chunk.holes.tile(tile.x, tile.z);
+    chunk.holes.writeTile(tile.x, tile.z, holes);
+
+    return previous;
+  }
+
   sampleAt(
     sampleX: number,
     sampleZ: number
@@ -241,9 +299,15 @@ export class Terrain implements TerrainReader {
   #load(
     coord: ChunkCoord,
     heights: Float32Array,
-    splat: SplatTexels | undefined
+    splat: SplatTexels | undefined,
+    holes: Uint8Array | undefined
   ): TerrainChunk {
-    const chunk = new TerrainChunk(coord, heights, new SplatMap(splat));
+    const chunk = new TerrainChunk(
+      coord,
+      heights,
+      new SplatMap(splat),
+      holes === undefined ? undefined : new HoleMask(holes)
+    );
     const materials = splat === undefined ?
       this.overview.materials(coord) :
       chunk.splat.overviewMaterials();
@@ -275,5 +339,14 @@ export class Terrain implements TerrainReader {
     }
 
     return nearest;
+  }
+}
+
+function assertTier(
+  chunk: TerrainChunk,
+  tile: TileCoord
+): void {
+  if (tile.tier !== chunk.tier) {
+    throw new Error(`Tile ${tile.key} is at x${tile.tier}, its chunk at x${chunk.tier}.`);
   }
 }
