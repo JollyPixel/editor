@@ -26,6 +26,10 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
+  canUseTool,
+  type TerrainAccessSource
+} from "../access/TerrainAccess.ts";
+import {
   decodeMaterialImage,
   MaterialTextures
 } from "../features/materials/rendering/MaterialTextures.ts";
@@ -65,6 +69,7 @@ export interface TerrainEditorSceneOptions {
   leases: TextureLeases;
   selection: MaterialSelection;
   poiSelection: PoiSelection;
+  access: TerrainAccessSource;
 }
 
 interface TerrainSceneParts {
@@ -88,6 +93,7 @@ export class TerrainEditorScene extends Systems.Scene {
   #leases: TextureLeases;
   #selection: MaterialSelection;
   #poiSelection: PoiSelection;
+  #access: TerrainAccessSource;
   #parts: TerrainSceneParts | null = null;
   #cameraPosition = new THREE.Vector3();
   #disposables: Array<() => void> = [];
@@ -104,6 +110,7 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#leases = options.leases;
     this.#selection = options.selection;
     this.#poiSelection = options.poiSelection;
+    this.#access = options.access;
   }
 
   get view(): TerrainView {
@@ -165,8 +172,10 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#disposables.push(() => materialTextures.dispose());
 
     const poiSelection = this.#poiSelection;
-    function editingPoi(): boolean {
-      return poiSelection.editing;
+    const access = this.#access;
+    const sculpt = this.#sculpt;
+    function toolResting(): boolean {
+      return poiSelection.editing || !canUseTool(access.current, sculpt.options.tool);
     }
     const peerRings = this.world
       .createActor("peer-brush-rings")
@@ -185,7 +194,7 @@ export class TerrainEditorScene extends Systems.Scene {
         history: this.#history,
         camera: camera.camera,
         rings: peerRings,
-        paused: editingPoi
+        paused: toolResting
       });
     const chunkTool = this.world
       .createActor("chunk-tool")
@@ -195,7 +204,7 @@ export class TerrainEditorScene extends Systems.Scene {
         settings: this.#sculpt,
         history: this.#history,
         camera: camera.camera,
-        paused: editingPoi
+        paused: toolResting
       });
     const poiTool = this.world
       .createActor("poi-chunk-tool")
@@ -204,7 +213,8 @@ export class TerrainEditorScene extends Systems.Scene {
         preview,
         selection: this.#poiSelection,
         history: this.#history,
-        camera: camera.camera
+        camera: camera.camera,
+        paused: () => !access.current.has("pointsOfInterest")
       });
     const frustums = this.world
       .createActor("peer-frustums")

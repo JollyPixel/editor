@@ -31,6 +31,11 @@ import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/select";
 
 // Import Internal Dependencies
+import {
+  canImportHeights,
+  TERRAIN_CAPABILITIES,
+  type TerrainAccess
+} from "../../../access/TerrainAccess.ts";
 import type {
   ChosenHeightmap,
   ChosenMask,
@@ -97,6 +102,9 @@ export class ExchangePanel extends LitElement {
   @property({ attribute: false })
   declare context: ExchangePanelContext | null;
 
+  @property({ attribute: false })
+  declare access: TerrainAccess;
+
   @state()
   declare private rect: ChunkRect;
 
@@ -130,6 +138,7 @@ export class ExchangePanel extends LitElement {
   constructor() {
     super();
     this.context = null;
+    this.access = TERRAIN_CAPABILITIES.full;
     this.rect = { x: 0, z: 0, columns: 1, rows: 1 };
     this.tier = 1;
     this.format = "png";
@@ -254,7 +263,7 @@ export class ExchangePanel extends LitElement {
         <jolly-button
           label="Choose heightmap"
           data-action="choose-heightmap"
-          ?disabled=${busy}
+          ?disabled=${busy || !canImportHeights(this.access)}
           @click=${() => this.heightmapInput.click()}
         ></jolly-button>
         <input
@@ -272,7 +281,7 @@ export class ExchangePanel extends LitElement {
               label="Import heightmap"
               data-action="import-heightmap"
               variant="accent"
-              ?disabled=${busy}
+              ?disabled=${busy || !canImportHeights(this.access)}
               @click=${this.#importHeightmap}
             ></jolly-button>
           `}
@@ -322,7 +331,7 @@ export class ExchangePanel extends LitElement {
         <jolly-button
           label="Choose masks"
           data-action="choose-masks"
-          ?disabled=${busy}
+          ?disabled=${busy || !this.access.has("paint")}
           @click=${() => this.maskInput.click()}
         ></jolly-button>
         <input
@@ -353,7 +362,7 @@ export class ExchangePanel extends LitElement {
               label="Import splat map"
               data-action="import-splat"
               variant="accent"
-              ?disabled=${busy || unmatched}
+              ?disabled=${busy || unmatched || !this.access.has("paint")}
               @click=${this.#importSplat}
             ></jolly-button>
           `}

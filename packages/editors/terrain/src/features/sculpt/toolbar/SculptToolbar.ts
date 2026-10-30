@@ -26,6 +26,11 @@ import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
 import {
+  canUseTool,
+  TERRAIN_CAPABILITIES,
+  type TerrainAccess
+} from "../../../access/TerrainAccess.ts";
+import {
   CHUNK_MODES,
   type ChunkMode
 } from "../../chunks/model/ChunkDrag.ts";
@@ -92,6 +97,9 @@ export class SculptToolbar extends LitElement {
   @property({ attribute: false })
   declare history: TerrainHistory | null;
 
+  @property({ attribute: false })
+  declare access: TerrainAccess;
+
   #size = new FieldBinding<number>(this, {
     read: () => this.settings?.options.size ?? BRUSH_SIZE.min,
     write: (size) => this.settings?.update({ size })
@@ -151,6 +159,7 @@ export class SculptToolbar extends LitElement {
     super();
     this.settings = null;
     this.history = null;
+    this.access = TERRAIN_CAPABILITIES.full;
   }
 
   protected override willUpdate(
@@ -182,6 +191,7 @@ export class SculptToolbar extends LitElement {
               icon=${`sculpt-${option}`}
               label=${kToolLabels[option]}
               ?active=${option === tool}
+              ?disabled=${!canUseTool(this.access, option)}
               @click=${() => settings.update({ tool: option })}
             ></jolly-tool-button>
           `)}

@@ -36,6 +36,7 @@ export interface PoiChunkToolOptions {
   selection: Pick<PoiSelection, "selected" | "editing">;
   history: Pick<TerrainHistory, "open">;
   camera: THREE.Camera;
+  paused?: () => boolean;
 }
 
 interface ActiveDrag {
@@ -75,6 +76,7 @@ export class PoiChunkTool extends ActorComponent {
     if (
       selected === null ||
       !editing ||
+      this.#options.paused?.() === true ||
       !mouse.hovering ||
       mouse.isDown("middle") ||
       InputCombination.Alt.evaluate(input)

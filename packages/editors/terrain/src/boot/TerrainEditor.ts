@@ -23,11 +23,17 @@ import {
   LogQueue
 } from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
+import { RoomGrants } from "@jolly-pixel/network/client";
 
 import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 import { TEXTURE_ASSET } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
+import {
+  TERRAIN_CAPABILITIES,
+  type TerrainAccess,
+  type TerrainGrants
+} from "../access/TerrainAccess.ts";
 import { TerrainExchange } from "../features/importExport/model/TerrainExchange.ts";
 import { downloadFile } from "../features/importExport/panel/downloadFile.ts";
 import "../features/importExport/panel/ExchangePanel.ts";
@@ -58,6 +64,13 @@ const kCanvas = "#game-container canvas";
 const kTerrainKind = terrainDocumentKind();
 const kTextureKind = textureDocumentKind();
 const kTextureFolder = "textures";
+const kViewOnlyRefused = "You can only view this terrain, so the change was not saved";
+const kAccessElements = [
+  "terrain-sculpt-toolbar",
+  "terrain-material-palette",
+  "terrain-poi-panel",
+  "terrain-exchange-panel"
+].join(",");
 
 export interface TerrainEditorParts {
   runtime: Runtime;
@@ -193,6 +206,10 @@ async function mountScene(
     });
   }
 
+  const access = new RoomGrants(target.room, TERRAIN_CAPABILITIES);
+  disposables.push(() => access.dispose());
+  disposables.push(access.subscribe("denied", () => log.push(kViewOnlyRefused)));
+
   const selection = new MaterialSelection(target.document);
   disposables.push(() => selection.dispose());
   const poiSelection = new PoiSelection(target.document);
@@ -206,7 +223,8 @@ async function mountScene(
     room: target.room,
     leases,
     selection,
-    poiSelection
+    poiSelection,
+    access
   });
   const { sceneManager } = context.runtime.runtime.world;
   disposables.push(() => sceneManager.unloadScene(scene));
@@ -219,6 +237,7 @@ async function mountScene(
   );
   mountPoiPanel(target.document, { history, selection: poiSelection }, disposables);
   mountExchangePanel(context, target.document, history, disposables);
+  disposables.push(publishAccess(access));
 
   const presence = new PresenceStore();
   const roster = new PeerRoster({
@@ -327,6 +346,20 @@ function mountExchangePanel(
   disposables.push(() => {
     element.context = null;
   });
+}
+
+function publishAccess(
+  access: TerrainGrants
+): () => void {
+  const elements = document.querySelectorAll<HTMLElement & { access: TerrainAccess; }>(kAccessElements);
+  function publish(): void {
+    for (const element of elements) {
+      element.access = access.current;
+    }
+  }
+  publish();
+
+  return access.subscribe("change", publish);
 }
 
 function disposeAll(

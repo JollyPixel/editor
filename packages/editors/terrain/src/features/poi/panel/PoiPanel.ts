@@ -30,6 +30,10 @@ import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/toggle";
 
 // Import Internal Dependencies
+import {
+  TERRAIN_CAPABILITIES,
+  type TerrainAccess
+} from "../../../access/TerrainAccess.ts";
 import type { PoiEditor } from "../model/PoiEditor.ts";
 import type { PoiSelection } from "../model/PoiSelection.ts";
 import "./poiIcons.ts";
@@ -106,6 +110,9 @@ export class PoiPanel extends LitElement {
   @property({ attribute: false })
   declare context: PoiPanelContext | null;
 
+  @property({ attribute: false })
+  declare access: TerrainAccess;
+
   #subscriptions = new SubscriptionController<PoiPanelContext | null>(
     this,
     (context) => (context === null ?
@@ -120,6 +127,7 @@ export class PoiPanel extends LitElement {
   constructor() {
     super();
     this.context = null;
+    this.access = TERRAIN_CAPABILITIES.full;
   }
 
   protected override willUpdate(
@@ -147,6 +155,7 @@ export class PoiPanel extends LitElement {
         icon="poi-add"
         label="Add point of interest"
         data-action="add-poi"
+        ?disabled=${!this.access.has("pointsOfInterest")}
         @click=${() => editor.add()}
       ></jolly-button>
       ${points.length === 0 ?
@@ -177,7 +186,7 @@ export class PoiPanel extends LitElement {
     const { editor, selection } = this.context!;
 
     return html`
-      <div class="details">
+      <div class="details" ?inert=${!this.access.has("pointsOfInterest")}>
         <div class="heading">
           <jolly-text
             label="Name"

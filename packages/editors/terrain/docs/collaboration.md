@@ -260,6 +260,15 @@ A tier change undoes with a `tier-changed` back to the old tier, carrying the
 heights and holes it replaced. A Chunks tool drag undoes with the inverse of
 each chunk it added or removed, as one step.
 
+## Access
+
+Room rights follow the commands. `src/access/TerrainAccess.ts` groups them
+into capabilities: heights, paint, holes, chunks (with tiers), materials and
+points of interest. A capability needs write access to all its commands.
+Tools and panels without one rest and show as disabled, and importing a
+heightmap needs both heights and chunks, since it can add chunks and change
+tiers. A refused command is reported in the activity log.
+
 <!-- Reference-style links for DRYness -->
 
 [asset-parts]: ../../../asset-server/architecture/AssetParts.md
