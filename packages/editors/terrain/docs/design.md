@@ -243,9 +243,14 @@ coarsest range, is still drawn at the minimum level when no node above it
 can draw it. Two nodes of different biases meet with skirts, as nodes of
 different levels do, since their morph bands differ.
 
-The Points of interest pane lists them with their settings. Selecting one
-tints its chunks, and its "Edit chunks" toggle lets a click or drag add
-chunks to it, Ctrl+click remove them.
+The Points of interest pane lists them with their chunk counts; Add creates
+one named "Point of interest N" and selects it. Selecting one tints its
+chunks amber and shows its name, LoD bias, minimum detail and priority, each
+edit one undo step. Its "Edit chunks" toggle lets a click or drag on the
+terrain add chunks to it, Ctrl+click remove them, a drag being one undo step;
+a ghost outlines the chunk under the cursor, and the brushes and the Chunks
+tool rest while the toggle is on. Removing the point of interest ends the
+editing.
 
 Points of interest are part of the asset: the manifest lists them, at most
 64, each with its chunks, and the join snapshot carries them to every member.

@@ -38,6 +38,7 @@ export const MAX_CHUNK_LAYERS = 256;
 export const LOOKUP_SIZE = 256;
 export const OVERVIEW_TEXTURE_SIZE = LOOKUP_SIZE * OVERVIEW_SAMPLES;
 export const TIER_LAYER_STRIDE = 512;
+export const HIGHLIGHT_FLAG = 8;
 const kSplatLayerBytes = SPLAT_TEXEL_COUNT * SPLAT_CHANNELS;
 const kLookupComponents = 4;
 const kKnownComponent = 3;
@@ -81,6 +82,7 @@ export class ChunkTextureStore {
   #terrain: TerrainReader;
   #replaced: NonNullable<ChunkTextureStoreOptions["replaced"]>;
   #layers = new Map<ChunkKey, ChunkLayer>();
+  #highlighted = new Map<ChunkKey, ChunkCoord>();
   #freeLayers: number[] = [];
   #refined: Record<RefinedTier, RefinedPool>;
 
@@ -245,6 +247,22 @@ export class ChunkTextureStore {
     this.#writeAprons(mergeAprons(regions));
   }
 
+  highlight(
+    coords: Iterable<ChunkCoord>
+  ): void {
+    const previous = this.#highlighted;
+    this.#highlighted = new Map([...coords].map((coord) => [coord.key, coord]));
+    const lookup = this.lookup.image.data as Float32Array;
+    for (const coord of new Map([...previous, ...this.#highlighted]).values()) {
+      const slot = lookupSlot(coord) * kLookupComponents;
+      const known = lookup[slot + kKnownComponent] % HIGHLIGHT_FLAG;
+      if (known !== 0 && lookup[slot + 1] === coord.x && lookup[slot + 2] === coord.z) {
+        lookup[slot + kKnownComponent] = known + (this.#highlighted.has(coord.key) ? HIGHLIGHT_FLAG : 0);
+        this.lookup.needsUpdate = true;
+      }
+    }
+  }
+
   splatChanged(
     tiles: Iterable<TileCoord>
   ): void {
@@ -352,7 +370,8 @@ export class ChunkTextureStore {
     known: number
   ): void {
     const lookup = this.lookup.image.data as Float32Array;
-    lookup.set([layer, coord.x, coord.z, known], lookupSlot(coord) * kLookupComponents);
+    const flag = this.#highlighted.has(coord.key) ? HIGHLIGHT_FLAG : 0;
+    lookup.set([layer, coord.x, coord.z, known + flag], lookupSlot(coord) * kLookupComponents);
     this.lookup.needsUpdate = true;
   }
 

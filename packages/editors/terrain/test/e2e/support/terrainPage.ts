@@ -133,6 +133,14 @@ export class TerrainPage {
     await nextFrames(this.page);
   }
 
+  pointOfInterestChunks(): Promise<string[]> {
+    return this.page.evaluate(() => {
+      const [point] = window.terrainEditor!.document.pointsOfInterest.pointsOfInterest();
+
+      return point === undefined ? [] : point.chunks.map(({ x, z }) => `${x},${z}`);
+    });
+  }
+
   chunkTier(
     chunkX: number,
     chunkZ: number

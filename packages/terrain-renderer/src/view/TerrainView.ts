@@ -175,6 +175,13 @@ export class TerrainView {
     this.#requestFrame();
   }
 
+  highlightChunks(
+    coords: Iterable<ChunkCoord>
+  ): void {
+    this.#textures.highlight(coords);
+    this.#requestFrame();
+  }
+
   get walkableSlope(): number {
     return this.#walkableSlope;
   }

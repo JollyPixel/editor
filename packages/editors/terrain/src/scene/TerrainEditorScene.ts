@@ -32,6 +32,8 @@ import {
 import type { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
 import type { TextureLeases } from "../features/materials/model/TextureLeases.ts";
 import { ChunkTool } from "../features/chunks/ChunkTool.ts";
+import type { PoiSelection } from "../features/poi/model/PoiSelection.ts";
+import { PoiChunkTool } from "../features/poi/PoiChunkTool.ts";
 import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -62,6 +64,7 @@ export interface TerrainEditorSceneOptions {
   room: Room;
   leases: TextureLeases;
   selection: MaterialSelection;
+  poiSelection: PoiSelection;
 }
 
 interface TerrainSceneParts {
@@ -72,6 +75,7 @@ interface TerrainSceneParts {
   readonly peerRings: PeerBrushRings;
   readonly brush: SculptBrush;
   readonly chunkTool: ChunkTool;
+  readonly poiTool: PoiChunkTool;
   readonly frustums: PeerFrustums;
 }
 
@@ -83,6 +87,7 @@ export class TerrainEditorScene extends Systems.Scene {
   #room: Room;
   #leases: TextureLeases;
   #selection: MaterialSelection;
+  #poiSelection: PoiSelection;
   #parts: TerrainSceneParts | null = null;
   #cameraPosition = new THREE.Vector3();
   #disposables: Array<() => void> = [];
@@ -98,6 +103,7 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#room = options.room;
     this.#leases = options.leases;
     this.#selection = options.selection;
+    this.#poiSelection = options.poiSelection;
   }
 
   get view(): TerrainView {
@@ -158,6 +164,10 @@ export class TerrainEditorScene extends Systems.Scene {
     });
     this.#disposables.push(() => materialTextures.dispose());
 
+    const poiSelection = this.#poiSelection;
+    function editingPoi(): boolean {
+      return poiSelection.editing;
+    }
     const peerRings = this.world
       .createActor("peer-brush-rings")
       .addComponentAndGet(PeerBrushRings, {
@@ -174,7 +184,8 @@ export class TerrainEditorScene extends Systems.Scene {
         selection: this.#selection,
         history: this.#history,
         camera: camera.camera,
-        rings: peerRings
+        rings: peerRings,
+        paused: editingPoi
       });
     const chunkTool = this.world
       .createActor("chunk-tool")
@@ -182,6 +193,16 @@ export class TerrainEditorScene extends Systems.Scene {
         document: this.#document,
         preview,
         settings: this.#sculpt,
+        history: this.#history,
+        camera: camera.camera,
+        paused: editingPoi
+      });
+    const poiTool = this.world
+      .createActor("poi-chunk-tool")
+      .addComponentAndGet(PoiChunkTool, {
+        document: this.#document,
+        preview,
+        selection: this.#poiSelection,
         history: this.#history,
         camera: camera.camera
       });
@@ -197,6 +218,7 @@ export class TerrainEditorScene extends Systems.Scene {
       peerRings.refresh();
       brush.terrainChanged();
       chunkTool.terrainChanged();
+      poiTool.terrainChanged();
     });
     this.#parts = {
       camera,
@@ -206,6 +228,7 @@ export class TerrainEditorScene extends Systems.Scene {
       peerRings,
       brush,
       chunkTool,
+      poiTool,
       frustums
     };
   }
@@ -233,6 +256,7 @@ export class TerrainEditorScene extends Systems.Scene {
   override destroy(): void {
     this.#parts?.brush.endStroke();
     this.#parts?.chunkTool.endDrag();
+    this.#parts?.poiTool.endDrag();
     for (const dispose of this.#disposables.splice(0).reverse()) {
       dispose();
     }
@@ -284,8 +308,16 @@ export class TerrainEditorScene extends Systems.Scene {
     view: TerrainView
   ): void {
     const document = this.#document;
+    const selection = this.#poiSelection;
     function focus(): void {
       view.focusOn(document.pointsOfInterest.pointsOfInterest());
+      highlight();
+    }
+    function highlight(): void {
+      const { selected } = selection;
+      const point = selected === null ? undefined : document.pointsOfInterest.pointOfInterest(selected);
+      const chunks = point?.chunks ?? [];
+      view.highlightChunks(chunks.map(({ x, z }) => new ChunkCoord(x, z)));
     }
     focus();
     this.#disposables.push(
@@ -294,7 +326,8 @@ export class TerrainEditorScene extends Systems.Scene {
           focus();
         }
       }),
-      document.subscribe("reset", focus)
+      document.subscribe("reset", focus),
+      selection.subscribe("change", highlight)
     );
   }
 

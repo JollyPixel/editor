@@ -60,6 +60,7 @@ import { holePyramidSize } from "../textures/holePyramid.ts";
 import {
   LOOKUP_SIZE,
   OVERVIEW_TEXTURE_SIZE,
+  HIGHLIGHT_FLAG,
   TIER_LAYER_STRIDE,
   type RefinedTier,
   type TierArrays
@@ -89,6 +90,8 @@ const kSlopeHigh = vec3(0.9, 0.48, 0.16);
 const kSlopeTooSteep = vec3(0.82, 0.12, 0.12);
 const kHoleColor = vec3(0.78, 0.22, 0.86);
 const kHoleTint = 0.55;
+const kHighlightColor = vec3(0.98, 0.75, 0.14);
+const kHighlightTint = 0.4;
 const kFinestTier = CHUNK_TIERS[CHUNK_TIERS.length - 1];
 
 export const TERRAIN_OVERLAYS = ["none", "chunks", "lod", "slope", "splat", "holes"] as const;
@@ -122,6 +125,7 @@ export interface TerrainShading {
 
 interface ChunkEntry {
   known: BoolNode;
+  highlighted: BoolNode;
   loaded: BoolNode;
   layer: IntNode;
   tier: FloatNode;
@@ -152,10 +156,13 @@ export function createTerrainShading(
     const loaded = entry.x.greaterThan(0.5).and(matches);
     const stride = floor(entry.x.div(TIER_LAYER_STRIDE));
     const layer = int(entry.x.sub(stride.mul(TIER_LAYER_STRIDE))).sub(1);
-    const tier = select(loaded, entry.w, float(1));
+    const highlighted = entry.w.greaterThanEqual(HIGHLIGHT_FLAG);
+    const known = select(highlighted, entry.w.sub(HIGHLIGHT_FLAG), entry.w);
+    const tier = select(loaded, known, float(1));
 
     return {
-      known: entry.w.greaterThan(0.5).and(matches),
+      known: known.greaterThan(0.5).and(matches),
+      highlighted: highlighted.and(matches),
       loaded,
       layer: select(loaded, layer, int(-1)),
       tier,
@@ -497,6 +504,9 @@ export function createTerrainShading(
     });
     If(overlayIs("chunks").or(overlayIs("lod")).or(revealGrid.equal(1)), () => {
       color.assign(mix(color, kLineColor, line));
+    });
+    If(fragmentEntry.highlighted, () => {
+      color.assign(mix(color, kHighlightColor, kHighlightTint));
     });
     If(inHole, () => {
       color.assign(mix(mix(color, kHoleColor, kHoleTint), kHoleColor, holeLine));

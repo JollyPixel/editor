@@ -35,6 +35,9 @@ import { textureDocumentKind } from "../features/materials/model/TextureDocument
 import { TextureLeases } from "../features/materials/model/TextureLeases.ts";
 import { parentFolder } from "../features/materials/model/textureNames.ts";
 import "../features/materials/panel/MaterialPalettePanel.ts";
+import { PoiEditor } from "../features/poi/model/PoiEditor.ts";
+import { PoiSelection } from "../features/poi/model/PoiSelection.ts";
+import "../features/poi/panel/PoiPanel.ts";
 import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
 import { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -189,6 +192,8 @@ async function mountScene(
 
   const selection = new MaterialSelection(target.document);
   disposables.push(() => selection.dispose());
+  const poiSelection = new PoiSelection(target.document);
+  disposables.push(() => poiSelection.dispose());
   const leases = new TextureLeases((assetId) => context.session.lease(kTextureKind, assetId));
   const scene = new TerrainEditorScene({
     document: target.document,
@@ -197,7 +202,8 @@ async function mountScene(
     history,
     room: target.room,
     leases,
-    selection
+    selection,
+    poiSelection
   });
   const { sceneManager } = context.runtime.runtime.world;
   disposables.push(() => sceneManager.unloadScene(scene));
@@ -208,6 +214,7 @@ async function mountScene(
     { history, selection, leases, overlay: overlaySettings },
     disposables
   );
+  mountPoiPanel(target.document, { history, selection: poiSelection }, disposables);
 
   const presence = new PresenceStore();
   const roster = new PeerRoster({
@@ -273,6 +280,26 @@ function mountMaterialPalette(
   disposables.push(() => {
     element.context = null;
     thumbnails.dispose();
+  });
+}
+
+function mountPoiPanel(
+  terrain: TerrainDocument,
+  shared: {
+    history: TerrainHistory;
+    selection: PoiSelection;
+  },
+  disposables: Array<() => void>
+): void {
+  const element = document.querySelector("terrain-poi-panel");
+  if (element === null) {
+    return;
+  }
+
+  const editor = new PoiEditor({ document: terrain, ...shared });
+  element.context = { document: terrain, editor, selection: shared.selection };
+  disposables.push(() => {
+    element.context = null;
   });
 }
 

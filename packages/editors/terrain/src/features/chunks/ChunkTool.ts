@@ -41,6 +41,7 @@ export interface ChunkToolOptions {
   settings: Pick<SculptSettings, "options">;
   history: Pick<TerrainHistory, "open">;
   camera: THREE.Camera;
+  paused?: () => boolean;
 }
 
 interface ActiveDrag {
@@ -79,6 +80,7 @@ export class ChunkTool extends ActorComponent {
     const { tool, chunkMode, chunkTier } = this.#options.settings.options;
     if (
       tool !== "chunks" ||
+      this.#options.paused?.() === true ||
       !mouse.hovering ||
       mouse.isDown("middle") ||
       InputCombination.Alt.evaluate(input)

@@ -192,8 +192,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   interest's chunks have their distance and morph bands multiplied by its
   bias, and are drawn at its minimum level or finer at any distance, past the
   coarsest range included.
-- **Next:** the Points of interest pane: listing and editing them, tinting
-  the selected one's chunks, and its "Edit chunks" toggle.
+- **Points of interest pane: done** (2026-10-30). The pane lists, adds,
+  edits and removes them; the selected one's chunks are tinted, and its
+  "Edit chunks" toggle adds chunks by click or drag, Ctrl+click removing
+  them, while the brushes rest. Points of interest are complete.
+- **Next:** the ramp and terrace brushes.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -265,7 +268,7 @@ chunks yet.
 - [x] Chunks tool: add and remove chunks by click or drag, one undo step.
 - [x] Resolution tiers ×2 and ×4, with seam morphing, set from the Chunks
   tool's Detail mode.
-- [ ] Points of interest: chunk sets with an LoD bias and a minimum detail
+- [x] Points of interest: chunk sets with an LoD bias and a minimum detail
   level, kept loaded at any distance, edited in their pane.
 - [ ] Ramp and terrace brushes.
 - [ ] Heightmap and splat map import and export.

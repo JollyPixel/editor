@@ -46,6 +46,7 @@ export interface SculptBrushOptions {
   history: Pick<TerrainHistory, "open">;
   camera: THREE.Camera;
   rings: Pick<PeerBrushRings, "publishLocalRing">;
+  paused?: () => boolean;
 }
 
 export class SculptBrush extends ActorComponent {
@@ -89,6 +90,7 @@ export class SculptBrush extends ActorComponent {
     const selected = this.#options.settings.options.tool;
     if (
       selected === "chunks" ||
+      this.#options.paused?.() === true ||
       !mouse.hovering ||
       mouse.isDown("middle") ||
       InputCombination.Alt.evaluate(input)
