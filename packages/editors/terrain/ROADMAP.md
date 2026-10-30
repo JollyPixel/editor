@@ -196,7 +196,10 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   edits and removes them; the selected one's chunks are tinted, and its
   "Edit chunks" toggle adds chunks by click or drag, Ctrl+click removing
   them, while the brushes rest. Points of interest are complete.
-- **Next:** the ramp and terrace brushes.
+- **Terrace brush: done** (2026-10-30). The Terrace tool moves the ground
+  toward a staircase of a set step height, its sharpness blending from soft
+  steps to flat ledges, at flatten's rate.
+- **Next:** the ramp brush.
 
 Tick a box when its item lands, and move **Next** along with it.
 

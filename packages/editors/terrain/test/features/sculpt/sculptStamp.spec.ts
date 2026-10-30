@@ -16,6 +16,7 @@ import {
 // Import Internal Dependencies
 import {
   sculptStamp,
+  terraceHeight,
   type SculptStamp
 } from "#src/features/sculpt/model/sculptStamp.ts";
 
@@ -114,6 +115,40 @@ describe("sculptStamp", () => {
       [chunk.sample(1, 1), chunk.sample(2, 0), terrain.sampleAt(CHUNK_SAMPLES - 1, 0)],
       [2, 0, 0]
     );
+  });
+
+  test("terrace steps blend from soft slopes to flat ledges, below zero as above", () => {
+    assert.deepEqual(
+      [0.5, 1, 1.5].map((height) => terraceHeight(height, 2, 0)),
+      [0.3125, 1, 1.6875]
+    );
+    assert.deepEqual(
+      [0.5, 1.5, -0.5, -1.5].map((height) => terraceHeight(height, 2, 1)),
+      [0, 2, 0, -2]
+    );
+  });
+
+  test("a full terrace stamp moves each sample onto its step", () => {
+    const terrain = new Terrain();
+    const coord = new ChunkCoord(0, 0);
+    const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
+    for (let index = 0; index < heights.length; index++) {
+      heights[index] = (index % CHUNK_SAMPLES) * 0.25;
+    }
+    terrain.addChunk(coord, heights);
+    stamp(terrain, {
+      tool: "terrace",
+      x: 8,
+      z: 8,
+      radius: 6,
+      strength: 1,
+      falloff: "constant",
+      step: 2,
+      sharpness: 1
+    });
+
+    assert.deepEqual([5, 6, 7, 9, 10].map((x) => terrain.sampleAt(x, 8)), [2, 2, 2, 2, 2]);
+    assert.deepEqual([3, 11, 13].map((x) => terrain.sampleAt(x, 8)), [0, 2, 4]);
   });
 
   test("smooth on a x2 chunk averages the neighbours half a metre away", () => {

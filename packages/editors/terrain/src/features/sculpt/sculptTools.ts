@@ -23,6 +23,7 @@ export function sculptTools(
   return {
     raise: { begin: stroke("raise"), pick: () => undefined },
     smooth: { begin: stroke("smooth"), pick: () => undefined },
+    terrace: { begin: stroke("terrace"), pick: () => undefined },
     flatten: {
       begin: stroke("flatten"),
       pick: ({ point }) => options.settings.update({

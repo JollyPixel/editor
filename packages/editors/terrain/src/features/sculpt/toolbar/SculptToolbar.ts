@@ -41,6 +41,7 @@ import {
   BRUSH_SIZE,
   BRUSH_TOOLS,
   STRENGTH_OPTIONS,
+  TERRACE_STEP,
   type BrushTool,
   type SculptOptions,
   type SculptSettings
@@ -58,6 +59,7 @@ const kToolLabels: Readonly<Record<BrushTool, string>> = {
   raise: "Raise and lower (right button lowers)",
   smooth: "Smooth",
   flatten: "Flatten",
+  terrace: "Terrace",
   paint: "Paint the selected material (Ctrl+click picks one)",
   holes: "Cut and fill holes (Ctrl inverts)",
   chunks: "Add, remove and refine chunks (Ctrl swaps add and remove)"
@@ -113,6 +115,16 @@ export class SculptToolbar extends LitElement {
       changes[key] = percent / 100;
       settings.update(changes);
     }
+  });
+
+  #terraceStep = new FieldBinding<number>(this, {
+    read: () => this.settings?.options.terraceStep ?? TERRACE_STEP.min,
+    write: (terraceStep) => this.settings?.update({ terraceStep })
+  });
+
+  #terraceSharpness = new FieldBinding<number>(this, {
+    read: () => Math.round((this.settings?.options.terraceSharpness ?? 0) * 100),
+    write: (percent) => this.settings?.update({ terraceSharpness: percent / 100 })
   });
 
   #flattenHeight = new FieldBinding<number>(this, {
@@ -175,6 +187,7 @@ export class SculptToolbar extends LitElement {
         </div>
         ${tool === "chunks" ? this.#renderChunkMode(settings) : this.#renderBrushSettings(settings)}
         ${tool === "flatten" ? this.#renderFlattenTarget(settings) : nothing}
+        ${tool === "terrace" ? this.#renderTerrace() : nothing}
         ${tool === "holes" ? this.#renderHoleMode(settings) : nothing}
       </jolly-rail>
     `;
@@ -348,6 +361,47 @@ export class SculptToolbar extends LitElement {
             ></jolly-number>
           </jolly-tool-button>
         ` : nothing}
+      </div>
+    `;
+  }
+
+  #renderTerrace(): TemplateResult {
+    return html`
+      <div class="group divided" role="group" aria-label="Terrace">
+        <jolly-tool-button
+          data-tool="terrace-step"
+          flyout-side="above"
+          label=${`Step height ${formatMetres(this.#terraceStep.value)}`}
+        >
+          <span class="value">${Number(this.#terraceStep.value.toFixed(1))}</span>
+          <jolly-number
+            slot="flyout"
+            label="Step height (m)"
+            min=${TERRACE_STEP.min}
+            max=${TERRACE_STEP.max}
+            step="0.25"
+            .value=${this.#terraceStep.value}
+            @jolly-input=${this.#terraceStep.input}
+            @jolly-change=${this.#terraceStep.commit}
+          ></jolly-number>
+        </jolly-tool-button>
+        <jolly-tool-button
+          data-tool="terrace-sharpness"
+          flyout-side="above"
+          label=${`Sharpness ${this.#terraceSharpness.value}%: soft steps to flat ledges`}
+        >
+          <span class="value">${this.#terraceSharpness.value}</span>
+          <jolly-slider
+            slot="flyout"
+            orientation="vertical"
+            min="0"
+            max="100"
+            step="1"
+            .value=${this.#terraceSharpness.value}
+            @jolly-input=${this.#terraceSharpness.input}
+            @jolly-change=${this.#terraceSharpness.commit}
+          ></jolly-slider>
+        </jolly-tool-button>
       </div>
     `;
   }

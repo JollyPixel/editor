@@ -152,6 +152,22 @@ registerIcon("chunks-detail", svg`
   />
 `, { tone: "teal" });
 
+registerIcon("sculpt-terrace", svg`
+  <path
+    class="tone-fill"
+    d="M2 20h20v-4h-5v-4h-5V8H7V4H2Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 4h5v4h5v4h5v4h5M2 20h20"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "lime" });
+
 registerIcon("sculpt-smooth", svg`
   <path
     d="M2 16l3-5 3 6 3-8 3 7 3-4 3 5 2-2"

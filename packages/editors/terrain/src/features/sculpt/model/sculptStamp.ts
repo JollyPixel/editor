@@ -22,8 +22,10 @@ import {
 export const SCULPT_TOOLS = Object.freeze([
   "raise",
   "smooth",
-  "flatten"
+  "flatten",
+  "terrace"
 ] as const);
+const kMaxTerraceFlat = 0.98;
 const kSmoothKernel = [
   [1, 2, 1],
   [2, 4, 2],
@@ -54,7 +56,13 @@ interface FlattenStamp extends StampFootprint {
   readonly target: number;
 }
 
-export type SculptStamp = RaiseStamp | SmoothStamp | FlattenStamp;
+interface TerraceStamp extends StampFootprint {
+  readonly tool: "terrace";
+  readonly step: number;
+  readonly sharpness: number;
+}
+
+export type SculptStamp = RaiseStamp | SmoothStamp | FlattenStamp | TerraceStamp;
 
 interface GridSample {
   readonly x: number;
@@ -113,7 +121,22 @@ function stampDelta(
       return stamp.target - height;
     case "smooth":
       return smoothed(terrain, sample) - height;
+    case "terrace":
+      return terraceHeight(height, stamp.step, stamp.sharpness) - height;
   }
+}
+
+export function terraceHeight(
+  height: number,
+  step: number,
+  sharpness: number
+): number {
+  const base = Math.floor(height / step) * step;
+  const within = (height - base) / step;
+  const flat = Math.min(Math.max(sharpness, 0), kMaxTerraceFlat);
+  const rise = Math.min(Math.max((within - flat / 2) / (1 - flat), 0), 1);
+
+  return base + step * rise * rise * (3 - 2 * rise);
 }
 
 function smoothed(

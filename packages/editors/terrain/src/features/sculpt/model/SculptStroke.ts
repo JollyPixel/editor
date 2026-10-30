@@ -141,6 +141,13 @@ export class SculptStroke {
           ...footprint,
           tool: "smooth"
         };
+      case "terrace":
+        return {
+          ...footprint,
+          tool: "terrace",
+          step: options.terraceStep,
+          sharpness: options.terraceSharpness
+        };
     }
   }
 }

@@ -9,7 +9,8 @@ import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   BRUSH_SIZE,
-  SculptSettings
+  SculptSettings,
+  TERRACE_STEP
 } from "#src/features/sculpt/model/SculptSettings.ts";
 
 describe("SculptSettings", () => {
@@ -22,6 +23,8 @@ describe("SculptSettings", () => {
       strength: 0.7,
       flattenTarget: "fixed",
       flattenHeight: -9000,
+      terraceStep: 1000,
+      terraceSharpness: 1.5,
       holeMode: "fill",
       chunkMode: "remove",
       chunkTier: 4
@@ -39,6 +42,8 @@ describe("SculptSettings", () => {
         spacing: 0.25,
         flattenTarget: "fixed",
         flattenHeight: HEIGHT_RANGE.min,
+        terraceStep: TERRACE_STEP.max,
+        terraceSharpness: 1,
         holeMode: "fill",
         chunkMode: "remove",
         chunkTier: 4
@@ -65,6 +70,8 @@ describe("SculptSettings", () => {
         spacing: 0.05,
         flattenTarget: "press",
         flattenHeight: 0,
+        terraceStep: 2,
+        terraceSharpness: 0.5,
         holeMode: "cut",
         chunkMode: "add",
         chunkTier: 2

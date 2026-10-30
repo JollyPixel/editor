@@ -31,11 +31,13 @@ const kStorageKey = "terrain:sculpt";
 export const BRUSH_SIZE = Object.freeze({ min: 0.5, max: 128 });
 export const BRUSH_SPACING = Object.freeze({ min: 0.05, max: 1 });
 export const FLATTEN_TARGETS = ["press", "fixed"] as const;
+export const TERRACE_STEP = Object.freeze({ min: 0.25, max: 256 });
 export const BRUSH_TOOLS = Object.freeze([...SCULPT_TOOLS, "paint", "holes", "chunks"] as const);
 export const STRENGTH_OPTIONS: Readonly<Record<BrushTool, StrengthOption | null>> = Object.freeze({
   raise: "strength",
   smooth: "strength",
   flatten: "strength",
+  terrace: "strength",
   paint: "paintStrength",
   holes: null,
   chunks: null
@@ -54,6 +56,8 @@ export interface SculptOptions {
   spacing: number;
   flattenTarget: FlattenTarget;
   flattenHeight: number;
+  terraceStep: number;
+  terraceSharpness: number;
   holeMode: HoleMode;
   chunkMode: ChunkMode;
   chunkTier: ChunkTier;
@@ -72,6 +76,8 @@ const kDefaultOptions: Readonly<SculptOptions> = Object.freeze({
   spacing: 0.25,
   flattenTarget: "press",
   flattenHeight: 0,
+  terraceStep: 2,
+  terraceSharpness: 0.5,
   holeMode: "cut",
   chunkMode: "add",
   chunkTier: 2
@@ -100,6 +106,8 @@ export class SculptSettings extends Emitter<SculptSettingsEvents> {
       spacing: clamp(number("spacing"), BRUSH_SPACING.min, BRUSH_SPACING.max),
       flattenTarget: choice("flattenTarget", FLATTEN_TARGETS),
       flattenHeight: clamp(number("flattenHeight"), HEIGHT_RANGE.min, HEIGHT_RANGE.max),
+      terraceStep: clamp(number("terraceStep"), TERRACE_STEP.min, TERRACE_STEP.max),
+      terraceSharpness: clamp(number("terraceSharpness"), 0, 1),
       holeMode: choice("holeMode", HOLE_MODES),
       chunkMode: choice("chunkMode", CHUNK_MODES),
       chunkTier: choice("chunkTier", CHUNK_TIERS)

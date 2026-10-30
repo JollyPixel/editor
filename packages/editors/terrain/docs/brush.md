@@ -74,9 +74,13 @@ existing chunks: the part of a stamp over empty ground is dropped, and the
   the line from the surface height under A to the height under B, by
   `weight × strength`, with the falloff across its width. Written once on
   release, as one stroke.
-- **Terrace.** Moves each sample toward the nearest multiple of a step
-  height, set in the toolbar and 2 m by default, at the same rate as flatten.
-  A sharpness setting blends from soft steps to flat ledges.
+- **Terrace.** Moves each sample toward a staircase of steps of a set height,
+  set in the toolbar from 0.25 m to 256 m and 2 m by default, at the same
+  rate as flatten. Within a step the staircase rises along a smooth curve; a
+  sharpness setting, 0 to 100 % and 50 % by default, squeezes the rise
+  toward the middle of the step, from soft steps at 0 to flat ledges at the
+  nearest multiple of the step height at 100 %. Both settings are saved with
+  the others.
 
 ## Hole brush
 
