@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   TILE_SAMPLE_COUNT,
-  type TerrainReader,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
 
@@ -11,7 +10,6 @@ import {
   encodeHeights
 } from "./heights.ts";
 import {
-  chunkAtTier,
   encodeTileCoord,
   patchTileCoord
 } from "./patchTile.ts";
@@ -33,20 +31,4 @@ export function decodeTilePatch(
   const heights = decodeHeights(encoded.heights, TILE_SAMPLE_COUNT);
 
   return tile === null || heights === null ? null : { tile, heights };
-}
-
-export function currentTilePatches(
-  terrain: Pick<TerrainReader, "chunk">,
-  tiles: Iterable<EncodedTilePatch>
-): EncodedTilePatch[] {
-  const current: EncodedTilePatch[] = [];
-  for (const encoded of tiles) {
-    const tile = patchTileCoord(encoded);
-    const heights = tile === null ? undefined : chunkAtTier(terrain, tile)?.tileHeights(tile.x, tile.z);
-    if (tile !== null && heights !== undefined) {
-      current.push(encodeTilePatch({ tile, heights }));
-    }
-  }
-
-  return current;
 }

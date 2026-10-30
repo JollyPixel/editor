@@ -20,7 +20,10 @@ import { encodeHoles } from "../network/holes.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import { encodeSplatTilePatch } from "../network/splat.ts";
 import { currentTier } from "../network/tierCommands.ts";
-import { currentTiles } from "../network/tilePatchCommands.ts";
+import {
+  currentTiles,
+  type TilePatchCommand
+} from "../network/tilePatchCommands.ts";
 import { encodeTilePatch } from "../network/tilePatches.ts";
 import type { TerrainCommand } from "../network/types.ts";
 import {
@@ -134,10 +137,10 @@ function currentChunks(
   return unchanged ? chunks : null;
 }
 
-function batchPairs<TTile, TCommand extends TerrainCommand>(
+function batchPairs<TTile>(
   current: CurrentChunks,
   tiles: readonly TTile[],
-  command: (batch: TTile[]) => TCommand & Parameters<typeof currentTiles>[1]
+  command: (batch: TTile[]) => TilePatchCommand
 ): PairedCommands[] {
   const reader = { chunk: (coord: ChunkCoord) => current.get(coord.key) };
 

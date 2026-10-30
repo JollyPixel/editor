@@ -3,7 +3,6 @@ import {
   HOLE_BYTES,
   HOLE_TILE_BYTES,
   tierOfHoleBytes,
-  type TerrainReader,
   type TileCoord
 } from "@jolly-pixel/terrain.renderer";
 import {
@@ -13,7 +12,6 @@ import {
 
 // Import Internal Dependencies
 import {
-  chunkAtTier,
   encodeTileCoord,
   patchTileCoord
 } from "./patchTile.ts";
@@ -66,20 +64,4 @@ export function decodeHoleTilePatch(
   const holes = decodeHoles(encoded.holes, HOLE_TILE_BYTES);
 
   return tile === null || holes === null ? null : { tile, holes };
-}
-
-export function currentHoleTilePatches(
-  terrain: Pick<TerrainReader, "chunk">,
-  tiles: Iterable<EncodedHoleTilePatch>
-): EncodedHoleTilePatch[] {
-  const current: EncodedHoleTilePatch[] = [];
-  for (const encoded of tiles) {
-    const tile = patchTileCoord(encoded);
-    const holes = tile === null ? undefined : chunkAtTier(terrain, tile)?.holes.tile(tile.x, tile.z);
-    if (tile !== null && holes !== undefined) {
-      current.push(encodeHoleTilePatch({ tile, holes }));
-    }
-  }
-
-  return current;
 }

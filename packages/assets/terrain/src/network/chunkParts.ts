@@ -2,7 +2,6 @@
 import {
   ChunkCoord,
   isOverviewTile,
-  TileCoord,
   type ChunkKey
 } from "@jolly-pixel/terrain.renderer";
 
@@ -10,7 +9,6 @@ import {
 import { isMaterialCommand } from "../model/materialCommands.ts";
 import { isPoiCommand } from "../model/poiCommands.ts";
 import { patchTileCoord } from "./patchTile.ts";
-import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
 import {
   CHUNK_CHANNELS,
   filterTiles,
@@ -30,10 +28,6 @@ const kPartSuffixes: Readonly<Record<ChunkChannel, string>> = {
   splat: "_splat",
   holes: "_holes"
 };
-const kOverviewTiles = new Set(
-  Array.from({ length: CHUNK_TILE_COUNT }, (_, index) => index)
-    .filter((index) => isOverviewTile(TileCoord.fromIndex(new ChunkCoord(0, 0), index)))
-);
 
 export interface ChunkPart {
   readonly coord: ChunkCoord;
@@ -125,10 +119,6 @@ export function outsideCommand<TCommand extends TerrainCommand>(
   }
 
   const outside = filterTiles(command, (tile) => {
-    if (command.action === "splat-patched") {
-      return kOverviewTiles.has(tile.tile);
-    }
-
     const coord = patchTileCoord(tile);
 
     return coord !== null && isOverviewTile(coord);

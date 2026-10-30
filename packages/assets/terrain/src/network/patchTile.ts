@@ -15,13 +15,6 @@ export interface PatchTile {
   readonly tier?: 2 | 4;
 }
 
-export interface EncodedTileCoord {
-  readonly x: number;
-  readonly z: number;
-  readonly tile: number;
-  readonly tier?: 2 | 4;
-}
-
 export function patchTileCoord(
   { x, z, tile, tier }: PatchTile
 ): TileCoord | null {
@@ -32,7 +25,7 @@ export function patchTileCoord(
 
 export function encodeTileCoord(
   tile: TileCoord
-): EncodedTileCoord {
+): PatchTile {
   const encoded = { x: tile.chunk.x, z: tile.chunk.z, tile: tile.index };
 
   return tile.tier === 1 ? encoded : { ...encoded, tier: tile.tier };

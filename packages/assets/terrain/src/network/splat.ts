@@ -1,14 +1,12 @@
 // Import Third-party Dependencies
 import {
-  ChunkCoord,
   isValidSplat,
   OVERVIEW_SAMPLE_COUNT,
   SPLAT_CHANNELS,
   SPLAT_TEXEL_COUNT,
   SPLAT_TILE_TEXEL_COUNT,
-  TileCoord,
   type SplatTexels,
-  type TerrainReader
+  type TileCoord
 } from "@jolly-pixel/terrain.renderer";
 import {
   decodeBase64,
@@ -16,6 +14,10 @@ import {
 } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
+import {
+  encodeTileCoord,
+  patchTileCoord
+} from "./patchTile.ts";
 import type { EncodedSplatTilePatch } from "./types.ts";
 
 export interface SplatTilePatch {
@@ -83,9 +85,7 @@ export function encodeSplatTilePatch(
   { tile, splat }: SplatTilePatch
 ): EncodedSplatTilePatch {
   return {
-    x: tile.chunk.x,
-    z: tile.chunk.z,
-    tile: tile.index,
+    ...encodeTileCoord(tile),
     splat: encodeSplat(splat)
   };
 }
@@ -93,28 +93,8 @@ export function encodeSplatTilePatch(
 export function decodeSplatTilePatch(
   encoded: EncodedSplatTilePatch
 ): SplatTilePatch | null {
+  const tile = patchTileCoord(encoded);
   const splat = decodeSplat(encoded.splat, SPLAT_TILE_TEXEL_COUNT);
 
-  return splat === null ?
-    null :
-    {
-      tile: TileCoord.fromIndex(new ChunkCoord(encoded.x, encoded.z), encoded.tile),
-      splat
-    };
-}
-
-export function currentSplatTilePatches(
-  terrain: Pick<TerrainReader, "chunk">,
-  tiles: Iterable<EncodedSplatTilePatch>
-): EncodedSplatTilePatch[] {
-  const current: EncodedSplatTilePatch[] = [];
-  for (const { x, z, tile: index } of tiles) {
-    const tile = TileCoord.fromIndex(new ChunkCoord(x, z), index);
-    const splat = terrain.chunk(tile.chunk)?.splat.tile(tile.x, tile.z);
-    if (splat !== undefined) {
-      current.push(encodeSplatTilePatch({ tile, splat }));
-    }
-  }
-
-  return current;
+  return tile === null || splat === null ? null : { tile, splat };
 }

@@ -25,9 +25,13 @@ import {
   type TerrainWriteRef
 } from "../network/TerrainCommandKeys.ts";
 import {
+  channelOfAction,
   isTilePatchCommand,
+  TILE_PATCH_ACTIONS,
   type ChunkChannel,
-  type PatchTile
+  type PatchTile,
+  type TilePatchAction,
+  type TilePatchCommand
 } from "../network/tilePatchCommands.ts";
 import type { TerrainCommand } from "../network/types.ts";
 
@@ -155,40 +159,30 @@ function readTile(
 function compactTilePatches(
   commands: readonly TerrainCommand[]
 ): TerrainCommand[] {
-  const kept: TerrainCommand[] = commands.filter((command) => !isTilePatchCommand(command));
-  const heights = latestTiles(
-    "heights",
-    commands.flatMap((command) => (command.action === "heights-patched" ? command.tiles : []))
-  );
-  const splat = latestTiles(
-    "splat",
-    commands.flatMap((command) => (command.action === "splat-patched" ? command.tiles : []))
-  );
-  const holes = latestTiles(
-    "holes",
-    commands.flatMap((command) => (command.action === "holes-patched" ? command.tiles : []))
-  );
-  for (const batch of patchBatches(heights)) {
-    kept.push({ action: "heights-patched", tiles: batch });
-  }
-  for (const batch of patchBatches(splat)) {
-    kept.push({ action: "splat-patched", tiles: batch });
-  }
-  for (const batch of patchBatches(holes)) {
-    kept.push({ action: "holes-patched", tiles: batch });
-  }
-
-  return kept;
+  return [
+    ...commands.filter((command) => !isTilePatchCommand(command)),
+    ...TILE_PATCH_ACTIONS.flatMap((action) => latestTileBatches(commands, action))
+  ];
 }
 
-function latestTiles<TTile extends PatchTile>(
-  channel: ChunkChannel,
-  tiles: readonly TTile[]
-): TTile[] {
-  const latest = new Map<string, TTile>();
-  for (const tile of tiles) {
-    latest.set(terrainTileKey(channel, tile.x, tile.z, tile.tile, tile.tier), tile);
+function latestTileBatches(
+  commands: readonly TerrainCommand[],
+  action: TilePatchAction
+): TilePatchCommand[] {
+  const latest = new Map<string, PatchTile>();
+  for (const command of commands) {
+    if (isTilePatchCommand(command) && command.action === action) {
+      const tiles: readonly PatchTile[] = command.tiles;
+      for (const tile of tiles) {
+        latest.set(terrainTileKey(channelOfAction(action), tile.x, tile.z, tile.tile, tile.tier), tile);
+      }
+    }
   }
 
-  return [...latest.values()];
+  const batches: TilePatchCommand[] = [];
+  for (const tiles of patchBatches([...latest.values()])) {
+    batches.push({ action, tiles } as TilePatchCommand);
+  }
+
+  return batches;
 }
