@@ -72,8 +72,10 @@ existing chunks: the part of a stamp over empty ground is dropped, and the
   with the others.
 - **Ramp.** Drag from A to B. Samples within `size` of the segment move toward
   the line from the surface height under A to the height under B, by
-  `weight × strength`, with the falloff across its width. Written once on
-  release, as one stroke.
+  `weight × strength`, with the falloff across its width. The height under A
+  is taken at the press, the one under B at release. Written once on release,
+  as one stroke; a press released without moving writes nothing, and the
+  right button does nothing.
 - **Terrace.** Moves each sample toward a staircase of steps of a set height,
   set in the toolbar from 0.25 m to 256 m and 2 m by default, at the same
   rate as flatten. Within a step the staircase rises along a smooth curve; a

@@ -168,6 +168,22 @@ registerIcon("sculpt-terrace", svg`
   />
 `, { tone: "lime" });
 
+registerIcon("sculpt-ramp", svg`
+  <path
+    class="tone-fill"
+    d="M2 20h20V8Z"
+  />
+  <path
+    class="tone-ink"
+    d="M2 20h20V8ZM5 10l5-3M10 7l-1 2.5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "lime" });
+
 registerIcon("sculpt-smooth", svg`
   <path
     d="M2 16l3-5 3 6 3-8 3 7 3-4 3 5 2-2"

@@ -1,5 +1,9 @@
 // Import Internal Dependencies
 import type { BrushToolHandler } from "./model/BrushToolHandler.ts";
+import {
+  RampStroke,
+  type RampStrokeOptions
+} from "./model/RampStroke.ts";
 import type { SculptTool } from "./model/sculptStamp.ts";
 import {
   SculptStroke,
@@ -9,6 +13,15 @@ import type { SculptSettings } from "./model/SculptSettings.ts";
 
 export interface SculptToolsOptions extends SculptStrokeOptions {
   settings: Pick<SculptSettings, "options" | "update">;
+}
+
+export function rampTool(
+  options: RampStrokeOptions
+): BrushToolHandler {
+  return {
+    begin: (press) => (press.lower ? null : new RampStroke(options, press)),
+    pick: () => undefined
+  };
 }
 
 export function sculptTools(

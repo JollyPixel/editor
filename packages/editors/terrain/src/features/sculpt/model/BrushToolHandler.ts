@@ -10,7 +10,13 @@ export interface BrushPress {
   readonly lower: boolean;
 }
 
+export interface StrokeSegment {
+  readonly from: GroundPoint;
+  readonly to: GroundPoint;
+}
+
 export interface BrushStroke {
+  readonly segment?: StrokeSegment | null;
   update(point: GroundPoint | null, elapsed: number, inverted: boolean): void;
   end(): void;
 }

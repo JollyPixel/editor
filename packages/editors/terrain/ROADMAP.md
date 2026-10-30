@@ -199,7 +199,12 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
 - **Terrace brush: done** (2026-10-30). The Terrace tool moves the ground
   toward a staircase of a set step height, its sharpness blending from soft
   steps to flat ledges, at flatten's rate.
-- **Next:** the ramp brush.
+- **Ramp brush: done** (2026-10-30). The Ramp tool takes a drag from A to B
+  and, on release, pulls the ground within the brush size of the segment
+  toward the straight line between the heights under its ends, as one stroke;
+  a guide shows the segment and its width while dragging. Ramp and terrace
+  brushes are complete.
+- **Next:** heightmap and splat map import and export.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -273,7 +278,7 @@ chunks yet.
   tool's Detail mode.
 - [x] Points of interest: chunk sets with an LoD bias and a minimum detail
   level, kept loaded at any distance, edited in their pane.
-- [ ] Ramp and terrace brushes.
+- [x] Ramp and terrace brushes.
 - [ ] Heightmap and splat map import and export.
 
 ## Not planned for V1

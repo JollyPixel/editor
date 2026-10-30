@@ -29,10 +29,14 @@ import {
   type SculptSettings
 } from "./model/SculptSettings.ts";
 import type { GroundPoint } from "./model/StampSpacer.ts";
-import { sculptTools } from "./sculptTools.ts";
+import {
+  rampTool,
+  sculptTools
+} from "./sculptTools.ts";
 import type { TerrainHistory } from "../../shared/terrainHistory.ts";
 import type { PeerBrushRings } from "./collaboration/PeerBrushRings.ts";
 import { BrushCursor } from "./rendering/BrushCursor.ts";
+import { RampGuide } from "./rendering/RampGuide.ts";
 
 // CONSTANTS
 const kResizeStep = 1.1;
@@ -52,6 +56,7 @@ export interface SculptBrushOptions {
 export class SculptBrush extends ActorComponent {
   #options: SculptBrushOptions;
   #cursor: BrushCursor;
+  #guide = new RampGuide();
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
   #tools: Readonly<Record<Exclude<BrushTool, "chunks">, BrushToolHandler>>;
@@ -70,6 +75,7 @@ export class SculptBrush extends ActorComponent {
     this.#options = options;
     this.#tools = {
       ...sculptTools(options),
+      ramp: rampTool(options),
       paint: paintTool(options),
       holes: holeTool(options)
     };
@@ -80,7 +86,7 @@ export class SculptBrush extends ActorComponent {
   }
 
   awake(): void {
-    this.actor.object3D.add(this.#cursor.ring);
+    this.actor.object3D.add(this.#cursor.ring, this.#guide);
     this.#keepAlive = this.actor.world.keepAlive(() => this.#stroke !== null);
   }
 
@@ -123,10 +129,12 @@ export class SculptBrush extends ActorComponent {
     else if (this.#cursor.show(aim.point, this.#ringOptions())) {
       this.actor.world.invalidate();
     }
+    this.#showGuide();
   }
 
   terrainChanged(): void {
     this.#cursor.terrainChanged();
+    this.#guide.terrainChanged();
   }
 
   endStroke(): void {
@@ -137,8 +145,9 @@ export class SculptBrush extends ActorComponent {
   override destroy(): void {
     this.endStroke();
     this.#keepAlive?.();
-    this.actor.object3D.remove(this.#cursor.ring);
+    this.actor.object3D.remove(this.#cursor.ring, this.#guide);
     this.#cursor.dispose();
+    this.#guide.dispose();
 
     super.destroy();
   }
@@ -206,7 +215,19 @@ export class SculptBrush extends ActorComponent {
   }
 
   #hideCursor(): void {
-    if (this.#cursor.hide()) {
+    const ring = this.#cursor.hide();
+    const guide = this.#guide.hide();
+    if (ring || guide) {
+      this.actor.world.invalidate();
+    }
+  }
+
+  #showGuide(): void {
+    const segment = this.#stroke?.segment ?? null;
+    const changed = segment === null ?
+      this.#guide.hide() :
+      this.#guide.show(this.#options.preview.terrain, segment, this.#options.settings.options.size);
+    if (changed) {
       this.actor.world.invalidate();
     }
   }

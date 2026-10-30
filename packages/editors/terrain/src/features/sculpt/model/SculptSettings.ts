@@ -32,12 +32,13 @@ export const BRUSH_SIZE = Object.freeze({ min: 0.5, max: 128 });
 export const BRUSH_SPACING = Object.freeze({ min: 0.05, max: 1 });
 export const FLATTEN_TARGETS = ["press", "fixed"] as const;
 export const TERRACE_STEP = Object.freeze({ min: 0.25, max: 256 });
-export const BRUSH_TOOLS = Object.freeze([...SCULPT_TOOLS, "paint", "holes", "chunks"] as const);
+export const BRUSH_TOOLS = Object.freeze([...SCULPT_TOOLS, "ramp", "paint", "holes", "chunks"] as const);
 export const STRENGTH_OPTIONS: Readonly<Record<BrushTool, StrengthOption | null>> = Object.freeze({
   raise: "strength",
   smooth: "strength",
   flatten: "strength",
   terrace: "strength",
+  ramp: "strength",
   paint: "paintStrength",
   holes: null,
   chunks: null

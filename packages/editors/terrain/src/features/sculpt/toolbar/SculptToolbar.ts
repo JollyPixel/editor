@@ -60,6 +60,7 @@ const kToolLabels: Readonly<Record<BrushTool, string>> = {
   smooth: "Smooth",
   flatten: "Flatten",
   terrace: "Terrace",
+  ramp: "Ramp (drag from one end to the other)",
   paint: "Paint the selected material (Ctrl+click picks one)",
   holes: "Cut and fill holes (Ctrl inverts)",
   chunks: "Add, remove and refine chunks (Ctrl swaps add and remove)"

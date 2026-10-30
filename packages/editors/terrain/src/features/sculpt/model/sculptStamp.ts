@@ -1,13 +1,7 @@
 // Import Third-party Dependencies
 import {
-  CHUNK_SAMPLES,
-  ChunkCoord,
-  HEIGHT_RANGE,
   pointHeight,
   TILE_SAMPLES,
-  TileCoord,
-  tilesPerSide,
-  type TerrainChunk,
   type TerrainReader,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
@@ -17,6 +11,12 @@ import {
   falloffWeight,
   type FalloffCurve
 } from "./falloff.ts";
+import {
+  clampHeight,
+  squareAround,
+  tileCorner,
+  tilesInRect
+} from "./tileGrid.ts";
 
 // CONSTANTS
 export const SCULPT_TOOLS = Object.freeze([
@@ -75,7 +75,7 @@ export function sculptStamp(
   stamp: SculptStamp
 ): TilePatch[] {
   const patches: TilePatch[] = [];
-  for (const tile of tilesUnder(terrain, stamp)) {
+  for (const tile of tilesInRect(terrain, squareAround(stamp))) {
     const chunk = terrain.chunk(tile.chunk)!;
     const heights = chunk.tileHeights(tile.x, tile.z);
     const corner = tileCorner(tile);
@@ -151,63 +151,4 @@ function smoothed(
   }
 
   return sum / 16;
-}
-
-function* tilesUnder(
-  terrain: TerrainReader,
-  { x, z, radius }: SculptStamp
-): IterableIterator<TileCoord> {
-  const first = ChunkCoord.containing(x - radius, z - radius);
-  const last = ChunkCoord.containing(x + radius, z + radius);
-  for (let chunkZ = first.z; chunkZ <= last.z; chunkZ++) {
-    for (let chunkX = first.x; chunkX <= last.x; chunkX++) {
-      const chunk = terrain.chunk(new ChunkCoord(chunkX, chunkZ));
-      if (chunk !== undefined) {
-        yield* chunkTilesUnder(chunk, { x, z, radius });
-      }
-    }
-  }
-}
-
-function* chunkTilesUnder(
-  chunk: TerrainChunk,
-  { x, z, radius }: Pick<SculptStamp, "x" | "z" | "radius">
-): IterableIterator<TileCoord> {
-  const side = tilesPerSide(chunk.tier);
-  const size = CHUNK_SAMPLES / side;
-  const origin = chunk.coord.originSample;
-  function tileRange(
-    centre: number,
-    start: number
-  ): [number, number] {
-    return [
-      Math.max(0, Math.floor((centre - radius - start) / size)),
-      Math.min(side - 1, Math.floor((centre + radius - start) / size))
-    ];
-  }
-  const [firstX, lastX] = tileRange(x, origin.x);
-  const [firstZ, lastZ] = tileRange(z, origin.z);
-  for (let tileZ = firstZ; tileZ <= lastZ; tileZ++) {
-    for (let tileX = firstX; tileX <= lastX; tileX++) {
-      yield new TileCoord(chunk.coord, tileX, tileZ, chunk.tier);
-    }
-  }
-}
-
-function tileCorner(
-  tile: TileCoord
-): { x: number; z: number; } {
-  const origin = tile.chunk.originSample;
-  const { x, z } = tile.area;
-
-  return {
-    x: origin.x + x,
-    z: origin.z + z
-  };
-}
-
-function clampHeight(
-  height: number
-): number {
-  return Math.min(Math.max(height, HEIGHT_RANGE.min), HEIGHT_RANGE.max);
 }
