@@ -28,6 +28,9 @@ import type { TerrainView } from "@jolly-pixel/terrain.renderer";
 import { TEXTURE_ASSET } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
+import { TerrainExchange } from "../features/importExport/model/TerrainExchange.ts";
+import { downloadFile } from "../features/importExport/panel/downloadFile.ts";
+import "../features/importExport/panel/ExchangePanel.ts";
 import { MaterialPalette } from "../features/materials/model/MaterialPalette.ts";
 import { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
 import { MaterialThumbnails } from "../features/materials/model/MaterialThumbnails.ts";
@@ -215,6 +218,7 @@ async function mountScene(
     disposables
   );
   mountPoiPanel(target.document, { history, selection: poiSelection }, disposables);
+  mountExchangePanel(context, target.document, history, disposables);
 
   const presence = new PresenceStore();
   const roster = new PeerRoster({
@@ -298,6 +302,28 @@ function mountPoiPanel(
 
   const editor = new PoiEditor({ document: terrain, ...shared });
   element.context = { document: terrain, editor, selection: shared.selection };
+  disposables.push(() => {
+    element.context = null;
+  });
+}
+
+function mountExchangePanel(
+  { session }: RuntimeEditorContext,
+  terrain: TerrainDocument,
+  history: TerrainHistory,
+  disposables: Array<() => void>
+): void {
+  const element = document.querySelector("terrain-exchange-panel");
+  if (element === null) {
+    return;
+  }
+
+  const baseName = session.target.record.path.split("/").at(-1)!.split(".")[0];
+  element.context = {
+    document: terrain,
+    exchange: new TerrainExchange({ document: terrain, history, baseName }),
+    download: downloadFile
+  };
   disposables.push(() => {
     element.context = null;
   });

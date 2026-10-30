@@ -336,7 +336,9 @@ which leaves a flat 1 m strip along the edge of the world.
 
 ## Import and export
 
-Both work on a rectangle of chunks, the whole terrain by default.
+Both work on a rectangle of chunks, the whole terrain by default, from the
+Import and export pane. An image side stops at 16384 px. Each exported file
+downloads on its own, so a browser may ask once to allow several downloads.
 
 - **Heightmap.** A 16-bit PNG or RAW at the resolution of a chosen tier.
   Values map the exported range, lowest to highest height, which is written to

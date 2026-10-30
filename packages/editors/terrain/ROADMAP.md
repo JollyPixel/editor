@@ -215,7 +215,11 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   imports heights and splat masks over a rectangle as one undo step, adding
   the chunks it lacks and moving the others to the chosen tier, loaded or not.
   `readHeightGrid` and `readSplatMasks` build what export writes. No UI yet.
-- **Next:** the Import and export pane.
+- **Import and export pane: done** (2026-10-30). The pane exports a rectangle's
+  heightmap with its sidecar and one mask per painted material. Choosing a
+  heightmap fills the rectangle, detail and heights from its sidecar, and
+  masks that match no material by name ask for one.
+- **M4: done** (2026-10-30). V1's planned milestones are complete.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -290,7 +294,7 @@ chunks yet.
 - [x] Points of interest: chunk sets with an LoD bias and a minimum detail
   level, kept loaded at any distance, edited in their pane.
 - [x] Ramp and terrace brushes.
-- [ ] Heightmap and splat map import and export.
+- [x] Heightmap and splat map import and export.
 
 ## Not planned for V1
 
