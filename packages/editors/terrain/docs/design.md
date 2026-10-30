@@ -229,7 +229,11 @@ The stream keeps the chunks of every point of interest loaded at any
 distance, so the minimum level is drawn from their heights, not from the
 overview. They fill the layers the stream circle leaves free, highest priority
 first and nearest first within a priority; a chunk that finds no free layer
-falls back to the overview.
+falls back to the overview. The circle's share counts every known chunk out to
+the unload radius, loaded or not, so the camera moving never needs more than
+the 256 layers. A chunk takes the highest priority of the points of interest
+naming it, and the choice is made again whenever the camera enters another
+chunk or a point of interest changes.
 
 The Points of interest pane lists them with their settings. Selecting one
 tints its chunks, and its "Edit chunks" toggle lets a click or drag add

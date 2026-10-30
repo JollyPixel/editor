@@ -1,13 +1,17 @@
 // Import Third-party Dependencies
 import {
+  ChunkCoord,
   holeBytes,
+  MAX_CHUNK_LAYERS,
   tierOfSampleCount,
-  type ChunkCoord,
   type ChunkKey,
   type SplatTexels,
   type Terrain
 } from "@jolly-pixel/terrain.renderer";
 import { Emitter } from "@openally/emitt";
+
+// Import Internal Dependencies
+import type { TerrainPointsOfInterestReader } from "./TerrainPointsOfInterest.ts";
 
 // CONSTANTS
 export const STREAM_RADIUS = 8;
@@ -27,17 +31,21 @@ export type TerrainStreamEvents = {
 
 export class TerrainStream extends Emitter<TerrainStreamEvents> {
   #terrain: Terrain;
+  #pointsOfInterest: TerrainPointsOfInterestReader;
   #source: ChunkSource | null = null;
   #centre: ChunkCoord | null = null;
   #subscribed = new Map<ChunkKey, ChunkCoord>();
+  #pinned = new Map<ChunkKey, ChunkCoord>();
   #earlySplat = new Map<ChunkKey, SplatTexels>();
   #earlyHoles = new Map<ChunkKey, Uint8Array>();
 
   constructor(
-    terrain: Terrain
+    terrain: Terrain,
+    pointsOfInterest: TerrainPointsOfInterestReader
   ) {
     super();
     this.#terrain = terrain;
+    this.#pointsOfInterest = pointsOfInterest;
   }
 
   connect(
@@ -67,7 +75,14 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
       return true;
     }
 
-    return this.#centre !== null && within(this.#centre, coord, STREAM_RADIUS);
+    return this.#centre !== null &&
+      (within(this.#centre, coord, STREAM_RADIUS) || this.#pinned.has(coord.key));
+  }
+
+  isPinned(
+    coord: ChunkCoord
+  ): boolean {
+    return this.#pinned.has(coord.key);
   }
 
   follow(
@@ -88,9 +103,11 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
       return;
     }
 
+    this.#pinned = this.#pickPinned(centre);
     const dropped: ChunkCoord[] = [];
     for (const coord of [...this.#subscribed.values()]) {
-      if (!this.#terrain.knows(coord) || !within(centre, coord, kUnloadRadius)) {
+      const kept = within(centre, coord, kUnloadRadius) || this.#pinned.has(coord.key);
+      if (!this.#terrain.knows(coord) || !kept) {
         this.#subscribed.delete(coord.key);
         this.#earlySplat.delete(coord.key);
         this.#earlyHoles.delete(coord.key);
@@ -103,7 +120,9 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
 
     const wanted = [...this.#terrain.overview.coords()]
       .filter((coord) => !this.#subscribed.has(coord.key) && within(centre, coord, STREAM_RADIUS))
-      .sort((left, right) => squaredDistance(centre, left) - squaredDistance(centre, right));
+      .sort((left, right) => squaredDistance(centre, left) - squaredDistance(centre, right))
+      .concat([...this.#pinned.values()].filter((coord) => !this.#subscribed.has(coord.key) &&
+        !within(centre, coord, STREAM_RADIUS)));
     for (const coord of wanted) {
       this.#subscribed.set(coord.key, coord);
     }
@@ -117,6 +136,31 @@ export class TerrainStream extends Emitter<TerrainStreamEvents> {
         this.emit("unloaded", coord);
       }
     }
+  }
+
+  #pickPinned(
+    centre: ChunkCoord
+  ): Map<ChunkKey, ChunkCoord> {
+    const priorities = new Map<ChunkKey, { coord: ChunkCoord; priority: number; }>();
+    for (const { chunks, priority } of this.#pointsOfInterest.pointsOfInterest()) {
+      for (const { x, z } of chunks) {
+        const coord = new ChunkCoord(x, z);
+        const known = priorities.get(coord.key);
+        if (this.#terrain.knows(coord) && !within(centre, coord, kUnloadRadius) &&
+          (known === undefined || known.priority < priority)) {
+          priorities.set(coord.key, { coord, priority });
+        }
+      }
+    }
+
+    const inCircle = [...this.#terrain.overview.coords()]
+      .filter((coord) => within(centre, coord, kUnloadRadius)).length;
+    const picked = [...priorities.values()]
+      .sort((left, right) => right.priority - left.priority ||
+        squaredDistance(centre, left.coord) - squaredDistance(centre, right.coord))
+      .slice(0, Math.max(0, MAX_CHUNK_LAYERS - inCircle));
+
+    return new Map(picked.map(({ coord }) => [coord.key, coord]));
   }
 
   received(

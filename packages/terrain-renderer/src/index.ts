@@ -98,7 +98,10 @@ export {
   TerrainView,
   type TerrainViewOptions
 } from "./view/TerrainView.ts";
-export { LOOKUP_SIZE } from "./view/textures/ChunkTextureStore.ts";
+export {
+  LOOKUP_SIZE,
+  MAX_CHUNK_LAYERS
+} from "./view/textures/ChunkTextureStore.ts";
 export {
   DEFAULT_MATERIAL_TEXTURE_SIZE,
   MATERIAL_MAPS,

@@ -142,14 +142,14 @@ export class TerrainDocument extends CommandDocument<
 
   constructor() {
     const model = new TerrainModel();
-    const stream = new TerrainStream(model.terrain);
+    const stream = new TerrainStream(model.terrain, model.pointsOfInterest);
     super(terrainState(model, stream));
     this.terrain = model.terrain;
     this.materials = model.materials;
     this.pointsOfInterest = model.pointsOfInterest;
     this.stream = stream;
     this.on("change", ({ command }) => {
-      if (command.action === "chunk-added" || command.action === "chunk-removed") {
+      if (command.action === "chunk-added" || command.action === "chunk-removed" || isPoiCommand(command)) {
         stream.refresh();
       }
     });

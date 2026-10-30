@@ -184,8 +184,12 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   streaming priority and its chunks. `poi-added`, `poi-updated` and
   `poi-removed` change them, keyed per field, and undo field by field; the
   manifest saves them. Nothing streams, draws or edits them yet.
-- **Next:** point-of-interest streaming: their chunks kept subscribed at any
-  distance, in the layers the stream circle leaves free.
+- **Point-of-interest streaming: done** (2026-10-30). The chunks of every
+  point of interest stay subscribed at any distance, in the layers the stream
+  circle leaves free, highest priority first and nearest first; the others
+  fall back to the overview.
+- **Next:** point-of-interest rendering: the LoD bias and the minimum detail
+  level in the quadtree selection.
 
 Tick a box when its item lands, and move **Next** along with it.
 
