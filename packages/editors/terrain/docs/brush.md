@@ -75,7 +75,9 @@ existing chunks: the part of a stamp over empty ground is dropped, and the
   `weight × strength`, with the falloff across its width. The height under A
   is taken at the press, the one under B at release. Written once on release,
   as one stroke; a press released without moving writes nothing, and the
-  right button does nothing.
+  right button does nothing. Ctrl+wheel resizes the ramp during the drag.
+  Leaving the viewport, pressing Alt or the middle button, or starting to edit
+  a point of interest cancels the drag and writes nothing.
 - **Terrace.** Moves each sample toward a staircase of steps of a set height,
   set in the toolbar from 0.25 m to 256 m and 2 m by default, at the same
   rate as flatten. Within a step the staircase rises along a smooth curve; a

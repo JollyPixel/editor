@@ -254,7 +254,7 @@ export class TerrainEditorScene extends Systems.Scene {
   }
 
   override destroy(): void {
-    this.#parts?.brush.endStroke();
+    this.#parts?.brush.interruptStroke();
     this.#parts?.chunkTool.endDrag();
     this.#parts?.poiTool.endDrag();
     for (const dispose of this.#disposables.splice(0).reverse()) {

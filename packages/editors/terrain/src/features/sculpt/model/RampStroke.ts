@@ -52,6 +52,10 @@ export class RampStroke implements BrushStroke {
     }
   }
 
+  cancel(): void {
+    this.#ended = true;
+  }
+
   end(): void {
     if (this.#ended) {
       return;

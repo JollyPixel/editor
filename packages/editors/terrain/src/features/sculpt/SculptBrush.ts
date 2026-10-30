@@ -101,7 +101,7 @@ export class SculptBrush extends ActorComponent {
       mouse.isDown("middle") ||
       InputCombination.Alt.evaluate(input)
     ) {
-      this.endStroke();
+      this.interruptStroke();
       this.#hideCursor();
 
       return;
@@ -114,7 +114,7 @@ export class SculptBrush extends ActorComponent {
       this.#resize(mouse.isDown("scrollUp"), mouse.isDown("scrollDown"));
     }
     if (control && tool.pick !== undefined) {
-      this.endStroke();
+      this.#endStroke();
       if (aim !== null && mouse.wasJustPressed("left")) {
         tool.pick(aim);
       }
@@ -137,19 +137,29 @@ export class SculptBrush extends ActorComponent {
     this.#guide.terrainChanged();
   }
 
-  endStroke(): void {
-    this.#stroke?.end();
-    this.#stroke = null;
+  interruptStroke(): void {
+    if (this.#stroke?.cancel === undefined) {
+      this.#endStroke();
+    }
+    else {
+      this.#stroke.cancel();
+      this.#stroke = null;
+    }
   }
 
   override destroy(): void {
-    this.endStroke();
+    this.interruptStroke();
     this.#keepAlive?.();
     this.actor.object3D.remove(this.#cursor.ring, this.#guide);
     this.#cursor.dispose();
     this.#guide.dispose();
 
     super.destroy();
+  }
+
+  #endStroke(): void {
+    this.#stroke?.end();
+    this.#stroke = null;
   }
 
   #aim(
@@ -182,7 +192,7 @@ export class SculptBrush extends ActorComponent {
   ): void {
     const { mouse } = this.actor.world.input;
     if (this.#stroke !== null && !mouse.isDown("left") && !mouse.isDown("right")) {
-      this.endStroke();
+      this.#endStroke();
     }
 
     const point = aim === null ? null : groundPoint(aim);

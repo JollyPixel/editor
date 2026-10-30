@@ -203,7 +203,8 @@ export class TerrainPage {
 
   async dragBrush(
     from: { x: number; z: number; },
-    to: { x: number; z: number; }
+    to: { x: number; z: number; },
+    whileHeld?: () => Promise<void>
   ): Promise<void> {
     const start = await this.#clientPoint(from.x, from.z);
     const end = await this.#clientPoint(to.x, to.z);
@@ -212,6 +213,7 @@ export class TerrainPage {
     await nextFrames(this.page, 2);
     await this.page.mouse.move(end.x, end.y, { steps: 8 });
     await nextFrames(this.page, 2);
+    await whileHeld?.();
     await this.page.mouse.up();
     await nextFrames(this.page, 2);
   }

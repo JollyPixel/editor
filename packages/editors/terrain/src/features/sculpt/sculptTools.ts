@@ -19,8 +19,7 @@ export function rampTool(
   options: RampStrokeOptions
 ): BrushToolHandler {
   return {
-    begin: (press) => (press.lower ? null : new RampStroke(options, press)),
-    pick: () => undefined
+    begin: (press) => (press.lower ? null : new RampStroke(options, press))
   };
 }
 

@@ -68,4 +68,21 @@ describe("ramp", () => {
     history.undo(TERRAIN_HISTORY_SCOPE);
     assert.equal(document.terrain.sampleAt(19, 40), 8);
   });
+
+  test("a cancelled drag writes nothing, and ending it afterwards changes nothing", () => {
+    const document = new TerrainDocument();
+    document.addChunk(0, 0);
+    const preview = new TerrainPreview(document);
+    const history = createTerrainHistory(document);
+    const settings = new SculptSettings();
+    const press = { point: { x: 8, z: 40 }, height: 9, lower: false };
+    const stroke = new RampStroke({ preview, history, settings }, press);
+    stroke.update({ x: 30, z: 40 });
+
+    stroke.cancel();
+    stroke.end();
+
+    assert.equal(stroke.segment, null);
+    assert.equal(history.state(TERRAIN_HISTORY_SCOPE).undoCount, 0);
+  });
 });
