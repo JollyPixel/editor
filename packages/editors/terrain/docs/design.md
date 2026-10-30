@@ -219,7 +219,8 @@ mountain seen from far away. It has:
   alone would;
 - a minimum detail level kept at any distance, from 0 (the 32 m leaf) to 5
   (the 1024 m region root), 3 by default (256 m nodes);
-- a priority for streaming its chunks in.
+- a priority for streaming its chunks in, from 0 to 9, 0 by default, the
+  highest first.
 
 A chunk can belong to several points of interest; the largest bias, the
 finest minimum level and the highest priority apply.
@@ -234,7 +235,10 @@ The Points of interest pane lists them with their settings. Selecting one
 tints its chunks, and its "Edit chunks" toggle lets a click or drag add
 chunks to it, Ctrl+click remove them.
 
-Points of interest are part of the asset.
+Points of interest are part of the asset: the manifest lists them, at most
+64, each with its chunks, and the join snapshot carries them to every member.
+A point of interest may name chunks that do not exist, such as ones removed
+since; they are skipped wherever its chunks are used.
 
 ## Future tessellation
 

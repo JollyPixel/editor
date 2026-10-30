@@ -43,7 +43,10 @@ const kLabels: Readonly<Record<TerrainCommand["action"], string>> = {
   "material-added": "Add material",
   "material-updated": "Edit material",
   "material-removed": "Remove material",
-  "texture-size-changed": "Change texture size"
+  "texture-size-changed": "Change texture size",
+  "poi-added": "Add point of interest",
+  "poi-updated": "Edit point of interest",
+  "poi-removed": "Remove point of interest"
 };
 
 export interface TerrainHistoryRegistrationOptions<TScope extends string> {
@@ -94,10 +97,15 @@ function guardEntries(
 }
 
 function readWriteRef(
-  { terrain, materials }: TerrainModelReader,
+  { terrain, materials, pointsOfInterest }: TerrainModelReader,
   ref: TerrainWriteRef
 ): unknown {
   switch (ref.kind) {
+    case "poi": {
+      const point = pointsOfInterest.pointOfInterest(ref.id);
+
+      return ref.field === null ? point !== undefined : point?.[ref.field];
+    }
     case "chunk":
       return terrain.has(ref.chunk);
     case "tier":

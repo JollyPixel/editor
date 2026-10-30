@@ -11,6 +11,9 @@ import type {
   terrainCommandSchema,
   terrainManifestSchema,
   terrainMaterialSchema,
+  poiPropertiesSchema,
+  pointOfInterestSchema,
+  TERRAIN_POI_ACTIONS,
   TERRAIN_MATERIAL_ACTIONS,
   TERRAIN_TEXTURE_SIZES,
   tilePatchSchema
@@ -36,7 +39,15 @@ export type TerrainMaterialCommand = Extract<
   TerrainCommand,
   { action: typeof TERRAIN_MATERIAL_ACTIONS[number]; }
 >;
-export type TerrainChunkCommand = Exclude<TerrainCommand, TerrainMaterialCommand>;
+export type TerrainPoiCommand = Extract<
+  TerrainCommand,
+  { action: typeof TERRAIN_POI_ACTIONS[number]; }
+>;
+export type TerrainChunkCommand = Exclude<TerrainCommand, TerrainMaterialCommand | TerrainPoiCommand>;
+export type PointOfInterestProperties = network.Infer<typeof poiPropertiesSchema>;
+export type PointOfInterestData = network.Infer<typeof pointOfInterestSchema>;
+export type PointOfInterestChanges = Partial<PointOfInterestProperties>;
+export type PointOfInterestField = keyof PointOfInterestProperties;
 export type TerrainNetworkCommand = TerrainCommand & network.NetworkCommandHeader;
 
 export type TerrainServerMessage = network.NetworkServerMessage<

@@ -15,6 +15,7 @@ import * as z from "zod/mini";
 
 // CONSTANTS
 export const MAX_PATCH_TILES = 1024;
+export const MAX_TERRAIN_CHUNKS = 4096;
 export const CHUNK_TILE_COUNT = TILES_PER_CHUNK * TILES_PER_CHUNK;
 export const CHUNK_COORDINATE_RANGE = {
   min: -LOOKUP_SIZE / 2,
@@ -111,12 +112,35 @@ export const chunkEntrySchema = z.object({
   tier: kRefinedTier
 });
 
+export const MAX_POINTS_OF_INTEREST = 64;
+export const POI_LOD_BIAS = { min: 1, max: 8 } as const;
+export const POI_MIN_LEVEL = { min: 0, max: 5 } as const;
+export const POI_PRIORITY = { min: 0, max: 9 } as const;
+export const TERRAIN_POI_ACTIONS = ["poi-added", "poi-updated", "poi-removed"] as const;
+const kPoiId = z.string().check(z.minLength(1), z.maxLength(64));
+
+export const poiPropertiesSchema = z.object({
+  name: z.string().check(z.maxLength(64)),
+  lodBias: z.number().check(z.gte(POI_LOD_BIAS.min), z.lte(POI_LOD_BIAS.max)),
+  minLevel: z.int().check(z.gte(POI_MIN_LEVEL.min), z.lte(POI_MIN_LEVEL.max)),
+  priority: z.int().check(z.gte(POI_PRIORITY.min), z.lte(POI_PRIORITY.max)),
+  chunks: z.array(z.object({ x: kChunkCoordinate, z: kChunkCoordinate }))
+    .check(z.maxLength(MAX_TERRAIN_CHUNKS))
+});
+
+export const pointOfInterestSchema = z.extend(poiPropertiesSchema, {
+  id: kPoiId
+});
+
 export const terrainManifestSchema = z.object({
   chunks: z.array(chunkEntrySchema),
   materials: z.optional(
     z.array(terrainMaterialSchema).check(z.maxLength(MAX_TERRAIN_MATERIALS))
   ),
-  textureSize: z.optional(kTextureSize)
+  textureSize: z.optional(kTextureSize),
+  pointsOfInterest: z.optional(
+    z.array(pointOfInterestSchema).check(z.maxLength(MAX_POINTS_OF_INTEREST))
+  )
 });
 
 export const terrainPartSchema = z.string();
@@ -161,6 +185,16 @@ export const terrainCommandSchema = z.discriminatedUnion("action", [
   }),
   commandVariant("texture-size-changed", {
     size: kTextureSize
+  }),
+  commandVariant("poi-added", {
+    poi: pointOfInterestSchema
+  }),
+  commandVariant("poi-updated", {
+    id: kPoiId,
+    changes: z.partial(poiPropertiesSchema)
+  }),
+  commandVariant("poi-removed", {
+    id: kPoiId
   })
 ]);
 

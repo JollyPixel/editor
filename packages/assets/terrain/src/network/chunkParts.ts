@@ -8,6 +8,7 @@ import {
 
 // Import Internal Dependencies
 import { isMaterialCommand } from "../model/materialCommands.ts";
+import { isPoiCommand } from "../model/poiCommands.ts";
 import { patchTileCoord } from "./patchTile.ts";
 import { CHUNK_TILE_COUNT } from "./TerrainCommand.schema.ts";
 import {
@@ -78,7 +79,7 @@ export function listedChunkPartIds(
 export function touchedChunks(
   command: TerrainCommand
 ): ChunkCoord[] {
-  if (isMaterialCommand(command)) {
+  if (isMaterialCommand(command) || isPoiCommand(command)) {
     return [];
   }
   if (!isTilePatchCommand(command)) {

@@ -3,6 +3,7 @@ export * from "./asset/terrainAssetKind.ts";
 export * from "./model/terrainState.ts";
 export * from "./model/TerrainMaterials.ts";
 export * from "./model/TerrainModel.ts";
+export * from "./model/TerrainPointsOfInterest.ts";
 export * from "./network/heights.ts";
 export * from "./network/holes.ts";
 export * from "./network/splat.ts";

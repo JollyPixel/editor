@@ -36,9 +36,21 @@ import {
   encodeSplat,
   type SplatTilePatch
 } from "../network/splat.ts";
-import { CHUNK_COORDINATE_RANGE } from "../network/TerrainCommand.schema.ts";
+import {
+  CHUNK_COORDINATE_RANGE,
+  MAX_TERRAIN_CHUNKS
+} from "../network/TerrainCommand.schema.ts";
 import { decodeTilePatch } from "../network/tilePatches.ts";
 import { chunkOverview } from "./chunkOverview.ts";
+import {
+  acceptsPoiCommand,
+  applyPoiCommand,
+  isPoiCommand
+} from "./poiCommands.ts";
+import {
+  TerrainPointsOfInterest,
+  type TerrainPointsOfInterestReader
+} from "./TerrainPointsOfInterest.ts";
 import {
   acceptsMaterialCommand,
   applyMaterialCommand,
@@ -61,7 +73,7 @@ import type {
 } from "../network/types.ts";
 
 // CONSTANTS
-export const MAX_TERRAIN_CHUNKS = 4096;
+export { MAX_TERRAIN_CHUNKS };
 
 export interface LoadedChunkEntry {
   readonly x: number;
@@ -109,6 +121,9 @@ export function acceptsTerrainCommand(
 ): boolean {
   if (isMaterialCommand(command)) {
     return acceptsMaterialCommand(model.materials, command);
+  }
+  if (isPoiCommand(command)) {
+    return acceptsPoiCommand(model.pointsOfInterest, command);
   }
 
   const { terrain } = model;
@@ -159,6 +174,11 @@ export function applyTerrainCommand(
 ): void {
   if (isMaterialCommand(command)) {
     applyMaterialCommand(model.materials, command);
+
+    return;
+  }
+  if (isPoiCommand(command)) {
+    applyPoiCommand(model.pointsOfInterest, command);
 
     return;
   }
@@ -282,7 +302,7 @@ function uniquePatches<TEncoded, TPatch extends { readonly tile: TileCoord; }>(
 }
 
 export function terrainSnapshot(
-  { terrain, materials }: TerrainModelReader
+  { terrain, materials, pointsOfInterest }: TerrainModelReader
 ): TerrainSnapshot {
   return {
     chunks: Array.from(terrain.overview.coords(), (coord) => {
@@ -291,18 +311,28 @@ export function terrainSnapshot(
       return chunk === undefined ? overviewEntry(terrain, coord) : loadedChunkEntry(chunk);
     }),
     materials: materials.materials(),
-    textureSize: materials.textureSize
+    textureSize: materials.textureSize,
+    ...listedPointsOfInterest(pointsOfInterest)
   };
 }
 
 export function terrainManifest(
-  { terrain, materials }: TerrainModelReader
+  { terrain, materials, pointsOfInterest }: TerrainModelReader
 ): TerrainManifest {
   return {
     chunks: Array.from(terrain.overview.coords(), (coord) => overviewEntry(terrain, coord)),
     materials: materials.materials(),
-    textureSize: materials.textureSize
+    textureSize: materials.textureSize,
+    ...listedPointsOfInterest(pointsOfInterest)
   };
+}
+
+function listedPointsOfInterest(
+  points: TerrainPointsOfInterestReader
+): Pick<TerrainManifest, "pointsOfInterest"> {
+  const listed = points.pointsOfInterest();
+
+  return listed.length === 0 ? {} : { pointsOfInterest: listed };
 }
 
 export function loadTerrainManifest(
@@ -331,11 +361,13 @@ export function loadTerrainManifest(
   });
 
   const materials = loadedMaterials(manifest);
+  const points = loadedPointsOfInterest(manifest);
   terrain.clear();
   for (const { coord, heights, splat, holes } of chunks) {
     terrain.addChunk(coord, heights, splat, holes);
   }
   model.materials.load(materials.materials(), materials.textureSize);
+  model.pointsOfInterest.load(points.pointsOfInterest());
 }
 
 export function loadTerrainSnapshot(
@@ -370,6 +402,7 @@ export function loadTerrainSnapshot(
   });
 
   const materials = loadedMaterials(snapshot);
+  const points = loadedPointsOfInterest(snapshot);
   terrain.clear();
   for (const chunk of chunks) {
     if ("heights" in chunk) {
@@ -383,6 +416,16 @@ export function loadTerrainSnapshot(
     }
   }
   model.materials.load(materials.materials(), materials.textureSize);
+  model.pointsOfInterest.load(points.pointsOfInterest());
+}
+
+function loadedPointsOfInterest(
+  { pointsOfInterest = [] }: TerrainManifest
+): TerrainPointsOfInterest {
+  const loaded = new TerrainPointsOfInterest();
+  loaded.load(pointsOfInterest);
+
+  return loaded;
 }
 
 export function loadedChunkEntry(

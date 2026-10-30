@@ -179,8 +179,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   sculpt and hole brushes work on each chunk's own grid, and the brush ray
   and height queries follow the grid as drawn, edges with coarser chunks
   included. Resolution tiers are complete.
-- **Next:** points of interest: chunk sets with an LoD bias and a minimum
-  detail level, kept loaded at any distance.
+- **Point-of-interest data: done** (2026-10-30). A terrain holds up to 64
+  points of interest, each a name, an LoD bias, a minimum detail level, a
+  streaming priority and its chunks. `poi-added`, `poi-updated` and
+  `poi-removed` change them, keyed per field, and undo field by field; the
+  manifest saves them. Nothing streams, draws or edits them yet.
+- **Next:** point-of-interest streaming: their chunks kept subscribed at any
+  distance, in the layers the stream circle leaves free.
 
 Tick a box when its item lands, and move **Next** along with it.
 

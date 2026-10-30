@@ -34,6 +34,9 @@ import { currentTiles } from "../network/tilePatchCommands.ts";
 import { encodeTilePatch } from "../network/tilePatches.ts";
 import type {
   ChunkEntry,
+  PointOfInterestChanges,
+  PointOfInterestData,
+  PointOfInterestProperties,
   TerrainCommand,
   TerrainMaterialChanges,
   TerrainMaterialData,
@@ -50,6 +53,15 @@ import {
   DEFAULT_MATERIAL_PROPERTIES,
   type TerrainMaterialsReader
 } from "./TerrainMaterials.ts";
+import {
+  capturePoiImage,
+  invertPoiCommand,
+  isPoiCommand
+} from "./poiCommands.ts";
+import {
+  DEFAULT_POI_PROPERTIES,
+  type TerrainPointsOfInterestReader
+} from "./TerrainPointsOfInterest.ts";
 import {
   TerrainModel,
   type TerrainModelReader
@@ -98,6 +110,14 @@ export interface MaterialImage {
   readonly material: TerrainMaterialData | null;
 }
 
+export interface PointOfInterestImage {
+  readonly id: string;
+  /**
+   * The point of interest before the change, or `null` when it did not exist.
+   */
+  readonly poi: PointOfInterestData | null;
+}
+
 export interface TerrainImage {
   readonly chunks: readonly ChunkImage[];
   readonly materials: readonly MaterialImage[];
@@ -105,6 +125,7 @@ export interface TerrainImage {
    * The texture size before the change, or `null` when it did not change.
    */
   readonly textureSize: TerrainTextureSize | null;
+  readonly pointsOfInterest?: readonly PointOfInterestImage[];
 }
 
 export type TerrainChange = CommandChange<TerrainCommand, TerrainImage>;
@@ -116,6 +137,7 @@ export class TerrainDocument extends CommandDocument<
 > implements TerrainModelReader {
   readonly terrain: TerrainReader;
   readonly materials: TerrainMaterialsReader;
+  readonly pointsOfInterest: TerrainPointsOfInterestReader;
   readonly stream: TerrainStream;
 
   constructor() {
@@ -124,6 +146,7 @@ export class TerrainDocument extends CommandDocument<
     super(terrainState(model, stream));
     this.terrain = model.terrain;
     this.materials = model.materials;
+    this.pointsOfInterest = model.pointsOfInterest;
     this.stream = stream;
     this.on("change", ({ command }) => {
       if (command.action === "chunk-added" || command.action === "chunk-removed") {
@@ -172,6 +195,31 @@ export class TerrainDocument extends CommandDocument<
     size: TerrainTextureSize
   ): boolean {
     return this.commit({ action: "texture-size-changed", size });
+  }
+
+  addPointOfInterest(
+    properties: Partial<PointOfInterestProperties> = {}
+  ): string | null {
+    const id = crypto.randomUUID();
+    const committed = this.commit({
+      action: "poi-added",
+      poi: { ...DEFAULT_POI_PROPERTIES, ...properties, id }
+    });
+
+    return committed ? id : null;
+  }
+
+  updatePointOfInterest(
+    id: string,
+    changes: PointOfInterestChanges
+  ): boolean {
+    return this.commit({ action: "poi-updated", id, changes });
+  }
+
+  removePointOfInterest(
+    id: string
+  ): boolean {
+    return this.commit({ action: "poi-removed", id });
   }
 
   canAddChunk(
@@ -295,11 +343,14 @@ function terrainState(
 }
 
 function captureImage(
-  { terrain, materials }: TerrainModelReader,
+  { terrain, materials, pointsOfInterest }: TerrainModelReader,
   command: TerrainCommand
 ): TerrainImage {
   if (isMaterialCommand(command)) {
     return captureMaterialImage(materials, command);
+  }
+  if (isPoiCommand(command)) {
+    return capturePoiImage(pointsOfInterest, command);
   }
 
   return {
@@ -310,11 +361,14 @@ function captureImage(
 }
 
 function invertCommand(
-  { terrain, materials }: TerrainModelReader,
+  { terrain, materials, pointsOfInterest }: TerrainModelReader,
   command: TerrainCommand
 ): TerrainCommand[] {
   if (isMaterialCommand(command)) {
     return invertMaterialCommand(materials, command);
+  }
+  if (isPoiCommand(command)) {
+    return invertPoiCommand(pointsOfInterest, command);
   }
 
   switch (command.action) {
@@ -368,6 +422,9 @@ function restoreImages(
   const materials = new Map(
     (snapshot.materials ?? []).map((material) => [material.id, material])
   );
+  const points = new Map(
+    (snapshot.pointsOfInterest ?? []).map((point) => [point.id, point])
+  );
   let { textureSize } = snapshot;
   for (const image of [...images].reverse()) {
     for (const chunk of image.chunks) {
@@ -388,13 +445,22 @@ function restoreImages(
         materials.set(id, material);
       }
     }
+    for (const { id, poi } of image.pointsOfInterest ?? []) {
+      if (poi === null) {
+        points.delete(id);
+      }
+      else {
+        points.set(id, poi);
+      }
+    }
     textureSize = image.textureSize ?? textureSize;
   }
 
   return {
     chunks: [...chunks.values()],
     materials: [...materials.values()].sort((left, right) => left.slot - right.slot),
-    textureSize
+    textureSize,
+    ...(points.size === 0 ? {} : { pointsOfInterest: [...points.values()] })
   };
 }
 

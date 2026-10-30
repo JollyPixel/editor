@@ -13,6 +13,11 @@ import {
   type TerrainMaterialWriteRef
 } from "../model/materialCommands.ts";
 import {
+  isPoiCommand,
+  poiWriteRefs,
+  type PoiWriteRef
+} from "../model/poiCommands.ts";
+import {
   CHUNK_CHANNELS,
   isTilePatchCommand,
   patchedTiles,
@@ -40,7 +45,8 @@ export type TerrainWriteRef =
     readonly channel: ChunkChannel;
     readonly tile: TileCoord;
   }
-  | TerrainMaterialWriteRef;
+  | TerrainMaterialWriteRef
+  | PoiWriteRef;
 
 export function terrainChunkKey(
   x: number,
@@ -80,6 +86,8 @@ export function terrainWriteRefKey(
       return terrainMaterialKey(ref.id, ref.field);
     case "texture-size":
       return kTextureSizeKey;
+    case "poi":
+      return ref.field === null ? `poi:${ref.id}` : `poi:${ref.id}:${ref.field}`;
   }
 }
 
@@ -88,6 +96,9 @@ export function terrainWriteRefs(
 ): TerrainWriteRef[] {
   if (isMaterialCommand(command)) {
     return materialWriteRefs(command);
+  }
+  if (isPoiCommand(command)) {
+    return poiWriteRefs(command);
   }
   if (isTilePatchCommand(command)) {
     const channel = tileChannel(command);
