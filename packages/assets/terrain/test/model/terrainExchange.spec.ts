@@ -40,7 +40,7 @@ function flatGrid(
 
 describe("terrain heightmap import", () => {
   test("covers loaded, unloaded and new chunks, updates the overview, and undoes as one step", async(t) => {
-    const { server, route, document, history, read } = stripPeers(t);
+    const { server, route, document, history, read } = await stripPeers(t);
     const rect = { x: 11, z: 0, columns: 3, rows: 1 };
     const created = new ChunkCoord(13, 0);
     const overviewBefore = document.terrain.overview.samples(kFar)![0];
@@ -49,7 +49,7 @@ describe("terrain heightmap import", () => {
     assert.equal(before.length, 2);
     const grid = flatGrid(rect, 1, 50);
     assert.equal(history.record("terrain", null, () => document.importHeights(rect, 1, grid, before)), true);
-    route();
+    await route();
 
     for (const coord of chunksInRect(rect)) {
       assert.equal(server.state.terrain.chunk(coord)?.height(3, 3), 50);
@@ -58,7 +58,7 @@ describe("terrain heightmap import", () => {
     assert.equal(document.terrain.has(kFar), false);
 
     assert.equal(history.undo("terrain"), true);
-    route();
+    await route();
 
     assert.equal(server.state.terrain.chunk(kFar)?.height(3, 3), kFar.x);
     assert.equal(server.state.terrain.chunk(new ChunkCoord(11, 0))?.height(3, 3), 11);
@@ -68,10 +68,10 @@ describe("terrain heightmap import", () => {
   });
 
   test("moves an unloaded chunk to the chosen tier, and undo brings back its heights and holes", async(t) => {
-    const { server, route, document, history, read } = stripPeers(t);
+    const { server, route, document, history, read } = await stripPeers(t);
     const holes = new Uint8Array(HOLE_BYTES);
     holes[0] = 1;
-    server.receive("X", networkCommand(
+    await server.receive("X", networkCommand(
       {
         action: "tier-changed",
         x: kFar.x,
@@ -82,12 +82,12 @@ describe("terrain heightmap import", () => {
       },
       { clientId: "X" }
     ));
-    route();
+    await route();
     const rect = { x: kFar.x, z: 0, columns: 1, rows: 1 };
 
     const before = await read(rect);
     history.record("terrain", null, () => document.importHeights(rect, 2, flatGrid(rect, 2, 8), before));
-    route();
+    await route();
 
     const refined = server.state.terrain.chunk(kFar)!;
     assert.equal(refined.tier, 2);
@@ -96,7 +96,7 @@ describe("terrain heightmap import", () => {
     assert.equal(document.terrain.overview.samples(kFar)![0], 8);
 
     assert.equal(history.undo("terrain"), true);
-    route();
+    await route();
 
     const restored = server.state.terrain.chunk(kFar)!;
     assert.equal(restored.tier, 1);
@@ -106,61 +106,61 @@ describe("terrain heightmap import", () => {
   });
 
   test("undoing a tier change on a loaded chunk restores the chunks imported beside it", async(t) => {
-    const { server, route, document, history, read } = stripPeers(t);
+    const { server, route, document, history, read } = await stripPeers(t);
     const beside = new ChunkCoord(2, 0);
     const refined = encodeHeights(new Float32Array(chunkSampleCount(2)).fill(2));
-    server.receive("X", networkCommand(
+    await server.receive("X", networkCommand(
       { action: "tier-changed", x: beside.x, z: 0, tier: 2, heights: refined },
       { clientId: "X" }
     ));
-    route();
+    await route();
     const rect = { x: 1, z: 0, columns: 2, rows: 1 };
 
     const before = await read(rect);
     history.record("terrain", null, () => document.importHeights(rect, 2, flatGrid(rect, 2, 50), before));
-    route();
+    await route();
     assert.equal(history.undo("terrain"), true);
-    route();
+    await route();
 
     assert.equal(server.state.terrain.chunk(new ChunkCoord(1, 0))?.tier, 1);
     assert.equal(server.state.terrain.chunk(beside)?.sample(100, 100), 2);
   });
 
   test("redo brings an import back on unloaded chunks and on a new one, and undoes again", async(t) => {
-    const { server, route, document, history, read } = stripPeers(t);
+    const { server, route, document, history, read } = await stripPeers(t);
     const rect = { x: 11, z: 0, columns: 3, rows: 1 };
     const created = new ChunkCoord(13, 0);
     const before = await read(rect);
     history.record("terrain", null, () => document.importHeights(rect, 1, flatGrid(rect, 1, 50), before));
-    route();
+    await route();
 
     history.undo("terrain");
-    route();
+    await route();
     assert.equal(history.redo("terrain"), true);
-    route();
+    await route();
     assert.equal(server.state.terrain.chunk(kFar)?.height(3, 3), 50);
     assert.equal(server.state.terrain.chunk(created)?.height(3, 3), 50);
 
     assert.equal(history.undo("terrain"), true);
-    route();
+    await route();
     assert.equal(server.state.terrain.chunk(kFar)?.height(3, 3), kFar.x);
     assert.equal(server.state.terrain.knows(created), false);
   });
 
   test("an import whose chunks changed since they were read writes nothing", async(t) => {
-    const { server, route, document, read } = stripPeers(t);
+    const { server, route, document, read } = await stripPeers(t);
     const rect = { x: 1, z: 0, columns: 2, rows: 1 };
     const before = await read(rect);
-    server.receive("X", networkCommand({ action: "chunk-removed", x: 2, z: 0 }, { clientId: "X" }));
-    route();
+    await server.receive("X", networkCommand({ action: "chunk-removed", x: 2, z: 0 }, { clientId: "X" }));
+    await route();
 
     assert.equal(document.importHeights(rect, 1, flatGrid(rect, 1, 50), before), false);
-    route();
+    await route();
     assert.equal(server.state.terrain.chunk(new ChunkCoord(1, 0))?.height(3, 3), 1);
   });
 
-  test("refuses a rectangle that cannot be placed", (t) => {
-    const { document } = stripPeers(t);
+  test("refuses a rectangle that cannot be placed", async(t) => {
+    const { document } = await stripPeers(t);
 
     assert.equal(document.importRefusal({ x: 126, z: 0, columns: 4, rows: 1 }), "out-of-range");
     assert.equal(document.importRefusal({ x: 40, z: 40, columns: 2, rows: 2 }), "disconnected");
@@ -169,7 +169,7 @@ describe("terrain heightmap import", () => {
   });
 
   test("a whole rectangle exported then imported keeps every height", async(t) => {
-    const { server, route, document, history, read } = stripPeers(t);
+    const { server, route, document, history, read } = await stripPeers(t);
     const rect = { x: 11, z: 0, columns: 2, rows: 1 };
     const before = await read(rect);
 
@@ -181,7 +181,7 @@ describe("terrain heightmap import", () => {
     assert.equal(grid.width, 128);
 
     history.record("terrain", null, () => document.importHeights(rect, 1, grid.heights, before));
-    route();
+    await route();
 
     assert.equal(server.state.terrain.chunk(kFar)?.height(0, 0), 12);
     assert.equal(server.state.terrain.chunk(new ChunkCoord(11, 0))?.height(63, 63), 11);

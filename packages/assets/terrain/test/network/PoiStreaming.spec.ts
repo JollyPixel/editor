@@ -24,7 +24,7 @@ import {
 const kBlockWidth = 100;
 const kBlockRows = 3;
 
-function blockPeers(
+async function blockPeers(
   t: TestContext,
   width: number,
   rows: number
@@ -33,7 +33,7 @@ function blockPeers(
   t.after(peers.dispose);
   for (let z = 0; z < rows; z++) {
     for (let x = z === 0 ? 1 : 0; x < width; x++) {
-      peers.server.receive("X", networkCommand(
+      await peers.server.receive("X", networkCommand(
         { action: "chunk-added", x, z, heights: heights(0) },
         { clientId: "X" }
       ));
@@ -62,29 +62,29 @@ function isLoaded(
 }
 
 describe("point-of-interest streaming", () => {
-  test("a point of interest keeps its chunks loaded at any distance until it lets them go", (t) => {
-    const { join, route } = blockPeers(t, 30, 1);
-    const { document } = join("A");
+  test("a point of interest keeps its chunks loaded at any distance until it lets them go", async(t) => {
+    const { join, route } = await blockPeers(t, 30, 1);
+    const { document } = await join("A");
     const id = document.addPointOfInterest({ chunks: [{ x: 25, z: 0 }, { x: 99, z: 0 }] })!;
-    route();
+    await route();
 
     assert.deepEqual([isLoaded(document.terrain, 25), isLoaded(document.terrain, 20)], [true, false]);
     document.stream.follow(new ChunkCoord(5, 0));
-    route();
+    await route();
     assert.equal(isLoaded(document.terrain, 25), true);
 
     document.updatePointOfInterest(id, { chunks: [] });
-    route();
+    await route();
     assert.equal(isLoaded(document.terrain, 25), false);
   });
 
-  test("past the free layers, higher priorities load first, then the nearest, within the layers", (t) => {
-    const { join, route } = blockPeers(t, kBlockWidth, kBlockRows);
-    const { document } = join("A");
+  test("past the free layers, higher priorities load first, then the nearest, within them", async(t) => {
+    const { join, route } = await blockPeers(t, kBlockWidth, kBlockRows);
+    const { document } = await join("A");
     const far = chunks(kBlockWidth - 5, kBlockWidth - 1, kBlockRows);
     document.addPointOfInterest({ priority: 0, chunks: chunks(20, kBlockWidth - 1, kBlockRows) });
     document.addPointOfInterest({ priority: 5, chunks: far });
-    route();
+    await route();
 
     assert.ok(far.every(({ x, z }) => isLoaded(document.terrain, x, z)));
     assert.deepEqual(

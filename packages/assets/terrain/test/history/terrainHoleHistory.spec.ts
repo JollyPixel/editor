@@ -13,39 +13,39 @@ import {
 } from "../helpers/terrain.ts";
 
 describe("terrain hole history", () => {
-  test("a cut undoes to the filled tile, skipped once a peer has cut that tile again", () => {
-    const { history, document, server, route, skipped } = historySetup();
+  test("a cut undoes to the filled tile, skipped once a peer has cut that tile again", async() => {
+    const { history, document, server, route, skipped } = await historySetup();
     function edgeHoles() {
       return server.state.terrain.chunk(EDGE_TILE.chunk)!.holes.tile(EDGE_TILE.x, EDGE_TILE.z);
     }
     history.record("terrain", null, () => document.patchHoles([{ tile: EDGE_TILE, holes: holeTile(true) }]));
-    route();
+    await route();
     assert.deepEqual(edgeHoles(), holeTile(true));
 
     assert.equal(history.undo("terrain"), true);
-    route();
+    await route();
     assert.deepEqual(edgeHoles(), holeTile(false));
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
 
     assert.equal(history.redo("terrain"), true);
-    route();
+    await route();
     const cut = cutHoles(EDGE_TILE.chunk.x, EDGE_TILE.chunk.z, { [EDGE_TILE.index]: false });
-    server.receive("A", networkCommand(cut, { clientId: "A", timestamp: Date.now() + 1000 }));
-    route();
+    await server.receive("A", networkCommand(cut, { clientId: "A", timestamp: Date.now() + 1000 }));
+    await route();
 
     assert.equal(history.undo("terrain"), false);
     assert.deepEqual(skipped, ["peer"]);
   });
 
-  test("undoing a chunk's removal brings back its holes", () => {
-    const { history, document, server, route } = historySetup();
+  test("undoing a chunk's removal brings back its holes", async() => {
+    const { history, document, server, route } = await historySetup();
     document.patchHoles([{ tile: EDGE_TILE, holes: holeTile(true) }]);
-    route();
+    await route();
     history.record("terrain", null, () => document.removeChunk(EDGE_TILE.chunk.x, EDGE_TILE.chunk.z));
-    route();
+    await route();
 
     assert.equal(history.undo("terrain"), true);
-    route();
+    await route();
 
     const { holes } = server.state.terrain.chunk(EDGE_TILE.chunk)!;
     assert.deepEqual(holes.tile(EDGE_TILE.x, EDGE_TILE.z), holeTile(true));

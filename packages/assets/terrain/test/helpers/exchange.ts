@@ -21,18 +21,18 @@ import {
 // CONSTANTS
 const kStrip = 13;
 
-export function stripPeers(
+export async function stripPeers(
   t: TestContext
 ) {
   const peers = terrainPeers();
   t.after(peers.dispose);
   for (let x = 1; x < kStrip; x++) {
-    peers.server.receive("X", networkCommand(
+    await peers.server.receive("X", networkCommand(
       { action: "chunk-added", x, z: 0, heights: heights(x) },
       { clientId: "X" }
     ));
   }
-  const peer = peers.join("A");
+  const peer = await peers.join("A");
   const history = new CommandHistory<"terrain">();
   history.register(terrainHistoryRegistration(peer.document, { scope: "terrain" }));
 
@@ -47,7 +47,7 @@ export function stripPeers(
       }
     })();
     await setImmediate();
-    peers.route();
+    await peers.route();
     await reading;
 
     return collected;

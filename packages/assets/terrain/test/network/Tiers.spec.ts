@@ -44,52 +44,52 @@ function refineCommand(
 }
 
 describe("terrain tiers", () => {
-  test("a refinement reaches the room at x2 and undoes back to the x1 heights and holes", () => {
-    const { history, document, server, route, sculpt } = historySetup();
+  test("a refinement reaches the room at x2 and undoes back to the x1 heights and holes", async() => {
+    const { history, document, server, route, sculpt } = await historySetup();
     sculpt(3);
     document.patchHoles([{ tile: EDGE_TILE, holes: holeTile(true) }]);
-    route();
+    await route();
     const original = server.state.terrain.chunk(kChunk)!;
     const heights = original.copyHeights();
     const holes = original.holes.copy();
 
     history.record("terrain", null, () => document.changeTier(kChunk.x, kChunk.z, 2));
-    route();
+    await route();
     const refined = server.state.terrain.chunk(kChunk)!;
     assert.equal(refined.tier, 2);
     assert.equal(refined.holes.isHole(1, 65), true);
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
 
     assert.equal(history.undo("terrain"), true);
-    route();
+    await route();
     const restored = server.state.terrain.chunk(kChunk)!;
     assert.deepEqual([restored.tier, restored.copyHeights(), restored.holes.copy()], [1, heights, holes]);
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
   });
 
-  test("a x1 sculpt crossing a peer's refinement settles on the x2 chunk without a snapshot", () => {
-    const { server, document, sculpt, route } = edgePeerSetup();
+  test("a x1 sculpt crossing a peer's refinement settles on the x2 chunk without a snapshot", async() => {
+    const { server, document, sculpt, route } = await edgePeerSetup();
     let resets = 0;
     document.on("reset", () => resets++);
     sculpt(5);
-    server.receive("A", networkCommand(refineCommand(server.state.terrain), { clientId: "A" }));
-    route();
+    await server.receive("A", networkCommand(refineCommand(server.state.terrain), { clientId: "A" }));
+    await route();
 
     assert.equal(document.terrain.chunk(kChunk)!.tier, 2);
     assert.deepEqual(terrainSnapshot(document), terrainSnapshot(server.state));
     assert.equal(resets, 0);
   });
 
-  test("undoing a refinement is skipped once a peer has sculpted the refined chunk", () => {
-    const { history, document, server, route, skipped } = historySetup();
+  test("undoing a refinement is skipped once a peer has sculpted the refined chunk", async() => {
+    const { history, document, server, route, skipped } = await historySetup();
     history.record("terrain", null, () => document.changeTier(kChunk.x, kChunk.z, 2));
-    route();
+    await route();
     const patch = encodeTilePatch({ tile: kRefinedTile, heights: tileHeights(-2) });
-    server.receive("A", networkCommand(
+    await server.receive("A", networkCommand(
       { action: "heights-patched", tiles: [patch] },
       { clientId: "A", timestamp: Date.now() + 1000 }
     ));
-    route();
+    await route();
 
     assert.equal(document.terrain.chunk(kChunk)!.tileHeights(0, 4)[0], -2);
     assert.equal(history.undo("terrain"), false);
@@ -98,10 +98,10 @@ describe("terrain tiers", () => {
 
   test("a refined chunk's heights and holes round-trip through its parts in any order", async() => {
     const handler = terrainAssetKind();
-    const { server, document, route } = edgePeerSetup();
+    const { server, document, route } = await edgePeerSetup();
     document.patchHoles([{ tile: EDGE_TILE, holes: holeTile(true) }]);
     document.changeTier(kChunk.x, kChunk.z, 4);
-    route();
+    await route();
 
     const manifest = await handler.serialize(server.state);
     const partIds = [...handler.parts!.list(manifest)];

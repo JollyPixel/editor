@@ -89,8 +89,8 @@ describe("terrain asset kind", () => {
   test("a chunk's hole part is listed only while the chunk has holes", async() => {
     const handler = terrainAssetKind();
     const room = new LiveAssetRoom(handler);
-    room.receive("A", networkCommand(cutHoles(0, 0, { 3: true })));
-    room.receive("A", networkCommand(cutHoles(0, 0, { 3: false })));
+    await room.receive("A", networkCommand(cutHoles(0, 0, { 3: true })));
+    await room.receive("A", networkCommand(cutHoles(0, 0, { 3: false })));
 
     const partIds = [...handler.parts!.list(await handler.serialize(room.state))];
 

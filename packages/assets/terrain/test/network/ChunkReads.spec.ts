@@ -45,17 +45,17 @@ describe("chunk reads", () => {
     const { server, join, route, dispose } = terrainPeers();
     t.after(dispose);
     for (let x = 1; x <= kFar.x; x++) {
-      server.receive("X", networkCommand(
+      await server.receive("X", networkCommand(
         { action: "chunk-added", x, z: 0, heights: heights(x) },
         { clientId: "X" }
       ));
     }
-    const near = join("A");
-    const far = join("B", { streamCentre: kFar });
+    const near = await join("A");
+    const far = await join("B", { streamCentre: kFar });
 
     const reading = readChunks(near.document, [kNear, kFar, kAbsent]);
     await setImmediate();
-    route();
+    await route();
     const [nearChunk, farChunk, ...others] = await reading;
 
     assert.equal(nearChunk.coord, kNear);
@@ -71,7 +71,7 @@ describe("chunk reads", () => {
       tile: TileCoord.fromIndex(kFar, kInnerTile),
       heights: tileHeights(30)
     }]);
-    route();
+    await route();
     assert.deepEqual(received, []);
   });
 });
