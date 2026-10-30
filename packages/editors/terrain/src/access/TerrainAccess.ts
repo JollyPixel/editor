@@ -7,7 +7,7 @@ import {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import type { BrushTool } from "../features/sculpt/model/SculptSettings.ts";
+import type { BrushTool } from "../state/SculptSettings.ts";
 
 // CONSTANTS
 const kToolCapabilities: Readonly<Record<BrushTool, TerrainCapability>> = {

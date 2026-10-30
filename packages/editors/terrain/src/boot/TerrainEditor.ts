@@ -36,11 +36,11 @@ import {
   type TerrainAccess,
   type TerrainGrants
 } from "../access/TerrainAccess.ts";
-import { TerrainExchange } from "../features/importExport/model/TerrainExchange.ts";
-import { downloadFile } from "../features/importExport/panel/downloadFile.ts";
-import "../features/importExport/panel/ExchangePanel.ts";
+import { TerrainExchange } from "../features/exchange/model/TerrainExchange.ts";
+import { downloadFile } from "../features/exchange/panel/downloadFile.ts";
+import "../features/exchange/panel/ExchangePanel.ts";
 import { MaterialPalette } from "../features/materials/model/MaterialPalette.ts";
-import { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
+import { MaterialSelection } from "../state/MaterialSelection.ts";
 import { MaterialThumbnails } from "../features/materials/model/MaterialThumbnails.ts";
 import { textureDocumentKind } from "../features/materials/model/TextureDocument.ts";
 import { TextureLeases } from "../features/materials/model/TextureLeases.ts";
@@ -49,13 +49,13 @@ import "../features/materials/panel/MaterialPalettePanel.ts";
 import { PoiEditor } from "../features/poi/model/PoiEditor.ts";
 import { PoiSelection } from "../features/poi/model/PoiSelection.ts";
 import "../features/poi/panel/PoiPanel.ts";
-import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
+import { SculptSettings } from "../state/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
-import { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
+import { OverlaySettings } from "../state/OverlaySettings.ts";
 import "../features/overlays/toolbar/OverlayToolbar.ts";
 import { TERRAIN_KEYBINDINGS } from "../preferences.ts";
 import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
-import { PresenceStore } from "../shared/PresenceStore.ts";
+import { PresenceStore } from "../state/PresenceStore.ts";
 import {
   createTerrainHistory,
   TERRAIN_REFUSAL_WORDING,

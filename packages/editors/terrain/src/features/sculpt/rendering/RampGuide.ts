@@ -9,7 +9,7 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import { Line2NodeMaterial } from "three/webgpu";
 
 // Import Internal Dependencies
-import type { StrokeSegment } from "../model/BrushToolHandler.ts";
+import type { StrokeSegment } from "../../brush/model/BrushToolHandler.ts";
 
 // CONSTANTS
 const kSegments = 48;

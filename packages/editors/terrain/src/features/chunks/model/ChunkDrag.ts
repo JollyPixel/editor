@@ -11,7 +11,7 @@ import {
   TERRAIN_HISTORY_SCOPE,
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
-import type { GroundPoint } from "../../sculpt/model/StampSpacer.ts";
+import type { GroundPoint } from "../../brush/model/StampSpacer.ts";
 import { chunksAlong } from "./chunksAlong.ts";
 
 // CONSTANTS

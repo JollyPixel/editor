@@ -14,16 +14,16 @@ import { Emitter } from "@openally/emitt";
 import {
   CHUNK_MODES,
   type ChunkMode
-} from "../../chunks/model/ChunkDrag.ts";
+} from "../features/chunks/model/ChunkDrag.ts";
 import {
   HOLE_MODES,
   type HoleMode
-} from "../../holes/model/holeStamp.ts";
+} from "../features/holes/model/holeStamp.ts";
 import {
   FALLOFF_CURVES,
   type FalloffCurve
-} from "./falloff.ts";
-import { SCULPT_TOOLS } from "./sculptStamp.ts";
+} from "../features/brush/model/falloff.ts";
+import { SCULPT_TOOLS } from "../features/sculpt/model/sculptStamp.ts";
 
 // CONSTANTS
 const kStorageKey = "terrain:sculpt";

@@ -43,7 +43,7 @@ import {
 import {
   FALLOFF_CURVES,
   type FalloffCurve
-} from "../model/falloff.ts";
+} from "../../brush/model/falloff.ts";
 import {
   BRUSH_SIZE,
   BRUSH_TOOLS,
@@ -52,7 +52,7 @@ import {
   type BrushTool,
   type SculptOptions,
   type SculptSettings
-} from "../model/SculptSettings.ts";
+} from "../../../state/SculptSettings.ts";
 import {
   TERRAIN_HISTORY_SCOPE,
   type TerrainHistory

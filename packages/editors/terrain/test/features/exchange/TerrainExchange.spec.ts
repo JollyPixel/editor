@@ -15,7 +15,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import { TerrainExchange } from "#src/features/importExport/model/TerrainExchange.ts";
+import { TerrainExchange } from "#src/features/exchange/model/TerrainExchange.ts";
 import {
   createTerrainHistory,
   TERRAIN_HISTORY_SCOPE

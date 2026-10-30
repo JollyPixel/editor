@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { BrushToolHandler } from "../sculpt/model/BrushToolHandler.ts";
+import type { BrushToolHandler } from "../brush/model/BrushToolHandler.ts";
 import {
   HoleStroke,
   type HoleStrokeOptions

@@ -3,8 +3,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { decodeBrushRing } from "#src/features/sculpt/model/brushRingPresence.ts";
-import { BRUSH_SIZE } from "#src/features/sculpt/model/SculptSettings.ts";
+import { decodeBrushRing } from "#src/features/brush/model/brushRingPresence.ts";
+import { BRUSH_SIZE } from "#src/state/SculptSettings.ts";
 
 describe("decodeBrushRing", () => {
   test("keeps a published ring and the null of a peer that stopped aiming", () => {

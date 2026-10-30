@@ -11,13 +11,13 @@ import type {
   BrushPress,
   BrushStroke,
   StrokeSegment
-} from "./BrushToolHandler.ts";
+} from "../../brush/model/BrushToolHandler.ts";
 import {
   rampStamp,
   type RampEnd
 } from "./rampStamp.ts";
-import type { SculptSettings } from "./SculptSettings.ts";
-import type { GroundPoint } from "./StampSpacer.ts";
+import type { SculptSettings } from "../../../state/SculptSettings.ts";
+import type { GroundPoint } from "../../brush/model/StampSpacer.ts";
 
 export interface RampStrokeOptions {
   preview: Pick<TerrainPreview, "beginStroke">;

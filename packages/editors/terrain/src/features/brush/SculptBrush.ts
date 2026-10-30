@@ -16,7 +16,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { holeTool } from "../holes/holeTool.ts";
-import type { MaterialSelection } from "../materials/model/MaterialSelection.ts";
+import type { MaterialSelection } from "../../state/MaterialSelection.ts";
 import { paintTool } from "../paint/paintTool.ts";
 import type {
   BrushStroke,
@@ -27,16 +27,16 @@ import {
   type BrushTool,
   type SculptOptions,
   type SculptSettings
-} from "./model/SculptSettings.ts";
+} from "../../state/SculptSettings.ts";
 import type { GroundPoint } from "./model/StampSpacer.ts";
 import {
   rampTool,
   sculptTools
-} from "./sculptTools.ts";
+} from "../sculpt/sculptTools.ts";
 import type { TerrainHistory } from "../../shared/terrainHistory.ts";
 import type { PeerBrushRings } from "./collaboration/PeerBrushRings.ts";
 import { BrushCursor } from "./rendering/BrushCursor.ts";
-import { RampGuide } from "./rendering/RampGuide.ts";
+import { RampGuide } from "../sculpt/rendering/RampGuide.ts";
 
 // CONSTANTS
 const kResizeStep = 1.1;

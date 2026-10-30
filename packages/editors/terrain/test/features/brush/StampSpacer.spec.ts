@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   StampSpacer,
   type GroundPoint
-} from "#src/features/sculpt/model/StampSpacer.ts";
+} from "#src/features/brush/model/StampSpacer.ts";
 
 describe("StampSpacer", () => {
   test("stamps land every spacing along the path, however the moves split it", () => {

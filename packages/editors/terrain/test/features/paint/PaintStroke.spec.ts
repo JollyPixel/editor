@@ -12,8 +12,8 @@ import type { TerrainReader } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import { PaintStroke } from "#src/features/paint/model/PaintStroke.ts";
-import { COMMIT_INTERVAL } from "#src/features/sculpt/model/CommitCadence.ts";
-import { SculptSettings } from "#src/features/sculpt/model/SculptSettings.ts";
+import { COMMIT_INTERVAL } from "#src/features/brush/model/CommitCadence.ts";
+import { SculptSettings } from "#src/state/SculptSettings.ts";
 import {
   createTerrainHistory,
   TERRAIN_HISTORY_SCOPE

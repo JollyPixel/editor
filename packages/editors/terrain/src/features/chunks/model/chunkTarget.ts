@@ -8,7 +8,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import type { GroundPoint } from "../../sculpt/model/StampSpacer.ts";
+import type { GroundPoint } from "../../brush/model/StampSpacer.ts";
 
 // CONSTANTS
 const kPlaneRefinements = 3;

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { BrushTool } from "./SculptSettings.ts";
+import type { BrushTool } from "../../../state/SculptSettings.ts";
 
 // CONSTANTS
 export const RAISE_RATE = 1;

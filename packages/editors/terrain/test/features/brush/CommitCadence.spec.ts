@@ -14,7 +14,7 @@ import {
   COMMIT_CHUNKS_INTERVAL,
   COMMIT_INTERVAL,
   CommitCadence
-} from "#src/features/sculpt/model/CommitCadence.ts";
+} from "#src/features/brush/model/CommitCadence.ts";
 
 function tile(
   chunkX: number,

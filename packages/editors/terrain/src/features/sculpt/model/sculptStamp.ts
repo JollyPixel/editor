@@ -10,7 +10,7 @@ import {
 import {
   falloffWeight,
   type FalloffCurve
-} from "./falloff.ts";
+} from "../../brush/model/falloff.ts";
 import {
   clampHeight,
   squareAround,

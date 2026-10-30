@@ -17,7 +17,7 @@ import {
 import {
   falloffWeight,
   type FalloffCurve
-} from "../../sculpt/model/falloff.ts";
+} from "../../brush/model/falloff.ts";
 
 // CONSTANTS
 const kTexelSize = CHUNK_SAMPLES / SPLAT_TEXELS;

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { BrushToolHandler } from "./model/BrushToolHandler.ts";
+import type { BrushToolHandler } from "../brush/model/BrushToolHandler.ts";
 import {
   RampStroke,
   type RampStrokeOptions
@@ -9,7 +9,7 @@ import {
   SculptStroke,
   type SculptStrokeOptions
 } from "./model/SculptStroke.ts";
-import type { SculptSettings } from "./model/SculptSettings.ts";
+import type { SculptSettings } from "../../state/SculptSettings.ts";
 
 export interface SculptToolsOptions extends SculptStrokeOptions {
   settings: Pick<SculptSettings, "options" | "update">;

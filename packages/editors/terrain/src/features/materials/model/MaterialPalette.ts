@@ -13,7 +13,7 @@ import type {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import type { MaterialSelection } from "./MaterialSelection.ts";
+import type { MaterialSelection } from "../../../state/MaterialSelection.ts";
 import {
   parentFolder,
   groupMaterialFiles,

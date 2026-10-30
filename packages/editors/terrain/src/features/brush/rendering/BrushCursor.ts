@@ -4,7 +4,7 @@ import type { TerrainReader } from "@jolly-pixel/terrain.renderer";
 // Import Internal Dependencies
 import type { PeerBrushRings } from "../collaboration/PeerBrushRings.ts";
 import { halfWeightDistance } from "../model/falloff.ts";
-import type { SculptOptions } from "../model/SculptSettings.ts";
+import type { SculptOptions } from "../../../state/SculptSettings.ts";
 import type { GroundPoint } from "../model/StampSpacer.ts";
 import {
   BrushRing,

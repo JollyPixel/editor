@@ -46,9 +46,9 @@ import type {
   MaterialPalette,
   TextureFile
 } from "../model/MaterialPalette.ts";
-import type { MaterialSelection } from "../model/MaterialSelection.ts";
+import type { MaterialSelection } from "../../../state/MaterialSelection.ts";
 import type { MaterialThumbnails } from "../model/MaterialThumbnails.ts";
-import type { OverlaySettings } from "../../overlays/model/OverlaySettings.ts";
+import type { OverlaySettings } from "../../../state/OverlaySettings.ts";
 import "./materialIcons.ts";
 
 // CONSTANTS

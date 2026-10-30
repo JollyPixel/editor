@@ -12,7 +12,7 @@ import {
   TERRAIN_CAPABILITIES,
   type TerrainCapability
 } from "#src/access/TerrainAccess.ts";
-import { BRUSH_TOOLS } from "#src/features/sculpt/model/SculptSettings.ts";
+import { BRUSH_TOOLS } from "#src/state/SculptSettings.ts";
 
 function resolved(
   denied: readonly string[]

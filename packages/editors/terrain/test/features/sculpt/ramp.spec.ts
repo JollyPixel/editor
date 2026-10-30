@@ -18,7 +18,7 @@ import {
 // Import Internal Dependencies
 import { rampStamp } from "#src/features/sculpt/model/rampStamp.ts";
 import { RampStroke } from "#src/features/sculpt/model/RampStroke.ts";
-import { SculptSettings } from "#src/features/sculpt/model/SculptSettings.ts";
+import { SculptSettings } from "#src/state/SculptSettings.ts";
 import {
   createTerrainHistory,
   TERRAIN_HISTORY_SCOPE

@@ -11,7 +11,7 @@ import {
   BRUSH_SIZE,
   SculptSettings,
   TERRACE_STEP
-} from "#src/features/sculpt/model/SculptSettings.ts";
+} from "#src/state/SculptSettings.ts";
 
 describe("SculptSettings", () => {
   test("stored settings come back after a reload, clamped, with unknown values replaced by defaults", () => {

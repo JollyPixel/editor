@@ -7,7 +7,7 @@ import {
   FALLOFF_CURVES,
   falloffWeight,
   halfWeightDistance
-} from "#src/features/sculpt/model/falloff.ts";
+} from "#src/features/brush/model/falloff.ts";
 
 describe("falloff", () => {
   test("every curve is full at the centre, never rises outward and is zero past the radius", () => {

@@ -14,13 +14,13 @@ import {
   TERRAIN_HISTORY_SCOPE,
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
-import type { BrushStroke } from "../../sculpt/model/BrushToolHandler.ts";
-import { CommitCadence } from "../../sculpt/model/CommitCadence.ts";
-import type { SculptSettings } from "../../sculpt/model/SculptSettings.ts";
+import type { BrushStroke } from "../../brush/model/BrushToolHandler.ts";
+import { CommitCadence } from "../../brush/model/CommitCadence.ts";
+import type { SculptSettings } from "../../../state/SculptSettings.ts";
 import {
   StampSpacer,
   type GroundPoint
-} from "../../sculpt/model/StampSpacer.ts";
+} from "../../brush/model/StampSpacer.ts";
 import {
   holeStamp,
   type HoleTiles

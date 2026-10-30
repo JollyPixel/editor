@@ -16,7 +16,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import type { TerrainHistory } from "../../shared/terrainHistory.ts";
-import type { SculptSettings } from "../sculpt/model/SculptSettings.ts";
+import type { SculptSettings } from "../../state/SculptSettings.ts";
 import {
   ChunkDrag,
   type ChunkMode

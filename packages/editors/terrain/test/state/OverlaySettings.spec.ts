@@ -10,7 +10,7 @@ import {
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { OverlaySettings } from "#src/features/overlays/model/OverlaySettings.ts";
+import { OverlaySettings } from "#src/state/OverlaySettings.ts";
 
 describe("OverlaySettings", () => {
   test("the overlay and walkable slope come back after a reload, clamped, unknown values replaced", () => {

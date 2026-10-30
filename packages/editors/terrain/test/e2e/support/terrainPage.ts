@@ -15,7 +15,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import type { BrushTool } from "#src/features/sculpt/model/SculptSettings.ts";
+import type { BrushTool } from "#src/state/SculptSettings.ts";
 import {
   captureCanvas,
   type CanvasPixels

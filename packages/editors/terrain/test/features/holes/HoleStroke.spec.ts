@@ -12,7 +12,7 @@ import type { TerrainReader } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import { HoleStroke } from "#src/features/holes/model/HoleStroke.ts";
-import { SculptSettings } from "#src/features/sculpt/model/SculptSettings.ts";
+import { SculptSettings } from "#src/state/SculptSettings.ts";
 import {
   createTerrainHistory,
   TERRAIN_HISTORY_SCOPE

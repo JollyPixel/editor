@@ -34,15 +34,15 @@ import {
   decodeMaterialImage,
   MaterialTextures
 } from "../features/materials/rendering/MaterialTextures.ts";
-import type { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
+import type { MaterialSelection } from "../state/MaterialSelection.ts";
 import type { TextureLeases } from "../features/materials/model/TextureLeases.ts";
 import { ChunkTool } from "../features/chunks/ChunkTool.ts";
 import type { PoiSelection } from "../features/poi/model/PoiSelection.ts";
 import { PoiChunkTool } from "../features/poi/PoiChunkTool.ts";
-import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
-import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
-import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
-import { SculptBrush } from "../features/sculpt/SculptBrush.ts";
+import { PeerBrushRings } from "../features/brush/collaboration/PeerBrushRings.ts";
+import type { SculptSettings } from "../state/SculptSettings.ts";
+import type { OverlaySettings } from "../state/OverlaySettings.ts";
+import { SculptBrush } from "../features/brush/SculptBrush.ts";
 import type { TerrainAction } from "../keybindings/terrainActions.ts";
 import { terrainShortcuts } from "../keybindings/terrainShortcuts.ts";
 import type { TerrainHistory } from "../shared/terrainHistory.ts";

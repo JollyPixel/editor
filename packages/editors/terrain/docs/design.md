@@ -401,9 +401,15 @@ show what peers did to it.
 
 ### `@jolly-pixel/editor.terrain`
 
-This package, laid out like the voxel-map editor:
+This package:
 
-- `boot/`, `document/`, `state/`, `scene/`, `shell/`, `shared/`.
-- `features/{sculpt,paint,holes,materials,chunks,poi,overlays,importExport}/`,
-  each split into `model/`, `interaction/`, `rendering/`, `toolbar/` and
-  `collaboration/` as needed.
+- `boot/`: the editor's entry and its wiring.
+- `access/`: room rights per capability.
+- `keybindings/`, with `preferences.ts` at the root: rebindable shortcuts.
+- `state/`: stores shared by features, such as the tool settings and the
+  selected material.
+- `scene/`, `shared/`.
+- `features/{brush,sculpt,paint,holes,materials,chunks,poi,overlays,exchange}/`,
+  each split into `model/`, `rendering/`, `toolbar/`, `panel/` and
+  `collaboration/` as needed. `brush/` holds what every brush tool shares;
+  `sculpt/` holds the height tools.

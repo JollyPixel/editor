@@ -8,7 +8,7 @@ import {
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
 import { chunksAlong } from "../../chunks/model/chunksAlong.ts";
-import type { GroundPoint } from "../../sculpt/model/StampSpacer.ts";
+import type { GroundPoint } from "../../brush/model/StampSpacer.ts";
 
 export type PoiChunkMode = "add" | "remove";
 

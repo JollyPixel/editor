@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { BrushRingShape } from "../rendering/BrushRing.ts";
-import { BRUSH_SIZE } from "./SculptSettings.ts";
+import { BRUSH_SIZE } from "../../../state/SculptSettings.ts";
 
 // CONSTANTS
 export const BRUSH_RING_PRESENCE_KEY = "terrain-brush";

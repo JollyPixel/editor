@@ -8,7 +8,7 @@ import {
   MAX_FRAME_TIME,
   RAISE_RATE,
   stampStrength
-} from "#src/features/sculpt/model/brushRate.ts";
+} from "#src/features/brush/model/brushRate.ts";
 
 function strokeTotal(
   frames: Array<[elapsed: number, stamps: number]>
