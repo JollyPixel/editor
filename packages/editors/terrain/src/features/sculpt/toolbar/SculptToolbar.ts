@@ -23,6 +23,10 @@ import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
 import {
+  CHUNK_MODES,
+  type ChunkMode
+} from "../../chunks/model/ChunkDrag.ts";
+import {
   HOLE_MODES,
   type HoleMode
 } from "../../holes/model/holeStamp.ts";
@@ -52,7 +56,12 @@ const kToolLabels: Readonly<Record<BrushTool, string>> = {
   smooth: "Smooth",
   flatten: "Flatten",
   paint: "Paint the selected material (Ctrl+click picks one)",
-  holes: "Cut and fill holes (Ctrl inverts)"
+  holes: "Cut and fill holes (Ctrl inverts)",
+  chunks: "Add and remove chunks (Ctrl swaps)"
+};
+const kChunkModeLabels: Readonly<Record<ChunkMode, string>> = {
+  add: "Add chunks",
+  remove: "Remove chunks"
 };
 const kHoleModeLabels: Readonly<Record<HoleMode, string>> = {
   cut: "Cut holes",
@@ -160,29 +169,59 @@ export class SculptToolbar extends LitElement {
             ></jolly-tool-button>
           `)}
         </div>
-        <div class="group divided" role="group" aria-label="Brush settings">
-          <jolly-tool-button
-            data-tool="size"
-            flyout-side="above"
-            label=${`Size ${formatMetres(this.#size.value)} (Ctrl + wheel)`}
-          >
-            <span class="value">${Math.round(this.#size.value)}</span>
-            <jolly-slider
-              slot="flyout"
-              orientation="vertical"
-              min=${BRUSH_SIZE.min}
-              max=${BRUSH_SIZE.max}
-              step="0.5"
-              .value=${this.#size.value}
-              @jolly-input=${this.#size.input}
-              @jolly-change=${this.#size.commit}
-            ></jolly-slider>
-          </jolly-tool-button>
-          ${STRENGTH_OPTIONS[tool] === null ? nothing : this.#renderStrength(settings)}
-        </div>
+        ${tool === "chunks" ? this.#renderChunkMode(settings) : this.#renderBrushSettings(settings)}
         ${tool === "flatten" ? this.#renderFlattenTarget(settings) : nothing}
         ${tool === "holes" ? this.#renderHoleMode(settings) : nothing}
       </jolly-rail>
+    `;
+  }
+
+  #renderBrushSettings(
+    settings: SculptSettings
+  ): TemplateResult {
+    const { tool } = settings.options;
+
+    return html`
+      <div class="group divided" role="group" aria-label="Brush settings">
+        <jolly-tool-button
+          data-tool="size"
+          flyout-side="above"
+          label=${`Size ${formatMetres(this.#size.value)} (Ctrl + wheel)`}
+        >
+          <span class="value">${Math.round(this.#size.value)}</span>
+          <jolly-slider
+            slot="flyout"
+            orientation="vertical"
+            min=${BRUSH_SIZE.min}
+            max=${BRUSH_SIZE.max}
+            step="0.5"
+            .value=${this.#size.value}
+            @jolly-input=${this.#size.input}
+            @jolly-change=${this.#size.commit}
+          ></jolly-slider>
+        </jolly-tool-button>
+        ${STRENGTH_OPTIONS[tool] === null ? nothing : this.#renderStrength(settings)}
+      </div>
+    `;
+  }
+
+  #renderChunkMode(
+    settings: SculptSettings
+  ): TemplateResult {
+    const { chunkMode } = settings.options;
+
+    return html`
+      <div class="group divided" role="group" aria-label="Chunk mode">
+        ${CHUNK_MODES.map((mode) => html`
+          <jolly-tool-button
+            data-tool=${`chunks-${mode}`}
+            icon=${`chunks-${mode}`}
+            label=${kChunkModeLabels[mode]}
+            ?active=${mode === chunkMode}
+            @click=${() => settings.update({ chunkMode: mode })}
+          ></jolly-tool-button>
+        `)}
+      </div>
     `;
   }
 

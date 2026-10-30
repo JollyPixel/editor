@@ -32,6 +32,7 @@ import {
   encodeSplat,
   type SplatTilePatch
 } from "../network/splat.ts";
+import { CHUNK_COORDINATE_RANGE } from "../network/TerrainCommand.schema.ts";
 import { decodeTilePatch } from "../network/tilePatches.ts";
 import { chunkOverview } from "./chunkOverview.ts";
 import {
@@ -107,16 +108,33 @@ export function acceptsTerrainCommand(
 
   switch (edit.action) {
     case "chunk-added":
-      return !terrain.knows(edit.coord) &&
-        terrain.overview.size < MAX_TERRAIN_CHUNKS &&
-        (terrain.overview.size === 0 || terrain.touches(edit.coord));
+      return acceptsChunkAdd(terrain, edit.coord);
     case "chunk-removed":
-      return terrain.knows(edit.coord) && terrain.overview.size > 1;
+      return acceptsChunkRemoval(terrain, edit.coord);
     case "heights-patched":
     case "splat-patched":
     case "holes-patched":
       return edit.patches.every(({ tile }) => terrain.knows(tile.chunk));
   }
+}
+
+export function acceptsChunkAdd(
+  terrain: TerrainReader,
+  coord: ChunkCoord
+): boolean {
+  const { min, max } = CHUNK_COORDINATE_RANGE;
+
+  return [coord.x, coord.z].every((value) => value >= min && value <= max) &&
+    !terrain.knows(coord) &&
+    terrain.overview.size < MAX_TERRAIN_CHUNKS &&
+    (terrain.overview.size === 0 || terrain.touches(coord));
+}
+
+export function acceptsChunkRemoval(
+  terrain: TerrainReader,
+  coord: ChunkCoord
+): boolean {
+  return terrain.knows(coord) && terrain.overview.size > 1;
 }
 
 export function applyTerrainCommand(

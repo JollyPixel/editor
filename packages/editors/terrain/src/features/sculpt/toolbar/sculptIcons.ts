@@ -90,6 +90,53 @@ registerIcon("holes-fill", svg`
   />
 `, { tone: "violet" });
 
+registerIcon("sculpt-chunks", svg`
+  <path
+    class="tone-fill"
+    d="M3 3h9v9H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 3h18v18H3ZM12 3v18M3 12h18"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("chunks-add", svg`
+  <path
+    class="tone-fill"
+    d="M3 3h12v12H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 3h12v12H3ZM19 14v8M15 18h8"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
+registerIcon("chunks-remove", svg`
+  <path
+    class="tone-fill"
+    d="M3 3h12v12H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 3h12v12H3ZM15 18h8"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
 registerIcon("sculpt-smooth", svg`
   <path
     d="M2 16l3-5 3 6 3-8 3 7 3-4 3 5 2-2"

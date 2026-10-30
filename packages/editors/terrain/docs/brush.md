@@ -93,18 +93,22 @@ the Holes overlay, over whichever overlay is on.
 Works on whole chunks, in one of three modes:
 
 - **Add.** A ghost outline shows the chunk under the cursor on empty ground,
-  aimed at a plane at the height of the nearest neighbour's edge, or 0. A
-  click or a drag adds chunks next to existing ones, with their edges seeded
-  from the neighbours.
-- **Remove.** A click or a drag removes the chunks under it. Removing the last
-  chunk is refused.
+  aimed at a plane at the mean height of its seeded edge, which the
+  neighbours give. A click or a drag adds chunks next to existing ones, with
+  their edges seeded from the neighbours.
+- **Remove.** The ghost outlines the loaded chunk under the cursor. A click or
+  a drag removes the chunks under it. Removing the last chunk is refused.
 - **Detail.** Sets the chunks under a click or a drag to the tier picked in
   the toolbar, ×1, ×2 or ×4.
 
-Ctrl swaps Add and Remove while held. A drag is one undo step. Undoing an Add
-removes its chunks, refused once a peer has edited one of them; undoing a
-Remove brings back their heights, splat and holes. The chunk grid overlay
-turns on while the tool is selected.
+The ghost is grey where the click would be refused: a chunk that touches no
+other, past the coordinate range or the chunk cap, or the last one. Ctrl
+swaps Add and Remove for the next press. A drag stays on a plane at the
+height of its press and works on every chunk the cursor crosses, so a fast
+drag leaves no gap. A drag is one undo step. Undoing an Add removes its
+chunks, refused once a peer has edited one of them; undoing a Remove brings
+back their heights, splat and holes. While the tool is selected, chunk
+borders are drawn as in the Chunks overlay, over whichever overlay is on.
 
 ## Paint brush
 

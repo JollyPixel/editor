@@ -50,6 +50,8 @@ import {
   type TerrainModelReader
 } from "./TerrainModel.ts";
 import {
+  acceptsChunkAdd,
+  acceptsChunkRemoval,
   acceptsTerrainCommand,
   applyTerrainCommand,
   loadedChunkEntry,
@@ -167,12 +169,26 @@ export class TerrainDocument extends CommandDocument<
     return this.commit({ action: "texture-size-changed", size });
   }
 
+  canAddChunk(
+    x: number,
+    z: number
+  ): boolean {
+    return acceptsChunkAdd(this.terrain, new ChunkCoord(x, z));
+  }
+
+  canRemoveChunk(
+    x: number,
+    z: number
+  ): boolean {
+    return acceptsChunkRemoval(this.terrain, new ChunkCoord(x, z));
+  }
+
   addChunk(
     x: number,
     z: number
   ): boolean {
     const coord = new ChunkCoord(x, z);
-    if (this.terrain.knows(coord)) {
+    if (!acceptsChunkAdd(this.terrain, coord)) {
       return false;
     }
 

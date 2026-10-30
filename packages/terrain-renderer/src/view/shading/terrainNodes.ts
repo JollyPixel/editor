@@ -106,6 +106,7 @@ export interface TerrainShading {
   overlay(mode: TerrainOverlay): void;
   walkableSlope(degrees: number): void;
   revealHoles(revealed: boolean): void;
+  revealChunks(revealed: boolean): void;
   highlightSlot(slot: number | null): void;
   materialArrays(arrays: MaterialArrays): void;
 }
@@ -367,6 +368,7 @@ export function createTerrainShading(
   }
   const reveal = uniform(0);
   const holesShown = overlayIs("holes").or(reveal.equal(1));
+  const revealGrid = uniform(0);
   const holeCellCoord = local.div(holeCellSize);
   const holeLineDistance = abs(fract(holeCellCoord.sub(0.5)).sub(0.5))
     .div(max(fwidth(holeCellCoord), vec2(1e-4)));
@@ -384,7 +386,7 @@ export function createTerrainShading(
     }).ElseIf(overlayIs("splat"), () => {
       color.assign(splatColor);
     });
-    If(overlayIs("chunks").or(overlayIs("lod")), () => {
+    If(overlayIs("chunks").or(overlayIs("lod")).or(revealGrid.equal(1)), () => {
       color.assign(mix(color, kLineColor, line));
     });
     If(inHole, () => {
@@ -401,6 +403,9 @@ export function createTerrainShading(
     },
     revealHoles(revealed) {
       reveal.value = revealed ? 1 : 0;
+    },
+    revealChunks(revealed) {
+      revealGrid.value = revealed ? 1 : 0;
     },
     walkableSlope(degrees) {
       walkable.value = degreesToRadians(degrees);

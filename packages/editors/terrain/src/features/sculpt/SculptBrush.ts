@@ -53,7 +53,7 @@ export class SculptBrush extends ActorComponent {
   #cursor: BrushCursor;
   #raycaster = new THREE.Raycaster();
   #pointer = new THREE.Vector2();
-  #tools: Readonly<Record<BrushTool, BrushToolHandler>>;
+  #tools: Readonly<Record<Exclude<BrushTool, "chunks">, BrushToolHandler>>;
   #stroke: BrushStroke | null = null;
   #keepAlive: (() => void) | null = null;
 
@@ -86,14 +86,20 @@ export class SculptBrush extends ActorComponent {
   update(): void {
     const { input } = this.actor.world;
     const { mouse } = input;
-    if (!mouse.hovering || mouse.isDown("middle") || InputCombination.Alt.evaluate(input)) {
+    const selected = this.#options.settings.options.tool;
+    if (
+      selected === "chunks" ||
+      !mouse.hovering ||
+      mouse.isDown("middle") ||
+      InputCombination.Alt.evaluate(input)
+    ) {
       this.endStroke();
       this.#hideCursor();
 
       return;
     }
 
-    const tool = this.#tool();
+    const tool = this.#tools[selected];
     const aim = this.#aim(tool);
     const control = InputCombination.Control.evaluate(input);
     if (control) {
@@ -181,10 +187,6 @@ export class SculptBrush extends ActorComponent {
       }
     }
     this.#stroke.update(point, this.actor.world.time.unscaledDelta, inverted);
-  }
-
-  #tool(): BrushToolHandler {
-    return this.#tools[this.#options.settings.options.tool];
   }
 
   #resize(

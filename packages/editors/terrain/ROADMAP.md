@@ -157,7 +157,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   over the surface kept under them, tinted and outlined cell by cell. The
   hole tool shows them the same way while selected, over whichever overlay is
   on, so its cuts and fills stay visible.
-- **Next:** the Chunks tool, adding and removing chunks.
+- **Chunks tool: done** (2026-10-30). Add and Remove in the brush toolbar,
+  Ctrl swapping them for the next press. A ghost outlines the target chunk,
+  grey where the click would be refused, and the chunk borders show while
+  the tool is selected. A drag works on every chunk the cursor crosses and
+  undoes as one step. The Detail mode waits for the resolution tiers.
+- **Next:** resolution tiers ×2 and ×4, set from the Chunks tool's Detail
+  mode.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -226,7 +232,7 @@ chunks yet.
 - [x] Hole brush, cut and fill: the `<x>_<z>_holes` part, `holes-patched`
   commits, the mask drawn in the view, and the tool.
 - [x] Debug overlay for holes.
-- [ ] Chunks tool: add and remove chunks by click or drag, one undo step.
+- [x] Chunks tool: add and remove chunks by click or drag, one undo step.
 - [ ] Resolution tiers ×2 and ×4, with seam morphing, set from the Chunks
   tool's Detail mode.
 - [ ] Points of interest: chunk sets with an LoD bias and a minimum detail

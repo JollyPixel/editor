@@ -30,6 +30,7 @@ import {
 } from "../features/materials/rendering/MaterialTextures.ts";
 import type { MaterialSelection } from "../features/materials/model/MaterialSelection.ts";
 import type { TextureLeases } from "../features/materials/model/TextureLeases.ts";
+import { ChunkTool } from "../features/chunks/ChunkTool.ts";
 import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
@@ -69,6 +70,7 @@ interface TerrainSceneParts {
   readonly live: TerrainLiveSender;
   readonly peerRings: PeerBrushRings;
   readonly brush: SculptBrush;
+  readonly chunkTool: ChunkTool;
   readonly frustums: PeerFrustums;
 }
 
@@ -172,6 +174,15 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: camera.camera,
         rings: peerRings
       });
+    const chunkTool = this.world
+      .createActor("chunk-tool")
+      .addComponentAndGet(ChunkTool, {
+        document: this.#document,
+        preview,
+        settings: this.#sculpt,
+        history: this.#history,
+        camera: camera.camera
+      });
     const frustums = this.world
       .createActor("peer-frustums")
       .addComponentAndGet(PeerFrustums, {
@@ -183,6 +194,7 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#bindPreview(preview, view, () => {
       peerRings.refresh();
       brush.terrainChanged();
+      chunkTool.terrainChanged();
     });
     this.#parts = {
       camera,
@@ -191,6 +203,7 @@ export class TerrainEditorScene extends Systems.Scene {
       live,
       peerRings,
       brush,
+      chunkTool,
       frustums
     };
   }
@@ -217,6 +230,7 @@ export class TerrainEditorScene extends Systems.Scene {
 
   override destroy(): void {
     this.#parts?.brush.endStroke();
+    this.#parts?.chunkTool.endDrag();
     for (const dispose of this.#disposables.splice(0).reverse()) {
       dispose();
     }
@@ -245,11 +259,13 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#disposables.push(overlaySettings.subscribe("change", applyOverlaySettings));
 
     const sculpt = this.#sculpt;
-    function revealHoles(): void {
-      view.revealHoles = sculpt.options.tool === "holes";
+    function revealForTool(): void {
+      const { tool } = sculpt.options;
+      view.revealHoles = tool === "holes";
+      view.revealChunks = tool === "chunks";
     }
-    revealHoles();
-    this.#disposables.push(sculpt.subscribe("change", revealHoles));
+    revealForTool();
+    this.#disposables.push(sculpt.subscribe("change", revealForTool));
 
     const terrain = this.#document;
     const selection = this.#selection;

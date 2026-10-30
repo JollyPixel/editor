@@ -151,7 +151,8 @@ The view uses CDLOD:
 draws a one-pixel line on every chunk border, `lod`, which adds a tint per
 LoD level, `slope`, described below, `splat`, described in
 [texture](./texture.md#overlays), and `holes`, which draws hole cells instead
-of discarding them; `revealHoles` does the same over any other mode. Uniforms
+of discarding them; `revealHoles` does the same over any other mode, and
+`revealChunks` draws the chunk borders over any other mode. Uniforms
 select the mode, so switching does not recompile the shader.
 
 ### Slope overlay

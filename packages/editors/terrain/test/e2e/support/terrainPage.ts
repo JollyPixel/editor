@@ -167,7 +167,7 @@ export class TerrainPage {
     };
   }
 
-  async sculptAt(
+  async clickAt(
     sampleX: number,
     sampleZ: number
   ): Promise<void> {

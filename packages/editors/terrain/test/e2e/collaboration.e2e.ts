@@ -56,7 +56,7 @@ test("undoing a stroke restores the heights a peer sees", async({ terrain, peerT
   await terrain.viewport.pinCamera(kNearPose);
   const before = await terrain.heightAt(kStroke.x, kStroke.z);
 
-  await terrain.sculptAt(kStroke.x, kStroke.z);
+  await terrain.clickAt(kStroke.x, kStroke.z);
   await expect.poll(() => peerTerrain.heightAt(kStroke.x, kStroke.z)).toBeGreaterThan(before);
 
   await terrain.undo();
