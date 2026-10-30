@@ -49,31 +49,49 @@ document.body.append(element);
 
 Ctrl+K (Cmd+K on macOS) opens the console.
 
+## 📖 Guides
+
+- [Registering from features](./docs/guides/registering-features.md): split an editor's console
+  entries into features and register them as one list
+
 ## 📚 API
 
-- [CommandConsole](./docs/CommandConsole.md): namespaces, commands, variables, reverting, output and history
-- [Registering from features](./docs/features.md): `ConsoleFeature` and `registerConsoleFeatures`
-- [Input grammar](./docs/grammar.md): the three modes, coercion, search, completion and scripts
-- [jolly-console](./docs/element.md): mounting the element, keys and accessibility
+### Headless
+
+```ts
+import "@jolly-pixel/console";
+```
+
+Holds namespaces, commands and variables, runs what the user types and keeps the output and
+history.
+
+- [CommandConsole](./docs/CommandConsole.md): namespaces, features, commands, variables, reverting, scripts, output and history
+- [Input grammar](./docs/grammar.md): prompt syntax, value coercion, scope and script format
 - [Remote consoles](./docs/remote.md): `ConsoleServer` and `ConsoleMirror`, a console served over a `MessagePort`
+
+> [!NOTE]
+> It touches no DOM and does not need Lit.
+
+### UI component
+
+```ts
+import "@jolly-pixel/console/element";
+```
+
+The `jolly-console` Lit dialog that displays a `CommandConsole`. It needs the optional `lit` and
+`@jolly-pixel/ui` peers.
+
+- [jolly-console](./docs/element.md): mounting, opening and closing, keys, scripts and styling
+
+The element's `console` property connects the two.
 
 ## 🧪 Benchmarks
 
-The Node suites measure the work done on every keystroke: tokenizing and
-classifying a line, then a search, a browse and a completion against 500
-registered entries, with a second search suite at 5000 entries.
-
 ```bash
+# Node: tokenizing, classifying, search, browse and completion on each keystroke
 pnpm --filter @jolly-pixel/console bench
-```
 
-The browser suite mounts `jolly-console` in headless Chromium with Lit's
-production build, fills the scrollback to its 500-entry capacity and times
-each keystroke until layout is clean. `KB/op` is the heap growth over 40
-operations after a forced GC, with a young generation large enough that no
-collection runs in between.
-
-```bash
+# Headless Chromium: jolly-console keystroke time with a full scrollback
 pnpm --filter @jolly-pixel/console bench:browser
 ```
 

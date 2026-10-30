@@ -1,14 +1,8 @@
 # Behavior
 
-A `Behavior` is a specialized
-[ActorComponent](../actor/actor-component.md) that adds scripting
-capabilities to an Actor. It provides:
-
-- **Actor lookup** — other scripts find a behavior by class with
-  `actor.getComponent(PlayerBehavior)` or `actor.getComponents(PlayerBehavior)`
-- **Decorators** — declarative metadata for scene properties,
-  component references, input listeners, and
-  [signals](./signal.md)
+A `Behavior` is the [ActorComponent](../actor/actor-component.md) for game
+scripts. Decorators declare its scene properties, component references and
+input listeners; [signals](./signal.md) let other scripts react to it.
 
 ```ts
 import {
@@ -61,11 +55,9 @@ export class PlayerBehavior extends Behavior {
 
 ## Decorators
 
-Decorated properties, components, and input listeners are resolved by
-`bind()`, which runs right before `awake()`. A component referenced
-with `@SceneActorComponent` therefore only needs to be added to the
-same actor before the actor awakes, in any order. Input listeners are
-removed when the behavior is destroyed.
+Decorators are resolved right before `awake()`, so a component referenced
+with `@SceneActorComponent` may be added to the actor in any order before it
+awakes. Input listeners are removed when the behavior is destroyed.
 
 ### `@SceneProperty`
 
@@ -78,16 +70,13 @@ variants), `Vector2`, `Vector3`, `Vector4`, `Color`.
 speed = 0.05;
 ```
 
-A field still `undefined` when `bind()` runs gets the type default: `""`,
-`0`, `false`, an empty array, a zero vector, or black. Vectors and colors are
-new instances for each behavior.
+A field left `undefined` gets the type default: `""`, `0`, `false`, an empty
+array, a zero vector, or black.
 
-The `Actor` type references another actor. A scene file stores its
-`persistentId`, and `bind()` replaces it with the live actor found by
-`world.sceneManager.actors.find`. An id no live actor holds logs a warning
-and leaves `null`. Every actor of a file is built before any behavior binds,
-so the target may come later in the file. The reference is not cleared when
-the target is destroyed later: check `pendingForDestruction` before using it.
+The `Actor` type references another actor, stored by `persistentId` in a
+scene file. An id no live actor holds logs a warning and leaves `null`. The
+reference is not cleared when the target is destroyed: check
+`pendingForDestruction` before using it.
 
 ```ts
 @SceneProperty({ type: "Actor" })
@@ -96,8 +85,7 @@ target: Actor | null = null;
 
 ### `@SceneActorComponent`
 
-Binds a field to a sibling component on the same actor. The
-component reference is resolved automatically during initialization.
+Binds a field to a sibling component on the same actor.
 
 ```ts
 @SceneActorComponent(ModelRenderer)
@@ -106,10 +94,8 @@ model: ModelRenderer;
 
 ### `@InputListener`
 
-Binds a method to an input event, by dot-path name (see
-[`InputListenerType`](../../../controls/docs/input.md#listener-types)
-in `@jolly-pixel/controls`). The listener is wired automatically
-during behavior initialization.
+Binds a method to an input event by its `InputListenerType` dot-path name,
+from `@jolly-pixel/controls`.
 
 ```ts
 @InputListener("keyboard.down")
@@ -154,18 +140,12 @@ interface ScriptData {
   its initializer. A key without a `@SceneProperty` field is ignored.
 - An unregistered name logs a warning and builds no behavior. Edit mode
   builds none either.
-- `capture(behavior)` writes a registered behavior back as `ScriptData`, each
-  `@SceneProperty` field in its stored form (a `Vector3` as `[x, y, z]`, a
-  `Color` as `"#rrggbb"`, an actor as its `persistentId`). `owns(component)`
-  accepts an instance of a registered class only, not of a subclass, so a
-  save never reloads a subclass as its parent.
-- `SCENE_PROPERTY_TYPES` lists every `@SceneProperty` value type, which the
-  editor can edit. The `Actor` type is not part of it:
-  `BehaviorPropertyType` is the union of both.
-  `inferScenePropertyType(value)` picks one from a stored value, for an editor
-  that does not know the behavior: `[0, 1, 0]` is a `Vector3`, five numbers a
-  `number[]`, `"#ff0000"` a `Color`. It returns `null` when no type parses the
-  value.
+- `capture(behavior)` writes each `@SceneProperty` field back in its stored
+  form. `owns(component)` accepts instances of a registered class, not of a
+  subclass.
+- `SCENE_PROPERTY_TYPES` lists the value types (`Actor` excluded;
+  `BehaviorPropertyType` includes it). `inferScenePropertyType(value)` guesses
+  one from a stored value, or returns `null`.
 
 ## See also
 

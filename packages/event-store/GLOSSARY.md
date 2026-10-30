@@ -1,74 +1,56 @@
 # Event store glossary
 
-This glossary defines the vocabulary for recording and ordering asset events.
-Asset identity and classification come from the
-[asset glossary](../asset/GLOSSARY.md). Rebuilding asset state and projecting
-it to storage belong to the
-[asset-server glossary](../asset-server/GLOSSARY.md).
+Assets are not saved as files that get overwritten. Every change is recorded as
+an **event**, and an asset's current state is what you get by replaying its
+events in order. The event store keeps those events; it does not know what
+they mean.
 
-## Terms
+Each term below describes the idea first. The *In code* line names where it
+shows up in the API. The [architecture](./ARCHITECTURE.md) shows how the parts
+fit together.
+
+## History
 
 ### Event
 
-An immutable record accepted into an asset's history. An event names what
-occurred, carries its domain data, identifies its actor, and records when the
-store accepted it.
+One change to an asset: what happened, its data, who did it and when the store
+accepted it. Events are only ever added at the end, never edited. The **actor**
+is who did it: a user, or a system process such as a server task.
 
-### Actor
+*In code:* `Event`, with `eventType`, `eventData`, `actor` and `createdAt`.
+`writer.append` adds one.
 
-The origin attributed to an event. A user actor carries a user identity. A
-system actor names the process or service that produced the event.
+### Event stream
 
-### Event Stream
+The history of one asset, numbered by **event version**: 1, 2, 3 and so on.
+All streams share one **event log**, which numbers every event with an
+**event ID** in the order the store accepted it. Neither number changes once
+given.
 
-The ordered history of one asset. Events with the same
-[asset ID](../asset/GLOSSARY.md#asset-id) form one stream.
+*In code:* `assetId`, `eventVersion`, `eventId`. `reader.list` reads one
+stream, `reader.listAll` the whole log.
 
-### Append
-
-The act of recording a new event at the end of an asset's stream and the
-overall log. Appending extends history without revising earlier events.
-
-### Event ID
-
-An event's position in the overall log across all asset streams. Event IDs
-express the order in which the store accepted events.
-
-### Event Version
-
-An event's position in one asset stream. Versions increase independently for
-each asset and remain stable after compaction.
-
-### Event Log
-
-The ordered collection of recorded events across all asset streams. The log
-grows through append operations and may shrink through compaction.
-
-### Event Store
-
-The boundary through which an application records and reads event history. It
-owns the event log while leaving event meaning to its consumers.
+## Trimming history
 
 ### Checkpoint
 
-An event from which a consumer can rebuild an asset without reading earlier
-events. The consumer decides which event types qualify because it owns the
-[fold](../asset-server/GLOSSARY.md#fold).
+An event that carries an asset's whole state, so the asset can be rebuilt from
+it without the events before it. The store cannot tell which events qualify,
+so the consumer names the checkpoint event types.
+
+*In code:* `checkpointEventTypes`, `reader.listFromCheckpoints`.
 
 ### Compaction
 
-The irreversible removal of events that precede the newest checkpoint in each
-asset stream. The checkpoint, every later event, and every tagged event remain
-available.
+Deleting the events before each asset's newest checkpoint to save space. It
+cannot be undone. The checkpoint, everything after it and every tagged event
+stay.
+
+*In code:* `compact`.
 
 ### Tag
 
-A name attached to one event of an asset stream, unique within that asset. The
-tagged event survives compaction until its last tag is deleted.
+A name pinned on one event of an asset, like a release label. A tagged event
+survives compaction until its last tag is deleted.
 
-## Naming boundaries
-
-- Use **event ID** for position in the overall log and **event version** for
-  position in one asset stream.
-- Use **checkpoint** for the event that makes earlier history unnecessary and
-  **compaction** for removing that history.
+*In code:* `tags.create`, `tags.delete`.

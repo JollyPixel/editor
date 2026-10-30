@@ -1,11 +1,7 @@
 # disposeObject3D
 
-Releases the GPU resources owned by an `Object3D` subtree.
-
-Three.js never frees geometries, materials or textures on its own: they
-live until `dispose()` is called on them. `disposeObject3D` walks a
-subtree, collects every disposable resource it finds and disposes each
-one exactly once, even when several nodes share it.
+Disposes the GPU resources of an `Object3D` subtree, each one once even when
+several nodes share it. Three.js never frees them on its own.
 
 ```ts
 import { disposeObject3D } from "@jolly-pixel/engine";
@@ -36,24 +32,19 @@ is detached from its parent and its children are removed.
 
 ### textures
 
-Disposing a material has no effect on its textures, because a single
-texture is commonly shared by several materials (a blockset atlas, an
-asset library entry). Texture disposal is therefore opt-in:
+Textures are often shared between materials, so disposing them is opt-in:
 
 ```ts
 disposeObject3D(mesh, { textures: true });
 ```
 
-Only pass `true` when the subtree owns its textures. When enabled, the
-walk covers the material's own texture properties (`map`, `normalMap`,
-`emissiveMap`, ...) and the texture values held by `ShaderMaterial`
-uniforms. A texture backed by an `ImageBitmap` also gets its source
-closed, since Three.js leaves that call to the application.
+Only pass `true` when the subtree owns its textures. It covers material
+texture properties (`map`, `normalMap`, ...) and `ShaderMaterial` uniforms,
+and closes `ImageBitmap` sources.
 
 ### stopAtActors
 
-Actors mark their group with `userData.isActor`. With `stopAtActors`,
-the traversal does not descend into a nested actor, which owns its own
+The traversal does not descend into a nested actor, which owns its own
 destruction. [Actor](../actor/actor.md) uses this on `destroy()`.
 
 ## What gets disposed

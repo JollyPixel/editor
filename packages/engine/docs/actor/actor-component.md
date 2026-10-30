@@ -1,29 +1,19 @@
 # ActorComponent
 
-The engine follows an **Entity-Component** pattern inspired by
-game engines like Unity and Godot:
-
-- **Entity** → [Actor](actor.md): a node in the scene tree with
-  a transform, but no logic or rendering on its own.
-- **Component** → `ActorComponent`: a modular piece of data or
-  behavior attached to an actor. Each component adds one
-  responsibility (rendering, physics, scripting, etc.).
-
-An actor gains its capabilities entirely through the components
-attached to it. For example, the same actor can display a 3D model
-by attaching a `ModelRenderer` and react to player input by
-attaching a custom [Behavior](../components/behavior.md). This
-composition-over-inheritance approach keeps each component focused
-on one piece of behavior or rendering.
-
-The engine ships with several built-in components:
+An [Actor](actor.md) has no logic or rendering of its own: each
+`ActorComponent` attached to it adds one responsibility. The engine ships
+with these components:
 
 | Component | Role |
 | --------- | ---- |
 | [ModelRenderer](../components/renderers.md#modelrenderer) | Renders a 3D model (OBJ, FBX, glTF) |
 | [SpriteRenderer](../components/renderers.md#spriterenderer) | Renders a 2D sprite / spritesheet |
 | [TextRenderer](../components/renderers.md#textrenderer) | Renders 3D text |
+| [MeshRenderer](../components/renderers.md#meshrenderer) | Renders a primitive geometry |
+| [LightComponent](../components/light.md) | Adds a three.js light |
+| [CameraComponent](../components/camera.md) | Turns the actor into a camera |
 | [Camera3DControls](../components/camera-3d-controls.md) | First-person camera with WASD + mouse look |
+| [OrbitFlyCamera](../components/orbit-fly-camera.md) | Fly camera with an optional orbit pivot |
 | [Behavior](../components/behavior.md) | Custom scripting with lifecycle hooks and decorators |
 
 ## Attaching components
@@ -41,13 +31,10 @@ actor.addComponent(ModelRenderer, {
 actor.addComponent(PlayerBehavior);
 ```
 
-When constructed, a component automatically registers itself on
-the actor's `components` list and is queued for its first `start()`
-call on the next frame.
+A new component registers itself on the actor and is queued for `start()`.
 
 ## Lifecycle
 
-Components follow a lifecycle managed by the scene engine:
 
 | Hook | When it runs |
 | ---- | ------------ |
@@ -61,8 +48,7 @@ The `update` delta follows the loop time scale and is `0` while paused, when
 no fixed step runs either. Read [`world.time`](../systems/world.md#time) for
 wall-clock time.
 
-Components that define `update()` or `fixedUpdate()` are
-registered for per-frame updates via the `needUpdate` property.
+A component that defines `update()` or `fixedUpdate()` gets `needUpdate`.
 Pass `needUpdate: false` to `super()` to start without updates:
 
 ```ts
@@ -128,6 +114,8 @@ export type StrictComponentEnum =
   | "VoxelRenderer"
   | "SpriteRenderer"
   | "ModelRenderer"
+  | "MeshRenderer"
+  | "Light"
   | "TextRenderer";
 
 export type FreeComponentEnum = StrictComponentEnum | (string & {});
@@ -201,14 +189,12 @@ class PlayerBehavior extends ActorComponent {
 }
 ```
 
-Pass the group to the owning scene with `assets: [PlayerBehavior.assets]`.
-This keeps asset loading at the runtime boundary while `awake()`, `start()`,
-and `update()` remain synchronous.
+Pass the group to the owning scene with `assets: [PlayerBehavior.assets]`,
+so the lifecycle methods stay synchronous.
 
 ## Accessing game context
 
-The `context` getter provides a convenient shortcut to the
-game instance context without navigating through `actor.world`:
+`context` is a shortcut to `actor.world.context`:
 
 ```ts
 class PlayerBehavior extends Behavior {

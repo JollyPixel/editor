@@ -118,6 +118,6 @@ flowchart TB
 The host owns the instance. A new command is a feature module plus one line in
 the editor's feature list.
 
-API: [CommandConsole](./docs/CommandConsole.md), [features](./docs/features.md),
+API: [CommandConsole](./docs/CommandConsole.md), [features](./docs/guides/registering-features.md),
 [grammar](./docs/grammar.md), [jolly-console](./docs/element.md),
 [ADRs](./docs/adr/README.md).

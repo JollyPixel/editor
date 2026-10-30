@@ -1,8 +1,8 @@
 # SceneManager
 
-`SceneManager` owns the active scene, appended scenes, scene-load state, and
-frame-boundary activation. Gameplay code can request a scene synchronously from
-an `ActorComponent` without accessing the runtime.
+`SceneManager` owns the current scene, the appended scenes and their loads,
+and swaps scenes at frame boundaries. Any component can request a scene
+synchronously.
 
 ## Loading a scene
 
@@ -12,12 +12,10 @@ const load = this.actor.world.sceneManager.loadScene(
 );
 ```
 
-`loadScene()` requests a replacement and returns a `SceneLoad` immediately.
-`SceneManager` loads the assets declared by `scene.assets` as one batch of the
-world's `AssetCoordinator` and reports progress through that object. A scene
-whose assets are all loaded, or that declares none, is `ready` before
-`loadScene()` returns. Once the load is ready, `SceneManager` replaces the
-current scene at the next frame boundary.
+`loadScene()` returns a `SceneLoad` at once and loads `scene.assets` as one
+batch of `world.assetCoordinator`. A scene with nothing left to load is
+`ready` before `loadScene()` returns. A ready scene replaces the current one
+at the next frame boundary.
 
 ```ts
 load.status;
@@ -53,18 +51,14 @@ const load = sceneManager.loadScene(
 fade.start();
 ```
 
-The fade and asset loading can advance independently during normal synchronous
-updates:
-
 ```ts
 if (fade.isOpaque) {
   load.allowActivation();
 }
 ```
 
-Calling `allowActivation()` before loading finishes records the permission and
-waits for readiness. Calling it after loading finishes releases the ready scene
-for activation. Both paths replace the scene at the next `beginFrame()`.
+`allowActivation()` may come before or after loading finishes. The scene is
+replaced at the next `beginFrame()` once both are done.
 
 ## Appending a scene
 
@@ -87,16 +81,12 @@ boundary and cancels additive requests that have not activated yet.
 ## Unloading the current scene
 
 `unloadScene(scene)` tears `scene` down at once when it is the current scene:
-appended scenes and `scene` are destroyed, then every actor, and append loads
-that have not activated yet are cancelled. Afterwards `currentScene` is `null`.
-A replacement load of `scene` that has not activated yet is cancelled. Any
-other scene is left untouched, and a second call is a no-op.
+appended scenes and `scene` are destroyed, then every actor. Pending appends
+and a pending replacement by `scene` are cancelled, and `currentScene`
+becomes `null`. Any other scene is left untouched.
 
-The teardown is immediate rather than deferred to the next `beginFrame()`, so
-a dispose path can release the scene's resources right after the call even
-when no further frame runs. Call it outside a frame where possible. When it
-runs during `update()` or `fixedUpdate()`, the rest of that frame skips the
-torn-down actors and scenes.
+Prefer calling it outside a frame. During `update()` or `fixedUpdate()`, the
+rest of that frame skips the torn-down actors.
 
 ```ts
 sceneManager.unloadScene(editorScene);
@@ -104,9 +94,8 @@ sceneManager.unloadScene(editorScene);
 
 ## Observing loads
 
-`SceneManager.sceneLoad` points to the latest replacement request. The manager
-emits `sceneLoadRequested` and `sceneLoadChanged` for replacement and additive
-loads, so loading UI can observe either operation:
+`sceneLoad` is the latest replacement request. `sceneLoadRequested` and
+`sceneLoadChanged` fire for replacements and appends:
 
 ```ts
 sceneManager.on("sceneLoadChanged", (load) => {
@@ -114,8 +103,7 @@ sceneManager.on("sceneLoadChanged", (load) => {
 });
 ```
 
-Components may keep the returned `SceneLoad` and read it directly instead.
-Neither approach introduces promises into the ECS lifecycle.
+Components may also poll the returned `SceneLoad`.
 
 ## API
 
@@ -156,6 +144,8 @@ class SceneManager<TContext> {
   ): SceneLoad<TContext>;
 
   unloadScene(scene: Scene<TContext>): void;
+  /** Removes an appended scene, by instance or name. */
+  removeScene(scene: Scene<TContext> | string): void;
 
   /** First non-pending actor with this name, or at this root-anchored path. */
   getActor(name: string): Actor<TContext> | null;
@@ -169,38 +159,13 @@ class ActorRegistry<TContext> {
   find(persistentId: string): Actor<TContext> | null;
   /** `true` while an actor holds a component with `needUpdate`. */
   get updating(): boolean;
-  /** Next actor `id` of this world, counted from 0. */
-  nextActorId(): number;
-  /** Next component `id` of this world, counted from 0. */
-  nextComponentId(): number;
-  /** A random 16-character hex id no actor of this world holds. */
-  newPersistentId(): string;
-  /** Destroys the component at the end of the frame. */
-  destroyLater(component: Component): void;
-  /** Actors created while `build` runs. */
-  collect(build: () => void): ReadonlySet<Actor<TContext>>;
-  /** Destroys each actor whose parent is not in the set. */
-  destroyRoots(actors: ReadonlySet<Actor<TContext>>): void;
-  /** Like `destroyRoots`, but keeps the persistent roots in the set and their subtrees. */
-  destroySceneActors(actors: ReadonlySet<Actor<TContext>>): void;
-  /** Starts or stops the updates of the actor's subtree from `active`. */
-  reschedule(actor: Actor<TContext>): void;
 }
 ```
 
-Replacing or unloading the current scene destroys every actor except
-[persistent roots](../actor/actor.md#persistent-actors), which stay in the
-tree and in `default`. Removing an appended scene destroys the actors it
-created through `destroySceneActors`, so its persistent roots stay too.
+Replacing, unloading or removing a scene destroys its actors except
+[persistent roots](../actor/actor.md#persistent-actors).
 
 ## Frame lifecycle
-
-`sceneManager.actors` owns the actors and components of every scene: it
-attaches each new actor to the tree, queues each new component for `start()`,
-and keeps the list of actors updated each frame. `Actor` and `ActorComponent`
-register themselves, and `markDestructionPending()` on an actor or a
-component queues it here. Call the registry directly only to collect and
-tear down a group of actors.
 
 `beginFrame()` activates ready scene loads, starts pending scenes, awakes
 every actor created since the last frame, then starts pending components.

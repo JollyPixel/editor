@@ -112,29 +112,18 @@ See [GLOSSARY.md](./GLOSSARY.md) for the timing terms used by the package.
 
 ## 🐌 Lag policy
 
-The scheduler limits lag in two stages.
+The loop never tries to catch up on all the time it lost.
 
-| Option | Default | Meaning |
-| --- | --- | --- |
-| `fixedFps` | `60` | Simulation rate. Fixed, never adapted. |
-| `maxFps` | `Infinity` | Render cap. Independent of `fixedFps`. |
-| `maxFrameDelta` | `250` | The raw delta is clamped to this before accumulating. |
-| `maxStepsPerFrame` | `5` | Upper bound on fixed steps per frame, multiplied by `timeScale` above `1`. |
-| `timeScale` | `1` | Multiplier applied to the frame delta. `0` pauses. |
-| `snapTolerance` | `0` | Snaps deltas near whole refresh periods. See [frame pacing](./docs/framescheduler.md#frame-pacing). |
+- **One huge frame** (tab switch, breakpoint, laptop waking up): the delta is
+  clamped to `maxFrameDelta` (250ms by default) and the frame reports
+  `clamped: true`.
+- **More steps due than one frame allows** (the simulation can't keep up): the
+  loop runs `maxStepsPerFrame` steps (5 by default), drops the remaining time
+  and reports `panicked: true` with `droppedMs`. The game slows down instead of
+  locking up while it catches up.
 
-A tab switch, a breakpoint or a laptop waking up produces one enormous delta.
-`maxFrameDelta` absorbs it and the frame reports `clamped: true`.
-
-An overloaded frame wants more steps than its budget allows. The budget is
-`ceil(maxStepsPerFrame × max(timeScale, 1))`, so fast-forward does not count
-as overload. The scheduler runs that many steps and **discards** the rest beyond half a step, reporting `panicked: true`
-with `droppedMs`. Simulation time falls behind wall-clock time, the game slows
-down, and the loop cannot spiral, because unrun work is never carried forward.
-
-A capped frame still accumulates time and still runs its fixed steps. Only
-`render` comes back `false`, because a source that swallowed frames would hide
-their elapsed time from the accumulator.
+`GameLoop` emits both cases as `clamp` and `panic` events. The limits are
+[FrameScheduler options](./docs/framescheduler.md#options).
 
 ## 🧪 Benchmarks
 

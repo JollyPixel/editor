@@ -1,27 +1,13 @@
 # Renderer
 
-The `Renderer` interface defines the rendering pipeline used
-by [World](world.md). It abstracts over the
-underlying graphics API so the rest of the engine only depends on
-a small set of operations: resize, draw, clear, dispose, and waiting
-for pending GPU pipeline compiles.
-
-The engine ships with one concrete implementation —
-`ThreeRenderer` — built on top of Three.js's `WebGPURenderer`.
-`WebGPURenderer` renders through a native WebGPU backend when the
-browser supports it, and automatically falls back to a WebGL2
-backend otherwise — so there is a single renderer implementation
-covering both cases.
+`Renderer` is the drawing interface [World](world.md) depends on: resize,
+draw, clear, dispose, and waiting for pipeline compiles.
 
 ## ThreeRenderer
 
-`ThreeRenderer` is the default renderer. It creates a
-`THREE.WebGPURenderer` from a `<canvas>` element and manages
-cameras and automatic resizing.
-
-`WebGPURenderer` requires an asynchronous `init()` call before it can
-be used (it negotiates a GPU adapter), so `ThreeRenderer` is built
-with a static async factory rather than its constructor:
+`ThreeRenderer` draws through a `THREE.WebGPURenderer`, which uses WebGPU
+when the browser supports it and WebGL2 otherwise. It is created with an
+async factory, since the GPU adapter is negotiated first:
 
 ```ts
 import { ThreeRenderer } from "@jolly-pixel/engine";
@@ -30,10 +16,7 @@ const canvas = document.querySelector("canvas")!;
 const renderer = await ThreeRenderer.create(canvas);
 ```
 
-If neither a native WebGPU backend nor the WebGL2 fallback can be
-initialized (no GPU support in the browser at all), `create()`
-rejects — the caller is expected to handle that failure (show an
-error UI, etc.).
+`create()` rejects when neither backend can start.
 
 ```ts
 interface ThreeRendererOptions {
@@ -91,9 +74,8 @@ await ThreeRenderer.create(canvas, {
 | `toneMapping` | `THREE.NeutralToneMapping` | |
 | `toneMappingExposure` | `1.25` | Lower it if bright surfaces clip to white |
 
-`resolveRendererSettings(options, devicePixelRatio)` exposes the
-same merge as a pure function, if you need to inspect the resolved
-configuration without creating a context.
+`resolveRendererSettings(options, devicePixelRatio)` returns the merged
+settings without creating a context.
 
 `shadows.type` supports `THREE.BasicShadowMap`, `THREE.PCFShadowMap`, and
 `THREE.VSMShadowMap`. `THREE.PCFSoftShadowMap` was removed from
@@ -106,13 +88,6 @@ The underlying `THREE.WebGPURenderer` stays accessible via
 const webGPU = renderer.getSource();
 webGPU.toneMappingExposure = 1.5;
 ```
-
-## Drawing the cameras
-
-Each draw sorts the registered cameras by ascending `depth`, keeping
-registration order between equal depths, and calls
-`THREE.WebGPURenderer.render()` once per camera inside its `viewport`. A
-`depth` changed between two draws applies on the next one.
 
 ## Post-processing
 
@@ -167,10 +142,9 @@ is disposed.
 
 ## Cameras (render components)
 
-Cameras are registered as **render components** — anything
-implementing `RenderComponent`, which in practice means
-[`CameraComponent`](../components/camera.md). Components register
-themselves in `awake()`:
+A render component implements `RenderComponent`; in practice it is a
+[`CameraComponent`](../components/camera.md), which registers itself in
+`awake()`:
 
 ```ts
 world.createActor("camera")
@@ -183,9 +157,9 @@ before each draw. `Viewport.full` covers the whole canvas;
 `viewport.pixels(canvas)` and `viewport.aspect(canvas)` convert it to
 canvas pixels.
 
-Cameras render in ascending `depth` order: lower values first
-(background), higher last (overlay). The cameras are sorted on every
-draw, so a `depth` changed with `configure()` applies on the next frame.
+Each draw renders the cameras by ascending `depth` (background first,
+registration order between equals), each inside its `viewport`. A `depth`
+changed with `configure()` applies on the next draw.
 
 ## Aspect ratio
 
@@ -206,16 +180,12 @@ within the viewport.
 
 ## Resize
 
-`resize()` is called automatically on every draw, and the pending
-size is fed by a `ResizeObserver` installed by `observeResize()`
-(wired up by [World](world.md)). It is a no-op unless the observer
-reported a size other than the one last applied. A zero size, as
-in a hidden iframe, is skipped: showing the canvas again at its
-previous size does not reallocate the frame buffers.
+Each draw applies the size last reported by the `ResizeObserver` that
+`observeResize()` installs (called by `World.connect()`). A zero size, as in
+a hidden iframe, is skipped.
 
-The renderer emits a `"resize"` event after each actual size
-change, with the new `CanvasDimensions` (`width`, `height`, `aspect`,
-`isEmpty`, `equals()`):
+`"resize"` fires after each actual change, with the new `CanvasDimensions`
+(`width`, `height`, `aspect`, `isEmpty`, `equals()`):
 
 ```ts
 renderer.on("resize", ({ width, height }) => {
@@ -240,25 +210,18 @@ renderer.on("draw", ({ source }) => {
 });
 ```
 
-`source.info.render` is only valid inside a `"draw"` handler. Three.js resets
-it at the start of every animation-loop tick, including ticks a frame cap
-skips. Under `@jolly-pixel/runtime`, read the latched
-[renderer counters](../../../runtime/docs/api/RuntimeMetrics.md#renderer-counters)
-instead.
+`source.info.render` is only valid inside a `"draw"` handler: three.js resets
+it on every animation-loop tick. Under `@jolly-pixel/runtime`, read the
+renderer counters of `RuntimeMetrics` instead.
 
 `clear()` clears the frame buffer without rendering.
 
 ## Pipeline compiles
 
-`ThreeRenderer` compiles every render pipeline asynchronously, including the
-ones three.js creates inside a render: scene materials, post-processing
-passes, the output pass and `PMREMGenerator`. The browser compiles them in
-parallel, off the GPU process main thread, so frames keep presenting while
-shaders compile.
-
-An object whose pipeline is still compiling is skipped by the frame and drawn
-by a later one. When the last pending compile settles, the renderer emits
-`"compiled"`; under `@jolly-pixel/runtime` this requests a frame.
+`ThreeRenderer` compiles every render pipeline asynchronously, so frames keep
+presenting while shaders compile. An object whose pipeline is still compiling
+is drawn by a later frame. When the last pending compile settles, the
+renderer emits `"compiled"`.
 
 ```ts
 interface ThreeRenderer {
@@ -292,22 +255,13 @@ draw. It is read-only; register and remove cameras with `addRenderComponent()` a
 
 ## Dispose
 
-`dispose()` releases the GPU context, its programs and its textures,
-and stops the `ResizeObserver`. Browsers cap the number of live
-GPU contexts, so an editor that opens and closes scenes must dispose
-the renderers it drops — otherwise context creation eventually
-starts failing and rendering stops.
-
-```ts
-world.dispose(); // stops the loop, disconnects, disposes the renderer
-```
-
-Prefer [`World.dispose()`](world.md), which sequences the teardown
-correctly. The renderer must not be used after disposal.
+`dispose()` releases the GPU context and stops the `ResizeObserver`. Prefer
+[`world.dispose()`](world.md#dispose), which also stops the loop and
+disconnects. The renderer must not be used after disposal.
 
 ## Events
 
-`ThreeRenderer` extends `Emitter` (from [`@openally/emitt`](https://github.com/OpenAlly/npm-packages/tree/main/src/emitt)) and emits:
+`ThreeRenderer` is an `Emitter` (`@openally/emitt`) and emits:
 
 | Event | Payload | When it fires |
 | ----- | ------- | ------------- |
@@ -316,9 +270,8 @@ correctly. The renderer must not be used after disposal.
 | `compiled` | none | When the last pending [pipeline compile](#pipeline-compiles) settles |
 | `deviceLost` | `{ api, message, reason }` | When the GPU device or WebGL context is lost |
 
-After `deviceLost`, three.js has already logged the loss and stops rendering.
-The canvas stays blank until the page creates a new renderer, so show a reload
-prompt:
+After `deviceLost` the canvas stays blank until the page creates a new
+renderer, so show a reload prompt:
 
 ```ts
 renderer.on("deviceLost", ({ api, message }) => {

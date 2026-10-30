@@ -1,15 +1,9 @@
 # UINode
 
-A **UINode** is an [ActorComponent](../actor/actor-component.md)
-that positions an actor in screen space using an **anchor**,
-**offset**, and **pivot** system. It is the base positioning layer
-for all 2D UI elements — [UISprite](./ui-sprite.md) extends it to
-add visuals and interaction.
-
-When a [UIRenderer](./ui-renderer.md) exists in the game instance,
-every new `UINode` automatically registers itself with the renderer.
-Otherwise it falls back to listening to renderer `resize` events
-directly.
+A `UINode` positions an actor in screen space from an anchor, an offset and
+a pivot, and follows canvas resizes. [UISprite](./ui-sprite.md) extends it
+with visuals and interaction. It registers itself with the world's
+[UIRenderer](./ui-renderer.md) when there is one.
 
 ```ts
 import { Actor, UINode } from "@jolly-pixel/engine";
@@ -27,22 +21,17 @@ const hud = new Actor(world, {
 
 ## Anchor
 
-The **anchor** determines which screen edge the element aligns to.
-Anchors are independent on each axis.
+The screen edge the element aligns to, per axis.
 
 | Axis | Values | Description |
 | ---- | ------ | ----------- |
 | `x` | `"left"`, `"center"`, `"right"` | Horizontal screen edge |
 | `y` | `"top"`, `"center"`, `"bottom"` | Vertical screen edge |
 
-When an anchor is set to `"left"`, the element is pushed against the
-left edge of the screen. Combined with an offset you can create
-consistent margins that survive window resizes.
-
 ## Offset
 
-The **offset** shifts the element away from its anchor in
-world units. Positive X moves right, positive Y moves up.
+Shifts the element away from its anchor, in world units. Positive X moves
+right, positive Y moves up.
 
 ```ts
 // 20 units from the left edge, 10 units below the top
@@ -54,8 +43,8 @@ world units. Positive X moves right, positive Y moves up.
 
 ## Pivot
 
-The **pivot** is a normalized origin point from `0` to `1` that
-controls which part of the element sits at the computed position.
+The normalized point of the element, from `0` to `1`, that sits at the
+computed position.
 
 | Pivot | Meaning |
 | ----- | ------- |
@@ -63,15 +52,10 @@ controls which part of the element sits at the computed position.
 | `{ x: 0.5, y: 0.5 }` | Center (default) |
 | `{ x: 1, y: 1 }` | Top-right corner |
 
-Setting the pivot to `{ x: 0, y: 1 }` makes the top-left corner
-the origin — useful for left-aligned HUD panels anchored to the
-top of the screen.
-
 ## Size
 
-The **size** defines the width and height of the element in world
-units. It is used by `UISprite` to create the mesh geometry and by
-the anchoring logic to keep the element fully on-screen.
+Width and height in world units. `UISprite` sizes its mesh from it, and
+anchoring uses it to keep the element on screen.
 
 ```ts
 {

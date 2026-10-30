@@ -12,12 +12,16 @@ import {
   createReporter
 } from "@jolly-pixel/bench";
 
-const reporter = createReporter(BenchmarkConfig.fromEnvironment().format);
-reporter.print(createReport({
+const reporter = createReporter(
+  BenchmarkConfig.fromEnvironment().format
+);
+
+const report = createReport({
   suite: "pixel-draw / browser canvas and rendering",
   runtime: { userAgent: browserReport.runtime.userAgent },
   results: browserReport.results
-}));
+});
+reporter.print(report);
 ```
 
 ## `createReport(input): BenchmarkReport`

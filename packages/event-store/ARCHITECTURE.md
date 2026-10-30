@@ -1,133 +1,88 @@
 # Event store architecture
 
-The event store records an ordered history for each asset. It assigns an ID
-across the whole log and a version within each asset stream. Consumers decide
-what events mean and how to rebuild state from them.
+The event store keeps the history of every asset as a list of events. It
+numbers and orders them, but never reads `eventData`. What an event means, and
+how to rebuild an asset from its events, is up to the consumer.
 
-## Workspace map
+## One log, many streams
 
 ```mermaid
 flowchart TB
-    Caller["Asset backend or other consumer"]
-    Store["EventStore<br/>writer · reader · tags · subscribe · compact"]
-    Log["EventLog<br/>internal backend contract"]
-    Memory["MemoryEventLog<br/>instance-owned arrays and maps"]
-    SQLite["SqliteEventLog<br/>SQLite events table"]
-
-    Caller -->|"append · read · compact · close"| Store
-    Store -->|"insert · read · compact · close"| Log
-    Log -->|"memory factory"| Memory
-    Log -->|"SQLite factory"| SQLite
-    Store -->|"accepted or rejected append"| Caller
-```
-
-`createEventStore` wraps an `EventLog` in the public store and queues its
-writes, so each `EventLog` write runs alone and the backend never sees two
-appends race for the same position. The writer resolves a `Result` for each
-append and notifies `subscribe` listeners of accepted
-appends and `subscribeRejections` listeners of rejected ones. The reader is a
-read-only view of the log. `subscribe` can filter by a literal event type
-prefix and does not replay earlier events; a consumer reads history to build
-its initial view.
-
-`EventLog` stays internal: callers pick a backend through its factory and never
-see the contract the two backends share.
-
-An optional schema map checks `eventType` and `eventData` when appending at the
-TypeScript boundary. Reads still return `Event` with an `unknown` payload, so
-consumers validate stored data before treating it as a typed domain event.
-
-| Backend | Factory | Storage | Runtime |
-|---|---|---|---|
-| Memory | `persistence.memory()` | One store instance | Browser or Node.js |
-| SQLite | `await persistence.sqlite(location?)` | SQLite connection, optionally backed by a file | Node.js |
-| IndexedDB | `await persistence.indexeddb({ name })` | IndexedDB database | Browser |
-
-The IndexedDB backend is a `MemoryEventLog` loaded from the database and given
-an `EventJournal`. The memory log calls the journal before it changes, so a
-failed write leaves the log as it was.
-
-The main entry loads the Node-only SQLite backend when its factory is called.
-The separate `@jolly-pixel/event-store/node` entry exposes the SQLite factory
-directly. `SqliteDatabase.open` owns the whole opening: parent directories,
-vacuum mode, journal pragmas and schema.
-
-## Appending an event
-
-```mermaid
-sequenceDiagram
-    participant Caller
-    participant Writer as writer
-    participant Log as EventLog backend
-    participant Subscriber as Subscriber
-
-    Caller->>Writer: append(assetId, eventType, eventData, actor)
-    Writer->>Log: insert(input)
-    Log->>Log: serialize payload and actor as JSON
-    alt insert succeeds
-        Log->>Log: assign eventId and asset eventVersion
-        Log-->>Writer: stored event
-        Writer-->>Subscriber: accepted event, if prefix matches
-        Writer-->>Caller: Result with stored event
-    else serialization or insert fails
-        Log-->>Writer: error
-        Writer-->>Subscriber: rejection with original input
-        Writer-->>Caller: Result with error
+    subgraph A["Stream of asset A"]
+        direction LR
+        A1["v1 · id 1"] --> A2["v2 · id 3"] --> A3["v3 · id 4"]
+    end
+    subgraph B["Stream of asset B"]
+        direction LR
+        B1["v1 · id 2"] --> B2["v2 · id 5"]
     end
 ```
 
-`eventId` orders accepted events across all assets. `eventVersion` increases
-within one asset stream. Each event also records `assetType`, `eventType`,
-`eventData`, `actor`, and `createdAt`. Both backends store JSON values rather
-than references to the caller's objects; a rejected append consumes neither
-position. Subscriber callbacks run after the backend accepts an event.
+- Each asset has its own stream, numbered by `eventVersion` from 1.
+- All streams share one log, ordered by `eventId`.
+- Events are only appended. Neither number changes afterwards, even after
+  compaction.
 
-## Reading history
+Code: `src/EventStore.ts`.
+
+## Write, read, listen
 
 ```mermaid
-flowchart LR
-    Log[("Event log<br/>all asset streams")]
-    One["list(assetId)<br/>one stream by eventVersion"]
-    All["listAll()<br/>all streams by eventId"]
-    Checkpoints["listFromCheckpoints(options)<br/>each stream's checkpoint onward"]
-
-    Log --> One
-    Log --> All
-    Log --> Checkpoints
+flowchart TB
+    Producer -->|"append"| Store["EventStore"]
+    Consumer -->|"read history"| Store
+    Store -->|"one write at a time"| Log[("Event log")]
+    Store -.->|"new events"| Consumer
 ```
 
-`list` can exclude versions at or below `fromVersion`. `listAll` can exclude
-IDs at or below `fromEventId`, filter by event type prefix, and limit the
-result. Checkpoint reads retain each stream's newest matching checkpoint and
-every later event. A stream without a matching checkpoint remains whole. The
-read returns surviving events in global `eventId` order, which is
-`eventVersion` order when `assetId` scopes it to one stream; its prefix filter
-applies after the checkpoint boundary is chosen. The checkpoint read and
-`compact` share each backend's head lookup.
+- Writes run one at a time, so two appends never race for the same version.
+  Reads do not wait for them.
+- A rejected append takes no position in the log.
+- Listeners only hear new events: a consumer reads history first, then
+  subscribes.
+
+Code: `src/persistence/createEventStore.ts`.
 
 ## Checkpoints and compaction
 
 ```mermaid
 flowchart TB
-    Before["One asset stream<br/>v1 · v2 · checkpoint v3 · v4 · checkpoint v5 · v6"]
-    Read["Checkpoint read<br/>checkpoint v5 · v6"]
-    Compact["compact(checkpointEventTypes)"]
-    After["Stored stream<br/>checkpoint v5 · v6"]
-
-    Before -->|"read without deletion"| Read
-    Before --> Compact
-    Compact -->|"remove earlier events"| After
+    subgraph Before["Before"]
+        direction LR
+        B1["v1"] --> B2["v2 · tagged"] --> B3["v3 · checkpoint"] --> B4["v4"]
+    end
+    subgraph After["After"]
+        direction LR
+        A2["v2 · tagged"] --> A3["v3 · checkpoint"] --> A4["v4"]
+    end
+    Before -->|"compact"| After
 ```
 
-The caller supplies checkpoint event types because only the consumer knows
-which events can replace earlier state. `compact` permanently removes events
-before the newest matching checkpoint in each asset stream. Streams without a
-checkpoint stay intact. An event a tag points at survives, so a stream can keep
-gaps below its checkpoint. Surviving IDs and versions do not change, and the
-report counts removed events and assets with checkpoints. SQLite can run
-`VACUUM` after a deletion when `reclaim` is true; the memory backend has no
-file to reclaim.
+- A checkpoint carries an asset's whole state. The consumer names which event
+  types are checkpoints, since only it knows how to rebuild the asset.
+- `compact` deletes the events before each stream's newest checkpoint, except
+  tagged ones. It cannot be undone.
+- `listFromCheckpoints` reads the same cut without deleting anything.
 
-Details: [API and data model](./docs/EventStore.md),
-[memory persistence](./docs/Memory.md), [SQLite persistence](./docs/Sqlite.md),
-and [glossary](./GLOSSARY.md).
+Code: `src/persistence/memory/log.ts`, `src/persistence/sqlite/log.ts`.
+
+## Backends
+
+```mermaid
+flowchart TB
+    Store["EventStore"] --> Log["EventLog · internal"]
+    Log --> Memory["Memory log"]
+    Log --> SQLite["SQLite log · Node.js"]
+    Memory -->|"writes through"| Journal["IndexedDB journal · browser"]
+```
+
+- Callers pick a factory from `persistence` and never see `EventLog`.
+- The IndexedDB backend is a memory log loaded from the database. It writes to
+  the journal before changing itself, so a failed write leaves it as it was.
+- The main entry loads SQLite only when `persistence.sqlite()` is called.
+  `@jolly-pixel/event-store/node` exports it directly.
+
+Code: `src/persistence/`.
+
+The [API](./docs/EventStore.md) covers options and errors, and the
+[glossary](./GLOSSARY.md) defines the terms.

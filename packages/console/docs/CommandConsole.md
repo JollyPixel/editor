@@ -35,8 +35,28 @@ A namespace nests under another when its address has dots: `pixelart.keybinds` h
 no description and no members, so separate features can share it. Registering the parent itself
 gives it a description and members without touching the nested namespaces.
 
-The console object itself is the root namespace. To register from editor features, see
-[Registering from features](./features.md).
+The console object itself is the root namespace.
+
+## Features
+
+```ts
+type ConsoleFeature<TContext> = (
+  commands: CommandConsole,
+  context: TContext
+) => RegistrationHandle;
+
+function registerConsoleFeatures<TContext>(
+  commands: CommandConsole,
+  features: Iterable<ConsoleFeature<TContext>>,
+  context: TContext
+): RegistrationHandle;
+```
+
+A feature registers its entries and returns their handle. `registerConsoleFeatures` calls each
+feature in order with the same context; the handle it returns unregisters them in reverse. If one
+throws, the ones already registered are removed and the error is rethrown. See
+[Registering from features](./guides/registering-features.md) for how an editor splits its
+entries.
 
 ## Commands
 

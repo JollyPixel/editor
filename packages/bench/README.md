@@ -73,7 +73,7 @@ The package exports the modules below, plus `BenchmarkError`. Built on
 - [Suite](./docs/suite.md): `defineSuite`, `runSuites`, `batched` and `mulberry32`.
 - [Config](./docs/config.md): `BenchmarkConfig`.
 - [Report](./docs/report.md): `createReport`, `createReporter` and the row columns.
-- [Load](./docs/load.md): `LoadHarness`, `Flag`, `runLoadDriver`, `runLoadServer` and `LoadMeter`.
+- [Load](./docs/load.md): `LoadHarness`, `runLoadDriver` and `runLoadServer`.
 
 ## 🥊 Why tasks are batched
 

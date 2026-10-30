@@ -239,8 +239,8 @@ interface ComponentContext<TAssets> {
   component as `data`. `owns` tells whether a component the scene file did
   not build is one the definition captures; without it, only the components
   the definition built are captured. `toHexColor(value)` turns any
-  `THREE.ColorRepresentation` into the
-  `"#rrggbb"` form `ComponentData.color` reads. See
+  `THREE.ColorRepresentation` into the `"#rrggbb"` form
+  `ComponentData.color` reads. See
   [Saving a running scene](#saving-a-running-scene).
 - `anchors` returns the [anchors](#anchors) of a component it built. It is
   called once per built component.
@@ -397,7 +397,8 @@ type SceneInstanceEvents = {
 skipped at once.
 
 `actor(id)` and `component(id)` return the built actor or component, or
-`null`. An expanded actor or component goes by its path id. `actorId(object)` returns the file id of the actor whose `object3D` is
+`null`. An expanded actor or component goes by its path id.
+`actorId(object)` returns the file id of the actor whose `object3D` is
 `object`, or `null`; it does not search ancestors. `components()` iterates
 the built components.
 

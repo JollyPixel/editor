@@ -16,13 +16,8 @@ world.createActor("camera")
 
 ## The actor drives the camera
 
-The actor's transform is the single source of truth for the camera
-pose. Every frame, `prepareRender` copies `actor.object3D.matrixWorld`
-onto the camera and mirrors it into `camera.position` /
-`camera.quaternion`.
-
-Writing to the `THREE.Camera` directly does **not** work — those
-writes are overwritten on the next frame:
+The camera copies the actor's world matrix before every draw, so writes to
+the `THREE.Camera` are overwritten on the next frame:
 
 ```ts
 // ❌ silently reverted every frame
@@ -34,17 +29,7 @@ component.actor.transform
   .lookAt({ x: 0, y: 0, z: 0 });
 ```
 
-Because the actor owns the pose, parenting works as expected —
-attach the camera actor to another actor and it follows.
-
-Mechanically, the component sets `matrixWorldAutoUpdate = false` on
-its `THREE.Camera`. Without it, three recomposes `matrixWorld` from
-the camera's own local transform right before drawing
-(`WebGPURenderer` does this for any camera whose `parent` is `null`),
-throwing away what `prepareRender` wrote. As a consequence three
-never walks the camera's children either, so the component updates
-them itself — that is what keeps an attached `AudioListener`
-positioned correctly.
+A camera actor parented to another actor follows it.
 
 ## Options
 
@@ -79,18 +64,16 @@ interface CameraOptions {
 `CAMERA_DEFAULTS` holds these defaults.
 
 > [!NOTE]
-> The default `near`/`far` pair is a 100,000:1 ratio, which leaves
-> roughly 0.6 world units of depth resolution at 1000 units out on a
-> 24-bit depth buffer. For large worlds, raise `near` as far as the
-> scene allows, or enable `logarithmicDepthBuffer` through the
-> [renderer's `webgl` options](../systems/renderer.md#configuration).
+> The default `near`/`far` ratio is 100,000:1, which leaves little depth
+> precision far out. For large worlds, raise `near`, or enable
+> `logarithmicDepthBuffer` through the
+> [renderer's `webgpu` options](../systems/renderer.md#configuration).
 
 ## Viewport and depth
 
-`depth` orders cameras within a frame: lower renders first
-(background), higher last (overlay). `viewport` restricts a camera to
-a normalized rect of the canvas — `{ x: 0, y: 0, width: 0.5, height: 1 }`
-is the left half, with `y = 0` at the bottom per the WebGL convention.
+`depth` orders cameras within a frame: lower renders first. `viewport`
+restricts a camera to a normalized rect of the canvas, with `y = 0` at the
+bottom.
 
 ```ts
 // Split screen
@@ -137,10 +120,8 @@ camera.configure({
 });
 ```
 
-A new `projectionMode` swaps the underlying `THREE.Camera` for a new one
-of the other kind. It carries the attached objects (the audio
-listener) and the layer mask across, and tells the renderer to rebind
-anything keyed on the old camera:
+A new `projectionMode` replaces `threeCamera` with one of the other kind,
+keeping its attached objects and layer mask:
 
 ```ts
 camera.configure({ projectionMode: "orthographic" });
