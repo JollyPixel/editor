@@ -30,6 +30,7 @@ import {
   canUseTool,
   type TerrainAccessSource
 } from "../access/TerrainAccess.ts";
+import type { TerrainEditing } from "../editing/TerrainEditing.ts";
 import {
   decodeMaterialImage,
   MaterialTextures
@@ -60,18 +61,19 @@ const kCameraPreset: OrbitFlyCameraOptions = {
   maxMoveSpeed: 400
 };
 
-export interface TerrainEditorSceneOptions {
-  document: TerrainDocument;
-  sculpt: SculptSettings;
-  overlaySettings: OverlaySettings;
-  history: TerrainHistory;
-  room: Room;
-  leases: TextureLeases;
-  selection: MaterialSelection;
-  poiSelection: PoiSelection;
-  access: TerrainAccessSource;
-  keyBindings: KeyBindingSettings<TerrainAction>;
-}
+export type TerrainEditorSceneOptions = Pick<
+  TerrainEditing,
+  | "document"
+  | "sculpt"
+  | "overlaySettings"
+  | "history"
+  | "room"
+  | "leases"
+  | "selection"
+  | "poiSelection"
+  | "access"
+  | "keyBindings"
+>;
 
 interface TerrainSceneParts {
   readonly camera: OrbitFlyCamera;

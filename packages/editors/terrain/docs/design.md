@@ -403,7 +403,10 @@ show what peers did to it.
 
 This package:
 
-- `boot/`: the editor's entry and its wiring.
+- `boot/`: the editor's entry; it creates the `TerrainEditing` stores, loads
+  the scene and mounts the shell.
+- `editing/`: the `TerrainEditing` contract the scene and shell share.
+- `shell/`: everything that reaches the page, from toolbars to panels.
 - `access/`: room rights per capability.
 - `keybindings/`, with `preferences.ts` at the root: rebindable shortcuts.
 - `state/`: stores shared by features, such as the tool settings and the
