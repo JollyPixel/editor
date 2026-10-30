@@ -39,6 +39,8 @@ const kRefusals: Readonly<Record<NonNullable<ReturnType<TerrainDocument["importR
   "too-many-chunks": "The chunks this adds would pass the limit of 4096.",
   disconnected: "The rectangle must touch the terrain to add chunks."
 };
+const kEmptyRect = "The rectangle holds no chunk.";
+const kStaleImport = "The terrain changed while importing; nothing was written. Try again.";
 
 export type HeightmapFormat = "png" | "raw";
 
@@ -99,7 +101,7 @@ export class TerrainExchange {
     assertImageSide(rect, chunkResolution(tier));
     const grid = await readHeightGrid(this.#read(rect), rect, tier);
     if (grid === null) {
-      throw new InvalidImageError("The rectangle holds no chunk.");
+      throw new InvalidImageError(kEmptyRect);
     }
 
     const { width, height, range } = grid;
@@ -130,6 +132,9 @@ export class TerrainExchange {
     assertImageSide(rect, SPLAT_TEXELS);
     const { document, baseName } = this.#options;
     const masks = await readSplatMasks(this.#read(rect), rect);
+    if (masks.length === 0) {
+      throw new InvalidImageError(kEmptyRect);
+    }
 
     return Promise.all(masks.map(async({ slot, image }) => {
       const material = document.materials.materialAt(slot)?.name ?? `slot-${slot}`;
@@ -170,45 +175,56 @@ export class TerrainExchange {
     }));
   }
 
-  refusal(
-    rect: ChunkRect
-  ): string | null {
-    const refusal = this.#options.document.importRefusal(rect);
-
-    return refusal === null ? null : kRefusals[refusal];
-  }
-
   async importHeightmap(
     image: GrayImage,
     rect: ChunkRect,
     tier: ChunkTier,
     range: HeightRange
-  ): Promise<boolean> {
+  ): Promise<void> {
     const { document, history } = this.#options;
     const resolution = chunkResolution(tier);
+    assertImageSide(rect, resolution);
+    if (range.min > range.max) {
+      throw new InvalidImageError("The lowest height must not be above the highest.");
+    }
+
+    const refusal = document.importRefusal(rect);
+    if (refusal !== null) {
+      throw new InvalidImageError(kRefusals[refusal]);
+    }
+
     const size = { width: rect.columns * resolution, height: rect.rows * resolution };
     const heights = fitGrid(expandHeights(image, range), image, size);
     const before = await this.#readAll(rect);
-
-    return history.record(
+    const imported = history.record(
       TERRAIN_HISTORY_SCOPE,
       "Import heightmap",
       () => document.importHeights(rect, tier, heights, before)
     );
+    if (!imported) {
+      throw new InvalidImageError(kStaleImport);
+    }
   }
 
   async importSplat(
     rect: ChunkRect,
     masks: readonly SplatMask[]
-  ): Promise<boolean> {
+  ): Promise<void> {
     const { document, history } = this.#options;
+    assertImageSide(rect, SPLAT_TEXELS);
     const before = await this.#readAll(rect);
+    if (before.length === 0) {
+      throw new InvalidImageError(kEmptyRect);
+    }
 
-    return history.record(
+    const imported = history.record(
       TERRAIN_HISTORY_SCOPE,
       "Import splat map",
       () => document.importSplat(rect, masks, before)
     );
+    if (!imported) {
+      throw new InvalidImageError(kStaleImport);
+    }
   }
 
   #read(

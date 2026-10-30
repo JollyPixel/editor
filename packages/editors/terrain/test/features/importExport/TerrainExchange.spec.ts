@@ -82,6 +82,35 @@ describe("TerrainExchange", () => {
     assert.equal(other.slot, null);
   });
 
+  test("flat ground exports and imports back", async() => {
+    const document = new TerrainDocument();
+    document.addChunk(0, 0);
+    const history = createTerrainHistory(document);
+    const exchange = new TerrainExchange({ document, history, baseName: "flat" });
+    const rect = { x: 0, z: 0, columns: 1, rows: 1 };
+
+    const { image, sidecar } = await exchange.chooseHeightmap(await exchange.exportHeightmap(rect, 1, "png"));
+    await exchange.importHeightmap(image, rect, 1, sidecar!);
+
+    assert.equal(document.terrain.chunk(new ChunkCoord(0, 0))?.height(5, 5), 0);
+  });
+
+  test("an import that cannot be written fails instead of reporting success", async() => {
+    const { history, exchange } = exchangeSetup();
+    const image = { width: 1, height: 1, depth: 16, samples: Uint16Array.of(0) } as const;
+    const empty = { x: 50, z: 50, columns: 1, rows: 1 };
+    const range = { min: 0, max: 1 };
+    const masks = [{ slot: 0, image }];
+
+    await assert.rejects(exchange.importHeightmap(image, kRect, 1, { min: 2, max: 1 }), InvalidImageError);
+    await assert.rejects(exchange.importHeightmap(image, empty, 1, range), InvalidImageError);
+    const tooWide = { ...kRect, columns: 256 };
+    await assert.rejects(exchange.importHeightmap(image, tooWide, 4, range), InvalidImageError);
+    await assert.rejects(exchange.importSplat(empty, masks), InvalidImageError);
+    await assert.rejects(exchange.exportSplat(empty), InvalidImageError);
+    assert.equal(history.state(TERRAIN_HISTORY_SCOPE).undoCount, 0);
+  });
+
   test("the whole rectangle spans every chunk", () => {
     const { document, exchange } = exchangeSetup();
     document.addChunk(1, -1);

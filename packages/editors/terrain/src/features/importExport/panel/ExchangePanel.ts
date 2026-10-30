@@ -397,16 +397,7 @@ export class ExchangePanel extends LitElement {
   });
 
   #importHeightmap = (): Promise<void> => this.#run(async() => {
-    const { exchange } = this.context!;
-    const refusal = exchange.refusal(this.rect);
-    if (refusal !== null) {
-      throw new InvalidImageError(refusal);
-    }
-    if (this.range.min >= this.range.max) {
-      throw new InvalidImageError("The lowest height must be under the highest.");
-    }
-
-    await exchange.importHeightmap(this.heightmap!.image, this.rect, this.tier, this.range);
+    await this.context!.exchange.importHeightmap(this.heightmap!.image, this.rect, this.tier, this.range);
     this.heightmap = null;
 
     return "Heightmap imported.";
