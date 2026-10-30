@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
 import type { TerrainDocument } from "@jolly-pixel/asset.terrain/client";
-import type { OpenStep } from "@jolly-pixel/history";
+import type { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
   TERRAIN_HISTORY_SCOPE,
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
-import { chunksAlong } from "../../chunks/model/chunksAlong.ts";
+import { ChunkPathDrag } from "../../chunks/model/ChunkPathDrag.ts";
 import type { GroundPoint } from "../../brush/model/StampSpacer.ts";
 
 export type PoiChunkMode = "add" | "remove";
@@ -17,35 +17,27 @@ export interface PoiChunkDragOptions {
   history: Pick<TerrainHistory, "open">;
 }
 
-export class PoiChunkDrag {
+export class PoiChunkDrag extends ChunkPathDrag {
   readonly mode: PoiChunkMode;
 
   #options: PoiChunkDragOptions;
   #id: string;
-  #step: OpenStep;
-  #last: GroundPoint;
-  #ended = false;
 
   constructor(
     options: PoiChunkDragOptions,
     { id, mode }: { id: string; mode: PoiChunkMode; },
     point: GroundPoint
   ) {
+    super(options.history.open(TERRAIN_HISTORY_SCOPE, "Edit point-of-interest chunks"), point);
     this.mode = mode;
     this.#options = options;
     this.#id = id;
-    this.#step = options.history.open(TERRAIN_HISTORY_SCOPE, "Edit point-of-interest chunks");
-    this.#last = point;
     this.moveTo(point);
   }
 
-  moveTo(
-    point: GroundPoint
+  protected override visit(
+    coords: readonly ChunkCoord[]
   ): void {
-    if (this.#ended) {
-      return;
-    }
-
     const { document } = this.#options;
     const current = document.pointsOfInterest.pointOfInterest(this.#id);
     if (current === undefined) {
@@ -53,7 +45,7 @@ export class PoiChunkDrag {
     }
 
     const chunks = new Map(current.chunks.map((chunk) => [`${chunk.x},${chunk.z}`, chunk]));
-    for (const coord of chunksAlong(this.#last, point)) {
+    for (const coord of coords) {
       if (this.mode === "remove") {
         chunks.delete(coord.key);
       }
@@ -61,18 +53,8 @@ export class PoiChunkDrag {
         chunks.set(coord.key, { x: coord.x, z: coord.z });
       }
     }
-    this.#last = point;
     if (chunks.size !== current.chunks.length) {
       document.updatePointOfInterest(this.#id, { chunks: [...chunks.values()] });
     }
-  }
-
-  end(): void {
-    if (this.#ended) {
-      return;
-    }
-
-    this.#ended = true;
-    this.#step.commit();
   }
 }

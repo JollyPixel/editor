@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import type { TerrainDocument } from "@jolly-pixel/asset.terrain/client";
-import type { OpenStep } from "@jolly-pixel/history";
 import type {
   ChunkCoord,
   ChunkTier
@@ -12,7 +11,7 @@ import {
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
 import type { GroundPoint } from "../../brush/model/StampSpacer.ts";
-import { chunksAlong } from "./chunksAlong.ts";
+import { ChunkPathDrag } from "./ChunkPathDrag.ts";
 
 // CONSTANTS
 const kLabels: Readonly<Record<ChunkMode, string>> = {
@@ -35,48 +34,30 @@ export interface ChunkDragAction {
   readonly tier: ChunkTier;
 }
 
-export class ChunkDrag {
+export class ChunkDrag extends ChunkPathDrag {
   readonly mode: ChunkMode;
 
   #options: ChunkDragOptions;
   #tier: ChunkTier;
-  #step: OpenStep;
-  #last: GroundPoint;
-  #ended = false;
 
   constructor(
     options: ChunkDragOptions,
     { mode, tier }: ChunkDragAction,
     point: GroundPoint
   ) {
+    super(options.history.open(TERRAIN_HISTORY_SCOPE, kLabels[mode]), point);
     this.mode = mode;
     this.#tier = tier;
     this.#options = options;
-    this.#step = options.history.open(TERRAIN_HISTORY_SCOPE, kLabels[mode]);
-    this.#last = point;
     this.moveTo(point);
   }
 
-  moveTo(
-    point: GroundPoint
+  protected override visit(
+    coords: readonly ChunkCoord[]
   ): void {
-    if (this.#ended) {
-      return;
-    }
-
-    for (const coord of chunksAlong(this.#last, point)) {
+    for (const coord of coords) {
       this.#apply(coord);
     }
-    this.#last = point;
-  }
-
-  end(): void {
-    if (this.#ended) {
-      return;
-    }
-
-    this.#ended = true;
-    this.#step.commit();
   }
 
   #apply(

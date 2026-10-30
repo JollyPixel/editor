@@ -37,9 +37,10 @@ import {
 } from "../features/materials/rendering/MaterialTextures.ts";
 import type { MaterialSelection } from "../state/MaterialSelection.ts";
 import type { TextureLeases } from "../features/materials/model/TextureLeases.ts";
-import { ChunkTool } from "../features/chunks/ChunkTool.ts";
+import { ChunkDragTool } from "../features/chunks/ChunkDragTool.ts";
+import { chunkToolStrategy } from "../features/chunks/chunkToolStrategy.ts";
 import type { PoiSelection } from "../features/poi/model/PoiSelection.ts";
-import { PoiChunkTool } from "../features/poi/PoiChunkTool.ts";
+import { poiChunkStrategy } from "../features/poi/poiChunkStrategy.ts";
 import { PeerBrushRings } from "../features/brush/collaboration/PeerBrushRings.ts";
 import type { SculptSettings } from "../state/SculptSettings.ts";
 import type { OverlaySettings } from "../state/OverlaySettings.ts";
@@ -82,8 +83,8 @@ interface TerrainSceneParts {
   readonly live: TerrainLiveSender;
   readonly peerRings: PeerBrushRings;
   readonly brush: SculptBrush;
-  readonly chunkTool: ChunkTool;
-  readonly poiTool: PoiChunkTool;
+  readonly chunkTool: ChunkDragTool;
+  readonly poiTool: ChunkDragTool;
   readonly frustums: PeerFrustums;
 }
 
@@ -203,23 +204,29 @@ export class TerrainEditorScene extends Systems.Scene {
       });
     const chunkTool = this.world
       .createActor("chunk-tool")
-      .addComponentAndGet(ChunkTool, {
-        document: this.#document,
+      .addComponentAndGet(ChunkDragTool, {
         preview,
-        settings: this.#sculpt,
-        history: this.#history,
         camera: camera.camera,
-        paused: toolResting
+        strategy: chunkToolStrategy({
+          document: this.#document,
+          preview,
+          settings: this.#sculpt,
+          history: this.#history,
+          paused: toolResting
+        })
       });
     const poiTool = this.world
       .createActor("poi-chunk-tool")
-      .addComponentAndGet(PoiChunkTool, {
-        document: this.#document,
+      .addComponentAndGet(ChunkDragTool, {
         preview,
-        selection: this.#poiSelection,
-        history: this.#history,
         camera: camera.camera,
-        paused: () => !access.current.has("pointsOfInterest")
+        strategy: poiChunkStrategy({
+          document: this.#document,
+          preview,
+          selection: this.#poiSelection,
+          history: this.#history,
+          paused: () => !access.current.has("pointsOfInterest")
+        })
       });
     const frustums = this.world
       .createActor("peer-frustums")
