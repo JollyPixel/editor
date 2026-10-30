@@ -162,7 +162,7 @@ export class InspectorPanel extends LitElement {
     const id = editing?.selection.primary ?? null;
     const actor = id === null || editing === null ?
       null :
-      editing.document.tree.actor(id) ?? editing.live.expandedActor(id);
+      editing.live.actorEntry(id);
     if (editing === null || actor === null) {
       return html`<p class="empty">Select an actor to inspect it.</p>`;
     }

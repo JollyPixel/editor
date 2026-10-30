@@ -8,6 +8,8 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  READY_MESSAGE_TYPE,
+  revealMessage,
   SESSION_RENEWED_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE
 } from "@jolly-pixel/editor.host";
@@ -131,6 +133,23 @@ describe("StudioSession", () => {
     await Promise.resolve();
 
     assert.equal(studio.tabs.active, "map-1");
+  });
+
+  test("hands the reveal of an open-asset command to the opened editor once it launches", async() => {
+    const studio = session(new FakeCatalog([MAP_RECORD]));
+    await studio.openAsset("map-1");
+    const posted = recordPosts(frame());
+
+    postFromFrame({
+      type: SHELL_MESSAGE_TYPE,
+      command: "open-asset",
+      target: "map-1",
+      reveal: "object:spawn"
+    });
+    await Promise.resolve();
+    postFromFrame({ type: READY_MESSAGE_TYPE });
+
+    assert.deepEqual(posted[1]?.[0], revealMessage("object:spawn"));
   });
 
   test("reloads the tabs of a rebuilt editor only", async() => {

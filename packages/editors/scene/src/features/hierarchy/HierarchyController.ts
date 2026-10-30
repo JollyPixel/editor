@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
+import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   MenuSession,
   SubscriptionController,
@@ -21,6 +22,7 @@ import type {
 // Import Internal Dependencies
 import type { ActorRole } from "../../editing/InstanceOverrides.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
+import type { ActorAnchor } from "../../state/AnchorPicks.ts";
 import {
   ActorTreeRows,
   PREFAB_ICON
@@ -50,11 +52,13 @@ const kOverrideActions: Readonly<Record<ActorRole, readonly OverrideAction[]>> =
 
 export interface HierarchyView {
   beginRename(id: string): void;
+  reveal(id: string): void;
 }
 
 type AddAction = AddActorAction | "add-instance";
 type OverrideAction = "revert-overrides" | "apply-to-prefab";
 type RowAction = "rename" | "duplicate" | "delete" | OverrideAction | AddAction;
+type AnchorAction = AddAction | "show-in-asset";
 
 export class HierarchyController {
   static #overrideEntries(
@@ -179,6 +183,15 @@ export class HierarchyController {
     this.#host.requestUpdate();
   };
 
+  #onAnchorPick = (
+    picked: ActorAnchor
+  ): void => {
+    const id = ActorTreeRows.anchorRowId(picked);
+    this.#expansion.reveal(this.#rows.ancestorIds(id));
+    this.#host.requestUpdate();
+    this.#view.reveal(id);
+  };
+
   constructor(
     host: ReactiveControllerHost,
     view: HierarchyView
@@ -189,6 +202,7 @@ export class HierarchyController {
       const {
         document,
         selection,
+        anchorPicks,
         presence,
         live
       } = editing;
@@ -198,6 +212,7 @@ export class HierarchyController {
         document.subscribe("change", this.#onChange),
         document.subscribe("reset", this.#rebuild),
         selection.subscribe("change", this.#onSelection),
+        anchorPicks.subscribe("pick", this.#onAnchorPick),
         presence.subscribe("selectionsChange", this.#rebuild),
         live.subscribe("anchorsChange", this.#rebuild),
         live.subscribe("actorsChange", this.#rebuild)
@@ -309,13 +324,7 @@ export class HierarchyController {
     }
     const row = this.#rows.anchorRow(id);
     if (row !== null) {
-      return this.#rows.isInner(id) ?
-        MenuSession.EMPTY :
-        MenuSession.forRow(
-          HierarchyController.#addEntries(editing.presets),
-          () => editing.document.tree.has(row.ownerId),
-          (action) => this.#add(action, row.ownerId, row.anchor)
-        );
+      return this.#anchorMenu(editing, row, this.#rows.isInner(id));
     }
     if (!editing.selection.has(id)) {
       editing.selection.select([id]);
@@ -353,6 +362,45 @@ export class HierarchyController {
     }
   }
 
+  #anchorMenu(
+    editing: SceneEditing,
+    row: ActorAnchor,
+    inner: boolean
+  ): MenuSession {
+    function exists(): boolean {
+      return editing.overrides.exists(row.ownerId);
+    }
+    const add = inner ? [] : HierarchyController.#addEntries(editing.presets);
+    const addTo = (
+      action: AddAction
+    ): Promise<void> => this.#add(action, row.ownerId, row.anchor);
+    const reference = anchorAsset(editing, row);
+    const { open } = editing.assetSlots;
+    if (reference === null || open === null) {
+      return MenuSession.forRow(add, exists, addTo);
+    }
+
+    const show: MenuItem<AnchorAction> = {
+      id: "show-in-asset",
+      label: `Show in ${editing.assetSlots.name(reference)}`,
+      icon: "view-frame",
+      disabled: editing.live.findAnchor(row.ownerId, row.anchor) === null
+    };
+
+    return MenuSession.forRow<AnchorAction>(
+      add.length === 0 ? [show] : [...add, "separator", show],
+      exists,
+      async(action) => {
+        if (action === "show-in-asset") {
+          open(reference, row.anchor.key);
+        }
+        else {
+          await addTo(action);
+        }
+      }
+    );
+  }
+
   async #add(
     action: AddAction,
     parentId: string | null,
@@ -373,4 +421,18 @@ export class HierarchyController {
       await editing.actions.addActor(preset, parentId, anchor);
     }
   }
+}
+
+function anchorAsset(
+  editing: Pick<SceneEditing, "live" | "components">,
+  row: ActorAnchor
+): AssetReferenceData | null {
+  const entry = editing.live.componentEntry(row.anchor.component);
+  if (entry === null) {
+    return null;
+  }
+
+  const slot = editing.components.find(entry.type)?.anchorAsset;
+
+  return slot === undefined ? null : entry.assets?.[slot] ?? null;
 }

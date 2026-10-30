@@ -73,3 +73,24 @@ Only what is marked as an anchor is listed: a layer with
 - An object keeps its key when it moves to another object layer, so anchored
   objects need ids unique across object layers. The editor gives each object a
   UUID.
+
+### `VoxelMapAnchorKey`
+
+```ts
+type VoxelMapAnchorKind = "layer" | "object";
+
+class VoxelMapAnchorKey {
+  static layer(id: string): VoxelMapAnchorKey;
+  static object(id: string): VoxelMapAnchorKey;
+  static parse(key: string): VoxelMapAnchorKey | null;
+
+  readonly kind: VoxelMapAnchorKind;
+  readonly id: string;
+
+  toString(): string;
+}
+```
+
+Reads and writes the anchor keys above. `parse()` returns `null` for a key
+without a `layer` or `object` prefix, or with an empty id. The id is everything
+after the first `:`.

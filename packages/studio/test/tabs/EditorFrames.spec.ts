@@ -13,6 +13,7 @@ import {
   READY_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE,
   preferencesMessage,
+  revealMessage,
   type LaunchIdentity,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
@@ -220,6 +221,27 @@ describe("EditorFrames", () => {
         "map-1"
       ]
     ]);
+  });
+
+  test("posts a reveal right after the frame's launch, then later reveals right away", () => {
+    scope();
+    const frames = editorFrames();
+    frames.show(MAP_TAB);
+    const posted = recordPosts(frame());
+
+    frames.reveal("map-1", "object:early");
+    assert.equal(posted.length, 0);
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    frames.reveal("map-1", "object:later");
+    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+
+    const messages = posted.map(([message]) => message);
+    assert.equal(messages.length, 4);
+    const [launch, early, later, relaunch] = messages;
+    assert.notEqual(parseLaunchMessage(launch), undefined);
+    assert.deepEqual(early, revealMessage("object:early"));
+    assert.deepEqual(later, revealMessage("object:later"));
+    assert.notEqual(parseLaunchMessage(relaunch), undefined);
   });
 
   test("dispose removes the frames", () => {

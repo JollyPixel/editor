@@ -7,6 +7,7 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
+import type { NamedSceneComponentPackage } from "../../src/components/SceneComponents.ts";
 import type { PrefabScenes } from "../../src/scene/PrefabScenes.ts";
 import { createSceneBinding } from "./sceneBinding.ts";
 
@@ -64,6 +65,21 @@ const kAnchored: Systems.ComponentDefinition<string, Probe> = {
     };
   }
 };
+
+export const ANCHORED_COMPONENTS: NamedSceneComponentPackage = [
+  "probe",
+  {
+    components: [
+      {
+        definition: kAnchored,
+        label: "Anchored",
+        icon: "actor",
+        form: () => [],
+        anchorAsset: "map"
+      }
+    ]
+  }
+];
 
 export function createProbeBinding(
   document: SceneDocument,

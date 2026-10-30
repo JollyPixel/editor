@@ -7,6 +7,7 @@ import {
   PageAppearance,
   preferencesMessage,
   readDebugLogger,
+  revealMessage,
   sessionRenewedMessage,
   type Appearance,
   type CatalogShare,
@@ -79,7 +80,8 @@ export class EditorFrames {
   #onShellCommand: ((command: ShellCommand, from: string) => void) | undefined;
   #logger: HostLogger;
   #frames = new Map<string, EditorFrame>();
-  #launchPorts = new Map<string, () => void>();
+  #launched = new Map<string, () => void>();
+  #unsentReveals = new Map<string, string>();
   #listening = new AbortController();
 
   constructor(
@@ -131,6 +133,19 @@ export class EditorFrames {
     }
   }
 
+  reveal(
+    id: string,
+    key: string
+  ): void {
+    const frame = this.#frames.get(id);
+    if (frame !== undefined && this.#launched.has(id)) {
+      this.#post(frame.element, revealMessage(key));
+    }
+    else {
+      this.#unsentReveals.set(id, key);
+    }
+  }
+
   notifySessionRenewed(): void {
     const message = sessionRenewedMessage();
     for (const { element } of this.#frames.values()) {
@@ -148,6 +163,7 @@ export class EditorFrames {
     id: string
   ): void {
     this.#stopPorts(id);
+    this.#unsentReveals.delete(id);
     this.#frames.get(id)?.element.remove();
     this.#frames.delete(id);
   }
@@ -155,7 +171,7 @@ export class EditorFrames {
   dispose(): void {
     this.#listening.abort();
     this.#stopPreferences();
-    for (const id of [...this.#launchPorts.keys()]) {
+    for (const id of [...this.#launched.keys()]) {
       this.#stopPorts(id);
     }
     for (const { element } of this.#frames.values()) {
@@ -226,7 +242,7 @@ export class EditorFrames {
       ports.console = consoleChannel.port2;
       stops.push(this.#consoles.connect(id, consoleChannel.port1));
     }
-    this.#launchPorts.set(id, () => {
+    this.#launched.set(id, () => {
       for (const stop of stops) {
         stop();
       }
@@ -244,13 +260,18 @@ export class EditorFrames {
       }),
       Object.values(ports).filter((port) => port !== undefined)
     );
+    const reveal = this.#unsentReveals.get(id);
+    if (reveal !== undefined) {
+      this.#unsentReveals.delete(id);
+      this.#post(frame.element, revealMessage(reveal));
+    }
   }
 
   #stopPorts(
     id: string
   ): void {
-    this.#launchPorts.get(id)?.();
-    this.#launchPorts.delete(id);
+    this.#launched.get(id)?.();
+    this.#launched.delete(id);
   }
 
   readonly #onMessage = (

@@ -38,6 +38,7 @@ export interface TreeRowState {
   swatchPosition: TreeSwatchPosition;
   reorderable: boolean;
   match: Readonly<SearchMatch> | null;
+  flash: boolean;
 }
 
 export class TreeRowView {
@@ -71,6 +72,7 @@ export class TreeRowView {
   readonly swatchPosition: TreeSwatchPosition;
   readonly reorderable: boolean;
   readonly match: Readonly<SearchMatch> | null;
+  readonly flash: boolean;
 
   static indentStyle(
     depth: number
@@ -127,6 +129,7 @@ export class TreeRowView {
     this.swatchPosition = state.swatchPosition;
     this.reorderable = state.reorderable;
     this.match = state.match;
+    this.flash = state.flash;
     Object.freeze(this);
   }
 
@@ -162,6 +165,7 @@ export class TreeRowView {
       sameRails(this.rails, state.rails) &&
       this.swatchPosition === state.swatchPosition &&
       this.reorderable === state.reorderable &&
+      this.flash === state.flash &&
       sameMatch(this.match, state.match) &&
       sameSwatch(this.swatch, node.swatch) &&
       sameBadges(this.badges, node.badges ?? kNoBadges);

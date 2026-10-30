@@ -58,8 +58,12 @@ export class TreeFocusController implements ReactiveController {
     id: string
   ): void {
     void this.#host.updateComplete.then(() => {
-      if (this.#options.rowElement(id) === null) {
+      const row = this.#options.rowElement(id);
+      if (row === null) {
         this.#scrollTo(id);
+      }
+      else {
+        row.scrollIntoView({ block: "nearest" });
       }
     });
   }

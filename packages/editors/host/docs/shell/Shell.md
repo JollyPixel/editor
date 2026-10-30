@@ -5,15 +5,28 @@ each frame with a target, shares its catalog, console, appearance and
 preferences with it, and hears back the frame's state.
 
 On the editor side, `context.shell` is a `ShellChannel` when a shell launched
-the page and `null` otherwise. `shell.openAsset(id)` asks the shell to open
-another asset in its own tab.
+the page and `null` otherwise. `shell.openAsset(id, reveal?)` asks the shell to
+open another asset in its own tab.
+
+## Reveals
+
+A reveal names something the opened editor should show, such as a voxel map
+anchor key. `shell.openAsset(id, reveal)` passes it on. The editor reads it
+with `shell.onReveal(listener, signal)` once it is ready.
+
+- The shell posts it as `jolly-reveal`. For a frame it has not launched yet,
+  it posts the reveal right after `jolly-launch`.
+- The channel keeps the last reveal that arrives while no listener is set and
+  hands it to the next `onReveal()` call.
+- A channel has one reveal listener: a later `onReveal()` replaces the
+  previous one, and aborting the signal removes it.
 
 ## Messages
 
 ```ts
 // frame → shell
 { type: "jolly-ready" }
-{ type: "jolly-shell", command: "open-asset", target: string }
+{ type: "jolly-shell", command: "open-asset", target: string, reveal?: string }
 { type: "jolly-shell", command: "toggle-console" }
 { type: "jolly-shell", command: "session-refused" }
 { type: "jolly-shell", command: "unsaved", unsaved: boolean }
@@ -32,11 +45,12 @@ another asset in its own tab.
 { type: "jolly-appearance", appearance: Appearance }
 { type: "jolly-preferences", scope: string, overrides: PreferenceOverrides }
 { type: "jolly-session-renewed" }
+{ type: "jolly-reveal", key: string }
 ```
 
 The shell builds its messages with `launchMessage`, `appearanceMessage`,
-`preferencesMessage` and `sessionRenewedMessage`, and narrows what a frame
-posts with `isReadyMessage` and `isShellCommand`.
+`preferencesMessage`, `sessionRenewedMessage` and `revealMessage`, and narrows
+what a frame posts with `isReadyMessage` and `isShellCommand`.
 
 - The frame posts `jolly-ready` and waits one second for `jolly-launch` from
   an allowed origin.

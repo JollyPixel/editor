@@ -92,7 +92,7 @@ export class SceneEditor {
         descriptors: PROJECT_COMPONENTS.descriptors,
         open: context.shell === null ?
           null :
-          (assetId) => context.shell?.openAsset(assetId)
+          (assetId, reveal) => context.shell?.openAsset(assetId, reveal)
       });
       const scene = new SceneEditorScene({
         sceneId,

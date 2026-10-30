@@ -7,6 +7,7 @@ import { Systems } from "@jolly-pixel/engine";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import { VoxelMapAnchorKey } from "../../../src/plugins/engine/VoxelMapAnchors.ts";
 import { VoxelMapDefinition } from "../../../src/plugins/engine/VoxelMapDefinition.ts";
 import type { VoxelMapSource } from "../../../src/plugins/engine/VoxelMapSource.ts";
 import { VoxelDocument } from "../../../src/document/VoxelDocument.ts";
@@ -190,6 +191,21 @@ describe("VoxelMapDefinition", () => {
         }
       }
     ]);
+  });
+
+  it("parses an anchor key back to its layer or object id and refuses any other key", () => {
+    assert.deepStrictEqual(
+      VoxelMapAnchorKey.parse("layer:ground-id"),
+      VoxelMapAnchorKey.layer("ground-id")
+    );
+    assert.deepStrictEqual(
+      VoxelMapAnchorKey.parse("object:a:b"),
+      VoxelMapAnchorKey.object("a:b")
+    );
+    assert.strictEqual(VoxelMapAnchorKey.object("spawn").toString(), "object:spawn");
+    for (const key of ["spawn", "layer:", "voxel:1", ":spawn"]) {
+      assert.strictEqual(VoxelMapAnchorKey.parse(key), null, key);
+    }
   });
 
   it("notifies anchor listeners of layer and object changes, not voxel edits", () => {

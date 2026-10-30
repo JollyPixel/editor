@@ -25,7 +25,8 @@ const kVoxelMap: SceneComponentKind<VoxelMapSettings> = {
   form: () => [
     kRows.boolean(["castShadow"], "Cast shadow"),
     kRows.boolean(["receiveShadow"], "Receive shadow")
-  ]
+  ],
+  anchorAsset: "map"
 };
 
 export const SCENE_COMPONENTS: SceneComponentPackage = {

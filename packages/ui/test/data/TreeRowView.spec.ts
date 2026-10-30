@@ -52,7 +52,8 @@ const kState: TreeRowState = {
   rails: ["tee"],
   swatchPosition: "end",
   reorderable: true,
-  match: null
+  match: null,
+  flash: false
 };
 
 function createRow(

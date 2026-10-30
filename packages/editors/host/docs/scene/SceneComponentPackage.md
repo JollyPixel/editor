@@ -85,6 +85,7 @@ interface SceneComponentKind<TData extends object = any> {
   label: string;
   icon: string;
   form: ComponentForm<TData>;
+  anchorAsset?: string;
 }
 
 type ComponentForm<TData> = (data: TData) => FormRow<TData>[];
@@ -102,6 +103,11 @@ inspector rows.
 - An edit of a top-level field patches that field; setting it back to its
   default unsets it.
 - An edit of a nested field rewrites the whole object.
+
+`anchorAsset` names the `definition.assets` slot whose asset the anchor keys
+from `definition.anchors()` belong to. An anchor row then offers to show the
+anchor in that asset, which opens it with the anchor key as its
+[reveal](../shell/Shell.md#reveals). Without it, the row has no such entry.
 
 ## FormRows
 

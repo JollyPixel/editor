@@ -8,6 +8,10 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
+import type {
+  ActorAnchor,
+  AnchorPicks
+} from "../../state/AnchorPicks.ts";
 import type { SelectionStore } from "../../state/SelectionStore.ts";
 
 // CONSTANTS
@@ -17,9 +21,15 @@ export interface ActorResolver {
   findActorId(object: THREE.Object3D): string | null;
 }
 
+export interface AnchorResolver {
+  pick(ray: THREE.Ray): ActorAnchor | null;
+}
+
 export interface ActorPickerOptions {
   camera: () => THREE.Camera;
   targets: ActorResolver;
+  anchors: AnchorResolver;
+  anchorPicks: AnchorPicks;
   selection: SelectionStore;
   busy: () => boolean;
 }
@@ -61,7 +71,19 @@ export class ActorPicker extends ActorComponent {
       return;
     }
 
-    const id = this.pick(mouse.viewportPositionTo(this.#pointer));
+    const aimed = this.#raycaster;
+    aimed.setFromCamera(
+      mouse.viewportPositionTo(this.#pointer),
+      this.#options.camera()
+    );
+    const anchor = this.#options.anchors.pick(aimed.ray);
+    if (anchor !== null) {
+      this.#options.anchorPicks.emit("pick", anchor);
+
+      return;
+    }
+
+    const id = this.#pickActor(aimed);
     const { selection } = this.#options;
     if (!InputCombination.Control.evaluate(input)) {
       selection.select(id === null ? [] : [id]);
@@ -71,16 +93,11 @@ export class ActorPicker extends ActorComponent {
     }
   }
 
-  pick(
-    pointer: THREE.Vector2Like
+  #pickActor(
+    aimed: THREE.Raycaster
   ): string | null {
     const scene = this.actor.world.sceneManager.getSource();
-    this.#raycaster.setFromCamera(
-      this.#pointer.set(pointer.x, pointer.y),
-      this.#options.camera()
-    );
-
-    for (const hit of this.#raycaster.intersectObjects(scene.children, true)) {
+    for (const hit of aimed.intersectObjects(scene.children, true)) {
       const id = isVisibleInHierarchy(hit.object) ?
         this.#options.targets.findActorId(hit.object) :
         null;

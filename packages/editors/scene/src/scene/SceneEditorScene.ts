@@ -19,6 +19,7 @@ import {
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
 import { Grid } from "@jolly-pixel/three";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import { SceneBinding } from "./SceneBinding.ts";
@@ -39,6 +40,7 @@ import type {
 } from "../editing/SceneEditing.ts";
 import { createSceneHistory } from "../features/history/sceneHistory.ts";
 import { ActorPicker } from "../features/viewport/ActorPicker.ts";
+import { AnchorMarkers } from "../features/viewport/AnchorMarkers.ts";
 import { followGridPreferences } from "../features/viewport/followGridPreferences.ts";
 import { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import { SceneGizmo } from "../features/viewport/SceneGizmo.ts";
@@ -46,6 +48,7 @@ import { SceneHelpers } from "../features/viewport/SceneHelpers.ts";
 import { SelectionHighlight } from "../features/viewport/SelectionHighlight.ts";
 import type { SceneAction } from "../keybindings/sceneActions.ts";
 import { sceneShortcuts } from "../keybindings/sceneShortcuts.ts";
+import type { AnchorPicksEvents } from "../state/AnchorPicks.ts";
 import type { PresenceStore } from "../state/PresenceStore.ts";
 import { SceneDraft } from "../state/SceneDraft.ts";
 import { SelectionStore } from "../state/SelectionStore.ts";
@@ -182,11 +185,20 @@ export class SceneEditorScene extends Systems.Scene {
       settings: gizmo
     });
     teardown.defer(() => sceneGizmo.dispose());
+    const anchorMarkers = world
+      .createActor("anchor-markers")
+      .addComponentAndGet(AnchorMarkers, {
+        live: binding,
+        selection
+      });
+    const anchorPicks = new Emitter<AnchorPicksEvents>();
     world
       .createActor("actor-picker")
       .addComponent(ActorPicker, {
         camera: () => camera.camera,
         targets: binding,
+        anchors: anchorMarkers,
+        anchorPicks,
         selection,
         busy: () => sceneGizmo.hovering || sceneGizmo.dragging
       });
@@ -241,6 +253,7 @@ export class SceneEditorScene extends Systems.Scene {
       history,
       actions,
       selection,
+      anchorPicks,
       presence,
       gizmo,
       assetSlots,

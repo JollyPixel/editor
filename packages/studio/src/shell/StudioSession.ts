@@ -48,6 +48,13 @@ export interface StudioCatalog {
   ): unknown;
 }
 
+export interface AssetOpenOptions extends EditorTabOpenOptions {
+  /**
+   * Handed to the asset's editor, which shows what it names.
+   */
+  reveal?: string;
+}
+
 export interface StudioSessionRenewal {
   renew(): Promise<void>;
   onRenewed(
@@ -178,8 +185,9 @@ export class StudioSession {
 
   async openAsset(
     assetId: string,
-    options: EditorTabOpenOptions = {}
+    options: AssetOpenOptions = {}
   ): Promise<boolean> {
+    const { reveal, ...tabOptions } = options;
     const record = this.#catalog.record(assetId);
     if (record === undefined) {
       return false;
@@ -190,7 +198,7 @@ export class StudioSession {
       return false;
     }
 
-    return this.tabs.open(
+    const opened = await this.tabs.open(
       {
         id: assetId,
         editor: editor.name,
@@ -198,8 +206,13 @@ export class StudioSession {
         url: this.#editors.pageUrl(editor.name, assetId),
         icon: this.kinds.kindIcon(record.kind)
       },
-      options
+      tabOptions
     );
+    if (opened && reveal !== undefined) {
+      this.#frames.reveal(assetId, reveal);
+    }
+
+    return opened;
   }
 
   async restoreTabs(): Promise<void> {
@@ -268,7 +281,10 @@ export class StudioSession {
   ): void => {
     switch (command.command) {
       case "open-asset":
-        void this.openAsset(command.target);
+        void this.openAsset(
+          command.target,
+          command.reveal === undefined ? {} : { reveal: command.reveal }
+        );
         break;
       case "toggle-console":
         this.toggleConsole();
