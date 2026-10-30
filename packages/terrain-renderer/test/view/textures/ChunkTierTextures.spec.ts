@@ -34,6 +34,22 @@ function rampHeights(
 }
 
 describe("ChunkTextureStore tiers", () => {
+  test("growing a tier's arrays uploads the layers copied into them, or they stay blank on the GPU", () => {
+    const terrain = new Terrain();
+    const store = new ChunkTextureStore(terrain);
+    for (const x of [0, 2, 4, 6, 8]) {
+      const coord = new ChunkCoord(x, 0);
+      terrain.addChunk(coord, rampHeights(x));
+      store.chunkAdded(coord);
+      terrain.changeTier(coord, resampleHeights(terrain, coord, 2));
+      store.tilesChanged(TileCoord.all(coord));
+    }
+
+    const { heights, holes } = store.refinedArrays(2);
+    assert.deepEqual([...heights.layerUpdates].sort(), [0, 1, 2, 3, 4]);
+    assert.deepEqual([...holes.layerUpdates].sort(), [0, 1, 2, 3, 4]);
+  });
+
   test("a refined chunk moves to its tier's array, grown on demand, and coarsening frees its layer", () => {
     const terrain = new Terrain();
     const replaced: number[] = [];

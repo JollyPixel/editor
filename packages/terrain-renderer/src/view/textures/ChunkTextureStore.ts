@@ -547,6 +547,12 @@ class RefinedPool {
     if (this.#capacity > 0) {
       (heights.image.data as Float32Array).set(this.arrays.heights.image.data as Float32Array);
       (holes.image.data as Uint8Array).set(this.arrays.holes.image.data as Uint8Array);
+      for (let layer = 0; layer < this.#capacity; layer++) {
+        heights.addLayerUpdate(layer);
+        holes.addLayerUpdate(layer);
+      }
+      heights.needsUpdate = true;
+      holes.needsUpdate = true;
     }
     this.dispose();
     this.arrays = { heights, holes };
