@@ -1,29 +1,19 @@
 # World
 
-The `World` is the central orchestrator of the engine. It
-wires together the [SceneManager](scene-manager.md),
-[Renderer](renderer.md), [Input](../../../controls/docs/input.md),
-and [Audio](../audio/audio.md) systems and drives the main
-**connect → update → render** loop.
-
-Every project creates exactly one `World`. It is passed to
-every [Actor](../actor/actor.md) at construction time and is
-available throughout the component tree via `actor.world`.
+`World` wires the [SceneManager](scene-manager.md), the
+[Renderer](renderer.md), input and [audio](../audio/audio.md) together and
+runs the frame loop. A game has one world, reached as `actor.world`.
 
 ## Creating a game instance
 
 ```ts
-import {
-  SceneEngine,
-  ThreeRenderer,
-  World
-} from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/engine";
 
 const canvas = document.querySelector("canvas")!;
-const sceneManager = new SceneManager();
-const renderer = await ThreeRenderer.create(canvas);
+const sceneManager = new Systems.SceneManager();
+const renderer = await Systems.ThreeRenderer.create(canvas);
 
-const game = new World(renderer, { sceneManager });
+const game = new Systems.World(renderer, { sceneManager, assetCoordinator });
 ```
 
 The constructor accepts a [Renderer](renderer.md) and a
@@ -32,11 +22,15 @@ The constructor accepts a [Renderer](renderer.md) and a
 ```ts
 interface WorldOptions {
   /** The scene that manages actors and components. */
-  sceneManager: SceneContract;
+  sceneManager: SceneManager;
+  /** Loads the assets scenes declare. */
+  assetCoordinator: AssetCoordinator;
   /** Input system for keyboard, mouse, gamepad, etc. @default auto-created from canvas */
   input?: Input;
   /** Global audio manager. @default new GlobalAudio() */
   audio?: GlobalAudio;
+  /** Read by components as `this.context`. @default {} */
+  context?: TContext;
   /** Enable the exit mechanism on the input system. @default false */
   enableOnExit?: boolean;
   /** Abstraction over global references (useful for testing). @default BrowserGlobalsAdapter */
@@ -48,41 +42,16 @@ interface WorldOptions {
 }
 ```
 
-## Loading manager
-
-Three.js assets (models, textures, audio) can share a single
-`THREE.LoadingManager` via the game instance:
-
-```ts
-const manager = new THREE.LoadingManager();
-manager.onProgress = (_url, loaded, total) => {
-  console.log(`${loaded}/${total}`);
-};
-
-game.setLoadingManager(manager);
-```
-
-The loading manager is available from anywhere as
-`actor.world.loadingManager`.
-
 ## Connect and disconnect
 
-`connect()` starts the game by wiring up input listeners, the
-window resize handler, and awakening the scene:
+`connect()` connects input, starts observing the canvas size and awakes the
+scene:
 
 ```ts
 game.connect();
 ```
 
-Internally this:
-
-1. Connects the [Input](../../../controls/docs/input.md) system.
-2. Registers the renderer's `resize` callback on the window
-   adapter.
-3. Calls `scene.awake()`, which awakens all existing actors and
-   emits the `"awake"` event.
-
-`disconnect()` tears down the listeners:
+`disconnect()` disconnects input and stops observing the canvas:
 
 ```ts
 game.disconnect();
@@ -90,24 +59,21 @@ game.disconnect();
 
 ## Dispose
 
-`dispose()` stops the loop, disconnects, and releases the
-[renderer](renderer.md)'s WebGL context:
+`dispose()` stops the loop, disconnects, and disposes the
+[renderer](renderer.md):
 
 ```ts
 game.dispose();
 ```
 
-Call it whenever a world is dropped, such as when closing a scene in
-an editor or swapping a canvas. Browsers cap the number of live WebGL contexts
-(~16 in Chrome), so a world that is garbage-collected without being
-disposed leaks one, and a long session eventually stops rendering
-altogether. The world must not be used after disposal.
+Call it whenever a world is dropped. Browsers cap the number of live GPU
+contexts, so a leaked one eventually stops rendering. The world must not be
+used after disposal.
 
 ## Game loop
 
-The caller owns a `FrameScheduler` from
-[@jolly-pixel/loop](../../../loop/README.md) and passes each `FrameSchedule` to
-the world. Use one scheduler per app. `World` reads no clock.
+`World` reads no clock: the caller owns one `FrameScheduler` from
+`@jolly-pixel/loop` and passes each `FrameSchedule` to `tick()`.
 
 ```ts
 import { FrameScheduler } from "@jolly-pixel/loop";
@@ -126,9 +92,8 @@ function loop(now: number) {
 requestAnimationFrame(loop);
 ```
 
-`@jolly-pixel/runtime` provides a `GameLoop` that owns the frame source and
-scheduler. It calls `tick()` from the renderer's animation loop. Configure
-timing on the loop:
+Under `@jolly-pixel/runtime`, its `GameLoop` calls `tick()`. Configure timing
+there:
 
 ```ts
 runtime.loop.scheduler.fixedFps = 60;  // simulation rate
@@ -138,45 +103,36 @@ runtime.loop.timeScale = 0.5;          // slow motion; 0 pauses the simulation
 
 #### `tick(schedule)`
 
-`schedule` is the `FrameSchedule` produced for the current frame, and `World`
-uses it unchanged because it has no accumulator. Tests and editors can replay
-or construct any frame. Returns `true` when the input system asked to exit.
+Runs one frame of `schedule` as given; the world has no accumulator, so tests
+and editors can replay any frame. Returns `true` when the input system asked
+to exit.
 
 One frame, in order:
 
-1. Calls `sceneManager.beginFrame()`, which snapshots the actor tree and
-   starts pending components. The snapshot is reused by every `fixedUpdate`
-   and `update` call in the frame.
-2. Calls `input.sample()` once.
-3. Runs `schedule.steps` fixed steps, each preceded by
-   `input.publish("step")`. See [Input](../../../controls/docs/input.md).
-4. On a drawn frame, calls `input.publish("frame")`, then
-   `sceneManager.update(deltaTime, alpha)`, then
-   `renderer.draw(sceneManager.getSource())`.
-5. Calls `endFrame()`.
+1. `sceneManager.beginFrame()`, then the time and timers advance and input
+   is sampled once.
+2. `schedule.steps` fixed steps, each preceded by `input.publish("step")`.
+3. On a drawn frame, `input.publish("frame")`, then
+   `sceneManager.update(deltaTime, alpha)`, then the draw.
+4. `sceneManager.endFrame()`, which destroys pending components and actors.
+   On exit, the renderer is cleared.
 
 #### `fixedUpdate(deltaTime, stepIndex)`
 
-Runs deterministic logic at a fixed rate, 0 to `maxStepsPerFrame` times per
-frame, always with the same delta. `stepIndex` counts the steps within the
-current frame, from zero.
+Runs 0 to `maxStepsPerFrame` times per frame, always with the same delta.
+`stepIndex` counts the steps within the frame, from zero.
 
-Input is published to each step, so a catch-up frame running three steps
-reports a press edge to the first step only. A frame that runs no step keeps
-its edges pending for the next step, so a press during slow motion or on a
-display faster than the step rate is never lost to `fixedUpdate`. While paused, edges
-wait for the next step, such as one run by `GameLoop.step()` or the first one
-after `resume()`.
+A press edge reaches the first step that runs after it, and only that one.
+A frame with no step keeps it for the next step, so `fixedUpdate` never
+misses a press in slow motion or while paused.
 
 #### `update(deltaTime, alpha)`
 
-Runs variable-rate logic once per drawn frame. `alpha` is how far the frame
-sits between the last fixed step and the next one, in `[0, 1)`. Pass it to
-`Interpolated` from `@jolly-pixel/loop` to draw smoothly between steps. The
-engine does not interpolate transforms: a component that moves an actor in
-`fixedUpdate` should interpolate it here, or the motion looks choppy on fast
-displays and in slow motion. See
-[Interpolated](../../../loop/docs/interpolated.md#slow-motion).
+Runs once per drawn frame. `alpha` is how far the frame sits between the last
+fixed step and the next one, in `[0, 1)`. The engine does not interpolate
+transforms: a component that moves an actor in `fixedUpdate` interpolates it
+here, for example with `Interpolated` from `@jolly-pixel/loop`, or the motion
+looks choppy.
 
 ```ts
 class Mover extends Behavior {
@@ -193,11 +149,7 @@ class Mover extends Behavior {
 }
 ```
 
-Before this phase, `World` calls `input.publish("frame")`: the transitions,
-typed characters and mouse movement sampled since the previous drawn frame.
-Variable-rate components therefore see each edge once even when the current
-frame ran several fixed steps or none.
-
+`update` sees each input edge once, however many fixed steps the frame ran.
 A frame suppressed by `maxFps` skips `update` and the draw, but still
 accumulates time and still runs its fixed steps.
 
@@ -213,10 +165,8 @@ accumulates time and still runs its fixed steps.
 | `unscaledElapsed` | Wall-clock time received so far, clamped. |
 | `fixedElapsed` | Game time consumed by completed fixed steps. Inside `fixedUpdate` it is the start time of the running step. |
 
-Code that must keep running at normal speed while the game slows down or
-pauses reads `unscaledDelta`: cameras, UI motion, debug tools, and tweens of
-`timeScale` itself. [Camera3DControls](../components/camera-3d-controls.md)
-and [OrbitFlyCamera](../components/orbit-fly-camera.md) move by it.
+Cameras, UI motion and debug tools read `unscaledDelta` to keep their speed
+in slow motion and while paused.
 
 ```ts
 const { time } = this.actor.world;
@@ -230,9 +180,8 @@ A tick on a stopped world does not advance the time.
 
 ### Timers
 
-`world.timers` is a `Timers` that `tick()` advances to `time.elapsed`
-right after the time, before the fixed steps. Its timers count game
-time, so they follow `timeScale` and wait while paused.
+`world.timers` counts game time: its timers follow `timeScale` and wait while
+paused.
 
 ```ts
 interface TimerOptions {
@@ -256,29 +205,14 @@ class Timers {
 }
 ```
 
-`schedule()` throws a `RangeError` for a negative delay, and for a
-repeating timer without delay. Timers due in the same tick fire in due
-order, and a timer cancelled by an earlier callback of that tick does
-not fire. The world keeps animating while `pending` is `true`, so a
-render-on-demand host keeps ticking until the last timer fires.
-Components schedule through
-[`ActorComponent.schedule`](../actor/actor-component.md#timers), which
-also cancels their timers on destruction.
-
-#### `endFrame(): boolean`
-
-Called once at the end of each animation frame:
-
-1. Calls `sceneManager.endFrame()`, which destroys pending components
-   and actors.
-2. If the input system signals an exit, clears the renderer and
-   returns `true`. Otherwise returns `false`.
-
-### `render()`
-
-Delegates to `renderer.draw(scene)`, which resizes if needed, clears
-the frame buffer, and renders the scene through all active
-cameras.
+- `schedule()` throws a `RangeError` for a negative delay, and for a
+  repeating timer without delay.
+- Timers due in the same tick fire in due order. One cancelled by an earlier
+  callback of that tick does not fire.
+- The world keeps animating while `pending` is `true`.
+- Components use
+  [`ActorComponent.schedule`](../actor/actor-component.md#timers), which
+  cancels their timers on destruction.
 
 ## Rendering on demand
 
@@ -293,12 +227,11 @@ keepAlive(predicate: WorldKeepAlive): () => void;
 get animating(): boolean;
 ```
 
-`invalidate()` emits `invalidate`. Call it after changing what is drawn from
-outside a frame, such as from a network or timer callback. `keepAlive()` adds
-a predicate read after every frame; frames continue while one returns `true`,
-so an animation or a damped motion can settle. It invalidates once and returns
-a function removing the predicate. `animating` is `true` while any predicate
-returns `true`.
+- `invalidate()` emits `invalidate`. Call it after changing what is drawn
+  from outside a frame, such as from a network callback.
+- `keepAlive()` keeps frames coming while its predicate returns `true`. It
+  invalidates once and returns a function removing the predicate.
+- `animating` is `true` while any predicate returns `true`.
 
 ```ts
 const release = this.actor.world.keepAlive(() => this.fading);
@@ -308,9 +241,7 @@ this.addTeardown(release);
 A host that ticks every frame ignores both, so components can call them
 unconditionally.
 
-A render-on-demand host that should keep running while any component
-updates can opt in with one predicate. Behaviors with an `update()` then
-keep frames going, and the loop sleeps once only static actors remain:
+To keep frames going while any component updates:
 
 ```ts
 world.keepAlive(() => world.sceneManager.actors.updating);
@@ -336,5 +267,4 @@ if (input.keyboard.isDown("Space")) {
 - [Scene files](scene-file.md): `FileScene` and component definitions
 - [Renderer](renderer.md): rendering pipeline
 - [Logger](logger.md): `world.logger`, namespaces and steps
-- [Input](../../../controls/docs/input.md): input handling
 - [Actor](../actor/actor.md): the engine's core entity

@@ -83,56 +83,42 @@ test("opens the requested model with its default block", async({ page }) => {
 
 ## 📚 API
 
-`@jolly-pixel/e2e`, for every suite:
+### Suite
 
-- [Config](./docs/config.md): `defineE2EConfig`, `PORTS`, `baseUrl`, the
-  `prebundleWorkspace` Vite plugin and `RunMode`.
-- [Roles](./docs/roles.md): `CookieAuthentication` and `ContextAccess`.
-- Browser helpers:
-  [Pointer](./docs/browser/pointer.md) (bounding boxes and drags),
-  [Locators](./docs/browser/locators.md) (dialogs, fields and tree rows of
-  `@jolly-pixel/ui`) and [Sockets](./docs/browser/sockets.md) (`recordSockets`).
-- [Console](./docs/browser/console.md): `CommandConsole`, the command console
-  prompt and log.
+```ts
+import {
+  PORTS,
+  RunMode,
+  defineE2EConfig
+} from "@jolly-pixel/e2e";
+```
 
-`@jolly-pixel/e2e/editor`, for editors and the studio:
+Configures a suite and drives the `@jolly-pixel/ui` components a page renders, without importing
+`@jolly-pixel/ui` or an editor.
 
-- [Editor fixture](./docs/editor/fixture.md): `editorFixture`, roles, the `peer` page and the catalog helpers.
-- [Editor navigation](./docs/editor/navigation.md): `openEditor`, `reloadEditor`, `followEditor` and `waitForEditor`.
-- [Editor frames](./docs/editor/frames.md) and [Editor press](./docs/editor/press.md): `nextFrames` and `pressAt`.
-- [Editor toolbar](./docs/editor/toolbar.md): `EditorToolbar`, the target picker and tags above the viewport.
+- Config: `defineE2EConfig`, `PORTS`, `baseUrl`, `RunMode` and the `prebundleWorkspace` Vite plugin
+- Roles: `CookieAuthentication` and `ContextAccess`, one network role per browser context
+- Browser: locators for dialogs, fields and tree rows, pointer geometry and drags, `recordSockets`
+  and `CommandConsole`
 
-## 🧱 Boundaries
+### Editor
 
-The package never imports `@jolly-pixel/ui` or an editor, directly or through
-a dependency. Locators match `jolly-*` tag names and ARIA roles only, and
-`nextFrames` types `window.jollyEditor` structurally. This lets `@jolly-pixel/ui` devDepend on
-the package without a workspace cycle.
+```ts
+import {
+  editorFixture,
+  openEditor,
+  pressAt
+} from "@jolly-pixel/e2e/editor";
+```
 
-## 🧭 Starting a new suite
+Seeds documents through the catalog and opens an editor on them, for editor and studio suites. It
+relies on the editor host contracts: the `?target=`, `?username=`, `?max-fps=` and `?debug=` query
+parameters, `data-editor-state` on `<html>` and `window.jollyEditor` in dev builds.
 
-1. Add a port to `PORTS` and pass it to
-   [`RunMode`](./docs/config.md#runmode) in the suite's `vite.config.ts`.
-2. Add `playwright.config.ts` with `defineE2EConfig`, and a `test:e2e` script
-   running `playwright test`.
-3. For an editor, add `test/e2e/fixtures.ts` exporting `editorFixture` with the
-   suite's seed documents, and `expect`.
-4. Write `test/e2e/<feature>.e2e.ts` against that `test`. Keep domain helpers
-   (scene, painting, hierarchy) in the suite's `test/e2e/support/`.
-5. Serve the page with `vite --mode e2e` and add `mode.plugins()`, which
-   holds [`prebundleWorkspace()`](./docs/config.md#prebundleworkspace-plugin),
-   to the Vite plugins. Vite never pre-bundles linked packages, so plain
-   `vite` serves each file of their `dist/` as its own module: about 1,000
-   requests per editor boot, which on a CI runner is enough to push tests that
-   boot several pages past the 30s timeout. A trace of one test should show no
-   request under `packages/*/dist/`. A page that imports its own `src/` still
-   serves each source file on its own; build it instead with
-   `vite build --mode e2e && vite preview --mode e2e`, as `@jolly-pixel/ui`
-   does.
-6. CI picks the suite up from its `test:e2e` script and runs it when the
-   package or one of its workspace dependencies changes
-   (`scripts/ci/affected.ts`). To keep it out of CI, add a `--skip-e2e` entry
-   in `.github/workflows/node.js.yml`.
+- Fixture: `editorFixture`, `withCatalog` and `e2eFolder`
+- Navigation: `openEditor`, `reloadEditor`, `followEditor`, `waitForEditor` and `editorPath`
+- Frames and input: `nextFrames` and `pressAt`
+- Toolbar: `EditorToolbar`, the Asset and Version selects above the viewport
 
 ## ✨ Contributors guide
 

@@ -1,17 +1,13 @@
 # Renderers
 
-The engine ships with four built-in renderer components. Each one
-extends [ActorComponent](../actor/actor-component.md) and handles
-loading, displaying, and cleaning up a specific type of visual
-asset.
+Built-in [components](../actor/actor-component.md) that draw a model, a
+sprite, text or a primitive mesh.
 
 ## ModelRenderer
 
-Renders a 3D model loaded from an OBJ, FBX, or glTF file.
-On `awake`, a clone of the loaded model (skeletons included) is added
-to the actor's Three.js group, so several actors can share one model
-asset. The clone shares geometries and materials with the asset and
-is detached on `destroy` without disposing them.
+Renders a 3D model (OBJ, FBX or glTF). Each renderer adds its own clone of
+the model, skeletons included, sharing geometries and materials with the
+asset, so several actors can use one model.
 
 ```ts
 import { Actor, ModelRenderer } from "@jolly-pixel/engine";
@@ -33,8 +29,7 @@ actor.addComponent(ModelRenderer, {
 | `animations.default` | — | Name of the animation clip to play on start |
 | `animations.clipNameRewriter` | identity | Transforms clip names before storing them |
 
-Every `ModelRenderer` exposes an `animation` property that
-controls clip playback with crossfade transitions:
+`animation` plays clips with crossfades:
 
 ```ts
 const renderer = actor.addComponentAndGet(ModelRenderer, {
@@ -46,15 +41,13 @@ renderer.animation.play("walk");
 renderer.animation.stop();
 ```
 
-`animation.isAnimating` is `true` while a clip plays or fades. The
-renderer only requests updates in that state: `play()`, `resume()` and a
-fading `stop()` turn them on, and they turn off once nothing is left to
-animate.
+`animation.isAnimating` is `true` while a clip plays or fades; the renderer
+only updates in that state.
 
 ## SpriteRenderer
 
-Renders a 2D sprite from a spritesheet texture. Supports
-frame-based animation, horizontal/vertical flipping, and opacity.
+Renders a 2D sprite from a spritesheet, with frame animation, flipping and
+opacity.
 
 ```ts
 import { Actor, SpriteRenderer } from "@jolly-pixel/engine";
@@ -96,22 +89,20 @@ sprite.setOpacity(0.8);
 sprite.animation.play("run", { duration: 0.6, loop: true });
 ```
 
-`duration` is the length of one full cycle, in seconds. Playback
-advances with the frame `deltaTime`. A non-looping animation stops on
-its last frame and `isPlaying` becomes `false`. The sprite only requests
-updates while `isPlaying` is `true`. Playing an unknown animation name
-logs a warning through `world.logger` and changes nothing.
-
-`frameIndex` and `flip` are read-only; change them with `setFrame()` and
-the flip setters. `sheet` is the `SpriteSheet` built from the tile counts.
-Its constructor throws a `RangeError` for a count below 1 or not an
-integer, and `writeFrame(texture, frame, flip)` sets the texture's `repeat`
-and `offset` to one cell. Frames count left to right from the top row.
+- `duration` is the length of one cycle, in seconds of game time. A
+  non-looping animation stops on its last frame and `isPlaying` becomes
+  `false`.
+- An unknown animation name logs a warning and changes nothing.
+- `frameIndex` and `flip` are read-only; use `setFrame()` and the flip
+  setters. Frames count left to right from the top row.
+- `sheet` is the `SpriteSheet` built from the tile counts; it throws a
+  `RangeError` for a count below 1 or not an integer.
+  `sheet.writeFrame(texture, frame, flip)` sets a texture's `repeat` and
+  `offset` to one cell.
 
 ## TextRenderer
 
-Renders 3D extruded text using a Three.js typeface font
-(`.typeface.json`).
+Renders 3D extruded text from a Three.js typeface font (`.typeface.json`).
 
 ```ts
 import * as THREE from "three";
@@ -133,9 +124,7 @@ actor.addComponent(TextRenderer, {
 | `material` | `MeshBasicMaterial` | Material applied to the text mesh |
 | `textGeometryOptions` | `{ size: 1, depth: 1 }` | Three.js `TextGeometry` parameters |
 
-To update the text at runtime, use the `text` property and call
-`updateMesh()`. `text.ensureMesh()` rebuilds the geometry when the value,
-font or options changed, and returns the mesh:
+Change the text with `text.setValue()`, then call `updateMesh()`:
 
 ```ts
 const renderer = actor.addComponentAndGet(TextRenderer, {

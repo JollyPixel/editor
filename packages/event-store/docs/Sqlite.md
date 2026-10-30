@@ -1,8 +1,6 @@
 # SQLite persistence
 
-Use this backend for a file-backed store or when an application already works
-with SQLite. It uses Node's built-in `node:sqlite` module and passes its string
-`location` to `DatabaseSync`.
+File-backed store for Node.js, built on the built-in `node:sqlite` module.
 
 ```ts
 EventStore.persistence.sqlite<TMap>(
@@ -10,79 +8,38 @@ EventStore.persistence.sqlite<TMap>(
 ): Promise<TypedEventStore<TMap>>
 ```
 
-The optional `TMap` schema map is described in
-[EventStore](./EventStore.md#schema-map); it defaults to an unconstrained map.
+`TMap` is the optional [schema map](./EventStore.md#schema-map).
 
 ```ts
 import * as EventStore from "@jolly-pixel/event-store";
 
-await using store = await EventStore.persistence.sqlite("./events.sqlite");
+await using store = await EventStore.persistence.sqlite(
+  "./events.sqlite"
+);
 ```
 
-Passing a file path creates or opens a durable database, and creates the
-directories leading to it. The default location is `":memory:"`, which lasts
-only until its SQLite connection closes and touches no filesystem path.
-
-## Journal
-
-For a file location, the factory sets these before running the schema:
-
-| Pragma | Value | Effect |
-|---|---|---|
-| `auto_vacuum` | `INCREMENTAL` | A file created without it is converted once with `VACUUM` |
-| `journal_mode` | `WAL` | Writes go to `<location>-wal`; readers do not block the writer |
-| `synchronous` | `NORMAL` | No fsync per commit; a power loss can drop the last commits, a process crash cannot |
-
-SQLite keeps `<location>-wal` and `<location>-shm` next to the database while
-a connection is open and removes them on a clean close.
-
-The factory returns a promise because the main package entry point loads the
-Node-only backend when the factory is called. Importing the main entry point is
-safe in a browser bundle as long as the SQLite factory is not called.
+- A file `location` creates or opens the database, and creates the directories
+  leading to it. The default `":memory:"` lasts until the store closes.
+- File databases run in WAL mode with `synchronous=NORMAL`: a power loss can
+  drop the last commits, a process crash cannot. SQLite keeps
+  `<location>-wal` and `<location>-shm` next to the database while it is open.
+- Several connections can share one file. Event versions and tag names stay
+  unique across them, and the losing append or `tags.create` resolves with a
+  `Result` error.
+- `compact` with the default `reclaim: true` shrinks the file. With `false`,
+  later inserts reuse the freed pages instead.
 
 ## Node-only entry point
 
-Node.js applications can import the factory directly:
+The main entry loads the SQLite backend when the factory is called. Node.js
+applications can import it directly instead:
 
 ```ts
-import { createSqliteEventStore } from "@jolly-pixel/event-store/node";
+import {
+  createSqliteEventStore
+} from "@jolly-pixel/event-store/node";
 
-await using store = await createSqliteEventStore("./events.sqlite");
+await using store = await createSqliteEventStore(
+  "./events.sqlite"
+);
 ```
-
-The factory owns the connection it opens and closes it with the store.
-
-## Schema initialization
-
-The factory runs the schema before returning. It creates the `events` and
-`tags` tables and their indexes when they do not exist, so a database made
-before tags existed gains the `tags` table the next time it is opened.
-
-`tags.create` checks that the event exists and inserts the tag in one
-statement. The schema's unique `(asset_id, name)` constraint turns a duplicate
-name into an `EventTagConflictError`, whichever connection created the first
-one.
-
-`CREATE TABLE IF NOT EXISTS` does not alter an existing table. A database made
-with a schema that predates the unique `(asset_id, event_version)` constraint
-must be migrated by the application or recreated.
-
-## Multiple connections
-
-Each insert assigns the next asset version in the `INSERT` statement, while the
-schema's unique `(asset_id, event_version)` constraint prevents two connections
-from storing the same version for one asset. If SQLite rejects the insert,
-`writer.append` returns a `Result` error under the shared
-[`EventStore` contract](./EventStore.md#writer).
-
-## Compaction
-
-[`compact`](./EventStore.md#compaction) deletes superseded rows. With the
-default `reclaim: true`, it releases the freed pages after a deletion: with
-`PRAGMA incremental_vacuum` when the database uses incremental auto-vacuum (the
-factory's default), with `VACUUM` otherwise. Pass `reclaim: false` to keep the
-freed pages; later inserts reuse them, so the file stops growing without
-shrinking.
-
-A conditional append (`expectedVersion`) checks the asset's newest version in
-the same `INSERT` statement that assigns the next one.

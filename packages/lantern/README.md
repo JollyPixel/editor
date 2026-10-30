@@ -59,7 +59,11 @@ its tours through `context.lantern`.
 
 ## 📚 API
 
-### Headless: `@jolly-pixel/lantern`
+### Headless
+
+```ts
+import "@jolly-pixel/lantern";
+```
 
 Declares tours, runs them and remembers which ones the user has seen. It draws nothing and does
 not need Lit.
@@ -68,7 +72,11 @@ not need Lit.
 - [TourRun](./docs/TourRun.md): the step machine behind a running tour
 - [Lantern](./docs/Lantern.md): registering and starting tours, `LanternSeen`
 
-### UI component: `@jolly-pixel/lantern/element`
+### UI component
+
+```ts
+import "@jolly-pixel/lantern/element";
+```
 
 The `jolly-lantern` Lit element that draws a `TourRun` as a spotlight and a card. It needs the
 optional `lit` and `@jolly-pixel/ui` peers.

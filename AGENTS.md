@@ -24,7 +24,7 @@
 - E2E tests are slow to run. Add one only when a unit or `happy-dom` test
   cannot cover the behavior (real browser rendering, WebGL, cross-page or
   network flows), and tell the user that reason before adding it.
-- Build e2e suites on `@jolly-pixel/e2e` (`packages/e2e/README.md`); keep only
+- Build e2e suites on `@jolly-pixel/e2e` (`packages/e2e/AGENTS.md`); keep only
   domain helpers in the suite.
 - After changing a workspace, rebuild it with `pnpm run build` before
   validating consuming workspaces so they load the updated `dist/` output.

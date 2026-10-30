@@ -1,13 +1,10 @@
 # OrbitFlyCamera
 
-A WASD + mouse-look fly camera. It extends [CameraComponent](camera.md)
-and, unlike [Camera3DControls](camera-3d-controls.md), can pivot around a
-focus point instead of always flying free: `focusMode: "lock"` orbits a
-fixed point at a scroll-adjusted distance, and `focusMode: "elastic"` lets
-WASD/look pilot a free-floating pivot that the camera trails behind.
-Movement and damping follow wall-clock time
-([`world.time.unscaledDelta`](../systems/world.md#time)), so the camera
-keeps its speed in slow motion and while the game is paused.
+A WASD + mouse-look fly [CameraComponent](camera.md) that can also pivot:
+`focusMode: "lock"` orbits a fixed point, and `focusMode: "elastic"` trails
+a pivot that WASD and look steer. It moves by wall-clock time
+([`world.time.unscaledDelta`](../systems/world.md#time)), so it keeps its
+speed in slow motion and while paused.
 
 ## Usage
 
@@ -92,7 +89,7 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `yaw` / `pitch` | `0` / `-0.2` | Starting orientation, in radians |
 | `moveSpeed` | `18` | Cruise speed in units per second |
 | `minMoveSpeed` / `maxMoveSpeed` | `2` / `240` | Bounds for the scroll-adjusted `moveSpeed`; a min above the max throws a `RangeError` |
-| `accelerationTime` | `0.15` | Seconds to ease into a new cruise velocity. Acceleration starts at zero and builds up; `0` starts at full speed |
+| `accelerationTime` | `0.15` | Seconds to ease into a new cruise velocity; `0` starts at full speed |
 | `brakingTime` | `0.1` | Seconds to glide to a stop once the movement keys are released; `0` stops at once |
 | `responsiveness` | `18` | Frame-rate-independent damping rate of the "lock" pivot and distance and the "elastic" trail distance, in 1/s |
 | `mouseSensitivity` | `0.003` | Mouse-look sensitivity |
@@ -106,7 +103,7 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `speedAdjustStep` | `0.15` | Fraction `moveSpeed` grows per wheel notch in "none" mode, and in "lock" mode while not orbiting |
 | `focusMode` | `"none"` | `"none"`: no pivot. `"lock"`: `enterOrbitFocus` engages a fixed pivot; scroll adjusts distance; `exitOrbitFocus` or `teleport` releases it. `"elastic"`: WASD/look pilot a free-floating pivot; scroll trails the camera behind it, reaching 0 (free-fly) at full zoom-in |
 | `minPivotDistance` / `maxPivotDistance` | `1` / `200` | Bounds for the scroll-adjusted pivot distance in "lock" mode; `minPivotDistance` must be greater than 0 and at most `maxPivotDistance`, or the constructor throws a `RangeError`. `maxPivotDistance` also doubles as "elastic" mode's max trail distance |
-| `pivotZoomStep` | `0.1` | While orbiting in "lock" mode, each wheel notch multiplies the pivot distance by `1 + pivotZoomStep` zooming out and divides it zooming in, so a notch covers the same share of the distance near the pivot as far from it |
+| `pivotZoomStep` | `0.1` | While orbiting in "lock" mode, each wheel notch multiplies or divides the pivot distance by `1 + pivotZoomStep` |
 | `pivotNudgeStep` | `1` | Distance nudged per key press while orbiting in "lock" mode |
 | `showPivotMarker` | `true` | Draws a marker at the pivot in "lock" and "elastic" modes |
 | `fov` | `60` | Vertical field of view, in degrees |
@@ -119,11 +116,9 @@ claims it. Ctrl is reserved for other scroll-driven interactions (e.g. brush
 size), so Ctrl+wheel is ignored.
 
 On a touchpad, a two-finger swipe looks around (orbits while a pivot is
-locked) and a pinch does what the wheel does. With natural scrolling, moving
-the fingers right looks right. The camera reads
-[`Mouse.scrollSource`](../../../controls/docs/mouse.md#wheel-source) to tell
-swipes from wheel notches; set `input.mouse.scrollDevice` when that guess is
-wrong for a device.
+locked) and a pinch does what the wheel does. Swipes are told from wheel
+notches by `Mouse.scrollSource` of `@jolly-pixel/controls`; set
+`input.mouse.scrollDevice` when it guesses wrong.
 
 ## Keys
 

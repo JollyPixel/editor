@@ -1,20 +1,8 @@
 # Registering from features
 
 An editor registers its console entries feature by feature. Each feature is a function that
-registers a namespace and returns it.
-
-```ts
-type ConsoleFeature<TContext> = (
-  commands: CommandConsole,
-  context: TContext
-) => RegistrationHandle;
-
-function registerConsoleFeatures<TContext>(
-  commands: CommandConsole,
-  features: Iterable<ConsoleFeature<TContext>>,
-  context: TContext
-): RegistrationHandle;
-```
+registers a namespace and returns it. The signatures are in
+[CommandConsole](../CommandConsole.md#features).
 
 ## Declaring a feature
 
@@ -68,6 +56,3 @@ const features = registerConsoleFeatures(
 // on dispose
 features.unregister();
 ```
-
-Features register in order and unregister in reverse. If one throws, the ones already registered
-are removed and the error is rethrown.

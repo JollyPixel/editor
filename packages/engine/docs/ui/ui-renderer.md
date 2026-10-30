@@ -1,15 +1,10 @@
 # UIRenderer
 
-The **UIRenderer** is an [ActorComponent](../actor/actor-component.md)
-that provides an orthographic 2D overlay on top of the 3D scene.
-It creates its own `OrthographicCamera` and a Three.js
-`CSS2DRenderer` so that [UINode](./ui-node.md) and
-[UISprite](./ui-sprite.md) elements are always drawn screen-aligned,
-independently from the main 3D camera.
-
-Typically a single `UIRenderer` is registered once on a dedicated
-actor (e.g. `"camera2D"`). Every `UINode` created under that actor
-auto-discovers the renderer and registers itself.
+`UIRenderer` draws a 2D overlay over the 3D scene with its own
+`OrthographicCamera`, plus a `CSS2DRenderer` for text, so
+[UINode](./ui-node.md) and [UISprite](./ui-sprite.md) elements stay
+screen-aligned. Add one per world, usually on a dedicated actor; nodes
+register with it on their own.
 
 ```ts
 import { Actor, UIRenderer, UISprite } from "@jolly-pixel/engine";
@@ -18,17 +13,7 @@ const camera2D = new Actor(world, { name: "camera2D" })
   .addComponent(UIRenderer, { near: 1 });
 ```
 
-## How it works
-
-1. On construction the component creates an `OrthographicCamera`
-   sized to match the current canvas and appends a `CSS2DRenderer`
-   DOM element on top of the WebGL canvas.
-2. It listens to the game renderer's `resize` event and
-   automatically updates both the CSS overlay size and every
-   registered node position.
-3. On every `draw` event it renders the scene through the
-   orthographic camera so that CSS2D objects (used by
-   [UIText](./ui-sprite.md)) stay in sync with the 3D world.
+On a canvas resize it resizes the overlay and repositions every node.
 
 ## Constructor
 
@@ -51,9 +36,8 @@ interface UIRendererOptions {
 
 ## Creating a HUD element
 
-Once a `UIRenderer` exists, child actors can register
-[UISprite](./ui-sprite.md) components that are automatically
-positioned relative to the screen edges.
+Child actors add [UISprite](./ui-sprite.md) components positioned against
+the screen edges:
 
 ```ts
 const button = new Actor(world, {
@@ -83,8 +67,8 @@ button.onClick.connect(() => {
 
 ## Updating positions at runtime
 
-When you change the offset or anchor of a node after creation
-you can force a full re-layout by calling `updateWorldPosition`:
+After changing a node's offset or anchor, `updateWorldPosition()` lays out
+every node again:
 
 ```ts
 const uiRenderer = camera2D.getComponent(UIRenderer)!;
@@ -93,9 +77,8 @@ uiRenderer.updateWorldPosition();
 
 ## Cleanup
 
-Calling `clear()` destroys every registered node, removes the
-CSS overlay from the DOM, and unsubscribes from renderer events.
-Destroying the component calls it too:
+`clear()` destroys every registered node, removes the CSS overlay and stops
+listening to the renderer. Destroying the component calls it:
 
 ```ts
 uiRenderer.clear();

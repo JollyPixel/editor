@@ -1,10 +1,7 @@
 # UISprite
 
-A **UISprite** is a [UINode](./ui-node.md) that renders a flat
-rectangular mesh and provides pointer interaction signals. It is
-the main building block for buttons, panels, icons, and other
-interactive 2D elements drawn by the
-[UIRenderer](./ui-renderer.md).
+A `UISprite` is a [UINode](./ui-node.md) drawn as a flat rectangle, with
+pointer signals: the building block for buttons, panels and icons.
 
 ```ts
 import { Actor, UISprite } from "@jolly-pixel/engine";
@@ -25,10 +22,8 @@ btn.onClick.connect(() => console.log("Clicked!"));
 
 ## Style
 
-The `style` option controls the default appearance of the sprite's
-`MeshBasicMaterial`. An optional `styleOnHover` is automatically
-swapped in when the pointer enters the element and reverted when
-it leaves.
+`style` sets the sprite's `MeshBasicMaterial`. `styleOnHover` applies while
+the pointer is over it, with no signal wiring needed.
 
 ```ts
 interface UISpriteStyle {
@@ -59,9 +54,8 @@ interface UISpriteStyle {
 
 ## Text
 
-Passing a `text` option embeds a **UIText** label rendered with the
-CSS2DRenderer on top of the sprite mesh. The text is a regular HTML
-`<div>` styled via CSS properties.
+`text` adds a `UIText` label over the sprite: an HTML `<div>` styled with
+CSS properties.
 
 ```ts
 interface UITextOptions {
@@ -89,16 +83,13 @@ Default text style:
 }
 ```
 
-All standard CSS text properties are supported: `color`,
-`fontSize`, `fontFamily`, `fontWeight`, `textAlign`, `lineHeight`,
-`letterSpacing`, `textTransform`, `textShadow`, `padding`,
-`backgroundColor`, `borderRadius`, `opacity`, and `whiteSpace`.
+`UITextStyle` accepts `color`, `fontSize`, `fontFamily`, `fontWeight`,
+`textAlign`, `lineHeight`, `letterSpacing`, `textTransform`, `textShadow`,
+`padding`, `backgroundColor`, `borderRadius`, `opacity` and `whiteSpace`.
 
 ## Signals
 
-`UISprite` exposes [SignalEvent](../components/signal.md) instances
-for every pointer interaction. Subscribe with `connect` and
-unsubscribe with `disconnect`.
+Each pointer interaction is a [SignalEvent](../components/signal.md):
 
 | Signal | Fires when |
 | ------ | ---------- |
@@ -124,26 +115,10 @@ sprite.onPointerLeave.connect(() => console.log("leave"));
 sprite.onRightClick.connect(() => console.log("right click"));
 ```
 
-## Hover styling
-
-When `styleOnHover` is provided the material is updated
-automatically on pointer enter and restored on pointer leave.
-No manual signal wiring is needed.
-
-```ts
-.addComponentAndGet(UISprite, {
-  size: { width: 120, height: 40 },
-  style: { color: 0x222222, opacity: 0.8 },
-  styleOnHover: { color: 0x4444ff, opacity: 1 }
-});
-```
-
 ## Hit testing
 
-`UISprite` performs hit testing every frame in its `update` loop
-by projecting the mouse world position onto the mesh bounding box.
-The `isPointerOver()` method is available if you need to query the
-hover state manually:
+The sprite tests the pointer against its bounds every frame.
+`isPointerOver()` reads the result:
 
 ```ts
 if (sprite.isPointerOver()) {

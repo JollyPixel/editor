@@ -1,12 +1,8 @@
 # EventStore
 
-Shared API returned by the built-in persistence factories.
-
-| Backend | Factory | Storage lifetime | Runtime |
-|---|---|---|---|
-| [Memory](./Memory.md) | `persistence.memory()` | One store instance | Browser or Node.js |
-| [SQLite](./Sqlite.md) | `await persistence.sqlite(location?)` | File-backed, or one connection with `":memory:"` | Node.js |
-| [IndexedDB](./IndexedDb.md) | `await persistence.indexeddb({ name })` | IndexedDB database `name` | Browser |
+Shared API returned by the [Memory](./Memory.md), [Sqlite](./Sqlite.md) and
+[IndexedDb](./IndexedDb.md) factories. Every member returns a promise, and
+writes run one at a time in call order.
 
 ```ts
 export interface EventStore {
@@ -14,38 +10,24 @@ export interface EventStore {
   readonly reader: EventReader;
   readonly tags: EventTags;
   subscribe(
-    listener: EventListener,
-    options?: SubscribeOptions
+    listener: (event: Event) => void,
+    options?: { eventTypePrefix?: string; }
   ): () => void;
   subscribeRejections(
-    listener: RejectionListener
+    listener: (error: Error, input: AppendInput) => void
   ): () => void;
-  compact(
-    options: CompactOptions
-  ): Promise<CompactReport>;
+  compact(options: CompactOptions): Promise<CompactReport>;
   close(): Promise<void>;
   [Symbol.asyncDispose](): Promise<void>;
 }
 ```
 
-Every read and write returns a promise, whatever the backend. Writes
-(`append`, `tags.create`, `tags.delete`, `compact` and `close`) run one at a
-time in call order, so a write starts only after the previous one settled.
-Reads do not wait for pending writes and see the log as of the last settled
-write.
-
 ## Data model
 
 ```ts
-type ActorUser = {
-  type: "user";
-  id: string;
-};
-type ActorSystem = {
-  type: "system";
-  source: string;
-};
-export type Actor = ActorUser | ActorSystem;
+export type Actor =
+  | { type: "user"; id: string; }
+  | { type: "system"; source: string; };
 
 export interface AppendInput {
   assetType: string;
@@ -57,22 +39,22 @@ export interface AppendInput {
 }
 
 export interface Event {
-  eventId: number;
+  eventId: number; // position in the whole log
   assetType: string;
   assetId: string;
   eventType: string;
   eventData: unknown;
-  eventVersion: number;
+  eventVersion: number; // position in the asset stream, from 1
   actor: Actor;
   createdAt: string;
 }
 ```
 
-## Schema map
+### Schema map
 
-Passing a map of event type to payload shape narrows what `append` accepts.
-Every factory takes it as an optional type argument and returns a
-`TypedEventStore<TMap>`, which remains assignable to `EventStore`.
+A map of event type to payload narrows what `append` accepts. Reads still
+return `Event` with an `unknown` payload, because a stored row may predate the
+map: check it before use.
 
 ```ts
 type SpriteMap = {
@@ -80,158 +62,40 @@ type SpriteMap = {
   "sprite.renamed": { from: string; to: string; };
 };
 
-const store = persistence.memory<SpriteMap>();
-
-await store.writer.append({
-  assetType: "sprite",
-  assetId: "a1",
-  eventType: "sprite.created",
-  eventData: { path: "a.png", size: 12 },
-  actor
-});
+const store = EventStore.persistence.memory<SpriteMap>();
 ```
 
-An `eventType` outside the map is rejected, and so is an `eventData` that
-does not match the payload its `eventType` declares.
-
-`append` still returns the loose `Event`, so the map only constrains what a
-holder of the store writes. A store built without a map therefore satisfies
-a `TypedEventStore<TMap>` parameter — its `append` accepts every input the
-map describes — while a store built with a different map does not.
-
-`TypedEvent<TMap>` is the discriminated union the map describes. Narrowing on
-`eventType` narrows `eventData` with it:
-
-```ts
-export type TypedEvent<TMap extends EventDataMap> = {
-  [K in EventType<TMap>]: EventEnvelope & {
-    eventType: K;
-    eventData: TMap[K];
-  };
-}[EventType<TMap>];
-```
-
-Reads are deliberately left untyped. `reader` hands back `Event`, whose
-`eventData` is `unknown`, because a stored row is parsed from JSON and may
-predate the current map. Validate it with a type guard before use:
-
-```ts
-function isSpriteCreated(
-  event: Event
-): event is Extract<TypedEvent<SpriteMap>, { eventType: "sprite.created"; }> {
-  return event.eventType === "sprite.created" &&
-    typeof (event.eventData as { path?: unknown; })?.path === "string";
-}
-```
-
-## `writer`
+## writer
 
 ```ts
 writer.append(input: AppendInput): Promise<Result<Event, Error>>
 ```
 
-`append` resolves with the stored event on success, including the `eventId`
-and `eventVersion` assigned by the backend. Failures resolve as `Result`
-errors; the promise itself does not reject. Appends issued without awaiting
-each other are stored in call order and get consecutive versions.
+- Resolves with the stored event, or with a `Result` error. It never rejects.
+- With `expectedVersion`, the append succeeds only while the asset's newest
+  `eventVersion` equals it (`0` for an empty stream). Otherwise it resolves
+  with an `EventVersionConflictError`.
+- `eventData` and `actor` are stored as JSON: a `Date` comes back as a string
+  and a `BigInt` fails the append.
 
-### Expected version
-
-`expectedVersion` makes the append conditional: it succeeds only while the
-asset's newest `eventVersion` equals it (`0` for an empty stream). Otherwise
-`append` returns an `EventVersionConflictError` and stores nothing:
+## reader
 
 ```ts
-class EventVersionConflictError extends Error {
-  readonly assetId: string;
-  readonly expectedVersion: number;
-  readonly actualVersion: number;
-}
-```
-
-The check and the insert are one statement, so another connection cannot
-append in between. A writer that derived the event from state at version `v`
-passes `v` to make sure nothing landed since.
-
-## `subscribe`
-
-```ts
-export type EventListener = (event: Event) => void;
-
-export interface SubscribeOptions {
-  eventTypePrefix?: string;
+export interface EventReader {
+  get(assetId: string, eventVersion: number): Promise<Event | undefined>;
+  list(assetId: string, fromVersion?: number): Promise<Event[]>;
+  listAll(options?: ListAllOptions): Promise<Event[]>;
+  listFromCheckpoints(options: ListFromCheckpointsOptions): Promise<Event[]>;
 }
 
-subscribe(listener: EventListener, options?: SubscribeOptions): () => void
-```
-
-Calls `listener` with each event the store accepts, in append order, and
-returns the function that detaches it. Listeners run before the `append`
-promise resolves, so the appender continues with every listener already
-called. A rejected append notifies nothing.
-`eventTypePrefix` matches the start of `eventType` literally, the same way the
-reader filters, so a consumer folding one family of events does not filter the
-stream itself.
-
-```ts
-const unsubscribe = store.subscribe(
-  (event) => catalog.apply(event),
-  { eventTypePrefix: "asset." }
-);
-```
-
-Subscribing does not replay history. A projection that starts from stored
-events reads them first, then subscribes to follow the log.
-
-### `subscribeRejections`
-
-```ts
-export type RejectionListener = (error: Error, input: AppendInput) => void;
-
-subscribeRejections(listener: RejectionListener): () => void
-```
-
-Calls `listener` with the error and the original input of each append the
-store rejects, and returns the function that detaches it. `append` still
-returns the same error, so the appender handles it either way.
-
-## `reader`
-
-```ts
-reader.get(assetId: string, eventVersion: number): Promise<Event | undefined>
-reader.list(assetId: string, fromVersion?: number): Promise<Event[]>
-reader.listAll(options?: ListAllOptions): Promise<Event[]>
-reader.listFromCheckpoints(options: ListFromCheckpointsOptions): Promise<Event[]>
-```
-
-`get` resolves with the event stored at one version of an asset, or `undefined` when
-the stream does not hold that version, for example after compaction removed it.
-
-`list` returns one asset stream in `eventVersion` order and treats `fromVersion`
-as an exclusive lower bound.
-
-`listAll` reads every stream in `eventId` order and accepts these filters:
-
-```ts
 export interface ListAllOptions {
-  fromEventId?: number;
-  beforeEventId?: number;
+  fromEventId?: number; // exclusive
+  beforeEventId?: number; // exclusive
   eventTypePrefix?: string;
   limit?: number;
   newestFirst?: boolean;
 }
-```
 
-- `fromEventId` is an exclusive lower bound.
-- `beforeEventId` is an exclusive upper bound.
-- `eventTypePrefix` matches the start of `eventType` literally.
-- `limit` truncates the ordered result.
-- `newestFirst` reverses the order, so `limit` keeps the newest events. Pass
-  the last `eventId` read as `beforeEventId` to read the next page.
-
-### `listFromCheckpoints`
-
-```ts
 export interface ListFromCheckpointsOptions {
   checkpointEventTypes: readonly string[];
   eventTypePrefix?: string;
@@ -239,29 +103,33 @@ export interface ListFromCheckpointsOptions {
 }
 ```
 
-Returns, for each asset, its newest event whose type is in
-`checkpointEventTypes` plus everything appended after it, across every stream
-in `eventId` order. An asset holding no checkpoint yields its whole stream,
-so an empty `checkpointEventTypes` returns every event, or the whole stream
-when `assetId` is set.
+`list` follows `eventVersion` order, the other reads follow `eventId` order.
+`fromVersion` is exclusive.
 
-`eventTypePrefix` filters the result without moving the bound: an event
-matching the prefix but stored before its asset's checkpoint is still left out.
+`listFromCheckpoints` returns, for each asset, its newest
+[checkpoint](../GLOSSARY.md#checkpoint) and every event after it. An asset
+with no checkpoint returns its whole stream. `eventTypePrefix` filters the
+result after the checkpoint is chosen, so it never changes which checkpoint
+applies.
 
-`assetId` limits the read to one stream, which then comes back in
-`eventVersion` order as well. A consumer that folds one asset uses it to read
-only the events its fold still needs:
+## subscribe
 
-```ts
-const events = await store.reader.listFromCheckpoints({
-  assetId: "a1",
-  checkpointEventTypes: ["asset.created", "asset.updated"]
-});
-```
+`subscribe` calls the listener with each accepted event before `append`
+resolves. It does not replay history: read the stored events first, then
+subscribe. `subscribeRejections` receives each rejected append with its input.
 
-## `tags`
+## tags
+
+A tag names one event of an asset and keeps it through compaction.
 
 ```ts
+export interface EventTags {
+  create(input: EventTagInput): Promise<Result<EventTag, Error>>;
+  get(assetId: string, name: string): Promise<EventTag | undefined>;
+  list(assetId?: string): Promise<EventTag[]>;
+  delete(assetId: string, name: string): Promise<boolean>;
+}
+
 export interface EventTagInput {
   assetId: string;
   name: string;
@@ -273,74 +141,20 @@ export interface EventTagInput {
 export interface EventTag extends EventTagInput {
   createdAt: string;
 }
-
-tags.create(input: EventTagInput): Promise<Result<EventTag, Error>>
-tags.get(assetId: string, name: string): Promise<EventTag | undefined>
-tags.list(assetId?: string): Promise<EventTag[]>
-tags.delete(assetId: string, name: string): Promise<boolean>
 ```
 
-A tag names one event of one asset stream and keeps that event through
-[compaction](#compaction). Its name is unique within the asset, and several
-names may point at the same event. The store only refuses an empty name; any
-other naming rule belongs to the consumer.
+`create` resolves with an `UnknownEventError` when the event does not exist,
+an `EventTagConflictError` when the name is taken, and a `TypeError` when the
+name is empty.
+
+## compact
 
 ```ts
-const [checkpoint] = await store.reader.listFromCheckpoints({
-  assetId: "a1",
-  checkpointEventTypes: ["asset.created", "asset.updated"]
-});
-
-(await store.tags.create({
-  assetId: "a1",
-  name: "v1",
-  eventVersion: checkpoint.eventVersion,
-  message: "First pass",
-  actor
-})).unwrap();
-```
-
-`create` resolves with the stored tag and the `createdAt` the store assigned.
-It resolves with an error and stores nothing when:
-
-- the stream holds no event at `eventVersion`, including one that compaction
-  already removed: `UnknownEventError`;
-- the asset already has a tag with that name: `EventTagConflictError`;
-- `name` is empty: `TypeError`.
-
-```ts
-class UnknownEventError extends Error {
-  readonly assetId: string;
-  readonly eventVersion: number;
-}
-
-class EventTagConflictError extends Error {
-  readonly assetId: string;
-  readonly tagName: string;
-}
-```
-
-`list` returns tags in creation order, across every asset or for one. A tag
-never moves: to point a name at another event, delete it and create it again,
-which also moves it to the end of the list.
-
-`delete` resolves with `false` when the tag does not exist. It leaves the event in
-place, and the next `compact` removes that event unless another tag still
-points at it.
-
-## Compaction
-
-```ts
-export interface EventPosition {
-  assetId: string;
-  eventVersion: number;
-}
-
 export interface CompactOptions {
   checkpointEventTypes: readonly string[];
-  reclaim?: boolean;
+  reclaim?: boolean; // default true
   assetId?: string;
-  keep?: Iterable<EventPosition>;
+  keep?: Iterable<{ assetId: string; eventVersion: number; }>;
 }
 
 export interface CompactReport {
@@ -349,49 +163,14 @@ export interface CompactReport {
 }
 ```
 
-`compact` removes every event stored before each asset's newest checkpoint,
-which is the set `listFromCheckpoints` already skips, minus the events a
-[tag](#tags) points at. An asset holding no checkpoint keeps its whole stream,
-and an empty `checkpointEventTypes` removes nothing. `assetId` limits the pass
-to one asset. `keep` names more events to leave in place, as a tag does, for
-a consumer whose checkpoints still read older events.
-
-Because tagged events stay, `list` and `listAll` can return a stream with gaps
-below its newest checkpoint, such as `v3, v9, v10`. `listFromCheckpoints` never
-returns a tagged event once a newer checkpoint exists.
+Removes the events before each asset's newest checkpoint. Tagged and `keep`
+events survive, and surviving events keep their `eventId` and `eventVersion`.
 
 > [!WARNING]
-> Compaction is destructive and irreversible. Only call it when the checkpoint
-> types genuinely replace an asset's whole state, so nothing below them is ever
-> read again.
+> Compaction is irreversible. Only use checkpoint types that replace an
+> asset's whole state.
 
-Surviving events keep their `eventId` and `eventVersion`, so a position held
-elsewhere stays valid and `append` keeps assigning increasing versions.
-`reclaim` defaults to `true` and asks the backend to release the freed space.
+## close
 
-## Lifecycle
-
-```ts
-close(): Promise<void>
-[Symbol.asyncDispose](): Promise<void>
-```
-
-`close()` is idempotent and waits for the writes issued before it. A closed
-store refuses later reads and writes with an `EventLogClosedError`: `append`
-and `tags.create` resolve with it as a `Result` error, and every other member
-rejects with it.
-`[Symbol.asyncDispose]` calls `close()`, so stores work with `await using`
-declarations.
-
-## Storage contract
-
-All backends follow the same behavior:
-
-- `eventData` and `actor` pass through JSON serialization. `BigInt` values
-  cannot be stored, top-level values such as `undefined` and `Symbol` fail the
-  append, object properties with those values are omitted, and `Date` values
-  become ISO strings.
-- The stored event does not alias the input, and values returned by the reader
-  or `tags` cannot mutate the log.
-- `append` returns an event equivalent to the one returned by a later `list`.
-- A rejected append consumes neither an `eventId` nor an `eventVersion`.
+Waits for pending writes, then refuses every later call. Stores work with
+`await using`.

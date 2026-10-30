@@ -4,11 +4,8 @@
 ## Prerequisites
 
 - Node.js v24 or higher
-- [Vite](https://vite.dev/) (for local dev server)
-  - [vite-plugin-checker](https://github.com/fi3ework/vite-plugin-checker): provides checks for TypeScript, ESLint, vue-tsc, and Stylelint
-  - [vite-plugin-glsl](https://github.com/UstymUkhman/vite-plugin-glsl#readme): import, inline (and minify) GLSL/WGSL shader files
-- TypeScript (recommended)
-- `@jolly-pixel/engine` and `@jolly-pixel/runtime` packages
+- [Vite](https://vite.dev/) with `vite-plugin-checker` (TypeScript checks)
+  and `vite-plugin-glsl` (shader imports)
 
 ## 1. Project Setup
 
@@ -22,30 +19,7 @@ npm i @jolly-pixel/engine @jolly-pixel/runtime three
 npm i -D @types/three typescript vite vite-plugin-checker vite-plugin-glsl
 ```
 
-Your `package.json` should look like this:
-
-```json
-{
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@jolly-pixel/engine": "^1.0.0",
-    "@jolly-pixel/runtime": "^1.0.0",
-    "three": "0.182.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.3",
-    "vite": "^7.3.1",
-    "@types/three": "0.182.0",
-    "vite-plugin-checker": "0.12.0",
-    "vite-plugin-glsl": "1.5.5"
-  }
-}
-```
+Set `"type": "module"` in `package.json` and add a `"dev": "vite"` script.
 
 ## 2. Vite Configuration
 
@@ -99,8 +73,8 @@ const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true
 });
 
-// Add actors, components, and systems via the runtime API, for example:
-// runtime.world.addActor(...);
+// Add actors and components, for example:
+// runtime.world.createActor("Player").addComponent(...);
 
 runtime.load().catch(console.error);
 ```
@@ -110,17 +84,14 @@ runtime.load().catch(console.error);
 Start the dev server:
 
 ```bash
-pnpm run dev
+npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser. You should see a blank canvas—your engine is running!
+Open [http://localhost:5173](http://localhost:5173): a blank canvas means the
+engine is running.
 
 ## 6. Next Steps
 
-- Add actors and components to your scene using the engine API.
-- Explore our [games](https://github.com/JollyPixel/games) repository for real-world example.
-- See the [engine README](../../README.md) and [runtime README](../../../runtime/README.md) for more advanced usage and API details.
-
----
-
-You now have a working JollyPixel hello world! Continue exploring the docs to build your game.
+- Add actors and components: see the [engine README](../../README.md).
+- Browse the [games](https://github.com/JollyPixel/games) repository for
+  complete examples.

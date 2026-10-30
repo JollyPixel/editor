@@ -71,23 +71,30 @@ runtime.load({
 ```
 
 Vite serves `public/assets.json` during development and copies it to the build
-output. Resolving the catalog from `document.baseURI` works with both the web
-and desktop guides. `Runtime.create()` fetches and parses the catalog before it
-constructs the world.
+output. `Runtime.create()` fetches and parses the catalog before it constructs
+the world. Resolving it from `document.baseURI` works on both platforms below.
 
-The guides cover runtime setup and customization:
+## 🖥️ Platforms
 
-- [Web](./docs/guides/platforms/web.md)
-- [Desktop](./docs/guides/platforms/desktop.md)
-- [Scenes and assets](./docs/guides/scenes-and-assets.md)
-- [Custom asset loaders](./docs/guides/custom-asset-loaders.md)
-- [Loading screen](./docs/guides/loading-screen.md)
-- [Frame scheduling and performance](./docs/guides/frame-scheduling-and-performance.md)
+The web and desktop builds share the same HTML file and application code. Only
+the build setup differs.
 
-> [!NOTE]
-> The Vite web runtime and the Electron desktop runtime share the same HTML
-> file and application code. The desktop build adds a relative Vite base and
-> an Electron shell that loads `dist/index.html`.
+- [Web](./docs/guides/platforms/web.md): serve and build the application with
+  Vite.
+- [Desktop](./docs/guides/platforms/desktop.md): a relative Vite base and an
+  Electron main process that loads `dist/index.html`.
+
+## 📖 Guides
+
+- [Scenes and assets](./docs/guides/scenes-and-assets.md): the catalog, the
+  initial scene, scene changes, and explicit load batches.
+- [Loading screen](./docs/guides/loading-screen.md): container, minimum delay,
+  theming, or starting without a screen.
+- [Custom asset loaders](./docs/guides/custom-asset-loaders.md): register a
+  loader for a project-specific asset kind.
+- [Frame scheduling and performance](./docs/guides/frame-scheduling-and-performance.md):
+  loop and device settings, performance statistics, metrics, and renderer
+  counters.
 
 ## 📚 API
 

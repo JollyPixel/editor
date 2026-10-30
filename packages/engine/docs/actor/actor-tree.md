@@ -1,10 +1,8 @@
 # ActorTree
 
-Hierarchical container that manages a collection of `Actor` nodes. It
-provides depth-first traversal, pattern-based lookups (including glob
-and path syntax), and lifecycle management (add, remove, destroy).
-`Actor` itself extends `ActorTree`, so every actor doubles as a
-sub-tree for its own children.
+A list of child actors with depth-first traversal and name, path and glob
+lookups. `Actor` extends `ActorTree`, so every actor is the tree of its own
+children.
 
 ```ts
 import { ActorTree } from "@jolly-pixel/engine";
@@ -56,22 +54,17 @@ interface ActorTreeOptions {
 new ActorTree(options?: ActorTreeOptions);
 ```
 
-Creates a new tree. Optional callbacks are invoked whenever an actor
-is added to or removed from this tree's direct `children` list.
-
-The `children: Actor[]` property holds the list of direct child
-actors managed by this tree.
+The callbacks run when an actor joins or leaves `children`, the list of
+direct child actors.
 
 ### `add(actor)`
 
-Appends `actor` to the `children` list and fires the `addCallback`
-(if provided).
+Appends `actor` to `children` and calls `addCallback`.
 
 ### `remove(actor)`
 
-Removes `actor` from the `children` list and fires the
-`removeCallback` (if provided). No-op if the actor is not a direct
-child.
+Removes `actor` from `children` and calls `removeCallback`. No-op if the
+actor is not a direct child.
 
 ### `getActor(name): Actor | null`
 
@@ -106,8 +99,8 @@ actors pending for destruction).
 
 ### `destroyActor(actor)`
 
-Marks `actor` as pending for destruction. The actual cleanup is
-handled by the game systems on the next frame.
+Marks `actor` as pending for destruction; it is destroyed at the end of the
+frame.
 
 ### `destroyAllActors()`
 
@@ -125,14 +118,10 @@ children, yielding `{ actor, parent }` pairs.
 
 ### `[Symbol.iterator](): IterableIterator<Actor>`
 
-Makes the tree iterable with `for...of`. Yields direct children,
-skipping any that are pending for destruction.
+Makes the tree iterable with `for...of`, like `getRootActors()`.
 
 ```ts
 for (const actor of tree) {
   console.log(actor.name);
 }
 ```
-
-> [!NOTE]
-> This is equivalent to getRootActors()

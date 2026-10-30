@@ -41,6 +41,23 @@ that cannot be dismissed keeps the console closed.
 | Up, Down | move through suggestions, or through history |
 | Escape | closes the console |
 
+## Search and completion
+
+Search matches the names and descriptions of every namespace, command and variable. Exact and
+prefix matches rank first, initials match (`bs` finds `brush.size`), and words of 4 to 7
+characters tolerate one typo, longer ones two (`brush.sise` finds `brush.size`).
+
+Enter on a command that needs no argument runs it. Any other result is inserted: a command so you
+can type its arguments, a variable by name, a namespace as `namespace.`.
+
+Tab completes the word under the caret and never runs anything: command names after `/`, a
+namespace's members after `namespace.`, the commands of a namespace and of its nested ones after
+`/namespace.`, and an argument's `autocomplete` or `enumValues`. In a scope, relative names come
+first. Every item of a `boolean[]` is offered `true` and `false`.
+
+An unknown command or variable prints an error with the closest name when one is within typo
+range: `Did you mean /brush.grow?`. The suggestion never runs.
+
 ## Scripts
 
 `/script [namespace]`, or `commands.editScript()`, replaces the prompt with a text editor over

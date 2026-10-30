@@ -1,18 +1,9 @@
 # Actor
 
-The `Actor` is the central **entity** in the engine's
-Entity-Component architecture. On its own an actor is simply a
-named node in the scene tree with a
-[Transform](actor-transform.md) — it carries no rendering or
-game logic. All capabilities are added through
-[components](actor-component.md) and
-[behaviors](../components/behavior.md).
-
-Because `Actor` extends [ActorTree](actor-tree.md), every actor
-is also a container for child actors, forming an arbitrarily deep
-hierarchy (scene graph). Parent–child relationships drive
-transform inheritance: moving a parent automatically moves all of
-its descendants.
+An `Actor` is a named node of the scene tree with a
+[Transform](actor-transform.md). It has no rendering or logic of its own:
+[components](actor-component.md) add them. It extends
+[ActorTree](actor-tree.md), so it holds child actors, which move with it.
 
 ## Creating an actor
 
@@ -22,22 +13,18 @@ import { Actor } from "@jolly-pixel/engine";
 const player = new Actor(world, { name: "Player" });
 ```
 
-Each actor is assigned a numeric `id`, counted from 0 in each world,
-and a random hex `persistentId` (16 characters) no other actor of the
-world holds.
-The `toString()` method returns `"$name:$id-$persistentId"`.
+Each actor gets a numeric `id`, counted from 0 in each world, and a random
+16-character hex `persistentId`. `toString()` returns
+`"$name:$id-$persistentId"`.
 
 ```ts
 console.log(`${player}`);
 // "Player:0-a1b2c3d4e5f60708"
 ```
 
-Pass `persistentId` to give the actor a known id instead, for example
-the id an actor had in a saved scene. Scene files do this for every
-actor they build. The id must not belong to another actor of the
-world: the constructor throws when it does. Look an actor up by its
-id with `world.sceneManager.actors.find(persistentId)`, which returns
-`null` once no actor holds it.
+Pass `persistentId` to restore a known id, such as one from a saved scene.
+The constructor throws when another actor of the world holds it.
+`world.sceneManager.actors.find(persistentId)` looks an actor up by its id.
 
 The constructor accepts an `ActorOptions` object:
 
@@ -58,9 +45,7 @@ interface ActorOptions {
 }
 ```
 
-When a `parent` is provided, the actor is automatically added as a
-child of that parent in both the scene tree and the Three.js scene
-graph. Otherwise it is added at the root of the scene.
+Without a `parent`, the actor is added at the root of the scene.
 
 ```ts
 const hand = new Actor(world, {
@@ -74,12 +59,8 @@ const found = world.sceneManager.tree.getActor("Player/RightHand");
 
 ## Adding components
 
-An actor gains its capabilities through components. Use
-`addComponent` for a fluent (chainable) API, or
-`addComponentAndGet` when you need a reference to the
-component instance. See
-[ActorComponent](actor-component.md) for the full component
-lifecycle.
+`addComponent` returns the actor for chaining; `addComponentAndGet` returns
+the component. See [ActorComponent](actor-component.md) for the lifecycle.
 
 ```ts
 import { ModelRenderer } from "@jolly-pixel/engine";
@@ -108,9 +89,8 @@ for (const enemyScript of actor.getComponents(EnemyBehavior)) {
 }
 ```
 
-`actor.components` is the actor's `ActorComponents` collection.
-Iterating it yields the components not pending destruction, in the
-order they were added. `has(component)` checks membership, and
+Iterating `actor.components` yields the components not pending destruction,
+in the order they were added. `has(component)` checks membership, and
 `updating` is `true` while one of them receives `update()` calls.
 
 ```ts
@@ -140,11 +120,9 @@ const vehicle = seat.findComponentInParent(VehicleBehavior);
 
 ## Removing components
 
-`removeComponent` takes a component instance or a class, and destroys
-the component at the end of the frame. Until then the component no
-longer shows up in `getComponent` or `hasComponent`. It returns
-`false` when there was nothing to remove, including a component
-already being removed.
+`removeComponent` takes a component instance or a class, and destroys the
+component at the end of the frame; lookups stop finding it at once. It
+returns `false` when there was nothing to remove.
 
 ```ts
 actor.removeComponent(ShieldBehavior);
@@ -152,47 +130,20 @@ actor.removeComponent(ShieldBehavior);
 
 ## Managing Three.js children
 
-Use `addChildren` and `removeChildren` to attach or detach
-Three.js objects (meshes, lights, helpers, etc.) to the actor's
-underlying `object3D` group. This avoids manipulating `object3D`
-directly and ensures GPU resources are properly disposed.
+`addChildren` and `removeChildren` attach and detach Three.js objects to the
+actor's `object3D`. Removing a child disposes its GPU resources.
 
 ```ts
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-const mesh = new THREE.Mesh(geometry, material);
-
-actor.addChildren(mesh);
-```
-
-When removing children, their GPU resources are automatically
-disposed
-
-```ts
+actor.addChildren(new THREE.Mesh(geometry, material));
 actor.removeChildren(mesh);
 ```
 
-On destruction, the actor disposes the resources of all its remaining
-Three.js children before clearing the group. The traversal stops on
-nested actors, which own their own destruction, and leaves textures
-untouched since they are commonly shared.
-
-## Transform
-
-Every actor owns a [Transform](actor-transform.md) that wraps the
-underlying Three.js object. It provides a clean API for reading
-and writing position, orientation, and scale in both local and
-global space.
-
-```ts
-actor.transform.setLocalPosition(new THREE.Vector3(0, 2, 0));
-```
+On destruction, the actor disposes its remaining Three.js children. It stops
+at nested actors and leaves textures alone, since they are often shared.
 
 ## Scene tree hierarchy
 
-Because `Actor` extends [ActorTree](actor-tree.md), you can
-traverse children, search by name or glob pattern, and walk the
-subtree rooted at any actor.
+[ActorTree](actor-tree.md) lookups and walks work from any actor:
 
 ```ts
 for (const child of player.getRootActors()) {
@@ -212,8 +163,7 @@ if (player.hasDescendant(pickedActor)) {
 
 ## Re-parenting
 
-An actor can be moved to a different parent at runtime with
-`setParent`. By default the actor keeps its global (world) position and orientation.
+`setParent` keeps the actor's global position and orientation by default.
 
 ```ts
 hand.setParent(otherActor);
@@ -225,16 +175,10 @@ Pass `keepLocal = true` to preserve the local values instead.
 hand.setParent(otherActor, true);
 ```
 
-## Lifecycle
-
-See [ActorComponent](./actor-component.md#lifecycle) lifecycle section.
-
 ## Active state
 
-Setting `active` to `false` stops `update()` and `fixedUpdate()` for
-the actor and every actor below it. The actor stays in the tree and
-keeps rendering: hide it with `object3D.visible` when it should
-disappear too. `activeInHierarchy` is `true` only when the actor and
+Setting `active` to `false` stops `update()` and `fixedUpdate()` for the
+actor and its subtree. It keeps rendering: hide it with `object3D.visible`. `activeInHierarchy` is `true` only when the actor and
 all its ancestors are active.
 
 ```ts
@@ -248,12 +192,9 @@ an inactive parent pauses it.
 
 ## Persistent actors
 
-A scene change destroys every actor, except root actors created with
-`persistent: true` or flagged later through the `persistent` property.
-They keep their children, components and state, and stay in the tree
-of the next scene. Removing an appended scene keeps the persistent
-roots it created as well. Destroy a persistent actor yourself when it
-is no longer needed.
+A scene change, or removing an appended scene, destroys every actor except
+root actors with `persistent: true` (option or property). They keep their
+children, components and state. Destroy them yourself when no longer needed.
 
 ```ts
 const player = world.createActor("Player", { persistent: true });
@@ -266,11 +207,10 @@ kept and the file's actor and its subtree are skipped.
 
 ## Destruction
 
-`status` is `"alive"`, `"pending"` or `"destroyed"`. Calling
-`markDestructionPending()` moves an alive actor (and recursively all
-its descendants) to `"pending"`. While pending, the actor stops
-updating and cannot be used as a parent. The engine destroys it at
-the end of the frame.
+`status` is `"alive"`, `"pending"` or `"destroyed"`.
+`markDestructionPending()` marks the actor and its descendants pending: they
+stop updating, cannot be used as a parent, and are destroyed at the end of
+the frame.
 
 ```ts
 player.markDestructionPending();
@@ -280,10 +220,8 @@ if (player.pendingForDestruction) {
 }
 ```
 
-`destroy()` destroys the actor at once and sets `status` to
-`"destroyed"`. It runs once and later calls do nothing.
-`pendingForDestruction` is `true` in both the pending and the
-destroyed status.
+`destroy()` destroys the actor at once, and only once.
+`pendingForDestruction` is `true` while pending and once destroyed.
 
 ## See also
 

@@ -11,8 +11,8 @@ as `world.audio`. The manager and background player are built on top of it.
 
 ## 🔇 Browser autoplay policy
 
-Browsers block audio playback until the user has interacted with the page
-(click, tap, key press). You must start playback from within a user gesture handler:
+Browsers block audio until the user interacts with the page, so start
+playback from a user gesture handler:
 
 ```ts
 canvas.addEventListener("click", async() => {
@@ -20,19 +20,12 @@ canvas.addEventListener("click", async() => {
 });
 ```
 
-> [!NOTE]
-> This is a browser restriction, not an engine limitation.
-> See [Chrome Autoplay Policy](https://developer.chrome.com/blog/autoplay/).
-
 ## GlobalAudio
 
-Master volume controller. Wraps a Three.js `AudioListener` and emits
-`volumechange` when the volume changes. Every sound created with the
-world listener goes through the listener gain, so the master volume
-applies to it without any extra wiring.
+Master volume over a Three.js `AudioListener`; it emits `volumechange`.
+Every sound created with the world listener follows the master volume.
 
-The listener, and the browser `AudioContext` behind it, is created the
-first time `listener`, `threeAudioListener` or `volume` is used, so a world
+The listener and its `AudioContext` are created on first use, so a world
 that never plays sound opens no audio context.
 
 ```ts
@@ -103,10 +96,8 @@ The browser runtime registers `AudioAssetLoader` (exported with
 
 ### Async loading (`loadAudio` / `loadPositionalAudio`)
 
-Fetches and decodes a URL on demand. Useful for audio that is loaded
-dynamically at runtime (e.g. user-triggered sound effects loaded after the
-loading screen). Each URL is decoded once per manager; a failed load is
-retried on the next call.
+Fetches and decodes a URL on demand. Each URL is decoded once per manager;
+a failed load is retried on the next call.
 
 ```ts
 const audio = await audioManager.loadAudio("sounds/click.mp3", { volume: 0.5 });
@@ -115,9 +106,8 @@ audio.play();
 
 ### Sync creation from pre-loaded buffers (`createAudio` / `createPositionalAudio`)
 
-When buffers have been prepared through the runtime (e.g. via
-`AudioLibrary`), these methods construct a ready-to-play `THREE.Audio` or
-`THREE.PositionalAudio` synchronously — no `await` needed in lifecycle methods.
+Builds a ready-to-play sound from a buffer the runtime already loaded, for
+example through `AudioLibrary`, so lifecycle methods need no `await`.
 
 ```ts
 // In Behavior.start():
@@ -126,8 +116,7 @@ this.#musicAudio = audioManager.createAudio(sfx.get("music"), { loop: true, volu
 this.actor.add(this.#shootAudio);
 ```
 
-For 3D-positioned sound, use `createPositionalAudio` and add the result to
-an `Actor`:
+For 3D sound, add a positional audio to an actor:
 
 ```ts
 this.#footsteps = audioManager.createPositionalAudio(sfx.get("footstep"), { loop: true });

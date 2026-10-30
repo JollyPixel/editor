@@ -1,9 +1,8 @@
 # Assets in the engine
 
-The engine consumes the platform-agnostic types from `@jolly-pixel/asset`.
-Scenes declare what they need, `SceneManager` owns replacement and additive
-load requests and loads them through the world's `AssetCoordinator`, and a
-loader performs the I/O. ECS lifecycle methods stay synchronous.
+Scenes declare the assets they need, `SceneManager` loads them through the
+world's `AssetCoordinator` before the scene starts, and components read them
+synchronously.
 
 ## Declaring scene assets
 
@@ -44,13 +43,9 @@ class BattleScene extends Systems.Scene {
 }
 ```
 
-`Scene.assets` is declarative data. `SceneManager.loadScene()` and
-`SceneManager.appendScene()` create a `SceneLoad` that tracks readiness and
-progress. `SceneManager` prepares those references through
-`world.assetCoordinator`, then activates the scene at a frame boundary.
-
-`SceneOptions.assets` accepts individual references and named reference groups.
-Groups are flattened once into the scene's immutable `assets` array.
+`SceneOptions.assets` accepts references and reference groups, flattened
+into the scene's `assets`. [SceneManager](systems/scene-manager.md) loads
+them before activating the scene.
 
 ## Using a reference in a component
 
@@ -62,11 +57,8 @@ actor.addComponent(ModelRenderer, {
 });
 ```
 
-`ActorComponent.getAsset(reference)` reads the prepared value synchronously.
-The runtime completes the scene batch before `awake()`, so component lifecycle
-methods do not perform asynchronous work. A missing prepared value throws
-`AssetNotReadyError`, which exposes an orchestration error instead of starting
-an implicit load inside the ECS lifecycle.
+`ActorComponent.getAsset(reference)` reads the loaded value synchronously.
+A value not loaded yet throws `AssetNotReadyError`; it never starts a load.
 
 ## Built-in types and loaders
 
@@ -78,11 +70,8 @@ an implicit load inside the ECS lifecycle.
 | `TEXTURE_ASSET` | `texture` | `TextureAssetLoader` | Formats supported by `THREE.TextureLoader`, plus KTX2 (see below) |
 
 `createDefaultAssetLoaders(manager, options?)` returns an `AssetLoaderRegistry`
-holding these loaders, all sharing the given Three.js `LoadingManager`. The
-runtime starts from it and registers custom loaders on top. The model loader
-imports the three.js loader for a format (and the meshopt decoder for glTF) on
-the first file of that format, so bundles that never load a model do not
-download them.
+holding these loaders, sharing one Three.js `LoadingManager`. The model loader
+imports a format's three.js loader on the first file of that format.
 
 ```ts
 const loaders = createDefaultAssetLoaders(new THREE.LoadingManager());
@@ -110,15 +99,7 @@ const loaders = createDefaultAssetLoaders(manager, { ktx2 });
 
 The transcoder path serves `basis_transcoder.js` and `basis_transcoder.wasm`
 from `three/examples/jsm/libs/basis/`. `detectSupport()` needs an initialized
-renderer. The caller owns the loader and calls `ktx2.dispose()` when done.
-`Runtime` does this for you through
-[`assets.ktx2`](../../runtime/docs/api/runtime-assets.md#ktx2-textures).
+renderer. The caller disposes the loader; `@jolly-pixel/runtime` does it for
+its `assets.ktx2` option.
 
-## Responsibility boundary
-
-- `@jolly-pixel/asset` owns IDs, catalogs, references, handles, stores, and batches.
-- `@jolly-pixel/engine` owns the built-in loaders, loads scene assets through the world's coordinator, and reads prepared handles synchronously.
-- `@jolly-pixel/runtime` resolves the catalog, composes the coordinator, and loads startup assets.
-
-See the [`@jolly-pixel/asset` README](../../asset/README.md) for the catalog
-format and lower-level APIs.
+Catalogs, references and handles come from `@jolly-pixel/asset`.
