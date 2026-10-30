@@ -161,6 +161,18 @@ export class SceneBinding
     return this.#instance.expandedActor(id);
   }
 
+  actorEntry(
+    id: string
+  ): SceneActorView | null {
+    return this.#document.tree.actor(id) ?? this.expandedActor(id);
+  }
+
+  componentEntry(
+    id: string
+  ): SceneComponentView | null {
+    return this.#document.tree.component(id) ?? this.#instance.expandedComponent(id);
+  }
+
   worldBounds(
     ids: Iterable<string>
   ): THREE.Box3 {
@@ -318,18 +330,6 @@ export class SceneBinding
     this.emit("actorsChange");
   }
 
-  #actorFile(
-    id: string
-  ): SceneActorView | null {
-    return this.#document.tree.actor(id) ?? this.expandedActor(id);
-  }
-
-  #componentEntry(
-    id: string
-  ): SceneComponentView | null {
-    return this.#document.tree.component(id) ?? this.#instance.expandedComponent(id);
-  }
-
   #rebuild(): void {
     this.#clear();
     this.#buildActors(this.#document.tree.actorIds());
@@ -379,7 +379,7 @@ export class SceneBinding
     id: string,
     patch: SceneTransformPatch = {}
   ): void {
-    const file = this.#actorFile(id);
+    const file = this.actorEntry(id);
     if (file === null) {
       return;
     }
@@ -419,7 +419,7 @@ export class SceneBinding
     id: string,
     change: ComponentChange
   ): boolean {
-    const entry = this.#componentEntry(id);
+    const entry = this.componentEntry(id);
 
     return entry !== null && this.#instance.applyComponent(
       id,

@@ -5,6 +5,7 @@ import type {
 } from "@jolly-pixel/asset";
 import type {
   SceneActorView,
+  SceneComponentView,
   SceneDocument
 } from "@jolly-pixel/asset.scene/client";
 import type { ShortcutLabels } from "@jolly-pixel/controls";
@@ -20,6 +21,7 @@ import type { ActorPresetMenu } from "../features/hierarchy/model/ActorPresetMen
 import type { SceneHistory } from "../features/history/sceneHistory.ts";
 import type { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import type { SceneAction } from "../keybindings/sceneActions.ts";
+import type { AnchorPicks } from "../state/AnchorPicks.ts";
 import type { PresenceStore } from "../state/PresenceStore.ts";
 import type { SceneDraft } from "../state/SceneDraft.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
@@ -34,7 +36,7 @@ export interface SceneAssetSlots {
   ): Promise<AssetReferenceData | null>;
   pickScene(): Promise<AssetReferenceData | null>;
   open: (
-    (reference: AssetReferenceData) => void
+    (reference: AssetReferenceData, reveal?: string) => void
   ) | null;
   subscribe(
     listener: () => void
@@ -48,6 +50,12 @@ export interface SceneLiveView extends Systems.SceneAnchorsReader {
   expandedActor(
     id: string
   ): SceneActorView | null;
+  actorEntry(
+    id: string
+  ): SceneActorView | null;
+  componentEntry(
+    id: string
+  ): SceneComponentView | null;
   subscribe(
     event: "anchorsChange" | "actorsChange",
     listener: () => void
@@ -64,6 +72,7 @@ export interface SceneEditing {
   history: SceneHistory;
   actions: SceneActions;
   selection: SelectionStore;
+  anchorPicks: AnchorPicks;
   presence: PresenceStore;
   gizmo: GizmoSettings;
   assetSlots: SceneAssetSlots;

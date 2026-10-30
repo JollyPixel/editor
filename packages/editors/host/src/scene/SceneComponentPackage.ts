@@ -16,6 +16,10 @@ export interface SceneComponentKind<TData extends object = any> {
    */
   icon: string;
   form: ComponentForm<TData>;
+  /**
+   * The `definition.assets` slot whose asset the anchor keys belong to.
+   */
+  anchorAsset?: string;
 }
 
 export interface SceneComponentSeed {

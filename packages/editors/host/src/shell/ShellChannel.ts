@@ -24,6 +24,7 @@ export const SHELL_MESSAGE_TYPE = "jolly-shell";
 export const APPEARANCE_MESSAGE_TYPE = "jolly-appearance";
 export const SESSION_RENEWED_MESSAGE_TYPE = "jolly-session-renewed";
 export const PREFERENCES_MESSAGE_TYPE = "jolly-preferences";
+export const REVEAL_MESSAGE_TYPE = "jolly-reveal";
 const kOverridesSchema = z.record(z.string(), z.unknown());
 const kLaunchPreferencesSchema = z.record(z.string(), kOverridesSchema);
 const kAppearanceSchema = z.object({
@@ -54,7 +55,8 @@ const kShellCommandSchema = z.discriminatedUnion("command", [
   z.object({
     type: z.literal(SHELL_MESSAGE_TYPE),
     command: z.literal("open-asset"),
-    target: z.string()
+    target: z.string(),
+    reveal: z.optional(z.string())
   }),
   z.object({
     type: z.literal(SHELL_MESSAGE_TYPE),
@@ -92,6 +94,10 @@ const kPreferencesMessageSchema = z.object({
   type: z.literal(PREFERENCES_MESSAGE_TYPE),
   scope: z.string(),
   overrides: kOverridesSchema
+});
+const kRevealMessageSchema = z.object({
+  type: z.literal(REVEAL_MESSAGE_TYPE),
+  key: z.string()
 });
 
 export interface ShellReadyMessage {
@@ -145,6 +151,10 @@ export interface ShellOpenAssetCommand {
   type: typeof SHELL_MESSAGE_TYPE;
   command: "open-asset";
   target: string;
+  /**
+   * Handed to the opened editor, which shows what it names.
+   */
+  reveal?: string;
 }
 
 export interface ShellToggleConsoleCommand {
@@ -199,6 +209,11 @@ export interface PreferencesMessage {
   overrides: PreferenceOverrides;
 }
 
+export interface RevealMessage {
+  type: typeof REVEAL_MESSAGE_TYPE;
+  key: string;
+}
+
 export interface RenewableClient {
   on(
     event: "unauthorized",
@@ -248,11 +263,21 @@ export class ShellChannel {
   readonly preferences: Readonly<Record<string, PreferenceOverrides>>;
 
   #port: ShellPort;
+  #unreadReveal: string | null = null;
+  #revealListener: ((key: string) => void) | null = null;
 
   constructor(
     options: ShellChannelOptions
   ) {
     this.#port = options.port;
+    window.addEventListener("message", (event) => {
+      if (this.#isFromShell(event)) {
+        const message = kRevealMessageSchema.safeParse(event.data);
+        if (message.success) {
+          this.#reveal(message.data.key);
+        }
+      }
+    });
     this.origin = options.origin;
     this.appearance = options.appearance ?? null;
     this.catalog = options.catalog ?? null;
@@ -268,12 +293,14 @@ export class ShellChannel {
   }
 
   openAsset(
-    id: AssetId | string
+    id: AssetId | string,
+    reveal?: string
   ): void {
     this.#post({
       type: SHELL_MESSAGE_TYPE,
       command: "open-asset",
-      target: AssetId.from(id).value
+      target: AssetId.from(id).value,
+      ...reveal === undefined ? {} : { reveal }
     });
   }
 
@@ -365,6 +392,39 @@ export class ShellChannel {
     }, { signal });
   }
 
+  onReveal(
+    listener: (key: string) => void,
+    signal: AbortSignal
+  ): void {
+    if (signal.aborted) {
+      return;
+    }
+
+    this.#revealListener = listener;
+    signal.addEventListener("abort", () => {
+      if (this.#revealListener === listener) {
+        this.#revealListener = null;
+      }
+    }, { once: true });
+
+    const unread = this.#unreadReveal;
+    if (unread !== null) {
+      this.#unreadReveal = null;
+      listener(unread);
+    }
+  }
+
+  #reveal(
+    key: string
+  ): void {
+    if (this.#revealListener === null) {
+      this.#unreadReveal = key;
+    }
+    else {
+      this.#revealListener(key);
+    }
+  }
+
   #isFromShell(
     event: MessageEvent
   ): boolean {
@@ -388,6 +448,15 @@ export function launchMessage(
     identity: options.identity ?? null,
     preferences: options.preferences ?? {},
     ports: options.ports ?? {}
+  };
+}
+
+export function revealMessage(
+  key: string
+): RevealMessage {
+  return {
+    type: REVEAL_MESSAGE_TYPE,
+    key
   };
 }
 

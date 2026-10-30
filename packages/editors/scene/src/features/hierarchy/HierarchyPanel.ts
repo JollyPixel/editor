@@ -22,7 +22,10 @@ import { HierarchyController } from "./HierarchyController.ts";
 
 export class HierarchyPanel extends LitElement {
   #tree = new HierarchyController(this, {
-    beginRename: (id) => this.#treeElement()?.beginRename(id)
+    beginRename: (id) => this.#treeElement()?.beginRename(id),
+    reveal: (id) => {
+      void this.updateComplete.then(() => this.#treeElement()?.reveal(id));
+    }
   });
 
   #menu = new ContextMenuController(

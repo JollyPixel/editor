@@ -50,6 +50,20 @@ export const treeStyles = css`
     box-shadow: inset 0 0 0 1px var(--jolly-focus-ring, ${kFallback.focusRing});
   }
 
+  .row[data-flash] .content {
+    animation: row-flash 900ms ease-out;
+  }
+
+  @keyframes row-flash {
+    from {
+      background: color-mix(
+        in oklab,
+        var(--jolly-accent-fill, ${kFallback.focusRing}) 45%,
+        transparent
+      );
+    }
+  }
+
   .toggle,
   .toggle-spacer {
     flex: 0 0 auto;

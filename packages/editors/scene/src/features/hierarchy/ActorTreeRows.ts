@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import type {
   SceneActorView,
-  SceneAnchorJSON,
   SceneTreeReader
 } from "@jolly-pixel/asset.scene/client";
 import { Systems } from "@jolly-pixel/engine";
@@ -19,6 +18,11 @@ import {
 import type { SceneComponents } from "../../components/SceneComponents.ts";
 import type { ActorMove } from "../../editing/SceneActions.ts";
 import type { SceneLiveView } from "../../editing/SceneEditing.ts";
+import {
+  actorAnchor,
+  actorAnchorKey,
+  type ActorAnchor
+} from "../../state/AnchorPicks.ts";
 
 // CONSTANTS
 export const PREFAB_ICON = "actor-prefab";
@@ -28,12 +32,7 @@ const kMissingAnchor = "The anchor is gone from the asset; its actors sit at the
 type ActorAnchors = Pick<Systems.SceneAnchorsReader, "anchors">;
 type LiveActors = ActorAnchors & Pick<SceneLiveView, "expandedActors">;
 
-export interface AnchorRow {
-  ownerId: string;
-  anchor: SceneAnchorJSON;
-}
-
-type RowNode = TreeNode<AnchorRow>;
+type RowNode = TreeNode<ActorAnchor>;
 
 interface ActorSections {
   anchors: RowNode[];
@@ -43,6 +42,12 @@ interface ActorSections {
 
 export class ActorTreeRows {
   static readonly EMPTY = new ActorTreeRows();
+
+  static anchorRowId(
+    row: ActorAnchor
+  ): string {
+    return `anchor:${actorAnchorKey(row)}`;
+  }
 
   static read(
     tree: Pick<SceneTreeReader, "actorIds" | "actor" | "canContain">,
@@ -77,7 +82,7 @@ export class ActorTreeRows {
 
   anchorRow(
     id: string
-  ): AnchorRow | null {
+  ): ActorAnchor | null {
     return this.#nodes.get(id)?.data ?? null;
   }
 
@@ -150,7 +155,7 @@ export class ActorTreeRows {
       anchors: Array.from(
         anchors.anchors(actor.id),
         ({ component, anchor }) => this.#anchorNode(
-          anchorRow(actor.id, { component, key: anchor.key }),
+          actorAnchor(actor.id, { component, key: anchor.key }),
           anchor
         )
       ),
@@ -174,8 +179,8 @@ export class ActorTreeRows {
       return;
     }
 
-    const row = anchorRow(actor.parentId, actor.anchor);
-    const rowId = anchorRowId(row);
+    const row = actorAnchor(actor.parentId, actor.anchor);
+    const rowId = ActorTreeRows.anchorRowId(row);
     let rowNode = this.#nodes.get(rowId);
     if (rowNode === undefined) {
       rowNode = this.#anchorNode(row, null);
@@ -186,7 +191,7 @@ export class ActorTreeRows {
   }
 
   #anchorNode(
-    row: AnchorRow,
+    row: ActorAnchor,
     found: Systems.ComponentAnchor | null
   ): RowNode {
     const node = anchorNode(row, found);
@@ -207,30 +212,11 @@ export class ActorTreeRows {
   }
 }
 
-function anchorRow(
-  ownerId: string,
-  anchor: Readonly<SceneAnchorJSON>
-): AnchorRow {
-  return {
-    ownerId,
-    anchor: {
-      component: anchor.component,
-      key: anchor.key
-    }
-  };
-}
-
-function anchorRowId(
-  row: AnchorRow
-): string {
-  return `anchor:${row.ownerId}/${row.anchor.component}/${row.anchor.key}`;
-}
-
 function anchorNode(
-  row: AnchorRow,
+  row: ActorAnchor,
   found: Systems.ComponentAnchor | null
 ): RowNode {
-  const id = anchorRowId(row);
+  const id = ActorTreeRows.anchorRowId(row);
 
   return found === null ?
     {

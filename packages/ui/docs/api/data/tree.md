@@ -96,6 +96,11 @@ interface JollyReparentDetail {
 Starts renaming a row. Returns `false` when the row does not opt in, or a
 rename, drag or keyboard move is in progress.
 
+### `reveal(id: string): void`
+
+Scrolls a row into view and flashes it, without moving focus or selection. Its
+ancestors must be in `expanded`.
+
 ### `applySearch(query: SearchQuery): number`
 
 Sets `filter` from a [`SearchQuery`](../search.md#searchquery) and returns the
@@ -291,8 +296,8 @@ diacritics, plus their ancestors.
   Without one, the rows keep a 150px minimum.
 - It makes the first render and expanding cheaper on long trees, and each
   scroll step dearer. Leave it off for short trees.
-- Keyboard navigation, `beginRename` and keyboard moves scroll an unrendered
-  row into view.
+- Keyboard navigation, `beginRename`, `reveal` and keyboard moves scroll an
+  unrendered row into view.
 - Rows update shortly after `updateComplete`.
 - Set `virtual` before the first render.
 

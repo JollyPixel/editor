@@ -119,7 +119,8 @@ function createRowState(
       rails: [],
       swatchPosition: "end",
       reorderable: true,
-      match: null
+      match: null,
+      flash: false
     };
   };
 }

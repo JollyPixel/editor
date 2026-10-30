@@ -71,6 +71,18 @@ test.describe("Tree, virtual", () => {
     await expect(findRow(page, "asset-39-49").locator(".label")).toHaveText("Last.png");
   });
 
+  test("scrolls a revealed row into view and flashes it without taking focus", async({ page }) => {
+    await page.locator(TREE_SELECTOR).evaluate((element: HTMLElementTagNameMap["jolly-tree"]) => {
+      element.reveal("asset-39-49");
+    });
+
+    const target = findRow(page, "asset-39-49");
+    await expect(target).toBeInViewport();
+    await expect(target).toHaveAttribute("data-flash", "true");
+    await expect(target).not.toBeFocused();
+    await expect(target).not.toHaveAttribute("data-flash");
+  });
+
   test("hands the tab stop over to the active row once it is scrolled away", async({ page }) => {
     await findRow(page, "folder-0").click();
     await scrollTo(page, "bottom");

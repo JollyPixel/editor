@@ -8,7 +8,8 @@ import {
   type AssetLease,
   type EditorSession,
   type HostLogger,
-  type RuntimeEditorContext
+  type RuntimeEditorContext,
+  type ShellChannel
 } from "@jolly-pixel/editor.host";
 import {
   VOXEL_MAP_KIND,
@@ -22,6 +23,7 @@ import type { PaneVisibilityDetail } from "@jolly-pixel/ui";
 import { EditorState } from "../state/index.ts";
 import { EditorScene } from "./EditorScene.ts";
 import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
+import { revealAnchor } from "../features/layers/revealAnchor.ts";
 import { EditorShell } from "../shell/EditorShell.ts";
 import {
   VoxelMapViewer,
@@ -52,6 +54,7 @@ export interface VoxelMapEditorParts {
   disposePerformancePane: () => void;
   removeInspectorMetrics: () => void;
   lantern: Lantern;
+  shellChannel: ShellChannel | null;
 }
 
 export class VoxelMapEditor {
@@ -162,7 +165,8 @@ export class VoxelMapEditor {
       }),
       disposePerformancePane,
       removeInspectorMetrics,
-      lantern: context.lantern
+      lantern: context.lantern,
+      shellChannel: context.shell
     });
   }
 
@@ -172,6 +176,7 @@ export class VoxelMapEditor {
   #removeInspectorMetrics: () => void;
   #lantern: Lantern;
   #lanternReleases: Array<() => void>;
+  #revealing = new AbortController();
   #disposed = false;
 
   readonly ready: Promise<void>;
@@ -218,6 +223,13 @@ export class VoxelMapEditor {
       if (!this.#disposed) {
         parts.lantern.offer(basics);
         parts.shell.layout?.addEventListener("jolly-pane-visibility", this.#offerPaneTour);
+        const { editing } = parts;
+        parts.shellChannel?.onReveal((key) => revealAnchor({
+          world: editing.editorMap.world,
+          selection: editing.state.selection,
+          layers: editing.layers,
+          frame: (bounds) => editing.frame(bounds)
+        }, key), this.#revealing.signal);
       }
     }, () => undefined);
   }
@@ -233,6 +245,7 @@ export class VoxelMapEditor {
 
   dispose(): void {
     this.#disposed = true;
+    this.#revealing.abort();
     this.#shell.layout?.removeEventListener("jolly-pane-visibility", this.#offerPaneTour);
     this.#disposePerformancePane();
     this.#removeInspectorMetrics();

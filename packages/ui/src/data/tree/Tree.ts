@@ -48,6 +48,7 @@ import {
   renderWarning
 } from "./rowTemplates.ts";
 import { TreeDragController } from "./TreeDragController.ts";
+import { TreeFlash } from "./TreeFlash.ts";
 import { TreeFocusController } from "./TreeFocusController.ts";
 import { TreeHairlineController } from "./TreeHairlineController.ts";
 import { TreeRenameController } from "./TreeRenameController.ts";
@@ -194,12 +195,19 @@ export class Tree<TData = unknown> extends LitElement
     rails: kNoRails,
     swatchPosition: "end",
     reorderable: false,
-    match: null
+    match: null,
+    flash: false
   };
   #filtered = new TreeFilter<TData>([], SearchQuery.EMPTY);
   #activeRowId: string | null = null;
   #focus: TreeFocusController;
+  #flash = new TreeFlash(this);
   #rename: TreeRenameController;
+  readonly #switchInteraction = (
+    next: TreeInteraction
+  ): void => {
+    this._interaction = next;
+  };
 
   constructor() {
     super();
@@ -237,9 +245,7 @@ export class Tree<TData = unknown> extends LitElement
       acceptDrop: () => this.acceptDrop,
       dragOut: () => this.dragOut,
       interaction: () => this._interaction,
-      switchInteraction: (next) => {
-        this._interaction = next;
-      },
+      switchInteraction: this.#switchInteraction,
       rowsRect: () => this.renderRoot.querySelector(".rows")?.getBoundingClientRect(),
       elementAtPoint: (clientX, clientY) => this.shadowRoot?.elementFromPoint(clientX, clientY) ?? null,
       indentUnit: () => parseFloat(
@@ -257,9 +263,7 @@ export class Tree<TData = unknown> extends LitElement
     this.#rename = new TreeRenameController(this, {
       validateRename: () => this.validateRename,
       interaction: () => this._interaction,
-      switchInteraction: (next) => {
-        this._interaction = next;
-      },
+      switchInteraction: this.#switchInteraction,
       focusRow: (id) => this.#focus.focusRow(id)
     });
     this.#selection = new TreeSelectionController(this, {
@@ -268,9 +272,7 @@ export class Tree<TData = unknown> extends LitElement
       multiple: () => this.multiple,
       requireSelection: () => this.requireSelection,
       interaction: () => this._interaction,
-      switchInteraction: (next) => {
-        this._interaction = next;
-      }
+      switchInteraction: this.#switchInteraction
     });
   }
 
@@ -296,6 +298,13 @@ export class Tree<TData = unknown> extends LitElement
     else if (changed.has("selected")) {
       this.#layout.follow(this.#selectedIds);
     }
+  }
+
+  reveal(
+    id: string
+  ): void {
+    this.#flash.flash(id);
+    this.#focus.reveal(id);
   }
 
   applySearch(
@@ -400,6 +409,7 @@ export class Tree<TData = unknown> extends LitElement
       state.moveCursor = this.#drag.isMoveCursor(id);
       state.renaming = id === renaming?.id;
       state.renameError = id === renaming?.id ? renaming.error : null;
+      state.flash = this.#flash.flashing(id);
 
       return state;
     });
@@ -432,11 +442,13 @@ export class Tree<TData = unknown> extends LitElement
         data-hidden=${view.visible === false ? "true" : nothing}
         data-warning=${view.warning === undefined ? nothing : "true"}
         data-spacer=${view.spacer === "outside" ? "outside" : nothing}
+        data-flash=${view.flash ? "true" : nothing}
         style=${styleMap(rowStyle)}
         @click=${(event: MouseEvent) => this.#selection.onRowClick(event, id)}
         @dblclick=${(event: MouseEvent) => this.#onRowDoubleClick(event, id)}
         @contextmenu=${(event: MouseEvent) => this.#onRowContextMenu(event, id)}
         @pointerdown=${(event: PointerEvent) => this.#drag.onRowPointerDown(event, id)}
+        @animationend=${(event: AnimationEvent) => this.#flash.end(event, id)}
       >
         ${renderGuides(view.rails)}
         ${view.branch ? html`

@@ -18,11 +18,13 @@ export interface SessionAssetSlotsOptions {
   session: Pick<EditorSession, "catalog" | "pickAsset">;
   sceneId: string;
   descriptors: Iterable<AssetKindDescriptor>;
-  open: ((assetId: string) => void) | null;
+  open: ((assetId: string, reveal?: string) => void) | null;
 }
 
 export class SessionAssetSlots implements SceneAssetSlots {
-  readonly open: ((reference: AssetReferenceData) => void) | null;
+  readonly open: (
+    (reference: AssetReferenceData, reveal?: string) => void
+  ) | null;
 
   #session: Pick<EditorSession, "catalog" | "pickAsset">;
   #sceneId: string;
@@ -40,7 +42,7 @@ export class SessionAssetSlots implements SceneAssetSlots {
     );
     this.open = open === null ?
       null :
-      (reference) => open(reference.id);
+      (reference, reveal) => open(reference.id, reveal);
   }
 
   name(

@@ -12,6 +12,7 @@ import { HostMessageLaunchSource } from "#src/launch/sources/HostMessageLaunchSo
 import {
   LAUNCH_MESSAGE_TYPE,
   READY_MESSAGE_TYPE,
+  revealMessage,
   SHELL_MESSAGE_TYPE
 } from "#src/shell/ShellChannel.ts";
 
@@ -61,6 +62,17 @@ function frameIn(
   };
 }
 
+function postFromStudio(
+  parent: MessageEventSource,
+  data: unknown
+): void {
+  window.dispatchEvent(new MessageEvent("message", {
+    source: parent,
+    origin: kStudioOrigin,
+    data
+  }));
+}
+
 afterEach(() => {
   document.head.replaceChildren();
   window.history.replaceState(null, "", "/");
@@ -100,11 +112,7 @@ describe("HostMessageLaunchSource", () => {
       source: parent,
       data: { type: LAUNCH_MESSAGE_TYPE, target: 1 }
     }));
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: kStudioOrigin,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
-    }));
+    postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host" });
 
     const launch = await pending;
     assert.equal(launch?.target.value, "from-host");
@@ -119,18 +127,14 @@ describe("HostMessageLaunchSource", () => {
     const pending = new HostMessageLaunchSource({
       origins: [kStudioOrigin]
     }).read();
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: kStudioOrigin,
-      data: {
-        type: LAUNCH_MESSAGE_TYPE,
-        target: "from-host",
-        identity: {
-          username: "alice",
-          peerId: "peer-alice"
-        }
+    postFromStudio(parent, {
+      type: LAUNCH_MESSAGE_TYPE,
+      target: "from-host",
+      identity: {
+        username: "alice",
+        peerId: "peer-alice"
       }
-    }));
+    });
     const launch = await pending;
 
     assert.equal(launch?.shell?.identity?.username, "alice");
@@ -144,11 +148,7 @@ describe("HostMessageLaunchSource", () => {
     const pending = new HostMessageLaunchSource({
       origins: [kStudioOrigin]
     }).read();
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: kStudioOrigin,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
-    }));
+    postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host" });
     const launch = await pending;
     parent.posted.length = 0;
 
@@ -174,6 +174,22 @@ describe("HostMessageLaunchSource", () => {
     ]);
   });
 
+  test("keeps a reveal posted right after the launch for the editor's listener", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+
+    const pending = new HostMessageLaunchSource({
+      origins: [kStudioOrigin]
+    }).read();
+    postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host" });
+    postFromStudio(parent, revealMessage("object:spawn"));
+    const launch = await pending;
+    const received: string[] = [];
+    launch?.shell?.onReveal((key) => received.push(key), new AbortController().signal);
+
+    assert.deepEqual(received, ["object:spawn"]);
+  });
+
   test("gives the shell channel the ports the launch carries", async(context) => {
     const parent = fakeParent();
     context.after(frameIn(parent));
@@ -195,11 +211,7 @@ describe("HostMessageLaunchSource", () => {
       const pending = new HostMessageLaunchSource({
         origins: [kStudioOrigin]
       }).read();
-      window.dispatchEvent(new MessageEvent("message", {
-        source: parent,
-        origin: kStudioOrigin,
-        data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host", ports }
-      }));
+      postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host", ports });
       const shell = (await pending)?.shell;
       received.push([
         shell?.catalog instanceof ShellCatalog,
@@ -228,11 +240,7 @@ describe("HostMessageLaunchSource", () => {
       const pending = new HostMessageLaunchSource({
         origins: [kStudioOrigin]
       }).read();
-      window.dispatchEvent(new MessageEvent("message", {
-        source: parent,
-        origin: kStudioOrigin,
-        data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host", appearance }
-      }));
+      postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host", appearance });
       const launch = await pending;
       assert.equal(launch?.target.value, "from-host");
       appearances.push(launch?.shell?.appearance);
