@@ -2,6 +2,11 @@
 import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
 import { Emitter } from "@openally/emitt";
 
+// Import Internal Dependencies
+import type { SceneLiveView } from "../editing/SceneEditing.ts";
+
+export type ExpandedActors = Pick<SceneLiveView, "expandedActor" | "subscribe">;
+
 export type SelectionStoreEvents = {
   change: (ids: readonly string[]) => void;
 };
@@ -11,15 +16,19 @@ export class SelectionStore extends Emitter<SelectionStoreEvents> {
   #unsubscribe: (() => void)[];
 
   constructor(
-    document: SceneDocument
+    document: SceneDocument,
+    expanded: ExpandedActors
   ) {
     super();
     const prune = (): void => {
-      this.select(this.#ids.filter((id) => document.tree.has(id)));
+      this.select(this.#ids.filter(
+        (id) => document.tree.has(id) || expanded.expandedActor(id) !== null
+      ));
     };
     this.#unsubscribe = [
       document.subscribe("change", prune),
-      document.subscribe("reset", prune)
+      document.subscribe("reset", prune),
+      expanded.subscribe("actorsChange", prune)
     ];
   }
 

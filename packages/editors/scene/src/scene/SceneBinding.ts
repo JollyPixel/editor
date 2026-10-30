@@ -9,8 +9,10 @@ import {
   ComponentChange,
   ownedCopy,
   type SceneActorJSON,
+  type SceneActorView,
   type SceneAnchorJSON,
   type SceneChange,
+  type SceneComponentView,
   type SceneDocument,
   type SceneEnvironmentJSON,
   type SceneEnvironmentPatch,
@@ -34,7 +36,7 @@ export interface SceneBindingOptions {
   components: Systems.ComponentDefinitions;
   assets: Systems.ComponentAssetResolver;
   environment: SceneEnvironmentTarget;
-  prefabs: Pick<PrefabScenes, "find" | "subscribe">;
+  prefabs: Pick<PrefabScenes, "find" | "subscribe" | "retain">;
   sceneId: string;
 }
 
@@ -57,6 +59,7 @@ export class SceneBinding
   #document: SceneDocument;
   #instance: Systems.SceneInstance;
   #environment: SceneEnvironmentTarget;
+  #prefabs: Pick<PrefabScenes, "retain">;
   #pickTargets = new Map<THREE.Object3D, string>();
   #unsubscribePrefabs: () => void;
 
@@ -77,7 +80,7 @@ export class SceneBinding
   ): void => {
     this.#instance.refresh(sceneId);
     this.#forgetPickTargets();
-    this.emit("actorsChange");
+    this.#actorsChanged();
     this.#world.invalidate();
   };
 
@@ -88,6 +91,7 @@ export class SceneBinding
     this.#world = options.world;
     this.#document = options.document;
     this.#environment = options.environment;
+    this.#prefabs = options.prefabs;
     this.#instance = new Systems.SceneInstance({
       world: options.world,
       mode: "edit",
@@ -143,6 +147,18 @@ export class SceneBinding
     anchor: SceneAnchorJSON
   ): Systems.ComponentAnchor | null {
     return this.#instance.findAnchor(actorId, anchor);
+  }
+
+  expandedActors(
+    instanceId: string
+  ): IterableIterator<SceneActorView> {
+    return this.#instance.expandedActors(instanceId);
+  }
+
+  expandedActor(
+    id: string
+  ): SceneActorView | null {
+    return this.#instance.expandedActor(id);
   }
 
   worldBounds(
@@ -257,7 +273,7 @@ export class SceneBinding
       case "actor-removed":
         this.#instance.remove(command.id);
         this.#forgetPickTargets();
-        this.emit("actorsChange");
+        this.#actorsChanged();
         break;
       case "actor-moved":
         this.#reparent(command.id);
@@ -281,10 +297,37 @@ export class SceneBinding
         break;
       case "component-moved":
         break;
+      case "actor-overridden":
+      case "component-overridden": {
+        const overrides = tree.actor(command.id)?.overrides;
+        this.#instance.override(
+          command.id,
+          overrides === undefined ? undefined : ownedCopy(overrides)
+        );
+        this.#actorsChanged();
+        break;
+      }
       case "environment-changed":
         this.#environment.apply(tree.environment);
         break;
     }
+  }
+
+  #actorsChanged(): void {
+    this.#prefabs.retain(this.#instance.prefabSceneIds());
+    this.emit("actorsChange");
+  }
+
+  #actorFile(
+    id: string
+  ): SceneActorView | null {
+    return this.#document.tree.actor(id) ?? this.expandedActor(id);
+  }
+
+  #componentEntry(
+    id: string
+  ): SceneComponentView | null {
+    return this.#document.tree.component(id) ?? this.#instance.expandedComponent(id);
   }
 
   #rebuild(): void {
@@ -311,7 +354,7 @@ export class SceneBinding
     }
 
     this.#instance.add(files);
-    this.emit("actorsChange");
+    this.#actorsChanged();
   }
 
   #forgetPickTargets(): void {
@@ -336,8 +379,8 @@ export class SceneBinding
     id: string,
     patch: SceneTransformPatch = {}
   ): void {
-    const file = this.#document.tree.actor(id);
-    if (file === undefined) {
+    const file = this.#actorFile(id);
+    if (file === null) {
       return;
     }
 
@@ -376,9 +419,9 @@ export class SceneBinding
     id: string,
     change: ComponentChange
   ): boolean {
-    const entry = this.#document.tree.component(id);
+    const entry = this.#componentEntry(id);
 
-    return entry !== undefined && this.#instance.applyComponent(
+    return entry !== null && this.#instance.applyComponent(
       id,
       entry.type,
       ownedCopy(change.applyTo(entry.data))

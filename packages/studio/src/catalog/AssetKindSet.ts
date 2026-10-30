@@ -101,11 +101,17 @@ export class AssetKindSet implements AssetKindPresenter {
       : kNoEditorDetail;
   }
 
+  kindExtension(
+    kind: string
+  ): string | undefined {
+    return this.#byKind.get(kind)?.extension;
+  }
+
   trimExtension(
     kind: string,
     name: string
   ): string {
-    const extension = this.#byKind.get(kind)?.extension ?? "";
+    const extension = this.kindExtension(kind) ?? "";
     if (
       extension === "" ||
       name === extension ||

@@ -10,6 +10,7 @@ import {
 } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
+import { ActorWrites } from "../../src/editing/ActorWrites.ts";
 import { SceneDraft } from "../../src/state/SceneDraft.ts";
 import {
   createProbeBinding,
@@ -22,7 +23,8 @@ function createDraft(
   const { binding } = createProbeBinding(document);
   const draft = new SceneDraft({
     document,
-    view: binding
+    view: binding,
+    writes: new ActorWrites(document)
   });
 
   return {

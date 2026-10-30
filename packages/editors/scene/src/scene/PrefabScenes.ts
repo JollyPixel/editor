@@ -28,6 +28,8 @@ export class PrefabScenes
   implements Systems.ScenePrefabs {
   #open: SceneLeaser;
   #scenes = new Map<string, LeasedScene>();
+  #retained = new Set<string>();
+  #releasing = false;
 
   constructor(
     open: SceneLeaser
@@ -44,6 +46,33 @@ export class PrefabScenes
     return scene === null ?
       null :
       { actors: ownedCopy([...scene.lease.document.tree.actors()]) };
+  }
+
+  document(
+    sceneId: string
+  ): SceneDocument | null {
+    return this.#scenes.get(sceneId)?.lease.document ?? null;
+  }
+
+  retain(
+    sceneIds: Iterable<string>
+  ): void {
+    this.#retained = new Set(sceneIds);
+    if (this.#releasing) {
+      return;
+    }
+
+    this.#releasing = true;
+    queueMicrotask(() => {
+      this.#releasing = false;
+      for (const [sceneId, { lease, unsubscribe }] of this.#scenes) {
+        if (!this.#retained.has(sceneId)) {
+          this.#scenes.delete(sceneId);
+          unsubscribe();
+          lease.release();
+        }
+      }
+    });
   }
 
   dispose(): void {

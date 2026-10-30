@@ -38,6 +38,7 @@ import "@jolly-pixel/ui/elements/vector3";
 // Import Internal Dependencies
 import "../../app/sceneIcons.ts";
 import type { SceneComponents } from "../../components/SceneComponents.ts";
+import type { ActorRole } from "../../editing/InstanceOverrides.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import type { SceneDraft } from "../../state/SceneDraft.ts";
 import { axisValues } from "./axisValues.ts";
@@ -94,6 +95,7 @@ export class InspectorPanel extends LitElement {
       editing.document.subscribe("reset", repaint),
       editing.selection.subscribe("change", repaint),
       editing.draft.subscribe("change", repaint),
+      editing.live.subscribe("actorsChange", repaint),
       editing.assetSlots.subscribe(repaint)
     ];
   });
@@ -158,16 +160,48 @@ export class InspectorPanel extends LitElement {
   override render(): TemplateResult {
     const editing = this.#editing.current;
     const id = editing?.selection.primary ?? null;
-    const actor = id === null ? undefined : editing?.document.tree.actor(id);
-    if (editing === null || actor === undefined) {
+    const actor = id === null || editing === null ?
+      null :
+      editing.document.tree.actor(id) ?? editing.live.expandedActor(id);
+    if (editing === null || actor === null) {
       return html`<p class="empty">Select an actor to inspect it.</p>`;
     }
 
+    const role = editing.overrides.role(actor.id);
+
     return html`
-      ${this.#renderActor(editing, actor)}
-      ${editing.document.tree.canHoldComponents(actor.id) ?
-        this.#renderComponents(editing, actor) :
-        nothing}
+      ${this.#renderActor(editing, actor, role)}
+      ${this.#renderComponentSection(editing, actor, role)}
+    `;
+  }
+
+  #renderComponentSection(
+    editing: SceneEditing,
+    actor: SceneActorView,
+    role: ActorRole
+  ): TemplateResult | typeof nothing {
+    if (role === "inner") {
+      return this.#renderInnerComponents(editing, actor);
+    }
+
+    return editing.document.tree.canHoldComponents(actor.id) ?
+      this.#renderComponents(editing, actor) :
+      nothing;
+  }
+
+  #renderInnerComponents(
+    editing: SceneEditing,
+    actor: SceneActorView
+  ): TemplateResult {
+    return html`
+      <jolly-separator label="Components"></jolly-separator>
+      <div class="components">
+        ${repeat(
+          actor.components,
+          (component) => component.id,
+          (component) => this.#renderComponent(editing, component, false)
+        )}
+      </div>
     `;
   }
 
@@ -212,11 +246,44 @@ export class InspectorPanel extends LitElement {
     `;
   }
 
+  #renderOverrideActions(
+    editing: SceneEditing,
+    id: string,
+    role: ActorRole
+  ): TemplateResult | typeof nothing {
+    const { overrides } = editing;
+    if (role === "own" || !overrides.actorOverridden(id)) {
+      return nothing;
+    }
+
+    return html`
+      ${role === "instance" ? html`
+        <jolly-button
+          slot="actions"
+          icon="asset-export"
+          icon-only
+          label="Apply overrides to prefab"
+          title="Apply overrides to prefab"
+          @click=${() => overrides.applyToPrefab(id)}
+        ></jolly-button>
+      ` : nothing}
+      <jolly-button
+        slot="actions"
+        icon="revert"
+        icon-only
+        label="Revert overrides"
+        title="Revert overrides"
+        @click=${() => overrides.revertActor(id)}
+      ></jolly-button>
+    `;
+  }
+
   #renderActor(
     editing: SceneEditing,
-    actor: SceneActorView
+    actor: SceneActorView,
+    role: ActorRole
   ): TemplateResult {
-    const { document } = editing;
+    const { writes } = editing;
 
     return html`
       <jolly-folder
@@ -225,6 +292,7 @@ export class InspectorPanel extends LitElement {
         storage-key="scene-inspector:actor"
         flush
       >
+        ${this.#renderOverrideActions(editing, actor.id, role)}
         <jolly-button
           slot="actions"
           icon="eye"
@@ -232,7 +300,7 @@ export class InspectorPanel extends LitElement {
           label="Visible"
           title=${actor.visible ? "Hide" : "Show"}
           .pressed=${actor.visible}
-          @click=${() => document.changeVisibility(actor.id, !actor.visible)}
+          @click=${() => writes.changeVisibility(actor.id, !actor.visible)}
         ></jolly-button>
         ${this.#renderTransform(editing.draft, actor)}
         ${actor.prefab === undefined ? nothing : this.#renderPrefab(editing, actor.prefab)}
@@ -313,19 +381,42 @@ export class InspectorPanel extends LitElement {
         ?reorderable=${reorderable}
         flush
       >
+        ${this.#renderComponentAction(editing, component.id)}
+        <jolly-show-more storage-key=${`scene-inspector:more:${component.type}`}>
+          ${renderComponentBody(component, editing)}
+        </jolly-show-more>
+      </jolly-folder>
+    `;
+  }
+
+  #renderComponentAction(
+    editing: SceneEditing,
+    id: string
+  ): TemplateResult | typeof nothing {
+    const { document, overrides } = editing;
+    if (overrides.role(id) !== "inner") {
+      return html`
         <jolly-button
           slot="actions"
           icon="trash"
           icon-only
           label="Remove component"
           title="Remove component"
-          @click=${() => editing.document.removeComponent(component.id)}
+          @click=${() => document.removeComponent(id)}
         ></jolly-button>
-        <jolly-show-more storage-key=${`scene-inspector:more:${component.type}`}>
-          ${renderComponentBody(component, editing)}
-        </jolly-show-more>
-      </jolly-folder>
-    `;
+      `;
+    }
+
+    return overrides.componentOverridden(id) ? html`
+      <jolly-button
+        slot="actions"
+        icon="revert"
+        icon-only
+        label="Revert overrides"
+        title="Revert overrides"
+        @click=${() => overrides.revertComponent(id)}
+      ></jolly-button>
+    ` : nothing;
   }
 
   #components(): HTMLElement {

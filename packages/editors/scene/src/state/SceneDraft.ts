@@ -10,9 +10,11 @@ import {
   type SceneTransformJSON,
   type SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
+import { Systems } from "@jolly-pixel/engine";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import type { ActorWrites } from "../editing/ActorWrites.ts";
 import type { SceneBinding } from "../scene/SceneBinding.ts";
 
 export type SceneDraftView = Pick<
@@ -23,6 +25,7 @@ export type SceneDraftView = Pick<
 export interface SceneDraftOptions {
   document: SceneDocument;
   view: SceneDraftView;
+  writes: Pick<ActorWrites, "transform" | "changeComponent">;
 }
 
 export type SceneDraftEvents = {
@@ -32,6 +35,7 @@ export type SceneDraftEvents = {
 export class SceneDraft extends Emitter<SceneDraftEvents> {
   #document: SceneDocument;
   #view: SceneDraftView;
+  #writes: SceneDraftOptions["writes"];
   #environment: SceneEnvironmentPatch = {};
   #transforms = new Map<string, SceneTransformPatch>();
   #components = new Map<string, ComponentChange>();
@@ -43,6 +47,7 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
     super();
     this.#document = options.document;
     this.#view = options.view;
+    this.#writes = options.writes;
     this.#unsubscribe = [
       options.document.subscribe("change", (change) => this.#settle(change)),
       options.document.subscribe("reset", () => this.#discard())
@@ -124,7 +129,7 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
     patch: SceneTransformPatch
   ): void {
     this.#transforms.delete(id);
-    if (!this.#document.transform(id, patch)) {
+    if (!this.#writes.transform(id, patch)) {
       this.#view.previewTransform(id, {});
     }
     this.emit("change");
@@ -135,7 +140,7 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
     change: ComponentChange
   ): void {
     this.#components.delete(id);
-    if (!this.#document.changeComponent(id, change)) {
+    if (!this.#writes.changeComponent(id, change)) {
       this.#view.previewComponent(id, ComponentChange.NONE);
     }
     this.emit("change");
@@ -159,6 +164,12 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
         break;
       case "component-changed":
         this.#components.delete(command.id);
+        break;
+      case "actor-overridden":
+        this.#transforms.delete(Systems.InstancePath.join(command.id, command.path));
+        break;
+      case "component-overridden":
+        this.#components.delete(Systems.InstancePath.join(command.id, command.path));
         break;
     }
   }

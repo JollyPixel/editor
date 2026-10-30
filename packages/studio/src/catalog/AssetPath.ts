@@ -71,10 +71,10 @@ export class AssetPath {
   }
 
   withNameKeepingExtension(
-    name: string
+    name: string,
+    extension = this.extension
   ): AssetPath {
     assertName(name);
-    const extension = this.extension;
     if (
       extension === "" ||
       !name.endsWith(extension)

@@ -18,6 +18,7 @@ import {
   SCENE_HISTORY_SCOPE
 } from "../../src/features/history/sceneHistory.ts";
 import { SelectionStore } from "../../src/state/SelectionStore.ts";
+import { NO_EXPANDED_ACTORS } from "../helpers/expandedActors.ts";
 import { createSceneComponents } from "../helpers/sceneComponents.ts";
 
 // CONSTANTS
@@ -52,7 +53,7 @@ function createActions(
 ) {
   const document = new SceneDocument();
   const history = createSceneHistory(document);
-  const selection = new SelectionStore(document);
+  const selection = new SelectionStore(document, NO_EXPANDED_ACTORS);
   const picks: string[] = [];
   const actions = new SceneActions({
     document,

@@ -20,6 +20,10 @@ import type {
 } from "../network/types.ts";
 import { ComponentChange } from "./ComponentChange.ts";
 import { ComponentOwners } from "./ComponentOwners.ts";
+import {
+  OverrideChange,
+  type OverrideCommand
+} from "./OverrideChange.ts";
 import { ownedCopy } from "./ownedCopy.ts";
 import { SceneEnvironment } from "./SceneEnvironment.ts";
 import { SceneTransform } from "./SceneTransform.ts";
@@ -247,6 +251,7 @@ export class SceneTree {
       case "component-added":
         return this.canHoldComponents(command.actorId) &&
           !this.#owners.has(command.component.id) &&
+          isPlainId(command.component.id) &&
           fitsDataLimit(command.component.data);
       case "component-removed":
       case "component-moved":
@@ -255,6 +260,9 @@ export class SceneTree {
         return this.#canChangeComponent(command);
       case "component-assets-changed":
         return this.#owners.has(command.id);
+      case "actor-overridden":
+      case "component-overridden":
+        return this.#canOverride(command);
       case "environment-changed":
         return true;
     }
@@ -376,6 +384,19 @@ export class SceneTree {
         });
         break;
 
+      case "actor-overridden":
+      case "component-overridden":
+        this.#actors.update(command.id, (actor) => {
+          const { overrides: _overrides, ...rest } = actor;
+          const overrides = OverrideChange.from(command).applyTo(actor.overrides);
+
+          return overrides === undefined ? rest : {
+            ...rest,
+            overrides
+          };
+        });
+        break;
+
       case "environment-changed":
         this.#environment = SceneEnvironment.patch(command.environment).applyTo(this.#environment);
         break;
@@ -475,6 +496,19 @@ export class SceneTree {
       fitsDataLimit(change.applyTo(component.data));
   }
 
+  #canOverride(
+    command: OverrideCommand
+  ): boolean {
+    const actor = this.#actors.peek(command.id);
+    const change = OverrideChange.from(command);
+
+    return actor !== undefined &&
+      isPrefabInstance(actor) &&
+      !change.touchesNothing &&
+      !change.contradicts &&
+      fitsDataLimit(change.applyTo(actor.overrides) ?? {});
+  }
+
   #insert(
     actors: readonly SceneActorView[],
     beforeId: string | undefined
@@ -518,9 +552,15 @@ function isAnchorWithoutParent(
 }
 
 function fitsDataLimit(
-  data: SceneComponentView["data"]
+  data: unknown
 ): boolean {
   return JSON.stringify(data).length <= COMPONENT_DATA_MAX_LENGTH;
+}
+
+function isPlainId(
+  id: string
+): boolean {
+  return !id.includes("/");
 }
 
 function findActorListProblem(
@@ -532,6 +572,12 @@ function findActorListProblem(
   for (const [index, actor] of actors.entries()) {
     if (context.hasActor(actor.id) || listed.has(actor.id)) {
       return new InvalidEntryError("actor", actor.id, "is listed twice");
+    }
+    if (!isPlainId(actor.id)) {
+      return new InvalidEntryError("actor", actor.id, "has a / in its id");
+    }
+    if (actor.overrides !== undefined && actor.prefab === undefined) {
+      return new InvalidEntryError("actor", actor.id, "has overrides but no prefab");
     }
     const parent = actor.parentId === null ? undefined : listed.get(actor.parentId);
     if (parent === undefined && !context.isOuterParent(actor, index)) {
@@ -559,6 +605,9 @@ function findActorListProblem(
     for (const component of actor.components) {
       if (context.hasComponent(component.id) || componentIds.has(component.id)) {
         return new InvalidEntryError("component", component.id, "is listed twice");
+      }
+      if (!isPlainId(component.id)) {
+        return new InvalidEntryError("component", component.id, "has a / in its id");
       }
       if (!fitsDataLimit(component.data)) {
         return new InvalidEntryError(

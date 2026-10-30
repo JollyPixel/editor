@@ -5,13 +5,16 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import type {
   assetReferenceSchema,
+  sceneActorOverrideSchema,
   sceneActorSchema,
   sceneAnchorSchema,
   sceneCommandSchema,
+  sceneComponentOverrideSchema,
   sceneComponentSchema,
   sceneEnvironmentPatchSchema,
   sceneEnvironmentSchema,
   sceneFogSchema,
+  sceneOverridesSchema,
   sceneSnapshotSchema,
   sceneTransformPatchSchema,
   sceneTransformSchema,
@@ -45,6 +48,9 @@ export type SceneAnchorJSON = network.Infer<typeof sceneAnchorSchema>;
 export type SceneComponentJSON = network.Infer<typeof sceneComponentSchema>;
 export type SceneActorJSON = network.Infer<typeof sceneActorSchema>;
 export type SceneActorPlacement = Pick<SceneActorJSON, "parentId" | "anchor">;
+export type SceneActorOverrideJSON = network.Infer<typeof sceneActorOverrideSchema>;
+export type SceneComponentOverrideJSON = network.Infer<typeof sceneComponentOverrideSchema>;
+export type SceneOverridesJSON = network.Infer<typeof sceneOverridesSchema>;
 export type SceneFogJSON = network.Infer<typeof sceneFogSchema>;
 export type SceneEnvironmentJSON = network.Infer<typeof sceneEnvironmentSchema>;
 export type SceneEnvironmentPatch = network.Infer<typeof sceneEnvironmentPatchSchema>;
@@ -54,6 +60,7 @@ export type SceneTransformView = DeepReadonly<SceneTransformJSON>;
 export type SceneActorView = DeepReadonly<SceneActorJSON>;
 export type SceneComponentView = DeepReadonly<SceneComponentJSON>;
 export type SceneEnvironmentView = DeepReadonly<SceneEnvironmentJSON>;
+export type SceneOverridesView = DeepReadonly<SceneOverridesJSON>;
 
 export type SceneCommand = network.Infer<typeof sceneCommandSchema>;
 export type SceneCommandAction = SceneCommand["action"];

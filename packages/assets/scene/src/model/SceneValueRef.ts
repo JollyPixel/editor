@@ -1,4 +1,8 @@
 // Import Internal Dependencies
+import {
+  overrideFieldValue,
+  type OverrideGroup
+} from "./OverrideChange.ts";
 import type { SceneTreeReader } from "./SceneTree.ts";
 import type {
   SceneEnvironmentField,
@@ -69,6 +73,18 @@ export class SceneValueRef {
     field: SceneEnvironmentField
   ): SceneValueRef {
     return new SceneValueRef(`environment:${field}`, (tree) => tree.environment[field]);
+  }
+
+  static override(
+    id: string,
+    group: OverrideGroup,
+    path: string,
+    field: string
+  ): SceneValueRef {
+    return new SceneValueRef(
+      `override:${id}:${group}:${path}:${field}`,
+      (tree) => overrideFieldValue(tree.actor(id)?.overrides, group, path, field)
+    );
   }
 
   static subtree(

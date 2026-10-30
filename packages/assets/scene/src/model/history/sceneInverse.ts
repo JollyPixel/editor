@@ -6,6 +6,7 @@ import {
 
 // Import Internal Dependencies
 import { ComponentChange } from "../ComponentChange.ts";
+import { OverrideChange } from "../OverrideChange.ts";
 import { ownedCopy } from "../ownedCopy.ts";
 import { SceneEnvironment } from "../SceneEnvironment.ts";
 import { SceneTransform } from "../SceneTransform.ts";
@@ -104,6 +105,13 @@ export function invert(
           Object.keys(command.assets).map((slot) => [slot, assets[slot] ?? null])
         )
       }];
+    }
+
+    case "actor-overridden":
+    case "component-overridden": {
+      const { overrides } = existing(tree.actor(command.id), "actor", command.id);
+
+      return [OverrideChange.from(command).revert(overrides).toCommand()];
     }
 
     case "environment-changed":

@@ -3,13 +3,18 @@ import type {
   AssetReferenceData,
   AssetType
 } from "@jolly-pixel/asset";
-import type { SceneDocument } from "@jolly-pixel/asset.scene/client";
+import type {
+  SceneActorView,
+  SceneDocument
+} from "@jolly-pixel/asset.scene/client";
 import type { ShortcutLabels } from "@jolly-pixel/controls";
 import type { Systems } from "@jolly-pixel/engine";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { SceneComponents } from "../components/SceneComponents.ts";
+import type { ActorWrites } from "./ActorWrites.ts";
+import type { InstanceOverrides } from "./InstanceOverrides.ts";
 import type { SceneActions } from "./SceneActions.ts";
 import type { ActorPresetMenu } from "../features/hierarchy/model/ActorPresetMenu.ts";
 import type { SceneHistory } from "../features/history/sceneHistory.ts";
@@ -36,16 +41,24 @@ export interface SceneAssetSlots {
   ): () => void;
 }
 
-export interface SceneAnchorsView extends Systems.SceneAnchorsReader {
+export interface SceneLiveView extends Systems.SceneAnchorsReader {
+  expandedActors(
+    instanceId: string
+  ): IterableIterator<SceneActorView>;
+  expandedActor(
+    id: string
+  ): SceneActorView | null;
   subscribe(
-    event: "anchorsChange",
+    event: "anchorsChange" | "actorsChange",
     listener: () => void
   ): () => void;
 }
 
 export interface SceneEditing {
   document: SceneDocument;
-  anchors: SceneAnchorsView;
+  live: SceneLiveView;
+  writes: ActorWrites;
+  overrides: InstanceOverrides;
   components: SceneComponents;
   presets: ActorPresetMenu;
   history: SceneHistory;

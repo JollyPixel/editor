@@ -13,6 +13,7 @@ import {
 import { EDITOR_GIZMO_APPEARANCE } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
+import type { ActorWrites } from "../../editing/ActorWrites.ts";
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
 import { decomposePose } from "../../scene/sceneTransform.ts";
 import type { SelectionStore } from "../../state/SelectionStore.ts";
@@ -33,7 +34,8 @@ export interface SceneGizmoOptions {
   canvas: HTMLCanvasElement;
   scene: THREE.Scene;
   binding: SceneBinding;
-  document: SceneDocument;
+  document: Pick<SceneDocument, "on" | "off">;
+  writes: Pick<ActorWrites, "transform">;
   selection: SelectionStore;
   settings: GizmoSettings;
 }
@@ -88,7 +90,7 @@ export class SceneGizmo {
 
     const field = kPatchFields[event.mode];
     const transform = decomposePose(event);
-    const committed = this.#options.document.transform(id, {
+    const committed = this.#options.writes.transform(id, {
       [field]: transform[field]
     });
     if (!committed) {

@@ -25,6 +25,7 @@ import {
 const kMap = { id: "map-1", kind: "voxelmap" };
 const kTexture = { id: "texture-1", kind: "pixelart" };
 const kScene = { id: "scene-2", kind: "scene" };
+const kCookie = { id: "texture-2", kind: "pixelart" };
 
 function encodeJSON(
   value: unknown
@@ -58,6 +59,13 @@ describe("scene kind load", () => {
     ["a child under a prefab instance", encodeJSON(sceneFile([
       actor("A", { prefab: kScene }),
       actor("B", { parentId: "A" })
+    ]))],
+    ["overrides on an actor that is no instance", encodeJSON(sceneFile([
+      actor("A", { overrides: { actors: { door: { name: "Door" } } } })
+    ]))],
+    ["an actor id with a path separator", encodeJSON(sceneFile([actor("A/B")]))],
+    ["a component id with a path separator", encodeJSON(sceneFile([
+      actor("A", { components: [component("A/c")] })
     ]))],
     ["component data over the size limit", encodeJSON(sceneFile([
       actor("A", {
@@ -97,25 +105,33 @@ describe("scene kind assets", () => {
           component("c2", {}, { map: kMap, texture: kTexture })
         ]
       }),
-      actor("P", { prefab: kScene })
+      actor("P", {
+        prefab: kScene,
+        overrides: { components: { "room/lamp": { assets: { cookie: kCookie, glow: null } } } }
+      })
     ])));
   }
 
-  test("lists each filled asset slot and prefab reference once as a dependency", () => {
+  test("lists each filled asset slot, override slot and prefab reference once as a dependency", () => {
     assert.deepEqual(
       sceneAssetKind().dependencies?.(referencingState()),
-      [kMap, kTexture, kScene]
+      [kMap, kTexture, kScene, kCookie]
     );
   });
 
   test("rebinds referenced asset ids", () => {
     const state = referencingState();
-    sceneAssetKind().rebind?.(state, new Map([["map-1", "map-2"], ["scene-2", "scene-3"]]));
+    sceneAssetKind().rebind?.(state, new Map([
+      ["map-1", "map-2"],
+      ["scene-2", "scene-3"],
+      ["texture-2", "texture-3"]
+    ]));
 
     assert.deepEqual(state.dependencies(), [
       { id: "map-2", kind: "voxelmap" },
       kTexture,
-      { id: "scene-3", kind: "scene" }
+      { id: "scene-3", kind: "scene" },
+      { id: "texture-3", kind: "pixelart" }
     ]);
   });
 });

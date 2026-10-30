@@ -1,8 +1,5 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
@@ -104,7 +101,8 @@ describe("AssetTreeModel", () => {
     const model = new AssetTreeModel(kRecords, {
       presenter: {
         kindIcon: (kind) => (kind === "voxelmap" ? "map" : undefined),
-        kindDetail: (kind) => (kind === "binary" ? "no editor" : undefined)
+        kindDetail: (kind) => (kind === "binary" ? "no editor" : undefined),
+        kindExtension: () => undefined
       }
     });
 
