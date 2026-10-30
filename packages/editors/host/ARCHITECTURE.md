@@ -78,10 +78,9 @@ flowchart TB
 - Only the launch knows where the page runs. Placement reads it; the editor never has to.
 - Code: `shell/`, `launch/`, `preferences/`.
 
-API: [mountStandalone](./docs/boot/mountStandalone.md),
-[bootStandalone](./docs/boot/bootStandalone.md),
-[EditorLaunch](./docs/launch/EditorLaunch.md),
-[ShellChannel](./docs/shell/ShellChannel.md),
+API: [bootStandalone](./docs/boot/bootStandalone.md),
+[EditorDefinition](./docs/boot/EditorDefinition.md),
+[Shell](./docs/shell/Shell.md),
 [EditorSession](./docs/session/EditorSession.md),
 [AssetLeases](./docs/lease/AssetLeases.md),
 [EditorRuntime](./docs/runtime/EditorRuntime.md),

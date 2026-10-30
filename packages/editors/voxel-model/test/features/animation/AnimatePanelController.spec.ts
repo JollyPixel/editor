@@ -179,6 +179,17 @@ describe("AnimatePanelController", () => {
     assert.equal(controller.state.set, null);
   });
 
+  test("exports a shared set from its row menu and imports one from the shared section", async() => {
+    const { controller, archiveCalls, pick, rowAction, sectionAction } = createPanelHarness();
+    controller.actions!.linkSet(MENU_POINT);
+    await pick("Humanoid");
+
+    await rowAction("Humanoid", "Export…");
+    await sectionAction("shared", "Import set…");
+
+    assert.deepEqual(archiveCalls, ["export shared", "import voxelanimation"]);
+  });
+
   test("shares the own clips as a named set", async() => {
     const { controller, names } = createPanelHarness();
     await controller.actions!.newClip(null);

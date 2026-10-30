@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { AssetPath } from "@jolly-pixel/asset";
 import {
   disableEntries,
   type MenuEntry,
@@ -10,6 +11,7 @@ import type { EditorTargets } from "../session/EditorTargets.ts";
 import type { EditorToolbarArchives } from "../session/EditorToolbarSources.ts";
 
 // CONSTANTS
+const kDependencyPrefix = "dependency:";
 const kItems = {
   rename: {
     id: "rename",
@@ -39,10 +41,13 @@ const kItems = {
     intent: "danger"
   }
 } satisfies {
-  [TAction in AssetAction]: MenuItem<TAction>;
+  [TAction in AssetCommand]: MenuItem<TAction>;
 };
 
-export type AssetAction = "rename" | "export" | "import" | "delete" | "reset";
+type AssetCommand = "rename" | "export" | "import" | "delete" | "reset";
+type DependencyExport = `${typeof kDependencyPrefix}${string}`;
+
+export type AssetAction = AssetCommand | DependencyExport;
 
 export class AssetMenu {
   readonly #targets: EditorTargets;
@@ -61,6 +66,7 @@ export class AssetMenu {
     const entries: MenuEntry<AssetAction>[] = [
       kItems.rename,
       kItems.export,
+      ...this.#dependencyBranch(),
       ...archives.canImport ? [kItems.import] : [],
       "separator",
       kItems.delete,
@@ -76,6 +82,12 @@ export class AssetMenu {
   run(
     action: AssetAction
   ): Promise<void> {
+    if (isDependencyExport(action)) {
+      return this.#archives.downloadAsset(
+        action.slice(kDependencyPrefix.length)
+      );
+    }
+
     switch (action) {
       case "rename":
         return this.#targets.renameCurrent();
@@ -91,4 +103,30 @@ export class AssetMenu {
         return action satisfies never;
     }
   }
+
+  #dependencyBranch(): MenuEntry<AssetAction>[] {
+    const items = this.#archives.dependencies.map(
+      (record): MenuItem<AssetAction> => {
+        return {
+          id: `${kDependencyPrefix}${record.id}`,
+          label: new AssetPath(record.path).withoutExtension().toString()
+        };
+      }
+    );
+
+    return items.length === 0 ? [] : [
+      {
+        id: "dependencies",
+        label: "Export dependency",
+        icon: "asset-export",
+        items
+      }
+    ];
+  }
+}
+
+function isDependencyExport(
+  action: AssetAction
+): action is DependencyExport {
+  return action.startsWith(kDependencyPrefix);
 }

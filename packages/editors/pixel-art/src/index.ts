@@ -22,6 +22,7 @@ export type {
   TextureImportOrigin,
   TextureImportPolicy
 } from "./textures/import/TextureImporter.ts";
+export type { TextureFileDrop } from "./textures/import/TextureFileDrop.ts";
 export type { UvAccess } from "./access/TextureAccess.ts";
 export * from "./access/PixelArtAccess.ts";
 export type { AccessPanel } from "./access/RoomAccess.ts";

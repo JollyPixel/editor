@@ -1,50 +1,8 @@
 # Archives
 
-Export and import of `.zip` asset archives through the catalog room, the same
-way on a server and [offline](../boot/bootStandalone.md#offline-mode).
-
-## SessionArchive
-
-`session.archive` exports and imports archives.
-
-```ts
-const blob = await session.archive.export(session.target.record.id);
-
-const plan = await session.archive.plan(file);
-const report = await session.archive.import(file, {
-  onConflict: plan.live.length > 0 ? "replace" : "keep"
-});
-```
-
-### canImport
-
-`false` on offline data that does not persist, where the reload after an
-import would lose it.
-
-### export(assetId?)
-
-The asset with everything it references, or the whole catalog.
-
-### plan(file)
-
-The `ImportPlan`: which ids are `live` or `fresh`, incompatible kinds, and the
-`sharedDependents` a replace would affect. Writes nothing.
-
-### import(file, { onConflict })
-
-Resolves with the `ImportReport`. `"copy"` duplicates the archive under new
-ids. Rejects with `ArchiveImportDisabledError` when `canImport` is `false`.
-
-Documents already open do not see the assets an import replaced: reload onto
-`?target=<report.root.id>` when `report.replaced` is not empty.
-
-## EditorArchives
-
-The export, import and reset flows behind the `archive` console commands and
-the toolbar's [Asset actions menu](./EditorToolbar.md#properties).
-The host builds one per mount for the target and gives it to the editor as
-[`context.archives`](../boot/mountStandalone.md#editor-context). The editor
-definition names its labels:
+`context.archives` exports and imports the target as a `.zip` archive, the
+same way on a server and offline. The toolbar's Asset actions menu and the
+`archive` console namespace run the same flows.
 
 ```ts
 class ModelEditor {
@@ -55,42 +13,60 @@ class ModelEditor {
 }
 
 await context.archives.download();
-await archives.importFile(file);
-await archives.reset();
+await context.archives.importFile(file);
 ```
 
-### canImport and canReset
-
-Whether to offer import and reset.
+## Methods
 
 ### download()
 
-Saves the target as its path's stem with `.zip`, or `fallbackName`. The path
-is read on each call, so a renamed target downloads under its new name.
+Saves the target with everything it references, named after its current
+path's stem, or `fallbackName`.
 
-### importFile(file)
+### importFile(file, kind?)
 
-Rejects with `ArchiveRootError` when the archive root is not an `accepts`
-asset, before anything is written. Asks how to handle existing assets with
-`askImportConflictPolicy(plan)` and imports. Then it
-[switches](../boot/mountStandalone.md#switching-target-or-tag) to the root, or
-reloads onto it when the import replaced assets. Does nothing when the
-question is dismissed.
+- An archive rooted on an `accepts` asset is imported, then the page switches
+  to that asset.
+- An archive rooted on an [accepted](#dependencies) kind is imported and
+  linked to the target. A single file ending with its `extension` is created
+  in its `folder` and linked.
+- An archive import asks how to handle assets that already exist, and does
+  nothing when that question is dismissed.
+- The page reloads when the import replaced assets that are open, since open
+  documents do not see a replace.
+- With `kind`, only that kind is imported.
 
-### pickAndImport()
+Rejects before writing anything with `ArchiveRootError` when the root is
+neither, and with `ArchiveImportDisabledError` on offline data that does not
+persist.
 
-Opens a `.zip` file picker, then runs `importFile()`. Browsers open the
-picker only during a user action, such as a click or a console command
-submitted with Enter.
+### pickAndImport(kind?)
 
-### reset()
+Opens a file picker, then runs `importFile()`. Browsers open the picker only
+during a user action, such as a click or a console command submitted with
+Enter.
 
-Asks to confirm `resetWarning`, resets the offline data and reloads.
+## Dependencies
 
-The `browser` option, an `EditorArchiveBrowser`, replaces downloads, file
-picking, dialogs and reloads. It defaults to the DOM and `window.location`.
+The assets the target references, such as the blocksets of a voxel map, can be
+exported and imported on their own. The editor declares each kind it can link:
 
-## Console
+```ts
+const release = context.archives.acceptDependency({
+  kind: "blockset",
+  extension: ".blockset.json",
+  folder: "blocksets/"
+}, ({ id }) => blocksets.link(id));
 
-The host registers `/archive.export`, `/archive.import` (when `canImport`)
-and `/archive.reset` (when `canReset`) for every editor.
+await context.archives.downloadAsset(blocksetId);
+await context.archives.pickAndImport("blockset");
+```
+
+### acceptDependency(format, link): () => void
+
+Lets `importFile()` and `pickAndImport()` take `format.kind` assets and link
+them with `link`. The returned function stops accepting the kind.
+
+### downloadAsset(assetId)
+
+Saves that asset with everything it references.

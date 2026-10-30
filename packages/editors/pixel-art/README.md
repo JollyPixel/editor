@@ -47,55 +47,25 @@ const canvas = await panel.initialize({
 > [!TIP]
 > See [Voxel-Map](../voxel-map/README.md) or [Voxel-Model](../voxel-model/README.md) for a live integrations on this library/editor.
 
+## 📚 API
+
+- [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): component API and events
+- [Pixel-art key bindings](./docs/keybindings/PixelArtKeyBindings.md): shortcuts and the console `pixelart.keybinds` namespace
+- [`UvNetLibrary`](./docs/uv/UvNetLibrary.md): the UV nets regions unfold with, and the console `pixelart.nets` namespace
+- [Mesh texturing](./docs/mesh-texturing/README.md): canvas, normal-map and UV geometry adapters
+
 ## 🖼️ Editor page
 
-`page/` is the one editor app: the [studio](../../studio/README.md) opens it
-for `pixelart` assets (declared by the `jollypixel.editor` field of
-`package.json`), and the dev server serves it as a playground. It boots
-through [`@jolly-pixel/editor.host`](../host/README.md) `bootStandalone()`,
-and `PixelArtEditor` mounts `<pixel-draw-panel>` over the launch target with
-presence, the stored key bindings and texture tabs.
-
-`page/` has the layout of the other editors: `index.html`, `public/` and
-`src/`, with the `index.ts` entry, `boot/`, `state/`, `textures/` and
-`preview/`. It uses only what the package exports, imported through
-`#src/index.ts` and `#src/mesh-texturing/index.ts`. Unit-tested page modules
-import an exported class by its module path instead, such as
-`#src/panel/ViewSettings.ts`, because `node --test` can't load the Lit
-elements the root entry registers. Editors that embed `<pixel-draw-panel>` get
-none of the page code.
-
-`PixelArtFeatures` picks what the app turns on:
-
-| Feature | Built page (`editor`) | Dev server (`playground`) |
-|---|---|---|
-| 3D preview of the UV regions | off | on, `?runtime=off` hides it |
-| Starter UV region | off | on, `?empty` skips it |
-| UV create and delete | off | on |
-| UV resize handles | off | on |
-| Import policy | `replace` | `ask`, `?import-policy=` overrides |
-| Scope appearance | dark, comfortable | from the OS |
-
-The built page reads no feature query parameters, and the preview code
-(`page/src/preview/`, Cube and Ramp shapes in Three.js) is left out of
-its bundle.
+`page/` is the editor the studio opens for `pixelart` assets.
 
 ```bash
 pnpm --filter @jolly-pixel/editor.pixel-art dev
 pnpm --filter @jolly-pixel/editor.pixel-art build:page
 ```
 
-The dev server listens on `http://localhost:3000` and seeds one texture. The
-page builds to `dist-page/`, leaving the library's `dist/` alone. The
-studio's own builds compile `page/index.html` with the shell instead.
-
-## 📚 API
-
-- [UI components](./docs/ui.md): panel setup, texture ownership and UV access
-- [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): component API and events
-- [Pixel-art key bindings](./docs/keybindings/PixelArtKeyBindings.md): shortcuts and the console `pixelart.keybinds` namespace
-- [`UvNetLibrary`](./docs/uv/UvNetLibrary.md): the UV nets regions unfold with, and the console `pixelart.nets` namespace
-- [Mesh texturing](./docs/mesh-texturing/README.md): canvas, normal-map and UV geometry adapters
+The dev server is a playground with a 3D preview, a starter UV region, UV
+create/delete/resize and the `ask` import policy. `?runtime=off`, `?empty` and
+`?import-policy=` change it. The built page has none of these.
 
 ## 🧪 Running the E2E tests
 
@@ -103,11 +73,8 @@ studio's own builds compile `page/index.html` with the shell instead.
 pnpm --filter @jolly-pixel/editor.pixel-art test:e2e
 ```
 
-Playwright drives the editor page in its playground profile (started automatically via `webServer`) and exercises paint, fill, select, move, colors, history, and import/export through the actual UI, not internal APIs.
-
-The suite serves the page with `vite --mode e2e` (`pnpm run dev:e2e`). That mode skips the TypeScript checker and pre-bundles the workspace packages the browser imports (`kWorkspaceBrowserEntries` in `vite.config.ts`), see the [e2e README](../../e2e/README.md#-starting-a-new-suite). Add any new `@jolly-pixel/*` entry point the page or `src/` imports to that list.
-
-Each test creates its own blank 80x80 canvas through the catalog and opens the page on it, so tests share no state. Only the `3D preview` tests boot the runtime; they pass `?max-fps=` (`kRuntimeMaxFps` in `test/e2e/fixtures.ts`) to the page. Headless Chromium renders that scene in software at roughly 300ms a frame, so any cap above ~2 fps renders back to back, starves the main thread and stalls every dispatched input event.
+The `3D preview` tests cap the runtime at 1 fps (`kRuntimeMaxFps`): headless
+Chromium renders the scene in software, and a higher cap stalls input events.
 
 ## Contributors Guide
 

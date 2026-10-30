@@ -1,6 +1,8 @@
 # NormalMapTexture
 
-A `THREE.DataTexture` over a [`NormalMap`](../../../../pixel-draw-renderer/docs/normal/NormalMap.md) output. [`PixelCanvasTexture.normalTexture()`](./PixelCanvasTexture.md#normaltexture) uses it for a document's own normal map; build one directly for a normal map with other islands, such as a blockset's.
+A `THREE.DataTexture` over a `NormalMap`. [`PixelCanvasTexture.normalTexture()`](./PixelCanvasTexture.md)
+uses it for a document's own normal map; build one directly for another normal
+map, such as a blockset's.
 
 ```ts
 import { NormalMapTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
@@ -12,23 +14,16 @@ normal.dispose();
 ```
 
 ```ts
-new NormalMapTexture(normals: NormalMap)
+class NormalMapTexture {
+  readonly texture: THREE.DataTexture;
+
+  constructor(normals: NormalMap);
+  dispose(): void;
+}
 ```
 
-The constructor retains the normal map and flushes it, so `texture` holds the current map. The texture uses `NoColorSpace`, `NearestFilter`, no mipmaps and `flipY`, like a canvas texture over the albedo.
-
-`changed` marks the texture for upload. `resized` points it at the new pixels and disposes its GPU copy.
-
-## `texture`
-
-```ts
-readonly texture: THREE.DataTexture
-```
-
-## `dispose()`
-
-```ts
-dispose(): void
-```
-
-Stops following the normal map, releases it and disposes the texture.
+- The constructor retains and flushes the normal map.
+- The texture uses `NoColorSpace`, `NearestFilter`, no mipmaps and `flipY`, so
+  it shares UVs with the albedo canvas texture.
+- It follows the map's `changed` and `resized` events.
+- `dispose()` stops following, releases the map and disposes the texture.

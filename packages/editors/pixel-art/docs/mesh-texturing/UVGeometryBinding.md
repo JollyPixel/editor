@@ -1,6 +1,7 @@
 # UVGeometryBinding
 
-Projects a `UVRegion` onto a `THREE.BufferGeometry`'s `uv` attribute, and optionally keeps it in step as the user drags the region.
+Projects a `UVRegion` onto a `THREE.BufferGeometry`'s `uv` attribute and can
+follow the region as it is edited.
 
 ```ts
 import { UVGeometryBinding } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
@@ -17,40 +18,46 @@ const binding = new UVGeometryBinding({
 binding.follow(canvas.uv);
 ```
 
-The constructor snapshots the geometry's `uv` attribute as its projection base and applies the region right away. **Pass geometry whose UVs have not already been rewritten** — a second binding over the same geometry would read the first one's output as its base and compound the projections.
-
-Every write also records each vertex's texel bounds in a `uvRegion` attribute and, for a triangle face, the diagonal in `uvEdge`, adding both attributes to the geometry if it lacks them. A material prepared with [`clampUvRegion()`](./clampUvRegion.md) reads them to keep samples inside the face's rect; other materials ignore them.
+- The constructor snapshots the geometry's `uv` as its base and applies the
+  region. Pass geometry whose UVs were not rewritten yet: a second binding on
+  the same geometry compounds the projections.
+- Each write also fills the `uvRegion` and `uvEdge` attributes that
+  [`clampUvRegion()`](./clampUvRegion.md) reads.
 
 ## Face ranges
 
-A `FaceVertexRange` is `{ start, count }` in vertices, naming a slice of the vertex list one UV face owns. `FaceRanges` maps a face to a *list* of those slices, because a shape may emit several polygons into the same face slot; a stair, for instance, splits its top into two quads.
-
-A face with no ranges is skipped, so a partial map is legal.
-
-Base UVs are read as normalized tile space and scaled into the target rect rather than snapped to its corners. A vertex whose base UV is `0.5` therefore lands halfway across the rect, which is what lets a shape sample only part of its tile.
-
-Building the ranges is the caller's job, since they depend on how the geometry was assembled. `@jolly-pixel/voxel.renderer` exposes `buildShapeGeometry()`, which triangulates a `BlockShape` and returns the matching per-face ranges.
-
-## `applyFace()`
-
 ```ts
-applyFace(face: UVSlot | null, geometry: UVGeometry): void
+interface FaceVertexRange {
+  start: number; // in vertices
+  count: number;
+}
+
+type FaceRanges = Partial<Record<UVSlot, readonly FaceVertexRange[]>>;
 ```
 
-A `null` face, which is what a stacked region reports, projects the region's shared rect across every vertex. A named face writes only that face's ranges. `UVGeometry` may be a rectangle or a triangle; triangles are flipped onto the right corner.
+- A face can own several ranges, such as a stair top split into two quads.
+- A face with no ranges is skipped.
+- Base UVs are scaled into the target rect, so a base UV of `0.5` lands halfway.
+- `buildShapeGeometry()` from `@jolly-pixel/voxel.renderer` returns ranges for a
+  `BlockShape`.
 
-## `preview()`
+## Methods
 
-```ts
-preview(region: UVRegion): void
-```
+### applyFace(face: UVSlot | null, geometry: UVGeometry): void
 
-Projects `region` onto the mesh without adopting it, for an in-progress drag reported from elsewhere, such as a peer. A region with another id is ignored.
+`null`, from a stacked region, projects the shared rect across every vertex.
 
-## `follow()` / `unfollow()`
+### preview(region: UVRegion): void
 
-`follow(uv)` subscribes to `region-moved`, `region-dragging`, `region-state-changed` and `region-rotated`, filtered to the bound region's id. A region moved as a whole reprojects every active face. A rotated slot's UVs are turned inside its rect with `rotateUv()`, after the triangle corner orientation. `region-dragging` carries the region as a move or resize drag shows it, so the geometry tracks the pointer instead of jumping on release. Following a map already followed is a no-op; `unfollow()` is idempotent.
+Projects `region` without adopting it, such as a peer's drag. A region with
+another id is ignored.
 
-## `bindRegion()` / `resizeTexture()`
+### follow(uv: UVMap): void / unfollow(): void
 
-Both reproject every active face. `bindRegion` also changes what `regionId` reports and what `follow()` filters on.
+Reprojects on region moves, drags, state changes and rotations of the bound
+region. Both are idempotent.
+
+### bindRegion(region: UVRegion): void / resizeTexture(size: Vec2): void
+
+Reproject every active face. `bindRegion()` also changes `regionId` and what
+`follow()` listens to.

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { MenuSession, type MenuPoint } from "@jolly-pixel/ui";
+import type { EditorArchives } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import type {
@@ -21,13 +22,22 @@ import type {
   DeleteResult
 } from "../../../shared/dialogs/DeleteDialog.ts";
 import { duplicateName } from "../../../model/index.ts";
+import { ANIMATION_SET_DEPENDENCY } from "./animationSetDependency.ts";
 
 // CONSTANTS
 const kFirstClipName = "Clip 1";
 
+export type AnimateArchives = Pick<
+  EditorArchives,
+  | "canImport"
+  | "downloadAsset"
+  | "pickAndImport"
+>;
+
 export interface AnimateActionsEditing {
   animations: AnimationLibrary;
   animationFocus: AnimationFocusStore;
+  archives: AnimateArchives;
 }
 
 export interface AnimateActionsView {
@@ -178,6 +188,22 @@ export class AnimateActions {
         () => this.#animations.renameSet(setId, result.name)
       );
     }
+  }
+
+  async importSet(): Promise<void> {
+    await this.#attempt(
+      "Could not import the set",
+      () => this.#editing.archives.pickAndImport(ANIMATION_SET_DEPENDENCY.kind)
+    );
+  }
+
+  async exportSet(
+    setId: string
+  ): Promise<void> {
+    await this.#attempt(
+      `Could not export "${this.#animations.targetName(setId)}"`,
+      () => this.#editing.archives.downloadAsset(setId)
+    );
   }
 
   unlinkSet(

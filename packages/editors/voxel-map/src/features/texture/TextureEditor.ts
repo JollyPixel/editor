@@ -12,9 +12,14 @@ import {
 import type { PixelArtCanvasOptions } from "@jolly-pixel/pixel-draw.renderer";
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
 import {
+  BLOCKSET_EXTENSION,
+  BLOCKSET_KIND
+} from "@jolly-pixel/asset.voxel-map/client";
+import {
   PixelDrawPanel,
   type TextureChangeDetail,
   type TextureEditRequestDetail,
+  type TextureFileDrop,
   type UvAccess
 } from "@jolly-pixel/editor.pixel-art";
 import { LazyTemplate } from "@jolly-pixel/ui";
@@ -29,6 +34,7 @@ import {
   blocksetTabLabels,
   type BlocksetTabLabels
 } from "./blocksetTabLabels.ts";
+import { describeError } from "../../shared/describeError.ts";
 
 // CONSTANTS
 const kCanvasOptions: PixelArtCanvasOptions = {
@@ -45,6 +51,12 @@ const kCanvasOptions: PixelArtCanvasOptions = {
     deselectOnEmptyClick: false
   }
 };
+const kBlocksetDropTypes = [
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/json"
+];
+const kNoFileDrops: readonly TextureFileDrop[] = [];
 
 @customElement("texture-editor")
 export class TextureEditor extends EditingElement {
@@ -92,6 +104,16 @@ export class TextureEditor extends EditingElement {
   #reconciling: Promise<void> = Promise.resolve();
   #followedBlocksetId: string | null = null;
   #adding = false;
+  readonly #blocksetDrops: readonly TextureFileDrop[] = [
+    {
+      types: kBlocksetDropTypes,
+      extensions: [".zip", BLOCKSET_EXTENSION],
+      label: "Drop blockset to add",
+      drop: (file) => {
+        void this.#dropBlockset(file);
+      }
+    }
+  ];
 
   constructor() {
     super();
@@ -340,32 +362,57 @@ export class TextureEditor extends EditingElement {
     const result = await dialog.open({
       defaultTileSize: (active === null ? undefined : blocksets.blocksetTileSize(active)) ??
         DEFAULT_TILE_SIZE,
-      linkable: blocksets.linkableAssets()
+      linkable: blocksets.linkableAssets(),
+      importable: editing.archives.canImport
     });
     if (result === null) {
       return;
     }
 
+    await this.#add(editing, async() => {
+      switch (result.kind) {
+        case "import":
+          await editing.archives.pickAndImport(BLOCKSET_KIND);
+          break;
+        case "link":
+          blocksets.link(result.assetId);
+          break;
+        case "create":
+          await blocksets.create(result);
+          break;
+      }
+    });
+  };
+
+  async #dropBlockset(
+    file: File
+  ): Promise<void> {
+    const editing = this.editing;
+    if (editing === null || this.#adding) {
+      return;
+    }
+
+    await this.#add(
+      editing,
+      () => editing.archives.importFile(file, BLOCKSET_KIND)
+    );
+  }
+
+  async #add(
+    editing: VoxelMapEditing,
+    run: () => Promise<void>
+  ): Promise<void> {
     this.#adding = true;
     try {
-      const blocksetId = result.kind === "link" ?
-        blocksets.link(result.assetId) :
-        await blocksets.create(result);
-      if (blocksetId === null) {
-        editing.state.log.push("Could not add the blockset: it was refused by the map.");
-      }
-      else {
-        blocksets.activeBlocksetId = blocksetId;
-      }
+      await run();
     }
     catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      editing.state.log.push(`Could not add the blockset: ${reason}`);
+      editing.state.log.push(`Could not add the blockset: ${describeError(error)}`);
     }
     finally {
       this.#adding = false;
     }
-  };
+  }
 
   readonly #onEditRequest = (
     event: CustomEvent<TextureEditRequestDetail>
@@ -398,6 +445,7 @@ export class TextureEditor extends EditingElement {
             .texturesAddable=${addable}
             .texturesClosable=${false}
             .textureTabsLine=${textureTabs.value === "line"}
+            .fileDrops=${addable && editing.archives.canImport ? this.#blocksetDrops : kNoFileDrops}
             @texture-tabs-line-change=${(event: CustomEvent<boolean>) => {
               textureTabs.value = event.detail ? "line" : "tabs";
             }}

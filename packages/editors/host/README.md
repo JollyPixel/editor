@@ -38,7 +38,7 @@ mount lifetimes, one room per asset, swappable back-ends and the shell. The
 ```ts
 import {
   EditorRuntime,
-  mountStandalone,
+  bootStandalone,
   type HostLogger,
   type RuntimeEditorContext
 } from "@jolly-pixel/editor.host";
@@ -76,8 +76,13 @@ class MyEditor {
   }
 }
 
-await mountStandalone(MyEditor, {
-  dev: import.meta.env.DEV
+void bootStandalone(MyEditor, {
+  dev: import.meta.env.DEV,
+  offline: async() => {
+    const { default: createHandlers } = await import("virtual:jolly-pixel/handlers");
+
+    return { handlers: createHandlers() };
+  }
 });
 ```
 
@@ -85,25 +90,29 @@ await mountStandalone(MyEditor, {
 
 ### Boot
 
-- [`mountStandalone`](./docs/boot/mountStandalone.md): the editor definition and
-  context, switching, page lifecycle, console and boot tracing.
-- [`bootStandalone`](./docs/boot/bootStandalone.md): the offline fallback and
-  offline mode.
-- [`EditorLaunch`](./docs/launch/EditorLaunch.md): launch sources and the target, tag
-  and shell of a page.
-- [`ShellChannel`](./docs/shell/ShellChannel.md): the protocol between a shell and
-  its editor frames.
-- [`QueryParams`](./docs/params/QueryParams.md): typed query-string parameters.
+- [`bootStandalone`](./docs/boot/bootStandalone.md): the page entry point,
+  offline fallback, page state, switching and debug logging.
+- [`EditorDefinition`](./docs/boot/EditorDefinition.md): what an editor
+  declares, the context `mount` receives, its handle, console and tours.
+- [`QueryParams`](./docs/params/QueryParams.md): typed query-string parameters
+  and the host's own.
+- [Shell](./docs/shell/Shell.md): what a page framing editors, such as the
+  studio, uses.
 
 ### Session
 
-- [`EditorSession`](./docs/session/EditorSession.md): the target room, live
-  dependencies and their events.
+- [`EditorSession`](./docs/session/EditorSession.md): the target and its
+  leases, and the asset picker.
 - [`AssetLeases`](./docs/lease/AssetLeases.md): shared rooms and synced documents per
   asset.
-- [`Archives`](./docs/session/Archives.md): `.zip` export, import and reset.
-- [`EditorToolbar`](./docs/session/EditorToolbar.md): the bar above the viewport, its
-  target picker and the tags of the target.
+- [`Archives`](./docs/session/Archives.md): `.zip` export and import of the
+  target and its dependencies.
+
+### UI
+
+- [`EditorToolbar`](./docs/ui/EditorToolbar.md): the bar above the viewport.
+- [`bindPresenceStack`](./docs/ui/bindPresenceStack.md): a presence stack
+  bound to a room's peers.
 
 ### Preferences
 

@@ -8,8 +8,10 @@ import {
   createBlocksetAsset,
   createBlocksetFile,
   blocksetAsset,
-  BLOCKSET_EXTENSION
+  BLOCKSET_EXTENSION,
+  BLOCKSET_KIND
 } from "@jolly-pixel/asset.voxel-map/client";
+import type { EditorDependencyFormat } from "@jolly-pixel/editor.host";
 import type {
   BlockDefinition,
   MaterialGroup,
@@ -48,6 +50,12 @@ import {
 // CONSTANTS
 const kBlocksetDirectory = "blocksets/";
 
+export const BLOCKSET_DEPENDENCY: EditorDependencyFormat = {
+  kind: BLOCKSET_KIND,
+  extension: BLOCKSET_EXTENSION,
+  folder: kBlocksetDirectory
+};
+
 export interface BlocksetCatalog extends BlocksetRecords {
   record(assetId: string): AssetRecordData | undefined;
   create(
@@ -77,6 +85,7 @@ export type MapBlocksetsEvents = {
   change: () => void;
   activeChange: (blocksetId: string | null) => void;
   denied: (blocksetId: string) => void;
+  linkRefused: (assetId: string) => void;
 };
 
 export type MapBlocksetsSignals = Pick<
@@ -349,8 +358,15 @@ export class MapBlocksets
       id: blocksetId,
       asset: blocksetAsset(assetId)
     });
+    if (!added) {
+      this.emit("linkRefused", assetId);
 
-    return added ? blocksetId : null;
+      return null;
+    }
+
+    this.activeBlocksetId = blocksetId;
+
+    return blocksetId;
   }
 
   remove(

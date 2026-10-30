@@ -235,7 +235,7 @@ describe("MapBlocksets", () => {
     assert.equal(blocksets.active?.id, "terrain");
   });
 
-  it("links a catalog asset under a fresh blockset id", () => {
+  it("links a catalog asset under a fresh blockset id and activates it", () => {
     const { view, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET]);
 
     assert.deepEqual(
@@ -244,5 +244,19 @@ describe("MapBlocksets", () => {
     );
     assert.equal(blocksets.link("asset-rock"), "generated-0");
     assert.equal(view.document.blocksets.get("generated-0")?.asset?.id, "asset-rock");
+    assert.equal(blocksets.activeBlocksetId, "generated-0");
+  });
+
+  it("reports a link the map refuses and keeps the active blockset", () => {
+    const { view, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET]);
+    view.document.addBlockset = () => false;
+    const refused: string[] = [];
+    blocksets.subscribe("linkRefused", (assetId) => {
+      refused.push(assetId);
+    });
+
+    assert.equal(blocksets.link("asset-rock"), null);
+    assert.deepEqual(refused, ["asset-rock"]);
+    assert.equal(blocksets.activeBlocksetId, "terrain");
   });
 });

@@ -1,15 +1,21 @@
 // Import Third-party Dependencies
-import type {
-  ImportConflictPolicy,
-  ImportPlan,
-  ImportReport
+import {
+  DependencyIndex,
+  type CatalogCreateOptions,
+  type ImportConflictPolicy,
+  type ImportPlan,
+  type ImportReport
 } from "@jolly-pixel/asset-server/client";
-import type { AssetReferenceData } from "@jolly-pixel/asset";
+import type {
+  AssetRecordData,
+  AssetReferenceData
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
   EditorArchives,
   type EditorArchiveBrowser,
+  type EditorArchiveCatalog,
   type EditorArchiveTarget
 } from "#src/session/EditorArchives.ts";
 import type {
@@ -32,6 +38,58 @@ export const LIVE_ENTRY = {
   ...ARCHIVE_ROOT,
   path: "models/robot.voxelmodel.json"
 };
+export const TARGET_ID = "model-1";
+export const DEPENDENCY_KIND = {
+  kind: "voxelanimation",
+  extension: ".voxelanim.json",
+  folder: "animations/"
+};
+export const DEPENDENCY_ROOT: AssetReferenceData = {
+  id: "walk",
+  kind: DEPENDENCY_KIND.kind
+};
+
+export function archiveFile(): File {
+  return new File(["zip"], "robot.zip");
+}
+
+export interface CreatedAsset {
+  path: string;
+  text: string;
+  options: CatalogCreateOptions | undefined;
+}
+
+export class FakeArchiveCatalog implements EditorArchiveCatalog {
+  readonly dependencies = new DependencyIndex();
+  readonly created: CreatedAsset[] = [];
+  readonly #records: AssetRecordData[];
+
+  constructor(
+    records: AssetRecordData[] = []
+  ) {
+    this.#records = records;
+  }
+
+  record(
+    assetId: string
+  ): AssetRecordData | undefined {
+    return this.#records.find((record) => record.id === assetId);
+  }
+
+  create(
+    path: string,
+    content: Uint8Array | null,
+    options?: CatalogCreateOptions
+  ): Promise<string> {
+    this.created.push({
+      path,
+      text: new TextDecoder().decode(content ?? new Uint8Array()),
+      options
+    });
+
+    return Promise.resolve(`created-${this.created.length}`);
+  }
+}
 
 export interface FakeArchive extends SessionArchive {
   exported: Array<string | undefined>;
@@ -51,13 +109,13 @@ export interface FakeBrowser extends EditorArchiveBrowser {
   confirmed: string[];
   assigned: string[];
   reloads: number;
-  picks: number;
+  picks: string[];
 }
 
 export interface FakeBrowserOptions {
   policy?: ImportConflictPolicy | null;
   confirm?: boolean;
-  picked?: Blob | null;
+  picked?: File | null;
 }
 
 export function createArchive(
@@ -114,7 +172,7 @@ export function createBrowser(
   const {
     policy = "replace",
     confirm = true,
-    picked = new Blob(["zip"])
+    picked = archiveFile()
   } = options;
 
   const browser: FakeBrowser = {
@@ -123,7 +181,7 @@ export function createBrowser(
     confirmed: [],
     assigned: [],
     reloads: 0,
-    picks: 0,
+    picks: [],
     location: {
       href: "http://localhost:5173/?target=model-1&room=a",
       assign(url) {
@@ -133,8 +191,8 @@ export function createBrowser(
         browser.reloads++;
       }
     },
-    pickArchive() {
-      browser.picks++;
+    pickFile(accept) {
+      browser.picks.push(accept);
 
       return Promise.resolve(picked);
     },
@@ -165,6 +223,7 @@ export interface CreateArchivesOptions {
   offline?: OfflineMode | null;
   target?: EditorArchiveTarget;
   navigator?: LaunchNavigator;
+  catalog?: EditorArchiveCatalog;
 }
 
 export function createArchives(
@@ -175,8 +234,9 @@ export function createArchives(
     browser = createBrowser(),
     offline = null,
     navigator = new FakeNavigator(),
+    catalog = new FakeArchiveCatalog(),
     target = {
-      id: "model-1",
+      id: TARGET_ID,
       path: "models/robot.voxelmodel.json"
     }
   } = options;
@@ -185,7 +245,8 @@ export function createArchives(
     session: {
       archive,
       offline,
-      targetRecord: target
+      targetRecord: target,
+      catalog
     },
     accepts: ARCHIVE_KIND,
     fallbackName: "model",
@@ -219,6 +280,7 @@ export interface FakeToolbarArchives extends EditorToolbarArchives {
 export interface FakeToolbarArchivesOptions {
   canImport?: boolean;
   canReset?: boolean;
+  dependencies?: AssetRecordData[];
 }
 
 export function createToolbarArchives(
@@ -226,7 +288,8 @@ export function createToolbarArchives(
 ): FakeToolbarArchives {
   const {
     canImport = true,
-    canReset = false
+    canReset = false,
+    dependencies = []
   } = options;
   const calls: string[] = [];
   function call(
@@ -243,7 +306,13 @@ export function createToolbarArchives(
     canImport,
     canReset,
     calls,
+    dependencies,
     download: call("download"),
+    downloadAsset(assetId) {
+      calls.push(`download ${assetId}`);
+
+      return Promise.resolve();
+    },
     pickAndImport: call("import"),
     reset: call("reset")
   };

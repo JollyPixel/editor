@@ -1,17 +1,15 @@
 # Preferences
 
 A preference is a choice one user makes for themselves, such as the theme or
-whether the grid shows. Preferences are grouped in scopes. A scope declares
-its fields once, and the same declaration validates values in the browser and
-on the studio server.
+whether the grid shows. Preferences are grouped in scopes, and one scope
+declaration validates values in the browser and on the studio server.
 
 `@jolly-pixel/editor.host/preferences` holds the declarations, the
-`Preferences` holder and the host's own scopes. It imports neither the DOM
-nor Three.js, so a Node.js server can load it. `LocalPreferences`,
-`PreferenceStorage`, `followCameraPreferences`, `followKeyBindings` and
+`Preferences` holder and the host scopes, with no DOM or Three.js import.
+`LocalPreferences`, `followCameraPreferences`, `followKeyBindings` and
 `provideTourKeys` come from the package root.
 
-## `definePreferences`
+## definePreferences
 
 ```ts
 import { definePreferences } from "@jolly-pixel/editor.host/preferences";
@@ -20,26 +18,15 @@ export const VIEW_PREFERENCES = definePreferences({
   name: "voxel-map",
   label: "Voxel map",
   fields: {
-    grid: {
-      type: "boolean",
-      label: "Grid",
-      group: "View",
-      default: true
-    },
-    gridSize: {
-      type: "range",
-      label: "Grid size",
-      min: 1,
-      max: 256,
-      default: 16
-    }
+    grid: { type: "boolean", label: "Grid", group: "View", default: true },
+    gridSize: { type: "range", label: "Grid size", min: 1, max: 256, default: 16 }
   }
 });
 ```
 
-`name` is kebab-case: overrides are stored under it. `label` titles the
-scope's Settings page. Every field has a `label`, an optional `group` heading
-and `description`, and a `default`:
+`name` is kebab-case; overrides are stored under it. `label` titles the
+scope's Settings page. Every field has a `label`, a `default`, and an optional
+`group` heading and `description`:
 
 ```ts
 type PreferenceField =
@@ -49,48 +36,25 @@ type PreferenceField =
     options: readonly { value: string; label: string; }[];
     default: string; // one of the option values
   }
-  | {
-    type: "range";
-    min: number;
-    max: number;
-    step?: number; // default 1
-    default: number;
-  }
-  | {
-    type: "chord";
-    default: readonly string[]; // KeyChord strings, [] leaves it unbound
-  }
-  | {
-    type: "key";
-    default: readonly string[]; // KeyboardEvent.code values, [] leaves it unbound
-  }
-  | {
-    type: "color";
-    default: string | null; // "#rrggbb", stored lowercase
-  }
-  | {
-    type: "entries";
-    default: Readonly<Record<string, string>>;
-  };
+  | { type: "range"; min: number; max: number; step?: number; default: number; } // step: 1
+  | { type: "chord"; default: readonly string[]; } // KeyChord strings
+  | { type: "key"; default: readonly string[]; } // KeyboardEvent.code values
+  | { type: "color"; default: string | null; } // "#rrggbb", stored lowercase
+  | { type: "entries"; default: Readonly<Record<string, string>>; };
 ```
 
-- A chord field holds at most `MAX_CHORDS` (4) chords. Its strings are only
-  checked for length; the editor's `KeyBindingMap` drops what it cannot read.
-  Within a scope, a chord belongs to one field at most.
-- A key field lists the keys held for an action, such as a camera move, by
-  position and with no modifier: `"KeyW"`, `"ShiftLeft"`. It holds at most
-  `MAX_CHORDS` codes, and shares the one-field rule with chord fields.
-- An entries field is a string map that a store written for a `StorageAdapter`
-  keeps through [`PreferenceStorage`](#preferencestorage). Its JSON is at most
-  `MAX_ENTRIES_LENGTH` (32 KiB). Settings shows no form for it, only a Clear
-  button.
+- `chord` and `key` fields hold at most `MAX_CHORDS` (4) values; `[]` leaves
+  the action unbound. A key field lists keys held for an action, such as a
+  camera move, with no modifier.
+- Within a scope, a chord or key belongs to one field at most.
+- An `entries` field is a string map of at most `MAX_ENTRIES_LENGTH` (32 KiB)
+  of JSON. Settings shows only a Clear button for it.
 
-`definePreferences` throws `InvalidPreferencesError` when the name is not
-kebab-case, a range has `min` above `max`, or a field refuses its own default,
-and its `ChordConflictError` subclass when two binding fields share a default.
-An enum default outside its options is a type error.
+Throws `InvalidPreferencesError` when the name is not kebab-case, a range has
+`min` above `max`, or a field refuses its own default, and its
+`ChordConflictError` subclass when two binding fields share a default.
 
-## `defineKeyBindings`
+## defineKeyBindings
 
 ```ts
 export const MAP_KEYBINDINGS = defineKeyBindings({
@@ -103,16 +67,14 @@ export const MAP_KEYBINDINGS = defineKeyBindings({
 });
 ```
 
-A scope with one chord field per action of a `KeyBindingMap` defaults object,
-so each default must be a valid `KeyChordString`.
-`actions` gives each action its label and group; TypeScript requires one per
-action. The studio lists every scope with chord fields on its Keybindings
-page, and gives no page of its own to a scope that has nothing else.
+A scope with one chord field per action of a `KeyBindingMap` defaults object.
+TypeScript requires a label for every action. The studio lists these scopes
+on its Keybindings page.
 
-## `PreferenceScope`
+## PreferenceScope
 
 What both functions return. Overrides are the values that differ from the
-defaults, as a plain object.
+defaults.
 
 ```ts
 class PreferenceScope<TFields> {
@@ -135,32 +97,21 @@ class PreferenceScope<TFields> {
 }
 
 interface PreferenceFieldGroup<TField> {
-  label: string | null; // the fields' group, null when they have none
+  label: string | null; // null for fields without a group
   fields: Array<[key: string, field: TField]>;
 }
 ```
 
-- `form` holds every field but the chord and key ones, and `keyBindings` the
-  chord and key ones, each split by `group` in declaration order.
-  `BindingPreference` is a chord or a key field, and `FormPreference` any
-  other field.
-
-- `resolve` returns every field: the valid overrides over the defaults,
-  frozen. `PreferenceValues` types each field: `boolean`, the enum's option
-  values, `number`, `readonly string[]`, `string | null` or the entries map.
-- `prune` keeps the valid overrides and silently drops unknown fields,
-  refused values and values equal to the default.
-- `parse` reads a whole set of overrides and `update` applies a patch to
-  some. Both throw `InvalidPreferencesError` on an unknown field or a refused
-  value, and drop values equal to the default. They throw
-  `ChordConflictError` when the result binds one chord to two fields; its
-  `chord`, `key` and `owner` name the chord, a field the patch changed and the
-  field that already held it.
-- `bindings` returns the chords or codes of every binding field, the defaults
-  where an override is missing or invalid.
+- `form` groups the non-binding fields and `keyBindings` the chord and key
+  fields, in declaration order.
+- `resolve` returns every field, overrides over defaults, frozen.
+- `prune` keeps the valid overrides and silently drops the rest.
+- `parse` and `update` throw `InvalidPreferencesError` on an unknown field or
+  a refused value, and `ChordConflictError` when the result binds one chord to
+  two fields.
 - `toJSON` is the descriptor `PreferenceScope.from` reads back.
 
-## `Preferences`
+## Preferences
 
 The overrides of every scope, in memory.
 
@@ -185,65 +136,37 @@ class Preferences implements Iterable<[string, PreferenceOverrides]> {
 
 interface PreferenceChange {
   scope: string;
-  patch: PreferenceOverrides; // the values the change set, by key
-  overrides: PreferenceOverrides; // the scope once the change applied
+  patch: PreferenceOverrides;
+  overrides: PreferenceOverrides; // the scope after the change
 }
 ```
 
-- `update` validates the whole patch with the scope, then calls `write` and
-  the listeners once. A patch that changes nothing does neither, and a refused
-  one throws and changes nothing.
-- `assign` updates one field, and `reset` writes the default back to one
-  field or to every field of the scope, both as a single `update`.
-- `receive` replaces a scope's overrides from elsewhere, another tab or the
-  shell, and calls the listeners but not `write`.
+- `update` validates the patch, then calls `write` and the listeners once. A
+  patch that changes nothing does neither; a refused one throws.
+- `assign` and `reset` are single-field `update`s; `reset` without `key`
+  resets the whole scope.
+- `receive` takes overrides from elsewhere, another tab or the shell, and
+  calls the listeners but not `write`.
+- `view()` shares the overrides and `write`; its `dispose()` stops only the
+  listeners added through it. `context.preferences` is such a view.
 
-### View
+## LocalPreferences
 
-`view()` returns a `Preferences` over the same overrides and `write`.
-`dispose()` stops the listeners subscribed through that object only, and a
-later `subscribe` or `watch` on it does nothing.
-
-An editor gets a view as
-[`context.preferences`](../boot/mountStandalone.md#editor-context). The host
-disposes it with the editor, so a follower such as `followKeyBindings` stops
-with the mount that created it.
-
-## `LocalPreferences`
-
-`Preferences` kept in `localStorage`, one key per scope:
-`jolly-pixel:preferences:<scope>` (`LOCAL_PREFERENCES_KEY_PREFIX`). It follows
-the writes of other tabs through the `storage` event until disposed. An editor
-opened outside a shell, and the offline studio, use it.
+`Preferences` kept in `localStorage` under
+`jolly-pixel:preferences:<scope>`, following the writes of other tabs until
+disposed. Editors outside a shell and the offline studio use it.
 
 ```ts
 using local = new LocalPreferences();
 local.preferences.assign(CAMERA_PREFERENCES, "invertY", true);
 ```
 
-`storage` defaults to `globalThis.localStorage`; `null` keeps the preferences
-in memory. A write that throws, for a full quota, is kept in memory only.
+`storage: null` keeps the preferences in memory. A write that throws, such
+as a full quota, stays in memory.
 
-## `PreferenceStorage`
-
-```ts
-new PreferenceStorage(preferences, scope, field);
-```
-
-A `StorageAdapter` whose keys are the entries of one entries field. A store
-that took a `StorageAdapter`, such as `LanternSeen`, keeps
-its data with the account this way. It throws a `TypeError` for a field that
-is not an entries field.
-
-## `followKeyBindings`
+## followKeyBindings
 
 ```ts
-function followKeyBindings<TAction extends string>(
-  preferences: Preferences,
-  scope: PreferenceScope<KeyBindingFields<TAction>>,
-  onDropped?: (message: string) => void
-): KeyBindingSettings<TAction>;
-
 const settings = followKeyBindings(
   preferences,
   MAP_KEYBINDINGS,
@@ -251,44 +174,36 @@ const settings = followKeyBindings(
 );
 ```
 
-Returns a `KeyBindingSettings` over the defaults of a `defineKeyBindings`
-scope, kept in step with that scope for the life of the page. The settings
-load the scope's values now and again on every change made elsewhere, a swap
-of two chords included, and `onDropped` receives each stored entry they
-cannot read. Each change of the settings, such as a console command calling
-`assign` or `reset`, is written to the scope as one `update`. Entries the
-settings dropped while loading are written back without them.
+Returns a `KeyBindingSettings` that follows a `defineKeyBindings` scope:
+
+- It loads the scope's values now and on every change made elsewhere.
+- Each change of the settings, such as a console `assign`, is written back as
+  one `update`.
+- `onDropped` receives each stored entry it cannot read, and the scope is
+  written back without those entries.
 
 ## Host scopes
 
 `HOST_PREFERENCES` lists the scopes the host declares for every editor:
 
-- `RUNTIME_PREFERENCES` (`runtime`): `stats`, `viewHelper` and `metrics`, the
-  visibility of the [runtime widgets](../runtime/EditorRuntime.md#runtime-widgets).
-- `LANTERN_PREFERENCES` (`lantern`): `seen`, the tours finished, as entries.
-- `CAMERA_PREFERENCES` (`camera`): `lookSensitivity` and `flySpeed`, two
-  multipliers from 0.25 to 4, `invertY`, `touchpadSwipe`, `look` or `pan`,
-  and one key field per `OrbitFlyCamera` key action: `forward`, `back`,
-  `left`, `right`, `up`, `down`, `lookUp`, `lookDown`, `lookLeft` and
-  `lookRight`. Every editor shares these keys.
-- `COLOR_PICKER_PREFERENCES` (`color-picker`): `space` (`hsv` or `okhsv`),
-  `selector` (`square` or `wheel`), `channels` (`hsl` or `oklch`), `harmony`
-  (`none` or a harmony kind) and `discrete`. The values, labels and defaults
-  come from `@jolly-pixel/ui/color-picker`. When a page opens, the host hands
-  this scope to `ColorPicker.follow()`, so every colour picker on the page
-  reads it unless it sets its own property, and a picker's settings button
-  writes into it.
+- `RUNTIME_PREFERENCES` (`runtime`): `stats`, `viewHelper` and `metrics`
+  widget visibility.
+- `LANTERN_PREFERENCES` (`lantern`): `seen`, the finished tours.
+- `CAMERA_PREFERENCES` (`camera`): `lookSensitivity` and `flySpeed`
+  multipliers (0.25 to 4), `invertY`, `touchpadSwipe` (`look` or `pan`), and
+  one key field per `OrbitFlyCamera` action, `forward` to `lookRight`.
+- `COLOR_PICKER_PREFERENCES` (`color-picker`): the colour picker settings.
+  Every picker on the page follows them unless it sets its own property.
 
 ```ts
 const stop = followCameraPreferences(orbitFlyCamera, context.preferences);
 ```
 
-`followCameraPreferences` takes the camera's own speeds as the base the
-multipliers scale, so each editor keeps its tuning. It sets `moveSpeed` again
-only when `flySpeed` changes, so the speed the wheel picked survives other
-changes. It also sets the camera's `keys`.
+`followCameraPreferences` scales the camera's own speeds by the multipliers
+and sets its `keys`. It sets `moveSpeed` again only when `flySpeed` changes,
+so a speed picked with the wheel survives other changes.
 
-## `provideTourKeys`
+## provideTourKeys
 
 ```ts
 const release = provideTourKeys({
@@ -300,7 +215,6 @@ const release = provideTourKeys({
 });
 ```
 
-Lets tour bodies name the scope's bindings: `` `{map.tool.brush}` `` shows
-the key the user bound to `tool.brush`, labelled with the layout's
-characters. The host provides `camera` on every page, so a tour can write
-`` `{camera.forward}` ``.
+Lets tour bodies show the user's bindings: `` `{map.tool.brush}` `` prints
+the key bound to `tool.brush`, labelled for the user's keyboard. The host
+provides `camera` on every page, as in `` `{camera.forward}` ``.

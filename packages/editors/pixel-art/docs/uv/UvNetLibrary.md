@@ -1,9 +1,8 @@
 # UvNetLibrary
 
-The [UV nets](../../../../pixel-draw-renderer/docs/uv/UVNet.md) a `PixelDrawPanel` offers when a
-region unfolds, and the one it uses by default. The nets a user makes are saved in the texture's
-pixel document, so they are written to its `.pixelart` file and every peer editing that texture
-sees them. Another texture has its own nets.
+The `UVNet`s a `PixelDrawPanel` offers when a region unfolds, and the one it
+uses by default. Nets a user makes are saved in the texture's pixel document,
+so they go into its `.pixelart` file and reach every peer.
 
 ```ts
 import {
@@ -26,17 +25,10 @@ panel.uvNets = uvNets;
 const features = pixelArtConsole(commands, { keyBindingSettings, uvNets });
 ```
 
-The library lists three kinds of nets, in this order. The built-in nets, `UV_NET_PRESETS`, are
-*Packed* (`"packed"`, the renderer's packing net) and *Cross* (`"cross"`, the classic box cross).
-Then come the host's `presets`, and last the nets saved in the open texture. Built-in and host
-nets are locked; the user edits copies of them.
-
-In the panel, the region state menu lists every net under "Unfold with". A net that has no cell
-for one of the region's active slots is greyed out, and its tooltip names the missing slots.
-Choosing "Unfolded" uses the default net, and so does every other unfold that does not name one,
-such as a host unfolding a region itself. "Edit nets" opens the dialog where nets are created,
-renamed, rearranged, made the default or deleted. Double-click or F2 renames a net in the list.
-Dropping a slot on a cell that already holds one makes them share it.
+- Nets are listed in order: built-in `UV_NET_PRESETS` (`"packed"`, `"cross"`),
+  host `presets`, then the nets saved in the open texture.
+- Built-in and host nets are locked; the user edits copies.
+- An unfold that names no net uses the default net.
 
 ## Constructor
 
@@ -44,7 +36,7 @@ Dropping a slot on a cell that already holds one makes them share it.
 interface UvNetPresetInit {
   id: string;
   name: string;
-  rows: Iterable<Iterable<UVNetCellInput>> | null;
+  rows: Iterable<Iterable<UVNetCellInput>> | null; // null is the packing net
 }
 
 interface UvNetLibraryOptions {
@@ -55,9 +47,8 @@ interface UvNetLibraryOptions {
 new UvNetLibrary(options?: UvNetLibraryOptions)
 ```
 
-`rows` follows the [`UVNet` constructor](../../../../pixel-draw-renderer/docs/uv/UVNet.md#constructor);
-`null` is the packing net. `defaultId` is the default of a texture that has none, or whose default
-net was deleted. It falls back to `"packed"` when no locked net has that id.
+`defaultId` is the default of a texture that has none, or whose default was
+deleted. It falls back to `"packed"` when no locked net has that id.
 
 ## Document
 
@@ -67,41 +58,47 @@ type UvNetDocument = Pick<
   "uvNets" | "saveUvNet" | "deleteUvNet" | "changeDefaultUvNet" | "subscribe"
 >;
 
-get document(): UvNetDocument | null
-set document(document: UvNetDocument | null)
+document: UvNetDocument | null
 ```
 
-The `PixelDocument` whose saved nets the library lists and edits. The panel sets it to the active texture's document. Setting it
-emits `"change"`, and so does every change to the document's nets, local or from a peer. A saved
-net that reuses a locked id is not listed. While `document` is `null`, the library lists only
-locked nets and its edits change nothing and return `null` or `false`.
+- The panel sets it to the active texture's document.
+- Setting it emits `"change"`, and so does every change to the document's nets,
+  local or from a peer.
+- A saved net reusing a locked id is not listed.
+- While `null`, only locked nets are listed and edits return `null` or `false`.
 
-## Members
+## Methods
 
 ```ts
 get default(): UvNetPreset
 get defaultId(): string
-changeDefault(id: string): boolean
 get(id: string): UvNetPreset | undefined
 [Symbol.iterator](): IterableIterator<UvNetPreset>
 ```
 
-`changeDefault()` saves the default net in the document. It returns `false` for an unknown id or
-when no document is set.
-
-```ts
-create(name: string, rows?: UvNetRowsInput): UvNetPreset | null
-duplicate(id: string): UvNetPreset | null
-update(id: string, changes: { name?: string; rows?: UvNetRowsInput; }): boolean
-delete(id: string): boolean
-```
-
-`create()` starts from one row of the six box faces when `rows` is omitted, and returns `null`
-without a document. `duplicate()` copies any net under the name `"<name> copy"`; a copy of
-*Packed* starts from that same row. `update()` and `delete()` return `false` for a locked or
-unknown net, and `update()` also refuses rows the `UVNet` constructor rejects, such as a grid
-without slots. Each change is a document command, so it is undoable, saved with the texture and
+Each edit below is an undoable document command, saved with the texture and
 sent to peers.
+
+### changeDefault(id: string): boolean
+
+Returns `false` for an unknown id or without a document.
+
+### create(name: string, rows?: UvNetRowsInput): UvNetPreset | null
+
+Starts from one row of the six box faces when `rows` is omitted.
+
+### duplicate(id: string): UvNetPreset | null
+
+Copies any net as `"<name> copy"`.
+
+### update(id: string, changes: { name?: string; rows?: UvNetRowsInput }): boolean
+
+Returns `false` for a locked or unknown net, or rows the `UVNet` constructor
+rejects.
+
+### delete(id: string): boolean
+
+Returns `false` for a locked or unknown net.
 
 ## UvNetPreset
 
@@ -113,16 +110,13 @@ class UvNetPreset {
   readonly locked: boolean;
   readonly rows: readonly UVNetRow[] | null;
 
-  fits(slots: Iterable<UVSlot>): boolean;
+  fits(slots: Iterable<UVSlot>): boolean; // a cell for every slot
 }
 ```
 
-An immutable net entry. `fits()` is true when the net has a cell for every slot.
-
 ## Console
 
-`pixelArtConsole()` registers `pixelart.nets` through `uvNetConsole`:
+`pixelArtConsole()` registers `pixelart.nets`:
 
-- `/pixelart.nets.list` prints every net id and name, marking the default and the locked ones.
-- `/pixelart.nets.default cross` makes *Cross* the open texture's default net. An unknown id, or
-  no open texture, prints an error.
+- `/pixelart.nets.list` prints every net, marking the default and locked ones.
+- `/pixelart.nets.default cross` sets the open texture's default net.

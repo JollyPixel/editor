@@ -40,6 +40,5 @@ published none. `PeerFrustumPose` comes from `@jolly-pixel/three/network`.
 
 Destroying the actor removes every frustum.
 
-A remote pose change calls `world.invalidate()`, so a runtime
-[rendering on demand](../../../../runtime/docs/api/Runtime.md#rendering-on-demand)
-draws it. A peer joining wakes it too.
+A remote pose change or a joining peer calls `world.invalidate()`, so a
+runtime that [renders on demand](./EditorRuntime.md#methods) draws it.

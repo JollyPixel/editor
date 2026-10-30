@@ -25,7 +25,7 @@ The request that names the target. It comes from the app framing the page,
 from the page address, or from data written into the page when it was served.
 The host asks them in that order and the first answer wins.
 
-*In code:* [`EditorLaunch`](./docs/launch/EditorLaunch.md) and its
+*In code:* `EditorLaunch` and its
 `LaunchSource` list. `LaunchNotFoundError` when none answers.
 
 ### Editor
@@ -35,7 +35,7 @@ it edits, the other kinds it can load, and how to build itself. The host only
 loads what the editor declared, so the textures of a voxel map stay closed
 when the editor never said it can read textures.
 
-*In code:* the [editor definition](./docs/boot/mountStandalone.md#editor-definition):
+*In code:* the [editor definition](./docs/boot/EditorDefinition.md#definition):
 `accepts`, `kinds`, `mount` and the optional `createRuntime`.
 
 ### Mount
@@ -47,7 +47,7 @@ never tears down what the host prepared, since the next mount reuses it.
 *In code:* `mount(context)` returns an `EditorHandle`, whose `dispose()`
 releases what `mount` built. A `MountedEditor` holds one mount with what
 the host made for it, and undoes both.
-[`mountStandalone`](./docs/boot/mountStandalone.md) runs the whole boot.
+[`bootStandalone`](./docs/boot/bootStandalone.md) runs the whole boot.
 
 ### Switch
 
@@ -59,7 +59,7 @@ Anything the editor kept to itself, such as the selected brush, starts over.
 
 *In code:* `LaunchNavigator.navigate(target, tag)`, called by the toolbar's
 `EditorTargets.open()` and `EditorTags.view()`. See
-[switching](./docs/boot/mountStandalone.md#switching-target-or-tag).
+[switching](./docs/boot/bootStandalone.md#switching-asset-or-tag).
 
 ## Holding assets open
 
@@ -121,5 +121,5 @@ the page opens the asset last opened in this browser.
 
 *In code:* the `@jolly-pixel/editor.host/offline` entry,
 `openOfflineBackend()`, and `session.offline`, which is `null` on a
-server. [`bootStandalone`](./docs/boot/bootStandalone.md#offline-mode)
+server. [`bootStandalone`](./docs/boot/bootStandalone.md#offline-data)
 offers it when the server cannot be reached.

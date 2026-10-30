@@ -15,6 +15,10 @@ import type {
 } from "./TextureImporter.ts";
 import { ImageDrop } from "./ImageDrop.ts";
 import { TextureDropBounds } from "./TextureDropBounds.ts";
+import {
+  claimingDrop,
+  type TextureFileDrop
+} from "./TextureFileDrop.ts";
 import { TextureImportError } from "./errors/TextureImportError.ts";
 
 // CONSTANTS
@@ -32,13 +36,16 @@ interface DropTarget {
 export interface TextureDropControllerOptions {
   canvas: () => PixelArtCanvas | null;
   importer: TextureImporter;
+  fileDrops: () => readonly TextureFileDrop[];
 }
 
 export class TextureDropController implements ReactiveController {
   readonly #host: ReactiveControllerHost;
   readonly #canvas: () => PixelArtCanvas | null;
   readonly #importer: TextureImporter;
+  readonly #fileDrops: () => readonly TextureFileDrop[];
   #bounds: TextureDropBounds | null = null;
+  #label: string | null = null;
 
   constructor(
     host: ReactiveControllerHost,
@@ -47,6 +54,7 @@ export class TextureDropController implements ReactiveController {
     this.#host = host;
     this.#canvas = options.canvas;
     this.#importer = options.importer;
+    this.#fileDrops = options.fileDrops;
     host.addController(this);
   }
 
@@ -65,7 +73,11 @@ export class TextureDropController implements ReactiveController {
     event: DragEvent
   ): void => {
     const drop = new ImageDrop(event.dataTransfer);
-    const target = drop.carriesFiles ? this.#target(event) : null;
+    const type = drop.draggedType;
+    const claim = type === null ?
+      undefined :
+      claimingDrop(this.#fileDrops(), { type });
+    const target = drop.carriesFiles ? this.#target(event, claim) : null;
     if (target === null) {
       this.#clearOverlay();
 
@@ -73,7 +85,7 @@ export class TextureDropController implements ReactiveController {
     }
 
     event.preventDefault();
-    if (!drop.supported) {
+    if (claim === undefined && !drop.supported) {
       this.#clearOverlay();
 
       return;
@@ -83,6 +95,7 @@ export class TextureDropController implements ReactiveController {
       event.dataTransfer.dropEffect = "copy";
     }
     this.#bounds = target.bounds;
+    this.#label = claim?.label ?? null;
     this.#host.requestUpdate();
   };
 
@@ -103,16 +116,27 @@ export class TextureDropController implements ReactiveController {
   readonly onDrop = (
     event: DragEvent
   ): void => {
-    const target = this.#target(event);
+    const drop = new ImageDrop(event.dataTransfer);
+    const file = drop.singleFile;
+    const claim = file === null ?
+      undefined :
+      claimingDrop(this.#fileDrops(), file);
+    const target = this.#target(event, claim);
     this.#clearOverlay();
     if (target === null) {
       return;
     }
 
     event.preventDefault();
-    let file: File;
+    if (claim !== undefined && file !== null) {
+      claim.drop(file);
+
+      return;
+    }
+
+    let image: File;
     try {
-      file = new ImageDrop(event.dataTransfer).file();
+      image = drop.file();
     }
     catch (error) {
       if (!(error instanceof TextureImportError)) {
@@ -123,24 +147,26 @@ export class TextureDropController implements ReactiveController {
       return;
     }
 
-    void this.#importer.importFile(target.canvas, file, "drop");
+    void this.#importer.importFile(target.canvas, image, "drop");
   };
 
   readonly #clearOverlay = (): void => {
     if (this.#bounds) {
       this.#bounds = null;
+      this.#label = null;
       this.#host.requestUpdate();
     }
   };
 
   #target(
-    event: DragEvent
+    event: DragEvent,
+    claim: TextureFileDrop | undefined
   ): DropTarget | null {
     const canvas = this.#canvas();
     const stage = event.currentTarget;
     if (
       !canvas ||
-      canvas.pixelsReadOnly ||
+      (claim === undefined && canvas.pixelsReadOnly) ||
       !(stage instanceof HTMLElement) ||
       this.#isOverToolbar(event)
     ) {
@@ -179,7 +205,7 @@ export class TextureDropController implements ReactiveController {
         style=${this.#bounds.toStyle()}
       >
         ${renderIcon("import")}
-        <span>${kDropLabels[this.#importer.policy]}</span>
+        <span>${this.#label ?? kDropLabels[this.#importer.policy]}</span>
       </div>
     `;
   }

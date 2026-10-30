@@ -2,8 +2,7 @@
 import {
   LitElement,
   html,
-  css,
-  nothing
+  css
 } from "lit";
 import {
   customElement,
@@ -26,6 +25,7 @@ import {
   type AssetRecordData
 } from "@jolly-pixel/asset";
 import { DEFAULT_TILE_SIZE } from "@jolly-pixel/voxel.renderer";
+import { BLOCKSET_EXTENSION } from "@jolly-pixel/asset.voxel-map/client";
 
 // Import Internal Dependencies
 import { tileSizeSegments } from "../tileSizes.ts";
@@ -35,8 +35,13 @@ import "../blocksetIcons.ts";
 const kDefaultName = "blockset";
 const kDefaultGridSize = 8;
 const kMaxGridSize = 64;
+const kConfirmLabels: Record<AddBlocksetSource, string> = {
+  create: "Create",
+  link: "Link",
+  import: "Choose file…"
+};
 
-export type AddBlocksetSource = "create" | "link";
+export type AddBlocksetSource = "create" | "link" | "import";
 
 export type AddBlocksetResult =
   | {
@@ -49,11 +54,15 @@ export type AddBlocksetResult =
   | {
     kind: "link";
     assetId: string;
+  }
+  | {
+    kind: "import";
   };
 
 export interface AddBlocksetContext {
   defaultTileSize: number;
   linkable: readonly AssetRecordData[];
+  importable: boolean;
 }
 
 @customElement("add-blockset-dialog")
@@ -66,6 +75,12 @@ export class AddBlocksetDialog extends LitElement {
 
       --jolly-label-width: 80px;
       --jolly-field-inset-end: 0px;
+    }
+
+    .hint {
+      margin: 0;
+      color: var(--jolly-text-muted);
+      font-size: var(--jolly-font-size-sm, 12px);
     }
   `;
 
@@ -90,6 +105,9 @@ export class AddBlocksetDialog extends LitElement {
   @state()
   private declare _linkable: readonly AssetRecordData[];
 
+  @state()
+  private declare _importable: boolean;
+
   @query("jolly-dialog")
   private declare _dialog: Dialog;
 
@@ -104,6 +122,7 @@ export class AddBlocksetDialog extends LitElement {
     this._cols = kDefaultGridSize;
     this._rows = kDefaultGridSize;
     this._linkable = [];
+    this._importable = false;
   }
 
   async open(
@@ -113,6 +132,7 @@ export class AddBlocksetDialog extends LitElement {
     this._source = "create";
     this._name = kDefaultName;
     this._linkable = context.linkable;
+    this._importable = context.importable;
     this._assetId = context.linkable[0]?.id ?? "";
     this._tileSize = context.defaultTileSize;
     this._cols = kDefaultGridSize;
@@ -128,7 +148,7 @@ export class AddBlocksetDialog extends LitElement {
   }
 
   override render() {
-    const linking = this._source === "link";
+    const source = this._source;
 
     return html`
       <jolly-dialog
@@ -143,8 +163,7 @@ export class AddBlocksetDialog extends LitElement {
             .value=${this._source}
             @jolly-change=${this.#onSourceChange}
           ></jolly-button-group>
-          ${linking ? this.#renderLinkFields() : this.#renderCreateFields()}
-          ${linking ? nothing : this.#renderGridFields()}
+          ${this.#renderSourceFields(source)}
         </div>
 
         <jolly-button
@@ -156,9 +175,26 @@ export class AddBlocksetDialog extends LitElement {
           variant="accent"
           ?disabled=${!this.#valid}
           @click=${this.#confirm}
-        >${linking ? "Link" : "Create"}</jolly-button>
+        >${kConfirmLabels[source]}</jolly-button>
       </jolly-dialog>
     `;
+  }
+
+  #renderSourceFields(
+    source: AddBlocksetSource
+  ) {
+    switch (source) {
+      case "create":
+        return html`${this.#renderCreateFields()}${this.#renderGridFields()}`;
+      case "link":
+        return this.#renderLinkFields();
+      case "import":
+        return html`
+          <p class="hint">A .zip archive or a ${BLOCKSET_EXTENSION} file.</p>
+        `;
+      default:
+        return source satisfies never;
+    }
   }
 
   #renderCreateFields() {
@@ -224,14 +260,24 @@ export class AddBlocksetDialog extends LitElement {
         label: "Existing",
         value: "link",
         disabled: this._linkable.length === 0
+      },
+      {
+        label: "Import",
+        value: "import",
+        disabled: !this._importable
       }
     ];
   }
 
   get #valid(): boolean {
-    return this._source === "link" ?
-      this._assetId !== "" :
-      this._name.trim() !== "";
+    switch (this._source) {
+      case "link":
+        return this._assetId !== "";
+      case "create":
+        return this._name.trim() !== "";
+      default:
+        return true;
+    }
   }
 
   #onSourceChange(
@@ -275,19 +321,28 @@ export class AddBlocksetDialog extends LitElement {
       return;
     }
 
-    this.#resolve(this._source === "link" ?
-      {
-        kind: "link",
-        assetId: this._assetId
-      } :
-      {
-        kind: "create",
-        name: this._name.trim(),
-        tileSize: this._tileSize,
-        cols: this._cols,
-        rows: this._rows
-      });
+    this.#resolve(this.#result());
     this._dialog.close("confirm");
+  }
+
+  #result(): AddBlocksetResult {
+    switch (this._source) {
+      case "link":
+        return {
+          kind: "link",
+          assetId: this._assetId
+        };
+      case "import":
+        return { kind: "import" };
+      default:
+        return {
+          kind: "create",
+          name: this._name.trim(),
+          tileSize: this._tileSize,
+          cols: this._cols,
+          rows: this._rows
+        };
+    }
   }
 
   #cancel(): void {
