@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   CHUNK_SAMPLES,
   ChunkCoord,
+  resampleHeights,
   Terrain
 } from "@jolly-pixel/terrain.renderer";
 
@@ -62,6 +63,22 @@ describe("holeStamp", () => {
 
     stampAndWrite(terrain, { ...stamp, mode: "fill" });
     assert.deepEqual(holesAround(terrain, CHUNK_SAMPLES, 10), []);
+  });
+
+  test("on a x4 chunk a stamp cuts the quads of its own grid", () => {
+    const terrain = new Terrain();
+    const coord = new ChunkCoord(0, 0);
+    terrain.addChunk(coord);
+    terrain.changeTier(coord, resampleHeights(terrain, coord, 4));
+
+    stampAndWrite(terrain, { x: 10.125, z: 10.125, radius: 0.1, mode: "cut" });
+
+    const { holes } = terrain.chunk(coord)!;
+    assert.deepEqual([holes.isHole(40, 40), holes.isHole(41, 40), terrain.chunk(coord)!.holeAt(10, 10)], [
+      true,
+      false,
+      true
+    ]);
   });
 
   test("the part of a stamp over empty ground changes nothing", () => {

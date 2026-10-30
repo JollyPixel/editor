@@ -3,7 +3,11 @@ import {
   CHUNK_SAMPLES,
   ChunkCoord
 } from "./ChunkCoord.ts";
-import { quadDiagonal } from "./quadDiagonal.ts";
+import { pointHeight } from "./pointHeight.ts";
+import {
+  quadDiagonal,
+  type QuadDiagonal
+} from "./quadDiagonal.ts";
 import type { SampleBlock } from "./SampleBlock.ts";
 import type {
   HeightRange,
@@ -65,6 +69,7 @@ interface ChunkSpan extends RayInterval {
 class ChunkQuads {
   readonly chunk: TerrainChunk;
 
+  #terrain: TerrainReader;
   #blocks: readonly SampleBlock[];
   #corners: readonly [QuadCorner, QuadCorner, QuadCorner, QuadCorner];
   #main: readonly Triangle[];
@@ -76,6 +81,7 @@ class ChunkQuads {
   ) {
     const { x, z } = chunk.coord;
     this.chunk = chunk;
+    this.#terrain = terrain;
     this.#blocks = [[0, 0], [1, 0], [0, 1], [1, 1]].map(
       ([dx, dz]) => terrain.sampleBlock(new ChunkCoord(x + dx, z + dz))
     );
@@ -103,31 +109,94 @@ class ChunkQuads {
   }
 
   triangles(
-    quadX: number,
-    quadZ: number
+    gridX: number,
+    gridZ: number
   ): readonly Triangle[] {
-    const origin = this.chunk.coord.originSample;
-    const eastBlock = quadX + 1 - origin.x < CHUNK_SAMPLES ? 0 : 1;
-    const northBlock = quadZ + 1 - origin.z < CHUNK_SAMPLES ? 0 : 2;
     const [c00, c10, c01, c11] = this.#corners;
-    this.#place(c00, quadX, quadZ, 0);
-    this.#place(c10, quadX + 1, quadZ, eastBlock);
-    this.#place(c01, quadX, quadZ + 1, northBlock);
-    this.#place(c11, quadX + 1, quadZ + 1, eastBlock + northBlock);
+    this.#place(c00, gridX, gridZ);
+    this.#place(c10, gridX + 1, gridZ);
+    this.#place(c01, gridX, gridZ + 1);
+    this.#place(c11, gridX + 1, gridZ + 1);
 
-    return quadDiagonal(quadX, quadZ) === "main" ? this.#main : this.#anti;
+    return quadDiagonal(gridX, gridZ) === "main" ? this.#main : this.#anti;
   }
 
   #place(
     corner: QuadCorner,
-    sampleX: number,
-    sampleZ: number,
-    block: number
+    gridX: number,
+    gridZ: number
   ): void {
-    corner.x = sampleX;
-    corner.y = this.#blocks[block].height(sampleX, sampleZ);
-    corner.z = sampleZ;
+    const { tier } = this.chunk;
+    const origin = this.chunk.coord.originSample;
+    corner.x = origin.x + gridX / tier;
+    corner.z = origin.z + gridZ / tier;
+    if (tier === 1) {
+      const block = (gridX < CHUNK_SAMPLES ? 0 : 1) + (gridZ < CHUNK_SAMPLES ? 0 : 2);
+      corner.y = this.#blocks[block].height(corner.x, corner.z);
+    }
+    else {
+      corner.y = refinedCorner(this.#terrain, this.chunk, gridX, gridZ);
+    }
   }
+}
+
+function refinedCorner(
+  terrain: TerrainReader,
+  chunk: TerrainChunk,
+  gridX: number,
+  gridZ: number
+): number {
+  const { tier, resolution } = chunk;
+  const origin = chunk.coord.originSample;
+  if (gridX >= resolution || gridZ >= resolution) {
+    return pointHeight(terrain, origin.x + gridX / tier, origin.z + gridZ / tier);
+  }
+
+  const west = gridX === 0 ? coarserTier(terrain, chunk, -1, 0) : null;
+  if (west !== null && gridZ % (tier / west) !== 0) {
+    const step = tier / west;
+    const first = gridZ - gridZ % step;
+
+    return lerp(
+      refinedCorner(terrain, chunk, 0, first),
+      refinedCorner(terrain, chunk, 0, first + step),
+      (gridZ - first) / step
+    );
+  }
+
+  const south = gridZ === 0 ? coarserTier(terrain, chunk, 0, -1) : null;
+  if (south !== null && gridX % (tier / south) !== 0) {
+    const step = tier / south;
+    const first = gridX - gridX % step;
+
+    return lerp(
+      refinedCorner(terrain, chunk, first, 0),
+      refinedCorner(terrain, chunk, first + step, 0),
+      (gridX - first) / step
+    );
+  }
+
+  return chunk.sample(gridX, gridZ);
+}
+
+function coarserTier(
+  terrain: TerrainReader,
+  chunk: TerrainChunk,
+  dx: number,
+  dz: number
+): number | null {
+  const coord = new ChunkCoord(chunk.coord.x + dx, chunk.coord.z + dz);
+  const tier = terrain.chunk(coord)?.tier ?? (terrain.knows(coord) ? 1 : null);
+
+  return tier !== null && tier < chunk.tier ? tier : null;
+}
+
+function lerp(
+  from: number,
+  to: number,
+  blend: number
+): number {
+  return from + (to - from) * blend;
 }
 
 export function surfaceHeight(
@@ -138,22 +207,50 @@ export function surfaceHeight(
   const quadX = Math.floor(x);
   const quadZ = Math.floor(z);
   const coord = ChunkCoord.containing(quadX, quadZ);
-  if (!terrain.has(coord)) {
+  const chunk = terrain.chunk(coord);
+  if (chunk === undefined) {
     return null;
   }
 
   const origin = coord.originSample;
+  if (chunk.tier !== 1) {
+    const gridX = (x - origin.x) * chunk.tier;
+    const gridZ = (z - origin.z) * chunk.tier;
+    const cellX = Math.floor(gridX);
+    const cellZ = Math.floor(gridZ);
+
+    return triangleHeight(
+      (dx, dz) => refinedCorner(terrain, chunk, cellX + dx, cellZ + dz),
+      quadDiagonal(cellX, cellZ),
+      gridX - cellX,
+      gridZ - cellZ
+    );
+  }
+
   const sampler: Pick<SampleBlock, "height"> =
     quadX + 1 - origin.x < CHUNK_SAMPLES && quadZ + 1 - origin.z < CHUNK_SAMPLES ?
       terrain.sampleBlock(coord) :
       { height: (sampleX, sampleZ) => terrain.sampleAt(sampleX, sampleZ) };
-  const h00 = sampler.height(quadX, quadZ);
-  const h10 = sampler.height(quadX + 1, quadZ);
-  const h01 = sampler.height(quadX, quadZ + 1);
-  const h11 = sampler.height(quadX + 1, quadZ + 1);
-  const fx = x - quadX;
-  const fz = z - quadZ;
-  if (quadDiagonal(quadX, quadZ) === "main") {
+
+  return triangleHeight(
+    (dx, dz) => sampler.height(quadX + dx, quadZ + dz),
+    quadDiagonal(quadX, quadZ),
+    x - quadX,
+    z - quadZ
+  );
+}
+
+function triangleHeight(
+  corner: (dx: number, dz: number) => number,
+  diagonal: QuadDiagonal,
+  fx: number,
+  fz: number
+): number {
+  const h00 = corner(0, 0);
+  const h10 = corner(1, 0);
+  const h01 = corner(0, 1);
+  const h11 = corner(1, 1);
+  if (diagonal === "main") {
     return fx >= fz ?
       h00 + fx * (h10 - h00) + fz * (h11 - h10) :
       h00 + fz * (h01 - h00) + fx * (h11 - h01);
@@ -252,21 +349,27 @@ function marchChunk(
   ray: TerrainRay,
   hitHoles: boolean
 ): TerrainHit | null {
-  const { origin: start, direction } = ray;
+  const { direction } = ray;
   const { chunk } = quads;
-  const origin = quads.chunk.coord.originSample;
-  const last = { x: origin.x + CHUNK_SAMPLES - 1, z: origin.z + CHUNK_SAMPLES - 1 };
-  let quadX = clamp(Math.floor(start.x + direction.x * enter), origin.x, last.x);
-  let quadZ = clamp(Math.floor(start.z + direction.z * enter), origin.z, last.z);
-  const stepX = Math.sign(direction.x);
-  const stepZ = Math.sign(direction.z);
-  const deltaX = Math.abs(1 / direction.x);
-  const deltaZ = Math.abs(1 / direction.z);
-  let eastBlock = boundary(start.x, direction.x, quadX);
-  let northBlock = boundary(start.z, direction.z, quadZ);
+  const { tier, resolution } = chunk;
+  const origin = chunk.coord.originSample;
+  const start = {
+    x: (ray.origin.x - origin.x) * tier,
+    z: (ray.origin.z - origin.z) * tier
+  };
+  const along = { x: direction.x * tier, z: direction.z * tier };
+  const last = resolution - 1;
+  let quadX = clamp(Math.floor(start.x + along.x * enter), 0, last);
+  let quadZ = clamp(Math.floor(start.z + along.z * enter), 0, last);
+  const stepX = Math.sign(along.x);
+  const stepZ = Math.sign(along.z);
+  const deltaX = Math.abs(1 / along.x);
+  const deltaZ = Math.abs(1 / along.z);
+  let eastBlock = boundary(start.x, along.x, quadX);
+  let northBlock = boundary(start.z, along.z, quadZ);
 
-  while (quadX >= origin.x && quadX <= last.x && quadZ >= origin.z && quadZ <= last.z) {
-    const solid = hitHoles || !chunk.holeAt(quadX - origin.x, quadZ - origin.z);
+  while (quadX >= 0 && quadX <= last && quadZ >= 0 && quadZ <= last) {
+    const solid = hitHoles || !chunk.holes.isHole(quadX, quadZ);
     const hit = solid ? hitQuad(quads.triangles(quadX, quadZ), ray) : null;
     if (hit !== null) {
       return hit;

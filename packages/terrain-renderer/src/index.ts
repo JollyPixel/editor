@@ -67,6 +67,7 @@ export {
   type TileKey,
   type TilePatch
 } from "./terrain/TileCoord.ts";
+export { pointHeight } from "./terrain/pointHeight.ts";
 export {
   raycastTerrain,
   surfaceHeight,

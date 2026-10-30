@@ -1,7 +1,10 @@
 // Import Third-party Dependencies
 import type { TerrainDocument } from "@jolly-pixel/asset.terrain/client";
 import type { OpenStep } from "@jolly-pixel/history";
-import type { ChunkCoord } from "@jolly-pixel/terrain.renderer";
+import type {
+  ChunkCoord,
+  ChunkTier
+} from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
@@ -14,32 +17,40 @@ import { chunksAlong } from "./chunksAlong.ts";
 // CONSTANTS
 const kLabels: Readonly<Record<ChunkMode, string>> = {
   add: "Add chunks",
-  remove: "Remove chunks"
+  remove: "Remove chunks",
+  detail: "Change detail"
 };
 
-export const CHUNK_MODES = ["add", "remove"] as const;
+export const CHUNK_MODES = ["add", "remove", "detail"] as const;
 
 export type ChunkMode = typeof CHUNK_MODES[number];
 
 export interface ChunkDragOptions {
-  document: Pick<TerrainDocument, "terrain" | "addChunk" | "removeChunk">;
+  document: Pick<TerrainDocument, "terrain" | "addChunk" | "removeChunk" | "changeTier">;
   history: Pick<TerrainHistory, "open">;
+}
+
+export interface ChunkDragAction {
+  readonly mode: ChunkMode;
+  readonly tier: ChunkTier;
 }
 
 export class ChunkDrag {
   readonly mode: ChunkMode;
 
   #options: ChunkDragOptions;
+  #tier: ChunkTier;
   #step: OpenStep;
   #last: GroundPoint;
   #ended = false;
 
   constructor(
     options: ChunkDragOptions,
-    mode: ChunkMode,
+    { mode, tier }: ChunkDragAction,
     point: GroundPoint
   ) {
     this.mode = mode;
+    this.#tier = tier;
     this.#options = options;
     this.#step = options.history.open(TERRAIN_HISTORY_SCOPE, kLabels[mode]);
     this.#last = point;
@@ -74,6 +85,9 @@ export class ChunkDrag {
     const { document } = this.#options;
     if (this.mode === "add") {
       document.addChunk(coord.x, coord.z);
+    }
+    else if (this.mode === "detail") {
+      document.changeTier(coord.x, coord.z, this.#tier);
     }
     else if (document.terrain.has(coord)) {
       document.removeChunk(coord.x, coord.z);

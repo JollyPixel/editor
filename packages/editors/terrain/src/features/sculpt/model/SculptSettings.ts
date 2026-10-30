@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import { HEIGHT_RANGE } from "@jolly-pixel/terrain.renderer";
+import {
+  CHUNK_TIERS,
+  HEIGHT_RANGE,
+  type ChunkTier
+} from "@jolly-pixel/terrain.renderer";
 import {
   MemoryStorageAdapter,
   type StorageAdapter
@@ -52,6 +56,7 @@ export interface SculptOptions {
   flattenHeight: number;
   holeMode: HoleMode;
   chunkMode: ChunkMode;
+  chunkTier: ChunkTier;
 }
 
 export type SculptSettingsEvents = {
@@ -68,7 +73,8 @@ const kDefaultOptions: Readonly<SculptOptions> = Object.freeze({
   flattenTarget: "press",
   flattenHeight: 0,
   holeMode: "cut",
-  chunkMode: "add"
+  chunkMode: "add",
+  chunkTier: 2
 });
 
 export class SculptSettings extends Emitter<SculptSettingsEvents> {
@@ -95,7 +101,8 @@ export class SculptSettings extends Emitter<SculptSettingsEvents> {
       flattenTarget: choice("flattenTarget", FLATTEN_TARGETS),
       flattenHeight: clamp(number("flattenHeight"), HEIGHT_RANGE.min, HEIGHT_RANGE.max),
       holeMode: choice("holeMode", HOLE_MODES),
-      chunkMode: choice("chunkMode", CHUNK_MODES)
+      chunkMode: choice("chunkMode", CHUNK_MODES),
+      chunkTier: choice("chunkTier", CHUNK_TIERS)
     });
   }
 

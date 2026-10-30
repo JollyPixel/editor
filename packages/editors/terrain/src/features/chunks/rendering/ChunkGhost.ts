@@ -20,7 +20,8 @@ const kInset = 1e-3;
 const kHaloColor = 0x0b0f14;
 const kModeColors: Readonly<Record<ChunkMode, number>> = {
   add: 0x4ade80,
-  remove: 0xff6b6b
+  remove: 0xff6b6b,
+  detail: 0xfbbf24
 };
 const kRefusedColor = 0x8b949e;
 
@@ -126,9 +127,9 @@ function outlinePositions(
       const t = segment / kSegmentsPerSide;
       const x = fromX + (toX - fromX) * t;
       const z = fromZ + (toZ - fromZ) * t;
-      const y = mode === "remove" ?
-        surfaceHeight(terrain, Math.min(x, toInside(originX)), Math.min(z, toInside(originZ))) ?? height :
-        height;
+      const y = mode === "add" ?
+        height :
+        surfaceHeight(terrain, Math.min(x, toInside(originX)), Math.min(z, toInside(originZ))) ?? height;
       points.push(new THREE.Vector3(x, y + kLift, z));
     }
   }

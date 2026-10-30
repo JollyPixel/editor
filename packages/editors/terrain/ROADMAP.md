@@ -174,8 +174,13 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   chunk on its own grid, with one or two quadtree levels under its leaves.
   Its edge with a coarser neighbour follows the neighbour's grid, so the two
   meet without a gap, and its holes open at its quad size.
-- **Next:** the Chunks tool's Detail mode, with brushes, the brush ray and
-  height queries on a refined chunk's grid.
+- **Detail mode: done** (2026-10-30). The Chunks tool's Detail mode sets the
+  chunks under a click or a drag to ×1, ×2 or ×4, as one undo step. The
+  sculpt and hole brushes work on each chunk's own grid, and the brush ray
+  and height queries follow the grid as drawn, edges with coarser chunks
+  included. Resolution tiers are complete.
+- **Next:** points of interest: chunk sets with an LoD bias and a minimum
+  detail level, kept loaded at any distance.
 
 Tick a box when its item lands, and move **Next** along with it.
 
@@ -245,7 +250,7 @@ chunks yet.
   commits, the mask drawn in the view, and the tool.
 - [x] Debug overlay for holes.
 - [x] Chunks tool: add and remove chunks by click or drag, one undo step.
-- [ ] Resolution tiers ×2 and ×4, with seam morphing, set from the Chunks
+- [x] Resolution tiers ×2 and ×4, with seam morphing, set from the Chunks
   tool's Detail mode.
 - [ ] Points of interest: chunk sets with an LoD bias and a minimum detail
   level, kept loaded at any distance, edited in their pane.

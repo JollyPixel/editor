@@ -137,6 +137,21 @@ registerIcon("chunks-remove", svg`
   />
 `, { tone: "teal" });
 
+registerIcon("chunks-detail", svg`
+  <path
+    class="tone-fill"
+    d="M3 3h18v18H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 3h18v18H3ZM9 3v18M15 3v18M3 9h18M3 15h18"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+    stroke-linejoin="round"
+  />
+`, { tone: "teal" });
+
 registerIcon("sculpt-smooth", svg`
   <path
     d="M2 16l3-5 3 6 3-8 3 7 3-4 3 5 2-2"

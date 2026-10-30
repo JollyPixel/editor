@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { TerrainDocument } from "@jolly-pixel/asset.terrain/client";
 import {
   CHUNK_SAMPLES,
+  ChunkCoord,
   type TerrainReader
 } from "@jolly-pixel/terrain.renderer";
 
@@ -47,7 +48,7 @@ function dragSetup(
 describe("ChunkDrag", () => {
   test("a diagonal drag past empty ground adds a connected run of chunks, undone as one step", () => {
     const { document, history } = dragSetup([[0, 0]]);
-    const drag = new ChunkDrag({ document, history }, "add", chunkCentre(1, 0));
+    const drag = new ChunkDrag({ document, history }, { mode: "add", tier: 1 }, chunkCentre(1, 0));
     drag.moveTo(chunkCentre(3, 1));
     drag.end();
 
@@ -60,7 +61,7 @@ describe("ChunkDrag", () => {
 
   test("a remove drag removes the chunks it crosses but keeps the last one", () => {
     const { document, history } = dragSetup([[0, 0], [1, 0]]);
-    const drag = new ChunkDrag({ document, history }, "remove", chunkCentre(0, 0));
+    const drag = new ChunkDrag({ document, history }, { mode: "remove", tier: 1 }, chunkCentre(0, 0));
     drag.moveTo(chunkCentre(2, 0));
     drag.end();
 
@@ -68,5 +69,21 @@ describe("ChunkDrag", () => {
 
     history.undo(TERRAIN_HISTORY_SCOPE);
     assert.deepEqual(chunkKeys(document.terrain), ["0,0", "1,0"]);
+  });
+
+  test("a detail drag sets the tier of each chunk it crosses, undone as one step", () => {
+    const { document, history } = dragSetup([[0, 0], [1, 0], [2, 0]]);
+    function tiers(): number[] {
+      return [0, 1, 2].map((x) => document.terrain.chunk(new ChunkCoord(x, 0))!.tier);
+    }
+    const drag = new ChunkDrag({ document, history }, { mode: "detail", tier: 4 }, chunkCentre(0, 0));
+    drag.moveTo(chunkCentre(1, 0));
+    drag.end();
+
+    assert.deepEqual(tiers(), [4, 4, 1]);
+    assert.equal(history.state(TERRAIN_HISTORY_SCOPE).undoCount, 1);
+
+    history.undo(TERRAIN_HISTORY_SCOPE);
+    assert.deepEqual(tiers(), [1, 1, 1]);
   });
 });

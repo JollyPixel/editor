@@ -23,7 +23,8 @@ describe("SculptSettings", () => {
       flattenTarget: "fixed",
       flattenHeight: -9000,
       holeMode: "fill",
-      chunkMode: "remove"
+      chunkMode: "remove",
+      chunkTier: 4
     });
     const reloaded = new SculptSettings(storage).options;
 
@@ -39,7 +40,8 @@ describe("SculptSettings", () => {
         flattenTarget: "fixed",
         flattenHeight: HEIGHT_RANGE.min,
         holeMode: "fill",
-        chunkMode: "remove"
+        chunkMode: "remove",
+        chunkTier: 4
       }
     );
     assert.deepEqual(
@@ -50,7 +52,8 @@ describe("SculptSettings", () => {
           spacing: -1,
           flattenTarget: "peak",
           holeMode: "dig",
-          chunkMode: "grow"
+          chunkMode: "grow",
+          chunkTier: 3
         }))
       },
       {
@@ -63,7 +66,8 @@ describe("SculptSettings", () => {
         flattenTarget: "press",
         flattenHeight: 0,
         holeMode: "cut",
-        chunkMode: "add"
+        chunkMode: "add",
+        chunkTier: 2
       }
     );
     assert.equal(SculptSettings.parse("{not json").tool, "raise");

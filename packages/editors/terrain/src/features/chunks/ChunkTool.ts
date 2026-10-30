@@ -33,7 +33,10 @@ import { ChunkGhost } from "./rendering/ChunkGhost.ts";
 const kMaxAimDistance = 20_000;
 
 export interface ChunkToolOptions {
-  document: Pick<TerrainDocument, "terrain" | "addChunk" | "removeChunk" | "canAddChunk" | "canRemoveChunk">;
+  document: Pick<
+    TerrainDocument,
+    "terrain" | "addChunk" | "removeChunk" | "changeTier" | "canAddChunk" | "canRemoveChunk"
+  >;
   preview: Pick<TerrainPreview, "terrain">;
   settings: Pick<SculptSettings, "options">;
   history: Pick<TerrainHistory, "open">;
@@ -73,7 +76,7 @@ export class ChunkTool extends ActorComponent {
   update(): void {
     const { input } = this.actor.world;
     const { mouse } = input;
-    const { tool, chunkMode } = this.#options.settings.options;
+    const { tool, chunkMode, chunkTier } = this.#options.settings.options;
     if (
       tool !== "chunks" ||
       !mouse.hovering ||
@@ -105,7 +108,7 @@ export class ChunkTool extends ActorComponent {
     const target = this.#target(mode, ray);
     if (target !== null && mouse.wasJustPressed("left")) {
       this.#active = {
-        drag: new ChunkDrag(this.#options, mode, target.point),
+        drag: new ChunkDrag(this.#options, { mode, tier: chunkTier }, target.point),
         height: target.height
       };
       this.#hideGhost();
@@ -152,7 +155,7 @@ export class ChunkTool extends ActorComponent {
   ): ChunkTarget | null {
     const { document, preview } = this.#options;
     const surface = raycastTerrain(preview.terrain, ray, { maxDistance: kMaxAimDistance, hitHoles: true });
-    if (mode === "remove") {
+    if (mode !== "add") {
       return surface === null ? null : surfaceTarget(document.terrain, surface);
     }
 
@@ -165,11 +168,15 @@ export class ChunkTool extends ActorComponent {
     mode: ChunkMode,
     { coord }: ChunkTarget
   ): boolean {
-    const { document } = this.#options;
-
-    return mode === "add" ?
-      document.canAddChunk(coord.x, coord.z) :
-      document.canRemoveChunk(coord.x, coord.z);
+    const { document, settings } = this.#options;
+    switch (mode) {
+      case "add":
+        return document.canAddChunk(coord.x, coord.z);
+      case "remove":
+        return document.canRemoveChunk(coord.x, coord.z);
+      case "detail":
+        return document.terrain.chunk(coord)?.tier !== settings.options.chunkTier;
+    }
   }
 
   #hideGhost(): void {
@@ -182,5 +189,12 @@ export class ChunkTool extends ActorComponent {
 function swapped(
   mode: ChunkMode
 ): ChunkMode {
-  return mode === "add" ? "remove" : "add";
+  switch (mode) {
+    case "add":
+      return "remove";
+    case "remove":
+      return "add";
+    case "detail":
+      return "detail";
+  }
 }

@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import type { HoleTilePatch } from "@jolly-pixel/asset.terrain/client";
 import {
-  CHUNK_SAMPLES,
   ChunkCoord,
   TILE_SAMPLES,
   TileCoord,
+  type TerrainChunk,
   type TerrainReader,
   type TileKey
 } from "@jolly-pixel/terrain.renderer";
@@ -28,28 +28,13 @@ export function holeStamp(
   stamp: HoleStamp
 ): TileCoord[] {
   const changed = new Map<TileKey, TileCoord>();
-  const first = Math.floor(stamp.x - stamp.radius - 0.5);
-  const last = Math.ceil(stamp.x + stamp.radius - 0.5);
-  const top = Math.floor(stamp.z - stamp.radius - 0.5);
-  const bottom = Math.ceil(stamp.z + stamp.radius - 0.5);
-  for (let quadZ = top; quadZ <= bottom; quadZ++) {
-    for (let quadX = first; quadX <= last; quadX++) {
-      if (Math.hypot(quadX + 0.5 - stamp.x, quadZ + 0.5 - stamp.z) > stamp.radius) {
-        continue;
-      }
-
-      const located = locateQuad(terrain, tiles, quadX, quadZ);
-      if (located === null) {
-        continue;
-      }
-
-      const { tile, holes, quad } = located;
-      const byte = quad >> 3;
-      const bit = 1 << (quad & 7);
-      const next = stamp.mode === "cut" ? holes[byte] | bit : holes[byte] & ~bit;
-      if (next !== holes[byte]) {
-        holes[byte] = next;
-        changed.set(tile.key, tile);
+  const first = ChunkCoord.containing(stamp.x - stamp.radius, stamp.z - stamp.radius);
+  const last = ChunkCoord.containing(stamp.x + stamp.radius, stamp.z + stamp.radius);
+  for (let chunkZ = first.z; chunkZ <= last.z; chunkZ++) {
+    for (let chunkX = first.x; chunkX <= last.x; chunkX++) {
+      const chunk = terrain.chunk(new ChunkCoord(chunkX, chunkZ));
+      if (chunk !== undefined) {
+        stampChunk(chunk, tiles, stamp, changed);
       }
     }
   }
@@ -57,31 +42,53 @@ export function holeStamp(
   return [...changed.values()];
 }
 
-function locateQuad(
-  terrain: TerrainReader,
+function stampChunk(
+  chunk: TerrainChunk,
   tiles: HoleTiles,
-  quadX: number,
-  quadZ: number
-): { tile: TileCoord; holes: Uint8Array; quad: number; } | null {
-  const chunk = ChunkCoord.containing(quadX, quadZ);
-  const localX = quadX - chunk.x * CHUNK_SAMPLES;
-  const localZ = quadZ - chunk.z * CHUNK_SAMPLES;
-  const tile = new TileCoord(
-    chunk,
-    Math.floor(localX / TILE_SAMPLES),
-    Math.floor(localZ / TILE_SAMPLES)
-  );
-  let patch = tiles.get(tile.key);
-  if (patch === undefined) {
-    const current = terrain.chunk(chunk)?.holes.tile(tile.x, tile.z);
-    if (current === undefined) {
-      return null;
-    }
-    patch = { tile, holes: current };
-    tiles.set(tile.key, patch);
+  stamp: HoleStamp,
+  changed: Map<TileKey, TileCoord>
+): void {
+  const { tier, resolution } = chunk;
+  const origin = chunk.coord.originSample;
+  function quadRange(
+    centre: number,
+    start: number
+  ): [number, number] {
+    return [
+      Math.max(0, Math.floor((centre - stamp.radius - start) * tier - 0.5)),
+      Math.min(resolution - 1, Math.ceil((centre + stamp.radius - start) * tier - 0.5))
+    ];
   }
+  const [firstX, lastX] = quadRange(stamp.x, origin.x);
+  const [firstZ, lastZ] = quadRange(stamp.z, origin.z);
+  for (let quadZ = firstZ; quadZ <= lastZ; quadZ++) {
+    for (let quadX = firstX; quadX <= lastX; quadX++) {
+      const centreX = origin.x + (quadX + 0.5) / tier;
+      const centreZ = origin.z + (quadZ + 0.5) / tier;
+      if (Math.hypot(centreX - stamp.x, centreZ - stamp.z) > stamp.radius) {
+        continue;
+      }
 
-  const quad = (localZ % TILE_SAMPLES) * TILE_SAMPLES + localX % TILE_SAMPLES;
+      const tile = new TileCoord(
+        chunk.coord,
+        Math.floor(quadX / TILE_SAMPLES),
+        Math.floor(quadZ / TILE_SAMPLES),
+        tier
+      );
+      let patch = tiles.get(tile.key);
+      if (patch?.tile.tier !== tier) {
+        patch = { tile, holes: chunk.holes.tile(tile.x, tile.z) };
+        tiles.set(tile.key, patch);
+      }
 
-  return { tile, holes: patch.holes, quad };
+      const quad = (quadZ % TILE_SAMPLES) * TILE_SAMPLES + quadX % TILE_SAMPLES;
+      const byte = quad >> 3;
+      const bit = 1 << (quad & 7);
+      const next = stamp.mode === "cut" ? patch.holes[byte] | bit : patch.holes[byte] & ~bit;
+      if (next !== patch.holes[byte]) {
+        patch.holes[byte] = next;
+        changed.set(tile.key, patch.tile);
+      }
+    }
+  }
 }

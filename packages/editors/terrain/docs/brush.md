@@ -25,7 +25,9 @@ Every change is saved in the browser and comes back after a reload.
 ## Aim
 
 The mouse ray is cast against the displayed heights, not the meshes, so it
-hits the full-detail surface whatever LoD is drawn. Hole cells do not stop the
+hits the full-detail surface whatever LoD is drawn, on a refined chunk's own
+grid, and along its edge with a coarser chunk the coarser grid, as drawn.
+Hole cells do not stop the
 ray, except with the hole tool: it hits the heights kept under a hole, so Fill
 can aim at the opening. With nothing hit, the brush has no target and hides.
 
@@ -62,7 +64,7 @@ existing chunks: the part of a stamp over empty ground is dropped, and the
 - **Raise and lower.** Left button raises, right button lowers, at
   `weight × strength × size` metres per second.
 - **Smooth.** Moves each sample toward a Gaussian average of its 3×3
-  neighbours, closing `weight × strength × 8` of the gap per second.
+  neighbours on its chunk's grid, 1 m, 0.5 m or 0.25 m apart, closing `weight × strength × 8` of the gap per second.
 - **Flatten.** Moves each sample toward a target height at the same rate as
   smooth: the height under the press, or a fixed value set in the toolbar.
   With flatten selected, Ctrl+click switches to a fixed target and picks the
@@ -80,8 +82,9 @@ existing chunks: the part of a stamp over empty ground is dropped, and the
 
 Two modes, picked in the toolbar: **cut** and **fill**. Ctrl inverts the mode
 while held, so the tool has no Ctrl+click pick. The brush uses the same
-footprint, with no strength and no falloff: a quad is cut or filled when its
-centre lies inside the radius. Heights under a hole are kept.
+footprint, with no strength and no falloff: a quad of the chunk's grid is cut
+or filled when its centre lies inside the radius. Heights under a hole are
+kept.
 
 Holes reach peers and the saved asset as `holes-patched` commits on the
 stroke commit cadence, as paint does; there are no live hole patches. A
@@ -99,11 +102,13 @@ Works on whole chunks, in one of three modes:
 - **Remove.** The ghost outlines the loaded chunk under the cursor. A click or
   a drag removes the chunks under it. Removing the last chunk is refused.
 - **Detail.** Sets the chunks under a click or a drag to the tier picked in
-  the toolbar, ×1, ×2 or ×4.
+  the toolbar, ×1, ×2 or ×4, saved with the other settings. The ghost
+  outlines the loaded chunk under the cursor.
 
 The ghost is grey where the click would be refused: a chunk that touches no
-other, past the coordinate range or the chunk cap, or the last one. Ctrl
-swaps Add and Remove for the next press. A drag stays on a plane at the
+other, past the coordinate range or the chunk cap, the last one, or a chunk
+already at the picked tier. Ctrl swaps Add and Remove for the next press,
+and does nothing in Detail. A drag stays on a plane at the
 height of its press and works on every chunk the cursor crosses, so a fast
 drag leaves no gap. A drag is one undo step. Undoing an Add removes its
 chunks, refused once a peer has edited one of them; undoing a Remove brings

@@ -11,7 +11,10 @@ import {
   property
 } from "lit/decorators.js";
 import type { HistoryScopeState } from "@jolly-pixel/history";
-import { HEIGHT_RANGE } from "@jolly-pixel/terrain.renderer";
+import {
+  CHUNK_TIERS,
+  HEIGHT_RANGE
+} from "@jolly-pixel/terrain.renderer";
 import {
   FieldBinding,
   SubscriptionController
@@ -57,11 +60,12 @@ const kToolLabels: Readonly<Record<BrushTool, string>> = {
   flatten: "Flatten",
   paint: "Paint the selected material (Ctrl+click picks one)",
   holes: "Cut and fill holes (Ctrl inverts)",
-  chunks: "Add and remove chunks (Ctrl swaps)"
+  chunks: "Add, remove and refine chunks (Ctrl swaps add and remove)"
 };
 const kChunkModeLabels: Readonly<Record<ChunkMode, string>> = {
   add: "Add chunks",
-  remove: "Remove chunks"
+  remove: "Remove chunks",
+  detail: "Set the chunks' detail"
 };
 const kHoleModeLabels: Readonly<Record<HoleMode, string>> = {
   cut: "Cut holes",
@@ -220,6 +224,26 @@ export class SculptToolbar extends LitElement {
             ?active=${mode === chunkMode}
             @click=${() => settings.update({ chunkMode: mode })}
           ></jolly-tool-button>
+        `)}
+      </div>
+      ${chunkMode === "detail" ? this.#renderChunkTier(settings) : nothing}
+    `;
+  }
+
+  #renderChunkTier(
+    settings: SculptSettings
+  ): TemplateResult {
+    const { chunkTier } = settings.options;
+
+    return html`
+      <div class="group divided" role="group" aria-label="Detail">
+        ${CHUNK_TIERS.map((tier) => html`
+          <jolly-tool-button
+            data-tool=${`chunks-tier-${tier}`}
+            label=${`Detail ×${tier}, ${1 / tier} m between samples`}
+            ?active=${tier === chunkTier}
+            @click=${() => settings.update({ chunkTier: tier })}
+          ><span class="value">×${tier}</span></jolly-tool-button>
         `)}
       </div>
     `;

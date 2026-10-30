@@ -8,6 +8,7 @@ import {
   CHUNK_SAMPLES,
   ChunkCoord,
   HEIGHT_RANGE,
+  resampleHeights,
   Terrain,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
@@ -88,6 +89,43 @@ describe("sculptStamp", () => {
     }
     assert.equal(terrain.sampleAt(CHUNK_SAMPLES - 6, 0), 3);
     assert.equal(terrain.sampleAt(CHUNK_SAMPLES + 6, 0), 3);
+  });
+
+  test("a stamp on a x2 chunk writes its own grid, and the x1 chunk beside it only within reach", () => {
+    const terrain = flatTerrain([0, 0, 0], [1, 0, 0]);
+    const fine = new ChunkCoord(1, 0);
+    terrain.changeTier(fine, resampleHeights(terrain, fine, 2));
+    const patches = sculptStamp(terrain, {
+      tool: "raise",
+      x: CHUNK_SAMPLES,
+      z: 0,
+      radius: 0.75,
+      strength: 1,
+      falloff: "constant",
+      lift: 2
+    });
+    for (const { tile, heights } of patches) {
+      terrain.writeTile(tile, heights);
+    }
+
+    const chunk = terrain.chunk(fine)!;
+    assert.deepEqual(patches.map(({ tile }) => `${tile.key}@${tile.tier}`), ["1,0:0@2"]);
+    assert.deepEqual(
+      [chunk.sample(1, 1), chunk.sample(2, 0), terrain.sampleAt(CHUNK_SAMPLES - 1, 0)],
+      [2, 0, 0]
+    );
+  });
+
+  test("smooth on a x2 chunk averages the neighbours half a metre away", () => {
+    const terrain = new Terrain();
+    const coord = new ChunkCoord(0, 0);
+    const heights = new Float32Array(128 * 128);
+    heights[10 * 128 + 10] = 8;
+    heights[10 * 128 + 11] = 8;
+    terrain.addChunk(coord, heights);
+    stamp(terrain, { tool: "smooth", x: 5, z: 5, radius: 0.1, strength: 1, falloff: "constant" });
+
+    assert.equal(terrain.chunk(coord)!.sample(10, 10), 3);
   });
 
   test("lowering stops at the height range", () => {

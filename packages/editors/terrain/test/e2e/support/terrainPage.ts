@@ -133,6 +133,32 @@ export class TerrainPage {
     await nextFrames(this.page);
   }
 
+  chunkTier(
+    chunkX: number,
+    chunkZ: number
+  ): Promise<number | null> {
+    return this.page.evaluate(([x, z]) => {
+      const { terrain } = window.terrainEditor!.document;
+      const chunk = [...terrain.chunks()].find(({ coord }) => coord.x === x && coord.z === z);
+
+      return chunk?.tier ?? null;
+    }, [chunkX, chunkZ]);
+  }
+
+  confirmedSample(
+    chunkX: number,
+    chunkZ: number,
+    gridX: number,
+    gridZ: number
+  ): Promise<number | null> {
+    return this.page.evaluate(([x, z, sampleX, sampleZ]) => {
+      const { terrain } = window.terrainEditor!.document;
+      const chunk = [...terrain.chunks()].find(({ coord }) => coord.x === x && coord.z === z);
+
+      return chunk?.sample(sampleX, sampleZ) ?? null;
+    }, [chunkX, chunkZ, gridX, gridZ]);
+  }
+
   chunkLoaded(
     chunkX: number,
     chunkZ: number
