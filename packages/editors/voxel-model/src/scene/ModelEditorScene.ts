@@ -55,6 +55,7 @@ import {
   type EditorHistory
 } from "../features/history/index.ts";
 import {
+  ANIMATION_SET_DEPENDENCY,
   animationShortcuts,
   createAnimation,
   type AnimationKeyer,
@@ -304,6 +305,11 @@ export class ModelEditorScene extends Systems.Scene {
         tool.use(active ? keyer : rest);
       }),
       access.subscribe("change", () => tool.emit("change")),
+      this.#options.archives.acceptDependency(ANIMATION_SET_DEPENDENCY, ({ id }) => {
+        if (animations.link(id)) {
+          animationFocus.focusSet(id);
+        }
+      }),
       this.#options.keyBindings.bind(this.world.input.keyboard, {
         ...historyShortcuts({ history: activeHistory }),
         ...animationShortcuts({ keyer, selection })

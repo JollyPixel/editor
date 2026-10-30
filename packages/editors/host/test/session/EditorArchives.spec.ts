@@ -9,6 +9,7 @@ import {
   ARCHIVE_ROOT,
   LIVE_ENTRY,
   RESET_WARNING,
+  archiveFile,
   createArchive,
   createArchives,
   createBrowser,
@@ -54,7 +55,7 @@ describe("EditorArchives", () => {
       const navigator = new FakeNavigator();
       const archives = createArchives({ archive, browser, navigator });
 
-      await archives.importFile(new Blob());
+      await archives.importFile(archiveFile());
 
       assert.deepEqual(browser.asked, []);
       assert.deepEqual(archive.imported, [{ onConflict: "keep" }]);
@@ -76,7 +77,7 @@ describe("EditorArchives", () => {
       const navigator = new FakeNavigator();
       const archives = createArchives({ archive, browser, navigator });
 
-      await archives.importFile(new Blob());
+      await archives.importFile(archiveFile());
 
       assert.deepEqual(archive.imported, [{ onConflict: "replace" }]);
       assert.deepEqual(navigator.navigations, []);
@@ -91,7 +92,7 @@ describe("EditorArchives", () => {
       const navigator = new FakeNavigator();
       const archives = createArchives({ archive, browser, navigator });
 
-      await archives.importFile(new Blob());
+      await archives.importFile(archiveFile());
 
       assert.equal(browser.asked.length, 1);
       assert.deepEqual(archive.imported, [{ onConflict: "copy" }]);
@@ -104,7 +105,7 @@ describe("EditorArchives", () => {
       const navigator = new FakeNavigator();
       const archives = createArchives({ archive, browser, navigator });
 
-      await archives.importFile(new Blob());
+      await archives.importFile(archiveFile());
 
       assert.deepEqual(archive.imported, []);
       assert.deepEqual(navigator.navigations, []);
@@ -117,7 +118,7 @@ describe("EditorArchives", () => {
       });
       const archives = createArchives({ archive });
 
-      await assert.rejects(archives.importFile(new Blob()), ArchiveRootError);
+      await assert.rejects(archives.importFile(archiveFile()), ArchiveRootError);
       assert.deepEqual(archive.imported, []);
     });
 
@@ -125,7 +126,7 @@ describe("EditorArchives", () => {
       const archive = createArchive({ root: undefined });
       const archives = createArchives({ archive });
 
-      await assert.rejects(archives.importFile(new Blob()), ArchiveRootError);
+      await assert.rejects(archives.importFile(archiveFile()), ArchiveRootError);
       assert.deepEqual(archive.imported, []);
     });
   });
@@ -139,7 +140,7 @@ describe("EditorArchives", () => {
 
       await archives.pickAndImport();
 
-      assert.equal(browser.picks, 1);
+      assert.deepEqual(browser.picks, [".zip,application/zip"]);
       assert.deepEqual(archive.imported, [{ onConflict: "keep" }]);
       assert.deepEqual(navigator.navigations, [
         {
@@ -171,7 +172,7 @@ describe("EditorArchives", () => {
         archives.pickAndImport(),
         ArchiveImportDisabledError
       );
-      assert.equal(browser.picks, 0);
+      assert.deepEqual(browser.picks, []);
     });
   });
 

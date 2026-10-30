@@ -31,7 +31,10 @@ import {
   bytes,
   text
 } from "../helpers/bytes.ts";
-import { counterHandler } from "../helpers/kinds.ts";
+import {
+  counterHandler,
+  type CounterState
+} from "../helpers/kinds.ts";
 import { recordingClient } from "../helpers/rooms.ts";
 
 interface CreateRequest {
@@ -142,6 +145,30 @@ describe("catalog:create without content", () => {
 
     assert.strictEqual((await catalog.create("a.png")).type, CATALOG_APPLIED);
     assert.strictEqual(catalog.sync.assetIndex.byPath("a.png")?.kind, TEXTURE_KIND);
+  });
+});
+
+describe("catalog:create with content", () => {
+  test("rejects content its kind cannot load without writing", async() => {
+    await using catalog = await catalogServer([{
+      ...counterHandler(),
+      load(state: CounterState, content: Uint8Array) {
+        const value = text(content);
+        if (!/^\d+$/.test(value)) {
+          throw new Error("not a count");
+        }
+        state.value = Number(value);
+      }
+    }]);
+
+    const reply = await catalog.create("score.counter", {
+      content: bytes("four")
+    });
+    await catalog.sync.projector.flush();
+
+    assert.strictEqual(reply.type, CATALOG_REJECTED);
+    assert.strictEqual(reply.reason, "not a count");
+    assert.strictEqual(catalog.sync.assetIndex.byPath("score.counter"), undefined);
   });
 });
 

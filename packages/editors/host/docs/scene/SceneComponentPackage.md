@@ -97,9 +97,11 @@ slots decide which asset pickers open when the component is added.
 The package registers it when its module loads.
 
 `form` receives the data parsed by `definition.parse()` and returns the
-inspector rows. An edit of a top-level field patches that field, and setting
-it back to its default unsets it. An edit of a nested field rewrites the
-whole object.
+inspector rows.
+
+- An edit of a top-level field patches that field; setting it back to its
+  default unsets it.
+- An edit of a nested field rewrites the whole object.
 
 ## FormRows
 
@@ -112,10 +114,12 @@ class FormRows<TData> {
 }
 ```
 
-Builds typed rows. A `FieldPath` is one key of `TData`, or a key and one key
-of the nested object. Rows are plain objects, so a form can also write a
-`text` or `properties` row directly. A `choice` row with `resets: true`
-replaces its parent object instead of merging into it.
+- A `FieldPath` is one key of `TData`, or a key and one key of the nested
+  object.
+- Rows are plain objects, so a form can also write a `text` or `properties`
+  row directly.
+- A `choice` row with `resets: true` replaces its parent object instead of
+  merging into it.
 
 ## Presets
 
@@ -137,10 +141,10 @@ interface SceneComponentSeed {
 }
 ```
 
-The presets of one package form one section of the hierarchy's Add menu. A
-group is a submenu. The menu labels a preset whose components pick an asset
-with a trailing ellipsis, and names the new actor after the first asset
-picked.
+- The presets of one package form one section of the hierarchy's Add menu;
+  a group is a submenu.
+- A preset whose components pick an asset ends with an ellipsis, and the new
+  actor is named after the first asset picked.
 
 ## SceneAssetSource
 
@@ -163,8 +167,6 @@ Answers the asset slots of `descriptor.kind` while the scene is edited. The
 asset picker offers that descriptor. `documentKinds` are added to the editor's
 lease kinds.
 
-The editor calls `open()` once, the first time a component resolves an asset
-of that kind, and `dispose()` when the editor closes. The resolver owns the
-leases it opens: `SharedVoxelMaps` keeps one viewer per map and releases it a
-microtask after the last view detaches, so a component rebuild keeps the
-lease.
+The editor calls `open()` the first time a component resolves an asset of
+that kind, and `dispose()` when it closes. The resolver owns the leases it
+opens.

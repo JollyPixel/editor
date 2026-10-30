@@ -36,6 +36,7 @@ import type { UvNetLibrary } from "../uv/nets/UvNetLibrary.ts";
 import { ViewOptionsController } from "./ViewOptionsController.ts";
 import { SelectToolbarController } from "../tools/SelectToolbarController.ts";
 import { TextureDropController } from "../textures/import/TextureDropController.ts";
+import type { TextureFileDrop } from "../textures/import/TextureFileDrop.ts";
 import { renderHistoryFileToolbar } from "./historyFileToolbar.ts";
 import { renderBrushSizeOverlay } from "../tools/brushSizeOverlay.ts";
 import { NormalMapController } from "../normal/NormalMapController.ts";
@@ -214,6 +215,9 @@ export class PixelDrawPanel extends LitElement {
   @property({ type: Boolean, attribute: "grid-size-locked" })
   declare gridSizeLocked: boolean;
 
+  @property({ attribute: false })
+  declare fileDrops: readonly TextureFileDrop[];
+
   readonly #status = new TransientStatus(this);
   readonly #dialogs = new LazyTemplate(this, () => Promise.all([
     import("../textures/dialogs/ClearTextureDialog.ts"),
@@ -255,7 +259,8 @@ export class PixelDrawPanel extends LitElement {
   );
   readonly #textureDrop = new TextureDropController(this, {
     canvas: this.#activeCanvas,
-    importer: this.#importer
+    importer: this.#importer,
+    fileDrops: () => this.fileDrops
   });
   readonly #exporter = new TextureExporter(this, {
     canvas: this.#activeCanvas,
@@ -303,6 +308,7 @@ export class PixelDrawPanel extends LitElement {
     this.textureTabsVariant = "default";
     this.textureTabsLine = false;
     this.gridSizeLocked = false;
+    this.fileDrops = [];
     this.#textures.subscribe("active-change", () => {
       this.#status.clear();
       this.#uvNets.followActiveTexture();

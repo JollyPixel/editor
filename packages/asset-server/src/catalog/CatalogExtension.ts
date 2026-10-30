@@ -76,6 +76,7 @@ import { UnknownAssetError } from "../storage/writer/errors/UnknownAssetError.ts
 
 // CONSTANTS
 export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
+const kCreatedAssetId = "created";
 
 export interface CatalogBackend extends ArchiveBackend {
   readonly folders: CatalogFolders;
@@ -403,14 +404,19 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       return Ok(undefined);
     }
 
+    const { kinds } = this.#backend;
+    const kind = command.kind ?? kinds.resolve(command.path).kind;
     const decoded = this.#decode(content);
-    if (!decoded.ok || from === undefined) {
-      return decoded;
+    const data = !decoded.ok || from === undefined ?
+      decoded :
+      await kinds.convert(kind, from, decoded.val);
+    if (!data.ok || !kinds.has(kind)) {
+      return data;
     }
 
-    const kind = command.kind ?? this.#backend.kinds.resolve(command.path).kind;
-
-    return this.#backend.kinds.convert(kind, from, decoded.val);
+    return kinds
+      .decode(kind, kCreatedAssetId, data.val)
+      .map(() => data.val);
   }
 
   async #export(

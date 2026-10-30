@@ -131,6 +131,10 @@ function makeDocument(): VoxelView["document"] {
     removeBlendGroup: (id: string) => blendGroups.remove(id),
     addBlockset: (def: BlocksetDefinition) => {
       blocksets.declare(def);
+      fake.emit("command", {
+        action: "blockset-added",
+        blockset: def
+      });
 
       return true;
     }

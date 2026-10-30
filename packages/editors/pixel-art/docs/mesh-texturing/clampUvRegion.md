@@ -1,6 +1,7 @@
 # clampUvRegion
 
-Stops a textured mesh from sampling texels outside its UV regions. Without it, MSAA edge samples and texture filtering at a face's border can pick up the neighbouring region's pixels and show them as a seam.
+Stops a textured mesh from sampling texels outside its UV regions, which shows
+as seams from the neighbouring region under MSAA or filtering.
 
 ```ts
 import * as THREE from "three/webgpu";
@@ -27,10 +28,15 @@ new UVGeometryBinding({
 clampUvRegion(mesh: UvRegionClampedMesh): void
 ```
 
-`UvRegionClampedMesh` is a `THREE.Mesh` with a `THREE.NodeMaterial`, rendered by `WebGPURenderer`.
+`UvRegionClampedMesh` is a `THREE.Mesh` with a `THREE.NodeMaterial`, rendered by
+`WebGPURenderer`.
 
-The call adds the `uvRegion` and `uvEdge` vertex attributes the shader reads, if the geometry does not have them yet, and replaces the material's `colorNode`. A [`UVGeometryBinding`](./UVGeometryBinding.md) writes the same attributes, so the two can be set up in either order. Until a region is written, every vertex stays unclamped. After that, each fragment samples the nearest texel centre inside its face's rect, and a triangle face also stays on its side of the diagonal. Compound regions are clamped to their bounding rect only.
-
-The color node is built once and reads `map` and `color` from the material each time the shader is compiled. Setting `material.map` to another texture or to `null` only needs `material.needsUpdate = true`, not a second call. With no map, the material renders its plain `color`.
-
-Sampling always uses mip level `0` and the mesh's first `uv` set as written by the binding: the map's `offset`, `repeat`, `rotation`, `center` and `channel` are ignored.
+- Adds the `uvRegion` and `uvEdge` attributes if missing and replaces the
+  material's `colorNode`. Call it before or after the
+  [`UVGeometryBinding`](./UVGeometryBinding.md).
+- Each fragment samples the nearest texel centre inside its face's rect; a
+  triangle face also stays on its side of the diagonal. Compound regions clamp
+  to their bounding rect.
+- Changing `material.map` only needs `material.needsUpdate = true`.
+- Samples mip level `0` of the first `uv` set: the map's `offset`, `repeat`,
+  `rotation`, `center` and `channel` are ignored.

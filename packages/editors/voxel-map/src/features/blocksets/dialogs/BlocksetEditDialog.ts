@@ -25,6 +25,7 @@ import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../../editing/EditingElement.ts";
 import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { tileSizeSegments } from "../tileSizes.ts";
+import { describeError } from "../../../shared/describeError.ts";
 import "../blocksetIcons.ts";
 
 // CONSTANTS
@@ -148,6 +149,11 @@ export class BlocksetEditDialog extends EditingElement {
           ?disabled=${entry === undefined || !editing.access.current.has("blocksets")}
           @click=${this.#remove}
         >Remove</jolly-button>
+        <jolly-button
+          slot="actions"
+          ?disabled=${(entry?.assetId ?? null) === null}
+          @click=${this.#export}
+        >Export…</jolly-button>
         <jolly-button
           slot="actions"
           variant="accent"
@@ -296,6 +302,22 @@ export class BlocksetEditDialog extends EditingElement {
     }
   }
 
+  async #export(): Promise<void> {
+    const editing = this.editing;
+    const entry = this.#entry;
+    const assetId = entry?.assetId ?? null;
+    if (editing === null || entry === undefined || assetId === null) {
+      return;
+    }
+
+    try {
+      await editing.archives.downloadAsset(assetId);
+    }
+    catch (error) {
+      editing.state.log.push(`Could not export "${entry.label}": ${describeError(error)}`);
+    }
+  }
+
   #close(): void {
     this._dialog.close();
   }
@@ -304,12 +326,6 @@ export class BlocksetEditDialog extends EditingElement {
     this._blocksetId = null;
     this._pendingTileSize = null;
   }
-}
-
-function describeError(
-  error: unknown
-): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 declare global {

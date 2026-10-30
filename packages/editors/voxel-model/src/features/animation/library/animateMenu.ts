@@ -24,6 +24,7 @@ export type ClipAction =
 export type SetAction =
   | "new-clip"
   | "rename"
+  | "export"
   | "unlink";
 
 export type OwnAction =
@@ -32,7 +33,8 @@ export type OwnAction =
 
 export type SharedAction =
   | "new-set"
-  | "link-set";
+  | "link-set"
+  | "import-set";
 
 export function clipMenu(
   hasTargets: boolean
@@ -57,6 +59,10 @@ export const SET_MENU: readonly MenuEntry<SetAction>[] = [
     ...RENAME_ITEM,
     label: "Rename…"
   },
+  {
+    id: "export",
+    label: "Export…"
+  },
   "separator",
   {
     id: "unlink",
@@ -77,14 +83,23 @@ export function ownMenu(
   ];
 }
 
-export const SHARED_MENU: readonly MenuEntry<SharedAction>[] = [
-  {
-    id: "new-set",
-    label: "New set…",
-    icon: "plus"
-  },
-  {
-    id: "link-set",
-    label: "Link set…"
-  }
-];
+export function sharedMenu(
+  canImport: boolean
+): readonly MenuEntry<SharedAction>[] {
+  return [
+    {
+      id: "new-set",
+      label: "New set…",
+      icon: "plus"
+    },
+    {
+      id: "link-set",
+      label: "Link set…"
+    },
+    {
+      id: "import-set",
+      label: "Import set…",
+      disabled: !canImport
+    }
+  ];
+}

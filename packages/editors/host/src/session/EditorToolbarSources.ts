@@ -11,7 +11,9 @@ export type EditorToolbarArchives = Pick<
   EditorArchives,
   | "canImport"
   | "canReset"
+  | "dependencies"
   | "download"
+  | "downloadAsset"
   | "pickAndImport"
   | "reset"
 >;

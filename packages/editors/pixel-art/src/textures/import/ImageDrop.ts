@@ -61,6 +61,18 @@ export class ImageDrop {
     return this.#files.length > 0 || this.#types.includes("Files");
   }
 
+  get draggedType(): string | null {
+    const [item] = this.#items;
+
+    return this.#items.length === 1 && !item.directory ? item.type : null;
+  }
+
+  get singleFile(): File | null {
+    const directory = this.#items.some((item) => item.directory);
+
+    return this.#files.length === 1 && !directory ? this.#files[0] : null;
+  }
+
   get supported(): boolean {
     if (this.#types.includes("text/uri-list")) {
       return false;

@@ -73,6 +73,7 @@ import { MapTemplates } from "../features/templates/MapTemplates.ts";
 import { TemplateEditing } from "../features/templates/editing/TemplateEditing.ts";
 import { PeerEditContext } from "../features/templates/editing/PeerEditContext.ts";
 import {
+  BLOCKSET_DEPENDENCY,
   MapBlocksets,
   type BlocksetCatalog
 } from "../features/blocksets/MapBlocksets.ts";
@@ -89,6 +90,7 @@ const kDefaultLayerName = "Ground";
 const kMaxAccessListeners = 32;
 const kMapRefusedMessage = "You can only view this map, so the change was not saved";
 const kBlocksetRefusedMessage = "You can only view this blockset, so the change was not saved";
+const kBlocksetLinkRefusedMessage = "Could not add the blockset: it was refused by the map.";
 const kPaintBlockedMessages: Readonly<Record<MissingPaintSource, string>> = {
   layer: "No voxel layer to paint on: add one in the Layers panel",
   block: "No block to paint with: create one in the Block Library"
@@ -442,6 +444,12 @@ export class EditorScene extends Systems.Scene {
       }),
       blocksets.subscribe("denied", () => {
         state.log.push(kBlocksetRefusedMessage);
+      }),
+      blocksets.subscribe("linkRefused", () => {
+        state.log.push(kBlocksetLinkRefusedMessage);
+      }),
+      session.archives.acceptDependency(BLOCKSET_DEPENDENCY, ({ id }) => {
+        blocksets.link(id);
       }),
       () => {
         brush.suspended = false;

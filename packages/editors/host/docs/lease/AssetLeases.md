@@ -1,8 +1,8 @@
 # AssetLeases
 
-Shares one room, and one synced document, per asset between every holder. An
-editor reaches it as [`session.assets`](../session/EditorSession.md#properties) and
-never constructs it.
+Shares one room and one synced document per asset between every holder. An
+editor reaches it as [`session.assets`](../session/EditorSession.md#properties)
+and never constructs it.
 
 ```ts
 const lease = session.assets.open(pixelArtDocumentKind(), assetId);
@@ -20,44 +20,19 @@ type AssetDocumentKind<TDocument, TCommand = unknown, TMessage = unknown> =
   DocumentKind<string, Room<TCommand, TMessage>, SyncedDocument<TDocument>>;
 ```
 
-`DocumentKind` and `SyncedDocument` come from `@jolly-pixel/network/client`:
-`syncDocument(room)` returns the network base class every synced document
-extends. Its `pendingChanges` is the `PendingChanges` of the document's sync
-client.
-
-A document kind pairs an asset kind with the factory of its synced document. Asset
-packages export them, such as `pixelArtDocumentKind()` from
+A document kind pairs an asset kind with the factory of its synced document.
+Asset packages export them, such as `pixelArtDocumentKind()` from
 `@jolly-pixel/asset.pixel-art/client`.
 
-Create each kind object once and reuse it, for the editor's static `kinds` and
-for every `open` call. Two kind objects for the same asset
-[conflict](#errors).
+Create each kind object once and reuse it, for the editor's `kinds` and for
+every `open`. Opening one asset with two kind objects throws
+`AssetDocumentConflictError`.
 
-## Opening
+## open(kind, assetId, tag?): AssetLease
 
-```ts
-open<TDocument, TCommand, TMessage>(
-  kind: AssetDocumentKind<TDocument, TCommand, TMessage>,
-  assetId: string,
-  tag?: string | null
-): AssetLease<TDocument, TCommand, TMessage>;
-
-openRoom<TCommand, TMessage>(
-  kind: string,
-  assetId: string,
-  tag?: string | null
-): AssetRoomLease<TCommand, TMessage>;
-```
-
-`open` builds the document and joins the room on the first lease of an asset.
-`openRoom` opens the room only and leaves joining to the holder. Later leases
-of the same asset share the room and the document.
-
-The room is `kind:assetId`, or `kind@tag:assetId` when `tag` is set
-(`null` by default). A tag lease and a current-version lease of one asset are
-separate entries, each with its own room and document. The session opens its
-target with the launch's tag, so `session.targetLease()` reads the
-[tag view](../session/EditorToolbar.md#tag-views).
+Builds the document and joins the room on the first lease of an asset. Later
+leases share both. `tag` opens a tagged version as a separate entry, with its
+own room and document.
 
 ## Leases
 
@@ -75,63 +50,11 @@ interface AssetLease<TDocument, TCommand = unknown, TMessage = unknown>
 }
 ```
 
-The last `release()` of an asset disposes its document and leaves its room. A
-second `release()` of one lease does nothing. See the
-[lease lifecycle](../../ARCHITECTURE.md#lease-lifecycle).
-
-One collection serves every session opened on a connection, including the
-sessions of a [switch](../boot/mountStandalone.md#switching-target-or-tag), so a lease
-opened by a panel outlives its session until released. Closing the connection
-closes the collection permanently. Later `open` and `openRoom`
-calls throw an error; releasing an existing lease afterward is harmless.
-
-## Queries
-
-```ts
-has(assetId: string, tag?: string | null): boolean;
-holders(assetId: string, tag?: string | null): number;
-```
-
-## Unsaved changes
-
-```ts
-readonly unsaved: boolean;
-on(event: "unsaved", listener: (unsaved: boolean) => void): this;
-settled(signal?: AbortSignal): Promise<void>;
-```
-
-`unsaved` is `true` while an open document has changes its server has not
-acknowledged. The `unsaved` event fires each time it flips. Releasing the last
-lease of such a document makes it `false` again. Its changes are lost, except
-the [offline changes](#offline-changes) of a server session.
-`settled()` resolves once `unsaved` is `false`, at once when it already is.
-When `signal` aborts first, it rejects with `UnsettledChangesError`, whose
-`cause` is the signal's reason.
-
-## Offline changes
-
-On a server session, each current-version document keeps its unacknowledged
-changes in IndexedDB until the server answers them, through
-`pendingChanges.keepIn()`.
-A page that closes or reloads with changes still pending leaves them there.
-The next page claims them when its session opens; when it opens the same
-asset, it replays them over its first snapshot and sends them. Releasing and
-reopening an asset in the same page picks up its changes the same way.
-
-- A page never takes the changes of another page that is still open.
-- Tag views and every offline backend (in-page, shared-tab, peer) keep nothing.
-- A change the server applied but whose answer was lost with the page is
-  skipped, as long as the server still remembers the closed page's client.
-  After a server restart it is sent again.
-
-## Errors
-
-### AssetNotFoundError and AssetKindMismatchError
-
-From `@jolly-pixel/asset`. The catalog has no record for `assetId`, or the
-record has another kind.
-
-### AssetDocumentConflictError
-
-`open` targets an asset first opened with `openRoom`, or with another kind
-object.
+- `ready` resolves once the document has its first snapshot.
+- The last `release()` of an asset disposes its document and leaves its room.
+  A second `release()` of one lease does nothing.
+- A lease outlives a [switch](../boot/bootStandalone.md#switching-asset-or-tag):
+  release what a panel opened in the editor's `dispose()`.
+- On a server session, changes the server has not acknowledged survive a page
+  reload and are sent by the next page that opens the asset. Tag views and
+  offline data keep nothing.

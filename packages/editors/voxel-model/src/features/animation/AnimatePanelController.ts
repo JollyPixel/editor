@@ -43,9 +43,10 @@ import {
   clipMenu,
   ownMenu,
   SET_MENU,
-  SHARED_MENU,
+  sharedMenu,
   type ClipAction,
-  type SetAction
+  type SetAction,
+  type SharedAction
 } from "./library/animateMenu.ts";
 import {
   asClipRow,
@@ -68,6 +69,7 @@ const kEmptyState: AnimatePanelState = {
   set: null,
   clip: null,
   canShare: false,
+  canImport: false,
   editable: false,
   keyTitle: kKeyTitle,
   error: null,
@@ -106,6 +108,7 @@ export interface AnimatePanelState {
    * The model has clips of its own, which can become a shared set.
    */
   canShare: boolean;
+  canImport: boolean;
   editable: boolean;
   keyTitle: string;
   /**
@@ -279,9 +282,10 @@ export class AnimatePanelController {
       MenuSession.from(this.#writableEntries(ownMenu(this.#state.canShare)), (action) => (action === "share" ?
         actions.shareOwnSet() :
         actions.newClip(null))) :
-      MenuSession.from(this.#writableEntries(SHARED_MENU), (action, point) => (action === "new-set" ?
-        actions.newSet() :
-        actions.linkSet(point)));
+      MenuSession.from(
+        this.#writableEntries(sharedMenu(this.#state.canImport)),
+        (action, point) => this.#runSharedAction(actions, action, point)
+      );
   }
 
   keySelected(): void {
@@ -360,8 +364,29 @@ export class AnimatePanelController {
       case "rename":
         await actions.renameSet(setId);
         break;
+      case "export":
+        await actions.exportSet(setId);
+        break;
       case "unlink":
         actions.unlinkSet(setId);
+        break;
+    }
+  }
+
+  async #runSharedAction(
+    actions: AnimateActions,
+    action: SharedAction,
+    point: MenuPoint
+  ): Promise<void> {
+    switch (action) {
+      case "new-set":
+        await actions.newSet();
+        break;
+      case "link-set":
+        actions.linkSet(point);
+        break;
+      case "import-set":
+        await actions.importSet();
         break;
     }
   }
@@ -425,6 +450,7 @@ export class AnimatePanelController {
           frames: new FrameRate(clip.fps).frameAt(clip.length)
         },
       canShare: own !== undefined && own.document.set.size > 0,
+      canImport: editing.archives.canImport,
       editable: editing.animations.editable,
       keyTitle: editing.shortcuts.label(kKeyTitle, "animation.key"),
       error: this.#error,

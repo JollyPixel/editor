@@ -245,6 +245,12 @@ export class AnimatePanel extends LitElement {
               ?disabled=${!state.editable}
               @click=${this.#onLinkSet}
             >Link…</jolly-button>
+            <jolly-button
+              label="Import set"
+              title="Import a set from a .zip archive or a set file"
+              ?disabled=${!state.editable || !state.canImport}
+              @click=${() => void this.#controller.actions?.importSet()}
+            >Import…</jolly-button>
           </div>
           ${state.sharedSets.length === 0 ?
             html`<p class="empty">Shared sets reuse clips across models with the same block names.</p>` :

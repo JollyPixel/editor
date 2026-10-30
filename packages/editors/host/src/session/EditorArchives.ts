@@ -1,11 +1,15 @@
 // Import Third-party Dependencies
 import {
   AssetId,
-  AssetPath
+  AssetPath,
+  type AssetRecordData,
+  type AssetReferenceData
 } from "@jolly-pixel/asset";
 import type {
+  CatalogClient,
   ImportConflictPolicy,
-  ImportPlan
+  ImportPlan,
+  ImportReport
 } from "@jolly-pixel/asset-server/client";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 
@@ -27,11 +31,11 @@ const kDomArchiveBrowser: EditorArchiveBrowser = {
   get location() {
     return globalThis.location;
   },
-  pickArchive() {
-    const { promise, resolve } = Promise.withResolvers<Blob | null>();
+  pickFile(accept) {
+    const { promise, resolve } = Promise.withResolvers<File | null>();
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = kArchiveAccept;
+    input.accept = accept;
     input.addEventListener("change", () => {
       resolve(input.files?.[0] ?? null);
     }, { once: true });
@@ -66,9 +70,27 @@ export interface EditorArchiveTarget {
   readonly path: string;
 }
 
+export interface EditorDependencyFormat {
+  readonly kind: string;
+  /**
+   * Extension of a single asset file, such as `".blockset.json"`.
+   */
+  readonly extension: string;
+  /**
+   * Folder a single asset file is created in, such as `"blocksets/"`.
+   */
+  readonly folder: string;
+}
+
+export type EditorDependencyLink = (
+  reference: AssetReferenceData
+) => void;
+
 export interface EditorArchiveBrowser {
   readonly location: Pick<Location, "href" | "assign" | "reload">;
-  pickArchive(): Promise<Blob | null>;
+  pickFile(
+    accept: string
+  ): Promise<File | null>;
   save(
     blob: Blob,
     fileName: string
@@ -93,16 +115,29 @@ export interface EditorArchiveLabels {
   resetWarning?: string;
 }
 
+export type EditorArchiveCatalog = Pick<
+  CatalogClient,
+  | "record"
+  | "create"
+  | "dependencies"
+>;
+
 export interface EditorArchiveSession {
   readonly archive: SessionArchive;
   readonly offline: OfflineMode | null;
   readonly targetRecord: EditorArchiveTarget;
+  readonly catalog: EditorArchiveCatalog;
+}
+
+interface AcceptedDependency {
+  readonly format: EditorDependencyFormat;
+  readonly link: EditorDependencyLink;
 }
 
 export interface EditorArchivesOptions extends EditorArchiveLabels {
   session: EditorArchiveSession;
   /**
-   * Asset kind the editor opens; an archive rooted on another kind is refused.
+   * Asset kind the editor opens; other archive roots need `acceptDependency()`.
    */
   accepts: string;
   navigator: LaunchNavigator;
@@ -119,6 +154,7 @@ export class EditorArchives {
   #resetWarning: string;
   #navigator: LaunchNavigator;
   #browser: EditorArchiveBrowser;
+  #accepted = new Map<string, AcceptedDependency>();
 
   constructor(
     options: EditorArchivesOptions
@@ -141,19 +177,133 @@ export class EditorArchives {
     return offline?.persistent === true && offline.canReset !== false;
   }
 
+  get dependencies(): AssetRecordData[] {
+    const { catalog, targetRecord } = this.#session;
+
+    return catalog.dependencies
+      .listDependencies(targetRecord.id)
+      .flatMap((reference) => catalog.record(reference.id) ?? []);
+  }
+
   async download(): Promise<void> {
     const { id, path } = this.#session.targetRecord;
-    const blob = await this.#session.archive.export(id);
 
-    this.#browser.save(blob, this.#fileName(path));
+    await this.#save(id, path);
+  }
+
+  async downloadAsset(
+    assetId: string
+  ): Promise<void> {
+    const record = this.#session.catalog.record(assetId);
+
+    await this.#save(assetId, record?.path ?? assetId);
+  }
+
+  acceptDependency(
+    format: EditorDependencyFormat,
+    link: EditorDependencyLink
+  ): () => void {
+    const accepted = {
+      format,
+      link
+    };
+    this.#accepted.set(format.kind, accepted);
+
+    return () => {
+      if (this.#accepted.get(format.kind) === accepted) {
+        this.#accepted.delete(format.kind);
+      }
+    };
   }
 
   async importFile(
-    file: Blob
+    file: File,
+    kind?: string
+  ): Promise<void> {
+    if (!this.canImport) {
+      throw new ArchiveImportDisabledError();
+    }
+
+    const single = this.#acceptedIn(kind).find(
+      ({ format }) => file.name.endsWith(format.extension)
+    );
+    if (single === undefined) {
+      await this.#importArchive(file, kind);
+    }
+    else {
+      await this.#createDependency(file, single);
+    }
+  }
+
+  async pickAndImport(
+    kind?: string
+  ): Promise<void> {
+    if (!this.canImport) {
+      throw new ArchiveImportDisabledError();
+    }
+
+    const extensions = this.#acceptedIn(kind).map(
+      ({ format }) => format.extension.slice(format.extension.lastIndexOf("."))
+    );
+    const file = await this.#browser.pickFile(
+      [kArchiveAccept, ...extensions].join(",")
+    );
+    if (file !== null) {
+      await this.importFile(file, kind);
+    }
+  }
+
+  async reset(): Promise<void> {
+    if (!await this.#browser.confirmReset(this.#resetWarning)) {
+      return;
+    }
+
+    await this.#session.offline?.reset();
+    this.#browser.location.reload();
+  }
+
+  #acceptedIn(
+    kind: string | undefined
+  ): AcceptedDependency[] {
+    const accepted = [...this.#accepted.values()];
+
+    return kind === undefined ?
+      accepted :
+      accepted.filter(({ format }) => format.kind === kind);
+  }
+
+  async #createDependency(
+    file: File,
+    { format, link }: AcceptedDependency
+  ): Promise<void> {
+    const id = await this.#session.catalog.create(
+      `${format.folder}${file.name}`,
+      new Uint8Array(await file.arrayBuffer()),
+      {
+        kind: format.kind,
+        onConflict: "suffix"
+      }
+    );
+    link({
+      id,
+      kind: format.kind
+    });
+  }
+
+  async #importArchive(
+    file: File,
+    kind: string | undefined
   ): Promise<void> {
     const plan = await this.#session.archive.plan(file);
-    if (plan.root?.kind !== this.#accepts) {
-      throw new ArchiveRootError(this.#accepts);
+    const rootKind = plan.root?.kind;
+    const dependency = rootKind === undefined ?
+      undefined :
+      this.#accepted.get(rootKind);
+    if (
+      (rootKind !== this.#accepts && dependency === undefined) ||
+      (kind !== undefined && rootKind !== kind)
+    ) {
+      throw new ArchiveRootError(kind ?? this.#accepts);
     }
 
     const onConflict = plan.live.length === 0 ?
@@ -168,10 +318,23 @@ export class EditorArchives {
       { onConflict }
     );
     if (root === undefined) {
-      throw new ArchiveRootError(this.#accepts);
+      throw new ArchiveRootError(kind ?? this.#accepts);
     }
-    if (replaced.length === 0) {
-      await this.#navigator.navigate(root.id, null);
+
+    if (dependency === undefined) {
+      await this.#switchTo(root.id, replaced.length > 0);
+    }
+    else {
+      this.#linkImported(dependency, root, replaced);
+    }
+  }
+
+  async #switchTo(
+    rootId: string,
+    replaced: boolean
+  ): Promise<void> {
+    if (!replaced) {
+      await this.#navigator.navigate(rootId, null);
 
       return;
     }
@@ -179,29 +342,42 @@ export class EditorArchives {
     const { location } = this.#browser;
     location.assign(
       new EditorLaunch(
-        new AssetId(root.id)
+        new AssetId(rootId)
       ).toUrl(location.href).toString()
     );
   }
 
-  async pickAndImport(): Promise<void> {
-    if (!this.canImport) {
-      throw new ArchiveImportDisabledError();
+  #linkImported(
+    { link }: AcceptedDependency,
+    root: AssetReferenceData,
+    replaced: ImportReport["replaced"]
+  ): void {
+    const { catalog, targetRecord } = this.#session;
+    const linked = catalog.dependencies
+      .listDependencies(targetRecord.id)
+      .some((reference) => reference.id === root.id);
+    if (!linked) {
+      link(root);
     }
 
-    const file = await this.#browser.pickArchive();
-    if (file !== null) {
-      await this.importFile(file);
+    const open = new Set([
+      targetRecord.id,
+      ...catalog.dependencies
+        .transitiveDependencies(targetRecord.id)
+        .map((reference) => reference.id)
+    ]);
+    if (replaced.some((entry) => open.has(entry.id))) {
+      this.#browser.location.reload();
     }
   }
 
-  async reset(): Promise<void> {
-    if (!await this.#browser.confirmReset(this.#resetWarning)) {
-      return;
-    }
+  async #save(
+    assetId: string,
+    path: string
+  ): Promise<void> {
+    const blob = await this.#session.archive.export(assetId);
 
-    await this.#session.offline?.reset();
-    this.#browser.location.reload();
+    this.#browser.save(blob, this.#fileName(path));
   }
 
   #fileName(

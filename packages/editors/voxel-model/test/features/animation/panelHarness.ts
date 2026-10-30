@@ -144,10 +144,24 @@ export function createPanelHarness(
   const keyBindings = new KeyBindingSettings({
     defaults: MODEL_KEY_BINDINGS
   });
+  const archiveCalls: string[] = [];
   controller.attach({
     access,
     animations,
     animationFocus,
+    archives: {
+      canImport: true,
+      downloadAsset(assetId) {
+        archiveCalls.push(`export ${assetId}`);
+
+        return Promise.resolve();
+      },
+      pickAndImport(kind) {
+        archiveCalls.push(`import ${kind}`);
+
+        return Promise.resolve();
+      }
+    },
     selection,
     presence,
     clipRemoval,
@@ -179,8 +193,17 @@ export function createPanelHarness(
     await pick(label);
   }
 
+  async function sectionAction(
+    section: "own" | "shared",
+    label: string
+  ): Promise<void> {
+    menu = controller.sectionMenu(section);
+    await pick(label);
+  }
+
   return {
     access,
+    archiveCalls,
     controller,
     animations,
     history,
@@ -193,7 +216,8 @@ export function createPanelHarness(
     prompts,
     names,
     pick,
-    rowAction
+    rowAction,
+    sectionAction
   };
 }
 

@@ -97,5 +97,20 @@ describe("ImageDrop", () => {
     assert.throws(() => several.file(), new TextureImportError("Drop one image file"));
     assert.throws(() => svg.file(), new TextureImportError("Unsupported image format"));
     assert.throws(() => directory.file(), new TextureImportError("Unsupported image format"));
+    assert.equal(several.singleFile, null);
+    assert.equal(directory.singleFile, null);
+    assert.equal(directory.draggedType, null);
+  });
+
+  test("exposes any single dragged type and dropped file, image or not", () => {
+    const archive = createFile("stone.zip", "application/zip");
+    const drop = new ImageDrop(createTransfer({
+      items: [{ kind: "file", type: "application/zip" }],
+      files: [archive]
+    }));
+
+    assert.equal(drop.draggedType, "application/zip");
+    assert.equal(drop.singleFile, archive);
+    assert.ok(!drop.supported);
   });
 });

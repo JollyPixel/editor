@@ -8,13 +8,13 @@ import {
 } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import type {
-  AnimationSetRecord,
-  AnimationSetSource
+import {
+  ANIMATION_SET_DEPENDENCY,
+  type AnimationSetRecord,
+  type AnimationSetSource
 } from "../features/animation/index.ts";
 
 // CONSTANTS
-const kFolder = "animations";
 const kPathSeparators = /[\\/]+/g;
 const kOwnFallback = "Model animations";
 
@@ -80,7 +80,7 @@ function setPath(
 ): string {
   const file = name.trim().replace(kPathSeparators, "-") || "Animation set";
 
-  return `${kFolder}/${file}${VOXEL_ANIMATION_EXTENSION}`;
+  return `${ANIMATION_SET_DEPENDENCY.folder}${file}${VOXEL_ANIMATION_EXTENSION}`;
 }
 
 function baseName(

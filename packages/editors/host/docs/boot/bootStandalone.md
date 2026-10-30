@@ -1,9 +1,8 @@
 # bootStandalone
 
-Entry point of an editor that can also run offline. It mounts online through
-[`mountStandalone`](./mountStandalone.md), and in
-[offline mode](#offline-mode) when asked to or when the asset server cannot
-be reached. See the [architecture guide](../../ARCHITECTURE.md#offline).
+Entry point of an editor page. It reads the launch, opens the session, mounts
+the [editor definition](./EditorDefinition.md), and falls back to offline mode
+when the asset server cannot be reached.
 
 ```ts
 void bootStandalone(VoxelMapEditor, {
@@ -11,9 +10,15 @@ void bootStandalone(VoxelMapEditor, {
   debugHandle: "voxelMapEditor",
   forceOffline: import.meta.env.MODE === "static",
   offline: async() => {
-    const { createDefaultSeed } = await import("./boot/defaultSeed.ts");
+    const [
+      { createDefaultSeed },
+      { default: createHandlers }
+    ] = await Promise.all([
+      import("./boot/defaultSeed.ts"),
+      import("virtual:jolly-pixel/handlers")
+    ]);
 
-    return createDefaultSeed();
+    return { ...createDefaultSeed(), handlers: createHandlers() };
   }
 });
 ```
@@ -21,167 +26,83 @@ void bootStandalone(VoxelMapEditor, {
 ## Options
 
 ```ts
-function bootStandalone<THandle extends EditorHandle>(
-  definition: EditorDefinition<THandle>,
-  options: BootStandaloneOptions
-): Promise<StandaloneMount<THandle>>;
-
-interface BootStandaloneOptions
-  extends Omit<MountStandaloneOptions, "connect"> {
-  offline: OfflineProjectLoader;
+interface BootStandaloneOptions {
+  offline: () => OfflineProject | Promise<OfflineProject>;
   forceOffline?: boolean;
+  dev?: boolean;
+  debugHandle?: string;
 }
-
-type OfflineProjectLoader = () => OfflineProject | Promise<OfflineProject>;
 
 interface OfflineProject {
   handlers: AssetKindHandler[];
   seed?: AssetSeedMap | (() => AssetSeedMap | Promise<AssetSeedMap>);
-  backend?: AssetBackendTuning;
 }
 ```
 
-### offline
+- `offline` runs only in the tab that owns the offline data, so import its
+  modules dynamically.
+- `forceOffline` skips the server. Pass `import.meta.env.MODE === "static"`
+  for a static build.
+- `dev` exposes the mounted handle as `window.jollyEditor`, and as
+  `globalThis[debugHandle]` when `debugHandle` is set. It also stores the
+  `?username=` parameter so the username prompt is skipped.
 
-The asset kind handlers, seed and back-end tuning of the offline server.
-Called only in the tab that owns the offline data, so import them dynamically.
+## Startup
 
-### forceOffline
+The page picks the first case that applies:
 
-Skips the server. Pass `import.meta.env.MODE === "static"` for a static build.
+1. A `#peer=<host>.<token>` fragment joins another tab of the same browser
+   profile as a guest, with no socket.
+2. An injected launch with a `credential` (a studio `/view/<token>` share
+   link) opens the target read-only, with no username prompt and no offline
+   fallback.
+3. `forceOffline` or the `?offline` [query parameter](../params/QueryParams.md#host-parameters)
+   mounts offline at once.
+4. Otherwise the page mounts online. When the catalog does not answer
+   (`CatalogUnavailableError`) or no launch is found (`LaunchNotFoundError`),
+   a dialog offers Retry or Work offline. Any other error is rethrown.
 
-### sources
+## Offline data
 
-Used by the online attempt only.
+- Offline assets live in the `jolly-offline:<name>` IndexedDB database. The
+  name is the `?offline=<name>` value, or `definition.accepts` without one.
+- One tab owns the data. Other tabs of the same origin use its catalog and
+  rooms.
+- `seed` is applied only while the storage holds no asset, so a deleted seed
+  asset does not come back. Give seeded assets random ids, or every user's
+  archives collide on import.
 
-## Fallback
+## Page state
 
-The editor goes offline at once with `forceOffline` or the `offline`
-[query parameter](../params/QueryParams.md#host-parameters). Otherwise, when the
-online mount throws `CatalogUnavailableError` or `LaunchNotFoundError`, a
-dialog offers Retry or Work offline. Cancelling rethrows the error,
-and any other error is rethrown without asking. The runtime is created once
-and reused by every attempt, since the canvas keeps its first context.
-
-Offline, the editor mounts on the offline data named by the `offline` query
-parameter. Without a name, it is named after `definition.accepts`, so
-editors of different kinds served from one origin each seed their own. The
-parent's `jolly-launch` is still read first, so a page framed by the studio
-keeps its shell channel.
-
-A page that connects without `mountStandalone` uses the same dialog:
-
-```ts
-function offerOffline(message: string): Promise<"retry" | "offline" | null>;
-
-function withOfflineFallback<TValue>(options: {
-  message: string;
-  online: () => Promise<TValue>;
-  offline: () => Promise<TValue>;
-}): Promise<TValue>;
-```
-
-`withOfflineFallback` retries `online` on Retry and runs `offline` on Work
-offline, with the same error rules as above.
-
-## Share links
-
-When the page carries an injected launch with a `credential`, as a studio
-`/view/<token>` page does, `bootStandalone` mounts that launch only, with no
-username prompt and no offline fallback. The server connects the page as a
-guest and serves a read-only catalog of the target and its dependencies. When
-the server refuses the socket because the link was revoked or expired, a
-dialog offers to reload.
-
-## Peer invites
-
-A page whose URL fragment holds `#peer=<host>.<token>` opens as a guest of the
-tab that issued it, before any share link or offline check. The guest reaches
-that tab over an `RTCDataChannel`, uses its catalog and rooms like a follower
-tab does, and opens no socket. The token travels on the data channel only, so
-it never reaches a server.
-
-The two tabs find each other through a BroadcastChannel, which limits invites
-to one browser profile for now. No STUN or TURN server is configured. A dialog
-offers to reload when the host does not answer within 20 seconds, revokes the
-invite, or closes its tab.
-
-### Console
-
-In the owner tab of persistent offline data, the host registers
-`/peer.invite`, which prints a link to the current page with a new invite,
-and `/peer.stop`, which revokes every invite and disconnects the guests.
-
-## Offline mode
-
-`@jolly-pixel/editor.host/offline` runs the asset back-end inside the page.
-The editor mounts through the same `mount` as online, with a catalog, rooms
-and leases.
+`data-editor-state` (`EDITOR_STATE_ATTRIBUTE`) on `document.documentElement`
+is `booting`, `ready`, `switching` or `failed`. `ready` waits for
+`handle.ready` and, for an editor with a runtime, the first compiled frame.
 
 ```ts
-const { openOfflineBackend } =
-  await import("@jolly-pixel/editor.host/offline");
-const backend = await openOfflineBackend({
-  project: () => ({
-    handlers: [voxelMapAssetKind()],
-    seed: {
-      "maps/scratch.voxelmap.json": {
-        id: crypto.randomUUID(),
-        kind: VOXEL_MAP_KIND,
-        content: () => encodeWorld()
-      }
-    }
-  })
-});
-
-await mountStandalone(VoxelMapEditor, {
-  sources: backend.launchSources(VoxelMapEditor.accepts),
-  connect: () => backend.connect()
-});
+await page.waitForFunction(
+  () => document.documentElement.dataset.editorState === "ready"
+);
 ```
 
-Import the entry dynamically so an online boot does not bundle the back-end.
+## Switching asset or tag
 
-`openOfflineBackend({ project, name? })` opens the `jolly-offline:<name>`
-IndexedDB database (`name` defaults to `"default"`). One tab owns it; other
-tabs use the owner's catalog and rooms over BroadcastChannel and never call
-`project`. Without Web Locks, the offline data lives in memory.
+The toolbar opens another asset or version without reloading the page:
 
-The back-end's event log goes to a second database,
-`jolly-events:jolly-offline:<name>`. Each edit is written there when the
-back-end records it, so a reload right after an edit keeps it even before the
-asset itself is saved. `reset()` deletes both databases.
+- The host waits for the server to acknowledge pending changes, and keeps the
+  current editor when that takes more than 10 seconds.
+- It disposes the handle, then calls `mount` again with a new session on the
+  same connection and the same `EditorRuntime`.
+- State that `mount` created, such as the selected brush, starts over.
 
-`seed` is applied only while the storage holds no asset, so a seeded asset the
-user deleted does not come back. Give seeded assets random ids: a fixed id
-makes every user's first asset the same, and their archives collide on
-import.
+## Debug logging
 
-### persistent
+Boot steps go to a `HostLogger`. Nothing is logged until namespaces are
+enabled, as comma-separated globs:
 
-Whether the assets outlive the page.
+- `?debug=host.*,editor.*` in the URL; a bare `?debug` enables everything.
+- `localStorage.setItem("jolly-pixel:debug", "*")` for pages framed by the
+  studio. The query parameter wins.
 
-### peers
-
-Set on the owner tab only. `invite()` returns a new `PeerInvite`, whose
-`toUrl(page)` writes it into the fragment of `page`. `guests` counts the
-connected guests and `stop()` revokes every invite and disconnects the guests.
-
-### connect()
-
-Returns a guest identity, a client and the offline mode. Destroying the last
-client closes the backend.
-
-### launchSources(accepts)
-
-The `?target=` when the catalog knows it, then the target last opened in
-this browser, then the first catalog record of the `accepts` kind.
-
-### reset()
-
-Closes the backend and deletes its databases. `canReset` is `false` in a
-follower tab.
-
-### close()
-
-Flushes, then stops the server and the back-end.
+`host.boot`, `host.launch`, `host.session`, `host.switch` and `host.console`
+trace the host. `editor` is `context.logger`, and `editor.runtime` the logger
+passed to `createRuntime`.

@@ -153,4 +153,36 @@ describe("EditorToolbar assets", () => {
     assert.equal(menuItem(menu, "delete").disabled, true);
     assert.equal(query(element, ".error"), null);
   });
+
+  test("the asset menu exports a dependency picked in its submenu", async() => {
+    const archives = createToolbarArchives({
+      canImport: false,
+      dependencies: [
+        {
+          ...record("stone", "blockset"),
+          path: "blocksets/stone.blockset.json"
+        }
+      ]
+    });
+    const element = await mount(
+      voxelMaps([record("forest", "voxelmap")]),
+      null,
+      { archives }
+    );
+    const menu = query<ContextMenu>(element, "#asset-menu")!;
+
+    query(element, "#asset-actions")!.click();
+    menu.dispatchEvent(new CustomEvent("jolly-context-action", {
+      detail: { id: "dependency:stone" }
+    }));
+    await element.updateComplete;
+
+    assert.deepEqual(
+      menuItem(menu, "dependencies").items?.map(
+        (entry) => (entry === "separator" ? entry : entry.label)
+      ),
+      ["blocksets/stone"]
+    );
+    assert.deepEqual(archives.calls, ["download stone"]);
+  });
 });
