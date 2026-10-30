@@ -188,8 +188,12 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   point of interest stay subscribed at any distance, in the layers the stream
   circle leaves free, highest priority first and nearest first; the others
   fall back to the overview.
-- **Next:** point-of-interest rendering: the LoD bias and the minimum detail
-  level in the quadtree selection.
+- **Point-of-interest rendering: done** (2026-10-30). Nodes over a point of
+  interest's chunks have their distance and morph bands multiplied by its
+  bias, and are drawn at its minimum level or finer at any distance, past the
+  coarsest range included.
+- **Next:** the Points of interest pane: listing and editing them, tinting
+  the selected one's chunks, and its "Edit chunks" toggle.
 
 Tick a box when its item lands, and move **Next** along with it.
 

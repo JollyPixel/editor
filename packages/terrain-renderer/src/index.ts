@@ -80,6 +80,7 @@ export {
   LodRanges,
   type LodRangesOptions
 } from "./view/lod/LodRanges.ts";
+export type { LodFocusArea } from "./view/lod/LodFocus.ts";
 export type {
   NodeBounds,
   SelectedNode

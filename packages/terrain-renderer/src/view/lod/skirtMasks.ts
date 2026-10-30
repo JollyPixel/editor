@@ -19,6 +19,7 @@ export interface NodeArea {
   readonly x: number;
   readonly z: number;
   readonly size: number;
+  readonly bias?: number;
 }
 
 export function skirtMasks(
@@ -56,7 +57,8 @@ export function skirtMasks(
         const z = outZ === 0 ? node.z + along * node.size : edgeOutside(node.z, node.size, outZ);
         const neighbour = nodeAt(x, z);
 
-        return neighbour !== undefined && neighbour.level !== node.level;
+        return neighbour !== undefined &&
+          (neighbour.level !== node.level || (neighbour.bias ?? 1) !== (node.bias ?? 1));
       });
       if (differs) {
         mask |= bit;

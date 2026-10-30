@@ -10,6 +10,7 @@ import {
   LEAF_NODE_SIZE,
   LodRanges
 } from "./lod/LodRanges.ts";
+import type { LodFocusArea } from "./lod/LodFocus.ts";
 import {
   QuadtreeSelection,
   type SelectedNode
@@ -164,6 +165,13 @@ export class TerrainView {
   ) {
     this.#highlightedMaterial = slot;
     this.#shading.highlightSlot(slot);
+    this.#requestFrame();
+  }
+
+  focusOn(
+    areas: Iterable<LodFocusArea>
+  ): void {
+    this.selection.focusOn(areas);
     this.#requestFrame();
   }
 
@@ -364,7 +372,12 @@ class NodeBatch {
     nodes.forEach((node, index) => {
       const spacing = ranges.nodeSize(node.level) / NODE_RESOLUTION;
       data.setXYZW(index, node.x, node.z, spacing, spacing);
-      morph.setXYZ(index, ranges.morphStart(node.level), ranges.morphEnd(node.level), node.skirts);
+      morph.setXYZ(
+        index,
+        ranges.morphStart(node.level) * node.bias,
+        ranges.morphEnd(node.level) * node.bias,
+        node.skirts
+      );
     });
     data.needsUpdate = true;
     morph.needsUpdate = true;

@@ -176,6 +176,52 @@ describe("QuadtreeSelection", () => {
     }
   });
 
+  test("a point of interest's bias refines its chunks earlier, skirted where the bias changes", () => {
+    const camera = { x: 10, y: 20, z: 30 };
+    const selection = new QuadtreeSelection(stripTerrain(20));
+    const plain = nodesAt(selection.select(camera), 6.5 * CHUNK_SAMPLES, 32)[0].level;
+    selection.focusOn([{ chunks: [{ x: 6, z: 0 }], lodBias: 4, minLevel: 5 }]);
+    const nodes = selection.select(camera);
+
+    assert.ok(nodesAt(nodes, 6.5 * CHUNK_SAMPLES, 32)[0].level < plain);
+    for (const node of nodes) {
+      for (const { bit, outward } of SKIRT_EDGES) {
+        const expected = nodes.some((other) => acrossEdge(node, other, outward) &&
+          (other.level !== node.level || other.bias !== node.bias));
+        assert.equal((node.skirts & bit) !== 0, expected, `edge ${bit} at (${node.x}, ${node.z})`);
+      }
+    }
+  });
+
+  test("two leaves of different biases meet with skirts, as their morph bands differ", () => {
+    const selection = new QuadtreeSelection(stripTerrain(4));
+    selection.focusOn([{ chunks: [{ x: 1, z: 0 }], lodBias: 2, minLevel: 5 }]);
+    const nodes = selection.select({ x: CHUNK_SAMPLES, y: 4, z: 16 });
+    const [west] = nodesAt(nodes, CHUNK_SAMPLES - 8, 16);
+    const [east] = nodesAt(nodes, CHUNK_SAMPLES + 8, 16);
+
+    assert.deepEqual([west.level, east.level, west.bias, east.bias], [0, 0, 1, 2]);
+    assert.ok((west.skirts & 2) !== 0 && (east.skirts & 8) !== 0);
+  });
+
+  test("a point of interest with no bias and a coarse minimum level changes nothing in range", () => {
+    const camera = { x: 10, y: 20, z: 30 };
+    const selection = new QuadtreeSelection(stripTerrain(20));
+    const plain = selection.select(camera);
+    selection.focusOn([{ chunks: [{ x: 6, z: 0 }], lodBias: 1, minLevel: 5 }]);
+
+    assert.deepEqual(selection.select(camera), plain);
+  });
+
+  test("a point of interest past the coarsest range is still drawn, at its minimum level", () => {
+    const selection = new QuadtreeSelection(stripTerrain(60));
+    selection.focusOn([{ chunks: [{ x: 55, z: 0 }], lodBias: 1, minLevel: 3 }]);
+    const nodes = selection.select({ x: 10, y: 20, z: 30 });
+
+    assert.deepEqual(nodesAt(nodes, 55.5 * CHUNK_SAMPLES, 32).map(({ level }) => level), [3]);
+    assert.deepEqual(nodesAt(nodes, 50.5 * CHUNK_SAMPLES, 32), []);
+  });
+
   test("chunks beyond the coarsest range are not drawn", () => {
     const terrain = new Terrain();
     terrain.addChunk(new ChunkCoord(0, 0));

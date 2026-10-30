@@ -7,6 +7,7 @@ import {
 import { PeerFrustums } from "@jolly-pixel/editor.host";
 import type { Room } from "@jolly-pixel/network/client";
 import {
+  isPoiCommand,
   TerrainInterest,
   TerrainLiveReceiver,
   TerrainLiveSender,
@@ -147,6 +148,7 @@ export class TerrainEditorScene extends Systems.Scene {
         camera: () => camera.camera
       });
     this.#bindOverlaySettings(view);
+    this.#bindPointsOfInterest(view);
     const materialTextures = new MaterialTextures({
       document: this.#document,
       view,
@@ -276,6 +278,24 @@ export class TerrainEditorScene extends Systems.Scene {
     }
     highlightSelected();
     this.#disposables.push(selection.subscribe("change", highlightSelected));
+  }
+
+  #bindPointsOfInterest(
+    view: TerrainView
+  ): void {
+    const document = this.#document;
+    function focus(): void {
+      view.focusOn(document.pointsOfInterest.pointsOfInterest());
+    }
+    focus();
+    this.#disposables.push(
+      document.subscribe("change", ({ command }) => {
+        if (isPoiCommand(command)) {
+          focus();
+        }
+      }),
+      document.subscribe("reset", focus)
+    );
   }
 
   #bindPreview(

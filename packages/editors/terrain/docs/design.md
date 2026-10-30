@@ -235,6 +235,14 @@ the 256 layers. A chunk takes the highest priority of the points of interest
 naming it, and the choice is made again whenever the camera enters another
 chunk or a point of interest changes.
 
+In the quadtree, a node takes the largest bias and the finest minimum level
+of the point-of-interest chunks under it. Its distance bands and its morph
+band are multiplied by the bias. A node coarser than the minimum level is
+refined whatever its distance, and a node past its range, even past the
+coarsest range, is still drawn at the minimum level when no node above it
+can draw it. Two nodes of different biases meet with skirts, as nodes of
+different levels do, since their morph bands differ.
+
 The Points of interest pane lists them with their settings. Selecting one
 tints its chunks, and its "Edit chunks" toggle lets a click or drag add
 chunks to it, Ctrl+click remove them.
