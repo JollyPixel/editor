@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { KeyBindingSettings } from "@jolly-pixel/controls";
 import {
   OrbitFlyCamera,
   Systems,
@@ -42,10 +43,9 @@ import { PeerBrushRings } from "../features/sculpt/collaboration/PeerBrushRings.
 import type { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import type { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
 import { SculptBrush } from "../features/sculpt/SculptBrush.ts";
-import {
-  bindHistoryShortcuts,
-  type TerrainHistory
-} from "../shared/terrainHistory.ts";
+import type { TerrainAction } from "../keybindings/terrainActions.ts";
+import { terrainShortcuts } from "../keybindings/terrainShortcuts.ts";
+import type { TerrainHistory } from "../shared/terrainHistory.ts";
 
 // CONSTANTS
 const kCameraPreset: OrbitFlyCameraOptions = {
@@ -70,6 +70,7 @@ export interface TerrainEditorSceneOptions {
   selection: MaterialSelection;
   poiSelection: PoiSelection;
   access: TerrainAccessSource;
+  keyBindings: KeyBindingSettings<TerrainAction>;
 }
 
 interface TerrainSceneParts {
@@ -94,6 +95,7 @@ export class TerrainEditorScene extends Systems.Scene {
   #selection: MaterialSelection;
   #poiSelection: PoiSelection;
   #access: TerrainAccessSource;
+  #keyBindings: KeyBindingSettings<TerrainAction>;
   #parts: TerrainSceneParts | null = null;
   #cameraPosition = new THREE.Vector3();
   #disposables: Array<() => void> = [];
@@ -111,6 +113,7 @@ export class TerrainEditorScene extends Systems.Scene {
     this.#selection = options.selection;
     this.#poiSelection = options.poiSelection;
     this.#access = options.access;
+    this.#keyBindings = options.keyBindings;
   }
 
   get view(): TerrainView {
@@ -222,7 +225,9 @@ export class TerrainEditorScene extends Systems.Scene {
         room,
         camera: camera.camera
       });
-    this.#disposables.push(bindHistoryShortcuts(this.world.input.keyboard, this.#history));
+    this.#disposables.push(
+      this.#keyBindings.bind(this.world.input.keyboard, terrainShortcuts(this.#history))
+    );
 
     this.#bindPreview(preview, view, () => {
       peerRings.refresh();

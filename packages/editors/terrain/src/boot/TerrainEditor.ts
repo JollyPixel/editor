@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { ShortcutLabels } from "@jolly-pixel/controls";
 import {
   describeSkippedStep,
   type HistoryStepInfo
@@ -12,6 +13,7 @@ import {
 import {
   bindPresenceStack,
   EditorRuntime,
+  followKeyBindings,
   type AssetLease,
   type EditorSession,
   type HostLogger,
@@ -51,6 +53,7 @@ import { SculptSettings } from "../features/sculpt/model/SculptSettings.ts";
 import "../features/sculpt/toolbar/SculptToolbar.ts";
 import { OverlaySettings } from "../features/overlays/model/OverlaySettings.ts";
 import "../features/overlays/toolbar/OverlayToolbar.ts";
+import { TERRAIN_KEYBINDINGS } from "../preferences.ts";
 import { TerrainEditorScene } from "../scene/TerrainEditorScene.ts";
 import { PresenceStore } from "../shared/PresenceStore.ts";
 import {
@@ -187,14 +190,24 @@ async function mountScene(
       activityLog.entries = entries;
     }));
   }
+  const keyBindings = followKeyBindings(
+    context.preferences,
+    TERRAIN_KEYBINDINGS,
+    (message) => console.warn(message)
+  );
   const sculptToolbar = document.querySelector("terrain-sculpt-toolbar");
   if (sculptToolbar !== null) {
     sculptToolbar.settings = sculpt;
     sculptToolbar.history = history;
-    disposables.push(() => {
-      sculptToolbar.settings = null;
-      sculptToolbar.history = null;
-    });
+    sculptToolbar.shortcuts = new ShortcutLabels(context.keyboardLayout, keyBindings);
+    disposables.push(
+      keyBindings.subscribe("change", () => sculptToolbar.requestUpdate()),
+      () => {
+        sculptToolbar.settings = null;
+        sculptToolbar.history = null;
+        sculptToolbar.shortcuts = null;
+      }
+    );
   }
 
   const overlaySettings = new OverlaySettings(new LocalStorageAdapter());
@@ -224,7 +237,8 @@ async function mountScene(
     leases,
     selection,
     poiSelection,
-    access
+    access,
+    keyBindings
   });
   const { sceneManager } = context.runtime.runtime.world;
   disposables.push(() => sceneManager.unloadScene(scene));

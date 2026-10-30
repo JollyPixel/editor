@@ -10,6 +10,7 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
+import type { ShortcutLabels } from "@jolly-pixel/controls";
 import type { HistoryScopeState } from "@jolly-pixel/history";
 import {
   CHUNK_TIERS,
@@ -30,6 +31,7 @@ import {
   TERRAIN_CAPABILITIES,
   type TerrainAccess
 } from "../../../access/TerrainAccess.ts";
+import type { TerrainAction } from "../../../keybindings/terrainActions.ts";
 import {
   CHUNK_MODES,
   type ChunkMode
@@ -100,6 +102,9 @@ export class SculptToolbar extends LitElement {
   @property({ attribute: false })
   declare access: TerrainAccess;
 
+  @property({ attribute: false })
+  declare shortcuts: ShortcutLabels<TerrainAction> | null;
+
   #size = new FieldBinding<number>(this, {
     read: () => this.settings?.options.size ?? BRUSH_SIZE.min,
     write: (size) => this.settings?.update({ size })
@@ -160,6 +165,7 @@ export class SculptToolbar extends LitElement {
     this.settings = null;
     this.history = null;
     this.access = TERRAIN_CAPABILITIES.full;
+    this.shortcuts = null;
   }
 
   protected override willUpdate(
@@ -430,7 +436,7 @@ export class SculptToolbar extends LitElement {
         <jolly-tool-button
           data-tool="undo"
           icon="undo"
-          label="Undo (Ctrl+Z)"
+          label=${this.shortcuts?.label("Undo", "edit.undo") ?? "Undo"}
           .count=${state.undoCount}
           ?disabled=${state.undoCount === 0}
           @click=${() => history.undo(TERRAIN_HISTORY_SCOPE)}
@@ -438,7 +444,7 @@ export class SculptToolbar extends LitElement {
         <jolly-tool-button
           data-tool="redo"
           icon="redo"
-          label="Redo (Ctrl+Y)"
+          label=${this.shortcuts?.label("Redo", "edit.redo") ?? "Redo"}
           .count=${state.redoCount}
           ?disabled=${state.redoCount === 0}
           @click=${() => history.redo(TERRAIN_HISTORY_SCOPE)}

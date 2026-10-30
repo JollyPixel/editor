@@ -66,6 +66,6 @@ test("dragging the Ramp tool pulls the ground between its ends toward a straight
   await expect.poll(async() => Math.abs(await terrain.confirmedHeightAt(kMiddle.x, kMiddle.z) - line))
     .toBeLessThan(Math.abs(before - line) * 0.9);
 
-  await terrain.undo();
+  await terrain.page.keyboard.press("Control+z");
   await expect.poll(() => terrain.confirmedHeightAt(kMiddle.x, kMiddle.z)).toBe(before);
 });
