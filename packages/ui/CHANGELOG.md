@@ -1,5 +1,39 @@
 # @jolly-pixel/ui
 
+## 5.0.0
+
+### Major Changes
+
+- [#1088](https://github.com/JollyPixel/editor/pull/1088) [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1) Thanks [@fraxken](https://github.com/fraxken)! - `ui` elements now register from `@jolly-pixel/ui/elements/<name>` (class and dialog helpers included) and the facade, with its types, moved to `@jolly-pixel/ui/facade`; `./feedback` and `./icon` are removed, and the root entry registers nothing and exports element classes as types only.
+  Add `LazyTemplate` to `ui`, and let `jolly-console` (`editScript`) and `jolly-lantern` (`TourRun.shown`) be created late, so pages load these elements only when first needed.
+
+### Minor Changes
+
+- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files (`SceneFile`, `FileScene`, `SceneInstance`, scene transform helpers, `ComponentDefinitions`), `LightComponent`, `MeshRenderer`, `OrbitFlyCamera.frame()`, `Transform.visibleInHierarchy`, `inferScenePropertyType` and the `render` camera and `properties` behavior options to `engine`; `Actor.name` now follows `object3D.name`. Frames only visit actors with updating components and no longer allocate per actor or component; `sceneManager.actors.updating` lets a host sleep once nothing updates, and a component can start asleep with the `needUpdate` option.
+  Breaking: `Camera.configure()` replaces the camera setters, `sceneManager.actors` (`ActorRegistry`) replaces its actor and component scheduling methods, and `renderStrategy`, `markRenderOrderDirty()` and the `Behavior` property mirror (`getProperty`, `setProperty`, `mergeProperties`, `BehaviorProperties`) are removed.
+  Add `CameraGizmo` and `LightGizmo` to `three`, refusal messages to `history` and `reconcilePeerMarks` to `ui/network`.
+
+- [#1132](https://github.com/JollyPixel/editor/pull/1132) [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` gains `reveal(id)`, which scrolls a row into view and flashes it without moving focus.
+  Add `VoxelMapAnchorKey` to `@jolly-pixel/voxel.renderer/engine`, which builds and parses the `layer:<id>` and `object:<id>` keys `VoxelMapAnchors` lists.
+
+- [#1104](https://github.com/JollyPixel/editor/pull/1104) [`e083d5c`](https://github.com/JollyPixel/editor/commit/e083d5c062837c944609484f833d462eb9f88a52) Thanks [@fraxken](https://github.com/fraxken)! - Add `pressed` to `jolly-button`, `count` to `jolly-tool-button` and `floating` to `jolly-rail`.
+  Export `FolderReorder`, the folder grip controller panes use. `jolly-folder` no longer toggles its own grab: its handler sets the new `grabbed` property.
+
+- [#1090](https://github.com/JollyPixel/editor/pull/1090) [`063c4aa`](https://github.com/JollyPixel/editor/commit/063c4aac17e1c73d74ac2c2309a8c25174fb8d52) Thanks [@fraxken](https://github.com/fraxken)! - Add `menuPointBelow(event)` to `ui`, the point below a button where its context menu opens.
+
+- [#1108](https://github.com/JollyPixel/editor/pull/1108) [`3bfec4a`](https://github.com/JollyPixel/editor/commit/3bfec4aa2597e4923db19237593bcd928ff5f93a) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-reference`, a field that shows a referenced key by name with browse and clear buttons; it emits `jolly-browse` and `jolly-open` and leaves the picker to the consumer.
+  Add the `folder` built-in icon.
+
+- [#1106](https://github.com/JollyPixel/editor/pull/1106) [`a287fa7`](https://github.com/JollyPixel/editor/commit/a287fa7d5d01b07d93f672b5147b6c9aebba0901) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-show-more` (`@jolly-pixel/ui/elements/show-more`): it shows the first `limit` rows and folds the rest behind a centered "Show N more" button.
+  With `storage-key`, the expanded state persists. While a search is active, matching rows show whatever the limit.
+
+- [#1111](https://github.com/JollyPixel/editor/pull/1111) [`fee3858`](https://github.com/JollyPixel/editor/commit/fee3858c166edfccffe9c218020c1ffc38b5ca53) Thanks [@fraxken](https://github.com/fraxken)! - Add the `trash` built-in icon, toned `coral`.
+
+### Patch Changes
+
+- Updated dependencies [[`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64)]:
+  - @jolly-pixel/network@7.0.0
+
 ## 4.0.0
 
 ### Major Changes
