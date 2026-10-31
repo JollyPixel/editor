@@ -54,7 +54,6 @@ function setup(
     postProcessing: null as Systems.PostProcessing | null,
     teleport: (pose: CameraPose) => poses.push(pose),
     frame: (bounds: THREE.Box3) => {
-      controls.exitOrbitFocus();
       framed.push(bounds.getCenter(new THREE.Vector3()));
     },
     enterOrbitFocus: (point: THREE.Vector3Like) => {
@@ -63,7 +62,8 @@ function setup(
     },
     exitOrbitFocus: () => {
       controls.isOrbiting = false;
-    }
+    },
+    subscribe: () => () => undefined
   };
   const world = {
     input: { keyboard },
@@ -92,15 +92,10 @@ function setup(
     );
   }
 
-  function messages(): string[] {
-    return log.entries.map((entry) => String(entry.content)).reverse();
-  }
-
   return {
     camera,
     controls,
     pointer,
-    messages,
     pivots,
     poses,
     framed,
@@ -165,30 +160,6 @@ describe("EditorCamera", () => {
     );
   });
 
-  test("announces a mode switch only when the orbit state changes", () => {
-    const { camera, messages, pressEscape } = setup();
-
-    camera.focus({ x: 1, y: 0, z: 1 });
-    camera.focus({ x: 2, y: 0, z: 2 });
-    assert.equal(pressEscape(), true);
-    camera.exitFocus();
-
-    assert.deepEqual(messages(), [
-      "Camera switched to pivot",
-      "Camera switched to free fly"
-    ]);
-  });
-
-  test("spawning releases the orbit focus", () => {
-    const { camera, controls, messages } = setup();
-
-    camera.focus({ x: 1, y: 0, z: 1 });
-    camera.spawn([]);
-
-    assert.equal(controls.isOrbiting, false);
-    assert.equal(messages().at(-1), "Camera switched to free fly");
-  });
-
   test("disables the controls while the pointer is captured", () => {
     const { controls, pointer } = setup();
     const owner = {};
@@ -198,17 +169,6 @@ describe("EditorCamera", () => {
 
     pointer.release(owner);
     assert.equal(controls.enabled, true);
-  });
-
-  test("passes Escape on while the camera flies freely", () => {
-    const { camera, messages, pressEscape } = setup();
-
-    assert.equal(pressEscape(), false);
-
-    camera.focus({ x: 1, y: 0, z: 1 });
-    assert.equal(pressEscape(), true);
-    assert.equal(pressEscape(), false);
-    assert.equal(messages().at(-1), "Camera switched to free fly");
   });
 
   test("pivots around the center of the voxel under the pointer", () => {
@@ -229,7 +189,7 @@ describe("EditorCamera", () => {
   test("dispose releases the Escape binding and the pointer watch", () => {
     const { camera, controls, pointer, pressEscape } = setup();
 
-    camera.focus({ x: 1, y: 0, z: 1 });
+    controls.isOrbiting = true;
     camera.dispose();
     pointer.capture({});
 

@@ -28,6 +28,7 @@ export interface EditorShellOptions {
 }
 
 export class EditorShell {
+  #log = new LogQueue();
   #teardown = new Teardown();
 
   constructor(
@@ -37,6 +38,18 @@ export class EditorShell {
     if (editorToolbar !== null) {
       editorToolbar.sources = options.toolbar;
     }
+
+    const activityLog = document.querySelector("jolly-log");
+    if (activityLog !== null) {
+      this.#teardown.defer(this.#log.subscribe((entries) => {
+        activityLog.entries = entries;
+      }));
+    }
+    this.#teardown.defer(() => this.#log.dispose());
+  }
+
+  get log(): Pick<LogQueue, "push"> {
+    return this.#log;
   }
 
   adoptEditing(
@@ -59,26 +72,12 @@ export class EditorShell {
       ));
     }
 
-    const activityLog = document.querySelector("jolly-log");
-    if (activityLog !== null) {
-      this.#logSkippedSteps(editing, activityLog);
-    }
-  }
-
-  #logSkippedSteps(
-    editing: SceneEditing,
-    activityLog: HTMLElementTagNameMap["jolly-log"]
-  ): void {
-    const log = new LogQueue();
     this.#teardown.defer(editing.history.subscribe(
       "skipped",
-      (_scope: string, step: HistoryStepInfo) => log.push(
+      (_scope: string, step: HistoryStepInfo) => this.#log.push(
         describeSkippedStep(step, SCENE_REFUSAL_WORDING)
       )
     ));
-    this.#teardown.defer(log.subscribe((entries) => {
-      activityLog.entries = entries;
-    }));
   }
 
   dispose(): void {

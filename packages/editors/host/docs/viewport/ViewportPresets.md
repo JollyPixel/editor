@@ -6,8 +6,22 @@ Values the editors share so their viewports look and behave alike. The
 ```ts
 import {
   EDITOR_GIZMO_APPEARANCE,
+  bindOrbitFocus,
   presenceColorAllocator
 } from "@jolly-pixel/editor.host/viewport";
+```
+
+## bindOrbitFocus(camera, options): () => void
+
+Gives an `OrbitFlyCamera` the editors' pivot behavior: Escape leaves the pivot
+(and passes on while the camera flies freely), and each switch between pivot and
+free fly is pushed to `options.log`. Returns the function that releases both.
+
+```ts
+teardown.defer(bindOrbitFocus(camera, {
+  keyboard: world.input.keyboard,
+  log
+}));
 ```
 
 ## EDITOR_GIZMO_APPEARANCE

@@ -61,6 +61,8 @@ describe("OrbitFlyCamera orbit focus (elastic)", () => {
       maxPivotDistance: 20,
       position: { x: 0, y: 0, z: 0 }
     });
+    const changes: boolean[] = [];
+    harness.camera.subscribe("orbit", (orbiting) => changes.push(orbiting));
 
     harness.scroll(-10);
     harness.advance(100);
@@ -69,6 +71,7 @@ describe("OrbitFlyCamera orbit focus (elastic)", () => {
     harness.scroll(0);
 
     assert.equal(harness.camera.isOrbiting, false);
+    assert.deepEqual(changes, [true, false]);
     const pivot = harness.camera.orbitPivot as THREE.Vector3Like;
     assert.ok(
       harness.position.distanceTo(new THREE.Vector3(pivot.x, pivot.y, pivot.z)) < 1e-6

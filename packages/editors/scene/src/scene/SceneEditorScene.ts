@@ -18,7 +18,9 @@ import {
 } from "@jolly-pixel/editor.host";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
+import { bindOrbitFocus } from "@jolly-pixel/editor.host/viewport";
 import { Grid } from "@jolly-pixel/three";
+import type { LogQueue } from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -39,13 +41,13 @@ import type {
   SceneEditing
 } from "../editing/SceneEditing.ts";
 import { createSceneHistory } from "../features/history/sceneHistory.ts";
-import { ActorPicker } from "../features/viewport/ActorPicker.ts";
 import { AnchorMarkers } from "../features/viewport/AnchorMarkers.ts";
 import { followGridPreferences } from "../features/viewport/followGridPreferences.ts";
 import { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import { SceneGizmo } from "../features/viewport/SceneGizmo.ts";
 import { SceneHelpers } from "../features/viewport/SceneHelpers.ts";
 import { SelectionHighlight } from "../features/viewport/SelectionHighlight.ts";
+import { ViewportClick } from "../features/viewport/ViewportClick.ts";
 import type { SceneAction } from "../keybindings/sceneActions.ts";
 import { sceneShortcuts } from "../keybindings/sceneShortcuts.ts";
 import type { AnchorPicksEvents } from "../state/AnchorPicks.ts";
@@ -55,17 +57,14 @@ import { SelectionStore } from "../state/SelectionStore.ts";
 
 // CONSTANTS
 const kCameraPreset = {
-  focusMode: "elastic",
+  focusMode: "lock",
   position: { x: 6, y: 5, z: 10 },
-  pivotPosition: { x: 0, y: 0, z: 0 },
   pitch: -0.35,
   yaw: 0.5,
   moveSpeed: 8,
   minMoveSpeed: 1,
   maxMoveSpeed: 120,
-  scrollSpeed: 1,
-  maxPivotDistance: 100,
-  initialTrailDistance: 12
+  maxPivotDistance: 100
 } as const;
 const kFraming = {
   margin: 1.4,
@@ -82,6 +81,7 @@ export interface SceneEditorSceneOptions {
   assetSlots: SceneAssetSlots;
   presence: PresenceStore;
   preferences: Preferences;
+  log: Pick<LogQueue, "push">;
   keyBindings: KeyBindingSettings<SceneAction>;
   keyboardLayout: KeyboardLayoutStore;
 }
@@ -144,6 +144,10 @@ export class SceneEditorScene extends Systems.Scene {
       sceneId: this.#options.sceneId
     });
     teardown.defer(() => binding.dispose());
+    teardown.defer(bindOrbitFocus(camera, {
+      keyboard: world.input.keyboard,
+      log: this.#options.log
+    }));
     const writes = new ActorWrites(document);
     const draft = new SceneDraft({
       document,
@@ -193,9 +197,9 @@ export class SceneEditorScene extends Systems.Scene {
       });
     const anchorPicks = new Emitter<AnchorPicksEvents>();
     world
-      .createActor("actor-picker")
-      .addComponent(ActorPicker, {
-        camera: () => camera.camera,
+      .createActor("viewport-click")
+      .addComponent(ViewportClick, {
+        camera,
         targets: binding,
         anchors: anchorMarkers,
         anchorPicks,
