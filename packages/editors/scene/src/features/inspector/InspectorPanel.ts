@@ -33,6 +33,8 @@ import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/reference";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/show-more";
+import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/toggle";
 import "@jolly-pixel/ui/elements/vector3";
 
 // Import Internal Dependencies
@@ -171,6 +173,7 @@ export class InspectorPanel extends LitElement {
 
     return html`
       ${this.#renderActor(editing, actor, role)}
+      ${this.#renderTransform(editing.draft, actor)}
       ${this.#renderComponentSection(editing, actor, role)}
     `;
   }
@@ -293,16 +296,22 @@ export class InspectorPanel extends LitElement {
         flush
       >
         ${this.#renderOverrideActions(editing, actor.id, role)}
-        <jolly-button
-          slot="actions"
-          icon="eye"
-          icon-only
+        <jolly-text
+          label="Name"
+          .value=${actor.name}
+          @jolly-change=${(event: ChangeEvent<string>) => writes.rename(
+            actor.id,
+            event.detail.value
+          )}
+        ></jolly-text>
+        <jolly-toggle
           label="Visible"
-          title=${actor.visible ? "Hide" : "Show"}
-          .pressed=${actor.visible}
-          @click=${() => writes.changeVisibility(actor.id, !actor.visible)}
-        ></jolly-button>
-        ${this.#renderTransform(editing.draft, actor)}
+          .value=${actor.visible}
+          @jolly-change=${(event: ChangeEvent<boolean>) => writes.changeVisibility(
+            actor.id,
+            event.detail.value
+          )}
+        ></jolly-toggle>
         ${actor.prefab === undefined ? nothing : this.#renderPrefab(editing, actor.prefab)}
       </jolly-folder>
     `;
@@ -344,27 +353,34 @@ export class InspectorPanel extends LitElement {
     }
 
     return html`
-      <jolly-button-group
-        aria-label="Transform"
-        .options=${kTransformOptions}
-        .value=${field}
-        @jolly-change=${(event: ChangeEvent<SceneTransformField>) => {
-          this.#transformField = event.detail.value;
-          this.requestUpdate();
-        }}
-      ></jolly-button-group>
-      <jolly-vector3
-        .step=${kTransformSteps[field]}
-        .value=${{ ...current }}
-        @jolly-input=${(event: ChangeEvent<Record<string, unknown>>) => draft.editTransform(
-          actor.id,
-          patch(event)
-        )}
-        @jolly-change=${(event: ChangeEvent<Record<string, unknown>>) => draft.commitTransform(
-          actor.id,
-          patch(event)
-        )}
-      ></jolly-vector3>
+      <jolly-folder
+        key="transform"
+        label="Transform"
+        storage-key="scene-inspector:transform"
+        flush
+      >
+        <jolly-button-group
+          aria-label="Transform"
+          .options=${kTransformOptions}
+          .value=${field}
+          @jolly-change=${(event: ChangeEvent<SceneTransformField>) => {
+            this.#transformField = event.detail.value;
+            this.requestUpdate();
+          }}
+        ></jolly-button-group>
+        <jolly-vector3
+          .step=${kTransformSteps[field]}
+          .value=${{ ...current }}
+          @jolly-input=${(event: ChangeEvent<Record<string, unknown>>) => draft.editTransform(
+            actor.id,
+            patch(event)
+          )}
+          @jolly-change=${(event: ChangeEvent<Record<string, unknown>>) => draft.commitTransform(
+            actor.id,
+            patch(event)
+          )}
+        ></jolly-vector3>
+      </jolly-folder>
     `;
   }
 

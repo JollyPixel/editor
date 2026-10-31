@@ -57,6 +57,26 @@ describe("SceneDraft", () => {
     assert.deepEqual(object3D.position.toArray(), [2, 0, 0]);
   });
 
+  test("discards a transform edit and restores the viewport to the stored transform", () => {
+    const document = new SceneDocument();
+    const actorId = document.addActor({ name: "Actor" })!;
+    const { binding, draft } = createDraft(document);
+    const { object3D } = binding.actor(actorId)!;
+    let changes = 0;
+    draft.subscribe("change", () => {
+      changes++;
+    });
+
+    draft.editTransform(actorId, { position: { x: 5, y: 0, z: 0 } });
+    draft.discardTransform(actorId);
+    draft.discardTransform(actorId);
+
+    assert.strictEqual(changes, 2);
+    assert.deepEqual(draft.transform(document.tree.actor(actorId)!).position, { x: 0, y: 0, z: 0 });
+    assert.deepEqual(object3D.position.toArray(), [0, 0, 0]);
+    assert.deepEqual(document.tree.actor(actorId)!.transform.position, { x: 0, y: 0, z: 0 });
+  });
+
   test("commits a component edit and restores the viewport when the document refuses the commit", () => {
     const document = new SceneDocument();
     document.addActor({

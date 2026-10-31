@@ -184,7 +184,7 @@ export class SceneEditorScene extends Systems.Scene {
       scene,
       binding,
       document,
-      writes,
+      draft,
       selection,
       settings: gizmo,
       preferences: this.#options.preferences,

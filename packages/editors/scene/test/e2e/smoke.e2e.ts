@@ -1,9 +1,13 @@
 // Import Third-party Dependencies
 import {
   dialog,
+  textField,
   treeRow
 } from "@jolly-pixel/e2e";
-import { pressAt } from "@jolly-pixel/e2e/editor";
+import {
+  nextFrames,
+  pressAt
+} from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -17,7 +21,8 @@ import {
   hierarchy,
   inspectedActor,
   inspector,
-  sceneTool
+  sceneTool,
+  transformAxis
 } from "./support/panels.ts";
 import {
   actorPoint,
@@ -36,18 +41,25 @@ test("the inspector edits the actor added from the hierarchy", async({ page }) =
   await addActor(page, ["Primitive", "Box"]);
 
   await expect(treeRow(page, "Box")).toHaveAttribute("aria-selected", "true");
+  const name = textField(inspectedActor(page), "Name");
   await expect(inspectedActor(page)).toHaveAttribute("label", "Box");
+  await expect(name).toHaveValue("Box");
   await expect(inspector(page).locator("jolly-folder[label=\"Mesh\"]")).toBeVisible();
 
+  await name.fill("Crate");
+  await name.press("Enter");
+  await expect(treeRow(page, "Crate")).toHaveAttribute("aria-selected", "true");
+  await expect(inspectedActor(page)).toHaveAttribute("label", "Crate");
+
   await editTransform(page, "Scale", "Y", "2");
-  await expect.poll(async() => (await findActor(page, "Box"))?.transform.scale)
+  await expect.poll(async() => (await findActor(page, "Crate"))?.transform.scale)
     .toEqual({ x: 1, y: 2, z: 1 });
 
-  const visible = inspectedActor(page).getByRole("button", { name: "Visible" });
-  await expect(visible).toHaveAttribute("aria-pressed", "true");
-  await visible.click();
-  await expect(visible).toHaveAttribute("aria-pressed", "false");
-  await expect.poll(async() => (await findActor(page, "Box"))?.visible)
+  const visible = inspectedActor(page).getByRole("checkbox", { name: "Visible" });
+  await expect(visible).toBeChecked();
+  await inspectedActor(page).locator("jolly-toggle[label=\"Visible\"]").click();
+  await expect(visible).not.toBeChecked();
+  await expect.poll(async() => (await findActor(page, "Crate"))?.visible)
     .toBe(false);
 });
 
@@ -77,7 +89,16 @@ test("a click in the viewport selects an actor and the gizmo moves it in one und
   await pressAt(page, [await actorPoint(page, "Box", { x: 0, y: -0.3, z: 0.4 })]);
   await expect(treeRow(page, "Box")).toHaveAttribute("aria-selected", "true");
 
-  await pressAt(page, await gizmoHandlePoints(page, "x"));
+  const [grab, release] = await gizmoHandlePoints(page, "x");
+  await page.mouse.move(grab.x, grab.y);
+  await nextFrames(page);
+  await page.mouse.down();
+  await page.mouse.move(release.x, release.y, { steps: 4 });
+  await expect.poll(async() => Number(await transformAxis(page, "X").inputValue()))
+    .toBeGreaterThan(0.5);
+  expect((await findActor(page, "Box"))?.transform.position.x).toBe(0);
+
+  await page.mouse.up();
   await expect.poll(async() => (await findActor(page, "Box"))?.transform.position.x)
     .toBeGreaterThan(0.5);
   const moved = await findActor(page, "Box");
