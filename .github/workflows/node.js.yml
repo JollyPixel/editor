@@ -36,11 +36,10 @@ jobs:
         id: affected
         env:
           BASE: ${{ github.event_name == 'pull_request' && 'HEAD~1' || '' }}
-        # TODO: enable voxel-map and voxel-model once their CI-only timeouts are fixed
+        # TODO: enable voxel-model once its CI-only timeouts are fixed
         # TODO: enable terrain once the editor is no longer WIP
         run: |
           node scripts/ci/affected.ts --base "$BASE" \
-            --skip-e2e @jolly-pixel/editor.voxel-map \
             --skip-e2e @jolly-pixel/editor.voxel-model \
             --skip-e2e @jolly-pixel/editor.terrain \
             --skip-e2e @jolly-pixel/studio >> "$GITHUB_OUTPUT"

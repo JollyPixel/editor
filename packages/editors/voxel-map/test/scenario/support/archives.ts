@@ -1,17 +1,24 @@
+// Import Node.js Dependencies
+import fs from "node:fs/promises";
+
 // Import Third-party Dependencies
 import type {
   Download,
-  Locator,
   Page
 } from "@playwright/test";
 import {
   CommandConsole,
   dialog
 } from "@jolly-pixel/e2e";
-import { reloadEditor } from "@jolly-pixel/e2e/editor";
+import {
+  followEditor,
+  reloadEditor
+} from "@jolly-pixel/e2e/editor";
+
+// Import Internal Dependencies
+import { MapArchive } from "./MapArchive.ts";
 
 export class Archives {
-  readonly importCopyButton: Locator;
   readonly #page: Page;
   readonly #commands: CommandConsole;
 
@@ -20,24 +27,26 @@ export class Archives {
   ) {
     this.#page = page;
     this.#commands = new CommandConsole(page);
-    this.importCopyButton = dialog(page, "Import archive")
-      .getByRole("button", { name: "Import as copy" });
   }
 
   async exportArchive(): Promise<Download> {
     const downloading = this.#page.waitForEvent("download");
     await this.#commands.submit("/archive.export");
+    const download = await downloading;
+    await this.#commands.close();
 
-    return downloading;
+    return download;
   }
 
   async importArchive(
     path: string
   ): Promise<void> {
+    const archive = MapArchive.read(await fs.readFile(path));
     const choosing = this.#page.waitForEvent("filechooser");
     await this.#commands.submit("/archive.import");
     const chooser = await choosing;
     await chooser.setFiles(path);
+    await followEditor(this.#page, new RegExp(`target=${archive.rootId}`));
   }
 
   async resetOfflineData(): Promise<void> {

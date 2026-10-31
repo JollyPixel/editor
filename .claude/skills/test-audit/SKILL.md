@@ -23,6 +23,7 @@ chosen by file suffix, and each suffix has one runner:
 | `*.spec.ts` (`*.test.ts` in resize-handle, three) | `node --test` with `node:assert/strict` | behavior, invariants, regressions |
 | `*.tst.ts` | `tstyche` (`test-types` script) | inferred and generic type contracts |
 | `*.e2e.ts` under `test/e2e/` | Playwright on `@jolly-pixel/e2e` (`test:e2e` script) | interaction, layout, real browser behavior |
+| `*.scenario.ts` under `test/scenario/` | Playwright in installed Chrome (`test:scenario` script, local only) | one user story from a blank editor, checked through exported archives |
 | `*.gpu.ts` | dedicated script (`test-gpu`), outside the unit glob | GPU-only rendering probes |
 
 `bench/` suites are measurements, not tests; never audit them against this bar.
@@ -143,7 +144,7 @@ every change. On pull requests, unit, type and e2e tests run only for the
 workspaces a change reaches through the dependency graph
 (`scripts/ci/affected.ts`); a change under a workspace's `test/` or `docs/`
 does not reach its dependents. Pushes to `main` run them all. The
-voxel-map, voxel-model, terrain and studio e2e suites are currently skipped there, so their Playwright tests are proven only locally; weigh that
+voxel-model, terrain and studio e2e suites are currently skipped there, and voxel-map has only its local `test:scenario`, so their Playwright tests are proven only locally; weigh that
 before retiring a unit test whose only other proof is one of those suites.
 
 ## Discovery
@@ -244,7 +245,7 @@ checkout. Run commands with pnpm only.
    `pnpm --filter <package> test:e2e test/e2e/<file>.e2e.ts`. Editors
    resolve `@jolly-pixel/ui` and `pixel-draw-renderer` from `dist/`, so rebuild
    those first when their source changed. A single timeout in a full
-   voxel-map or voxel-model run must be rerun alone before it counts as a
+   voxel-model run must be rerun alone before it counts as a
    failure. Keep e2e reruns proportionate to the change.
 5. Run `pnpm run typecheck`, `pnpm run lint`, and `git diff --check`.
 6. Inspect `git diff --numstat`; report production and tooling separately from

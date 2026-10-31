@@ -15,7 +15,7 @@ const kMinPixelRatio = 2;
 const kMaxPixelRatio = 3;
 const kSamples = 4;
 
-export const PREVIEW_FIT_RADIUS = Math.tan((kCameraFov * Math.PI) / 360) *
+const kPreviewFitRadius = Math.tan((kCameraFov * Math.PI) / 360) *
   kCameraZ * kFitFactor;
 export interface PreviewAngle {
   readonly yaw: number;
@@ -132,7 +132,7 @@ export class PreviewStage {
   }
 }
 
-export function needsEnvironment(
+function needsEnvironment(
   mesh: THREE.Mesh
 ): boolean {
   const materials = Array.isArray(mesh.material) ?
@@ -154,7 +154,7 @@ export function fitGeometry(
   }
 
   const { center, radius } = sphere;
-  const scale = PREVIEW_FIT_RADIUS / radius;
+  const scale = kPreviewFitRadius / radius;
   geometry.translate(-center.x, -center.y, -center.z);
   geometry.scale(scale, scale, scale);
 }

@@ -25,9 +25,10 @@ The dev server seeds its assets under `assets/`; delete that directory to seed t
 $ pnpm --filter @jolly-pixel/editor.voxel-map test
 $ pnpm --filter @jolly-pixel/editor.voxel-map typecheck
 $ pnpm --filter @jolly-pixel/editor.voxel-map lint
-$ pnpm exec playwright install chromium
-$ pnpm --filter @jolly-pixel/editor.voxel-map test:e2e
+$ pnpm --filter @jolly-pixel/editor.voxel-map test:scenario
 ```
+
+`test:scenario` plays a user story in installed Chrome; see [the scenario guide](./test/scenario/README.md).
 
 ## Contributors Guide
 
