@@ -1,5 +1,17 @@
 # @jolly-pixel/network
 
+## 7.0.0
+
+### Major Changes
+
+- [#1101](https://github.com/JollyPixel/editor/pull/1101) [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64) Thanks [@fraxken](https://github.com/fraxken)! - Rename `KeyedSnapshot` to `KeyedCapture`, stop exporting `KeyedReads`, and rename `CommandDocument.apply` (and `SyncableDocument.apply`) to `applyRemote`.
+  `CommandDocument`, `CommandHistory` and `ChangeReceipts` no longer extend `Emitter`: listen with `on`/`off`/`subscribe` (`subscribe` only on receipts); `emit` is private. `CommandChangeInit` is a union keyed by `origin`.
+
+### Patch Changes
+
+- Updated dependencies [[`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64)]:
+  - @jolly-pixel/history@3.0.0
+
 ## 6.0.0
 
 ### Major Changes

@@ -1,5 +1,12 @@
 # @jolly-pixel/accounts
 
+## 1.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64)]:
+  - @jolly-pixel/network@7.0.0
+
 ## 1.1.0
 
 ### Minor Changes

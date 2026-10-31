@@ -1,5 +1,22 @@
 # @jolly-pixel/voxel.renderer
 
+## 8.1.0
+
+### Minor Changes
+
+- [#1132](https://github.com/JollyPixel/editor/pull/1132) [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` gains `reveal(id)`, which scrolls a row into view and flashes it without moving focus.
+  Add `VoxelMapAnchorKey` to `@jolly-pixel/voxel.renderer/engine`, which builds and parses the `layer:<id>` and `object:<id>` keys `VoxelMapAnchors` lists.
+
+- [#1125](https://github.com/JollyPixel/editor/pull/1125) [`a61b2a3`](https://github.com/JollyPixel/editor/commit/a61b2a318638f4f644b0ad2870f2c69071e50bfc) Thanks [@fraxken](https://github.com/fraxken)! - Add an `anchor` flag to layers and voxel objects, saved with the world. `VoxelMapDefinition.anchors()` publishes the flagged ones as scene anchors through `VoxelMapAnchors`.
+
+- [#1096](https://github.com/JollyPixel/editor/pull/1096) [`0ac751d`](https://github.com/JollyPixel/editor/commit/0ac751d6b077948c497ba62b9851eb222a516b7e) Thanks [@fraxken](https://github.com/fraxken)! - Add `VoxelMapDefinition`, the `VoxelMap` scene-file component type, with its `VOXEL_MAP_ASSET` slot type and `VoxelMapSource` interface.
+
+### Patch Changes
+
+- [#1125](https://github.com/JollyPixel/editor/pull/1125) [`8e19cb6`](https://github.com/JollyPixel/editor/commit/8e19cb64ff52d4fc1ea5ef969bb65ef74b918e06) Thanks [@fraxken](https://github.com/fraxken)! - `PulledChunkGeometry.computeBoundingBox()` and `computeBoundingSphere()` keep the chunk's cell bounds instead of measuring the template quad, so bounding-box highlights and raycasts stay correct after a recompute.
+- Updated dependencies [[`f731773`](https://github.com/JollyPixel/editor/commit/f731773de4c47100fbcfc53590a4b8d0f7198e1a), [`2c08218`](https://github.com/JollyPixel/editor/commit/2c0821822900c461d6d517fd17c768867a411e53), [`3a63812`](https://github.com/JollyPixel/editor/commit/3a63812c0e04954a670735acf79d157ea3ddfd10), [`a61b2a3`](https://github.com/JollyPixel/editor/commit/a61b2a318638f4f644b0ad2870f2c69071e50bfc), [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`125db2d`](https://github.com/JollyPixel/editor/commit/125db2d088c0baaf205c5468490dda2b64e8352c)]:
+  - @jolly-pixel/engine@8.0.0
+
 ## 8.0.0
 
 ### Major Changes
