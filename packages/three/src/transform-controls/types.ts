@@ -241,9 +241,16 @@ export interface TransformGizmoAppearanceOptions {
 export interface TransformSnapOptions {
   /**
    * World-unit step, shared or per gizmo axis. Applies to the distance
-   * travelled from the gesture start.
+   * travelled from the gesture start, or to the position with `grid`.
    */
   translate?: SnapStep;
+  /**
+   * Offset of the grid lines from the world origin along the gizmo axes,
+   * shared or per axis. Set, it rounds the position instead of the
+   * travelled distance; half the step puts positions on cell centers.
+   * @default null
+   */
+  grid?: number | THREE.Vector3Like | null;
   /**
    * Angle step in radians.
    */

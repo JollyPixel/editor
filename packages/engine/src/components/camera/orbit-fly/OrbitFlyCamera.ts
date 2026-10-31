@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { Actor } from "../../../actor/Actor.ts";
@@ -35,11 +36,17 @@ export interface OrbitFlyCameraOptions extends CameraOptions, FlyRigSettings {
   far?: number;
 }
 
+export type OrbitFlyCameraEvents = {
+  orbit: (orbiting: boolean) => void;
+};
+
 export class OrbitFlyCamera extends CameraComponent {
   enabled = true;
 
   #rig: FlyRig;
   #input: OrbitFlyInput;
+  #events = new Emitter<OrbitFlyCameraEvents>();
+  #orbiting: boolean;
 
   constructor(
     actor: Actor,
@@ -56,8 +63,10 @@ export class OrbitFlyCamera extends CameraComponent {
       sceneProvider: () => this.actor.world.sceneManager.getSource()
     });
     this.#input = new OrbitFlyInput(options.keys ?? OrbitFlyKeys.default);
+    this.#orbiting = this.#rig.isOrbiting;
 
     this.addTeardown(() => this.#rig.dispose());
+    this.addTeardown(() => this.#events.removeAllListeners());
     this.addTeardown(
       this.actor.world.keepAlive(() => this.enabled && this.moving)
     );
@@ -140,12 +149,20 @@ export class OrbitFlyCamera extends CameraComponent {
     return this.#rig.orbitPivot;
   }
 
+  subscribe<E extends keyof OrbitFlyCameraEvents>(
+    event: E,
+    listener: OrbitFlyCameraEvents[E]
+  ): () => void {
+    return this.#events.subscribe(event, listener);
+  }
+
   teleport(
     pose: CameraPose
   ): void {
     this.#rig.teleport(pose);
     this.#writeBody();
     this.actor.world.invalidate();
+    this.#syncOrbit();
   }
 
   enterOrbitFocus(
@@ -154,12 +171,14 @@ export class OrbitFlyCamera extends CameraComponent {
     if (this.#rig.enterOrbitFocus(point)) {
       this.#writeBody();
       this.actor.world.invalidate();
+      this.#syncOrbit();
     }
   }
 
   exitOrbitFocus(): void {
     this.#rig.exitOrbitFocus();
     this.actor.world.invalidate();
+    this.#syncOrbit();
   }
 
   frame(
@@ -186,6 +205,15 @@ export class OrbitFlyCamera extends CameraComponent {
 
     this.#rig.step(this.#input.read(input), time.unscaledDelta);
     this.#writeBody();
+    this.#syncOrbit();
+  }
+
+  #syncOrbit(): void {
+    const orbiting = this.#rig.isOrbiting;
+    if (orbiting !== this.#orbiting) {
+      this.#orbiting = orbiting;
+      this.#events.emit("orbit", orbiting);
+    }
   }
 
   #writeBody(): void {

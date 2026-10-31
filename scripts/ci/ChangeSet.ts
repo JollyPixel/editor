@@ -22,6 +22,11 @@ const kSharedPaths = [
 ];
 
 export class ChangeSet {
+  static readonly workspaceLocalPatterns: readonly string[] = [
+    "packages/**/test/**",
+    "packages/**/docs/**"
+  ];
+
   static since(
     base: string | undefined
   ): ChangeSet | null {

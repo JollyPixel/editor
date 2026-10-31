@@ -20,11 +20,13 @@ import {
 // CONSTANTS
 const kDirection = new THREE.Vector3();
 const kHit = new THREE.Vector3();
+const kFrom = new THREE.Vector3();
 
 export interface TranslateGestureInit {
   plane: THREE.Plane;
   mask: THREE.Vector3;
   startHit: THREE.Vector3;
+  start: THREE.Vector3;
   quaternion: THREE.Quaternion;
 }
 
@@ -34,6 +36,7 @@ export class TranslateGesture {
   #plane: THREE.Plane;
   #mask: THREE.Vector3;
   #startHit: THREE.Vector3;
+  #start: THREE.Vector3;
   #quaternion: THREE.Quaternion;
   #inverse: THREE.Quaternion;
 
@@ -45,10 +48,12 @@ export class TranslateGesture {
     this.#startHit = init.startHit;
     this.#quaternion = init.quaternion;
     this.#inverse = init.quaternion.clone().invert();
+    this.#start = init.start.clone().applyQuaternion(this.#inverse);
   }
 
   static begin(
-    context: GestureContext
+    context: GestureContext,
+    start: THREE.Vector3
   ): TranslateGesture | null {
     const { handle } = context;
     const plane = new THREE.Plane();
@@ -89,6 +94,7 @@ export class TranslateGesture {
       plane,
       mask,
       startHit: kHit.clone(),
+      start,
       quaternion: context.quaternion.clone()
     });
   }
@@ -96,18 +102,29 @@ export class TranslateGesture {
   update(
     ray: THREE.Ray,
     snap: SnapStep,
-    target: THREE.Vector3
+    target: THREE.Vector3,
+    grid: THREE.Vector3 | null
   ): boolean {
     if (ray.intersectPlane(this.#plane, kHit) === null) {
       return false;
     }
 
+    if (grid === null) {
+      kFrom.setScalar(0);
+    }
+    else {
+      kFrom.subVectors(this.#start, grid);
+    }
     target
       .subVectors(kHit, this.#startHit)
       .applyQuaternion(this.#inverse)
       .multiply(this.#mask);
     for (const axis of AXES) {
-      target[axis] = snapValue(target[axis], resolveSnapStep(snap, axis));
+      if (this.#mask[axis] !== 0) {
+        const step = resolveSnapStep(snap, axis);
+        target[axis] = snapValue(kFrom[axis] + target[axis], step) -
+          kFrom[axis];
+      }
     }
     target.applyQuaternion(this.#quaternion);
 

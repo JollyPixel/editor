@@ -249,6 +249,12 @@ describe("settings", () => {
       },
       RangeError
     );
+    assert.throws(
+      () => {
+        harness.controls.snap = { grid: Number.NaN };
+      },
+      RangeError
+    );
 
     harness.controls.dispose();
   });
@@ -266,6 +272,7 @@ describe("settings", () => {
     translate.set(9, 9, 9);
     assert.deepEqual(harness.controls.snap, {
       translate: new THREE.Vector3(1, 2, 3),
+      grid: null,
       rotate: null,
       scale: null
     });

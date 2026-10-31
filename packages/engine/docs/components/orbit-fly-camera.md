@@ -219,7 +219,20 @@ interface OrbitFlyCamera {
   // Releases the pivot and teleports to the frameBounds() pose, looking
   // along the actor's forward with the camera's fov unless `options` set them.
   frame(bounds: THREE.Box3, options?: Partial<CameraFramingOptions>): void;
+
+  // Calls `listener` each time isOrbiting changes, with its new value.
+  // Returns the unsubscribe function.
+  subscribe(
+    event: "orbit",
+    listener: (orbiting: boolean) => void
+  ): () => void;
 }
+```
+
+```ts
+camera.subscribe("orbit", (orbiting) => {
+  console.log(orbiting ? "pivot" : "free fly");
+});
 ```
 
 The camera keeps an on-demand host rendering through

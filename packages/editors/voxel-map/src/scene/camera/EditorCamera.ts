@@ -7,6 +7,7 @@ import {
 } from "@jolly-pixel/engine";
 import { followCameraPreferences } from "@jolly-pixel/editor.host";
 import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { bindOrbitFocus } from "@jolly-pixel/editor.host/viewport";
 import { clientToNdc } from "@jolly-pixel/three";
 import type { LogQueue } from "@jolly-pixel/ui";
 
@@ -42,13 +43,11 @@ export interface EditorCameraOptions {
 
 export class EditorCamera {
   #world: Systems.World;
-  #log: Pick<LogQueue, "push">;
   #controls: OrbitFlyCamera;
   #viewRay: ViewRay;
   #postProcessing: CameraPostProcessing;
   #disposables: Array<() => void>;
   #pointer = new THREE.Vector2();
-  #orbiting = false;
   #spawnPending = true;
 
   constructor(
@@ -62,7 +61,6 @@ export class EditorCamera {
       preferences
     } = options;
     this.#world = world;
-    this.#log = log;
     this.#postProcessing = new CameraPostProcessing({ samples });
 
     const controls = world
@@ -79,13 +77,9 @@ export class EditorCamera {
 
     this.#disposables = [
       followCameraPreferences(controls, preferences),
-      world.input.keyboard.bind("Escape", () => {
-        if (!controls.isOrbiting) {
-          return false;
-        }
-        this.exitFocus();
-
-        return true;
+      bindOrbitFocus(controls, {
+        keyboard: world.input.keyboard,
+        log
       }),
       pointer.subscribe("change", (captured) => {
         controls.enabled = !captured;
@@ -109,18 +103,11 @@ export class EditorCamera {
     );
   }
 
-  focus(
-    point: THREE.Vector3Like
-  ): void {
-    this.#controls.enterOrbitFocus(point);
-    this.#announceMode();
-  }
-
   pivotAt(
     solid: THREE.Object3D | null,
     pointer: THREE.Vector2
   ): void {
-    this.focus(
+    this.#controls.enterOrbitFocus(
       this.#viewRay.pivotPoint(solid, {
         pointer,
         maxDistance: kPivotMaxDistance,
@@ -131,7 +118,6 @@ export class EditorCamera {
 
   exitFocus(): void {
     this.#controls.exitOrbitFocus();
-    this.#announceMode();
   }
 
   pose(): CameraPose {
@@ -166,7 +152,6 @@ export class EditorCamera {
     bounds: THREE.Box3 | null
   ): void {
     this.#controls.frame(bounds ?? new THREE.Box3(), kSpawnFraming);
-    this.#announceMode();
   }
 
   rightAxis(): HorizontalAxis {
@@ -214,19 +199,5 @@ export class EditorCamera {
     for (const dispose of this.#disposables.splice(0)) {
       dispose();
     }
-  }
-
-  #announceMode(): void {
-    const orbiting = this.#controls.isOrbiting;
-    if (orbiting === this.#orbiting) {
-      return;
-    }
-
-    this.#orbiting = orbiting;
-    this.#log.push(
-      orbiting
-        ? "Camera switched to pivot"
-        : "Camera switched to free fly"
-    );
   }
 }

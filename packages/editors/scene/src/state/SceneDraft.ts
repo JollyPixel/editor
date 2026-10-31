@@ -135,6 +135,15 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
     this.emit("change");
   }
 
+  discardTransform(
+    id: string
+  ): void {
+    if (this.#transforms.delete(id)) {
+      this.#view.previewTransform(id, {});
+      this.emit("change");
+    }
+  }
+
   commitComponent(
     id: string,
     change: ComponentChange

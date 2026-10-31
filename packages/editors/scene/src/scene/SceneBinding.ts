@@ -217,12 +217,6 @@ export class SceneBinding
     };
   }
 
-  restoreActor(
-    id: string
-  ): void {
-    this.#syncActor(id);
-  }
-
   previewEnvironment(
     patch: SceneEnvironmentPatch
   ): void {

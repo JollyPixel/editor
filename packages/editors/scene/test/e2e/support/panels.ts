@@ -32,18 +32,27 @@ export function inspectedActor(
   return inspector(page).locator("jolly-folder[key=\"actor\"]");
 }
 
+export function transformAxis(
+  page: Page,
+  axis: "X" | "Y" | "Z"
+): Locator {
+  return inspector(page)
+    .locator("jolly-folder[key=\"transform\"] jolly-vector3")
+    .getByRole("textbox", { name: axis });
+}
+
 export async function editTransform(
   page: Page,
   field: "Position" | "Rotation" | "Scale",
   axis: "X" | "Y" | "Z",
   value: string
 ): Promise<void> {
-  const actor = inspectedActor(page);
-  await actor.getByRole("radio", { name: field }).click();
+  await inspector(page)
+    .locator("jolly-folder[key=\"transform\"]")
+    .getByRole("radio", { name: field })
+    .click();
 
-  const input = actor
-    .locator("jolly-vector3")
-    .getByRole("textbox", { name: axis });
+  const input = transformAxis(page, axis);
   await input.fill(value);
   await input.press("Enter");
 }

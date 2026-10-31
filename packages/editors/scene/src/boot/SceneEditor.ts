@@ -104,6 +104,7 @@ export class SceneEditor {
         assetSlots,
         presence: new PresenceStore(),
         preferences: context.preferences,
+        log: shell.log,
         keyBindings: followKeyBindings(
           context.preferences,
           SCENE_KEYBINDINGS,

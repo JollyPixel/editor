@@ -103,4 +103,13 @@ describe("SceneComponents", () => {
       );
     }
   });
+
+  test("places the actor origin on a corner when any of its kinds grows from it", () => {
+    const components = createSceneComponents(["maps", {
+      components: [{ ...kMapKind, origin: "corner" }]
+    }]);
+
+    assert.strictEqual(components.actorOrigin(["Mesh", "Map"]), "corner");
+    assert.strictEqual(components.actorOrigin(["Mesh", "Unknown"]), "center");
+  });
 });

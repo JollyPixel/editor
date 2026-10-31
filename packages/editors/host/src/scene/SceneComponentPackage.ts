@@ -20,7 +20,15 @@ export interface SceneComponentKind<TData extends object = any> {
    * The `definition.assets` slot whose asset the anchor keys belong to.
    */
   anchorAsset?: string;
+  /**
+   * Where the actor origin sits on the rendered content. `"corner"` when the
+   * content grows from the origin toward the positive axes.
+   * @default "center"
+   */
+  origin?: SceneComponentOrigin;
 }
+
+export type SceneComponentOrigin = "center" | "corner";
 
 export interface SceneComponentSeed {
   type: string;

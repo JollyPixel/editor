@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 import type { OrbitFlyCamera } from "@jolly-pixel/engine";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type {
   SceneChange,
   SceneDocument,
@@ -8,15 +9,20 @@ import type {
 } from "@jolly-pixel/asset.scene/client";
 import {
   TransformControls,
-  type TransformEndEvent
+  type TransformChangeEvent,
+  type TransformEndEvent,
+  type TransformGestureEvent
 } from "@jolly-pixel/three";
 import { EDITOR_GIZMO_APPEARANCE } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
-import type { ActorWrites } from "../../editing/ActorWrites.ts";
+import type { SceneComponents } from "../../components/SceneComponents.ts";
+import { SCENE_PREFERENCES } from "../../preferences.ts";
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
 import { decomposePose } from "../../scene/sceneTransform.ts";
+import type { SceneDraft } from "../../state/SceneDraft.ts";
 import type { SelectionStore } from "../../state/SelectionStore.ts";
+import { gizmoSnap } from "./gizmoSnap.ts";
 import type {
   GizmoMode,
   GizmoSettings
@@ -35,21 +41,47 @@ export interface SceneGizmoOptions {
   scene: THREE.Scene;
   binding: SceneBinding;
   document: Pick<SceneDocument, "on" | "off">;
-  writes: Pick<ActorWrites, "transform">;
+  draft: Pick<
+    SceneDraft,
+    "editTransform" | "commitTransform" | "discardTransform"
+  >;
   selection: SelectionStore;
   settings: GizmoSettings;
+  preferences: Pick<Preferences, "values" | "watch">;
+  components: Pick<SceneComponents, "actorOrigin">;
 }
 
 export class SceneGizmo {
   #options: SceneGizmoOptions;
   #controls: TransformControls;
   #dragged: string | null = null;
+  #stopSnap: () => void;
+
+  #applySnap = (): void => {
+    const {
+      binding,
+      selection,
+      preferences,
+      components
+    } = this.#options;
+    const id = selection.primary;
+    const entry = id === null ? null : binding.actorEntry(id);
+    const origin = entry === null ?
+      "center" :
+      components.actorOrigin(entry.components.map(({ type }) => type));
+
+    this.#controls.snap = gizmoSnap(
+      preferences.values(SCENE_PREFERENCES),
+      origin
+    );
+  };
 
   #sync = (): void => {
     const { binding, selection, settings } = this.#options;
     const id = selection.primary;
     const actor = id === null ? null : binding.actor(id);
 
+    this.#applySnap();
     this.#controls.mode = settings.mode;
     this.#controls.orientation = settings.space;
     if (actor === null) {
@@ -78,23 +110,29 @@ export class SceneGizmo {
     this.#options.camera.enabled = false;
   };
 
+  #onChange = (
+    event: TransformChangeEvent
+  ): void => {
+    if (this.#dragged !== null) {
+      this.#options.draft.editTransform(this.#dragged, posePatch(event));
+    }
+  };
+
   #onEnd = (
     event: TransformEndEvent
   ): void => {
     const id = this.#dragged;
     this.#dragged = null;
     this.#options.camera.enabled = true;
-    if (id === null || !event.changed || event.cancelled) {
+    if (id === null) {
       return;
     }
 
-    const field = kPatchFields[event.mode];
-    const transform = decomposePose(event);
-    const committed = this.#options.writes.transform(id, {
-      [field]: transform[field]
-    });
-    if (!committed) {
-      this.#options.binding.restoreActor(id);
+    if (event.changed && !event.cancelled) {
+      this.#options.draft.commitTransform(id, posePatch(event));
+    }
+    else {
+      this.#options.draft.discardTransform(id);
     }
   };
 
@@ -113,8 +151,13 @@ export class SceneGizmo {
       }
     );
     options.scene.add(this.#controls.helper);
+    this.#stopSnap = options.preferences.watch(
+      SCENE_PREFERENCES,
+      this.#applySnap
+    );
 
     this.#controls.addEventListener("start", this.#onStart);
+    this.#controls.addEventListener("change", this.#onChange);
     this.#controls.addEventListener("end", this.#onEnd);
     options.selection.on("change", this.#sync);
     options.settings.on("change", this.#sync);
@@ -137,11 +180,23 @@ export class SceneGizmo {
     settings.off("change", this.#sync);
     document.off("change", this.#onDocumentChange);
     document.off("reset", this.#sync);
+    this.#stopSnap();
     this.#controls.removeEventListener("start", this.#onStart);
+    this.#controls.removeEventListener("change", this.#onChange);
     this.#controls.removeEventListener("end", this.#onEnd);
     scene.remove(this.#controls.helper);
     this.#controls.dispose();
   }
+}
+
+function posePatch(
+  event: TransformGestureEvent
+): SceneTransformPatch {
+  const field = kPatchFields[event.mode];
+
+  return {
+    [field]: decomposePose(event)[field]
+  };
 }
 
 function touchesActor(
