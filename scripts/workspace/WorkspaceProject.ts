@@ -25,11 +25,13 @@ export class WorkspaceProject {
   }
 
   static selected(
-    selectors: readonly string[]
+    selectors: readonly string[],
+    testPatterns: readonly string[] = []
   ): WorkspaceProject[] {
-    return WorkspaceProject.#list(
-      selectors.map((selector) => `--filter "${selector}"`).join(" ")
-    );
+    return WorkspaceProject.#list([
+      ...selectors.map((selector) => `--filter "${selector}"`),
+      ...testPatterns.map((pattern) => `--test-pattern "${pattern}"`)
+    ].join(" "));
   }
 
   static read(

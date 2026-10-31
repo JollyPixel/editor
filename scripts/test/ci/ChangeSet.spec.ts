@@ -1,5 +1,6 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
+import path from "node:path";
 import { describe, it } from "node:test";
 
 // Import Internal Dependencies
@@ -26,6 +27,32 @@ describe("ChangeSet.selectors", () => {
     const changes = new ChangeSet("HEAD~1", ["pnpm-lock.yaml"], null);
 
     assert.equal(changes.selectors(), null);
+  });
+
+  it("keeps test and docs changes from reaching dependent workspaces", () => {
+    const local = [
+      "packages/engine/test/camera/OrbitFlyCamera.spec.ts",
+      "packages/editors/scene/test/e2e/smoke.e2e.ts",
+      "packages/engine/docs/components/orbit-fly-camera.md"
+    ];
+    const shared = [
+      "packages/engine/src/components/camera/orbit-fly/OrbitFlyCamera.ts",
+      "packages/editors/host/package.json"
+    ];
+    function isLocal(
+      file: string
+    ): boolean {
+      return ChangeSet.workspaceLocalPatterns.some(
+        (pattern) => path.matchesGlob(file, pattern)
+      );
+    }
+
+    for (const file of local) {
+      assert.ok(isLocal(file), file);
+    }
+    for (const file of shared) {
+      assert.ok(!isLocal(file), file);
+    }
   });
 
   it("selects everything when a shared file or folder changes", () => {

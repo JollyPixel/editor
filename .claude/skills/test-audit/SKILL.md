@@ -135,8 +135,9 @@ inspect the dependency source or types in `node_modules` directly.
 CI routing lives in `.github/workflows/node.js.yml`: lint and typecheck run on
 every change. On pull requests, unit, type and e2e tests run only for the
 workspaces a change reaches through the dependency graph
-(`scripts/ci/affected.ts`); pushes to `main` run them all. The
-voxel-map, voxel-model and studio e2e suites are currently skipped there, so their Playwright tests are proven only locally; weigh that
+(`scripts/ci/affected.ts`); a change under a workspace's `test/` or `docs/`
+does not reach its dependents. Pushes to `main` run them all. The
+voxel-map, voxel-model, terrain and studio e2e suites are currently skipped there, so their Playwright tests are proven only locally; weigh that
 before retiring a unit test whose only other proof is one of those suites.
 
 ## Discovery

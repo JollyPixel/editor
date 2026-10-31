@@ -32,7 +32,7 @@ const skipped = new Set(values["skip-e2e"]);
 const selectors = ChangeSet.since(values.base)?.selectors() ?? null;
 const projects = selectors === null ?
   WorkspaceProject.all() :
-  WorkspaceProject.selected(selectors);
+  WorkspaceProject.selected(selectors, ChangeSet.workspaceLocalPatterns);
 const suites = projects
   .filter((project) => !skipped.has(project.manifest.name))
   .map((project) => E2ESuite.read(project))
