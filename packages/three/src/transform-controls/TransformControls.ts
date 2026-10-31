@@ -36,6 +36,7 @@ import type {
   TransformSnapOptions
 } from "./types.ts";
 import {
+  finite,
   optionalStep,
   positive
 } from "./validation.ts";
@@ -56,6 +57,7 @@ type TransformGesture = TranslateGesture | RotateGesture | ScaleGesture;
 
 interface ResolvedSnap {
   translate: number | THREE.Vector3 | null;
+  grid: THREE.Vector3 | null;
   rotate: number | null;
   scale: number | null;
 }
@@ -92,6 +94,7 @@ export class TransformControls extends THREE.Controls<
   #target: THREE.Object3D | null = null;
   #snap: ResolvedSnap = {
     translate: null,
+    grid: null,
     rotate: null,
     scale: null
   };
@@ -186,12 +189,18 @@ export class TransformControls extends THREE.Controls<
   }
 
   get snap(): Required<TransformSnapOptions> {
-    const { translate, rotate, scale } = this.#snap;
+    const {
+      translate,
+      grid,
+      rotate,
+      scale
+    } = this.#snap;
 
     return {
       translate: translate instanceof THREE.Vector3
         ? translate.clone()
         : translate,
+      grid: grid?.clone() ?? null,
       rotate,
       scale
     };
@@ -202,6 +211,7 @@ export class TransformControls extends THREE.Controls<
   ) {
     this.#snap = {
       translate: resolveTranslateSnap(snap.translate ?? null),
+      grid: resolveGrid(snap.grid ?? null),
       rotate: optionalStep(snap.rotate, "snap.rotate"),
       scale: optionalStep(snap.scale, "snap.scale")
     };
@@ -389,7 +399,10 @@ export class TransformControls extends THREE.Controls<
       case "scale":
         return ScaleGesture.begin(context, target.scale);
       default:
-        return TranslateGesture.begin(context);
+        return TranslateGesture.begin(
+          context,
+          target.getWorldPosition(kWorldPosition)
+        );
     }
   }
 
@@ -440,7 +453,8 @@ export class TransformControls extends THREE.Controls<
 
     if (gesture.mode === "translate") {
       const step = snapping ? snap.translate : null;
-      if (!gesture.update(ray, step, kDelta)) {
+      const grid = step === null ? null : snap.grid;
+      if (!gesture.update(ray, step, kDelta, grid)) {
         return false;
       }
 
@@ -596,5 +610,22 @@ function resolveTranslateSnap(
     positive(snap.x, "snap.translate.x"),
     positive(snap.y, "snap.translate.y"),
     positive(snap.z, "snap.translate.z")
+  );
+}
+
+function resolveGrid(
+  grid: number | THREE.Vector3Like | null
+): THREE.Vector3 | null {
+  if (grid === null) {
+    return null;
+  }
+  if (typeof grid === "number") {
+    return new THREE.Vector3().setScalar(finite(grid, "snap.grid"));
+  }
+
+  return new THREE.Vector3(
+    finite(grid.x, "snap.grid.x"),
+    finite(grid.y, "snap.grid.y"),
+    finite(grid.z, "snap.grid.z")
   );
 }

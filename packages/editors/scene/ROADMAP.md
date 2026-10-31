@@ -14,8 +14,8 @@ v1 scripts name a behavior the game registers. A script asset will fill
 
 ## Editor extras
 
-Play mode in the editor, a camera preview inset, copy and paste across scenes,
-snapping settings and tours.
+Play mode in the editor, a camera preview inset, copy and paste across scenes
+and tours.
 
 ## Play from studio
 

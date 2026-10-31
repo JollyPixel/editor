@@ -10,6 +10,7 @@ export const SCENE_KEY_BINDINGS = Object.freeze({
   "gizmo.rotate": "Digit2",
   "gizmo.scale": "Digit3",
   "gizmo.space": "x",
+  "gizmo.snap": "g",
   "view.frame": "f"
 } as const satisfies KeyBindingDefaults<string>);
 

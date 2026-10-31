@@ -328,6 +328,21 @@ registerIcon("view-axes", svg`
   />
 `, { tone: "coral" });
 
+registerIcon("view-snap", svg`
+  <path
+    class="tone-fill"
+    d="M5 4h4v4H5zM15 4h4v4h-4z"
+  />
+  <path
+    d="M5 4h4v8a3 3 0 0 0 6 0V4h4v8a7 7 0 0 1-14 0ZM5 8h4M15 8h4"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "amber" });
+
 registerIcon("view-frame", svg`
   <circle
     class="tone-fill"

@@ -132,6 +132,7 @@ stays put. With `"origin"` the position is never touched by those modes.
 ```ts
 interface TransformSnapOptions {
   translate?: number | THREE.Vector3Like | null;
+  grid?: number | THREE.Vector3Like | null;
   rotate?: number | null;
   scale?: number | null;
 }
@@ -143,8 +144,15 @@ interface TransformSnapOptions {
 | `rotate` | The gesture angle, in radians. |
 | `scale` | The resulting scale value, so `0.5` yields `0.5`, `1`, `1.5`. |
 
-Omitted steps are `null`, which means free movement. Assigning `snap` replaces
-all three. Hold <kbd>Alt</kbd> during a pointer move to suspend snapping.
+Setting `grid` makes `translate` round the world position instead, along the
+gizmo axes. `grid` is the offset of the grid lines from the world origin,
+shared or per axis: with `grid: 0` the object at `x = 0.25` moves to `1`, `2`.
+Half the step puts positions on cell centers: with `grid: 0.5`, the object
+moves to `1.5`, `2.5`. Only the dragged axes are rounded.
+
+Omitted steps are `null`, which means free movement. An omitted `grid` is
+`null` too, which snaps the travelled distance. Assigning `snap` replaces
+every field. Hold <kbd>Alt</kbd> during a pointer move to suspend snapping.
 
 ## Axes and limits
 

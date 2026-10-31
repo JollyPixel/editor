@@ -19,19 +19,22 @@ import {
   rayAt
 } from "./context.ts";
 
+// CONSTANTS
+const kStart = new THREE.Vector3();
+
 describe("TranslateGesture", () => {
   test("keeps only the dragged axis and snaps the travelled distance", () => {
     const gesture = TranslateGesture.begin(createContext(
       { kind: "axis", axis: "x", direction: 1 },
       rayAt(0.5, 0)
-    ));
+    ), kStart);
     assert.ok(gesture);
 
     const delta = new THREE.Vector3();
-    assert.equal(gesture.update(rayAt(2.7, 0.3), 1, delta), true);
+    assert.equal(gesture.update(rayAt(2.7, 0.3), 1, delta, null), true);
     assertVector(delta, [2, 0, 0]);
 
-    assert.equal(gesture.update(rayAt(2.7, 0.3), null, delta), true);
+    assert.equal(gesture.update(rayAt(2.7, 0.3), null, delta, null), true);
     assertClose(delta.x, 2.2);
   });
 
@@ -39,7 +42,7 @@ describe("TranslateGesture", () => {
     const gesture = TranslateGesture.begin(createContext(
       { kind: "axis", axis: "z", direction: 1 },
       rayAt(0, 0)
-    ));
+    ), kStart);
 
     assert.equal(gesture, null);
   });
@@ -48,11 +51,11 @@ describe("TranslateGesture", () => {
     const gesture = TranslateGesture.begin(createContext(
       { kind: "plane", normal: "z" },
       rayAt(0.5, 0.5)
-    ));
+    ), kStart);
     assert.ok(gesture);
 
     const delta = new THREE.Vector3();
-    gesture.update(rayAt(1.7, 3.1), { x: 1, y: 2, z: 1 }, delta);
+    gesture.update(rayAt(1.7, 3.1), { x: 1, y: 2, z: 1 }, delta, null);
     assertVector(delta, [1, 2, 0]);
   });
 
@@ -60,7 +63,7 @@ describe("TranslateGesture", () => {
     const gesture = TranslateGesture.begin(createContext(
       { kind: "plane", normal: "x" },
       rayAt(0, 0.5)
-    ));
+    ), kStart);
 
     assert.equal(gesture, null);
   });
@@ -69,17 +72,20 @@ describe("TranslateGesture", () => {
     const gesture = TranslateGesture.begin(createContext(
       { kind: "center" },
       rayAt(0, 0)
-    ));
+    ), kStart);
     assert.ok(gesture);
 
     const delta = new THREE.Vector3();
-    gesture.update(rayAt(-1.5, 2.25), null, delta);
+    gesture.update(rayAt(-1.5, 2.25), null, delta, null);
     assertVector(delta, [-1.5, 2.25, 0]);
   });
 
   test("has no gesture for the view ring", () => {
     assert.equal(
-      TranslateGesture.begin(createContext({ kind: "view" }, rayAt(1, 0))),
+      TranslateGesture.begin(
+        createContext({ kind: "view" }, rayAt(1, 0)),
+        kStart
+      ),
       null
     );
   });

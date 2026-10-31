@@ -186,7 +186,9 @@ export class SceneEditorScene extends Systems.Scene {
       document,
       writes,
       selection,
-      settings: gizmo
+      settings: gizmo,
+      preferences: this.#options.preferences,
+      components
     });
     teardown.defer(() => sceneGizmo.dispose());
     const anchorMarkers = world
@@ -238,6 +240,7 @@ export class SceneEditorScene extends Systems.Scene {
         actions,
         selection,
         gizmo,
+        preferences: this.#options.preferences,
         frameSelection
       })
     ));

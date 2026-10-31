@@ -6,6 +6,7 @@ import type {
   SceneActorPresetEntry,
   SceneAssetSource,
   SceneComponentKind,
+  SceneComponentOrigin,
   SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
 import { Systems } from "@jolly-pixel/engine";
@@ -112,6 +113,18 @@ export class SceneComponents {
     }
 
     return EMPTY_ACTOR_ICON;
+  }
+
+  actorOrigin(
+    types: Iterable<string>
+  ): SceneComponentOrigin {
+    for (const type of types) {
+      if (this.find(type)?.origin === "corner") {
+        return "corner";
+      }
+    }
+
+    return "center";
   }
 
   assetSlots(

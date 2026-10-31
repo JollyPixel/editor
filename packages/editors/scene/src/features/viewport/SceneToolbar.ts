@@ -182,6 +182,16 @@ export class SceneToolbar extends LitElement {
           })}
         ></jolly-tool-button>
         <jolly-tool-button
+          data-tool="snap"
+          icon="view-snap"
+          flyout-side="above"
+          label=${shortcuts.label("Snap", "gizmo.snap")}
+          ?active=${view.snap}
+          @click=${() => preferences.update(SCENE_PREFERENCES, {
+            snap: !view.snap
+          })}
+        ></jolly-tool-button>
+        <jolly-tool-button
           data-tool="frame"
           icon="view-frame"
           flyout-side="above"

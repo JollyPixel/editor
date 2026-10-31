@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { KeyBindingHandlers } from "@jolly-pixel/controls";
+import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { SceneActions } from "../editing/SceneActions.ts";
@@ -8,6 +9,7 @@ import {
   type SceneHistory
 } from "../features/history/sceneHistory.ts";
 import type { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
+import { SCENE_PREFERENCES } from "../preferences.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
 import type { SceneAction } from "./sceneActions.ts";
 
@@ -16,13 +18,20 @@ export interface SceneShortcutsOptions {
   actions: Pick<SceneActions, "duplicateSelection" | "removeSelection">;
   selection: Pick<SelectionStore, "primary">;
   gizmo: GizmoSettings;
+  preferences: Pick<Preferences, "values" | "update">;
   frameSelection(): void;
 }
 
 export function sceneShortcuts(
   options: SceneShortcutsOptions
 ): KeyBindingHandlers<SceneAction> {
-  const { history, actions, selection, gizmo } = options;
+  const {
+    history,
+    actions,
+    selection,
+    gizmo,
+    preferences
+  } = options;
 
   return {
     "edit.undo": () => {
@@ -58,6 +67,10 @@ export function sceneShortcuts(
     },
     "gizmo.space": () => {
       gizmo.toggleSpace();
+    },
+    "gizmo.snap": () => {
+      const { snap } = preferences.values(SCENE_PREFERENCES);
+      preferences.update(SCENE_PREFERENCES, { snap: !snap });
     },
     "view.frame": () => {
       options.frameSelection();

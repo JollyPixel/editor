@@ -86,6 +86,7 @@ interface SceneComponentKind<TData extends object = any> {
   icon: string;
   form: ComponentForm<TData>;
   anchorAsset?: string;
+  origin?: "center" | "corner";
 }
 
 type ComponentForm<TData> = (data: TData) => FormRow<TData>[];
@@ -108,6 +109,11 @@ inspector rows.
 from `definition.anchors()` belong to. An anchor row then offers to show the
 anchor in that asset, which opens it with the anchor key as its
 [reveal](../shell/Shell.md#reveals). Without it, the row has no such entry.
+
+`origin` says where the actor origin sits on the rendered content. Set
+`"corner"` when the content grows from the origin toward the positive axes,
+as voxel map blocks do. Grid snapping in the scene editor then keeps the origin
+on grid lines instead of cell centers. It defaults to `"center"`.
 
 ## FormRows
 
