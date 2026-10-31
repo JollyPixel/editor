@@ -13,7 +13,7 @@
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
     "dev": "vite",
-    "test-only": "node --test \"test/**/*.test.ts\"",
+    "test-only": "node --test --test-isolation=none \"test/**/*.test.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"

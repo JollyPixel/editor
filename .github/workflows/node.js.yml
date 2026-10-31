@@ -27,7 +27,8 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 2
+          persist-credentials: false
       - uses: ./.github/actions/setup
         with:
           install: 'false'
@@ -44,8 +45,7 @@ jobs:
             --skip-e2e @jolly-pixel/editor.terrain \
             --skip-e2e @jolly-pixel/studio >> "$GITHUB_OUTPUT"
 
-  check:
-    name: lint & typecheck
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -54,17 +54,32 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
-      - name: Build dependencies
-        run: pnpm run build
       - name: Run lint
         run: pnpm run lint
-      - name: Run typecheck
-        run: pnpm run typecheck
       - name: Run script tests
         run: pnpm run test:scripts
       - name: Build docs
         run: pnpm run docs:build
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Build libraries
+        run: pnpm run build:libraries
+      - name: Run typecheck
+        run: pnpm run typecheck
 
   test:
     needs: changes
@@ -80,6 +95,8 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Build tested workspaces and their dependencies
         run: pnpm $BUILD_FILTERS --if-present run build
@@ -97,6 +114,8 @@ jobs:
       fail-fast: false
       matrix:
         suite: ${{ fromJSON(needs.changes.outputs.e2e) }}
+    env:
+      SUITE_FILTER: ${{ matrix.suite.filter }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -104,13 +123,23 @@ jobs:
           egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Build ${{ matrix.suite.filter }} and its dependencies
-        run: pnpm --filter "${{ matrix.suite.filter }}..." --if-present run build
+        run: pnpm --filter "$SUITE_FILTER..." --if-present run build
+      - name: Read the Playwright version
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps --only-shell chromium
       - name: Run E2E tests
-        run: pnpm --filter ${{ matrix.suite.filter }} test:e2e
+        run: pnpm --filter "$SUITE_FILTER" test:e2e
       - name: Upload E2E artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

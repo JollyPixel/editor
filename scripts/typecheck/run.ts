@@ -5,22 +5,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { text } from "node:stream/consumers";
-import { fileURLToPath } from "node:url";
 
 // Import Third-party Dependencies
 import { Mutex } from "@openally/mutex";
 
 // Import Internal Dependencies
+import { TSC_PATH } from "../typescript/tsc.ts";
 import { ROOT_DIR } from "../workspace/root.ts";
 
 // CONSTANTS
 const kCheckConfig = path.join(ROOT_DIR, "tsconfig", "check.json");
 const kSkippedDirectories = new Set(["node_modules", "dist", "coverage", "public"]);
-const kTsc = path.join(
-  path.dirname(fileURLToPath(import.meta.resolve("typescript7/package.json"))),
-  "bin",
-  "tsc"
-);
 
 function extendsCheckConfig(
   configPath: string
@@ -58,7 +53,15 @@ async function typecheck(
 
   const child = spawn(
     process.execPath,
-    [kTsc, "--noEmit", "--pretty", String(process.stdout.isTTY === true), "-p", configPath],
+    [
+      TSC_PATH,
+      "--noEmit",
+      "--singleThreaded",
+      "--pretty",
+      String(process.stdout.isTTY === true),
+      "-p",
+      configPath
+    ],
     { stdio: ["ignore", "pipe", "inherit"] }
   );
   const [output, [code]] = await Promise.all([
@@ -75,7 +78,7 @@ async function typecheck(
 }
 
 const mutex = new Mutex({
-  concurrency: Math.max(1, Math.floor(os.availableParallelism() / 2))
+  concurrency: os.availableParallelism()
 });
 const configs = checkConfigs();
 const results = await Promise.all(

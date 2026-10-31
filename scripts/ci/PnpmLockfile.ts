@@ -5,6 +5,7 @@ const kResolutionSections = new Set([
   "snapshots:"
 ]);
 const kEntry = /^ {2}(?! )('[^']*'|"[^"]*"|[^:]+):(.*)$/;
+const kImporterPath = /^[\w./@-]+$/;
 
 interface LockfileEntry {
   document: number;
@@ -90,6 +91,9 @@ export class PnpmLockfile {
 
       const { section, name } = entry;
       if (section === kImporters && name !== "" && name !== ".") {
+        if (!kImporterPath.test(name)) {
+          return null;
+        }
         if (current !== undefined) {
           importers.add(name);
         }

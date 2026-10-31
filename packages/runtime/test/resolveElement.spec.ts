@@ -5,11 +5,11 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { resolveElement } from "../src/resolveElement.ts";
 
-beforeEach(() => {
-  document.body.innerHTML = "";
-});
-
 describe("resolveElement", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
   test("returns the element as is", () => {
     const canvas = document.createElement("canvas");
 

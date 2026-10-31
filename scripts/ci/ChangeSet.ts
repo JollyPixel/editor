@@ -30,18 +30,19 @@ export class ChangeSet {
   static since(
     base: string | undefined
   ): ChangeSet | null {
-    if (base === undefined || base === "" || !ChangeSet.#commitExists(base)) {
+    const commit = base === undefined || base === "" ? null : ChangeSet.#commit(base);
+    if (commit === null) {
       return null;
     }
 
-    const files = ChangeSet.#git(["diff", "--name-only", base])
+    const files = ChangeSet.#git(["diff", "--name-only", commit])
       .split("\n")
       .filter(Boolean);
     const lockfileImporters = files.includes(kLockfile) ?
-      ChangeSet.#lockfileImporters(base) :
+      ChangeSet.#lockfileImporters(commit) :
       new Set<string>();
 
-    return new ChangeSet(base, files, lockfileImporters);
+    return new ChangeSet(commit, files, lockfileImporters);
   }
 
   static #lockfileImporters(
@@ -65,16 +66,16 @@ export class ChangeSet {
     });
   }
 
-  static #commitExists(
+  static #commit(
     ref: string
-  ): boolean {
+  ): string | null {
     try {
-      ChangeSet.#git(["cat-file", "-e", ref]);
-
-      return true;
+      return ChangeSet.#git(
+        ["rev-parse", "--verify", "--quiet", "--end-of-options", `${ref}^{commit}`]
+      ).trim();
     }
     catch {
-      return false;
+      return null;
     }
   }
 

@@ -1,7 +1,6 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 import {
-  before,
   describe,
   mock,
   test
@@ -21,6 +20,7 @@ import {
   type ViewHelperOptions,
   type ViewHelperPosition
 } from "../../../src/ui/viewHelper/ViewHelperSettings.ts";
+import { stubProperty } from "../../helpers/stubProperty.ts";
 
 // CONSTANTS
 const kLocations: Array<[ViewHelperPosition, HelperLocation]> = [
@@ -71,18 +71,12 @@ interface HelperLocation {
   right: number | null;
 }
 
-before(() => {
-  Object.defineProperty(
+describe("mountViewHelper", () => {
+  stubProperty(
     HTMLCanvasElement.prototype,
     "getContext",
-    {
-      configurable: true,
-      value: createContext2DStub
-    }
+    createContext2DStub
   );
-});
-
-describe("mountViewHelper", () => {
   test("renders nothing while no camera is registered", () => {
     const renderer = new FakeRenderer();
     const mounted = mountViewHelper(renderer, createSettings());

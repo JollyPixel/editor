@@ -73,12 +73,12 @@ function postFromStudio(
   }));
 }
 
-afterEach(() => {
-  document.head.replaceChildren();
-  window.history.replaceState(null, "", "/");
-});
-
 describe("HostMessageLaunchSource", () => {
+  afterEach(() => {
+    document.head.replaceChildren();
+    window.history.replaceState(null, "", "/");
+  });
+
   test("resolves nothing at once outside a frame", async() => {
     assert.equal(
       await new HostMessageLaunchSource({ timeout: 10_000 }).read(),

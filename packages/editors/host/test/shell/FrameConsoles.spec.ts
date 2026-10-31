@@ -19,12 +19,6 @@ import { captureLogs } from "../helpers/logs.ts";
 
 const closers: Array<() => void> = [];
 
-afterEach(() => {
-  for (const close of closers.splice(0)) {
-    close();
-  }
-});
-
 function editorPort(
   namespace: string
 ): MessagePort {
@@ -61,6 +55,12 @@ async function settled(
 }
 
 describe("FrameConsoles", () => {
+  afterEach(() => {
+    for (const close of closers.splice(0)) {
+      close();
+    }
+  });
+
   test("shows the namespaces of the focused frame only", async() => {
     const commands = new CommandConsole();
     const frames = new FrameConsoles({ commands });

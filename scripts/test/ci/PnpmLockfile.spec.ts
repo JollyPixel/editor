@@ -94,6 +94,12 @@ describe("PnpmLockfile.importersChangedSince", () => {
     assert.deepEqual(changed(kBase.replace("  packages/resize-handle: {}\n", "")), new Set());
   });
 
+  it("gives up when an importer name is not a plain workspace path", () => {
+    const next = kBase.replace("  packages/resize-handle: {}", "  packages/x\";id;\": {}");
+
+    assert.equal(changed(next), null);
+  });
+
   it("gives up when an existing snapshot changes", () => {
     const next = kBase
       .replace("  lit@3.3.0: {}", "  lit@3.3.0:\n    dependencies:\n      '@lit/reactive-element': 2.1.0");

@@ -13,7 +13,7 @@
   "scripts": {
     "prepublishOnly": "tsc -b",
     "build": "tsc -b",
-    "test-only": "node --test test/**/*.spec.ts",
+    "test-only": "node --test --test-isolation=none test/**/*.spec.ts",
     "test-gpu": "node --test test/systems/rendering/compositing/postProcessing.gpu.ts",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "oxlint src test",
