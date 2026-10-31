@@ -30,12 +30,6 @@ interface Bridge {
 
 const closers: Array<() => void> = [];
 
-afterEach(() => {
-  for (const close of closers.splice(0)) {
-    close();
-  }
-});
-
 function frameConsole(
   brush: FrameBrush
 ): CommandConsole {
@@ -166,6 +160,12 @@ function lines(
 }
 
 describe("ConsoleMirror", () => {
+  afterEach(() => {
+    for (const close of closers.splice(0)) {
+      close();
+    }
+  });
+
   test("keeps a namespace the shell already owns", async() => {
     const shell = new CommandConsole();
     shell.registerNamespace("brush").registerVariable("size", {

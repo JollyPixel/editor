@@ -80,9 +80,11 @@ describe("PointerDragSession", () => {
     element.addEventListener("click", (event) => clicks.push(event.detail));
 
     for (const [pointerId, upX] of [[5, 20], [6, 1]]) {
+      const down = pointer("pointerdown", pointerId);
+      element.dispatchEvent(down);
       startPointerDragSession({
         element,
-        event: pointer("pointerdown", pointerId),
+        event: down,
         threshold: 4,
         suppressClick: true,
         onMove: () => undefined,

@@ -9,13 +9,11 @@ import { Systems } from "@jolly-pixel/engine";
 // Import Internal Dependencies
 import { Runtime } from "../src/Runtime.ts";
 import { FakeRenderer } from "./helpers/FakeRenderer.ts";
-
-Object.defineProperty(globalThis.navigator, "getGamepads", {
-  configurable: true,
-  value: () => []
-});
+import { stubProperty } from "./helpers/stubProperty.ts";
 
 describe("Runtime device loss", () => {
+  stubProperty(globalThis.navigator, "getGamepads", () => []);
+
   test("logs the lost device as an error", () => {
     const lines: string[] = [];
     const metas: Array<Record<string, unknown> | undefined> = [];

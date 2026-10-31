@@ -1,9 +1,10 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
-import { before, describe, test } from "node:test";
+import { describe, test } from "node:test";
 
 // Import Internal Dependencies
 import { OverlayLayer } from "../../../src/ui/overlay/OverlayLayer.ts";
+import { stubProperty } from "../../helpers/stubProperty.ts";
 
 // CONSTANTS
 const kObservers: Array<FakeResizeObserver> = [];
@@ -24,14 +25,8 @@ class FakeResizeObserver {
   }
 }
 
-before(() => {
-  Object.defineProperty(globalThis, "ResizeObserver", {
-    configurable: true,
-    value: FakeResizeObserver
-  });
-});
-
 describe("OverlayLayer", () => {
+  stubProperty(globalThis, "ResizeObserver", FakeResizeObserver);
   test("fills a container element without tracking", () => {
     const container = document.createElement("div");
     const canvas = createCanvas(container);

@@ -51,13 +51,13 @@ async function settle(): Promise<void> {
   });
 }
 
-afterEach(() => {
-  mounted?.dispose();
-  mounted = undefined;
-  document.body.replaceChildren();
-});
-
 describe("mountLantern", () => {
+  afterEach(() => {
+    mounted?.dispose();
+    mounted = undefined;
+    document.body.replaceChildren();
+  });
+
   test("appends no overlay before a tour starts", async() => {
     mount();
     await settle();

@@ -31,12 +31,6 @@ interface Bridge {
 
 const closers: Array<() => void> = [];
 
-afterEach(() => {
-  for (const close of closers.splice(0)) {
-    close();
-  }
-});
-
 function frameConsole(
   brush: FrameBrush
 ): CommandConsole {
@@ -167,6 +161,12 @@ function lines(
 }
 
 describe("ConsoleMirror", () => {
+  afterEach(() => {
+    for (const close of closers.splice(0)) {
+      close();
+    }
+  });
+
   test("registers the frame's namespaces but not its root commands", async() => {
     const shell = new CommandConsole();
     const rootCommands = [...shell.registry.root.commands()].length;

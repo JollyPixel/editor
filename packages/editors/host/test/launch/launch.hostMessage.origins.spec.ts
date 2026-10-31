@@ -57,12 +57,12 @@ function frameIn(
   };
 }
 
-afterEach(() => {
-  document.head.replaceChildren();
-  window.history.replaceState(null, "", "/");
-});
-
 describe("HostMessageLaunchSource", () => {
+  afterEach(() => {
+    document.head.replaceChildren();
+    window.history.replaceState(null, "", "/");
+  });
+
   test("ignores a launch from an origin outside the allow-list", async(context) => {
     const parent = fakeParent();
     context.after(frameIn(parent));

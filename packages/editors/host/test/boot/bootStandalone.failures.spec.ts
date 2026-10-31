@@ -25,14 +25,10 @@ import { EDITOR_STATE_ATTRIBUTE } from "#src/shell/EditorState.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
+import { withoutWebNavigator } from "../helpers/navigator.ts";
 
 // CONSTANTS
 const kAssetId = "offline-target";
-
-Object.defineProperty(globalThis, "navigator", {
-  value: {},
-  configurable: true
-});
 
 function project(): OfflineProject {
   return {
@@ -122,6 +118,8 @@ async function answerOffer(
 }
 
 describe("bootStandalone", () => {
+  withoutWebNavigator();
+
   afterEach(() => {
     document.documentElement.removeAttribute(EDITOR_STATE_ATTRIBUTE);
     document.body.replaceChildren();

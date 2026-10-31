@@ -11,11 +11,7 @@ import {
   type RuntimeOptions
 } from "../src/Runtime.ts";
 import { FakeRenderer } from "./helpers/FakeRenderer.ts";
-
-Object.defineProperty(globalThis.navigator, "getGamepads", {
-  configurable: true,
-  value: () => []
-});
+import { stubProperty } from "./helpers/stubProperty.ts";
 
 function createRuntime(
   options: RuntimeOptions = {}
@@ -64,6 +60,8 @@ function createRuntime(
 }
 
 describe("Runtime renderOnDemand", () => {
+  stubProperty(globalThis.navigator, "getGamepads", () => []);
+
   test("stays continuous unless enabled", () => {
     const { runtime, renderer, tick, dispose } = createRuntime({
       renderOnDemand: false

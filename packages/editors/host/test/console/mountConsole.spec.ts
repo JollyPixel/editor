@@ -63,200 +63,202 @@ function lastLine(
   return `${entry?.kind}: ${entry?.text}`;
 }
 
-afterEach(() => {
-  mounted?.dispose();
-  mounted = undefined;
-  document.body.replaceChildren();
-});
-
-describe("console element", () => {
-  test("is mounted on the first open request", async() => {
-    const page = commands();
-    assert.equal(consoleElement(), null);
-
-    const shown = opened(page);
-    page.open();
-    await shown;
-
-    assert.equal(consoleElement()?.console, page);
-    assert.equal(consoleElement()?.open, true);
-  });
-
-  test("opens on the toggle shortcut", async() => {
-    const page = commands();
-    const shown = opened(page);
-    const event = new KeyboardEvent("keydown", {
-      key: "k",
-      ctrlKey: true,
-      cancelable: true
-    });
-
-    window.dispatchEvent(event);
-    await shown;
-
-    assert.equal(event.defaultPrevented, true);
-    assert.equal(document.querySelectorAll("jolly-console").length, 1);
-  });
-
-  test("shows the script editor of a script requested before mounting", async() => {
-    const page = commands();
-    const shown = opened(page);
-
-    page.editScript();
-    await shown;
-    const element = consoleElement();
-    await element?.updateComplete;
-
-    assert.notEqual(
-      element?.shadowRoot?.querySelector("jolly-console-script"),
-      null
-    );
-  });
-
-  test("mounts nothing when disposed while the element loads", async() => {
-    const page = commands();
-    page.open();
+describe("mountConsole", () => {
+  afterEach(() => {
     mounted?.dispose();
     mounted = undefined;
+    document.body.replaceChildren();
+  });
 
-    await import("@jolly-pixel/console/element");
-    await new Promise((resolve) => {
-      setImmediate(resolve);
+  describe("console element", () => {
+    test("is mounted on the first open request", async() => {
+      const page = commands();
+      assert.equal(consoleElement(), null);
+
+      const shown = opened(page);
+      page.open();
+      await shown;
+
+      assert.equal(consoleElement()?.console, page);
+      assert.equal(consoleElement()?.open, true);
     });
 
-    assert.equal(consoleElement(), null);
-  });
-});
+    test("opens on the toggle shortcut", async() => {
+      const page = commands();
+      const shown = opened(page);
+      const event = new KeyboardEvent("keydown", {
+        key: "k",
+        ctrlKey: true,
+        cancelable: true
+      });
 
-describe("theme variable", () => {
-  test("reads auto while the first scope sets no theme", async() => {
-    scopes(1);
-    const page = commands();
+      window.dispatchEvent(event);
+      await shown;
 
-    await page.submit("theme");
+      assert.equal(event.defaultPrevented, true);
+      assert.equal(document.querySelectorAll("jolly-console").length, 1);
+    });
 
-    assert.equal(lastLine(page), "info: auto");
-  });
+    test("shows the script editor of a script requested before mounting", async() => {
+      const page = commands();
+      const shown = opened(page);
 
-  test("a write themes every scope of the page", async() => {
-    const [first, second] = scopes(2);
-    const page = commands();
+      page.editScript();
+      await shown;
+      const element = consoleElement();
+      await element?.updateComplete;
 
-    await page.submit("theme Light");
+      assert.notEqual(
+        element?.shadowRoot?.querySelector("jolly-console-script"),
+        null
+      );
+    });
 
-    assert.equal(lastLine(page), "info: light");
-    assert.equal(first.getAttribute("theme"), "light");
-    assert.equal(second.getAttribute("theme"), "light");
-  });
+    test("mounts nothing when disposed while the element loads", async() => {
+      const page = commands();
+      page.open();
+      mounted?.dispose();
+      mounted = undefined;
 
-  test("auto removes the theme so the scopes follow the system", async() => {
-    const [scope] = scopes(1);
-    scope.setAttribute("theme", "dark");
-    const page = commands();
+      await import("@jolly-pixel/console/element");
+      await new Promise((resolve) => {
+        setImmediate(resolve);
+      });
 
-    await page.submit("theme auto");
-
-    assert.equal(scope.hasAttribute("theme"), false);
-    assert.equal(lastLine(page), "info: auto");
-  });
-
-  test("a write on a page without scope prints an error", async() => {
-    const page = commands();
-
-    await page.submit("theme dark");
-
-    assert.equal(
-      lastLine(page),
-      "error: This page has no jolly-scope"
-    );
-  });
-});
-
-describe("density variable", () => {
-  test("reads default while the first scope sets no density", async() => {
-    scopes(1);
-    const page = commands();
-
-    await page.submit("density");
-
-    assert.equal(lastLine(page), "info: default");
+      assert.equal(consoleElement(), null);
+    });
   });
 
-  test("a write resizes every scope of the page", async() => {
-    const [first, second] = scopes(2);
-    const page = commands();
+  describe("theme variable", () => {
+    test("reads auto while the first scope sets no theme", async() => {
+      scopes(1);
+      const page = commands();
 
-    await page.submit("density Compact");
+      await page.submit("theme");
 
-    assert.equal(lastLine(page), "info: compact");
-    assert.equal(first.getAttribute("density"), "compact");
-    assert.equal(second.getAttribute("density"), "compact");
+      assert.equal(lastLine(page), "info: auto");
+    });
+
+    test("a write themes every scope of the page", async() => {
+      const [first, second] = scopes(2);
+      const page = commands();
+
+      await page.submit("theme Light");
+
+      assert.equal(lastLine(page), "info: light");
+      assert.equal(first.getAttribute("theme"), "light");
+      assert.equal(second.getAttribute("theme"), "light");
+    });
+
+    test("auto removes the theme so the scopes follow the system", async() => {
+      const [scope] = scopes(1);
+      scope.setAttribute("theme", "dark");
+      const page = commands();
+
+      await page.submit("theme auto");
+
+      assert.equal(scope.hasAttribute("theme"), false);
+      assert.equal(lastLine(page), "info: auto");
+    });
+
+    test("a write on a page without scope prints an error", async() => {
+      const page = commands();
+
+      await page.submit("theme dark");
+
+      assert.equal(
+        lastLine(page),
+        "error: This page has no jolly-scope"
+      );
+    });
   });
 
-  test("default is written instead of removing the attribute", async() => {
-    const [scope] = scopes(1);
-    scope.setAttribute("density", "comfortable");
-    const page = commands();
+  describe("density variable", () => {
+    test("reads default while the first scope sets no density", async() => {
+      scopes(1);
+      const page = commands();
 
-    await page.submit("density default");
+      await page.submit("density");
 
-    assert.equal(scope.getAttribute("density"), "default");
-    assert.equal(lastLine(page), "info: default");
+      assert.equal(lastLine(page), "info: default");
+    });
+
+    test("a write resizes every scope of the page", async() => {
+      const [first, second] = scopes(2);
+      const page = commands();
+
+      await page.submit("density Compact");
+
+      assert.equal(lastLine(page), "info: compact");
+      assert.equal(first.getAttribute("density"), "compact");
+      assert.equal(second.getAttribute("density"), "compact");
+    });
+
+    test("default is written instead of removing the attribute", async() => {
+      const [scope] = scopes(1);
+      scope.setAttribute("density", "comfortable");
+      const page = commands();
+
+      await page.submit("density default");
+
+      assert.equal(scope.getAttribute("density"), "default");
+      assert.equal(lastLine(page), "info: default");
+    });
+
+    test("a write on a page without scope prints an error", async() => {
+      const page = commands();
+
+      await page.submit("density compact");
+
+      assert.equal(
+        lastLine(page),
+        "error: This page has no jolly-scope"
+      );
+    });
   });
 
-  test("a write on a page without scope prints an error", async() => {
-    const page = commands();
+  describe("appearance persistence", () => {
+    test("a write is restored by the next console on the storage", async() => {
+      const storage = new MemoryStorageAdapter();
+      scopes(1);
+      const page = commands(storage);
+      await page.submit("theme light");
+      await page.submit("density compact");
+      mounted?.dispose();
+      document.body.replaceChildren();
 
-    await page.submit("density compact");
+      const [scope] = scopes(1);
+      scope.setAttribute("theme", "dark");
+      scope.setAttribute("density", "comfortable");
+      commands(storage);
 
-    assert.equal(
-      lastLine(page),
-      "error: This page has no jolly-scope"
-    );
-  });
-});
+      assert.equal(storage.get("jolly-pixel:theme"), "light");
+      assert.equal(storage.get("jolly-pixel:density"), "compact");
+      assert.equal(scope.getAttribute("theme"), "light");
+      assert.equal(scope.getAttribute("density"), "compact");
+    });
 
-describe("appearance persistence", () => {
-  test("a write is restored by the next console on the storage", async() => {
-    const storage = new MemoryStorageAdapter();
-    scopes(1);
-    const page = commands(storage);
-    await page.submit("theme light");
-    await page.submit("density compact");
-    mounted?.dispose();
-    document.body.replaceChildren();
+    test("an invalid stored value keeps the page appearance", () => {
+      const storage = new MemoryStorageAdapter();
+      storage.set("jolly-pixel:theme", "neon");
+      storage.set("jolly-pixel:density", "compact");
+      const [scope] = scopes(1);
+      scope.setAttribute("theme", "dark");
+      scope.setAttribute("density", "comfortable");
 
-    const [scope] = scopes(1);
-    scope.setAttribute("theme", "dark");
-    scope.setAttribute("density", "comfortable");
-    commands(storage);
+      commands(storage);
 
-    assert.equal(storage.get("jolly-pixel:theme"), "light");
-    assert.equal(storage.get("jolly-pixel:density"), "compact");
-    assert.equal(scope.getAttribute("theme"), "light");
-    assert.equal(scope.getAttribute("density"), "compact");
-  });
+      assert.equal(scope.getAttribute("theme"), "dark");
+      assert.equal(scope.getAttribute("density"), "compact");
+    });
 
-  test("an invalid stored value keeps the page appearance", () => {
-    const storage = new MemoryStorageAdapter();
-    storage.set("jolly-pixel:theme", "neon");
-    storage.set("jolly-pixel:density", "compact");
-    const [scope] = scopes(1);
-    scope.setAttribute("theme", "dark");
-    scope.setAttribute("density", "comfortable");
+    test("a rejected write stores nothing", async() => {
+      const storage = new MemoryStorageAdapter();
+      const page = commands(storage);
 
-    commands(storage);
+      await page.submit("theme dark");
 
-    assert.equal(scope.getAttribute("theme"), "dark");
-    assert.equal(scope.getAttribute("density"), "compact");
-  });
-
-  test("a rejected write stores nothing", async() => {
-    const storage = new MemoryStorageAdapter();
-    const page = commands(storage);
-
-    await page.submit("theme dark");
-
-    assert.equal(storage.get("jolly-pixel:theme"), null);
+      assert.equal(storage.get("jolly-pixel:theme"), null);
+    });
   });
 });

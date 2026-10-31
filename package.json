@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --if-present run build",
+    "build:libraries": "node scripts/build/libraries.ts",
     "test": "pnpm -r --if-present run test && pnpm run test:scripts",
     "test:scripts": "node --test \"scripts/test/**/*.spec.ts\"",
     "lint": "oxlint packages scripts && node scripts/exports/check.ts && pnpm -r --if-present run lint:css",

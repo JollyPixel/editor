@@ -20,7 +20,7 @@
     "build": "vite build",
     "build:watch": "vite build --watch",
     "preview": "vite preview",
-    "test-only": "node --test \"test/**/*.spec.ts\"",
+    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",

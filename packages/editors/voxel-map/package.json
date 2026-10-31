@@ -26,7 +26,7 @@
     "dev": "vite",
     "dev:e2e": "vite --mode e2e",
     "preview": "vite preview",
-    "test-only": "node --import ./test/setup.ts --test \"test/**/*.spec.ts\"",
+    "test-only": "node --import ./test/setup.ts --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",

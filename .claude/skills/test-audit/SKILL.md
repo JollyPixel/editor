@@ -33,6 +33,12 @@ Tier ownership rules:
   through `node --import ./test/setup.ts`. happy-dom has no layout engine and
   no CSS cascade: geometry, focus order, scrolling, and computed styles belong
   in Playwright, not in a mocked unit spec.
+- Most `test-only` scripts pass `--test-isolation=none`, so all spec files
+  share one process (accounts, bench, studio and assets/terrain keep one
+  process per file because they run slower that way). A file-level hook then
+  runs for every file: register hooks inside the suite. A spec that replaces
+  a global or a prototype member installs it in a suite or test hook and
+  restores it, as voxel-map's `FakeFrames` and runtime's `stubProperty` do.
 - For `@jolly-pixel/ui` and the editors, unit-test pure logic extracted from
   components (reconciliation, clamping, parsing, size-from-delta) and cover
   interaction through the examples gallery or the editor e2e suite.

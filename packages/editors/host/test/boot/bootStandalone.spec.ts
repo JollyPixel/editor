@@ -26,14 +26,10 @@ import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { LAUNCH_MESSAGE_TYPE } from "#src/shell/ShellChannel.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
+import { withoutWebNavigator } from "../helpers/navigator.ts";
 
 // CONSTANTS
 const kAssetId = "offline-target";
-
-Object.defineProperty(globalThis, "navigator", {
-  value: {},
-  configurable: true
-});
 
 function project(): OfflineProject {
   return {
@@ -152,6 +148,8 @@ function frameInShell(): () => void {
 }
 
 describe("bootStandalone", () => {
+  withoutWebNavigator();
+
   afterEach(() => {
     document.documentElement.removeAttribute(EDITOR_STATE_ATTRIBUTE);
     document.body.replaceChildren();

@@ -43,11 +43,6 @@ const kDefinition: EditorDefinition<EditorHandle> = {
 };
 const kQueried = new EditorLaunch(new AssetId("map"));
 
-afterEach(() => {
-  window.history.replaceState(null, "", "/");
-  sessionStorage.clear();
-});
-
 async function shellLaunch(
   identity: LaunchIdentity | null = null
 ) {
@@ -96,6 +91,11 @@ function opener(
 }
 
 describe("SessionOpener", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+    sessionStorage.clear();
+  });
+
   test("an early session takes its catalog from the shell launch", async() => {
     using shell = await shellLaunch();
     const client = new FakeClient();
