@@ -21,12 +21,12 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // CONSTANTS
-export const DEFAULT_BLOCKSET_ID = "default";
-export const DEFAULT_BLOCKSET_SIZE = {
+const kDefaultBlocksetId = "default";
+const kDefaultBlocksetSize = {
   x: 512,
   y: 512
 } as const;
-export const STARTER_BLOCK_NAME = "Stone";
+const kStarterBlockName = "Stone";
 const kMiB = 1024 * 1024;
 const kStoneShades = [
   [120, 125, 134],
@@ -35,7 +35,7 @@ const kStoneShades = [
 ] as const;
 const kStoneEdge = [96, 100, 108] as const;
 
-export const WORLD_BACKEND_TUNING = {
+const kWorldBackendTuning = {
   catalog: {
     archiveLimits: {
       maxEntryBytes: 64 * kMiB,
@@ -49,10 +49,10 @@ export interface DefaultSeed {
   backend: AssetBackendTuning;
 }
 
-export function createDefaultBlockset(): BlocksetFile {
+function createDefaultBlockset(): BlocksetFile {
   return createBlocksetFile({
     tileSize: DEFAULT_TILE_SIZE,
-    pixels: createPixelArtFile(DEFAULT_BLOCKSET_SIZE, paintStarterTile()),
+    pixels: createPixelArtFile(kDefaultBlocksetSize, paintStarterTile()),
     blocks: blocksFromTileGrid(
       {
         cols: 1,
@@ -60,7 +60,7 @@ export function createDefaultBlockset(): BlocksetFile {
       },
       {
         map: () => {
-          return { name: STARTER_BLOCK_NAME };
+          return { name: kStarterBlockName };
         }
       }
     )
@@ -68,8 +68,8 @@ export function createDefaultBlockset(): BlocksetFile {
 }
 
 function paintStarterTile(): Uint8Array {
-  const width = DEFAULT_BLOCKSET_SIZE.x;
-  const pixels = new Uint8Array(width * DEFAULT_BLOCKSET_SIZE.y * 4);
+  const width = kDefaultBlocksetSize.x;
+  const pixels = new Uint8Array(width * kDefaultBlocksetSize.y * 4);
   const last = DEFAULT_TILE_SIZE - 1;
   for (let y = 0; y < DEFAULT_TILE_SIZE; y++) {
     for (let x = 0; x < DEFAULT_TILE_SIZE; x++) {
@@ -102,7 +102,7 @@ export function createDefaultSeed(
             chunkSize: DEFAULT_CHUNK_SIZE,
             blocksets: [
               {
-                id: DEFAULT_BLOCKSET_ID,
+                id: kDefaultBlocksetId,
                 asset: blocksetAsset(blocksetAssetId)
               }
             ]
@@ -110,6 +110,6 @@ export function createDefaultSeed(
         )
       }
     },
-    backend: WORLD_BACKEND_TUNING
+    backend: kWorldBackendTuning
   };
 }
