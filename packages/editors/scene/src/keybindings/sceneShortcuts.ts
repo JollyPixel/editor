@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { KeyBindingHandlers } from "@jolly-pixel/controls";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import type { SceneActions } from "../editing/SceneActions.ts";

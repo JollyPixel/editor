@@ -26,6 +26,7 @@ Every workspace name below drops the `@jolly-pixel/` scope: `network` is `@jolly
 
 - [studio](./packages/studio) - One project, its assets and one editor per tab
 - [editor.host](./packages/editors/host) - Shared launch, session and runtime boot for the editors
+- [preferences](./packages/preferences) - Preference scopes, validation and overrides for the studio and the editors
 
 #### Editors and formats
 

@@ -11,7 +11,7 @@ import { setImmediate } from "node:timers/promises";
 import type { EditorContext } from "#src/boot/EditorDefinition.ts";
 import { mountStandalone } from "#src/boot/mountStandalone.ts";
 import type { OfflineServer } from "#src/offline/server/OfflineServer.ts";
-import { CAMERA_PREFERENCES } from "#src/preferences/scope/hostPreferences.ts";
+import { CAMERA_PREFERENCES } from "#src/preferences/hostPreferences.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 import {
   ASSET_ID,

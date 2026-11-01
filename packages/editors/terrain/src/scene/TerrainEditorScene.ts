@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import type { KeyBindingSettings } from "@jolly-pixel/controls";
+import { PeerFrustums } from "@jolly-pixel/editor.host/viewport";
 import {
   OrbitFlyCamera,
   Systems,
   type OrbitFlyCameraOptions
 } from "@jolly-pixel/engine";
-import { PeerFrustums } from "@jolly-pixel/editor.host";
 import type { Room } from "@jolly-pixel/network/client";
 import {
   isPoiCommand,

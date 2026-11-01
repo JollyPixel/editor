@@ -3,7 +3,7 @@ import {
   defineKeyBindings,
   definePreferences,
   type PreferenceValues
-} from "@jolly-pixel/editor.host/preferences";
+} from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { PIXEL_ART_KEY_BINDINGS } from "./keybindings/PixelArtKeyBindings.ts";

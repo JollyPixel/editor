@@ -631,6 +631,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../../preferences
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
@@ -686,6 +689,9 @@ importers:
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../../preferences
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
@@ -756,6 +762,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../../preferences
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
@@ -805,6 +814,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../../preferences
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
@@ -872,6 +884,9 @@ importers:
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../../preferences
       '@jolly-pixel/resize-handle':
         specifier: workspace:*
         version: link:../../resize-handle
@@ -945,6 +960,9 @@ importers:
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../../preferences
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
@@ -1145,6 +1163,15 @@ importers:
         specifier: 4.0.0
         version: 4.0.0(debug@4.4.3(supports-color@10.2.2))(supports-color@10.2.2)
 
+  packages/preferences:
+    dependencies:
+      '@jolly-pixel/controls':
+        specifier: workspace:*
+        version: link:../controls
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
   packages/resize-handle: {}
 
   packages/runtime:
@@ -1234,6 +1261,9 @@ importers:
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../pixel-draw-renderer
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../preferences
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../ui

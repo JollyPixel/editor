@@ -8,7 +8,7 @@ import {
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
 import { followKeyBindings } from "@jolly-pixel/editor.host";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { PIXEL_ART_KEYBINDINGS } from "../../src/preferences.ts";

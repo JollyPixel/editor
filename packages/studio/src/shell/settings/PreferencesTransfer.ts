@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { Preferences } from "@jolly-pixel/preferences";
 import {
   LitElement,
   html,
@@ -11,7 +12,6 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/toolbar";
 

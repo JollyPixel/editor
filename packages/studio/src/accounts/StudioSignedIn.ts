@@ -4,9 +4,9 @@ import {
   type Account,
   type AccountsClient
 } from "@jolly-pixel/accounts";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { PeerMetadata } from "@jolly-pixel/network";
 import type { Client } from "@jolly-pixel/network/client";
+import type { Preferences } from "@jolly-pixel/preferences";
 import {
   peerIdentity,
   type PeerIdentity

@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
-import {
-  HOST_PREFERENCES,
-  type PreferenceOverrides,
-  type PreferenceScope
-} from "@jolly-pixel/editor.host/preferences";
+import { HOST_PREFERENCES } from "@jolly-pixel/editor.host/preferences";
+import type {
+  PreferenceOverrides,
+  PreferenceScope
+} from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { STUDIO_PREFERENCES } from "./studioScope.ts";

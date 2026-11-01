@@ -85,6 +85,8 @@ export {
 } from "./postprocess/HighlightPassJfa.ts";
 export {
   createDefaultColorAllocator,
+  createListedColorAllocator,
+  type ListedPeerColor,
   type PeerColorAllocator
 } from "./peer/PeerColorAllocator.ts";
 export {

@@ -10,7 +10,7 @@ import type {
 } from "@jolly-pixel/asset.scene/client";
 import type { ShortcutLabels } from "@jolly-pixel/controls";
 import type { Systems } from "@jolly-pixel/engine";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import type { SceneComponents } from "../components/SceneComponents.ts";

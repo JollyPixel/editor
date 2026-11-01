@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
-import * as z from "zod";
 import type {
   PreferenceOverrides,
-  PreferenceScope,
-  Preferences
-} from "@jolly-pixel/editor.host/preferences";
+  Preferences,
+  PreferenceScope
+} from "@jolly-pixel/preferences";
+import * as z from "zod";
 
 // Import Internal Dependencies
 import { FileDownload } from "../browser/FileDownload.ts";

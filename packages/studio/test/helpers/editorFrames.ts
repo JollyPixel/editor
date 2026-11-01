@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import {

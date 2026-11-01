@@ -3,10 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  Preferences,
-  type PreferenceChange
-} from "@jolly-pixel/editor.host/preferences";
+import { type PreferenceChange, Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import {

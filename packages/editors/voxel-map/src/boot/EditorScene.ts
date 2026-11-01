@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { PeerFrustums } from "@jolly-pixel/editor.host/viewport";
 import { Systems } from "@jolly-pixel/engine";
 import {
   Grid,
@@ -14,11 +15,7 @@ import {
 import { PeerRoster } from "@jolly-pixel/ui/network";
 import { RoomGrants } from "@jolly-pixel/network/client";
 import { describeSkippedStep } from "@jolly-pixel/history";
-import {
-  PeerFrustums,
-  type AssetLeases,
-  type EditorArchives
-} from "@jolly-pixel/editor.host";
+import type { AssetLeases, EditorArchives } from "@jolly-pixel/editor.host";
 import type {
   SyncedVoxelMap,
   VoxelMapRoom

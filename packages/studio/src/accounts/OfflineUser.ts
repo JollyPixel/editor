@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { ProjectRights } from "../../shared/ProjectRights.ts";

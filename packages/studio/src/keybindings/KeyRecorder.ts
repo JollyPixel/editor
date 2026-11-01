@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import type {
-  BindingPreference,
-  PreferenceScope
-} from "@jolly-pixel/editor.host/preferences";
+import type { BindingPreference, PreferenceScope } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { BoundChord } from "./BoundChord.ts";

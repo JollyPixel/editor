@@ -8,9 +8,9 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   ChordConflictError,
-  Preferences,
-  defineKeyBindings
-} from "@jolly-pixel/editor.host/preferences";
+  defineKeyBindings,
+  Preferences
+} from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";

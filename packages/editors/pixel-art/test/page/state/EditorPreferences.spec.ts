@@ -6,11 +6,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import {
   TextureGrid,
   UVMap
 } from "@jolly-pixel/pixel-draw.renderer";
+import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

@@ -9,6 +9,12 @@ const kDefaultColors = [
   "#577590",
   "#277da1"
 ];
+const kListedFallbackColor = "#ffffff";
+
+export interface ListedPeerColor {
+  clientId: string;
+  color: string;
+}
 
 export interface PeerColorAllocator {
   peerColor(
@@ -33,6 +39,16 @@ function hash(
 export function createDefaultColorAllocator(): PeerColorAllocator {
   return {
     peerColor: (peerId) => kDefaultColors[hash(peerId) % kDefaultColors.length],
+    release: () => void 0
+  };
+}
+
+export function createListedColorAllocator(
+  peers: () => readonly ListedPeerColor[]
+): PeerColorAllocator {
+  return {
+    peerColor: (peerId) => peers()
+      .find((peer) => peer.clientId === peerId)?.color ?? kListedFallbackColor,
     release: () => void 0
   };
 }

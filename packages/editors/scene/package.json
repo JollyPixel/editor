@@ -57,6 +57,7 @@
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",

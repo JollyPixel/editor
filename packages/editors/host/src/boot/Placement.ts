@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
+import { Preferences } from "@jolly-pixel/preferences";
 import { ColorPicker } from "@jolly-pixel/ui/elements/color-picker";
 
 // Import Internal Dependencies
@@ -16,12 +17,11 @@ import {
   type LaunchHistory
 } from "../launch/LaunchHistory.ts";
 import type { ShellChannel } from "../shell/ShellChannel.ts";
-import { LocalPreferences } from "../preferences/store/LocalPreferences.ts";
-import { Preferences } from "../preferences/store/Preferences.ts";
+import { LocalPreferences } from "../preferences/LocalPreferences.ts";
 import {
   CAMERA_PREFERENCES,
   LANTERN_PREFERENCES
-} from "../preferences/scope/hostPreferences.ts";
+} from "../preferences/hostPreferences.ts";
 import { PreferenceStorage } from "../preferences/adapters/PreferenceStorage.ts";
 import { followColorPickerPreferences } from "../preferences/adapters/followColorPickerPreferences.ts";
 import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";

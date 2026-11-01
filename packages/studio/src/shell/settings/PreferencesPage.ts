@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { Preferences, PreferenceScope } from "@jolly-pixel/preferences";
 import {
   LitElement,
   css,
@@ -10,10 +11,6 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
-import type {
-  PreferenceScope,
-  Preferences
-} from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { settingsColumnsStyles } from "./settingsStyles.ts";

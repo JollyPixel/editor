@@ -17,10 +17,7 @@ import {
   type LaunchPorts,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
-import type {
-  PreferenceOverrides,
-  Preferences
-} from "@jolly-pixel/editor.host/preferences";
+import type { PreferenceOverrides, Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import type { EditorTab } from "./EditorTabs.ts";

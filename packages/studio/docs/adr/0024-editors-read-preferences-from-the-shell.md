@@ -34,7 +34,8 @@ An editor opened outside the studio keeps the same scopes in `localStorage`.
 ## Consequences
 
 - An editor's preferences module must load in Node.js: it imports only
-  `@jolly-pixel/editor.host/preferences` and other modules that are just as plain.
+  `@jolly-pixel/preferences`, `@jolly-pixel/editor.host/preferences` and other
+  modules that are just as plain.
 - A scope shared by several editors, such as the pixel-art panel shortcuts, is declared once, by
   the editor that owns it, and listed under `shared` by the others. Settings shows it on its
   owner's page, or on the first editor sharing it when the owner is not installed. Two different

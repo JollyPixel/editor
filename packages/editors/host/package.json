@@ -17,8 +17,8 @@
       "default": "./dist/offline/index.js"
     },
     "./preferences": {
-      "types": "./dist/preferences/index.d.ts",
-      "default": "./dist/preferences/index.js"
+      "types": "./dist/preferences/hostPreferences.d.ts",
+      "default": "./dist/preferences/hostPreferences.js"
     },
     "./scene": {
       "types": "./dist/scene/index.d.ts",
@@ -71,6 +71,7 @@
     "@jolly-pixel/event-store": "workspace:*",
     "@jolly-pixel/lantern": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",

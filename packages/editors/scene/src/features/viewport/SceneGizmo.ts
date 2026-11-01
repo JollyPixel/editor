@@ -1,19 +1,19 @@
 // Import Third-party Dependencies
+import type { Preferences } from "@jolly-pixel/preferences";
 import type * as THREE from "three";
 import type { OrbitFlyCamera } from "@jolly-pixel/engine";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type {
   SceneChange,
   SceneDocument,
   SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
 import {
-  TransformControls,
+  COMPACT_GIZMO_APPEARANCE,
   type TransformChangeEvent,
+  TransformControls,
   type TransformEndEvent,
   type TransformGestureEvent
 } from "@jolly-pixel/three";
-import { EDITOR_GIZMO_APPEARANCE } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
 import type { SceneComponents } from "../../components/SceneComponents.ts";
@@ -145,7 +145,7 @@ export class SceneGizmo {
       options.canvas,
       {
         appearance: {
-          ...EDITOR_GIZMO_APPEARANCE,
+          ...COMPACT_GIZMO_APPEARANCE,
           planes: false
         }
       }

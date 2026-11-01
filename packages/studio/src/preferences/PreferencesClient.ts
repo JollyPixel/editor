@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { PreferenceOverrides } from "@jolly-pixel/editor.host/preferences";
+import type { PreferenceOverrides } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import {

@@ -10,7 +10,7 @@ import {
   CommandConsole,
   type RegisteredVariable
 } from "@jolly-pixel/console";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

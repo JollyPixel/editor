@@ -1,8 +1,8 @@
-// Import Third-party Dependencies
-import type { TransformControlsOptions } from "@jolly-pixel/three";
+// Import Internal Dependencies
+import type { TransformControlsOptions } from "./types.ts";
 
 // CONSTANTS
-export const EDITOR_GIZMO_APPEARANCE = {
+export const COMPACT_GIZMO_APPEARANCE = {
   size: 0.1,
   center: {
     interactive: true

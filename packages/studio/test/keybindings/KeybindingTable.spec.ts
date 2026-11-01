@@ -8,10 +8,9 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   CAMERA_PREFERENCES,
-  Preferences,
-  RUNTIME_PREFERENCES,
-  defineKeyBindings
+  RUNTIME_PREFERENCES
 } from "@jolly-pixel/editor.host/preferences";
+import { defineKeyBindings, Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { KeybindingTable } from "../../src/keybindings/KeybindingTable.ts";

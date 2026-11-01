@@ -12,8 +12,8 @@ import {
   type PreferenceField,
   type PreferenceValue
 } from "./PreferenceField.ts";
-import { ChordConflictError } from "../errors/ChordConflictError.ts";
-import { InvalidPreferencesError } from "../errors/InvalidPreferencesError.ts";
+import { ChordConflictError } from "./errors/ChordConflictError.ts";
+import { InvalidPreferencesError } from "./errors/InvalidPreferencesError.ts";
 
 // CONSTANTS
 export const PREFERENCE_SCOPE_NAME = /^[a-z0-9][a-z0-9-]*$/;

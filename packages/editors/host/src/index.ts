@@ -52,7 +52,6 @@ export {
   type EditorRuntimeLoadOptions,
   type PerformancePaneOptions
 } from "./runtime/EditorRuntime.ts";
-export * from "./runtime/PeerFrustums.ts";
 export * from "./runtime/RuntimeWidgets.ts";
 export * from "./boot/EditorDefinition.ts";
 export * from "./boot/mountStandalone.ts";
@@ -60,10 +59,9 @@ export { DEBUG_HANDLE } from "./boot/StandaloneEditor.ts";
 export * from "./boot/Teardown.ts";
 export * from "./boot/bootStandalone.ts";
 export * from "./boot/offerOffline.ts";
-export * from "./preferences/index.ts";
-export * from "./preferences/store/LocalPreferences.ts";
+export * from "./preferences/hostPreferences.ts";
+export * from "./preferences/LocalPreferences.ts";
 export * from "./preferences/adapters/PreferenceStorage.ts";
-export * from "./preferences/adapters/followCameraPreferences.ts";
 export * from "./preferences/adapters/followKeyBindings.ts";
 export * from "./preferences/appearance/PageAppearance.ts";
 export * from "./console/mountConsole.ts";

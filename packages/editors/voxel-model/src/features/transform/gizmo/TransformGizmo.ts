@@ -4,10 +4,10 @@ import { Emitter } from "@openally/emitt";
 import type { OrbitFlyCamera } from "@jolly-pixel/engine";
 import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/client";
 import {
+  COMPACT_GIZMO_APPEARANCE,
   TransformControls,
   type TransformControlsOptions
 } from "@jolly-pixel/three";
-import { EDITOR_GIZMO_APPEARANCE } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
 import type {
@@ -35,7 +35,7 @@ import { RenderOrder } from "../../../scene/renderOrder.ts";
 
 // CONSTANTS
 const kAppearance = {
-  ...EDITOR_GIZMO_APPEARANCE,
+  ...COMPACT_GIZMO_APPEARANCE,
   rings: {
     frontOnly: false
   },

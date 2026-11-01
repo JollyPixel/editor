@@ -8,7 +8,7 @@ import {
   isApplePlatform
 } from "@jolly-pixel/controls";
 import { followKeyBindings } from "@jolly-pixel/editor.host";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { VOXEL_MODEL_KEYBINDINGS } from "#src/preferences.ts";

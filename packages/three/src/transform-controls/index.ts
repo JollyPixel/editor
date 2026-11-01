@@ -1,4 +1,5 @@
 export { TransformControls } from "./TransformControls.ts";
+export * from "./compactGizmo.ts";
 export type {
   ResolvedOrientation,
   ResolvedPivot

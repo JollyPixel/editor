@@ -4,8 +4,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 // Import Third-party Dependencies
+import { PreferenceScope } from "@jolly-pixel/preferences";
 import * as z from "zod";
-import { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "../../shared/EditorDescriptor.ts";

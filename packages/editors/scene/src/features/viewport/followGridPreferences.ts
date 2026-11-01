@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import type { Preferences } from "@jolly-pixel/preferences";
 import type { Grid } from "@jolly-pixel/three";
 
 // Import Internal Dependencies

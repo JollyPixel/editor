@@ -10,7 +10,7 @@ import {
   Preferences,
   definePreferences,
   type PreferenceChange
-} from "#src/preferences/index.ts";
+} from "#src/index.ts";
 
 // CONSTANTS
 const kCamera = definePreferences({

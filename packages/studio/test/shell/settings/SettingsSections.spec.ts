@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { definePreferences } from "@jolly-pixel/editor.host/preferences";
+import { definePreferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../../src/catalog/AssetKindSet.ts";

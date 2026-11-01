@@ -14,7 +14,7 @@ What a user configures falls into three tiers, kept in three places:
   the kind filter. It stays in `localStorage` and never shows in Settings.
 
 A preference scope is declared once with `definePreferences` from
-`@jolly-pixel/editor.host/preferences`: each field is a boolean, an enum, a number range or a key
+`@jolly-pixel/preferences`: each field is a boolean, an enum, a number range or a key
 chord, with a label and a default. The server builds its validation from the same descriptors, so
 a `PUT /api/preferences/<scope>` with an unknown field or a refused value fails with a 400, and a
 read drops stored fields the descriptors no longer declare. Only overrides are stored: assigning a

@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
-import * as z from "zod";
 import {
-  Preferences,
   type PreferenceChange,
-  type PreferenceOverrides
-} from "@jolly-pixel/editor.host/preferences";
+  type PreferenceOverrides,
+  Preferences
+} from "@jolly-pixel/preferences";
+import * as z from "zod";
 
 // Import Internal Dependencies
 import type { PreferencesClient } from "./PreferencesClient.ts";

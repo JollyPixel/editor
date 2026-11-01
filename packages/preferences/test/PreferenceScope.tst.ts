@@ -8,7 +8,7 @@ import {
 import {
   definePreferences,
   type PreferenceValues
-} from "#src/preferences/index.ts";
+} from "#src/index.ts";
 
 // CONSTANTS
 const kView = definePreferences({

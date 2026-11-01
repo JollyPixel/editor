@@ -3,6 +3,7 @@ export * from "./camera/CameraProjection.ts";
 export * from "./camera/CameraDefinition.ts";
 export * from "./camera/Camera3DControls.ts";
 export * from "./camera/orbit-fly/OrbitFlyCamera.ts";
+export * from "./camera/orbit-fly/bindOrbitFocus.ts";
 export {
   TOUCHPAD_SWIPE_MODES,
   type CameraPose,

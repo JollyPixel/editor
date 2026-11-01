@@ -1,4 +1,9 @@
 // Import Third-party Dependencies
+import type {
+  FormPreference,
+  Preferences,
+  PreferenceScope
+} from "@jolly-pixel/preferences";
 import {
   LitElement,
   html,
@@ -11,11 +16,6 @@ import {
   property,
   state
 } from "lit/decorators.js";
-import type {
-  FormPreference,
-  PreferenceScope,
-  Preferences
-} from "@jolly-pixel/editor.host/preferences";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/color";

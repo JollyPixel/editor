@@ -14,10 +14,7 @@ import {
   SHELL_MESSAGE_TYPE,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
-import {
-  definePreferences,
-  Preferences
-} from "@jolly-pixel/editor.host/preferences";
+import { definePreferences, Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";

@@ -8,12 +8,9 @@ import {
   Lantern,
   TargetPath
 } from "@jolly-pixel/lantern";
-import {
-  CAMERA_PREFERENCES,
-  Preferences,
-  provideTourKeys
-} from "@jolly-pixel/editor.host";
+import { CAMERA_PREFERENCES, provideTourKeys } from "@jolly-pixel/editor.host";
 import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

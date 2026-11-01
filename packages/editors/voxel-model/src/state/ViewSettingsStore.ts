@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
+import type { Preferences } from "@jolly-pixel/preferences";
 import { Emitter } from "@openally/emitt";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import {

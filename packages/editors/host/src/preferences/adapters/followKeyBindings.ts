@@ -3,11 +3,11 @@ import {
   KeyBindingSettings,
   type KeyBindingDefaults
 } from "@jolly-pixel/controls";
-
-// Import Internal Dependencies
-import type { Preferences } from "../store/Preferences.ts";
-import type { PreferenceScope } from "../scope/PreferenceScope.ts";
-import type { KeyBindingFields } from "../scope/defineKeyBindings.ts";
+import type {
+  KeyBindingFields,
+  Preferences,
+  PreferenceScope
+} from "@jolly-pixel/preferences";
 
 export function followKeyBindings<TAction extends string>(
   preferences: Preferences,

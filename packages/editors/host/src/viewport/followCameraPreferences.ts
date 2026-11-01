@@ -3,11 +3,13 @@ import {
   OrbitFlyKeys,
   type OrbitFlyCamera
 } from "@jolly-pixel/engine";
+import type {
+  Preferences,
+  PreferenceValues
+} from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
-import { CAMERA_PREFERENCES } from "../scope/hostPreferences.ts";
-import type { Preferences } from "../store/Preferences.ts";
-import type { PreferenceValues } from "../scope/PreferenceScope.ts";
+import { CAMERA_PREFERENCES } from "../preferences/hostPreferences.ts";
 
 export type PreferenceCamera = Pick<
   OrbitFlyCamera,

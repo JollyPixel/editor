@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { UvSyncStore } from "../../src/state/UvSyncStore.ts";

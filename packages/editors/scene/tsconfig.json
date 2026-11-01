@@ -54,6 +54,9 @@
     },
     {
       "path": "../../voxel-renderer"
+    },
+    {
+      "path": "../../preferences"
     }
   ]
 }

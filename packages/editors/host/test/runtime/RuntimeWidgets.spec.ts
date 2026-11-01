@@ -5,8 +5,10 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/preferences";
+
 // Import Internal Dependencies
-import { Preferences } from "#src/preferences/index.ts";
 import { RuntimeWidgets } from "#src/runtime/RuntimeWidgets.ts";
 import { createWidgetHost } from "../helpers/runtime/widgetHost.ts";
 

@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 import {
   MemoryStorageAdapter,
   type StorageAdapter

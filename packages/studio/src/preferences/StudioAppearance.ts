@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
-import type {
-  Appearance,
-  PageAppearance,
-  Preferences
-} from "@jolly-pixel/editor.host";
+import type { Appearance, PageAppearance } from "@jolly-pixel/editor.host";
+import type { Preferences } from "@jolly-pixel/preferences";
 import type {
   Density,
   StorageAdapter,

@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
+import type {
+  Preferences,
+  PreferenceScope
+} from "@jolly-pixel/preferences";
 import type { StorageAdapter } from "@jolly-pixel/ui";
-
-// Import Internal Dependencies
-import type { Preferences } from "../store/Preferences.ts";
-import type { PreferenceScope } from "../scope/PreferenceScope.ts";
 
 export class PreferenceStorage implements StorageAdapter {
   #preferences: Preferences;
