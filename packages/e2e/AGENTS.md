@@ -19,6 +19,8 @@ devDepends on this package. Locators match `jolly-*` tags and ARIA roles;
    `vite build --mode e2e && vite preview --mode e2e`, like `@jolly-pixel/ui`.
 5. CI runs `test:e2e` when the package or a workspace dependency changes. Opt out
    with a `--skip-e2e` entry in `.github/workflows/node.js.yml`.
+6. A scenario suite (one user story checked through exported archives) uses
+   `defineScenarioConfig` and a `test:scenario` script instead; CI never runs it.
 
 ## Gotchas
 

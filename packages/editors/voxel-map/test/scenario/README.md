@@ -1,49 +1,17 @@
 # Voxel-map scenario
 
-One Playwright test plays a user story from a blank offline map to a finished
-house, in installed Chrome on the real GPU. It replaces the per-feature e2e
-specs, which ran on SwiftShader and were too flaky to keep in CI.
+One headed Playwright test builds a house, from a blank offline map to the
+finished build. It needs Google Chrome and does not run in CI. The runner and
+checkpoints are described in `@jolly-pixel/e2e`.
 
 ```bash
 $ pnpm --filter @jolly-pixel/editor.voxel-map test:scenario
 $ SCENARIO_FROM=template pnpm --filter @jolly-pixel/editor.voxel-map test:scenario
 ```
 
-The run is headed, uses one worker, and needs Google Chrome installed. It is
-not part of CI: the package has no `test:e2e` script. Every run records
-`test-results/<test>/video.webm` and attaches a screenshot per chapter.
-
-## How it works
-
-`buildHouse.scenario.ts` lists chapters. Each chapter drives the editor through
-its UI and console, then exports the map with `/archive.export`. `MapArchive`
-decodes that `.zip` in Node and the chapter compares it with its expectation:
-layers and their voxel counts, templates, blocks with the coverage of their
-tile, material groups, painted atlas tiles, and named cells. The comparison
-retries until it matches or the chapter times out.
-
-The export is also the checkpoint, saved under
-`node_modules/.cache/scenario/build-house/<chapter>.zip`. `SCENARIO_FROM`
-imports the checkpoint of the chapter before the one named, checks it, and
-plays on from there.
-
-Limits: 10 s per action and 45 s per chapter, so a stuck step fails and closes
-the browser.
-
-## Writing a chapter
-
-- Set up the session state the chapter needs: open pane, selected block, brush
-  size. None of it is saved in the map, so it is lost on resume, and the
-  previous chapter may have left another pane in front.
-- Assert through the exported archive. Reach for `window.voxelMapEditor` only
-  to aim the camera or to wait for an intermediate state inside a chapter.
-- Wait on a condition (`expect.poll`, `toPass`), never on a delay.
-- Write the expectation as a change from the previous chapter's one.
-
 ## Not covered yet
 
-These were covered by the deleted e2e specs (named in brackets) and are
-candidates for new chapters or a second scenario.
+Brackets name the deleted e2e spec that covered each item.
 
 - Peers: a second browser context that joins, sees edits and presence, and
   edits a template with the host (`collaboration`, `peer`, `templateEditing`).

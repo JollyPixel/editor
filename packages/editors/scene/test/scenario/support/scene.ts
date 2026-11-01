@@ -52,6 +52,23 @@ export async function findActor(
   }, name);
 }
 
+export async function actorOverridden(
+  page: Page,
+  name: string
+): Promise<boolean> {
+  const editor = await resolveEditor(page);
+
+  return editor.evaluate(({ editing }, actorName) => {
+    for (const actor of editing.document.tree.actors()) {
+      if (actor.name === actorName) {
+        return editing.overrides.actorOverridden(actor.id);
+      }
+    }
+
+    throw new Error(`No actor named '${actorName}'.`);
+  }, name);
+}
+
 export async function actorPoint(
   page: Page,
   name: string,

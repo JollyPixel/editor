@@ -2,10 +2,9 @@
 import { Buffer } from "node:buffer";
 
 // Import Third-party Dependencies
-import {
-  readAssetArchive,
-  type AssetArchive,
-  type AssetArchiveAsset
+import type {
+  AssetArchive,
+  AssetArchiveAsset
 } from "@jolly-pixel/asset-server";
 import {
   BLOCKSET_FILE,
@@ -55,18 +54,6 @@ export interface MapExpectation {
 }
 
 export class MapArchive {
-  static read(
-    bytes: Uint8Array
-  ): MapArchive {
-    const archive = readAssetArchive(bytes);
-    if (!archive.ok) {
-      throw archive.val;
-    }
-
-    return new MapArchive(archive.val);
-  }
-
-  readonly rootId: string;
   readonly #state: VoxelMapState;
   readonly #blockNames = new Map<number, string>();
   readonly #blocks: MapBlock[] = [];
@@ -80,7 +67,6 @@ export class MapArchive {
     if (map === undefined) {
       throw new Error("The archive holds no voxel map.");
     }
-    this.rootId = archive.root?.id ?? map.id;
 
     const world = decodeVoxelWorld(map.data);
     this.#state = new VoxelMapState(world.chunkSize);

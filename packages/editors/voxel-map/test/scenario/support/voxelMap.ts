@@ -5,9 +5,9 @@ import {
   openEditor,
   reloadEditor
 } from "@jolly-pixel/e2e/editor";
+import { ArchiveConsole } from "@jolly-pixel/e2e/scenario";
 
 // Import Internal Dependencies
-import { Archives } from "./archives.ts";
 import {
   BlockDialog,
   BlocksPane
@@ -36,7 +36,7 @@ export class VoxelMapPage {
   readonly world: MapWorld;
   readonly toolbar: EditToolbar;
   readonly panes: PaneDock;
-  readonly archives: Archives;
+  readonly archives: ArchiveConsole;
   readonly blocks: BlocksPane;
   readonly materials: MaterialsPane;
   readonly texture: TextureEditor;
@@ -54,7 +54,7 @@ export class VoxelMapPage {
     this.world = new MapWorld(page);
     this.toolbar = new EditToolbar(page);
     this.panes = new PaneDock(page);
-    this.archives = new Archives(page);
+    this.archives = new ArchiveConsole(page);
     this.blocks = new BlocksPane(page);
     this.materials = new MaterialsPane(page);
     this.texture = new TextureEditor(page);

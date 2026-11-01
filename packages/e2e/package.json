@@ -6,7 +6,8 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
-    "./editor": "./src/editor/index.ts"
+    "./editor": "./src/editor/index.ts",
+    "./scenario": "./src/scenario/index.ts"
   },
   "scripts": {
     "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",

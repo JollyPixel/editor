@@ -10,7 +10,6 @@ import type { PresencePeer } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import {
   ActorTreeRows,
-  ANCHOR_ICON,
   PREFAB_ICON
 } from "../../src/features/hierarchy/ActorTreeRows.ts";
 import type { SceneLiveView } from "../../src/editing/SceneEditing.ts";
@@ -184,8 +183,8 @@ describe("ActorTreeRows anchors", () => {
     assert.deepEqual(
       map.children?.map(({ label, icon, detail }) => [label, icon, detail]),
       [
-        ["ground", ANCHOR_ICON, "layer"],
-        ["spawn", ANCHOR_ICON, "object"],
+        ["ground", "actor-anchor", "layer"],
+        ["spawn", "actor-anchor", "object"],
         ["Crate", "actor-empty", undefined]
       ]
     );

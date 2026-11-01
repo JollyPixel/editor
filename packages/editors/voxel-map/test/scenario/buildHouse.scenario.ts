@@ -1,14 +1,16 @@
 // Import Third-party Dependencies
 import { expect } from "@playwright/test";
+import { Scenario } from "@jolly-pixel/e2e/scenario";
 
 // Import Internal Dependencies
-import { Scenario } from "./support/Scenario.ts";
-import type {
-  MapBlock,
-  MapCell,
-  MapExpectation
+import {
+  MapArchive,
+  type MapBlock,
+  type MapCell,
+  type MapExpectation
 } from "./support/MapArchive.ts";
 import type { Cell } from "./support/viewport.ts";
+import { VoxelMapPage } from "./support/voxelMap.ts";
 
 // CONSTANTS
 const kStone = "Stone";
@@ -109,9 +111,16 @@ function filled(
   });
 }
 
-new Scenario({
+new Scenario<VoxelMapPage, MapExpectation>({
   id: "build-house",
   title: "build a small house from a blank map",
+  open: async(page) => {
+    const map = new VoxelMapPage(page);
+    await map.openOffline();
+
+    return map;
+  },
+  describe: (archive, expected) => new MapArchive(archive).describe(expected.cells),
   chapters: [
     {
       id: "blank",

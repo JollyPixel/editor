@@ -26,7 +26,7 @@ import {
 
 // CONSTANTS
 export const PREFAB_ICON = "actor-prefab";
-export const ANCHOR_ICON = "actor-anchor";
+const kAnchorIcon = "actor-anchor";
 const kMissingAnchor = "The anchor is gone from the asset; its actors sit at the parent's origin";
 
 type ActorAnchors = Pick<Systems.SceneAnchorsReader, "anchors">;
@@ -222,7 +222,7 @@ function anchorNode(
     {
       id,
       label: "Missing anchor",
-      icon: ANCHOR_ICON,
+      icon: kAnchorIcon,
       renamable: false,
       warning: kMissingAnchor,
       data: row
@@ -230,7 +230,7 @@ function anchorNode(
     {
       id,
       label: found.label,
-      icon: ANCHOR_ICON,
+      icon: kAnchorIcon,
       detail: found.kind,
       renamable: false,
       data: row

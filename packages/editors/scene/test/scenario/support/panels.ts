@@ -32,9 +32,12 @@ export function inspectedActor(
   return inspector(page).locator("jolly-folder[key=\"actor\"]");
 }
 
+export type TransformField = "Position" | "Rotation" | "Scale";
+export type TransformAxis = "X" | "Y" | "Z";
+
 export function transformAxis(
   page: Page,
-  axis: "X" | "Y" | "Z"
+  axis: TransformAxis
 ): Locator {
   return inspector(page)
     .locator("jolly-folder[key=\"transform\"] jolly-vector3")
@@ -43,8 +46,8 @@ export function transformAxis(
 
 export async function editTransform(
   page: Page,
-  field: "Position" | "Rotation" | "Scale",
-  axis: "X" | "Y" | "Z",
+  field: TransformField,
+  axis: TransformAxis,
   value: string
 ): Promise<void> {
   await inspector(page)

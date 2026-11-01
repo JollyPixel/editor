@@ -23,11 +23,10 @@ The dev server loads scene component types from other workspaces only when their
 $ pnpm --filter @jolly-pixel/editor.scene test
 $ pnpm --filter @jolly-pixel/editor.scene typecheck
 $ pnpm --filter @jolly-pixel/editor.scene lint
-$ pnpm exec playwright install chromium
-$ pnpm --filter @jolly-pixel/editor.scene test:e2e
+$ pnpm --filter @jolly-pixel/editor.scene test:scenario
 ```
 
-Unit tests do not mount Lit elements; cover panes, viewport picking and the gizmo in the Playwright suite under `test/e2e/`.
+Unit tests do not mount Lit elements. `test:scenario` covers panes, viewport picking and the gizmo by playing a user story in installed Chrome; see [the scenario guide](./test/scenario/README.md).
 
 ## Contributors Guide
 
