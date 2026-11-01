@@ -164,57 +164,6 @@ describe("SceneBinding", () => {
     assert.deepEqual(environments.at(-1), foggy);
   });
 
-  test("previews an environment patch over the document without changing it", () => {
-    const document = new SceneDocument();
-    const stored = document.tree.environment;
-    const { binding, environments } = createProbeBinding(document);
-
-    binding.previewEnvironment({ background: "#ff0000" });
-
-    assert.deepEqual(environments.at(-1), {
-      ...stored,
-      background: "#ff0000"
-    });
-    assert.deepEqual(document.tree.environment, stored);
-  });
-
-  test("previews a component change through apply without changing the document", () => {
-    const document = new SceneDocument();
-    document.addActor({
-      name: "Actor",
-      components: [
-        { id: "patched", type: "Patched", data: { label: "a" }, assets: {} },
-        { id: "rebuilt", type: "Rebuilt", data: { label: "a" }, assets: {} }
-      ]
-    });
-    const { binding } = createProbeBinding(document);
-    const patched = binding.component("patched") as Probe;
-    const rebuilt = binding.component("rebuilt") as Probe;
-
-    binding.previewComponent("patched", new ComponentChange({ data: { label: "b" } }));
-    binding.previewComponent("rebuilt", new ComponentChange({ data: { label: "b" } }));
-    assert.strictEqual(patched.label, "b");
-    assert.strictEqual(binding.component("rebuilt"), rebuilt);
-    assert.strictEqual(rebuilt.label, "a");
-    assert.deepEqual(document.tree.component("patched")?.data, { label: "a" });
-
-    binding.previewComponent("patched", new ComponentChange({ unset: ["label"] }));
-    assert.strictEqual(patched.label, "none");
-  });
-
-  test("previews a transform patch over the stored transform without changing the document", () => {
-    const document = new SceneDocument();
-    const scale = { x: 2, y: 2, z: 2 };
-    const actorId = document.addActor({ name: "Actor", transform: { scale } })!;
-    const { binding } = createProbeBinding(document);
-    const { object3D } = binding.actor(actorId)!;
-
-    binding.previewTransform(actorId, { position: { x: 5, y: 0, z: 0 } });
-    assert.deepEqual(object3D.position.toArray(), [5, 0, 0]);
-    assert.deepEqual(object3D.scale.toArray(), [2, 2, 2]);
-    assert.deepEqual(document.tree.actor(actorId)?.transform.position, { x: 0, y: 0, z: 0 });
-  });
-
   test("finds the actor that owns a nested object", () => {
     const document = new SceneDocument();
     const actorId = document.addActor({ name: "Actor" })!;

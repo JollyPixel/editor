@@ -144,7 +144,7 @@ every change. On pull requests, unit, type and e2e tests run only for the
 workspaces a change reaches through the dependency graph
 (`scripts/ci/affected.ts`); a change under a workspace's `test/` or `docs/`
 does not reach its dependents. Pushes to `main` run them all. The
-voxel-model, terrain and studio e2e suites are currently skipped there, and voxel-map has only its local `test:scenario`, so their Playwright tests are proven only locally; weigh that
+voxel-model, terrain and studio e2e suites are currently skipped there, and voxel-map and scene have only their local `test:scenario`, so their Playwright tests are proven only locally; weigh that
 before retiring a unit test whose only other proof is one of those suites.
 
 ## Discovery

@@ -20,7 +20,7 @@ import {
 function createDraft(
   document: SceneDocument
 ) {
-  const { binding } = createProbeBinding(document);
+  const { binding, environments } = createProbeBinding(document);
   const draft = new SceneDraft({
     document,
     view: binding,
@@ -29,6 +29,7 @@ function createDraft(
 
   return {
     binding,
+    environments,
     draft
   };
 }
@@ -57,9 +58,9 @@ describe("SceneDraft", () => {
     assert.deepEqual(object3D.position.toArray(), [2, 0, 0]);
   });
 
-  test("discards a transform edit and restores the viewport to the stored transform", () => {
+  test("previews a transform edit over the stored transform and restores it on discard", () => {
     const document = new SceneDocument();
-    const actorId = document.addActor({ name: "Actor" })!;
+    const actorId = document.addActor({ name: "Actor", transform: { scale: { x: 2, y: 2, z: 2 } } })!;
     const { binding, draft } = createDraft(document);
     const { object3D } = binding.actor(actorId)!;
     let changes = 0;
@@ -68,6 +69,9 @@ describe("SceneDraft", () => {
     });
 
     draft.editTransform(actorId, { position: { x: 5, y: 0, z: 0 } });
+    assert.deepEqual(object3D.position.toArray(), [5, 0, 0]);
+    assert.deepEqual(object3D.scale.toArray(), [2, 2, 2]);
+
     draft.discardTransform(actorId);
     draft.discardTransform(actorId);
 
@@ -77,20 +81,28 @@ describe("SceneDraft", () => {
     assert.deepEqual(document.tree.actor(actorId)!.transform.position, { x: 0, y: 0, z: 0 });
   });
 
-  test("commits a component edit and restores the viewport when the document refuses the commit", () => {
+  test("previews a component edit only through apply and restores the viewport on a refused commit", () => {
     const document = new SceneDocument();
     document.addActor({
       name: "Actor",
-      components: [{ id: "probe", type: "Patched", data: { label: "a" }, assets: {} }]
+      components: [
+        { id: "probe", type: "Patched", data: { label: "a" }, assets: {} },
+        { id: "rebuilt", type: "Rebuilt", data: { label: "a" }, assets: {} }
+      ]
     });
     const { binding, draft } = createDraft(document);
     const probe = binding.component("probe") as Probe;
+    const rebuilt = binding.component("rebuilt") as Probe;
     function stored() {
       return document.tree.component("probe")!;
     }
 
     draft.editComponent("probe", new ComponentChange({ data: { label: "b" } }));
+    draft.editComponent("rebuilt", new ComponentChange({ data: { label: "b" } }));
     assert.strictEqual(probe.label, "b");
+    assert.strictEqual(binding.component("rebuilt"), rebuilt);
+    assert.strictEqual(rebuilt.label, "a");
+    assert.deepEqual(stored().data, { label: "a" });
     assert.deepEqual(draft.component(stored()).data, { label: "b" });
 
     draft.commitComponent("probe", ComponentChange.NONE);
@@ -103,11 +115,18 @@ describe("SceneDraft", () => {
     assert.deepEqual(draft.component(stored()).data, { label: "c" });
   });
 
-  test("discards every edit when the document resets", () => {
+  test("previews an environment edit without storing it and discards it when the document resets", () => {
     const document = new SceneDocument();
-    const { draft } = createDraft(document);
+    const stored = document.tree.environment;
+    const { draft, environments } = createDraft(document);
 
     draft.editEnvironment({ background: "#ff0000" });
+    assert.deepEqual(environments.at(-1), {
+      ...stored,
+      background: "#ff0000"
+    });
+    assert.deepEqual(document.tree.environment, stored);
+
     document.load({
       environment: SceneEnvironment.create(),
       actors: []

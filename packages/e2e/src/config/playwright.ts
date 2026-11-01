@@ -13,6 +13,10 @@ import { baseUrl } from "./ports.ts";
 // CONSTANTS
 const kWorkers = 4;
 const kServerTimeout = 60_000;
+const kScenarioViewport = {
+  width: 1280,
+  height: 720
+};
 
 export interface E2EConfigOptions {
   port: number;
@@ -58,6 +62,49 @@ export function defineE2EConfig(
       port,
       reuseExistingServer,
       timeout: kServerTimeout
+    }
+  };
+}
+
+export interface ScenarioConfigOptions {
+  port: number;
+  command: string;
+  viewport?: ViewportSize;
+}
+
+export function defineScenarioConfig(
+  options: ScenarioConfigOptions
+): PlaywrightTestConfig {
+  const {
+    port,
+    command,
+    viewport = kScenarioViewport
+  } = options;
+  const config = defineE2EConfig({
+    port,
+    command,
+    localWorkers: 1,
+    ciWorkers: 1,
+    viewport
+  });
+
+  return {
+    ...config,
+    testDir: "./test/scenario",
+    testMatch: "**/*.scenario.ts",
+    fullyParallel: false,
+    retries: 0,
+    use: {
+      ...config.use,
+      channel: "chrome",
+      headless: false,
+      actionTimeout: 10_000,
+      navigationTimeout: 30_000,
+      trace: "retain-on-failure",
+      video: {
+        mode: "on",
+        size: viewport
+      }
     }
   };
 }
