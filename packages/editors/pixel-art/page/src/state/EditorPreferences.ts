@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { Mode } from "@jolly-pixel/pixel-draw.renderer";
+import type { Preferences } from "@jolly-pixel/preferences";
 import type { StorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

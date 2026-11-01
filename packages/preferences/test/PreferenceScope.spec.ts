@@ -7,13 +7,12 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  CAMERA_PREFERENCES,
   ChordConflictError,
   InvalidPreferencesError,
   PreferenceScope,
   defineKeyBindings,
   definePreferences
-} from "#src/preferences/index.ts";
+} from "#src/index.ts";
 
 // CONSTANTS
 const kView = definePreferences({
@@ -79,6 +78,37 @@ const kKeys = defineKeyBindings({
     paste: {
       label: "Paste",
       group: "Clipboard"
+    }
+  }
+});
+
+const kHeld = definePreferences({
+  name: "held",
+  label: "Held keys",
+  fields: {
+    invertY: {
+      type: "boolean",
+      label: "Invert Y",
+      group: "Look",
+      default: false
+    },
+    forward: {
+      type: "key",
+      label: "Forward",
+      group: "Fly",
+      default: ["KeyW"]
+    },
+    up: {
+      type: "key",
+      label: "Up",
+      group: "Fly",
+      default: ["Space"]
+    },
+    lookUp: {
+      type: "key",
+      label: "Look up",
+      group: "Look",
+      default: ["KeyI"]
     }
   }
 });
@@ -167,16 +197,16 @@ describe("PreferenceScope", () => {
 
   test("lists held-key fields with the bindings, refusing chords and shared keys", () => {
     assert.deepEqual(
-      CAMERA_PREFERENCES.keyBindings.map((group) => group.label),
+      kHeld.keyBindings.map((group) => group.label),
       ["Fly", "Look"]
     );
     assert.throws(
-      () => CAMERA_PREFERENCES.update({}, { forward: ["Mod+w"] }),
+      () => kHeld.update({}, { forward: ["Mod+w"] }),
       (error: unknown) => error instanceof InvalidPreferencesError &&
         !(error instanceof ChordConflictError)
     );
     assert.throws(
-      () => CAMERA_PREFERENCES.update({}, { forward: ["Space"] }),
+      () => kHeld.update({}, { forward: ["Space"] }),
       ChordConflictError
     );
   });

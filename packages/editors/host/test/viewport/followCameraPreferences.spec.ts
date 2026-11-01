@@ -10,14 +10,14 @@ import {
   ORBIT_FLY_DEFAULT_KEYS,
   OrbitFlyKeys
 } from "@jolly-pixel/engine";
+import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
+import { CAMERA_PREFERENCES } from "#src/index.ts";
 import {
-  CAMERA_PREFERENCES,
-  Preferences,
   followCameraPreferences,
   type PreferenceCamera
-} from "#src/index.ts";
+} from "#src/viewport/index.ts";
 
 function createCamera(): PreferenceCamera {
   return {

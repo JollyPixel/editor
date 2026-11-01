@@ -6,12 +6,12 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/preferences";
 import * as THREE from "three";
 import {
   KeyBindings,
   type KeyCode
 } from "@jolly-pixel/controls";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies

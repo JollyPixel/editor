@@ -11,10 +11,8 @@ import {
   SHELL_MESSAGE_TYPE,
   preferencesMessage
 } from "@jolly-pixel/editor.host";
-import {
-  Preferences,
-  RUNTIME_PREFERENCES
-} from "@jolly-pixel/editor.host/preferences";
+import { RUNTIME_PREFERENCES } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

@@ -6,13 +6,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/preferences";
 import type { ColorPickerPreferenceSource } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import {
-  COLOR_PICKER_PREFERENCES,
-  Preferences
-} from "#src/index.ts";
+import { COLOR_PICKER_PREFERENCES } from "#src/index.ts";
 import {
   followColorPickerPreferences
 } from "#src/preferences/adapters/followColorPickerPreferences.ts";

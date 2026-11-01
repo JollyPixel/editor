@@ -66,6 +66,9 @@
     },
     {
       "path": "../../lantern"
+    },
+    {
+      "path": "../../preferences"
     }
   ]
 }

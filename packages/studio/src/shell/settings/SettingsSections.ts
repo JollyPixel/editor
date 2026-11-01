@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
+import type { PreferenceScope } from "@jolly-pixel/preferences";
 import type { IconName } from "@jolly-pixel/ui";
 import {
   LANTERN_PREFERENCES,
-  RUNTIME_PREFERENCES,
-  type PreferenceScope
+  RUNTIME_PREFERENCES
 } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies

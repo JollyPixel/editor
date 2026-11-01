@@ -7,13 +7,13 @@ import {
 import {
   MeshHighlight,
   ObjectOverlayRenderer,
-  PeerHighlights
+  PeerHighlights,
+  createListedColorAllocator
 } from "@jolly-pixel/three";
 import {
   reconcilePeerMarks,
   type PeerMarkMap
 } from "@jolly-pixel/ui/network";
-import { presenceColorAllocator } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
@@ -96,7 +96,7 @@ export class SelectionHighlight extends ActorComponent {
         hovered: { color: kSelectionColor }
       },
       peers: new PeerHighlights({
-        colorAllocator: presenceColorAllocator(() => presence.peers)
+        colorAllocator: createListedColorAllocator(() => presence.peers)
       })
     });
 

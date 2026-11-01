@@ -1,11 +1,11 @@
 // Import Internal Dependencies
-import { samePreferenceValue } from "../scope/PreferenceField.ts";
+import { samePreferenceValue } from "./PreferenceField.ts";
 import type {
   PreferenceFields,
   PreferenceOverrides,
   PreferenceScope,
   PreferenceValues
-} from "../scope/PreferenceScope.ts";
+} from "./PreferenceScope.ts";
 
 export interface PreferenceChange {
   scope: string;

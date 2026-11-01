@@ -1,5 +1,10 @@
 // Import Third-party Dependencies
 import {
+  ChordConflictError,
+  type Preferences,
+  type PreferenceScope
+} from "@jolly-pixel/preferences";
+import {
   LitElement,
   css,
   html,
@@ -13,11 +18,6 @@ import {
   state
 } from "lit/decorators.js";
 import { KeyboardLayoutStore } from "@jolly-pixel/controls";
-import {
-  ChordConflictError,
-  type PreferenceScope,
-  type Preferences
-} from "@jolly-pixel/editor.host/preferences";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/search";
 import "@jolly-pixel/ui/elements/separator";

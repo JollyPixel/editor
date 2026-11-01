@@ -47,6 +47,9 @@
     },
     {
       "path": "../ui"
+    },
+    {
+      "path": "../preferences"
     }
   ]
 }

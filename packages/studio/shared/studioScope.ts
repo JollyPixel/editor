@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { definePreferences } from "@jolly-pixel/editor.host/preferences";
+import { definePreferences } from "@jolly-pixel/preferences";
 
 export const STUDIO_PREFERENCES = definePreferences({
   name: "studio",

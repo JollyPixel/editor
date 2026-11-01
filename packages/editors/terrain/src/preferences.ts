@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { defineKeyBindings } from "@jolly-pixel/editor.host/preferences";
+import { defineKeyBindings } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { TERRAIN_KEY_BINDINGS } from "./keybindings/terrainActions.ts";

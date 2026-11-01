@@ -240,6 +240,26 @@ The camera keeps an on-demand host rendering through
 enabled and `moving`. `teleport()`, `frame()`, `enterOrbitFocus()` and
 `exitOrbitFocus()` call `world.invalidate()`.
 
+## bindOrbitFocus(camera, keyboard)
+
+Binds Escape to `exitOrbitFocus()`. Escape passes on to other bindings while
+the camera flies freely.
+
+```ts
+import { bindOrbitFocus } from "@jolly-pixel/engine";
+
+const release = bindOrbitFocus(camera, world.input.keyboard);
+```
+
+```ts
+function bindOrbitFocus(
+  camera: Pick<OrbitFlyCamera, "isOrbiting" | "exitOrbitFocus">,
+  keyboard: Pick<KeyBindings, "bind">
+): () => void;
+```
+
+The returned function removes the binding.
+
 ## frameBounds(bounds, options): CameraPose
 
 Returns the pose looking at the center of `bounds` along `forward`, far enough

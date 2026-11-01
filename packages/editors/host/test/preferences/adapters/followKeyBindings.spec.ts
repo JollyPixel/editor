@@ -5,12 +5,14 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
   Preferences,
-  defineKeyBindings,
-  followKeyBindings
-} from "#src/index.ts";
+  defineKeyBindings
+} from "@jolly-pixel/preferences";
+
+// Import Internal Dependencies
+import { followKeyBindings } from "#src/index.ts";
 
 // CONSTANTS
 const kKeys = defineKeyBindings({

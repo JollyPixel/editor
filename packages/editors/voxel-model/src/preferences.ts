@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
 import {
-  defineKeyBindings,
-  definePreferences,
-  type PreferenceValues
-} from "@jolly-pixel/editor.host/preferences";
-import {
   PIXEL_ART_KEYBINDINGS,
   PIXEL_ART_PREFERENCES
 } from "@jolly-pixel/editor.pixel-art/preferences";
+import {
+  defineKeyBindings,
+  definePreferences,
+  type PreferenceValues
+} from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { MODEL_KEY_BINDINGS } from "./keybindings/modelActions.ts";

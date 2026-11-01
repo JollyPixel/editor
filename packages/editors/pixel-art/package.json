@@ -80,6 +80,7 @@
     "@jolly-pixel/image": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
+    "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@openally/emitt": "1.1.0",
     "lit": "3.3.3",

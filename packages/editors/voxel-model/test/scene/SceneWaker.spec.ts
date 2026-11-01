@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 // Import Third-party Dependencies
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { SceneWaker } from "#src/scene/SceneWaker.ts";

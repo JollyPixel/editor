@@ -216,6 +216,19 @@ above a scene's own transparent geometry.
 
 Appearance is resolved at construction. Recreate the controls to change it.
 
+`COMPACT_GIZMO_APPEARANCE` is a preset: size `0.1`, an interactive center,
+inset planes, handles flipped toward the camera and a thicker dark outline.
+Spread it to override a field:
+
+```ts
+new TransformControls(camera, canvas, {
+  appearance: {
+    ...COMPACT_GIZMO_APPEARANCE,
+    viewRing: false
+  }
+});
+```
+
 The junction of the axis handles starts no gesture: pressing the origin is
 left to the center handle when it is interactive, which also wins over any
 plane handle reaching into it.

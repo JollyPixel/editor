@@ -14,7 +14,7 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
-import { PeerFrustums } from "#src/runtime/PeerFrustums.ts";
+import { PeerFrustums } from "#src/viewport/PeerFrustums.ts";
 import { FakeRoom } from "../helpers/rooms.ts";
 
 interface FrustumsHarness {

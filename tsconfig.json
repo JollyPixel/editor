@@ -5,6 +5,9 @@
       "path": "./packages/controls"
     },
     {
+      "path": "./packages/preferences"
+    },
+    {
       "path": "./packages/color"
     },
     {

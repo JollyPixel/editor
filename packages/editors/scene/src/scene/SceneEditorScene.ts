@@ -1,5 +1,7 @@
 // Import Third-party Dependencies
+import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
 import {
+  bindOrbitFocus,
   OrbitFlyCamera,
   Systems
 } from "@jolly-pixel/engine";
@@ -12,13 +14,9 @@ import type {
   SceneDocument,
   SceneRoom
 } from "@jolly-pixel/asset.scene/client";
-import {
-  followCameraPreferences,
-  Teardown
-} from "@jolly-pixel/editor.host";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Teardown } from "@jolly-pixel/editor.host";
 import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
-import { bindOrbitFocus } from "@jolly-pixel/editor.host/viewport";
+import type { Preferences } from "@jolly-pixel/preferences";
 import { Grid } from "@jolly-pixel/three";
 import type { LogQueue } from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
@@ -56,6 +54,8 @@ import { SceneDraft } from "../state/SceneDraft.ts";
 import { SelectionStore } from "../state/SelectionStore.ts";
 
 // CONSTANTS
+const kPivotMessage = "Camera switched to pivot";
+const kFreeFlyMessage = "Camera switched to free fly";
 const kCameraPreset = {
   focusMode: "lock",
   position: { x: 6, y: 5, z: 10 },
@@ -144,9 +144,9 @@ export class SceneEditorScene extends Systems.Scene {
       sceneId: this.#options.sceneId
     });
     teardown.defer(() => binding.dispose());
-    teardown.defer(bindOrbitFocus(camera, {
-      keyboard: world.input.keyboard,
-      log: this.#options.log
+    teardown.defer(bindOrbitFocus(camera, world.input.keyboard));
+    teardown.defer(camera.subscribe("orbit", (orbiting) => {
+      this.#options.log.push(orbiting ? kPivotMessage : kFreeFlyMessage);
     }));
     const writes = new ActorWrites(document);
     const draft = new SceneDraft({

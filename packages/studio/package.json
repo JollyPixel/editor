@@ -62,6 +62,7 @@
     "@jolly-pixel/event-store": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
+    "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
     "@openally/servo": "1.1.0",

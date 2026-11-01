@@ -7,10 +7,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  PageAppearance,
-  Preferences
-} from "@jolly-pixel/editor.host";
+import { PageAppearance } from "@jolly-pixel/editor.host";
+import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

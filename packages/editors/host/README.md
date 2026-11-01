@@ -116,19 +116,16 @@ void bootStandalone(MyEditor, {
 
 ### Preferences
 
-- [`Preferences`](./docs/preferences/Preferences.md): scope declarations, the
-  overrides holder, its `localStorage` store, keybinding and camera helpers,
-  and the host's scopes.
+- [`Preferences`](./docs/preferences/Preferences.md): the host's scopes, their
+  `localStorage` store and the keybinding, camera and tour helpers. Scopes are
+  declared with `@jolly-pixel/preferences`.
 
 ### Scene
 
 - [`EditorRuntime`](./docs/runtime/EditorRuntime.md): runtime boot with the editor
   keyboard rules.
-- [`PeerFrustums`](./docs/runtime/PeerFrustums.md): peer camera frustums as an actor
-  component.
-- [Viewport presets](./docs/viewport/ViewportPresets.md): the shared gizmo
-  appearance and peer highlight colors, from
-  `@jolly-pixel/editor.host/viewport`.
+- [`PeerFrustums`](./docs/viewport/PeerFrustums.md): peer camera frustums as an
+  actor component, from `@jolly-pixel/editor.host/viewport`.
 - [`SceneComponentPackage`](./docs/scene/SceneComponentPackage.md): the
   contract a package implements to add component types to the scene editor,
   from `@jolly-pixel/editor.host/scene`.

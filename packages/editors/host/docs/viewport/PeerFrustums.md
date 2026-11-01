@@ -1,7 +1,8 @@
 # PeerFrustums
 
 Actor component that draws every remote peer's camera frustum, labelled with
-the peer's username and tinted with its profile color.
+the peer's username and tinted with its profile color. It comes from
+`@jolly-pixel/editor.host/viewport`, the entry for 3D editors.
 
 ```ts
 const frustums = world

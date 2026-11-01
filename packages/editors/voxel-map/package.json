@@ -71,6 +71,7 @@
     "@jolly-pixel/lantern": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
+    "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/resize-handle": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/three": "workspace:*",

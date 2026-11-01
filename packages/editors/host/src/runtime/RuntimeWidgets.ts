@@ -4,11 +4,13 @@ import type {
   PerformanceStatsHud,
   ViewHelperSettings
 } from "@jolly-pixel/runtime";
+import type {
+  Preferences,
+  PreferenceValues
+} from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
-import { RUNTIME_PREFERENCES } from "../preferences/scope/hostPreferences.ts";
-import type { Preferences } from "../preferences/store/Preferences.ts";
-import type { PreferenceValues } from "../preferences/scope/PreferenceScope.ts";
+import { RUNTIME_PREFERENCES } from "../preferences/hostPreferences.ts";
 
 // CONSTANTS
 const kWidgets = [

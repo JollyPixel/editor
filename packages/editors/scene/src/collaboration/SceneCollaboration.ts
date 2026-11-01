@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
+import { PeerFrustums } from "@jolly-pixel/editor.host/viewport";
 import type * as THREE from "three";
 import type {
   CameraPose,
   Systems
 } from "@jolly-pixel/engine";
-import { PeerFrustums } from "@jolly-pixel/editor.host";
 import type { SceneRoom } from "@jolly-pixel/asset.scene/client";
 import {
   PeerMarkTracker,

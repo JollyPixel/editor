@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
 import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import {
   ShortcutLabels,
@@ -7,12 +8,9 @@ import {
 } from "@jolly-pixel/controls";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { registerPixelHistory } from "@jolly-pixel/asset.pixel-art/client";
+import type { Preferences } from "@jolly-pixel/preferences";
 import type { PresenceSource } from "@jolly-pixel/ui";
-import {
-  followCameraPreferences,
-  type EditorArchives
-} from "@jolly-pixel/editor.host";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
+import type { EditorArchives } from "@jolly-pixel/editor.host";
 import type {
   ModelDocument,
   VoxelModelRoom

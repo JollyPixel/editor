@@ -7,12 +7,12 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Lantern } from "@jolly-pixel/lantern";
+import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
   CAMERA_PREFERENCES,
-  Preferences,
   provideTourKeys
 } from "#src/index.ts";
 

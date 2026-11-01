@@ -7,7 +7,7 @@ import {
 
 // Import Third-party Dependencies
 import { CommandConsole } from "@jolly-pixel/console";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { viewConsole } from "../../src/scene/viewConsole.ts";

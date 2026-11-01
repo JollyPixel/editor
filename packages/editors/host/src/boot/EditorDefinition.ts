@@ -2,6 +2,7 @@
 import type { CommandConsole } from "@jolly-pixel/console";
 import type { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
+import type { Preferences } from "@jolly-pixel/preferences";
 import type { Runtime } from "@jolly-pixel/runtime";
 
 // Import Internal Dependencies
@@ -11,7 +12,6 @@ import type { ShellChannel } from "../shell/ShellChannel.ts";
 import type {
   AssetDocumentKind
 } from "../lease/AssetLease.ts";
-import type { Preferences } from "../preferences/store/Preferences.ts";
 import type { EditorRuntime } from "../runtime/EditorRuntime.ts";
 import type { EditorSession } from "../session/EditorSession.ts";
 import type {

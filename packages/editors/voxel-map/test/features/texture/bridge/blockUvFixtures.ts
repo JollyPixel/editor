@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 import {
   BlockRegistry,
   BlockShapeRegistry,

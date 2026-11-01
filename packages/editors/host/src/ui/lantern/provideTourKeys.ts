@@ -4,10 +4,10 @@ import {
   type KeyboardLayoutStore
 } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
-
-// Import Internal Dependencies
-import type { Preferences } from "../../preferences/store/Preferences.ts";
-import type { PreferenceScope } from "../../preferences/scope/PreferenceScope.ts";
+import type {
+  Preferences,
+  PreferenceScope
+} from "@jolly-pixel/preferences";
 
 export interface ProvideTourKeysOptions {
   lantern: Pick<Lantern, "keys">;

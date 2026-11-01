@@ -8,9 +8,9 @@ import {
 import type {
   BindingPreference,
   ChordConflictError,
-  PreferenceScope,
-  Preferences
-} from "@jolly-pixel/editor.host/preferences";
+  Preferences,
+  PreferenceScope
+} from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import {

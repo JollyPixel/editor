@@ -3,8 +3,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/preferences";
 import * as THREE from "three";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import { ViewLighting } from "#src/scene/ViewLighting.ts";

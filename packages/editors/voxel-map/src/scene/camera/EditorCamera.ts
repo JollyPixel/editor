@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
+import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
+import type { Preferences } from "@jolly-pixel/preferences";
 import * as THREE from "three";
 import {
-  OrbitFlyCamera,
+  bindOrbitFocus,
   type CameraPose,
+  OrbitFlyCamera,
   type Systems
 } from "@jolly-pixel/engine";
-import { followCameraPreferences } from "@jolly-pixel/editor.host";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
-import { bindOrbitFocus } from "@jolly-pixel/editor.host/viewport";
 import { clientToNdc } from "@jolly-pixel/three";
 import type { LogQueue } from "@jolly-pixel/ui";
 
@@ -24,6 +24,8 @@ import { CameraPostProcessing } from "./CameraPostProcessing.ts";
 const kPivotMaxDistance = 32;
 const kPivotFallbackDistance = 24;
 const kDefaultSamples = 4;
+const kPivotMessage = "Camera switched to pivot";
+const kFreeFlyMessage = "Camera switched to free fly";
 const kRight = new THREE.Vector3();
 const kSpawnFraming = {
   forward: new THREE.Vector3(0, -0.6, -1).normalize(),
@@ -77,9 +79,9 @@ export class EditorCamera {
 
     this.#disposables = [
       followCameraPreferences(controls, preferences),
-      bindOrbitFocus(controls, {
-        keyboard: world.input.keyboard,
-        log
+      bindOrbitFocus(controls, world.input.keyboard),
+      controls.subscribe("orbit", (orbiting) => {
+        log.push(orbiting ? kPivotMessage : kFreeFlyMessage);
       }),
       pointer.subscribe("change", (captured) => {
         controls.enabled = !captured;

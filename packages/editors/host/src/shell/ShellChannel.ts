@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { AssetId } from "@jolly-pixel/asset";
+import type { PreferenceOverrides } from "@jolly-pixel/preferences";
 import {
   DENSITIES,
   THEME_MODES,
@@ -10,7 +11,6 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { Appearance } from "../preferences/appearance/PageAppearance.ts";
-import type { PreferenceOverrides } from "../preferences/scope/PreferenceScope.ts";
 import {
   EDITOR_STATES,
   type EditorState

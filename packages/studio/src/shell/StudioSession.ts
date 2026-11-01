@@ -10,7 +10,7 @@ import {
   InvalidPreferencesError,
   type PreferenceOverrides,
   type Preferences
-} from "@jolly-pixel/editor.host/preferences";
+} from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import type { AssetKindSet } from "../catalog/AssetKindSet.ts";

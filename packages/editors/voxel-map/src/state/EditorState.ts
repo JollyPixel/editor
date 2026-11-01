@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { Preferences } from "@jolly-pixel/preferences";
 import {
   LocalStorageAdapter,
   LogQueue,
@@ -10,7 +11,6 @@ import {
   type PixelArtAction
 } from "@jolly-pixel/editor.pixel-art";
 import { followKeyBindings } from "@jolly-pixel/editor.host";
-import type { Preferences } from "@jolly-pixel/editor.host/preferences";
 import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
 import {
   KeyboardLayoutStore,

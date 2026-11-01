@@ -17,10 +17,8 @@ import {
   type LaunchIdentity,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
-import {
-  Preferences,
-  RUNTIME_PREFERENCES
-} from "@jolly-pixel/editor.host/preferences";
+import { RUNTIME_PREFERENCES } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import {

@@ -6,11 +6,13 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { definePreferences } from "@jolly-pixel/preferences";
+
 // Import Internal Dependencies
 import {
   LOCAL_PREFERENCES_KEY_PREFIX,
-  LocalPreferences,
-  definePreferences
+  LocalPreferences
 } from "#src/index.ts";
 
 // CONSTANTS

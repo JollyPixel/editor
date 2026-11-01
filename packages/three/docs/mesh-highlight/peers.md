@@ -89,6 +89,16 @@ interface PeerColorAllocator {
 }
 ```
 
+`createListedColorAllocator(peers)` gives each peer the `color` of its entry
+in `peers()`, matched by `clientId` and read again on every lookup. A peer
+missing from the list gets `#ffffff`.
+
+```ts
+new PeerHighlights({
+  colorAllocator: createListedColorAllocator(() => presence.peers)
+});
+```
+
 ## Draw peer indicators
 
 `MeshHighlight` creates a `PeerHighlights` as `highlight.peers` and renders it

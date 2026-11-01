@@ -2,9 +2,9 @@
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { Preferences } from "@jolly-pixel/preferences";
 import type { ReactiveControllerHost } from "lit";
 import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
 import type { MenuPoint } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

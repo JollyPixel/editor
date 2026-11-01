@@ -3,13 +3,13 @@ import type * as THREE from "three/webgpu";
 import {
   MeshHighlight,
   ObjectOverlayRenderer,
-  PeerHighlights
+  PeerHighlights,
+  createListedColorAllocator
 } from "@jolly-pixel/three";
 import {
   reconcilePeerMarks,
   type PeerMarkMap
 } from "@jolly-pixel/ui/network";
-import { presenceColorAllocator } from "@jolly-pixel/editor.host/viewport";
 
 // Import Internal Dependencies
 import type { ModelBlock, ModelBlocks } from "../../scene/blocks/index.ts";
@@ -120,7 +120,7 @@ export class HighlightBridge {
         occludedOpacityScale: kOccludedOpacityScale
       },
       peers: new PeerHighlights({
-        colorAllocator: presenceColorAllocator(() => this.#presence.peers)
+        colorAllocator: createListedColorAllocator(() => this.#presence.peers)
       })
     });
 

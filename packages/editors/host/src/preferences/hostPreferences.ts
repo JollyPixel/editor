@@ -3,9 +3,7 @@ import {
   COLOR_PICKER_DEFAULTS,
   COLOR_PICKER_OPTIONS
 } from "@jolly-pixel/ui/color-picker";
-
-// Import Internal Dependencies
-import { definePreferences } from "./PreferenceScope.ts";
+import { definePreferences } from "@jolly-pixel/preferences";
 
 export const RUNTIME_PREFERENCES = definePreferences({
   name: "runtime",

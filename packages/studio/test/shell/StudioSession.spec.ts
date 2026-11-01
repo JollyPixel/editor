@@ -13,7 +13,7 @@ import {
   SESSION_RENEWED_MESSAGE_TYPE,
   SHELL_MESSAGE_TYPE
 } from "@jolly-pixel/editor.host";
-import { Preferences } from "@jolly-pixel/editor.host/preferences";
+import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

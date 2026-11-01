@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
+import { PreferenceScope } from "@jolly-pixel/preferences";
 import * as z from "zod";
 import type { LoadedAssetKind } from "@jolly-pixel/asset-server";
-import { PreferenceScope } from "@jolly-pixel/editor.host/preferences";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "./EditorDescriptor.ts";

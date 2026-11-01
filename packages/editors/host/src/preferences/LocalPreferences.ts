@@ -1,9 +1,9 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
   Preferences,
-  type PreferenceChange
-} from "./Preferences.ts";
-import type { PreferenceOverrides } from "../scope/PreferenceScope.ts";
+  type PreferenceChange,
+  type PreferenceOverrides
+} from "@jolly-pixel/preferences";
 
 // CONSTANTS
 export const LOCAL_PREFERENCES_KEY_PREFIX = "jolly-pixel:preferences:";

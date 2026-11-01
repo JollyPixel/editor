@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import { AccountsError } from "@jolly-pixel/accounts";
-import { InvalidPreferencesError } from "@jolly-pixel/editor.host/preferences";
+import { InvalidPreferencesError } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { ApiError } from "./ApiError.ts";
