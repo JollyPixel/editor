@@ -20,7 +20,7 @@ import {
   PIXEL_ART_KIND
 } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
-import type { PixelNetworkCommand, PixelWireCommand } from "#src/network/types.ts";
+import type { PixelNetworkCommand, PixelWireCommand } from "#src/network/protocol/types.ts";
 import { packed } from "../fixtures/commands.ts";
 
 // CONSTANTS

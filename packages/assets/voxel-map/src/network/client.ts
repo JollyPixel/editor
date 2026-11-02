@@ -1,4 +1,4 @@
-export * from "./types.ts";
+export * from "./voxelMap/types.ts";
 export {
   VOXEL_MAP_ASSET,
   VOXEL_MAP_EXTENSION,
@@ -8,12 +8,12 @@ export * from "../asset/blockset.ts";
 export * from "../history/VoxelEdits.ts";
 export * from "../history/VoxelKeySet.ts";
 export * from "../history/voxelHistoryRegistration.ts";
-export * from "./VoxelSyncClient.ts";
-export * from "./SyncedVoxelMap.ts";
+export * from "./voxelMap/VoxelSyncClient.ts";
+export * from "./voxelMap/SyncedVoxelMap.ts";
 export * from "./blockset/types.ts";
 export * from "./blockset/BlocksetSyncClient.ts";
 export * from "./blockset/SyncedBlockset.ts";
-export * from "./blockset/blocksetAssets.ts";
+export * from "../asset/blocksetAssets.ts";
 export * from "../projection/blockShapeUv.ts";
 export * from "../projection/BlockProjection.ts";
 export * from "../projection/BlocksetIslands.ts";

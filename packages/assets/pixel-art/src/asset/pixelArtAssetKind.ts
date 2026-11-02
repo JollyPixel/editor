@@ -30,16 +30,16 @@ import {
   PIXEL_ART_KIND,
   pixelArtContentFromPng
 } from "./pixelArt.ts";
-import { applyPixelCommand } from "../network/PixelCommandApplier.ts";
-import { encodePixelSnapshot } from "../network/PixelSnapshotCodec.ts";
+import { applyPixelCommand } from "../network/arbiter/PixelCommandApplier.ts";
+import { encodePixelSnapshot } from "../network/protocol/PixelSnapshotCodec.ts";
 import {
   pixelCommandProtocol,
   pixelSnapshotSchema,
   sizeSchema
-} from "../network/PixelCommand.schema.ts";
-import { PIXEL_COMMAND_RULES } from "../network/PixelCommandRules.ts";
-import { correctPixelCommand } from "../network/PixelCorrection.ts";
-import type { PixelWireCommand } from "../network/types.ts";
+} from "../network/protocol/PixelCommand.schema.ts";
+import { PIXEL_COMMAND_RULES } from "../network/arbiter/PixelCommandRules.ts";
+import { correctPixelCommand } from "../network/arbiter/PixelCorrection.ts";
+import type { PixelWireCommand } from "../network/protocol/types.ts";
 
 // CONSTANTS
 const kDefaultSize: Vec2 = {

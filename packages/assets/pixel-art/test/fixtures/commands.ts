@@ -11,8 +11,8 @@ import {
 import type {
   PixelNetworkCommand,
   PixelWireCommand
-} from "#src/network/types.ts";
-import { packPixelEvent } from "#src/network/PixelWireCodec.ts";
+} from "#src/network/protocol/types.ts";
+import { packPixelEvent } from "#src/network/protocol/PixelWireCodec.ts";
 
 export type PixelCommandAction = PixelNetworkCommand["action"];
 export type PixelCommandOf<TAction extends PixelCommandAction> = Extract<

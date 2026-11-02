@@ -22,10 +22,10 @@ import {
   PIXEL_ART_KIND
 } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
-import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
+import { PixelSyncClient } from "#src/network/sync/PixelSyncClient.ts";
 import { SharedPixelHistory } from "#src/history/PixelCanvasHistory.ts";
 import { registerPixelHistory } from "#src/history/pixelHistoryRegistration.ts";
-import type { PixelWireCommand, PixelServerMessage } from "#src/network/types.ts";
+import type { PixelWireCommand, PixelServerMessage } from "#src/network/protocol/types.ts";
 import { command } from "../fixtures/commands.ts";
 import { readPixel } from "../fixtures/canvas.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";

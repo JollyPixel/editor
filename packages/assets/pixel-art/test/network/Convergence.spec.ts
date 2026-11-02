@@ -11,8 +11,8 @@ import { LiveAssetRoom } from "@jolly-pixel/asset-server/testing";
 // Import Internal Dependencies
 import { StandalonePixelHistory } from "#src/history/PixelCanvasHistory.ts";
 import { pixelArtAssetKind } from "#src/index.ts";
-import { PixelSyncClient } from "#src/network/PixelSyncClient.ts";
-import type { PixelWireSnapshot } from "#src/network/types.ts";
+import { PixelSyncClient } from "#src/network/sync/PixelSyncClient.ts";
+import type { PixelWireSnapshot } from "#src/network/protocol/types.ts";
 import { command } from "../fixtures/commands.ts";
 import { readPixel } from "../fixtures/canvas.ts";
 import { createPixelArtCanvas } from "../helpers/canvas.ts";

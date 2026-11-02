@@ -16,8 +16,8 @@ import {
   sceneAssetKind,
   type SceneState
 } from "#src/index.ts";
-import type { SceneTree } from "#src/model/SceneTree.ts";
-import { SceneTransform } from "#src/model/SceneTransform.ts";
+import type { SceneTree } from "#src/model/tree/SceneTree.ts";
+import { SceneTransform } from "#src/model/changes/SceneTransform.ts";
 import { sceneDocumentKind } from "#src/network/sceneDocumentKind.ts";
 import type {
   SceneNetworkCommand,

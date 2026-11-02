@@ -10,8 +10,8 @@ import { decodePngPixels, pixelArtSnapshot } from "@jolly-pixel/pixel-draw.rende
 // Import Internal Dependencies
 import { pixelArtAssetKind, PIXEL_ART_KIND } from "#src/index.ts";
 import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
-import { pixelSnapshotSchema } from "#src/network/PixelCommand.schema.ts";
-import type { PixelWireCommand, PixelWireSnapshot } from "#src/network/types.ts";
+import { pixelSnapshotSchema } from "#src/network/protocol/PixelCommand.schema.ts";
+import type { PixelWireCommand, PixelWireSnapshot } from "#src/network/protocol/types.ts";
 const kRedTuple = [255, 0, 0, 255];
 
 function binding(
