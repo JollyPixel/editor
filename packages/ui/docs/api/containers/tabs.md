@@ -175,6 +175,7 @@ jolly-tabs {
   --jolly-tab-close-icon-size: 8px;
   --jolly-tab-modified-size: 8px;
   --jolly-tab-status-size: 10px;
+  --jolly-tab-text-max-width: none; /* longer labels end with an ellipsis */
 }
 ```
 

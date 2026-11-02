@@ -113,6 +113,8 @@ void bootStandalone(MyEditor, {
 - [`EditorToolbar`](./docs/ui/EditorToolbar.md): the bar above the viewport.
 - [`bindPresenceStack`](./docs/ui/bindPresenceStack.md): a presence stack
   bound to a room's peers.
+- [`saveFile`](./docs/browser/saveFile.md): downloads a blob under a file
+  name.
 
 ### Preferences
 

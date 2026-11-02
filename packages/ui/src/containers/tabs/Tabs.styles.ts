@@ -144,6 +144,7 @@ export const tabsStyles = css`
     ${truncate}
 
     min-width: 0;
+    max-width: var(--jolly-tab-text-max-width, none);
     padding-block: 0.3em;
     text-box: trim-both cap alphabetic;
   }

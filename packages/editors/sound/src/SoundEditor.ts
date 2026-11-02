@@ -4,6 +4,7 @@ import {
   soundDocumentKind
 } from "@jolly-pixel/asset.sound/client";
 import {
+  bindPresenceStack,
   Teardown,
   type EditorContext,
   type EditorSession
@@ -11,7 +12,10 @@ import {
 import "@jolly-pixel/editor.host/ui";
 
 // Import Internal Dependencies
-import { SoundPlayer } from "../playback/SoundPlayer.ts";
+import { SoundCollaboration } from "./collaboration/SoundCollaboration.ts";
+import { SoundFile } from "./panes/sound/SoundFile.ts";
+import { SoundPlayer } from "./player/SoundPlayer.ts";
+import { VolumePreference } from "./player/volume/VolumePreference.ts";
 
 // CONSTANTS
 const kSoundKind = soundDocumentKind();
@@ -48,15 +52,47 @@ export class SoundEditor {
         editorToolbar.sources = context.toolbar;
       }
       const track = document.querySelector("jolly-sound-track");
-      if (track === null) {
-        throw new Error("SoundEditor: \"jolly-sound-track\" is missing from the page.");
+      const wave = document.querySelector("jolly-sound-wave");
+      const fileFolder = document.querySelector("jolly-sound-file");
+      const details = document.querySelector("jolly-sound-details");
+      if (
+        track === null ||
+        wave === null ||
+        fileFolder === null ||
+        details === null
+      ) {
+        throw new Error("SoundEditor: the page is missing a sound pane.");
       }
 
       const player = new SoundPlayer(
         new AudioContext()
       );
       teardown.defer(() => player.dispose());
-      track.attach(player);
+      teardown.defer(
+        new VolumePreference(context.preferences).follow(player)
+      );
+      const collaboration = new SoundCollaboration({
+        room: target.room,
+        player
+      });
+      teardown.defer(() => collaboration.dispose());
+      track.attach(player, collaboration);
+      wave.attach(player, collaboration);
+      fileFolder.attach(new SoundFile({
+        catalog: session.catalog,
+        assetId: session.targetRecord.id,
+        document: target.document
+      }));
+      details.attach(player);
+
+      const presenceStack = document.querySelector("jolly-presence-stack");
+      if (presenceStack !== null) {
+        teardown.defer(bindPresenceStack(
+          presenceStack,
+          collaboration,
+          (clientId) => collaboration.listenTo(clientId)
+        ));
+      }
 
       const ready = target.ready.then(
         () => player.follow(target.document)
