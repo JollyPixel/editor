@@ -10,10 +10,10 @@ import {
 } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
-import type { ComponentChange } from "./ComponentChange.ts";
-import type { OverrideChange } from "./OverrideChange.ts";
-import { SceneTree, type SceneTreeReader } from "./SceneTree.ts";
-import { SceneTransform } from "./SceneTransform.ts";
+import type { ComponentChange } from "./changes/ComponentChange.ts";
+import type { OverrideChange } from "./changes/OverrideChange.ts";
+import { SceneTree, type SceneTreeReader } from "./tree/SceneTree.ts";
+import { SceneTransform } from "./changes/SceneTransform.ts";
 import { invert } from "./history/sceneInverse.ts";
 import {
   captureSceneImage,

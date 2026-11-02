@@ -51,10 +51,10 @@ import { tileSizeSchema } from "../network/schema.ts";
 import {
   voxelCommandProtocol,
   voxelWorldSchema
-} from "../network/VoxelCommand.schema.ts";
-import { VOXEL_COMMAND_RULES } from "../network/VoxelCommandRules.ts";
-import { correctVoxelCommand } from "../network/VoxelCorrection.ts";
-import type { VoxelMapNetworkCommand } from "../network/types.ts";
+} from "../network/voxelMap/VoxelCommand.schema.ts";
+import { VOXEL_COMMAND_RULES } from "../network/voxelMap/VoxelCommandRules.ts";
+import { correctVoxelCommand } from "../network/voxelMap/VoxelCorrection.ts";
+import type { VoxelMapNetworkCommand } from "../network/voxelMap/types.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";

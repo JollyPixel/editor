@@ -6,8 +6,8 @@ import {
 } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
-import { SceneFootprint } from "../SceneFootprint.ts";
-import type { SceneTreeReader } from "../SceneTree.ts";
+import { SceneFootprint } from "../footprint/SceneFootprint.ts";
+import type { SceneTreeReader } from "../tree/SceneTree.ts";
 import type { SceneImage } from "./sceneImages.ts";
 import type { SceneCommand } from "../../network/types.ts";
 

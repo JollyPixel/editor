@@ -26,11 +26,11 @@ import {
   compactSceneFileSchema,
   expandSceneFile
 } from "./sceneFile.ts";
-import { SceneFootprint } from "../model/SceneFootprint.ts";
+import { SceneFootprint } from "../model/footprint/SceneFootprint.ts";
 import {
   SceneTree,
   type SceneTreeOptions
-} from "../model/SceneTree.ts";
+} from "../model/tree/SceneTree.ts";
 import {
   sceneCommandProtocol,
   sceneSnapshotSchema

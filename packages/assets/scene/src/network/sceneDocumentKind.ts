@@ -9,7 +9,7 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import { SCENE_KIND } from "../asset/scene.ts";
 import { SceneDocument } from "../model/SceneDocument.ts";
-import { sceneWriteKeys } from "../model/SceneCommandKeys.ts";
+import { sceneWriteKeys } from "../model/footprint/SceneCommandKeys.ts";
 
 export type SyncedSceneDocument = SyncedCommandDocument<
   SceneDocument,

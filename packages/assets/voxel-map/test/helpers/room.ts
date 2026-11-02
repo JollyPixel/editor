@@ -6,7 +6,7 @@ import type { VoxelWorldJSON } from "@jolly-pixel/voxel.renderer";
 import type {
   VoxelMapNetworkCommand,
   VoxelMapServerMessage
-} from "#src/network/types.ts";
+} from "#src/network/voxelMap/types.ts";
 
 export interface MockRoom extends network.Room<VoxelMapNetworkCommand, VoxelMapServerMessage> {
   sentCommands: VoxelMapNetworkCommand[];

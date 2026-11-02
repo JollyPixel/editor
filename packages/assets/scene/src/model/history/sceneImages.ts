@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { ownedCopy } from "../ownedCopy.ts";
-import { SceneFootprint } from "../SceneFootprint.ts";
-import type { SceneTreeReader } from "../SceneTree.ts";
+import { SceneFootprint } from "../footprint/SceneFootprint.ts";
+import type { SceneTreeReader } from "../tree/SceneTree.ts";
 import type {
   SceneActorView,
   SceneCommand,

@@ -26,7 +26,7 @@ import {
   PIXEL_ART_EXTENSION,
   PIXEL_ART_KIND
 } from "#src/index.ts";
-import type { PixelNetworkCommand } from "#src/network/types.ts";
+import type { PixelNetworkCommand } from "#src/network/protocol/types.ts";
 import { packed } from "../fixtures/commands.ts";
 
 // CONSTANTS

@@ -3,7 +3,7 @@ import type { Infer } from "@jolly-pixel/network";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import { SceneTransform } from "../model/SceneTransform.ts";
+import { SceneTransform } from "../model/changes/SceneTransform.ts";
 import {
   sceneActorSchema,
   sceneSnapshotSchema,

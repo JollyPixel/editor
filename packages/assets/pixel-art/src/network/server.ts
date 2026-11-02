@@ -8,13 +8,13 @@ export type {
   PixelWireCommand,
   PixelWireEvent,
   PixelWireSnapshot
-} from "./types.ts";
-export * from "./pixelCommandActions.ts";
-export * from "./PixelCommandApplier.ts";
-export * from "./PixelCommand.schema.ts";
-export * from "./UVLayout.schema.ts";
-export * from "./PixelCommandRules.ts";
-export * from "./PixelCommandKeys.ts";
-export * from "./PixelCorrection.ts";
-export * from "./PixelWireCodec.ts";
-export { encodePixelSnapshot } from "./PixelSnapshotCodec.ts";
+} from "./protocol/types.ts";
+export * from "./protocol/pixelCommandActions.ts";
+export * from "./arbiter/PixelCommandApplier.ts";
+export * from "./protocol/PixelCommand.schema.ts";
+export * from "./protocol/UVLayout.schema.ts";
+export * from "./arbiter/PixelCommandRules.ts";
+export * from "./protocol/PixelCommandKeys.ts";
+export * from "./arbiter/PixelCorrection.ts";
+export * from "./protocol/PixelWireCodec.ts";
+export { encodePixelSnapshot } from "./protocol/PixelSnapshotCodec.ts";

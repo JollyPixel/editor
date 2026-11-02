@@ -10,7 +10,7 @@ import {
   createSceneFile,
   SCENE_FILE
 } from "#src/index.ts";
-import { SceneTransform } from "#src/model/SceneTransform.ts";
+import { SceneTransform } from "#src/model/changes/SceneTransform.ts";
 import {
   actor,
   sceneFile

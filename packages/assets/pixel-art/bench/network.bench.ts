@@ -15,8 +15,8 @@ import {
 import {
   randomPositions
 } from "./_fixtures.ts";
-import { applyPixelCommand } from "../src/network/PixelCommandApplier.ts";
-import type { PixelNetworkCommand } from "../src/network/types.ts";
+import { applyPixelCommand } from "../src/network/arbiter/PixelCommandApplier.ts";
+import type { PixelNetworkCommand } from "../src/network/protocol/types.ts";
 
 // CONSTANTS
 const kSide = 256;

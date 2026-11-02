@@ -5,12 +5,12 @@ import {
 } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
-import { ComponentChange } from "../ComponentChange.ts";
-import { OverrideChange } from "../OverrideChange.ts";
+import { ComponentChange } from "../changes/ComponentChange.ts";
+import { OverrideChange } from "../changes/OverrideChange.ts";
 import { ownedCopy } from "../ownedCopy.ts";
-import { SceneEnvironment } from "../SceneEnvironment.ts";
-import { SceneTransform } from "../SceneTransform.ts";
-import type { SceneTreeReader } from "../SceneTree.ts";
+import { SceneEnvironment } from "../changes/SceneEnvironment.ts";
+import { SceneTransform } from "../changes/SceneTransform.ts";
+import type { SceneTreeReader } from "../tree/SceneTree.ts";
 import type { SceneCommand } from "../../network/types.ts";
 
 export function invert(

@@ -2,12 +2,12 @@
 import type { NetworkCommandHeader } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { SceneEnvironment } from "#src/model/SceneEnvironment.ts";
-import { SceneTransform } from "#src/model/SceneTransform.ts";
+import { SceneEnvironment } from "#src/model/changes/SceneEnvironment.ts";
+import { SceneTransform } from "#src/model/changes/SceneTransform.ts";
 import {
   SceneTree,
   type SceneTreeOptions
-} from "#src/model/SceneTree.ts";
+} from "#src/model/tree/SceneTree.ts";
 import type { SceneFile } from "#src/asset/scene.ts";
 import type {
   AssetReferenceJSON,

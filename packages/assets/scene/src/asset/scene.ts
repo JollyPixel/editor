@@ -3,8 +3,8 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import { randomId } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
-import { SceneEnvironment } from "../model/SceneEnvironment.ts";
-import { SceneTransform } from "../model/SceneTransform.ts";
+import { SceneEnvironment } from "../model/changes/SceneEnvironment.ts";
+import { SceneTransform } from "../model/changes/SceneTransform.ts";
 import type {
   JSONObject,
   SceneActorJSON,

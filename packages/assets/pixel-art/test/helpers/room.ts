@@ -7,7 +7,7 @@ import type {
   PixelWireCommand,
   PixelWireSnapshot,
   PixelServerMessage
-} from "#src/network/types.ts";
+} from "#src/network/protocol/types.ts";
 import { MockEmitter } from "./emitter.ts";
 
 // CONSTANTS
