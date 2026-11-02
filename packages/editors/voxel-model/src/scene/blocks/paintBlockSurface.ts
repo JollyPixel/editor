@@ -13,3 +13,16 @@ export function paintBlockSurface(
   target.emissive.set(surface.emissive);
   target.emissiveIntensity = surface.emissiveIntensity;
 }
+
+export function paintBlockMaterial(
+  target: THREE.MeshStandardNodeMaterial,
+  surface: MaterialSurfaceJSON
+): void {
+  const transparent = surface.opacity < 1;
+  if (target.transparent !== transparent) {
+    target.transparent = transparent;
+    target.depthWrite = !transparent;
+    target.needsUpdate = true;
+  }
+  paintBlockSurface(target, surface);
+}

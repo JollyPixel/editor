@@ -1,11 +1,13 @@
 # SceneComponentPackage
 
 The contract a package implements to add component types to the scene editor.
-The `scene` entry holds types and the `FormRows` builder only.
+The `scene` entry holds types, the `FormRows` builder and the
+`SharedSceneViewers` resolver.
 
 ```ts
 import {
   FormRows,
+  SharedSceneViewers,
   type SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
 ```
@@ -52,13 +54,17 @@ export const SCENE_COMPONENTS: SceneComponentPackage = {
     {
       descriptor: VOXEL_MAP_ASSET,
       documentKinds: VoxelMapViewer.kinds,
-      open: (session) => new SharedVoxelMaps(
-        (mapId) => new VoxelMapViewer({
+      open: (session) => new SharedSceneViewers({
+        open: (mapId) => new VoxelMapViewer({
           assets: session.assets,
           catalog: session.catalog,
           mapId
+        }),
+        source: (viewer, hold): VoxelMapSource => ({
+          document: viewer.document,
+          attach: (view) => hold(viewer.attach(view))
         })
-      )
+      })
     }
   ]
 };
@@ -182,3 +188,34 @@ lease kinds.
 The editor calls `open()` the first time a component resolves an asset of
 that kind, and `dispose()` when it closes. The resolver owns the leases it
 opens.
+
+## SharedSceneViewers
+
+```ts
+class SharedSceneViewers<TViewer extends SharedSceneViewer, TSource>
+  implements SceneAssetResolver<TSource> {
+  constructor(options: SharedSceneViewersOptions<TViewer, TSource>);
+}
+
+interface SharedSceneViewer {
+  release(): void;
+}
+
+interface SharedSceneViewersOptions<TViewer, TSource> {
+  open(assetId: string): TViewer;
+  source(viewer: TViewer, hold: SceneViewerHold): TSource;
+}
+
+type SceneViewerHold = (detach: () => void) => () => void;
+```
+
+A `SceneAssetResolver` that keeps one viewer per asset id, however many
+components show that asset.
+
+- `open()` builds the viewer the first time an asset id resolves.
+- `source()` builds the value a component receives. Pass each detach function
+  the viewer returns through `hold`; the viewer stays open until every held
+  detach has run.
+- The viewer is released one microtask after its last held detach, so a
+  component rebuilt in the same task keeps it. `dispose()` releases every open
+  viewer.

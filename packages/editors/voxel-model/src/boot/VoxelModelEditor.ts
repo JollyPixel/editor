@@ -3,7 +3,6 @@ import type { RegistrationHandle } from "@jolly-pixel/console";
 import type { Runtime } from "@jolly-pixel/runtime";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import {
-  PIXEL_ART_KIND,
   pixelArtDocumentKind,
   type PixelNetworkCommand,
   type PixelServerMessage
@@ -41,6 +40,7 @@ import {
 import { EditorShell } from "./EditorShell.ts";
 import { sessionAnimationSets } from "./animationSetSource.ts";
 import { VOXEL_MODEL_KEYBINDINGS } from "../preferences.ts";
+import { linkedTextureId } from "../viewer/linkedTexture.ts";
 
 // CONSTANTS
 const kCanvas = "#three-renderer canvas";
@@ -106,14 +106,10 @@ export class VoxelModelEditor {
       commands,
       runtime: editorRuntime
     } = context;
-    const reference = session.catalog
-      .dependencies.listDependencies(session.target.record.id)
-      .find((dependency) => dependency.kind === PIXEL_ART_KIND);
-    if (reference === undefined) {
-      throw new Error("VoxelModelEditor: the model has no pixel-art texture.");
-    }
-
-    const texture = session.lease(kTextureKind, reference.id);
+    const texture = session.lease(
+      kTextureKind,
+      linkedTextureId(session.catalog.dependencies, session.target.record.id)
+    );
     const target = session.targetLease(kModelKind);
     await texture.ready;
     const roomEnvironment = await BakedRoomEnvironment.load()

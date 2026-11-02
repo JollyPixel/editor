@@ -34,8 +34,8 @@ const kHemisphere: SceneComponentRow = {
   type: "Light",
   data: { kind: "hemisphere" }
 };
-const kVoxelMap: SceneComponentRow = {
-  type: "VoxelMap",
+const kDefaultMesh: SceneComponentRow = {
+  type: "Mesh",
   data: {}
 };
 const kBox: SceneComponentRow = {
@@ -75,10 +75,9 @@ const kSky: SceneActorRow = {
   scale: kOne,
   visible: true
 };
-const kMappedSky: SceneActorRow = {
+const kMeshedSky: SceneActorRow = {
   ...kSky,
-  components: [kVoxelMap, kHemisphere],
-  assets: ["voxelmap"]
+  components: [kDefaultMesh, kHemisphere]
 };
 const kCrate: SceneActorRow = {
   path: "Crate",
@@ -128,7 +127,7 @@ const kFog = {
   far: 100
 } as const;
 const kSeedActors = [kCamera, kSun, kSky];
-const kFurnishedActors = [kCamera, kSun, kMappedSky, kMovedCrate, kLid];
+const kFurnishedActors = [kCamera, kSun, kMeshedSky, kMovedCrate, kLid];
 
 const kBlank: SceneExpectation = {
   open: kRoom,
@@ -152,15 +151,14 @@ const kNested: SceneExpectation = {
   ...kBlank,
   scenes: { [kRoom]: [...kSeedActors, kMovedCrate, kLid] }
 };
-const kMapped: SceneExpectation = {
+const kMeshed: SceneExpectation = {
   ...kBlank,
-  scenes: { [kRoom]: kFurnishedActors },
-  assets: ["blockset", "voxelmap"]
+  scenes: { [kRoom]: kFurnishedActors }
 };
 const kFoggy: SceneExpectation = {
-  ...kMapped,
+  ...kMeshed,
   environment: {
-    ...kMapped.environment,
+    ...kMeshed.environment,
     fog: kFog
   }
 };
@@ -189,14 +187,14 @@ const kTidied: SceneExpectation = {
   ...kLampReverted,
   scenes: {
     ...kLampReverted.scenes,
-    [kRoom]: [kCamera, kHiddenSun, kMappedSky, kMovedCrate, kLid, kDimmedLamp]
+    [kRoom]: [kCamera, kHiddenSun, kMeshedSky, kMovedCrate, kLid, kDimmedLamp]
   }
 };
 const kLit: SceneExpectation = {
   ...kTidied,
   scenes: {
     ...kTidied.scenes,
-    [kRoom]: [kCamera, kSpotSun, kMappedSky, kMovedCrate, kLid, kDimmedLamp]
+    [kRoom]: [kCamera, kSpotSun, kMeshedSky, kMovedCrate, kLid, kDimmedLamp]
   }
 };
 
@@ -272,24 +270,16 @@ new Scenario<ScenePage, SceneExpectation>({
       expected: kNested
     },
     {
-      id: "voxel-map",
-      title: "give the sky a voxel map, pick it again and move it above the light",
+      id: "components",
+      title: "give the sky a mesh and move it above the light",
       play: async(scene) => {
         await scene.row("Sky").click();
-        await scene.addComponent("Voxel map…");
-        await scene.pickAsset("Pick a voxel map", "ground");
-        const map = scene.reference("VoxelMap", "Map");
-        await expect(map.getByRole("textbox")).toHaveText("ground");
+        await scene.addComponent("Mesh");
+        await expect(scene.component("Mesh")).toBeVisible();
 
-        await map.getByRole("button", { name: "Clear" }).click();
-        await expect(map.getByRole("textbox")).toHaveText("<empty>");
-        await map.getByRole("button", { name: "Browse" }).click();
-        await scene.pickAsset("Pick a voxel map", "ground");
-        await expect(map.getByRole("textbox")).toHaveText("ground");
-
-        await scene.moveComponentUp("VoxelMap");
+        await scene.moveComponentUp("Mesh");
       },
-      expected: kMapped
+      expected: kMeshed
     },
     {
       id: "environment",

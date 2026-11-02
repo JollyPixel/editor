@@ -2,17 +2,18 @@
 import { VOXEL_MAP_ASSET } from "@jolly-pixel/asset.voxel-map/client";
 import {
   FormRows,
+  SharedSceneViewers,
   type SceneComponentKind,
   type SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
 import {
   VoxelMapDefinition,
-  type VoxelMapSettings
+  type VoxelMapSettings,
+  type VoxelMapSource
 } from "@jolly-pixel/voxel.renderer/engine";
 
 // Import Internal Dependencies
 import { VoxelMapViewer } from "../viewer/VoxelMapViewer.ts";
-import { SharedVoxelMaps } from "./SharedVoxelMaps.ts";
 import "./componentIcons.ts";
 
 // CONSTANTS
@@ -48,13 +49,19 @@ export const SCENE_COMPONENTS: SceneComponentPackage = {
     {
       descriptor: VOXEL_MAP_ASSET,
       documentKinds: VoxelMapViewer.kinds,
-      open: (session) => new SharedVoxelMaps(
-        (mapId) => new VoxelMapViewer({
+      open: (session) => new SharedSceneViewers({
+        open: (mapId) => new VoxelMapViewer({
           assets: session.assets,
           catalog: session.catalog,
           mapId
-        })
-      )
+        }),
+        source: (viewer, hold): VoxelMapSource => {
+          return {
+            document: viewer.document,
+            attach: (view) => hold(viewer.attach(view))
+          };
+        }
+      })
     }
   ]
 };

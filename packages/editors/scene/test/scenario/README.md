@@ -13,8 +13,8 @@ $ SCENARIO_FROM=prefab pnpm --filter @jolly-pixel/editor.scene test:scenario
 
 - Peers: a second browser context that sees edits, presence badges in the
   hierarchy and the outline of a peer's selection.
-- Anchors: the seeded voxel map publishes none, so anchor rows, viewport
-  markers and moving an actor onto an anchor need a map with objects.
+- Components from other packages, their asset slots and anchors: the
+  standalone editor loads no component package.
 - Show in asset: needs the studio shell to open the anchor's map.
 - Script components and their properties: need a project script.
 - An instance nested inside a prefab.

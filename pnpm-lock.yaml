@@ -735,24 +735,15 @@ importers:
       '@jolly-pixel/asset.common':
         specifier: workspace:*
         version: link:../../assets/common
-      '@jolly-pixel/asset.pixel-art':
-        specifier: workspace:*
-        version: link:../../assets/pixel-art
       '@jolly-pixel/asset.scene':
         specifier: workspace:*
         version: link:../../assets/scene
-      '@jolly-pixel/asset.voxel-map':
-        specifier: workspace:*
-        version: link:../../assets/voxel-map
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
-      '@jolly-pixel/editor.voxel-map':
-        specifier: workspace:*
-        version: link:../voxel-map
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
@@ -774,9 +765,6 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
-      '@jolly-pixel/voxel.renderer':
-        specifier: workspace:*
-        version: link:../../voxel-renderer
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0

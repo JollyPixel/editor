@@ -256,14 +256,6 @@ export class ScenePage {
     await expect(picker).toBeHidden();
   }
 
-  reference(
-    component: string,
-    label: string
-  ): Locator {
-    return this.component(component)
-      .locator(`jolly-reference[label="${label}"]`);
-  }
-
   async moveComponentUp(
     component: string
   ): Promise<void> {

@@ -11,19 +11,10 @@
       "path": "../host"
     },
     {
-      "path": "../voxel-map"
-    },
-    {
       "path": "../../assets/common"
     },
     {
       "path": "../../assets/scene"
-    },
-    {
-      "path": "../../assets/voxel-map"
-    },
-    {
-      "path": "../../assets/pixel-art"
     },
     {
       "path": "../../asset"
@@ -51,9 +42,6 @@
     },
     {
       "path": "../../ui"
-    },
-    {
-      "path": "../../voxel-renderer"
     },
     {
       "path": "../../preferences"
