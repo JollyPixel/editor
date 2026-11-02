@@ -1,0 +1,35 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  background: #0e1316;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+}
+
+jolly-scope {
+  display: contents;
+}
+
+.sound-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#sound-view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}

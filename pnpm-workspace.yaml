@@ -18,6 +18,7 @@ strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
 allowBuilds:
   esbuild: false
+  node-av: false
 
 # Resolution
 linkWorkspacePackages: false
