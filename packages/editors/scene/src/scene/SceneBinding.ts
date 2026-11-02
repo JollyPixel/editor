@@ -71,8 +71,7 @@ export class SceneBinding
   };
 
   #onReset = (): void => {
-    this.#rebuild();
-    this.#world.invalidate();
+    this.rebuild();
   };
 
   #onPrefabChange = (
@@ -242,6 +241,11 @@ export class SceneBinding
     if (this.#applyComponent(id, change)) {
       this.#world.invalidate();
     }
+  }
+
+  rebuild(): void {
+    this.#rebuild();
+    this.#world.invalidate();
   }
 
   dispose(): void {

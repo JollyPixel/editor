@@ -39,6 +39,7 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
     "@jolly-pixel/editor.voxel-model"
   ],
   kinds: {
+    "@jolly-pixel/asset.font": {},
     "@jolly-pixel/asset.pixel-art": {
       defaultSize: TEXTURE_SIZE,
       snapshot: kSnapshot

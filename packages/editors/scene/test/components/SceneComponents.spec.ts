@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AssetType } from "@jolly-pixel/asset";
+import { FONT_ASSET } from "@jolly-pixel/asset.font/client";
 import type {
   SceneActorPreset,
   SceneAssetSource,
@@ -73,7 +74,7 @@ describe("SceneComponents", () => {
     });
     assert.ok(menu.find("add:map"));
     assert.ok(menu.find("add:light:spot"));
-    assert.deepEqual(components.descriptors, [kMapSource.descriptor]);
+    assert.deepEqual(components.descriptors, [FONT_ASSET, kMapSource.descriptor]);
   });
 
   test("refuses a component type, asset kind or preset declared by two packages", () => {

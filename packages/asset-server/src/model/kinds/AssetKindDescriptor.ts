@@ -15,6 +15,12 @@ export interface AssetKindDescriptor {
   label: string;
   extension: string;
   icon?: AssetKindIcon;
+  /**
+   * `false` when assets of the kind only come from an import, never from an
+   * empty file.
+   * @default true
+   */
+  creatable?: boolean;
 }
 
 export interface LoadedAssetKind extends AssetKindDescriptor {

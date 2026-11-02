@@ -4,29 +4,26 @@ import {
   BlockShape,
   MaterialSurface,
   type BlockShapeJSON,
-  type BlockTransformJSON,
   type MaterialSurfaceJSON,
   type MirrorAxes
 } from "@jolly-pixel/asset.voxel-model/client";
-import {
-  clampUvRegion,
-  type FaceRanges
-} from "@jolly-pixel/editor.pixel-art/mesh-texturing";
+import { clampUvRegion } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 
 // Import Internal Dependencies
-import { BlockNode } from "./BlockNode.ts";
+import {
+  BlockBody,
+  type BlockMesh
+} from "./BlockBody.ts";
 import { PivotMarker } from "./PivotMarker.ts";
 import { RenderOrder } from "../renderOrder.ts";
-import { plainVector3 } from "./plainVector3.ts";
-import { paintBlockSurface } from "./paintBlockSurface.ts";
-import type { FlatShading } from "./FlatShading.ts";
 import {
-  BlockShapeMesh,
-  type BlockShapeChanges
-} from "./BlockShapeMesh.ts";
+  paintBlockMaterial,
+  paintBlockSurface
+} from "./paintBlockSurface.ts";
+import type { FlatShading } from "./FlatShading.ts";
+import type { BlockShapeChanges } from "./BlockShapeMesh.ts";
 
 // CONSTANTS
-const kTransformRoundDecimals = 2;
 const kDefaultEmphasisOwner = "default";
 const kLocalPivotOwner = "local";
 const kOccludedGhostOpacityScale = 0.35;
@@ -46,32 +43,27 @@ export interface ModelBlockOptions {
   flatShading: FlatShading;
 }
 
-export type BlockMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardNodeMaterial>;
-
-export class ModelBlock {
-  readonly node = new BlockNode();
-  readonly mesh: BlockMesh;
-
-  #shapeMesh: BlockShapeMesh;
+export class ModelBlock extends BlockBody {
   #surface: MaterialSurfaceJSON | null = null;
   #flat: FlatShading;
-  #pivotOffset = new THREE.Vector3();
   #pivotMarker = new PivotMarker();
   #selectionTextureGhost: BlockMesh | null = null;
 
   constructor(
     options: ModelBlockOptions
   ) {
+    super({
+      shape: options.shape ?? BlockShape.box,
+      flip: options.flip,
+      size: options.size ?? new THREE.Vector3(1, 1, 1),
+      texture: options.texture ?? null
+    });
     const {
       position = new THREE.Vector3(0, 0, 0),
       pivotOffset = new THREE.Vector3(0, 0, 0),
-      size = new THREE.Vector3(1, 1, 1),
       scale = new THREE.Vector3(1, 1, 1),
       rotation,
       name,
-      shape = BlockShape.box,
-      flip,
-      texture = null,
       uuid,
       flatShading
     } = options;
@@ -87,24 +79,14 @@ export class ModelBlock {
     }
     this.node.name = name ?? "";
 
-    this.#shapeMesh = new BlockShapeMesh({ shape, flip, size });
-    this.mesh = new THREE.Mesh(
-      this.#shapeMesh.geometry,
-      new THREE.MeshStandardNodeMaterial({
-        alphaTest: 0.01,
-        side: THREE.DoubleSide,
-        map: texture
-      })
-    );
     this.mesh.name = name || `mesh_${this.node.uuid}`;
     this.mesh.castShadow = true;
     this.mesh.receiveShadow = true;
     this.#flat.shade(this.mesh.material);
-    clampUvRegion(this.mesh);
     this.#paint();
     this.moveBoxAroundPivot(pivotOffset);
 
-    this.node.add(this.mesh, this.#pivotMarker.object);
+    this.node.add(this.#pivotMarker.object);
   }
 
   get uuid(): string {
@@ -252,17 +234,6 @@ export class ModelBlock {
     return new THREE.Vector3().copy(this.node.effectiveScale);
   }
 
-  get pivotOffset(): THREE.Vector3 {
-    return this.#pivotOffset.clone();
-  }
-
-  moveBoxAroundPivot(
-    offset: THREE.Vector3
-  ): void {
-    this.#pivotOffset.copy(offset);
-    this.#placeMesh();
-  }
-
   movePivot(
     offset: THREE.Vector3
   ): void {
@@ -284,59 +255,18 @@ export class ModelBlock {
     this.movePivot(center.sub(world).applyMatrix4(toNodeSpace).negate());
   }
 
-  get size(): THREE.Vector3 {
-    return this.#shapeMesh.size;
-  }
-
-  get shape(): BlockShapeJSON {
-    return this.#shapeMesh.shape;
-  }
-
-  get faces(): Readonly<FaceRanges> {
-    return this.#shapeMesh.faces;
-  }
-
-  rebuild(
+  override rebuild(
     changes: BlockShapeChanges
   ): boolean {
-    if (!this.#shapeMesh.rebuild(changes)) {
+    if (!super.rebuild(changes)) {
       return false;
     }
 
-    const { geometry } = this.#shapeMesh;
-    this.mesh.geometry = geometry;
-    clampUvRegion(this.mesh);
     if (this.#selectionTextureGhost !== null) {
-      this.#selectionTextureGhost.geometry = geometry;
+      this.#selectionTextureGhost.geometry = this.mesh.geometry;
     }
 
     return true;
-  }
-
-  restoreBaseUv(): void {
-    this.#shapeMesh.restoreBaseUv();
-  }
-
-  get transform(): BlockTransformJSON {
-    return {
-      position: plainVector3(this.node.position),
-      pivotOffset: plainVector3(this.#pivotOffset),
-      size: plainVector3(this.#shapeMesh.size),
-      scale: plainVector3(this.node.scale),
-      rotation: plainVector3(this.node.rotation)
-    };
-  }
-
-  set transform(
-    transform: BlockTransformJSON
-  ) {
-    const { rotation } = transform;
-
-    this.position = new THREE.Vector3().copy(transform.position);
-    this.moveBoxAroundPivot(new THREE.Vector3().copy(transform.pivotOffset));
-    this.rotation = new THREE.Euler(rotation.x, rotation.y, rotation.z);
-    this.scale = new THREE.Vector3().copy(transform.scale);
-    this.resize(new THREE.Vector3().copy(transform.size));
   }
 
   showSelectionGhost(): void {
@@ -364,39 +294,10 @@ export class ModelBlock {
     this.#pivotMarker.hide(owner);
   }
 
-  roundTransform(
-    decimals: number = kTransformRoundDecimals
-  ): void {
-    roundVector(this.node.position, decimals);
-    roundVector(this.#pivotOffset, decimals);
-    this.node.rotation.set(
-      roundAngle(this.node.rotation.x, decimals),
-      roundAngle(this.node.rotation.y, decimals),
-      roundAngle(this.node.rotation.z, decimals)
-    );
-    roundVector(this.node.scale, decimals);
-
-    this.#placeMesh();
-  }
-
-  resize(
-    size: THREE.Vector3
-  ): void {
-    if (!sameRounded(this.#shapeMesh.size, size, kTransformRoundDecimals)) {
-      this.#shapeMesh.resize(size);
-    }
-  }
-
-  dispose(): void {
-    this.#shapeMesh.dispose();
-    this.mesh.material.dispose();
+  override dispose(): void {
     this.#disposeTextureGhost(this.#selectionTextureGhost);
     this.#pivotMarker.dispose();
-    this.node.removeFromParent();
-  }
-
-  #placeMesh(): void {
-    this.mesh.position.copy(this.#pivotOffset).negate();
+    super.dispose();
   }
 
   #createTextureGhost(): BlockMesh {
@@ -425,15 +326,7 @@ export class ModelBlock {
   }
 
   #paint(): void {
-    const surface = this.#shownSurface();
-    const target = this.mesh.material;
-    const transparent = surface.opacity < 1;
-    if (target.transparent !== transparent) {
-      target.transparent = transparent;
-      target.depthWrite = !transparent;
-      target.needsUpdate = true;
-    }
-    paintBlockSurface(target, surface);
+    paintBlockMaterial(this.mesh.material, this.#shownSurface());
 
     const ghost = this.#selectionTextureGhost;
     if (ghost !== null) {
@@ -459,41 +352,4 @@ export class ModelBlock {
     this.mesh.remove(ghost);
     ghost.material.dispose();
   }
-}
-
-function roundTo(
-  value: number,
-  decimals: number
-): number {
-  return Number(value.toFixed(decimals));
-}
-
-function roundVector(
-  vector: THREE.Vector3,
-  decimals: number
-): void {
-  vector.set(
-    roundTo(vector.x, decimals),
-    roundTo(vector.y, decimals),
-    roundTo(vector.z, decimals)
-  );
-}
-
-function roundAngle(
-  radians: number,
-  decimals: number
-): number {
-  return THREE.MathUtils.degToRad(
-    roundTo(THREE.MathUtils.radToDeg(radians), decimals)
-  );
-}
-
-function sameRounded(
-  left: THREE.Vector3,
-  right: THREE.Vector3,
-  decimals: number
-): boolean {
-  return roundTo(left.x, decimals) === roundTo(right.x, decimals) &&
-    roundTo(left.y, decimals) === roundTo(right.y, decimals) &&
-    roundTo(left.z, decimals) === roundTo(right.z, decimals);
 }

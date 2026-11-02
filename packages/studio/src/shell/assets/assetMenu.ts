@@ -102,11 +102,13 @@ export function assetMenu(
 export function newAssetMenu(
   kinds: AssetKindSet
 ): ContextMenuItem[] {
-  return kinds.entries.map((entry) => {
-    return {
-      id: newAssetAction(entry.kind),
-      label: entry.label,
-      icon: kinds.kindIcon(entry.kind)
-    };
-  });
+  return kinds.entries
+    .filter((entry) => entry.creatable !== false)
+    .map((entry) => {
+      return {
+        id: newAssetAction(entry.kind),
+        label: entry.label,
+        icon: kinds.kindIcon(entry.kind)
+      };
+    });
 }

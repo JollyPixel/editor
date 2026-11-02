@@ -77,6 +77,13 @@ describe("EditorRegistry", () => {
         label: "Pixel art",
         extension: ".pixelart",
         convertsFrom: [".png"]
+      })
+      .registerKind({
+        kind: "font",
+        label: "Font",
+        extension: ".typeface.json",
+        creatable: false,
+        convertsFrom: [".ttf"]
       });
 
     assert.deepEqual(registry.kindSet().entries, [
@@ -85,6 +92,7 @@ describe("EditorRegistry", () => {
         label: "Voxel map",
         extension: ".voxelmap.json",
         icon: "kind:voxelmap",
+        creatable: undefined,
         convertsFrom: []
       },
       {
@@ -92,7 +100,16 @@ describe("EditorRegistry", () => {
         label: "Pixel art",
         extension: ".pixelart",
         icon: undefined,
+        creatable: undefined,
         convertsFrom: [".png"]
+      },
+      {
+        kind: "font",
+        label: "Font",
+        extension: ".typeface.json",
+        icon: undefined,
+        creatable: false,
+        convertsFrom: [".ttf"]
       }
     ]);
   });

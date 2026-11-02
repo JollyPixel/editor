@@ -52,6 +52,7 @@ export class EditorRegistry {
       label: descriptor.label,
       extension: descriptor.extension,
       icon: registerKindIcon(descriptor),
+      creatable: descriptor.creatable,
       convertsFrom: descriptor.convertsFrom
     });
 

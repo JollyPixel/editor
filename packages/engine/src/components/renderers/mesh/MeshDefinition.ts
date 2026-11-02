@@ -1,9 +1,6 @@
 // Import Internal Dependencies
 import type { Actor } from "../../../actor/Actor.ts";
-import {
-  ComponentData,
-  toHexColor
-} from "../../../systems/scene/file/definitions/ComponentData.ts";
+import { ComponentData } from "../../../systems/scene/file/definitions/ComponentData.ts";
 import type {
   ComponentDefinition
 } from "../../../systems/scene/file/definitions/ComponentDefinition.ts";
@@ -14,9 +11,12 @@ import {
   MESH_GEOMETRY_DEFAULTS
 } from "./MeshGeometry.ts";
 import {
+  captureMeshSurface,
+  parseMeshSurface
+} from "./MeshSurface.ts";
+import {
   MeshRenderer,
   MESH_RENDERER_DEFAULTS,
-  type MeshMaterialOptions,
   type MeshRendererOptions
 } from "./MeshRenderer.ts";
 
@@ -32,10 +32,8 @@ export class MeshDefinition implements ComponentDefinition<
     const fields = new ComponentData(data);
 
     return {
-      geometry: parseGeometry(fields.object("geometry") ?? new ComponentData({})),
-      material: parseMaterial(fields.object("material") ?? new ComponentData({})),
-      castShadow: fields.boolean("castShadow", MESH_RENDERER_DEFAULTS.castShadow),
-      receiveShadow: fields.boolean("receiveShadow", MESH_RENDERER_DEFAULTS.receiveShadow)
+      ...parseMeshSurface(fields),
+      geometry: parseGeometry(fields.object("geometry") ?? new ComponentData({}))
     };
   }
 
@@ -62,17 +60,11 @@ export class MeshDefinition implements ComponentDefinition<
   capture(
     component: MeshRenderer<any>
   ): JSONObject {
-    const { geometry, material, castShadow, receiveShadow } = component.settings;
+    const { settings } = component;
 
     return {
-      geometry: { ...geometry },
-      material: {
-        ...material,
-        color: toHexColor(material.color),
-        emissive: toHexColor(material.emissive)
-      },
-      castShadow,
-      receiveShadow
+      ...captureMeshSurface(settings),
+      geometry: { ...settings.geometry }
     };
   }
 }
@@ -170,20 +162,4 @@ function parseGeometry(
       };
     }
   }
-}
-
-function parseMaterial(
-  fields: ComponentData
-): Required<MeshMaterialOptions> {
-  const defaults = MESH_RENDERER_DEFAULTS.material;
-
-  return {
-    color: fields.color("color", defaults.color),
-    roughness: fields.number("roughness", defaults.roughness),
-    metalness: fields.number("metalness", defaults.metalness),
-    emissive: fields.color("emissive", defaults.emissive),
-    emissiveIntensity: fields.number("emissiveIntensity", defaults.emissiveIntensity),
-    opacity: fields.number("opacity", defaults.opacity),
-    flatShading: fields.boolean("flatShading", defaults.flatShading)
-  };
 }

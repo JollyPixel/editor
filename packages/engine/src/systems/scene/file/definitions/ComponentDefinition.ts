@@ -22,7 +22,7 @@ export interface ComponentAssetResolver {
   resolve<TValue>(
     reference: AssetReferenceData,
     type: AssetType<TValue>
-  ): TValue;
+  ): TValue | null;
 }
 
 export class ComponentAssets<

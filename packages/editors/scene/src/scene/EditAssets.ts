@@ -5,7 +5,8 @@ import type {
 } from "@jolly-pixel/asset";
 import type {
   SceneAssetContext,
-  SceneAssetResolver
+  SceneAssetResolver,
+  SceneAssetUpdates
 } from "@jolly-pixel/editor.host/scene";
 import type { Systems } from "@jolly-pixel/engine";
 
@@ -15,21 +16,24 @@ import type { SceneComponents } from "../components/SceneComponents.ts";
 export class EditAssets implements Systems.ComponentAssetResolver {
   #components: Pick<SceneComponents, "assetSource">;
   #session: SceneAssetContext;
+  #updates: SceneAssetUpdates;
   #resolvers = new Map<string, SceneAssetResolver>();
 
   constructor(
     components: Pick<SceneComponents, "assetSource">,
-    session: SceneAssetContext
+    session: SceneAssetContext,
+    updates: SceneAssetUpdates
   ) {
     this.#components = components;
     this.#session = session;
+    this.#updates = updates;
   }
 
   resolve<TValue>(
     reference: AssetReferenceData,
     type: AssetType<TValue>
-  ): TValue {
-    return this.#resolver(type.kind.value).resolve(reference) as TValue;
+  ): TValue | null {
+    return this.#resolver(type.kind.value).resolve(reference) as TValue | null;
   }
 
   dispose(): void {
@@ -50,7 +54,7 @@ export class EditAssets implements Systems.ComponentAssetResolver {
           `EditAssets: the scene editor resolves no "${kind}" asset.`
         );
       }
-      resolver = source.open(this.#session);
+      resolver = source.open(this.#session, this.#updates);
       this.#resolvers.set(kind, resolver);
     }
 

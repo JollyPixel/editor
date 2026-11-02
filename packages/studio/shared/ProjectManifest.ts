@@ -25,6 +25,7 @@ const kProjectManifestSchema = z.object({
       tone: z.string().optional(),
       viewBox: z.string().optional()
     }).optional(),
+    creatable: z.boolean().optional(),
     convertsFrom: z.array(z.string())
   })),
   kindPackages: z.array(z.object({

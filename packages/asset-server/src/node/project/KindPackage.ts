@@ -25,7 +25,8 @@ const kDescriptorsParser = new SchemaParser(z.array(z.object({
     svg: z.string(),
     tone: z.optional(z.string()),
     viewBox: z.optional(z.string())
-  }))
+  })),
+  creatable: z.optional(z.boolean())
 })));
 
 export type PackageLoader = (

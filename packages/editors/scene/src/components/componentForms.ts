@@ -6,7 +6,10 @@ import type {
   LightSettings,
   MeshGeometryKind,
   MeshRendererOptions,
-  ScriptData
+  MeshSurfaceSettings,
+  ScriptData,
+  TextAlign,
+  TextSettings
 } from "@jolly-pixel/engine";
 import {
   FormRows,
@@ -43,7 +46,14 @@ const kGeometryLabels: Readonly<Record<MeshGeometryKind, string>> = {
   capsule: "Capsule"
 };
 
+const kAlignLabels: Readonly<Record<TextAlign, string>> = {
+  left: "Left",
+  center: "Center",
+  right: "Right"
+};
+
 const kProjectionModes = choiceOptions(kProjectionLabels);
+const kTextAligns = choiceOptions(kAlignLabels);
 
 export const LIGHT_KINDS = choiceOptions(kLightLabels);
 export const GEOMETRY_KINDS = choiceOptions(kGeometryLabels);
@@ -51,6 +61,19 @@ export const GEOMETRY_KINDS = choiceOptions(kGeometryLabels);
 const kCamera = new FormRows<CameraData>();
 const kLight = new FormRows<LightSettings>();
 const kMesh = new FormRows<MeshRendererOptions>();
+const kText = new FormRows<TextSettings>();
+const kSurface = new FormRows<MeshSurfaceSettings>();
+
+const kSurfaceRows: readonly FormRow<MeshSurfaceSettings>[] = [
+  kSurface.number(["material", "roughness"], "Roughness", kUnit),
+  kSurface.number(["material", "metalness"], "Metalness", kUnit),
+  kSurface.color(["material", "emissive"], "Emissive"),
+  kSurface.number(["material", "emissiveIntensity"], "Emissive intensity", kSize),
+  kSurface.number(["material", "opacity"], "Opacity", kUnit),
+  kSurface.boolean(["material", "flatShading"], "Flat shading"),
+  kSurface.boolean(["castShadow"], "Cast shadow"),
+  kSurface.boolean(["receiveShadow"], "Receive shadow")
+];
 
 const kGeometryRows: Readonly<
   Record<MeshGeometryKind, readonly FormRow<MeshRendererOptions>[]>
@@ -128,14 +151,32 @@ export function meshForm(
     },
     kMesh.color(["material", "color"], "Color"),
     ...data.geometry === undefined ? [] : kGeometryRows[data.geometry.kind],
-    kMesh.number(["material", "roughness"], "Roughness", kUnit),
-    kMesh.number(["material", "metalness"], "Metalness", kUnit),
-    kMesh.color(["material", "emissive"], "Emissive"),
-    kMesh.number(["material", "emissiveIntensity"], "Emissive intensity", kSize),
-    kMesh.number(["material", "opacity"], "Opacity", kUnit),
-    kMesh.boolean(["material", "flatShading"], "Flat shading"),
-    kMesh.boolean(["castShadow"], "Cast shadow"),
-    kMesh.boolean(["receiveShadow"], "Receive shadow")
+    ...kSurfaceRows
+  ];
+}
+
+export function textForm(
+  data: TextSettings
+): FormRow<TextSettings>[] {
+  return [
+    {
+      control: "text",
+      path: ["text"],
+      label: "Text"
+    },
+    kText.choice(["align"], "Align", kTextAligns),
+    kText.color(["material", "color"], "Color"),
+    kText.number(["size"], "Size", kSize),
+    kText.number(["depth"], "Depth", { min: 0, step: 0.05 }),
+    kText.number(["curveSegments"], "Curve segments", kSegments),
+    kText.boolean(["bevel"], "Bevel"),
+    ...data.bevel ?
+      [
+        kText.number(["bevelThickness"], "Bevel thickness", { min: 0, step: 0.01 }),
+        kText.number(["bevelSize"], "Bevel size", { min: 0, step: 0.01 })
+      ] :
+      [],
+    ...kSurfaceRows
   ];
 }
 

@@ -162,6 +162,24 @@ registerIcon("actor-mesh", svg`
   />
 `, { tone: "lime" });
 
+registerIcon("actor-text", svg`
+  <rect
+    class="tone-fill"
+    x="3"
+    y="3"
+    width="18"
+    height="18"
+    rx="2"
+  />
+  <path
+    d="M7 7.5h10M12 7.5V18M9.5 18h5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+  />
+`, { tone: "pink" });
+
 registerIcon("action-duplicate", svg`
   <rect
     class="tone-fill"

@@ -26,13 +26,10 @@ import { createSceneProject } from "./src/boot/sceneProject.ts";
 
 // CONSTANTS
 const kAssetsRoot = path.join(import.meta.dirname, "assets");
-const kComponentPackages = ["@jolly-pixel/editor.voxel-map"];
 const kProjectFile: ProjectFileData = {
   version: 1,
   kinds: {
-    "@jolly-pixel/asset.scene": {},
-    "@jolly-pixel/asset.voxel-map": {},
-    "@jolly-pixel/asset.pixel-art": {}
+    "@jolly-pixel/asset.scene": {}
   }
 };
 
@@ -54,7 +51,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     plugins: [
       mode.plugins(),
       createProjectKindsPlugin(kinds),
-      createProjectContributionsPlugin(kinds, kComponentPackages),
+      createProjectContributionsPlugin(kinds),
       createProjectFileWatchPlugin(projectFile),
       createAssetServerPlugin({
         root: kAssetsRoot,

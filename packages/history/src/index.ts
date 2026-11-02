@@ -2,6 +2,7 @@ export * from "./document/ChangeReceipts.ts";
 export * from "./document/CommandChange.ts";
 export * from "./document/ChangeSourceAdapter.ts";
 export * from "./document/CommandDocument.ts";
+export * from "./document/SnapshotDocument.ts";
 export * from "./history/CommandHistory.ts";
 export * from "./history/HistoryState.ts";
 export * from "./history/refusalMessages.ts";

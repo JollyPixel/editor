@@ -150,6 +150,7 @@ describe("StudioProject", () => {
       assert.deepEqual(
         project.kinds.descriptors().map((descriptor) => descriptor.kind),
         [
+          "font",
           "pixelart",
           "scene",
           "blockset",

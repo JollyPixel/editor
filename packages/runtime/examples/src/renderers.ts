@@ -47,7 +47,8 @@ class RenderersScene extends Systems.Scene {
       .addComponent(TextRenderer, {
         asset: kHelvetikerRegularFont,
         text: "Hello, 3D World !",
-        textGeometryOptions: { size: 2, depth: 2, center: true }
+        size: 2,
+        depth: 2
       });
     textActor.object3D.position.set(0, 5, 0);
 

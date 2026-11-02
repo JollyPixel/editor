@@ -6,6 +6,8 @@
 
 Private editor workspace for [`@jolly-pixel/asset.voxel-model`][asset-voxel-model] models, booted through [`@jolly-pixel/editor.host`][editor-host].
 
+The package exports a read-only model viewer from `src/viewer/` and the `VoxelModel` scene component from `src/sceneComponents/` (`@jolly-pixel/editor.voxel-model/scene`). The component draws the model with the pixel-art texture the model links. Games cannot load voxel models yet, so it renders only in the scene editor.
+
 ## 🚀 Running the editor
 
 ```bash

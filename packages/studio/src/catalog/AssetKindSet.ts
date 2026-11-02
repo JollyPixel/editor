@@ -17,6 +17,7 @@ export interface AssetKindEntry {
   readonly label: string;
   readonly extension: string;
   readonly icon?: IconName;
+  readonly creatable?: boolean;
   readonly convertsFrom?: readonly string[];
 }
 

@@ -19,10 +19,8 @@ import type {
   MaterialPreviews
 } from "../../state/index.ts";
 import { BlockNode } from "./BlockNode.ts";
-import {
-  ModelBlock,
-  type BlockMesh
-} from "./ModelBlock.ts";
+import { ModelBlock } from "./ModelBlock.ts";
+import type { BlockMesh } from "./BlockBody.ts";
 import { FlatShading } from "./FlatShading.ts";
 import type { BlockShapeChanges } from "./BlockShapeMesh.ts";
 import { plainVector3 } from "./plainVector3.ts";

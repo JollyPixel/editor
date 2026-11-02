@@ -1,9 +1,7 @@
-// Import Third-party Dependencies
-import { MessageProtocol } from "@jolly-pixel/network";
-
 // Import Internal Dependencies
 import type { AssetKindDescriptor } from "../AssetKindDescriptor.ts";
 import type { AssetKindHandler } from "../AssetKindHandler.ts";
+import { readOnlyCommands } from "../readOnlyCommands.ts";
 import { assetInlineContentSchema } from "../../events/AssetEvents.schema.ts";
 import { encodeContent } from "../../events/inlineContent.ts";
 import {
@@ -53,17 +51,10 @@ export function textureAssetKind(
     kind: TEXTURE_KIND,
     extensions: kExtensions,
     match: options.match,
-    commands: {
+    commands: readOnlyCommands({
       eventType: TEXTURE_COMMAND,
-      protocol: MessageProtocol.EMPTY,
-      apply: () => void 0,
-      live: ({ state }) => {
-        return {
-          snapshotSchema: assetInlineContentSchema,
-          snapshot: () => encodeContent(state.bytes),
-          arbitrate: () => null
-        };
-      }
-    }
+      snapshotSchema: assetInlineContentSchema,
+      snapshot: (state) => encodeContent(state.bytes)
+    })
   };
 }
