@@ -11,4 +11,5 @@ Private workspaces that define the editable asset kinds served by
 - [terrain](./terrain/README.md): heightfield terrains 🚧
 - [scene](./scene/README.md): actor trees whose components reference other assets 🚧
 - [font](./font/README.md): typeface fonts converted from dropped font files
+- [sound](./sound/README.md): Ogg sounds converted from dropped audio files
 - [common](./common/README.md): code the workspaces above share

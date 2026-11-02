@@ -1,11 +1,9 @@
 // Import Internal Dependencies
 import type { AssetKindDescriptor } from "../AssetKindDescriptor.ts";
 import type { AssetKindHandler } from "../AssetKindHandler.ts";
-import { readOnlyCommands } from "../readOnlyCommands.ts";
-import { assetInlineContentSchema } from "../../events/AssetEvents.schema.ts";
-import { encodeContent } from "../../events/inlineContent.ts";
 import {
   binaryAssetKind,
+  binaryCommands,
   type BinaryAssetState
 } from "./binary.ts";
 
@@ -51,10 +49,6 @@ export function textureAssetKind(
     kind: TEXTURE_KIND,
     extensions: kExtensions,
     match: options.match,
-    commands: readOnlyCommands({
-      eventType: TEXTURE_COMMAND,
-      snapshotSchema: assetInlineContentSchema,
-      snapshot: (state) => encodeContent(state.bytes)
-    })
+    commands: binaryCommands(TEXTURE_COMMAND)
   };
 }

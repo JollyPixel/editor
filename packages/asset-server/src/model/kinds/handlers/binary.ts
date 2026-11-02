@@ -1,5 +1,11 @@
 // Import Internal Dependencies
-import type { AssetKindHandler } from "../AssetKindHandler.ts";
+import type {
+  AssetCommands,
+  AssetKindHandler
+} from "../AssetKindHandler.ts";
+import { readOnlyCommands } from "../readOnlyCommands.ts";
+import { assetInlineContentSchema } from "../../events/AssetEvents.schema.ts";
+import { encodeContent } from "../../events/inlineContent.ts";
 
 export const BINARY_KIND = "binary";
 
@@ -38,3 +44,13 @@ export const binaryAssetKind: AssetKindHandler<BinaryAssetState> = {
     );
   }
 };
+
+export function binaryCommands(
+  eventType: string
+): AssetCommands<BinaryAssetState, never> {
+  return readOnlyCommands({
+    eventType,
+    snapshotSchema: assetInlineContentSchema,
+    snapshot: (state) => encodeContent(state.bytes)
+  });
+}

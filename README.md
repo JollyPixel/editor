@@ -37,6 +37,7 @@ Each editor is an `editor.<name>` workspace, and the formats it owns (the asset 
 - [Pixel art](./packages/editors/pixel-art) - Pixel-art texture editor for [`.pixelart` textures](./packages/assets/pixel-art), built on `pixel-draw.renderer`
 - [Terrain](./packages/editors/terrain) 🚧 - Heightfield terrain editor for [`.terrain.json` terrains](./packages/assets/terrain)
 - [Scene](./packages/editors/scene) 🚧 - Actors, components and environment, saved as [`.scene.json` scenes](./packages/assets/scene)
+- [Sound](./packages/editors/sound) 🚧 - Plays and loops [`.ogg` sounds](./packages/assets/sound) converted from dropped audio files
 
 #### UI
 
