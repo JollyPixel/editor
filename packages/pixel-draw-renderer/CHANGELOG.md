@@ -1,5 +1,16 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 9.0.0
+
+### Major Changes
+
+- [#1092](https://github.com/JollyPixel/editor/pull/1092) [`78ea67b`](https://github.com/JollyPixel/editor/commit/78ea67bc7a2636cdea144fe2c64efa0b5e228346) Thanks [@fraxken](https://github.com/fraxken)! - Save UV nets in the pixel document (`SavedUVNet`, `UVNetSet`, `saveUvNet`, `deleteUvNet`, `changeDefaultUvNet`, the `uv-net-*` commands and the `.pixelart` `uvNets` field) so they are saved with the texture and synced with peers.
+  `PixelDocument.loadSnapshot()` now takes one `PixelDocumentSnapshot` object instead of positional arguments.
+
+### Minor Changes
+
+- [#1091](https://github.com/JollyPixel/editor/pull/1091) [`383ef85`](https://github.com/JollyPixel/editor/commit/383ef85a2435ce0c6bd819c43402ba0d4374e5d2) Thanks [@fraxken](https://github.com/fraxken)! - Edge-pan the view while a selection or UV drag reaches the canvas edge, and keep a drag under the cursor when the view pans or zooms.
+
 ## 8.0.0
 
 ### Major Changes

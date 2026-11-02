@@ -1,5 +1,16 @@
 # @jolly-pixel/runtime
 
+## 6.1.1
+
+### Patch Changes
+
+- [#1088](https://github.com/JollyPixel/editor/pull/1088) [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1) Thanks [@fraxken](https://github.com/fraxken)! - `ui` elements now register from `@jolly-pixel/ui/elements/<name>` (class and dialog helpers included) and the facade, with its types, moved to `@jolly-pixel/ui/facade`; `./feedback` and `./icon` are removed, and the root entry registers nothing and exports element classes as types only.
+  Add `LazyTemplate` to `ui`, and let `jolly-console` (`editScript`) and `jolly-lantern` (`TourRun.shown`) be created late, so pages load these elements only when first needed.
+- Updated dependencies [[`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7), [`f731773`](https://github.com/JollyPixel/editor/commit/f731773de4c47100fbcfc53590a4b8d0f7198e1a), [`2c08218`](https://github.com/JollyPixel/editor/commit/2c0821822900c461d6d517fd17c768867a411e53), [`3a63812`](https://github.com/JollyPixel/editor/commit/3a63812c0e04954a670735acf79d157ea3ddfd10), [`a61b2a3`](https://github.com/JollyPixel/editor/commit/a61b2a318638f4f644b0ad2870f2c69071e50bfc), [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`125db2d`](https://github.com/JollyPixel/editor/commit/125db2d088c0baaf205c5468490dda2b64e8352c), [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1), [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5), [`e083d5c`](https://github.com/JollyPixel/editor/commit/e083d5c062837c944609484f833d462eb9f88a52), [`063c4aa`](https://github.com/JollyPixel/editor/commit/063c4aac17e1c73d74ac2c2309a8c25174fb8d52), [`3bfec4a`](https://github.com/JollyPixel/editor/commit/3bfec4aa2597e4923db19237593bcd928ff5f93a), [`a287fa7`](https://github.com/JollyPixel/editor/commit/a287fa7d5d01b07d93f672b5147b6c9aebba0901), [`fee3858`](https://github.com/JollyPixel/editor/commit/fee3858c166edfccffe9c218020c1ffc38b5ca53)]:
+  - @jolly-pixel/engine@8.0.0
+  - @jolly-pixel/ui@5.0.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 6.1.0
 
 ### Minor Changes

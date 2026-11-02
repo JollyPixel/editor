@@ -1,5 +1,38 @@
 # @jolly-pixel/engine
 
+## 8.0.0
+
+### Major Changes
+
+- [#1123](https://github.com/JollyPixel/editor/pull/1123) [`3a63812`](https://github.com/JollyPixel/editor/commit/3a63812c0e04954a670735acf79d157ea3ddfd10) Thanks [@fraxken](https://github.com/fraxken)! - Add `FileScene.capture()`, `captureSceneActors()`, `ComponentDefinition.owns`/`capture` and `ComponentDefinitions.create`/`apply`/`capture` to save a running scene as a `SceneFile`, the `Actor` scene property type, persistent actors, `Actor.active`, `ActorComponent.schedule()` on `world.timers`, `sceneManager.actors.find(persistentId)` and the `persistentId` actor option.
+  Add `hasComponent`, `ensureComponent`, `removeComponent`, `findComponentInChildren`, `findComponentInParent`, `root` and `hasDescendant` to `Actor`. Breaking: `IntegerIncrement.incr()` is renamed `next()`, `Actor.persistentId` is read-only, and a scene file actor takes its file id as `persistentId`.
+  Fix `Transform.moveForward`/`moveRight`/`moveUp` doubling the position, and add `Viewport`, `CanvasDimensions`, `CameraProjection`, `ActorComponents`, `SpriteSheet`, `UILayout` and `AudioPlaylists`. Breaking: `prepareRender(canvas)`, `camera.settings` replaces the camera getters, `actor.components` is an `ActorComponents`, `status`/`pendingForDestruction` replace `isDestroyed()`, ids are counted per world, and `actor.behaviors`, `componentsRequiringUpdate`, `PersistentIdIncrement` and the `Transform` static scratch objects are removed.
+
+- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files (`SceneFile`, `FileScene`, `SceneInstance`, scene transform helpers, `ComponentDefinitions`), `LightComponent`, `MeshRenderer`, `OrbitFlyCamera.frame()`, `Transform.visibleInHierarchy`, `inferScenePropertyType` and the `render` camera and `properties` behavior options to `engine`; `Actor.name` now follows `object3D.name`. Frames only visit actors with updating components and no longer allocate per actor or component; `sceneManager.actors.updating` lets a host sleep once nothing updates, and a component can start asleep with the `needUpdate` option.
+  Breaking: `Camera.configure()` replaces the camera setters, `sceneManager.actors` (`ActorRegistry`) replaces its actor and component scheduling methods, and `renderStrategy`, `markRenderOrderDirty()` and the `Behavior` property mirror (`getProperty`, `setProperty`, `mergeProperties`, `BehaviorProperties`) are removed.
+  Add `CameraGizmo` and `LightGizmo` to `three`, refusal messages to `history` and `reconcilePeerMarks` to `ui/network`.
+
+### Minor Changes
+
+- [#1140](https://github.com/JollyPixel/editor/pull/1140) [`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `bindOrbitFocus` to the engine (Escape leaves an `OrbitFlyCamera` pivot), and `COMPACT_GIZMO_APPEARANCE` and `createListedColorAllocator` to three. All three move out of the private editor host.
+
+- [#1135](https://github.com/JollyPixel/editor/pull/1135) [`f731773`](https://github.com/JollyPixel/editor/commit/f731773de4c47100fbcfc53590a4b8d0f7198e1a) Thanks [@fraxken](https://github.com/fraxken)! - Add `OrbitFlyCamera.subscribe("orbit", listener)`, called with the new `isOrbiting` value each time it changes.
+
+- [#1130](https://github.com/JollyPixel/editor/pull/1130) [`2c08218`](https://github.com/JollyPixel/editor/commit/2c0821822900c461d6d517fd17c768867a411e53) Thanks [@fraxken](https://github.com/fraxken)! - Add prefab overrides: a `SceneActorFile` with `prefab` can carry `overrides` for the names, visibility, transforms, component data and asset slots of the actors it expands.
+  `SceneInstance` gains `override()`, `expandedActors()`, `expandedActor()`, `expandedComponent()` and `prefabSceneIds()`; `InstancePath` reads and builds path ids.
+
+- [#1125](https://github.com/JollyPixel/editor/pull/1125) [`a61b2a3`](https://github.com/JollyPixel/editor/commit/a61b2a318638f4f644b0ad2870f2c69071e50bfc) Thanks [@fraxken](https://github.com/fraxken)! - Add scene anchors: a `ComponentDefinition` can publish `anchors(component)`, and a `SceneActorFile` with `anchor` hangs from one of its parent's.
+  `SceneInstance` follows anchor moves and is a `SceneAnchorsReader` (`anchors()`, `findAnchor()`), with an `anchorsChange` event and an `anchor` argument to `reparent()`; captures keep `anchor`.
+
+- [#1124](https://github.com/JollyPixel/editor/pull/1124) [`125db2d`](https://github.com/JollyPixel/editor/commit/125db2d088c0baaf205c5468490dda2b64e8352c) Thanks [@fraxken](https://github.com/fraxken)! - Expand scene file prefab instances: `SceneInstance` builds the referenced scene under each actor with `prefab`, using path ids, skips cycles and re-expands on `refresh(sceneId)`.
+  Add `ScenePrefabs`, `NO_SCENE_PREFABS`, `expandedSceneActors()` and the `prefabs` and `sceneId` options of `FileScene` and `SceneInstance`; a capture saves instances as their expanded actors.
+
+### Patch Changes
+
+- Updated dependencies [[`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7), [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`e6572be`](https://github.com/JollyPixel/editor/commit/e6572beab0d4d5ab208f9f900ccdb0acdee355dc)]:
+  - @jolly-pixel/three@5.1.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 7.1.0
 
 ### Minor Changes
