@@ -1,5 +1,22 @@
 # @jolly-pixel/three
 
+## 5.1.0
+
+### Minor Changes
+
+- [#1140](https://github.com/JollyPixel/editor/pull/1140) [`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `bindOrbitFocus` to the engine (Escape leaves an `OrbitFlyCamera` pivot), and `COMPACT_GIZMO_APPEARANCE` and `createListedColorAllocator` to three. All three move out of the private editor host.
+
+- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files (`SceneFile`, `FileScene`, `SceneInstance`, scene transform helpers, `ComponentDefinitions`), `LightComponent`, `MeshRenderer`, `OrbitFlyCamera.frame()`, `Transform.visibleInHierarchy`, `inferScenePropertyType` and the `render` camera and `properties` behavior options to `engine`; `Actor.name` now follows `object3D.name`. Frames only visit actors with updating components and no longer allocate per actor or component; `sceneManager.actors.updating` lets a host sleep once nothing updates, and a component can start asleep with the `needUpdate` option.
+  Breaking: `Camera.configure()` replaces the camera setters, `sceneManager.actors` (`ActorRegistry`) replaces its actor and component scheduling methods, and `renderStrategy`, `markRenderOrderDirty()` and the `Behavior` property mirror (`getProperty`, `setProperty`, `mergeProperties`, `BehaviorProperties`) are removed.
+  Add `CameraGizmo` and `LightGizmo` to `three`, refusal messages to `history` and `reconcilePeerMarks` to `ui/network`.
+
+- [#1135](https://github.com/JollyPixel/editor/pull/1135) [`e6572be`](https://github.com/JollyPixel/editor/commit/e6572beab0d4d5ab208f9f900ccdb0acdee355dc) Thanks [@fraxken](https://github.com/fraxken)! - Add `snap.grid` to `TransformControls`: the grid line offset that makes the translate step round the world position along the gizmo axes, instead of the travelled distance.
+
+### Patch Changes
+
+- Updated dependencies [[`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64)]:
+  - @jolly-pixel/network@7.0.0
+
 ## 5.0.0
 
 ### Major Changes

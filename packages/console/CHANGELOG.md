@@ -1,5 +1,17 @@
 # @jolly-pixel/console
 
+## 1.3.0
+
+### Minor Changes
+
+- [#1088](https://github.com/JollyPixel/editor/pull/1088) [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1) Thanks [@fraxken](https://github.com/fraxken)! - `ui` elements now register from `@jolly-pixel/ui/elements/<name>` (class and dialog helpers included) and the facade, with its types, moved to `@jolly-pixel/ui/facade`; `./feedback` and `./icon` are removed, and the root entry registers nothing and exports element classes as types only.
+  Add `LazyTemplate` to `ui`, and let `jolly-console` (`editScript`) and `jolly-lantern` (`TourRun.shown`) be created late, so pages load these elements only when first needed.
+
+### Patch Changes
+
+- Updated dependencies [[`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1), [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5), [`e083d5c`](https://github.com/JollyPixel/editor/commit/e083d5c062837c944609484f833d462eb9f88a52), [`063c4aa`](https://github.com/JollyPixel/editor/commit/063c4aac17e1c73d74ac2c2309a8c25174fb8d52), [`3bfec4a`](https://github.com/JollyPixel/editor/commit/3bfec4aa2597e4923db19237593bcd928ff5f93a), [`a287fa7`](https://github.com/JollyPixel/editor/commit/a287fa7d5d01b07d93f672b5147b6c9aebba0901), [`fee3858`](https://github.com/JollyPixel/editor/commit/fee3858c166edfccffe9c218020c1ffc38b5ca53)]:
+  - @jolly-pixel/ui@5.0.0
+
 ## 1.2.0
 
 ### Minor Changes

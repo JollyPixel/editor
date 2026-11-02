@@ -1,5 +1,12 @@
 # @jolly-pixel/event-store
 
+## 6.0.0
+
+### Major Changes
+
+- [#1128](https://github.com/JollyPixel/editor/pull/1128) [`75493f9`](https://github.com/JollyPixel/editor/commit/75493f9032176bfa25b4758b867c22f5b36c872f) Thanks [@fraxken](https://github.com/fraxken)! - Every reader, writer, `tags`, `compact` and `close` member returns a promise, and stores dispose with `await using` (`Symbol.asyncDispose`).
+  Writes run one at a time in call order and notify listeners before they resolve; an IndexedDB write resolves once its transaction committed.
+
 ## 5.0.0
 
 ### Major Changes

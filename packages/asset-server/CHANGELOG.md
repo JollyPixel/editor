@@ -1,5 +1,33 @@
 # @jolly-pixel/asset-server
 
+## 7.0.0
+
+### Major Changes
+
+- [#1102](https://github.com/JollyPixel/editor/pull/1102) [`19e8fb2`](https://github.com/JollyPixel/editor/commit/19e8fb24034a423e62b3ac9e2021b834984de0e9) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `AssetTags` takes `kinds`, and a tag backup stores each part at its part file path. Every asset room reserves `subscribe-parts` and `unsubscribe-parts`, and a tag room subscribes each member to every part.
+  `parts.list` reads the manifest bytes instead of a state, so writes no longer load the manifest. Add `partRequests()` to split a part request into messages the room accepts.
+
+- [#1128](https://github.com/JollyPixel/editor/pull/1128) [`75493f9`](https://github.com/JollyPixel/editor/commit/75493f9032176bfa25b4758b867c22f5b36c872f) Thanks [@fraxken](https://github.com/fraxken)! - Follow the async event store: `AssetTags.list`, `read` and `delete` return promises, and `LiveAssetRoom.connect`, `receive` and `resync` must be awaited.
+  `foldAssetEvent` takes the held part contents from the new `heldPartRefs()` and `loadHeldParts()` instead of an event reader, and asset rooms handle one command at a time.
+
+### Minor Changes
+
+- [#1114](https://github.com/JollyPixel/editor/pull/1114) [`fa742ce`](https://github.com/JollyPixel/editor/commit/fa742ceefc37a374ee60e6638ed3c0a8f1d06539) Thanks [@fraxken](https://github.com/fraxken)! - Add `JsonAssetFile` (JSON file codec that reports bad content as `InvalidAssetFileError`), `JSON_CONTENT_TYPE`, `SNAPSHOT_OPTIONS_SCHEMA` and `arbitrated(state, rules)`, which wires a `KeyedCommandArbiter` into an asset kind's live protocol.
+
+- [#1109](https://github.com/JollyPixel/editor/pull/1109) [`d36f467`](https://github.com/JollyPixel/editor/commit/d36f46702ac084e4305eca2114d19de84b7ea4e7) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add the `catalog:replace` command and `CatalogClient.replace(assetId, content, { from })`: new content for an existing asset, keeping its ID and path.
+  The overwritten content gets a `restore/<eventVersion>` restore point, and open rooms reload the new content.
+
+- [#1111](https://github.com/JollyPixel/editor/pull/1111) [`f17d58f`](https://github.com/JollyPixel/editor/commit/f17d58f00807c0dd3bf6404e07bcc5b74a6cd7ab) Thanks [@fraxken](https://github.com/fraxken)! - Add `createProjectContributionsPlugin`, which serves `virtual:jolly-pixel/contributions/<field>`: the export subpath that each project package names under `jollypixel.<field>` in its manifest.
+
+- [#1103](https://github.com/JollyPixel/editor/pull/1103) [`293b03d`](https://github.com/JollyPixel/editor/commit/293b03d92636ee1b7a31531635ebea69e398520d) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - The built-in `texture` kind opens a read-only live room whose snapshot is the image file as `AssetInlineContent`; it accepts no command. Add `TEXTURE_ASSET`, a descriptor to list textures in asset pickers.
+
+### Patch Changes
+
+- [#1131](https://github.com/JollyPixel/editor/pull/1131) [`7bfe12b`](https://github.com/JollyPixel/editor/commit/7bfe12b6c35e5b074c5a9109d1f97048856b6470) Thanks [@fraxken](https://github.com/fraxken)! - `catalog:create` now rejects content its asset kind cannot load, before anything is written.
+- Updated dependencies [[`75493f9`](https://github.com/JollyPixel/editor/commit/75493f9032176bfa25b4758b867c22f5b36c872f), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64)]:
+  - @jolly-pixel/event-store@6.0.0
+  - @jolly-pixel/network@7.0.0
+
 ## 6.0.0
 
 ### Major Changes
