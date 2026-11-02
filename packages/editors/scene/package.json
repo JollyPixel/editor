@@ -48,6 +48,7 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.common": "workspace:*",
+    "@jolly-pixel/asset.font": "workspace:*",
     "@jolly-pixel/asset.scene": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",

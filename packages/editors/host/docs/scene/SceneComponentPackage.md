@@ -170,13 +170,20 @@ interface SceneComponentSeed {
 interface SceneAssetSource<TValue = unknown> {
   descriptor: AssetKindDescriptor;
   documentKinds: readonly AssetDocumentKind<unknown>[];
-  open(session: SceneAssetContext): SceneAssetResolver<TValue>;
+  open(
+    session: SceneAssetContext,
+    updates: SceneAssetUpdates
+  ): SceneAssetResolver<TValue>;
 }
 
 type SceneAssetContext = Pick<EditorSession, "assets" | "catalog">;
 
+interface SceneAssetUpdates {
+  loaded(): void;
+}
+
 interface SceneAssetResolver<TValue = unknown> {
-  resolve(reference: AssetReferenceData): TValue;
+  resolve(reference: AssetReferenceData): TValue | null;
   dispose(): void;
 }
 ```
@@ -188,6 +195,12 @@ lease kinds.
 The editor calls `open()` the first time a component resolves an asset of
 that kind, and `dispose()` when it closes. The resolver owns the leases it
 opens.
+
+- `resolve()` returns `null` while an asset loads, such as a font read once
+  from its room snapshot. The definition then builds its component without
+  the asset.
+- `updates.loaded()` tells the editor an asset arrived; the editor
+  rebuilds the scene, and `resolve()` must then return the value.
 
 ## SharedSceneViewers
 

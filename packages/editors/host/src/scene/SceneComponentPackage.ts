@@ -54,8 +54,12 @@ export type SceneActorPresetEntry = SceneActorPreset | SceneActorPresetGroup;
 export interface SceneAssetResolver<TValue = unknown> {
   resolve(
     reference: AssetReferenceData
-  ): TValue;
+  ): TValue | null;
   dispose(): void;
+}
+
+export interface SceneAssetUpdates {
+  loaded(): void;
 }
 
 export type SceneAssetContext = Pick<EditorSession, "assets" | "catalog">;
@@ -70,7 +74,8 @@ export interface SceneAssetSource<TValue = unknown> {
    */
   documentKinds: readonly AssetDocumentKind<unknown>[];
   open(
-    session: SceneAssetContext
+    session: SceneAssetContext,
+    updates: SceneAssetUpdates
   ): SceneAssetResolver<TValue>;
 }
 

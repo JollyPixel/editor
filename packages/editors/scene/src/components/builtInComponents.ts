@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { FONT_ASSET } from "@jolly-pixel/asset.font/client";
 import type {
   SceneActorPreset,
   SceneComponentKind,
@@ -9,10 +10,12 @@ import {
   LightDefinition,
   MeshDefinition,
   ScriptDefinition,
+  TextDefinition,
   type CameraData,
   type LightSettings,
   type MeshRendererOptions,
-  type ScriptData
+  type ScriptData,
+  type TextSettings
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
@@ -22,9 +25,14 @@ import {
   LIGHT_KINDS,
   lightForm,
   meshForm,
-  scriptForm
+  scriptForm,
+  textForm
 } from "./componentForms.ts";
 import { EMPTY_ACTOR_ICON } from "./SceneComponents.ts";
+import {
+  FONT_DOCUMENT_KIND,
+  SceneFonts
+} from "./SceneFonts.ts";
 
 // CONSTANTS
 export const BUILT_IN_PACKAGE = "@jolly-pixel/editor.scene";
@@ -48,6 +56,12 @@ const kMesh: SceneComponentKind<MeshRendererOptions> = {
   icon: "actor-mesh",
   form: meshForm
 };
+const kText: SceneComponentKind<TextSettings> = {
+  definition: new TextDefinition(),
+  label: "Text",
+  icon: "actor-text",
+  form: textForm
+};
 const kScript: SceneComponentKind<ScriptData> = {
   definition: new ScriptDefinition({}),
   label: "Script",
@@ -56,7 +70,7 @@ const kScript: SceneComponentKind<ScriptData> = {
 };
 
 export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
-  components: [kCamera, kLight, kMesh, kScript],
+  components: [kCamera, kLight, kMesh, kText, kScript],
   presets: [
     {
       id: "empty",
@@ -91,6 +105,18 @@ export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
       })
     },
     {
+      id: "text",
+      label: "Text",
+      components: [
+        {
+          type: "Text",
+          data: {
+            text: "Text"
+          }
+        }
+      ]
+    },
+    {
       label: "Primitive",
       presets: GEOMETRY_KINDS.map(({ value: kind, label }) => {
         return {
@@ -108,6 +134,13 @@ export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
           ]
         };
       })
+    }
+  ],
+  assets: [
+    {
+      descriptor: FONT_ASSET,
+      documentKinds: [FONT_DOCUMENT_KIND],
+      open: (session, updates) => new SceneFonts(session, updates)
     }
   ]
 };

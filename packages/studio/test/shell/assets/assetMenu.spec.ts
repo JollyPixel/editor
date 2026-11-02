@@ -36,6 +36,12 @@ const kKinds = new AssetKindSet({
       kind: "pixelart",
       label: "Pixel art",
       extension: ".pixelart"
+    },
+    {
+      kind: "font",
+      label: "Font",
+      extension: ".typeface.json",
+      creatable: false
     }
   ],
   editable: []
@@ -105,7 +111,7 @@ describe("assetMenu", () => {
     );
   });
 
-  test("offers one new asset per kind in a submenu, named, iconed and keyed after it", () => {
+  test("offers one new asset per creatable kind in a submenu, named, iconed and keyed after it", () => {
     const [, newAsset] = buildMenu([]);
     assert.ok(newAsset !== "separator");
 

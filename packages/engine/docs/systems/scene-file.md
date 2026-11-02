@@ -11,6 +11,7 @@ import {
   LightDefinition,
   MeshDefinition,
   ScriptDefinition,
+  TextDefinition,
   loadJSON
 } from "@jolly-pixel/engine";
 
@@ -18,6 +19,7 @@ const components = new Systems.ComponentDefinitions().register(
   new CameraDefinition(),
   new LightDefinition(),
   new MeshDefinition(),
+  new TextDefinition(),
   new ScriptDefinition({ Player: PlayerBehavior })
 );
 
@@ -272,7 +274,9 @@ Resolves one slot of the component's `assets` map with the type the
 definition declares for it. Returns `null` for an empty or missing slot.
 `FileScene` resolves through `world.assetCoordinator`
 (`CoordinatorAssetResolver`). An editor passes its own
-`ComponentAssetResolver` to `SceneInstance`.
+`ComponentAssetResolver` to `SceneInstance`. Its `resolve` returns `null`
+for an asset that is still loading; the editor rebuilds the component once
+the asset arrives.
 
 ### ComponentDefinitions
 

@@ -130,7 +130,9 @@ export class SceneEditorScene extends Systems.Scene {
     teardown.defer(() => history.dispose());
     const environment = new Systems.SceneEnvironment(world);
     teardown.defer(() => environment.dispose());
-    const assets = new EditAssets(components, this.#options.session);
+    const assets = new EditAssets(components, this.#options.session, {
+      loaded: () => binding.rebuild()
+    });
     teardown.defer(() => assets.dispose());
     const prefabs = new PrefabScenes(this.#options.openScene);
     teardown.defer(() => prefabs.dispose());

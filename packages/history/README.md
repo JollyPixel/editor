@@ -67,6 +67,7 @@ What an editor uses to add undo to its documents.
 - [CommandHistory](./docs/CommandHistory.md): scopes, record, undo, redo and state.
 - [HistoryRegistration](./docs/HistoryRegistration.md): registered documents, `HistorySource`, guards and `KeyedGuard`.
 - [CommandDocument](./docs/CommandDocument.md): base class of a document edited by commands.
+- [SnapshotDocument](./docs/SnapshotDocument.md): a document that only loads snapshots, for assets a client never edits.
 
 ### Integration
 

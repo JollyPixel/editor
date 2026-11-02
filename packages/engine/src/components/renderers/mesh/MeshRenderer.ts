@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import * as THREE from "three/webgpu";
+import type * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { ActorComponent } from "../../../actor/ActorComponent.ts";
@@ -11,83 +11,36 @@ import {
   createMeshGeometry,
   isSameMeshGeometry
 } from "./MeshGeometry.ts";
+import {
+  MESH_SURFACE_DEFAULTS,
+  mergeMeshSurface,
+  type MeshSurfaceOptions,
+  type MeshSurfaceSettings
+} from "./MeshSurface.ts";
+import { SurfaceMesh } from "./SurfaceMesh.ts";
 
-export interface MeshMaterialOptions {
-  /**
-   * @default "#ffffff"
-   */
-  color?: THREE.ColorRepresentation;
-  /**
-   * @default 1
-   */
-  roughness?: number;
-  /**
-   * @default 0
-   */
-  metalness?: number;
-  /**
-   * @default "#000000"
-   */
-  emissive?: THREE.ColorRepresentation;
-  /**
-   * @default 1
-   */
-  emissiveIntensity?: number;
-  /**
-   * Below 1 the material renders as transparent.
-   * @default 1
-   */
-  opacity?: number;
-  /**
-   * @default false
-   */
-  flatShading?: boolean;
-}
-
-export interface MeshRendererOptions {
+export interface MeshRendererOptions extends MeshSurfaceOptions {
   /**
    * @default a 1x1x1 box
    */
   geometry?: MeshGeometry;
-  material?: MeshMaterialOptions;
-  /**
-   * @default false
-   */
-  castShadow?: boolean;
-  /**
-   * @default false
-   */
-  receiveShadow?: boolean;
 }
 
-export interface MeshSettings {
+export interface MeshSettings extends MeshSurfaceSettings {
   geometry: MeshGeometry;
-  material: Required<MeshMaterialOptions>;
-  castShadow: boolean;
-  receiveShadow: boolean;
 }
 
 // CONSTANTS
 export const MESH_RENDERER_DEFAULTS = {
-  geometry: MESH_GEOMETRY_DEFAULTS.box,
-  material: {
-    color: "#ffffff",
-    roughness: 1,
-    metalness: 0,
-    emissive: "#000000",
-    emissiveIntensity: 1,
-    opacity: 1,
-    flatShading: false
-  },
-  castShadow: false,
-  receiveShadow: false
+  ...MESH_SURFACE_DEFAULTS,
+  geometry: MESH_GEOMETRY_DEFAULTS.box
 } as const satisfies MeshSettings;
 
 export class MeshRenderer<
   TContext = WorldDefaultContext
 > extends ActorComponent<TContext> {
   #settings: MeshSettings;
-  #mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+  #surface: SurfaceMesh;
 
   constructor(
     actor: Actor<TContext>,
@@ -99,22 +52,16 @@ export class MeshRenderer<
     });
 
     this.#settings = mergeSettings(MESH_RENDERER_DEFAULTS, options);
-    this.#mesh = new THREE.Mesh(
+    this.#surface = new SurfaceMesh(
+      actor.object3D,
       createMeshGeometry(this.#settings.geometry),
-      new THREE.MeshStandardMaterial()
+      this.#settings
     );
-    this.#write();
-
-    actor.object3D.add(this.#mesh);
-    this.addTeardown(() => {
-      actor.object3D.remove(this.#mesh);
-      this.#mesh.geometry.dispose();
-      this.#mesh.material.dispose();
-    });
+    this.addTeardown(() => this.#surface.dispose());
   }
 
   get threeMesh(): THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> {
-    return this.#mesh;
+    return this.#surface.mesh;
   }
 
   get geometry(): MeshGeometry {
@@ -132,20 +79,11 @@ export class MeshRenderer<
     this.#settings = mergeSettings(previous, options);
 
     if (!isSameMeshGeometry(this.#settings.geometry, previous.geometry)) {
-      this.#mesh.geometry.dispose();
-      this.#mesh.geometry = createMeshGeometry(this.#settings.geometry);
+      this.#surface.replaceGeometry(createMeshGeometry(this.#settings.geometry));
     }
-    this.#write();
+    this.#surface.configure(this.#settings);
 
     return this;
-  }
-
-  #write(): void {
-    const { material, castShadow, receiveShadow } = this.#settings;
-
-    writeMaterial(this.#mesh.material, material);
-    this.#mesh.castShadow = castShadow;
-    this.#mesh.receiveShadow = receiveShadow;
   }
 }
 
@@ -154,34 +92,7 @@ function mergeSettings(
   options: MeshRendererOptions
 ): MeshSettings {
   return {
-    geometry: options.geometry ?? settings.geometry,
-    material: {
-      ...settings.material,
-      ...options.material
-    },
-    castShadow: options.castShadow ?? settings.castShadow,
-    receiveShadow: options.receiveShadow ?? settings.receiveShadow
+    ...mergeMeshSurface(settings, options),
+    geometry: options.geometry ?? settings.geometry
   };
-}
-
-function writeMaterial(
-  material: THREE.MeshStandardMaterial,
-  settings: Required<MeshMaterialOptions>
-): void {
-  material.color.set(settings.color);
-  material.roughness = settings.roughness;
-  material.metalness = settings.metalness;
-  material.emissive.set(settings.emissive);
-  material.emissiveIntensity = settings.emissiveIntensity;
-  material.opacity = settings.opacity;
-
-  const transparent = settings.opacity < 1;
-  if (
-    transparent !== material.transparent ||
-    settings.flatShading !== material.flatShading
-  ) {
-    material.transparent = transparent;
-    material.flatShading = settings.flatShading;
-    material.needsUpdate = true;
-  }
 }

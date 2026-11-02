@@ -69,6 +69,30 @@ describe("KindPackage", () => {
     ]);
   });
 
+  test("keeps a descriptor that refuses empty creation", async() => {
+    const kinds = kindPackage(["alpha"]);
+    const loaded = await KindPackage.load("kind-a", {}, packageLoader({
+      "kind-a": {
+        ASSET_KINDS: {
+          ...kinds,
+          descriptors: [
+            {
+              ...kindDescriptor("alpha"),
+              creatable: false
+            }
+          ]
+        }
+      }
+    }));
+
+    assert.deepEqual(loaded.descriptors, [
+      {
+        ...loadedKind("alpha"),
+        creatable: false
+      }
+    ]);
+  });
+
   test("names a package that cannot be loaded", async() => {
     await assert.rejects(
       KindPackage.load("missing-kind", {}, packageLoader({})),

@@ -48,6 +48,7 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset-source": "workspace:*",
+    "@jolly-pixel/asset.font": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.scene": "workspace:*",
     "@jolly-pixel/asset.voxel-animation": "workspace:*",

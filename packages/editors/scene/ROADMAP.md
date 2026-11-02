@@ -2,8 +2,10 @@
 
 ## More component types
 
-GLB models, sprites and text. `VoxelModel` does not play the model's
-animation sets yet.
+GLB models and sprites.
+
+Note:
+- `VoxelModel` does not play the model's animation sets yet.
 
 ## Scripts
 

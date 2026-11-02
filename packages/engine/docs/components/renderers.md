@@ -102,38 +102,65 @@ sprite.animation.play("run", { duration: 0.6, loop: true });
 
 ## TextRenderer
 
-Renders 3D extruded text from a Three.js typeface font (`.typeface.json`).
+Renders 3D extruded text from a Three.js typeface font (`.typeface.json`)
+with a `MeshStandardMaterial`.
 
 ```ts
-import * as THREE from "three";
 import { Actor, TextRenderer } from "@jolly-pixel/engine";
 
 const actor = new Actor(world, { name: "Title" });
-actor.addComponent(TextRenderer, {
+const title = actor.addComponentAndGet(TextRenderer, {
   asset: RobotoFont,
   text: "Hello World",
-  material: new THREE.MeshStandardMaterial({ color: 0xffffff }),
-  textGeometryOptions: { size: 2, depth: 0.5 }
+  size: 2,
+  depth: 0.5,
+  material: { color: "#ffcc00" }
 });
+
+title.configure({ text: "Score: 100" });
 ```
-
-| Option | Default | Description |
-| ------ | ------- | ----------- |
-| `asset` | — | Typed font reference declared by the owning scene |
-| `text` | `""` | Initial text to display |
-| `material` | `MeshBasicMaterial` | Material applied to the text mesh |
-| `textGeometryOptions` | `{ size: 1, depth: 1 }` | Three.js `TextGeometry` parameters |
-
-Change the text with `text.setValue()`, then call `updateMesh()`:
 
 ```ts
-const renderer = actor.addComponentAndGet(TextRenderer, {
-  asset: RobotoFont
-});
+type TextRendererOptions = TextShapeOptions & MeshSurfaceOptions & (
+  | { asset: AssetReference<Font>; } // resolved when the actor awakes
+  | { font?: Font | null; } // null
+);
 
-renderer.text.setValue("Score: 100");
-renderer.updateMesh();
+interface TextShapeOptions {
+  text?: string; // "", "\n" starts a new line
+  size?: number; // 1
+  depth?: number; // 0.2, extruded along local Z
+  curveSegments?: number; // 12
+  bevel?: boolean; // false
+  bevelThickness?: number; // 0.05
+  bevelSize?: number; // 0.02
+  align?: "left" | "center" | "right"; // "center"
+}
 ```
+
+`MeshSurfaceOptions` holds the `material`, `castShadow` and
+`receiveShadow` fields of [MeshRenderer](#meshrenderer).
+`TEXT_RENDERER_DEFAULTS` holds these defaults. An options object takes
+either `asset` or `font`, never both.
+
+- `align` places the text horizontally around the actor origin. The
+  baseline sits on the origin and the depth is centered on it.
+- Without a font, or with blank text, the mesh has an empty geometry.
+
+### font: Font | null
+
+Setting another font rebuilds the geometry.
+
+### configure(options): this
+
+Merges `options` into the current settings, field by field for `material`.
+The geometry is rebuilt only when a shape field (`text` to `align`)
+changes; the material is updated in place.
+
+### TextDefinition
+
+The scene file definition of type `"Text"`. Its data is the settings
+above; its `font` asset slot takes a `font` asset.
 
 ## MeshRenderer
 
