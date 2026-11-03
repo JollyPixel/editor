@@ -1,0 +1,39 @@
+diff --git a/packages/editors/sound/src/SoundEditor.ts b/packages/editors/sound/src/SoundEditor.ts
+index e12ada6a2..0703f81f0 100644
+--- a/packages/editors/sound/src/SoundEditor.ts
++++ b/packages/editors/sound/src/SoundEditor.ts
+@@ -94,7 +94,7 @@ export class SoundEditor {
+         ));
+       }
+ 
+-      const ready = target.ready.then(
++      const ready = localStorage.getItem("bench:sound-early-ready") === "1" ? target.ready.then(() => { void player.follow(target.document); }) : target.ready.then(
+         () => player.follow(target.document)
+       );
+ 
+diff --git a/packages/engine/src/components/light/LightComponent.ts b/packages/engine/src/components/light/LightComponent.ts
+index 8f11edf06..d5e359909 100644
+--- a/packages/engine/src/components/light/LightComponent.ts
++++ b/packages/engine/src/components/light/LightComponent.ts
+@@ -236,7 +236,7 @@ function writeShadow(
+   light: THREE.DirectionalLight | THREE.PointLight | THREE.SpotLight,
+   settings: LightSettings
+ ): void {
+-  light.castShadow = settings.castShadow;
++  light.castShadow = settings.castShadow && globalThis.localStorage?.getItem("bench:scene-no-shadows") !== "1";
+   light.shadow.bias = settings.shadowBias;
+ 
+   const size = settings.shadowMapSize;
+diff --git a/packages/studio/server/StudioBackend.ts b/packages/studio/server/StudioBackend.ts
+index 88ebcef35..2e026595c 100644
+--- a/packages/studio/server/StudioBackend.ts
++++ b/packages/studio/server/StudioBackend.ts
+@@ -221,7 +221,7 @@ export class StudioBackend implements AsyncDisposable {
+       path: DEFAULT_WEBSOCKET_PATH,
+       httpServer,
+       server: this.#assetServer.network,
+-      compression: kSocketCompression,
++      compression: process.env.BENCH_NO_SOCKET_COMPRESSION === "1" ? undefined : kSocketCompression,
+       allowedHosts: options.allowedHosts
+     }));
+   }

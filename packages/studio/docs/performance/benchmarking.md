@@ -1,6 +1,6 @@
 # Benchmarking editor opens
 
-How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, starting with [`openEditors.ts`](../../perf/openEditors.ts); the latest results are in [Editor start-up, 16 October 2026](./editor-startup-2026-10-16.md), and the cost of an open editor in [the earlier report of the same day](./editor-performance-2026-10-16.md).
+How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, starting with [`openEditors.ts`](../../perf/openEditors.ts); the latest results, for the scene and sound editors, are in [Scene and sound editors, 3 November 2026](./editor-open-2026-11-03.md).
 
 ## What is measured
 
@@ -30,16 +30,22 @@ Each phase changes which caches are warm:
 
 `first` includes one-off browser costs: the first WebGPU adapter in a fresh browser takes over a second, the first `AudioContext` a few hundred milliseconds. Users who already run Chrome pay them less often; read `cold` and `reload` for the cost of the studio itself.
 
-Server rooms stay open for `roomGraceMs` (5 min) after the last peer leaves, so only the first open after a server start replays a room. Restart `dev:e2e` to measure a cold room.
+Server rooms stay open for `roomGraceMs` (5 min) after the last peer leaves, so only the first open after a server start replays a room. Restart the server to measure a cold room.
+
+The seed project has no scene and no sound. Before the first scene open, the harness creates `New scene.scene.json` from the New asset menu; before the first sound open, it drops `packages/editors/sound/assets/sounds/chime.ogg` on the Asset Browser. That path is gitignored: the sound dev server seeds a generated chime of about 1.6 s there, and a longer file put at the same path measures a longer decode. Online, the asset stays on the server for the next accounts; offline, every new context creates it again.
 
 ## Running the matrix
 
-Build every workspace, then start the studio in e2e mode (in-memory back-end and accounts, port 3004):
+Build every workspace and the studio shell, then serve the build with the in-memory back-end and accounts of `dev:e2e` on port 3004:
 
 ```bash
 $ pnpm run build
-$ pnpm --filter @jolly-pixel/studio dev:e2e
+$ cd packages/studio
+$ pnpm exec vite build --sourcemap
+$ node perf/serveBuild.ts
 ```
+
+Do not measure against `dev:e2e`: it serves every editor page from source through Vite, so a scene open makes about 250 requests for unbundled modules (24 MB decoded) instead of 75 to 82. `serveBuild.ts` takes `--port` and `--shell` (another built `dist`), to serve a second variant next to the first.
 
 In a second terminal:
 
@@ -52,7 +58,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 
 `perf:open` options:
 
-- `--editors voxel-map,voxel-model,pixel-art` and `--modes online,offline`: what to open. Online registers a new account per context; offline opens `/?offline`.
+- `--editors voxel-map,voxel-model,pixel-art,scene,sound` and `--modes online,offline`: what to open. Online registers a new account per context; offline opens `/?offline`.
 - `--phases reopen,reload,cold,restart`: the phases measured after `first`, which always runs.
 - `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor. A measurement's `run` is its repetition, and profile files end with it.
 - `--label`: tags every measurement, for summaries that mix files.
@@ -60,7 +66,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 - `--prefetch`: lets the shell download the editors' files ahead of the open. Without it, the harness turns the studio's "Prefetch editors" preference off: on the new account online, in `localStorage` offline.
 - `--prewarm`: the shell requests a WebGPU adapter as soon as it loads.
 - `--cpu 4`: CDP CPU throttling.
-- `--network fast-4g`: CDP network throttling with the DevTools presets, `fast-4g` (9 Mbit/s, 165 ms) or `slow-4g` (1.6 Mbit/s, 563 ms), both at 90% of the nominal throughput. It starts after the shell's first load, so the unbundled `dev:e2e` shell does not dominate the run; a `reload` reloads the shell throttled. On localhost, transfer size barely shows in `ready`; use it to measure what bytes cost. It delivers a large uncompressed WebSocket frame about ten times slower than the preset's throughput, so keep socket compression on when reading room timings ([Over a real link](./editor-startup-2026-10-16.md#over-a-real-link)).
+- `--network fast-4g`: CDP network throttling with the DevTools presets, `fast-4g` (9 Mbit/s, 165 ms) or `slow-4g` (1.6 Mbit/s, 563 ms), both at 90% of the nominal throughput. It starts after the shell's first load, so the shell's own load does not dominate the run; a `reload` reloads the shell throttled. On localhost, transfer size barely shows in `ready`; use it to measure what bytes cost. It delivers a large uncompressed WebSocket frame about ten times slower than the preset's throughput, so keep socket compression on when reading room timings.
 - `--profile <dir>`: records a V8 CPU profile of each open.
 - `--memory <dir>`: samples every allocation of each open, collected objects included, into a `.heapprofile`, and records a light trace for garbage collection on the renderer main thread. Each measurement gets `memory.allocatedMB`, `memory.minorGc` and `memory.majorGc` (count and ms; major includes incremental marking steps), and `perf:summary` adds their columns. The recording slows the open, so compare memory runs with memory runs only.
 - `--headless`: avoid it. Headless Chromium renders with SwiftShader, which makes WebGPU and WebGL costs meaningless.
@@ -74,7 +80,7 @@ Results files carry a `kind`: `open` for `perf:open` and `perf:ab`, `steady` for
 Laptop speed drifts with power and thermal state, so never compare two runs taken at different times. Compare variants inside one interleaved run:
 
 ```bash
-$ pnpm run perf:ab --plan docs/performance/editor-open-2026-10-16.json --rounds 5 --out perf-results/ab.json
+$ pnpm run perf:ab --plan docs/performance/editor-open-2026-11-03.json --rounds 4 --out perf-results/ab.json
 $ pnpm run perf:summary perf-results/ab.json --control control
 ```
 
@@ -91,22 +97,25 @@ A plan file lists the `editors`, `modes` and follow-up `phases` as arrays, plus 
 
 ### Testing a code change
 
-Build the change once behind a `localStorage` flag, so control and variant run the same bundle:
+Put the change behind a `localStorage` flag that defaults to off, so control and variant run the same bundle. Apply the patch to the main checkout, rebuild the changed workspaces and the studio shell, serve it, run `perf:ab`, then `git apply -R` the patch:
 
 ```bash
-$ git worktree add D:/Sources/JollyPixel/jpb HEAD
-$ cd D:/Sources/JollyPixel/jpb
-$ pnpm install --frozen-lockfile --prefer-offline
-$ git apply packages/studio/docs/performance/editor-open-2026-10-16.patch
+$ git apply packages/studio/docs/performance/editor-open-2026-11-03.patch
 $ pnpm run build
-$ pnpm --filter @jolly-pixel/studio dev:e2e
+$ cd packages/studio
+$ pnpm exec vite build --sourcemap
+$ node perf/serveBuild.ts
 ```
 
-Then run `perf:ab` from the main checkout as above: the plan's variants turn the flags on, and the control runs the same build without them. Stop the main checkout's `dev:e2e` first, since both use port 3004. On Windows keep the worktree path short, as deep scratch paths exceed `MAX_PATH` during the build.
+A server-side change can read an environment variable instead, with a second server on another port and a variant whose `base` points at it:
 
-When only editor pages change, the patch can also go on the main checkout: apply it, rebuild the editors, measure, then `git apply -R` it. The flags default to off, so the control is the unchanged code.
+```bash
+$ BENCH_NO_SOCKET_COMPRESSION=1 node perf/serveBuild.ts --port 3014
+```
 
-[`editor-open-2026-10-16.patch`](./editor-open-2026-10-16.patch) holds the 16 October experiments: `bench:no-environment` and `bench:one-gizmo` in voxel-model. The patch is measurement scaffolding, not a fix to merge. It applies to `86ad0bda`, the commit of that report, and stopped applying at `51891fd1`; check out the commit in the worktree first, or write a new patch for the current code. [`editor-startup-2026-10-16.patch`](./editor-startup-2026-10-16.patch) holds the start-up experiments; it applies to `0b0438a8`.
+To compare two commits, build the other commit's shell in a worktree and serve it with `--shell`. On Windows keep the worktree path short, as deep scratch paths exceed `MAX_PATH` during the build.
+
+[`editor-open-2026-11-03.patch`](./editor-open-2026-11-03.patch) holds the experiments of the [3 November report](./editor-open-2026-11-03.md). It is measurement scaffolding, not a fix to merge, and applies to `f025a676`.
 
 Do not build or run tests while a measurement runs.
 
@@ -114,12 +123,14 @@ Do not build or run tests while a measurement runs.
 
 ### CPU profiles
 
-Build the editor pages with source maps, so profiles resolve to source files and packages:
+The studio build of [Running the matrix](#running-the-matrix) has source maps, so profiles resolve to source files and packages. [`bundleComposition.ts`](#bundles) reads each editor's own build instead:
 
 ```bash
 $ cd packages/editors/voxel-map && pnpm exec vite build --sourcemap
 $ cd ../voxel-model && pnpm exec vite build --sourcemap
 $ cd ../pixel-art && pnpm exec vite build --sourcemap
+$ cd ../scene && pnpm exec vite build --sourcemap
+$ cd ../sound && pnpm exec vite build --sourcemap
 ```
 
 Record and read a profile:
@@ -184,8 +195,8 @@ $ node perf/bundleComposition.ts
 
 Needs the source-map build. Prints, per editor, the eager chunks (the entry plus its `modulepreload` links) raw, gzip and brotli, and their bytes by package, then the lazy chunks. Bytes the minifier emits without a mapping show as `(unmapped)`.
 
-## Environment of the 16 October 2026 run
+## Environment of the 3 November 2026 run
 
 - Windows 11 Pro 26200, Intel Core Ultra 9 285HX laptop with 32 GB, integrated Intel Graphics (Xe-LPG) only.
-- Playwright 1.64 with Chromium 156.0.8078.4, headed. WebGL runs through ANGLE on Direct3D 11, WebGPU through Dawn on Direct3D 12.
-- Node.js 24.18, studio `dev:e2e`, editors built from `86ad0bda` for the first report and from `0b0438a8` for the start-up report.
+- Playwright 1.64.1 with Chromium 156.0.8078.4, headed. WebGL runs through ANGLE on Direct3D 11, WebGPU through Dawn on Direct3D 12.
+- Node.js 24.18, studio built from `f025a676` and served by `perf/serveBuild.ts`.

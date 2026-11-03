@@ -19,7 +19,7 @@ const { values: args } = parseArgs({
   options: {
     runs: { type: "string", default: "5" },
     modes: { type: "string", default: "online,offline" },
-    editors: { type: "string", default: "voxel-map,voxel-model,pixel-art" },
+    editors: { type: "string", default: "voxel-map,voxel-model,pixel-art,scene,sound" },
     phases: { type: "string", default: FOLLOW_UP_PHASE.options.join(",") },
     out: { type: "string", default: "perf-results/open.json" },
     label: { type: "string", default: "baseline" },

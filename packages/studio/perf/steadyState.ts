@@ -63,7 +63,7 @@ const kSummaryColumns: [string, MeasurementPick<SteadyMeasurement>][] = [
 
 const { values: args } = parseArgs({
   options: {
-    editors: { type: "string", default: "voxel-map,voxel-model,pixel-art" },
+    editors: { type: "string", default: "voxel-map,voxel-model,pixel-art,scene,sound" },
     mode: { type: "string", default: "offline" },
     scenarios: { type: "string", default: VIEWPORT_SCENARIOS.join(",") },
     seconds: { type: "string", default: "5" },

@@ -1,0 +1,14 @@
+{
+  "editors": ["sound"],
+  "modes": ["online", "offline"],
+  "phases": ["reload", "cold"],
+  "variants": [
+    {
+      "label": "f025a676",
+      "base": "http://localhost:3014/"
+    },
+    {
+      "label": "decode-after-ready"
+    }
+  ]
+}

@@ -94,9 +94,9 @@ export class SoundEditor {
         ));
       }
 
-      const ready = target.ready.then(
-        () => player.follow(target.document)
-      );
+      const ready = target.ready.then(() => {
+        void player.follow(target.document);
+      });
 
       return new SoundEditor({
         session,

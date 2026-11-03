@@ -226,6 +226,10 @@ export class SoundPlayer {
     }
     this.#bytes = bytes;
     this.pause();
+    if (bytes !== null) {
+      this.#sound = UnplayableSound.decoding;
+      this.#events.emit("change");
+    }
 
     const sound = await this.#decode(bytes);
     if (bytes === this.#bytes) {
