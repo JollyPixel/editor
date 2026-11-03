@@ -55,6 +55,7 @@ const studio = await bench.newStudioPage({
 });
 await studio.open();
 if (args.warm) {
+  await studio.waitUntilOpenable(editor);
   await studio.openEditor(editor);
   await studio.page.waitForTimeout(settleMs);
   await studio.reopenWithoutTabs();

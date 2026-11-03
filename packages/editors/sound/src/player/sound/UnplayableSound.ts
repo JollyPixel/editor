@@ -9,6 +9,7 @@ export type UnplayableStatus = Exclude<SoundStatus, "ready">;
 
 export class UnplayableSound implements Sound {
   static readonly empty = new UnplayableSound("empty");
+  static readonly decoding = new UnplayableSound("decoding");
   static readonly undecodable = new UnplayableSound("undecodable");
 
   readonly status: UnplayableStatus;

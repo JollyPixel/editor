@@ -28,6 +28,7 @@ import {
 // CONSTANTS
 const kMessages: Record<UnplayableStatus, string> = {
   empty: "This sound is empty.",
+  decoding: "Decoding the sound…",
   undecodable: "This browser cannot decode the sound."
 };
 

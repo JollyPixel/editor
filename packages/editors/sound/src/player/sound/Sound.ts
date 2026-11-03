@@ -2,7 +2,7 @@
 import type { Playback } from "../Playback.ts";
 import type { PlaybackMode } from "../PlaybackMode.ts";
 
-export type SoundStatus = "empty" | "undecodable" | "ready";
+export type SoundStatus = "empty" | "decoding" | "undecodable" | "ready";
 
 export interface SoundFormat {
   readonly sampleRate: string;

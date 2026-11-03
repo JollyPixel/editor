@@ -1,3 +1,6 @@
+// Import Node.js Dependencies
+import path from "node:path";
+
 // Import Internal Dependencies
 import {
   STUDIO_ROOT,
@@ -14,16 +17,55 @@ import {
 } from "../../test/e2e/support/tabs.ts";
 
 // CONSTANTS
-const kOpenTargets = new Map([
+const kSoundFile = path.join(
+  STUDIO_ROOT,
+  "..",
+  "editors",
+  "sound",
+  "assets",
+  "sounds",
+  "chime.ogg"
+);
+const kOpenTargets = new Map<string, BenchTarget>([
   ["voxel-map", { row: MAP, tab: MAP_TAB }],
   ["voxel-model", { row: MODEL, tab: "model" }],
-  ["pixel-art", { row: TEXTURE, tab: TEXTURE_TAB }]
+  ["pixel-art", { row: TEXTURE, tab: TEXTURE_TAB }],
+  [
+    "scene",
+    {
+      row: "New scene.scene.json",
+      tab: "New scene",
+      seed: {
+        kind: "new",
+        menuItem: "Scene"
+      }
+    }
+  ],
+  [
+    "sound",
+    {
+      row: "chime.ogg",
+      tab: "chime",
+      seed: {
+        kind: "drop",
+        file: kSoundFile
+      }
+    }
+  ]
 ]);
 
-export interface BenchEditor {
-  name: string;
+export type BenchAssetSeed =
+  | { kind: "new"; menuItem: string; }
+  | { kind: "drop"; file: string; };
+
+interface BenchTarget {
   row: string;
   tab: string;
+  seed?: BenchAssetSeed;
+}
+
+export interface BenchEditor extends BenchTarget {
+  name: string;
   dist: string;
 }
 

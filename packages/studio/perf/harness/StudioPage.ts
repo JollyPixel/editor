@@ -1,3 +1,7 @@
+// Import Node.js Dependencies
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 // Import Third-party Dependencies
 import {
   PORTS,
@@ -11,7 +15,10 @@ import type {
 // Import Internal Dependencies
 import { SEED_ROW_COUNT } from "../../test/e2e/support/assets.ts";
 import { StudioShell } from "../../test/e2e/support/studio.ts";
-import type { BenchEditor } from "./BenchEditors.ts";
+import type {
+  BenchAssetSeed,
+  BenchEditor
+} from "./BenchEditors.ts";
 
 // CONSTANTS
 export const STUDIO_URL = `${baseUrl(PORTS.studio)}/`;
@@ -56,8 +63,46 @@ export class StudioPage {
   async waitUntilOpenable(
     editor: BenchEditor
   ): Promise<void> {
-    await this.shell.assets.row(editor.row).waitFor();
+    const row = this.shell.assets.row(editor.row);
+    if (editor.seed !== undefined && await row.count() === 0) {
+      await this.#seed(editor.seed);
+    }
+    await row.waitFor({ timeout: kShellTimeoutMs });
     await this.page.waitForTimeout(kIdleBeforeOpenMs);
+  }
+
+  async #seed(
+    seed: BenchAssetSeed
+  ): Promise<void> {
+    const { assets } = this.shell;
+    if (seed.kind === "new") {
+      await assets.createAsset(seed.menuItem);
+      await assets.renameField.press("Escape");
+
+      return;
+    }
+
+    const content = await readFile(seed.file);
+    const transfer = await this.page.evaluateHandle(
+      ({ name, base64 }) => {
+        const bytes = Uint8Array.from(
+          atob(base64),
+          (char) => char.charCodeAt(0)
+        );
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(new File([bytes], name));
+
+        return dataTransfer;
+      },
+      {
+        name: path.basename(seed.file),
+        base64: content.toString("base64")
+      }
+    );
+    const card = assets.root.locator(".card.browser");
+    await card.dispatchEvent("dragover", { dataTransfer: transfer });
+    await card.dispatchEvent("drop", { dataTransfer: transfer });
+    await transfer.dispose();
   }
 
   async openEditor(

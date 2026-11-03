@@ -7,6 +7,7 @@ import type {
   WaveformBar
 } from "./Sound.ts";
 import { Timecode } from "./Timecode.ts";
+import { WaveformPeaks } from "./WaveformPeaks.ts";
 
 // CONSTANTS
 const kChannelLayouts: Record<number, string> = {
@@ -19,6 +20,7 @@ export class DecodedSound implements Sound {
 
   #buffer: AudioBuffer;
   #reversed: AudioBuffer | null = null;
+  #peaks: WaveformPeaks | null = null;
 
   constructor(
     buffer: AudioBuffer
@@ -50,38 +52,9 @@ export class DecodedSound implements Sound {
     width: number,
     height: number
   ): WaveformBar[] {
-    const buffer = this.#buffer;
-    const channels = Array.from(
-      { length: buffer.numberOfChannels },
-      (_, index) => buffer.getChannelData(index)
-    );
-    const { length } = buffer;
-    const middle = height / 2;
-    const bars: WaveformBar[] = [];
+    this.#peaks ??= WaveformPeaks.scan(this.#buffer);
 
-    for (let column = 0; column < width; column++) {
-      const start = Math.floor(column * length / width);
-      const end = Math.max(
-        start + 1,
-        Math.floor((column + 1) * length / width)
-      );
-      let lowest = Infinity;
-      let highest = -Infinity;
-      for (const channel of channels) {
-        for (let index = start; index < end; index++) {
-          lowest = Math.min(lowest, channel[index]);
-          highest = Math.max(highest, channel[index]);
-        }
-      }
-      const top = middle - highest * middle;
-      const bottom = middle - lowest * middle;
-      bars.push({
-        top,
-        height: Math.max(1, bottom - top)
-      });
-    }
-
-    return bars;
+    return this.#peaks.bars(width, height);
   }
 
   play(

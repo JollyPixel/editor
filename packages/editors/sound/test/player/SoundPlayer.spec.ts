@@ -137,6 +137,26 @@ describe("SoundPlayer", () => {
     });
   });
 
+  test("refuses to play the previous sound while a reset is decoding", async() => {
+    const { context, document, player } = await followingPlayer();
+    const decodes: Array<(buffer: AudioBuffer) => void> = [];
+    context.decodeAudioData = () => new Promise((resolve) => {
+      decodes.push(resolve);
+    });
+    const reloaded = nextSound(player);
+    document.load(encodeContent(kOtherOggBytes));
+    player.play();
+
+    assert.equal(player.status, "decoding");
+    assert.equal(player.playing, false);
+    assert.equal(player.duration, null);
+
+    decodes[0](fakeBuffer([new Float32Array(4)]));
+    await reloaded;
+
+    assert.equal(player.status, "ready");
+  });
+
   test("keeps the newest sound when a reset lands while an older one is decoding", async() => {
     const context = new FakeAudioContext();
     const decodes: Array<(buffer: AudioBuffer) => void> = [];
@@ -174,6 +194,27 @@ describe("SoundPlayer", () => {
       {
         top: 0.5,
         height: 3.5
+      }
+    ]);
+  });
+
+  test("keeps the extremes of every channel in the waveform of a long sound", async() => {
+    const left = new Float32Array(100_000);
+    const right = new Float32Array(100_000);
+    left[3] = 1;
+    right[99_999] = -1;
+    const context = new FakeAudioContext();
+    context.decoded = fakeBuffer([left, right]);
+    const { player } = await followingPlayer(context);
+
+    assert.deepEqual(player.waveform(2, 2), [
+      {
+        top: 0,
+        height: 1
+      },
+      {
+        top: 1,
+        height: 1
       }
     ]);
   });
