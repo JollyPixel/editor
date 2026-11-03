@@ -15,7 +15,9 @@ devDepends on this package. Locators match `jolly-*` tags and ARIA roles;
    and `expect`. Specs go in `test/e2e/<feature>.e2e.ts`.
 4. Serve with `vite --mode e2e` and add `mode.plugins()`. Without
    `prebundleWorkspace()`, every linked `dist/` file is its own request and CI
-   boots time out. A page importing its own `src/` needs
+   boots time out. It scans the `.html` pages in `optimizeDeps.entries` (else
+   `index.html`); a page it misses loads a second copy of `@jolly-pixel/ui`.
+   A page importing its own `src/` needs
    `vite build --mode e2e && vite preview --mode e2e`, like `@jolly-pixel/ui`.
 5. CI runs `test:e2e` when the package or a workspace dependency changes. Opt out
    with a `--skip-e2e` entry in `.github/workflows/node.js.yml`.

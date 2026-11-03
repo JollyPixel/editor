@@ -30,6 +30,8 @@ shell's own document waits for the `EditorDefinition` revisit in the
   an external editor can ship prebuilt, and the shell does not pin the host version an editor runs.
   Since October 2026 the studio build compiles the pages that ship their source HTML together with
   the shell, so modules they share get one URL; a prebuilt page is copied as built.
-  In dev, `pnpm --filter @jolly-pixel/studio dev:editors` rebuilds both libraries and every page
-  on change, and the dev server tells the shell to reload the frames of a rebuilt editor.
+  Since November 2026 the dev server compiles those pages from source too, and
+  `pnpm --filter @jolly-pixel/studio dev:editors` only rebuilds the libraries they import from
+  `dist/`. A page without source HTML is served from its folder, and the dev server tells the
+  shell to reload the frames of that editor when the folder is rebuilt.
 - An editor's own Vite config and back-end stay for standalone development and its e2e suite.

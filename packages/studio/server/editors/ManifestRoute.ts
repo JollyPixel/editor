@@ -11,6 +11,7 @@ import {
   ProjectManifest
 } from "../../shared/ProjectManifest.ts";
 import type { StudioProject } from "../project/StudioProject.ts";
+import { requestPathname } from "../requestPathname.ts";
 
 export class ManifestRoute {
   readonly source: string;
@@ -38,12 +39,7 @@ export class ManifestRoute {
       { dev: true }
     );
     this.middleware = (request, response, next) => {
-      const pathname = URL.parse(
-        request.url ?? "/",
-        "http://localhost"
-      )?.pathname;
-
-      if (pathname === `/${PROJECT_MANIFEST_FILE}`) {
+      if (requestPathname(request) === `/${PROJECT_MANIFEST_FILE}`) {
         serve(request, response, next);
       }
       else {

@@ -12,6 +12,8 @@ import {
   type StudioBackendOptions
 } from "../server/StudioBackend.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
+import { EditorPageInput } from "./EditorPageInput.ts";
+import { ServedEditorPages } from "./ServedEditorPages.ts";
 
 export function backend(
   project: StudioProject,
@@ -25,7 +27,13 @@ export function backend(
     async configureServer(server) {
       opened = await StudioBackend.open(
         project,
-        backendOptions(mode)
+        {
+          ...backendOptions(mode),
+          editorPages: new ServedEditorPages(
+            server,
+            EditorPageInput.compiled(server.config.root, project.editors)
+          )
+        }
       );
       server.middlewares.use(opened.middleware);
 

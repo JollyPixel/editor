@@ -9,8 +9,11 @@ export const FIXTURE_ROOT = path.posix.join(
   "workspace"
 );
 export const FIXTURE_PAGE = path.posix.join(FIXTURE_ROOT, "index.html");
+export const EDITOR_PAGE_ENTRY = "../editor-page/index.html";
 export const MAIN_MODULE = "virtual:fixture/main";
 export const HANDLERS_MODULE = "virtual:fixture/handlers";
+export const EDITOR_MODULE = "virtual:fixture/editor";
+export const EDITOR_ENTRY = "@jolly-pixel/editor-only";
 
 export const VIRTUAL_MODULES: Record<string, string> = {
   [MAIN_MODULE]: [
@@ -23,7 +26,8 @@ export const VIRTUAL_MODULES: Record<string, string> = {
     "export type { Reexport } from \"@jolly-pixel/type-reexport\";",
     "void import(\"@jolly-pixel/lazy\");"
   ].join("\n"),
-  [HANDLERS_MODULE]: "import \"@jolly-pixel/handlers\";"
+  [HANDLERS_MODULE]: "import \"@jolly-pixel/handlers\";",
+  [EDITOR_MODULE]: `import "${EDITOR_ENTRY}";\nimport "@jolly-pixel/feature";`
 };
 
 export const EXPECTED_ENTRIES = [

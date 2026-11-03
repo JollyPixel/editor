@@ -29,7 +29,10 @@ import {
   type TrustProxy
 } from "./api/StudioApi.ts";
 import { AssetLog } from "./audit/AssetLog.ts";
-import { EditorPageFolders } from "./editors/EditorPageFolders.ts";
+import {
+  EditorPageFolders,
+  type EditorPageSource
+} from "./editors/EditorPageFolders.ts";
 import { AuditFeed } from "./audit/AuditFeed.ts";
 import {
   AUDIT_DATABASE_FILE,
@@ -81,10 +84,10 @@ export interface StudioBackendOptions {
    */
   trustProxy?: TrustProxy;
   /**
-   * Where `/view/<token>` reads each editor's built page.
+   * Where `/view/<token>` reads each editor's page.
    * @default EditorPageFolders.packages()
    */
-  editorPages?: EditorPageFolders;
+  editorPages?: EditorPageSource;
 }
 
 export interface StudioBackendAttachOptions {

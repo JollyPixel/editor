@@ -28,6 +28,18 @@ const kPackageManifestSchema = z.object({
   })
 });
 
+export type EditorPage =
+  | {
+    kind: "source";
+    html: string;
+  }
+  | {
+    kind: "built";
+  }
+  | {
+    kind: "prebuilt";
+  };
+
 export interface EditorPackageData extends EditorDescriptor {
   package: string;
   /**
@@ -35,15 +47,12 @@ export interface EditorPackageData extends EditorDescriptor {
    */
   dist: string;
   /**
-   * The page ships built and is never watched.
+   * How the studio gets the page. A `source` page names its source HTML,
+   * which the studio's Vite compiles in dev and build. A `built` page is
+   * served from `dist` and watched in dev. A `prebuilt` page, installed in
+   * `node_modules`, is served from `dist` and never watched.
    */
-  prebuilt: boolean;
-  /**
-   * Absolute path of the page's source HTML, which the studio build compiles
-   * together with the shell. Null when the manifest names none, or when a
-   * prebuilt package ships only its built page.
-   */
-  page: string | null;
+  page: EditorPage;
   /**
    * The scopes the module named by the manifest's `preferences` exports by
    * default: the ones this editor declares.
@@ -66,8 +75,7 @@ export class EditorPackage implements EditorPackageData {
   readonly name: string;
   readonly kinds: readonly string[];
   readonly dist: string;
-  readonly prebuilt: boolean;
-  readonly page: string | null;
+  readonly page: EditorPage;
   readonly preferences: readonly PreferenceScope[];
   readonly sharedPreferences: readonly PreferenceScope[];
 
@@ -97,17 +105,7 @@ export class EditorPackage implements EditorPackageData {
       page,
       preferences
     } = manifest.data.jollypixel.editor;
-    const prebuilt = root.split(/[\\/]/).includes(kInstallFolder);
-    const source = page === undefined ?
-      null :
-      path.resolve(root, page);
-    const shipsPage = source !== null && fs.existsSync(source);
-    if (source !== null && !shipsPage && !prebuilt) {
-      throw new TypeError(
-        `"${packageName}" has no page source at "${source}".`
-      );
-    }
-
+    const editorPage = resolvePage(packageName, root, page);
     const scopes = preferences === undefined ?
       kNoPreferences :
       await loadPreferences(packageName, path.resolve(root, preferences));
@@ -117,8 +115,7 @@ export class EditorPackage implements EditorPackageData {
       name,
       kinds,
       dist: path.resolve(root, dist),
-      prebuilt,
-      page: shipsPage ? source : null,
+      page: editorPage,
       ...scopes
     });
   }
@@ -130,7 +127,6 @@ export class EditorPackage implements EditorPackageData {
     this.name = data.name;
     this.kinds = [...data.kinds];
     this.dist = data.dist;
-    this.prebuilt = data.prebuilt;
     this.page = data.page;
     this.preferences = [...data.preferences];
     this.sharedPreferences = [...data.sharedPreferences];
@@ -144,6 +140,32 @@ export class EditorPackage implements EditorPackageData {
       sharedPreferences: this.sharedPreferences.map((scope) => scope.toJSON())
     };
   }
+}
+
+function resolvePage(
+  packageName: string,
+  root: string,
+  page: string | undefined
+): EditorPage {
+  const prebuilt = root.split(/[\\/]/).includes(kInstallFolder);
+  if (page !== undefined) {
+    const html = path.resolve(root, page);
+    if (fs.existsSync(html)) {
+      return {
+        kind: "source",
+        html
+      };
+    }
+    if (!prebuilt) {
+      throw new TypeError(
+        `"${packageName}" has no page source at "${html}".`
+      );
+    }
+  }
+
+  return {
+    kind: prebuilt ? "prebuilt" : "built"
+  };
 }
 
 async function loadPreferences(

@@ -18,6 +18,7 @@ import {
   EDITOR_PAGES_DIR,
   EDITOR_PAGES_PREFIX
 } from "../../shared/EditorDescriptor.ts";
+import { readPathname } from "../requestPathname.ts";
 import { serveBuild } from "../serveBuild.ts";
 import type { EditorPackage } from "./EditorPackage.ts";
 import type { EditorPackages } from "./EditorPackages.ts";
@@ -35,17 +36,21 @@ export class EditorPages {
   ) {
     this.editors = [...editors];
     for (const editor of this.editors) {
-      if (editor.prebuilt && !existsSync(editor.dist)) {
+      if (editor.page.kind === "prebuilt" && !existsSync(editor.dist)) {
         throw new TypeError(
           `"${editor.package}" has no built page at "${editor.dist}".`
         );
       }
     }
     this.middleware = compose(
-      ...this.editors.map((editor) => serveBuild(
-        editor.dist,
-        `${EDITOR_PAGES_PREFIX}${editor.name}`
-      )),
+      ...this.editors.flatMap((editor) => {
+        const files = pageFiles(editor);
+
+        return files === null ? [] : serveBuild(
+          files,
+          `${EDITOR_PAGES_PREFIX}${editor.name}`
+        );
+      }),
       unknownEditorPage
     );
   }
@@ -55,7 +60,7 @@ export class EditorPages {
   ): EditorPagesWatcher {
     return new EditorPagesWatcher(
       server,
-      this.editors.filter((editor) => !editor.prebuilt)
+      this.editors.filter((editor) => editor.page.kind === "built")
     );
   }
 
@@ -64,7 +69,7 @@ export class EditorPages {
   ): Promise<void> {
     await Promise.all(
       this.editors.flatMap((editor) => {
-        const files = copiedFiles(editor);
+        const files = pageFiles(editor);
 
         return files === null ? [] : fs.cp(
           files,
@@ -76,13 +81,13 @@ export class EditorPages {
   }
 }
 
-function copiedFiles(
+function pageFiles(
   editor: EditorPackage
 ): string | null {
-  if (editor.page === null) {
+  if (editor.page.kind !== "source") {
     return editor.dist;
   }
-  const publicDir = path.join(path.dirname(editor.page), "public");
+  const publicDir = path.join(path.dirname(editor.page.html), "public");
 
   return existsSync(publicDir) ? publicDir : null;
 }
@@ -92,13 +97,10 @@ function unknownEditorPage(
   response: ServerResponse,
   next?: () => void
 ): void {
-  const pathname = URL.parse(
-    request.url ?? "/",
-    "http://localhost"
-  )?.pathname ?? "/";
+  const pathname = readPathname(request);
 
   if (
-    (request.method === "GET" || request.method === "HEAD") &&
+    pathname !== null &&
     pathname.startsWith(EDITOR_PAGES_PREFIX) &&
     pathname.length > EDITOR_PAGES_PREFIX.length
   ) {
