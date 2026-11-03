@@ -10,7 +10,8 @@ import { setImmediate } from "node:timers/promises";
 import { AssetPath } from "../../../src/catalog/AssetPath.ts";
 import {
   assetNodeId,
-  folderNodeId
+  folderNodeId,
+  type AssetTreeNode
 } from "../../../src/catalog/AssetTreeModel.ts";
 import {
   FakeTreeCatalog,
@@ -22,6 +23,17 @@ import {
   TREE_KINDS,
   treeView
 } from "../../helpers/assetTreeView.ts";
+
+function pendingRows(
+  nodes: readonly AssetTreeNode[],
+  folder = ""
+): string[] {
+  return nodes.flatMap((node) => (
+    node.pending === undefined ?
+      pendingRows(node.children ?? [], `${folder}${node.label}/`) :
+      [`${folder}${node.label}: ${node.pending}`]
+  ));
+}
 
 describe("AssetTreeView", () => {
   test("shows a new name while renaming and the old one again when the rename fails", async() => {
@@ -94,6 +106,86 @@ describe("AssetTreeView", () => {
     );
     assert.ok(view.expanded.has(folderNodeId(AssetPath.parse("maps"))));
     assert.deepEqual(errors, []);
+  });
+
+  test("shows dropped files as pending rows until the catalog lists them", async() => {
+    const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
+    const { view, imported } = treeView(catalog);
+    const asked: string[] = [];
+    const release = catalog.hold();
+
+    const importing = view.importFiles(AssetPath.parse("maps"), [
+      new File(["png"], "hero.png"),
+      new File(["vox"], "tree.vox"),
+      new File(["txt"], "notes.txt")
+    ], {
+      conversion: async(group) => {
+        asked.push(group.format);
+
+        return { convertTo: group.kinds[0] ?? null };
+      },
+      conflicts: async() => null
+    });
+    await setImmediate();
+    const askedWhileAdding = [...asked];
+    const whileAdding = pendingRows(view.nodes);
+    release();
+    await importing;
+    const beforeEcho = pendingRows(view.nodes);
+    catalog.change();
+    view.refresh();
+
+    const added = [...catalog.byId.values()]
+      .filter(({ id }) => id !== MAP_RECORD.id);
+    assert.deepEqual(askedWhileAdding, [".png", ".vox"]);
+    assert.deepEqual(whileAdding, [
+      "maps/hero.pixelart: Converting to Pixel art",
+      "maps/notes.txt: Adding",
+      "maps/tree.voxelmodel.json: Converting to Voxel model"
+    ]);
+    assert.deepEqual(beforeEcho, whileAdding);
+    assert.deepEqual(pendingRows(view.nodes), []);
+    assert.deepEqual(added.map(({ path }) => path).sort(), [
+      "maps/hero.pixelart",
+      "maps/notes.txt",
+      "maps/tree.voxelmodel.json"
+    ]);
+    assert.equal(imported.length, 1);
+    assert.ok(added.some(({ id }) => imported[0] === assetNodeId(id)));
+  });
+
+  test("reveals a dropped file the catalog lists before its add resolves", async() => {
+    const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
+    catalog.echoBeforeReply = true;
+    const { view, imported } = treeView(catalog);
+
+    await view.importFiles(AssetPath.parse("maps"), [
+      new File(["txt"], "notes.txt")
+    ], {
+      conversion: async() => null,
+      conflicts: async() => null
+    });
+    view.refresh();
+
+    assert.deepEqual(pendingRows(view.nodes), []);
+    assert.deepEqual(imported, [assetNodeId("created-1")]);
+  });
+
+  test("removes the pending row of a file the catalog refuses", async() => {
+    const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
+    catalog.failure = "disk full";
+    const { view, errors, imported } = treeView(catalog);
+
+    await view.importFiles(AssetPath.parse("maps"), [
+      new File(["txt"], "notes.txt")
+    ], {
+      conversion: async() => null,
+      conflicts: async() => null
+    });
+
+    assert.deepEqual(pendingRows(view.nodes), []);
+    assert.deepEqual(errors, ["Could not add \"notes.txt\": disk full"]);
+    assert.deepEqual(imported, []);
   });
 
   test("selects a new asset and asks to rename it once the catalog lists it", async() => {

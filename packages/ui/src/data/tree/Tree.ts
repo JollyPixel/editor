@@ -65,7 +65,6 @@ import {
 } from "./contract.ts";
 
 import "../../icon/Icon.ts";
-import "../../peer/Avatar.ts";
 import {
   originatesInButton,
   stopPropagation
@@ -441,6 +440,7 @@ export class Tree<TData = unknown> extends LitElement
         data-move-cursor=${view.moveCursor ? "true" : nothing}
         data-hidden=${view.visible === false ? "true" : nothing}
         data-warning=${view.warning === undefined ? nothing : "true"}
+        aria-busy=${view.pending === undefined ? nothing : "true"}
         data-spacer=${view.spacer === "outside" ? "outside" : nothing}
         data-flash=${view.flash ? "true" : nothing}
         style=${styleMap(rowStyle)}

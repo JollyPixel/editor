@@ -392,7 +392,10 @@ export class AssetBrowser extends LitElement {
       onChange: () => this.requestUpdate(),
       onError: (message) => this.#error(message),
       onCreated: (nodeId) => {
-        void this.#beginRenameNode(nodeId);
+        void this.#afterRender((tree) => tree.beginRename(nodeId));
+      },
+      onImported: (nodeId) => {
+        void this.#afterRender((tree) => tree.reveal(nodeId));
       }
     });
     this.requestUpdate();
@@ -411,12 +414,14 @@ export class AssetBrowser extends LitElement {
     this.dispatchEvent(assetOpenEvent(assetId));
   }
 
-  async #beginRenameNode(
-    nodeId: string
+  async #afterRender(
+    action: (tree: HTMLElementTagNameMap["jolly-tree"]) => void
   ): Promise<void> {
     await this.updateComplete;
     await this._tree?.updateComplete;
-    this._tree?.beginRename(nodeId);
+    if (this._tree !== null) {
+      action(this._tree);
+    }
   }
 
   #error(

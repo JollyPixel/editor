@@ -50,6 +50,7 @@ export interface TreeViewProbe {
   browserState: BrowserState;
   errors: string[];
   created: string[];
+  imported: string[];
   prompted: string[];
 }
 
@@ -71,6 +72,7 @@ export function treeView(
   const browserState = new BrowserState(new MemoryStorageAdapter());
   const errors: string[] = [];
   const created: string[] = [];
+  const imported: string[] = [];
   const prompted: string[] = [];
   const view = new AssetTreeView({
     catalog,
@@ -96,7 +98,8 @@ export function treeView(
     },
     onChange: () => undefined,
     onError: (message) => errors.push(message),
-    onCreated: (nodeId) => created.push(nodeId)
+    onCreated: (nodeId) => created.push(nodeId),
+    onImported: (nodeId) => imported.push(nodeId)
   });
 
   return {
@@ -104,6 +107,7 @@ export function treeView(
     browserState,
     errors,
     created,
+    imported,
     prompted
   };
 }

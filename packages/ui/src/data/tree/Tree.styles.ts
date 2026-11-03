@@ -304,6 +304,19 @@ export const treeStyles = css`
     color: var(--jolly-danger, ${kFallback.inkDanger});
   }
 
+  .node-pending {
+    --jolly-spinner-size: var(--jolly-tree-icon-size, 12px);
+    --jolly-spinner-thickness: 1.5px;
+
+    flex: 0 0 auto;
+    color: var(--jolly-text-muted, ${kFallback.text});
+  }
+
+  .row[aria-busy="true"] .label,
+  .row[aria-busy="true"] .detail {
+    opacity: 0.5;
+  }
+
   .row[data-hidden="true"] .label,
   .row[data-hidden="true"] .node-icon,
   .row[data-hidden="true"] .node-avatar {

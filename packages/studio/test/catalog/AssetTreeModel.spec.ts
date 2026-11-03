@@ -127,17 +127,6 @@ describe("AssetTreeModel", () => {
     );
     assert.equal(kModel.planDeletion(["asset:unknown"]).isEmpty, true);
   });
-
-  test("replaces labels without touching the model", () => {
-    const labels = new Map([[assetNodeId("map-2"), "tunnel.voxelmap.json"]]);
-
-    assert.deepEqual(shape(kModel.withLabels(labels))[0], [
-      "maps",
-      ["tunnel.voxelmap.json", "overworld.voxelmap.json"]
-    ]);
-    assert.equal(kModel.node(assetNodeId("map-2"))?.label, "cave.voxelmap.json");
-    assert.equal(kModel.withLabels(new Map()), kModel.nodes);
-  });
 });
 
 describe("AssetTreeModel kind filter", () => {

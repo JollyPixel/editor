@@ -125,8 +125,10 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
   readonly byId = new Map<string, AssetRecordData>();
   readonly folderPaths: Set<string>;
   failure: string | null = null;
+  echoBeforeReply = false;
   readonly replaced: Array<{ assetId: string; content: string; from?: string; }> = [];
   #created = 0;
+  #held: Promise<void> = Promise.resolve();
   #staged: Array<() => void> = [];
   #listeners = new Map<AssetTreeCatalogEvent, Set<() => void>>();
 
@@ -179,17 +181,32 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
     }
   }
 
+  hold(): () => void {
+    const { promise, resolve } = Promise.withResolvers<void>();
+    this.#held = promise;
+
+    return resolve;
+  }
+
   async create(
     path: string,
     _content: Uint8Array | null,
     options: CatalogCreateOptions = {}
   ): Promise<string> {
+    await this.#held;
+    if (this.failure !== null) {
+      throw new Error(this.failure);
+    }
+
     const id = `created-${++this.#created}`;
     this.#staged.push(() => this.byId.set(id, {
       id,
       kind: options.kind ?? "binary",
       path
     }));
+    if (this.echoBeforeReply) {
+      this.change();
+    }
 
     return id;
   }

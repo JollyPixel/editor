@@ -57,6 +57,11 @@ export interface TreeNode<
    * Flags the row as a problem; the text is its tooltip.
    */
   warning?: string;
+  /**
+   * Marks a row still being created or processed; the text labels the
+   * spinner drawn in place of `icon`.
+   */
+  pending?: string;
   data?: TData;
 }
 

@@ -77,6 +77,11 @@ export interface AssetRelocation {
 
 export type AssetDrop = Pick<JollyReparentDetail, "targetId" | "where">;
 
+export interface AssetTreeOverlay {
+  labels: ReadonlyMap<string, string>;
+  rows: ReadonlyMap<string, readonly AssetTreeNode[]>;
+}
+
 interface AssetLeaf {
   asset: AssetLeafData;
   node: AssetTreeNode;
@@ -285,12 +290,12 @@ export class AssetTreeModel {
     return relocations;
   }
 
-  withLabels(
-    labels: ReadonlyMap<string, string>
+  present(
+    overlay: AssetTreeOverlay
   ): AssetTreeNode[] {
-    return labels.size === 0
-      ? this.nodes
-      : relabel(this.nodes, labels);
+    return overlay.labels.size === 0 && overlay.rows.size === 0 ?
+      this.nodes :
+      decorate(this.nodes, folderNodeId(AssetPath.ROOT), overlay);
   }
 
   #movedData(
@@ -497,12 +502,13 @@ function assetNode(
   };
 }
 
-function relabel(
+function decorate(
   nodes: AssetTreeNode[],
-  labels: ReadonlyMap<string, string>
+  folderId: string,
+  overlay: AssetTreeOverlay
 ): AssetTreeNode[] {
-  return nodes.map((node) => {
-    const label = labels.get(node.id) ?? node.label;
+  const decorated = nodes.map((node) => {
+    const label = overlay.labels.get(node.id) ?? node.label;
 
     return node.children === undefined ?
       {
@@ -512,15 +518,20 @@ function relabel(
       {
         ...node,
         label,
-        children: relabel(node.children, labels)
+        children: decorate(node.children, node.id, overlay)
       };
   });
+  const rows = overlay.rows.get(folderId);
+
+  return rows === undefined ?
+    decorated :
+    [...decorated, ...rows].sort(compareAssetNodes);
 }
 
 function sortNodes(
   nodes: AssetTreeNode[]
 ): void {
-  nodes.sort(compareNodes);
+  nodes.sort(compareAssetNodes);
   for (const node of nodes) {
     if (node.children !== undefined) {
       sortNodes(node.children);
@@ -528,7 +539,7 @@ function sortNodes(
   }
 }
 
-function compareNodes(
+function compareAssetNodes(
   left: AssetTreeNode,
   right: AssetTreeNode
 ): number {

@@ -119,6 +119,7 @@ describe("Data.TreeRowView", () => {
       { detail: undefined },
       { visible: false },
       { locked: true },
+      { pending: "Converting" },
       { swatch: undefined },
       { swatch: { title: "Tint", color: "#00f" } },
       { swatch: { title: "Tint", color: "#f00", ring: "#fff" } },

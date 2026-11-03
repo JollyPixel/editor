@@ -9,6 +9,8 @@ import {
 import type { TreeBadge } from "./contract.ts";
 import type { TreeRail } from "./TreeRowLayout.ts";
 import type { TreeRowView } from "./TreeRowView.ts";
+import "../../peer/Avatar.ts";
+import "../../feedback/Spinner.ts";
 
 // CONSTANTS
 const kVerticalStroke = html`<svg class="stroke vertical"><line
@@ -48,6 +50,15 @@ export function renderGuides(
 export function renderIcon(
   view: TreeRowView
 ): TemplateResult | typeof nothing {
+  if (view.pending !== undefined) {
+    return html`
+      <jolly-spinner
+        class="node-pending"
+        label=${view.pending}
+        title=${view.pending}
+      ></jolly-spinner>
+    `;
+  }
   if (view.avatar !== undefined) {
     return html`
       <jolly-avatar

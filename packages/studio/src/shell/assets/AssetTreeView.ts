@@ -32,6 +32,7 @@ import {
   type AssetRelocation,
   type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
+import { PendingAssets } from "../../catalog/PendingAssets.ts";
 import { DroppedFile } from "../../browser/DroppedFile.ts";
 import type { BrowserState } from "../../browser/BrowserState.ts";
 import { KIND_FILTER_CHANGE } from "../../project/StudioProjectSettings.ts";
@@ -120,6 +121,10 @@ export interface AssetTreeViewOptions {
    * Called once a created asset or folder shows in the tree, selected.
    */
   onCreated: (nodeId: string) => void;
+  /**
+   * Called once the first file of a drop shows in the tree as an asset.
+   */
+  onImported: (nodeId: string) => void;
 }
 
 export class AssetTreeView {
@@ -132,6 +137,7 @@ export class AssetTreeView {
   #onChange: () => void;
   #onError: (message: string) => void;
   #onCreated: (nodeId: string) => void;
+  #onImported: (nodeId: string) => void;
   #model = AssetTreeModel.EMPTY;
   #nodes: AssetTreeNode[] = AssetTreeModel.EMPTY.nodes;
   #layout = CatalogLayout.EMPTY;
@@ -141,7 +147,8 @@ export class AssetTreeView {
   #expanded: ReadonlySet<string>;
   #selected: readonly string[] = [];
   #pendingLabels: ReadonlyMap<string, string> = new Map();
-  #created: string | null = null;
+  #pendingAssets = new PendingAssets();
+  #arrivals = new Map<string, (nodeId: string | null) => void>();
   #catalogChanged = false;
   #stale = true;
 
@@ -156,6 +163,7 @@ export class AssetTreeView {
     this.#onChange = options.onChange;
     this.#onError = options.onError;
     this.#onCreated = options.onCreated;
+    this.#onImported = options.onImported;
     this.#commands = new AssetCommands({
       catalog: options.catalog,
       onError: options.onError
@@ -216,7 +224,7 @@ export class AssetTreeView {
     if (this.#stale) {
       this.#rebuild();
     }
-    this.#revealCreated();
+    this.#settleArrivals();
   }
 
   filter(
@@ -304,7 +312,12 @@ export class AssetTreeView {
     }
 
     this.#expandFolder(folder);
-    this.#created = assetId;
+    this.#arrivals.set(assetId, (nodeId) => {
+      if (nodeId !== null) {
+        this.#selected = [nodeId];
+        this.#onCreated(nodeId);
+      }
+    });
     this.#onChange();
   }
 
@@ -414,19 +427,32 @@ export class AssetTreeView {
         `Could not add "${file.name}": it is larger than ${MAX_DROPPED_FILE_MB} MB`
       );
     }
+    this.#expandFolder(folder);
+    let revealed = false;
+    const reveal = (nodeId: string): void => {
+      if (!revealed) {
+        revealed = true;
+        this.#onImported(nodeId);
+      }
+    };
+
+    const adding = drop.files.map(
+      (file) => this.#add(folder, file, null, reveal)
+    );
     for (const archive of drop.archives) {
       if (!await this.#commands.importArchive(archive, questions.conflicts)) {
-        await this.#commands.add(folder, archive);
+        adding.push(this.#add(folder, archive, null, reveal));
       }
     }
     for (const group of drop.convertible) {
       const choice = await questions.conversion(group);
       if (choice !== null) {
-        await this.#addAll(folder, group.files, choice.convertTo);
+        adding.push(...group.files.map(
+          (file) => this.#add(folder, file, choice.convertTo, reveal)
+        ));
       }
     }
-    await this.#addAll(folder, drop.files);
-    this.#expandFolder(folder);
+    await Promise.all(adding);
   }
 
   dispose(): void {
@@ -454,14 +480,48 @@ export class AssetTreeView {
     }
   }
 
-  async #addAll(
+  async #add(
     folder: AssetPath,
-    files: readonly DroppedFile[],
-    convertTo: AssetKindEntry | null = null
+    file: DroppedFile,
+    convertTo: AssetKindEntry | null,
+    onShown: (nodeId: string) => void
   ): Promise<void> {
-    await Promise.all(
-      files.map((file) => this.#commands.add(folder, file, convertTo))
+    const path = folder.child(
+      convertTo === null ? file.name : `${file.stem}${convertTo.extension}`
     );
+    const rowId = this.#pendingAssets.add(
+      path,
+      convertTo === null ? "Adding" : `Converting to ${convertTo.label}`
+    );
+    this.#present();
+
+    const assetId = await this.#commands.add(path, file, convertTo);
+    if (assetId === null) {
+      this.#pendingAssets.remove(rowId);
+      this.#present();
+
+      return;
+    }
+
+    this.#arrivals.set(assetId, (nodeId) => {
+      this.#pendingAssets.remove(rowId);
+      if (nodeId !== null) {
+        onShown(nodeId);
+      }
+    });
+    this.#onChange();
+  }
+
+  #present(): void {
+    this.#nodes = this.#presented();
+    this.#onChange();
+  }
+
+  #presented(): AssetTreeNode[] {
+    return this.#model.present({
+      labels: this.#pendingLabels,
+      rows: this.#pendingAssets.rows
+    });
   }
 
   async #relocate(
@@ -476,16 +536,14 @@ export class AssetTreeView {
       this.#followFolder(relocation);
     }
     this.#pendingLabels = labels;
-    this.#nodes = this.#model.withLabels(labels);
-    this.#onChange();
+    this.#present();
 
     const failed = await this.#commands.relocate(relocations, verb);
     if (failed !== null) {
       const restored = new Map(this.#pendingLabels);
       restored.delete(failed.nodeId);
       this.#pendingLabels = restored;
-      this.#nodes = this.#model.withLabels(restored);
-      this.#onChange();
+      this.#present();
     }
   }
 
@@ -559,27 +617,22 @@ export class AssetTreeView {
       }
     }
     this.#pendingLabels = labels;
-    this.#nodes = model.withLabels(labels);
+    this.#nodes = this.#presented();
   }
 
-  #revealCreated(): void {
-    const assetId = this.#created;
-    if (assetId === null) {
-      return;
-    }
-
-    const nodeId = assetNodeId(assetId);
-    if (!this.#model.has(nodeId)) {
-      if (this.#catalog.record(assetId) !== undefined) {
-        this.#created = null;
+  #settleArrivals(): void {
+    const waiting = this.#arrivals.size;
+    for (const [assetId, arrive] of this.#arrivals) {
+      const nodeId = assetNodeId(assetId);
+      const shown = this.#model.has(nodeId);
+      if (shown || this.#catalog.record(assetId) !== undefined) {
+        this.#arrivals.delete(assetId);
+        arrive(shown ? nodeId : null);
       }
-
-      return;
     }
-
-    this.#created = null;
-    this.#selected = [nodeId];
-    this.#onCreated(nodeId);
+    if (this.#arrivals.size !== waiting) {
+      this.#nodes = this.#presented();
+    }
   }
 
   readonly #onCatalogChange = (): void => {
