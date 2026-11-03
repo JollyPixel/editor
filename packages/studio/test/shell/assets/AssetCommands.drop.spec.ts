@@ -23,12 +23,16 @@ const kPixelArtKind: AssetKindEntry = {
 };
 
 describe("AssetCommands dropped files", () => {
-  test("adds a dropped file under its name, or converted under the kind's extension", async() => {
+  test("adds a dropped file at its path, converted from its format when asked", async() => {
     const { commands, created, errors } = commandsFailingAt(-1);
     const sprites = AssetPath.parse("sprites");
 
-    await commands.add(sprites, droppedFile("hero.PNG", "png"), kPixelArtKind);
-    await commands.add(sprites, droppedFile("hero.PNG", "png"));
+    await commands.add(
+      sprites.child("hero.pixelart"),
+      droppedFile("hero.PNG", "png"),
+      kPixelArtKind
+    );
+    await commands.add(sprites.child("hero.PNG"), droppedFile("hero.PNG", "png"));
 
     assert.deepEqual(created, [
       [
@@ -57,7 +61,11 @@ describe("AssetCommands dropped files", () => {
     const { commands, errors } = commandsFailingAt(0);
 
     assert.equal(
-      await commands.add(AssetPath.ROOT, droppedFile("hero.png"), kPixelArtKind),
+      await commands.add(
+        AssetPath.parse("hero.pixelart"),
+        droppedFile("hero.png"),
+        kPixelArtKind
+      ),
       null
     );
     assert.deepEqual(errors, ['Could not add "hero.png": disk full']);

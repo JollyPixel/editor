@@ -48,6 +48,7 @@ export class TreeRowView {
   readonly avatar: Readonly<PeerAvatar> | undefined;
   readonly detail: string | undefined;
   readonly warning: string | undefined;
+  readonly pending: string | undefined;
   readonly visible: boolean | undefined;
   readonly locked: boolean | undefined;
   readonly swatch: Readonly<TreeSwatch> | undefined;
@@ -101,6 +102,7 @@ export class TreeRowView {
       Object.freeze({ ...node.avatar });
     this.detail = node.detail;
     this.warning = node.warning;
+    this.pending = node.pending;
     this.visible = node.visible;
     this.locked = node.locked;
     this.swatch = node.swatch === undefined ?
@@ -145,6 +147,7 @@ export class TreeRowView {
       sameAvatar(this.avatar, node.avatar) &&
       this.detail === node.detail &&
       this.warning === node.warning &&
+      this.pending === node.pending &&
       this.visible === node.visible &&
       this.locked === node.locked &&
       this.branch === isExpandable(node) &&

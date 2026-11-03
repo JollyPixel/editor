@@ -63,6 +63,7 @@ interface TreeNode<TData = unknown> {
   badges?: TreeBadge[];
   swatch?: TreeSwatch;
   warning?: string;
+  pending?: string; // spinner label, drawn in place of icon
   data?: TData;
 }
 ```
@@ -258,6 +259,9 @@ Order after the label: `detail`, swatch, warning, badges.
   stand for the swatch itself.
 - `warning`: the label turns to the danger colour and a warning icon carries
   the text.
+- `pending`: a [`jolly-spinner`](../feedback/spinner.md) labelled with the
+  text replaces `icon` and `avatar`, the label dims and the row gets
+  `aria-busy`. Selection, rename and drag are unchanged.
 - `avatar`: a [`jolly-avatar`](../peer/avatar.md) in place of `icon`, for rows
   that stand for a person.
 - A long label truncates with an

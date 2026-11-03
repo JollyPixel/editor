@@ -87,16 +87,13 @@ export class AssetCommands {
   }
 
   async add(
-    folder: AssetPath,
+    path: AssetPath,
     file: DroppedFile,
     convertTo: AssetKindEntry | null = null
   ): Promise<string | null> {
-    const name = convertTo === null ?
-      file.name :
-      `${file.stem}${convertTo.extension}`;
     try {
       return await this.#catalog.create(
-        folder.child(name).toString(),
+        path.toString(),
         await file.bytes(),
         {
           kind: convertTo?.kind,
