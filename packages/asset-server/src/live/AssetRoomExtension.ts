@@ -161,6 +161,7 @@ export class AssetRoomExtension<
       return;
     }
 
+    this.#protocol.reloaded?.();
     const room = this.#room;
     if (room === null) {
       return;
@@ -312,7 +313,10 @@ export class AssetRoomExtension<
       arbitration.command,
       appended.val.eventVersion
     );
-    if (arbitration.command !== command) {
+    if (
+      arbitration.command !== command &&
+      this.#protocol.authorRebases !== true
+    ) {
       this.#resync(
         clientId,
         context.room,

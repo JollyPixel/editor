@@ -19,7 +19,7 @@ import {
 
 // CONSTANTS
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
-const kEditorPages = ["pixel-art", "scene", "sound", "voxel-map", "voxel-model"];
+const kEditorPages = ["pixel-art", "scene", "script", "sound", "voxel-map", "voxel-model"];
 const kThreeCore = /[\\/]three[\\/]build[\\/]three\.core\.js$/;
 const kUiModule = /[\\/]packages[\\/]ui[\\/]dist[\\/]/;
 const kAtaValidator = /[\\/]ata-validator[\\/]/;

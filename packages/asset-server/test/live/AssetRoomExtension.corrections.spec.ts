@@ -132,6 +132,30 @@ describe("AssetRoomExtension", () => {
     ]);
   });
 
+  test("broadcasts a rewritten command without resyncing an author that rebases", async() => {
+    const { extension, context, broadcast, direct } = harness({
+      protocol: {
+        authorRebases: true,
+        arbitrate: (command) => {
+          return {
+            command: {
+              ...command,
+              action: "decrement"
+            }
+          };
+        }
+      }
+    });
+
+    await extension.onMessage("alice", { action: "increment" }, context);
+
+    assert.deepEqual(
+      broadcast.map((message) => (message as { data: Command; }).data.action),
+      ["decrement"]
+    );
+    assert.deepEqual(direct, []);
+  });
+
   test("sends the author a correction of a refused command instead of a snapshot", async() => {
     const corrections: [Command, Command | null][] = [];
     const { extension, context, direct } = harness({

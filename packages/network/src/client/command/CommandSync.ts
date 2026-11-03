@@ -186,7 +186,7 @@ export class CommandSync<
       ledger: this.#ledger,
       reconciler: options.reconciler,
       apply: (command) => this.emit("command", command),
-      resync: () => this.#resync(),
+      resync: () => this.resync(),
       unreplayable: (entry) => this.#discard(entry)
     });
     this.#applySnapshot = options.applySnapshot ?? null;
@@ -330,7 +330,7 @@ export class CommandSync<
     this.#ledger.discard(entry);
     this.#noteSettled([entry]);
     this.#refuse(entry);
-    this.#resync();
+    this.resync();
   }
 
   #noteVersion(
@@ -341,7 +341,7 @@ export class CommandSync<
     }
   }
 
-  #resync(): void {
+  protected resync(): void {
     if (this.#resyncing) {
       return;
     }
@@ -481,7 +481,7 @@ export class CommandSync<
     }
     if (dropped.length > 0) {
       this.#refusedOnSnapshot.push(...dropped);
-      this.#resync();
+      this.resync();
     }
   }
 

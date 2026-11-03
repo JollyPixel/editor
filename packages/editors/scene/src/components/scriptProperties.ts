@@ -3,6 +3,7 @@ import type {
   JSONObject,
   JSONValue
 } from "@jolly-pixel/asset.scene/client";
+import type { DeclaredProperty } from "@jolly-pixel/editor.host/scene";
 import {
   inferScenePropertyType,
   Systems,
@@ -11,26 +12,57 @@ import {
 
 export type ScriptListType = Extract<ScenePropertyType, `${string}[]`>;
 
-export interface ScriptProperty {
+export interface PropertyEntry {
   key: string;
   type: ScenePropertyType;
   value: JSONValue;
 }
+
+export interface StoredPropertyEntry extends PropertyEntry {
+  readonly kind: "stored";
+}
+
+export interface DeclaredPropertyEntry extends PropertyEntry {
+  readonly kind: "declared";
+  readonly declared: DeclaredProperty;
+}
+
+export type ListedProperty = StoredPropertyEntry | DeclaredPropertyEntry;
 
 // CONSTANTS
 const kDefaultColor = "#ffffff";
 const kListSeparator = ",";
 
 export function scriptProperties(
-  properties: Readonly<JSONObject>
-): ScriptProperty[] {
-  return Object.entries(properties).map(([key, value]) => {
+  properties: Readonly<JSONObject>,
+  declared: readonly DeclaredProperty[] = []
+): ListedProperty[] {
+  const declaredKeys = new Set(declared.map(({ key }) => key));
+  const rows: ListedProperty[] = declared.map((property) => {
+    const stored = Object.hasOwn(properties, property.key) ?
+      properties[property.key] :
+      property.default;
+
     return {
-      key,
-      type: inferScenePropertyType(value) ?? "string",
-      value
+      kind: "declared",
+      key: property.key,
+      type: property.type,
+      value: convertProperty(stored ?? null, property.type),
+      declared: property
     };
   });
+  for (const [key, value] of Object.entries(properties)) {
+    if (!declaredKeys.has(key)) {
+      rows.push({
+        kind: "stored",
+        key,
+        type: inferScenePropertyType(value) ?? "string",
+        value
+      });
+    }
+  }
+
+  return rows;
 }
 
 export function convertProperty(

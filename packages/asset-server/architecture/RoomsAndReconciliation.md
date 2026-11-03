@@ -34,6 +34,13 @@ The room validates and arbitrates a command, appends it, then commits and
 broadcasts it. The event store folds the command into live state. A failed
 append sends `rejected` to the sender and leaves the room state unchanged.
 
+When arbitration returns another command than the one received, the room
+broadcasts it and then sends the author a correction or a snapshot. A protocol
+with `authorRebases` skips that step: the author rewrites its own copy the same
+way, as text kinds do when they transform an edit. When the state is replaced
+from outside, the room calls the protocol's `reloaded()` before it broadcasts
+the new snapshot.
+
 The room handles one command at a time. The next command is arbitrated only
 after the previous append settled, so arbitration always runs against a state
 holding every earlier command. A join or a resync waits its turn behind the

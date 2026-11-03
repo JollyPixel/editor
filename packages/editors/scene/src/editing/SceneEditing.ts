@@ -76,6 +76,7 @@ export interface SceneEditing {
   presence: PresenceStore;
   gizmo: GizmoSettings;
   assetSlots: SceneAssetSlots;
+  assets: Systems.ComponentAssetResolver;
   preferences: Preferences;
   shortcuts: ShortcutLabels<SceneAction>;
   draft: SceneDraft;

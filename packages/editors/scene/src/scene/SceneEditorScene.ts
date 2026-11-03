@@ -266,6 +266,7 @@ export class SceneEditorScene extends Systems.Scene {
       presence,
       gizmo,
       assetSlots,
+      assets,
       preferences: this.#options.preferences,
       shortcuts: new ShortcutLabels(
         this.#options.keyboardLayout,

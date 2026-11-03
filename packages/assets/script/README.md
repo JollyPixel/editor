@@ -1,0 +1,32 @@
+## 📌 About
+
+Private asset workspace for scripts (kind `script`). A script asset is a plain `.ts` or `.js` file; new scripts start from a `Behavior` template. Files load as UTF-8 and their line endings become LF.
+
+- Edits are text changes (`{ at, insert }` or `{ at, delete }`, in UTF-16 offsets). The room orders them: it rebases each edit over the edits committed since its `basis` version, using operational transform (`TextEdit.rebaseOnto`), and appends the result. A client keeps one edit in flight and folds the next keystrokes into it until the room acknowledges it.
+- A room keeps the last 1,000 committed edits. An edit based on an older version, or one whose deleted text no longer matches, is refused and its author resyncs from the snapshot.
+- `ScriptDocument` holds the text and an undo history of the local edits, rebased over peer edits so an undo never reverts someone else's work.
+- The outline lists each `Behavior` class with its `@SceneProperty` fields (type, label, description, default). A client asks for it with `ScriptOutlineFeed.request()`; the room parses the text with [ts-morph](https://github.com/dsherret/ts-morph) and sends it to every member. ts-morph loads on the first request, in Node only: the browser build of the kind answers no outline.
+
+Browser code imports `@jolly-pixel/asset.script/client`. The package root pulls in server dependencies.
+
+## 🚀 Building
+
+```bash
+$ pnpm install
+$ pnpm --filter @jolly-pixel/asset.script build
+```
+
+The kind loads its outline reader from `dist/`, so tests and editors need a build first.
+
+## 🧪 Tests and checks
+
+```bash
+$ pnpm --filter @jolly-pixel/asset.script test
+$ pnpm --filter @jolly-pixel/asset.script lint
+```
+
+Convergence specs drive several clients against a real `LiveAssetRoom` and use fast-check to replay random edits, undos and deliveries.
+
+## License
+
+MIT

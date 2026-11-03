@@ -73,6 +73,12 @@ snapshot and are sent again.
 
 Detaches sync and clears pending work. Leave the room separately.
 
+### `protected resync(): void`
+
+Asks the room for a fresh snapshot, once until it lands. Meanwhile peer
+commands are skipped and own echoes only acknowledge their edits. A subclass
+calls it when its document no longer matches the room.
+
 ## Document adapters
 
 ### DocumentSyncClient

@@ -7,7 +7,6 @@ import type {
   MeshGeometryKind,
   MeshRendererOptions,
   MeshSurfaceSettings,
-  ScriptData,
   TextAlign,
   TextSettings
 } from "@jolly-pixel/engine";
@@ -177,21 +176,6 @@ export function textForm(
       ] :
       [],
     ...kSurfaceRows
-  ];
-}
-
-export function scriptForm(): FormRow<ScriptData>[] {
-  return [
-    {
-      control: "text",
-      path: ["behavior"],
-      label: "Behavior"
-    },
-    {
-      control: "properties",
-      path: ["properties"],
-      label: "Properties"
-    }
   ];
 }
 
