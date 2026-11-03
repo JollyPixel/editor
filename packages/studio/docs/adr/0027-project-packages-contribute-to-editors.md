@@ -42,8 +42,9 @@ standalone project.
 - Contributions are bundled like the offline kind handlers
   ([ADR-0016](./0016-the-project-file-lists-editors-and-kinds.md)): adding one needs a rebuild of
   the page that reads it.
-- In `dev:editors`, each page is built by its own Vite config, so it sees the packages of its
-  standalone project, not the studio's. The studio build compiles the pages with the studio's
-  project.
+- The studio compiles the pages that ship their source HTML with its own project, in dev and in
+  its build, so they see the packages of the project the studio opened. A page without source
+  HTML keeps the contributions it was built with, and an editor's own dev server sees only the
+  packages of its standalone project.
 - A contribution runs in the editor's page with the editor's rights, like any project package
   ([ADR-0017](./0017-project-packages-are-trusted-code.md)).

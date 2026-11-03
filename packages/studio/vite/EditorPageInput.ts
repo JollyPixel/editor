@@ -7,15 +7,32 @@ import path from "node:path";
 import { normalizePath } from "vite";
 
 // Import Internal Dependencies
-import { EDITOR_PAGES_DIR } from "../shared/EditorDescriptor.ts";
+import type { EditorPackage } from "../server/editors/EditorPackage.ts";
+import {
+  EDITOR_PAGE_FILE,
+  EDITOR_PAGES_DIR
+} from "../shared/EditorDescriptor.ts";
 
 // CONSTANTS
 const kPageUrl = /(<(?:script|link)\b[^>]*?\b(?:src|href)=)(["'])([^"']+)\2/g;
 const kExternalUrl = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
+const kServedFilePrefix = "/@fs";
 
 export class EditorPageInput {
+  static compiled(
+    root: string,
+    editors: Iterable<EditorPackage>
+  ): EditorPageInput[] {
+    return Array.from(editors).flatMap(({ name, page }) => (
+      page.kind === "source" ?
+        [new EditorPageInput(root, name, page.html)] :
+        []
+    ));
+  }
+
   readonly name: string;
   readonly id: string;
+  readonly entry: string;
   readonly #source: string;
 
   constructor(
@@ -25,12 +42,29 @@ export class EditorPageInput {
   ) {
     this.name = name;
     this.id = normalizePath(
-      path.join(root, EDITOR_PAGES_DIR, name, "index.html")
+      path.join(root, EDITOR_PAGES_DIR, name, EDITOR_PAGE_FILE)
     );
     this.#source = normalizePath(source);
+    this.entry = path.posix.relative(normalizePath(root), this.#source);
   }
 
-  async load(): Promise<string> {
+  load(): Promise<string> {
+    const pageDir = path.posix.dirname(this.id);
+
+    return this.#rewrite(
+      (file) => path.posix.relative(pageDir, file)
+    );
+  }
+
+  loadServed(): Promise<string> {
+    return this.#rewrite(
+      (file) => path.posix.join(kServedFilePrefix, file)
+    );
+  }
+
+  async #rewrite(
+    locate: (file: string) => string
+  ): Promise<string> {
     const html = await fs.readFile(this.#source, "utf8");
     const sourceDir = path.posix.dirname(this.#source);
 
@@ -47,10 +81,7 @@ export class EditorPageInput {
         return match;
       }
 
-      const target = path.posix.relative(
-        path.posix.dirname(this.id),
-        path.posix.join(sourceDir, url)
-      );
+      const target = locate(path.posix.join(sourceDir, url));
 
       return `${start}${quote}${target}${quote}`;
     });

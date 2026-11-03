@@ -21,9 +21,11 @@ import { editorPages } from "../../vite/editorPages.ts";
 import {
   BUNDLE,
   createDist,
+  EDITOR_CSS,
   INDEX_HTML,
   listen,
-  voxelMapPages
+  voxelMapPages,
+  writeEditorPage
 } from "../helpers/editorPages.ts";
 import {
   createTempDir,
@@ -31,9 +33,10 @@ import {
 } from "../helpers/tempDir.ts";
 
 // CONSTANTS
-const kEditorCss = "body { margin: 0; }";
 const kScriptUrl = /(?:src|href)="([^"]+\.js)"/g;
 const kBundledStylesheet = /href="\.\.\/\.\.\/assets\/[^"]+\.css"/;
+const kServedScript = /<script type="module" src="(\/@fs\/[^"]+)"/;
+const kStudioModule = "virtual:studio-module";
 
 async function readScripts(
   page: string
@@ -96,6 +99,51 @@ describe("editorPages", () => {
     }
   });
 
+  test("compiles an editor page on the dev server with the studio's plugins", async() => {
+    const editor = await createTempDir("studio-editor-page-");
+    const page = await writeEditorPage(
+      editor,
+      `import value from "${kStudioModule}";\ndocument.title = value;\n`
+    );
+    const vite = await createServer({
+      root,
+      configFile: false,
+      logLevel: "silent",
+      appType: "custom",
+      server: {
+        middlewareMode: true
+      },
+      plugins: [
+        editorPages(voxelMapPages(dist, page)),
+        {
+          name: "studio-module",
+          resolveId: (id) => (id === kStudioModule ? `\0${id}` : null),
+          load: (id) => (
+            id === `\0${kStudioModule}` ? "export default \"studio\";" : null
+          )
+        }
+      ]
+    });
+    await using server = await listen(vite.middlewares);
+
+    try {
+      const html = await (await server.fetch("/editors/voxel-map/")).text();
+      const [, script] = html.match(kServedScript) ?? [];
+      assert.ok(script, html);
+
+      const entry = await server.fetch(script);
+      assert.strictEqual(entry.status, 200);
+      assert.match(await entry.text(), /__x00__virtual:studio-module/);
+
+      const stylesheet = await server.fetch("/editors/voxel-map/main.css");
+      assert.strictEqual(await stylesheet.text(), EDITOR_CSS);
+    }
+    finally {
+      await vite.close();
+      await removeTempDir(editor);
+    }
+  });
+
   function buildStudio(
     pages: EditorPages,
     outDir: string
@@ -114,30 +162,17 @@ describe("editorPages", () => {
 
   test("compiles an editor page with the shell into shared chunks", async() => {
     const editor = await createTempDir("studio-editor-page-");
-    await fs.mkdir(path.join(editor, "src"));
-    await fs.mkdir(path.join(editor, "public"));
-    await fs.writeFile(
-      path.join(editor, "index.html"),
-      "<link rel=\"stylesheet\" href=\"./main.css\">" +
-      "<link rel=\"stylesheet\" href=\"./src/editor.css\">" +
-      "<script type=\"module\" src=\"./src/index.ts\"></script>"
-    );
-    await fs.writeFile(path.join(editor, "public", "main.css"), kEditorCss);
-    await fs.writeFile(path.join(editor, "src", "editor.css"), kEditorCss);
     const shared = path
       .relative(path.join(editor, "src"), path.join(root, "shared.ts"))
       .replaceAll("\\", "/");
-    await fs.writeFile(
-      path.join(editor, "src", "index.ts"),
+    const page = await writeEditorPage(
+      editor,
       `import { mount } from "${shared}";\nmount("editor");\n`
     );
     const outDir = path.join(root, "compiled");
 
     try {
-      await buildStudio(
-        voxelMapPages(dist, path.join(editor, "index.html")),
-        outDir
-      );
+      await buildStudio(voxelMapPages(dist, page), outDir);
       const editorDir = path.join(outDir, "editors", "voxel-map");
       const shellScripts = await readScripts(path.join(outDir, "index.html"));
       const editorScripts = await readScripts(path.join(editorDir, "index.html"));
@@ -156,7 +191,7 @@ describe("editorPages", () => {
       assert.match(editorHtml, kBundledStylesheet);
       assert.strictEqual(
         await fs.readFile(path.join(editorDir, "main.css"), "utf8"),
-        kEditorCss
+        EDITOR_CSS
       );
     }
     finally {

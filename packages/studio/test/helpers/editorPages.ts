@@ -16,7 +16,10 @@ import {
 import { ASSET_KINDS } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
-import { EditorPackage } from "../../server/editors/EditorPackage.ts";
+import {
+  EditorPackage,
+  type EditorPage
+} from "../../server/editors/EditorPackage.ts";
 import { EditorPackages } from "../../server/editors/EditorPackages.ts";
 import { EditorPages } from "../../server/editors/EditorPages.ts";
 import { StudioAccess } from "../../server/project/StudioAccess.ts";
@@ -32,6 +35,7 @@ export const PASS_THROUGH_STATUS = 418;
 export const INDEX_HTML = "<!DOCTYPE html><title>Voxel Map Editor</title>";
 export const BUNDLE = "export const editor = true;";
 export const HASHED_BUNDLE = "assets/index-B-y7Yx-y.js";
+export const EDITOR_CSS = "body { margin: 0; }";
 
 export interface PagesServer extends AsyncDisposable {
   fetch(pathname: string, init?: RequestInit): Promise<Response>;
@@ -56,10 +60,29 @@ export async function createDist(): Promise<string> {
   return dist;
 }
 
+export async function writeEditorPage(
+  editor: string,
+  script: string
+): Promise<string> {
+  const page = path.join(editor, "index.html");
+  await fs.mkdir(path.join(editor, "src"));
+  await fs.mkdir(path.join(editor, "public"));
+  await fs.writeFile(
+    page,
+    "<link rel=\"stylesheet\" href=\"./main.css\">" +
+    "<link rel=\"stylesheet\" href=\"./src/editor.css\">" +
+    "<script type=\"module\" src=\"./src/index.ts\"></script>"
+  );
+  await fs.writeFile(path.join(editor, "public", "main.css"), EDITOR_CSS);
+  await fs.writeFile(path.join(editor, "src", "editor.css"), EDITOR_CSS);
+  await fs.writeFile(path.join(editor, "src", "index.ts"), script);
+
+  return page;
+}
+
 export interface VoxelMapEditorOptions {
   name?: string;
-  prebuilt?: boolean;
-  page?: string | null;
+  page?: EditorPage;
 }
 
 export function voxelMapEditor(
@@ -68,8 +91,9 @@ export function voxelMapEditor(
 ): EditorPackage {
   const {
     name = "voxel-map",
-    prebuilt = false,
-    page = null
+    page = {
+      kind: "built"
+    }
   } = options;
 
   return new EditorPackage({
@@ -77,7 +101,6 @@ export function voxelMapEditor(
     name,
     kinds: ["voxelmap"],
     dist,
-    prebuilt,
     page,
     preferences: [],
     sharedPreferences: []
@@ -86,8 +109,17 @@ export function voxelMapEditor(
 
 export function voxelMapPages(
   dist: string,
-  page: string | null = null
+  html?: string
 ): EditorPages {
+  const page: EditorPage = html === undefined ?
+    {
+      kind: "built"
+    } :
+    {
+      kind: "source",
+      html
+    };
+
   return new EditorPages(
     new EditorPackages([voxelMapEditor(dist, { page })])
   );

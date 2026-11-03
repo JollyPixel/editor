@@ -79,11 +79,12 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    Package["editor package<br/>jollypixel.editor manifest"] --> Dev["dev: its own page folder"]
+    Package["editor package<br/>jollypixel.editor manifest"] --> Dev["dev: compiled from source<br/>by the studio's Vite server"]
     Package --> Build["build:hosted, build:static<br/>compiled with the shell"]
     Build --> Chunks["one ui, lit and three across pages"]
 ```
 
-- In dev, a rebuilt page folder reloads that editor's tabs.
+- Both paths resolve the scene's `virtual:jolly-pixel/contributions/scene` against the studio's project.
+- A page without source HTML is served from its built folder; in dev, a rebuild of that folder reloads the editor's tabs.
 - `test/vite/studio.bundle.spec.ts` guards the shared chunks.
 - Code: `server/editors/`, `vite/editorPages.ts`. See [hosting](./docs/hosting.md).

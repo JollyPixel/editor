@@ -18,6 +18,8 @@ import {
 // Import Internal Dependencies
 import { prebundleWorkspace } from "../../../src/config/plugins/prebundleWorkspace.ts";
 import {
+  EDITOR_ENTRY,
+  EDITOR_PAGE_ENTRY,
   EXPECTED_ENTRIES,
   FIXTURE_ROOT,
   VIRTUAL_MODULES
@@ -43,7 +45,8 @@ interface FixtureServer extends AsyncDisposable {
 }
 
 async function fixtureServer(
-  mode: string
+  mode: string,
+  entries?: string[]
 ): Promise<FixtureServer> {
   const cacheDir = await fs.mkdtemp(
     path.join(os.tmpdir(), "jolly-e2e-prebundle-")
@@ -68,12 +71,17 @@ async function fixtureServer(
     },
     optimizeDeps: {
       include: [kKeptEntry],
-      noDiscovery: true
+      noDiscovery: true,
+      entries
     },
     plugins: [
       fixtureVirtualModules(),
       prebundleWorkspace()
     ]
+  }).catch(async(error: unknown) => {
+    await fs.rm(cacheDir, { recursive: true, force: true });
+
+    throw error;
   });
 
   return {
@@ -92,6 +100,26 @@ describe("prebundleWorkspace", () => {
 
     assert.deepEqual(include, [kKeptEntry, ...EXPECTED_ENTRIES]);
     assert.strictEqual(force, true);
+  });
+
+  it("pre-bundles the scope entries of every page the optimizer scans", async() => {
+    await using fixture = await fixtureServer(
+      "e2e",
+      ["index.html", EDITOR_PAGE_ENTRY]
+    );
+    const { include } = fixture.server.environments.client.config.optimizeDeps;
+
+    assert.deepEqual(
+      include,
+      [kKeptEntry, ...[EDITOR_ENTRY, ...EXPECTED_ENTRIES].sort()]
+    );
+  });
+
+  it("rejects a glob entry it cannot scan as a page", async() => {
+    await assert.rejects(
+      fixtureServer("e2e", ["**/*.html"]),
+      /"\*\*\/\*\.html" is a glob/
+    );
   });
 
   it("hands the entries to the dependency optimizer before it starts", async() => {

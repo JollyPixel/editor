@@ -20,7 +20,7 @@ The project root defaults to `project/`, seeded on first boot. A missing `.jolly
 |---|---|
 | `?offline` | Run the asset back-end in the browser (IndexedDB) |
 
-To pick up editor, host or ui changes while the studio runs, start the watch builds in a second terminal:
+The dev server compiles each editor page from source. Editors import `@jolly-pixel/ui`, `editor.host` and the pixel-art library from `dist/`; to pick up changes to those while the studio runs, start their watch builds in a second terminal:
 
 ```bash
 $ pnpm --filter @jolly-pixel/studio dev:editors

@@ -35,7 +35,8 @@ function logPackages(
   logger: Pick<Logger, "info">
 ): void {
   for (const editor of project.editors) {
-    logger.info(`editor "${editor.name}" from ${editor.dist}`);
+    const from = editor.page.kind === "source" ? editor.page.html : editor.dist;
+    logger.info(`editor "${editor.name}" from ${from}`);
   }
   for (const { name } of project.kinds.packages) {
     logger.info(`kinds "${name}" from ${project.kinds.resolver.locate(name)}`);

@@ -121,8 +121,8 @@ describe("StudioProject", () => {
         editorA.dist,
         path.join(await fs.realpath(installed), "dist")
       );
-      assert.ok(editorA.prebuilt);
-      assert.ok(!localEditor.prebuilt);
+      assert.deepEqual(editorA.page, { kind: "prebuilt" });
+      assert.deepEqual(localEditor.page, { kind: "built" });
       assert.strictEqual(
         localEditor.dist,
         path.join(await fs.realpath(local), "dist")

@@ -1,5 +1,4 @@
 // Import Node.js Dependencies
-import fs from "node:fs/promises";
 import type {
   IncomingMessage,
   ServerResponse
@@ -11,8 +10,9 @@ import { launchElement } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import { EDITOR_PAGES_PATH } from "../../shared/EditorDescriptor.ts";
 import { VIEW_PAGES_PREFIX } from "../../shared/api/shares.ts";
-import type { EditorPageFolders } from "../editors/EditorPageFolders.ts";
+import type { EditorPageSource } from "../editors/EditorPageFolders.ts";
 import type { EditorPackages } from "../editors/EditorPackages.ts";
+import { readPathname } from "../requestPathname.ts";
 import type { StudioShares } from "./StudioShares.ts";
 
 // CONSTANTS
@@ -38,7 +38,7 @@ export type SharePageMiddleware = (
 export interface SharePageOptions {
   shares: StudioShares;
   editors: EditorPackages;
-  pages: EditorPageFolders;
+  pages: EditorPageSource;
 }
 
 export class SharePage {
@@ -46,7 +46,7 @@ export class SharePage {
 
   #shares: StudioShares;
   #editors: EditorPackages;
-  #pages: EditorPageFolders;
+  #pages: EditorPageSource;
 
   constructor(
     options: SharePageOptions
@@ -81,7 +81,7 @@ export class SharePage {
       return null;
     }
 
-    const page = await fs.readFile(this.#pages.index(editor), "utf8");
+    const page = await this.#pages.html(editor);
     const injected = `<base href="../${EDITOR_PAGES_PATH}${editor.name}/">` +
       launchElement({
         target: shared.assetId,
@@ -98,16 +98,9 @@ export class SharePage {
   #tokenIn(
     request: IncomingMessage
   ): string | null {
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      return null;
-    }
+    const pathname = readPathname(request);
 
-    const pathname = URL.parse(
-      request.url ?? "/",
-      "http://localhost"
-    )?.pathname ?? "/";
-
-    return pathname.startsWith(VIEW_PAGES_PREFIX) ?
+    return pathname?.startsWith(VIEW_PAGES_PREFIX) ?
       pathname.slice(VIEW_PAGES_PREFIX.length) :
       null;
   }

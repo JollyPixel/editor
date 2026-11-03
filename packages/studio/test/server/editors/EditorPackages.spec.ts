@@ -109,8 +109,10 @@ describe("EditorPackages", () => {
         name: "voxel-map",
         kinds: ["voxelmap"],
         dist: path.join(voxelMap, "dist"),
-        prebuilt: false,
-        page: path.join(voxelMap, "index.html"),
+        page: {
+          kind: "source",
+          html: path.join(voxelMap, "index.html")
+        },
         preferences: [],
         sharedPreferences: []
       }),
@@ -119,8 +121,9 @@ describe("EditorPackages", () => {
         name: "pixel-art",
         kinds: ["pixelart"],
         dist: path.join(pixelArt, "dist-page"),
-        prebuilt: false,
-        page: null,
+        page: {
+          kind: "built"
+        },
         preferences: [],
         sharedPreferences: []
       })
@@ -156,7 +159,7 @@ describe("EditorPackages", () => {
     assert.deepEqual(pixelArt.kinds, ["pixelart"]);
     assert.match(voxelMap.dist, /[\\/]voxel-map[\\/]dist$/);
     assert.match(pixelArt.dist, /[\\/]pixel-art[\\/]dist-page$/);
-    assert.ok(!voxelMap.prebuilt);
+    assert.strictEqual(voxelMap.page.kind, "source");
   });
 
   test("reads the scopes the package's module exports by default and as shared", async() => {
@@ -210,8 +213,7 @@ describe("EditorPackages", () => {
       new PackageResolver(root)
     );
 
-    assert.ok(editor.prebuilt);
-    assert.strictEqual(editor.page, null);
+    assert.deepEqual(editor.page, { kind: "prebuilt" });
   });
 
   test("rejects a workspace package whose page source is missing", async() => {

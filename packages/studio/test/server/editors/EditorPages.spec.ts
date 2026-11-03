@@ -173,7 +173,12 @@ describe("EditorPages", () => {
     const parent = await createTempDir("studio-missing-");
     const missingDist = path.join(parent, "dist");
     const editors = new EditorPackages([
-      voxelMapEditor(missingDist, { name: "prebuilt", prebuilt: true })
+      voxelMapEditor(missingDist, {
+        name: "prebuilt",
+        page: {
+          kind: "prebuilt"
+        }
+      })
     ]);
 
     try {
@@ -190,15 +195,28 @@ describe("EditorPages", () => {
     }
   });
 
-  test("announces rebuilt pages of the editors that are not prebuilt", async() => {
+  test("announces rebuilt pages of the editors that are neither prebuilt nor compiled", async() => {
     const parent = await createTempDir("studio-prebuilt-");
     const prebuiltDist = path.join(parent, "prebuilt", "dist");
     const builtDist = path.join(parent, "built", "dist");
+    const compiledDist = path.join(parent, "compiled", "dist");
     await fs.mkdir(prebuiltDist, { recursive: true });
     const sent: string[] = [];
     const watcher = new EditorPages(new EditorPackages([
-      voxelMapEditor(prebuiltDist, { name: "prebuilt", prebuilt: true }),
-      voxelMapEditor(builtDist, { name: "built" })
+      voxelMapEditor(prebuiltDist, {
+        name: "prebuilt",
+        page: {
+          kind: "prebuilt"
+        }
+      }),
+      voxelMapEditor(builtDist, { name: "built" }),
+      voxelMapEditor(compiledDist, {
+        name: "compiled",
+        page: {
+          kind: "source",
+          html: path.join(parent, "compiled", "index.html")
+        }
+      })
     ])).watch({
       config: {
         logger: {
@@ -213,6 +231,8 @@ describe("EditorPages", () => {
     try {
       await fs.writeFile(path.join(prebuiltDist, "index.html"), INDEX_HTML);
       await fs.writeFile(path.join(builtDist, "index.html"), INDEX_HTML);
+      await fs.mkdir(compiledDist, { recursive: true });
+      await fs.writeFile(path.join(compiledDist, "index.html"), INDEX_HTML);
       const deadline = Date.now() + (EDITOR_PAGE_SETTLE_MS * 10);
       while (sent.length === 0 && Date.now() < deadline) {
         await sleep(25);
