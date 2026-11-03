@@ -36,7 +36,9 @@ function inspect(
     assets: {}
   };
 
-  return new ComponentInspection(entry, kind);
+  return new ComponentInspection(entry, kind, {
+    resolve: () => null
+  });
 }
 
 function rowAt(

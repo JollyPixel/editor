@@ -1,0 +1,66 @@
+{
+  "name": "@jolly-pixel/editor.script",
+  "description": "Collaborative editor for JollyPixel script assets",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "jollypixel": {
+    "editor": {
+      "name": "script",
+      "kinds": [
+        "script"
+      ],
+      "page": "index.html"
+    },
+    "scene": "./scene"
+  },
+  "exports": {
+    ".": "./src/scene/index.ts",
+    "./scene": "./src/scene/index.ts"
+  },
+  "scripts": {
+    "dev": "vite",
+    "dev:e2e": "vite --mode e2e",
+    "build": "vite build",
+    "build:watch": "vite build --watch",
+    "preview": "vite preview",
+    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "lint": "oxlint src test vite.config.ts playwright.config.ts && pnpm run lint:css",
+    "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/editors/script"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@jolly-pixel/e2e": "workspace:*"
+  },
+  "dependencies": {
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset.script": "workspace:*",
+    "@jolly-pixel/editor.host": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
+    "@openally/emitt": "1.1.0",
+    "@shikijs/core": "4.5.0",
+    "@shikijs/engine-javascript": "4.5.0",
+    "@shikijs/langs": "4.5.0",
+    "lit": "3.3.3",
+    "zod": "4.6.7"
+  }
+}

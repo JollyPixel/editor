@@ -1,0 +1,62 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--jolly-groove) transparent;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: row;
+  background: #0e1316;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+}
+
+jolly-scope {
+  display: contents;
+
+  --jolly-label-width: 12ch;
+}
+
+jolly-pane::part(content) {
+  padding: 0;
+}
+
+jolly-dock {
+  --jolly-dock-handle-size: 8px;
+  --jolly-dock-resize-bg: transparent;
+}
+
+.script-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#script-view {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#script-view jolly-script-code {
+  flex: 1;
+}
+
+#script-view jolly-presence-stack {
+  position: absolute;
+  inset-block-end: 16px;
+  inset-inline-end: 24px;
+  z-index: 5;
+}

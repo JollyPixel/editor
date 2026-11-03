@@ -9,7 +9,8 @@ export const PORTS = {
   lantern: 3007,
   terrain: 3008,
   scene: 3009,
-  sound: 3010
+  sound: 3010,
+  script: 3011
 } as const;
 
 export function baseUrl(

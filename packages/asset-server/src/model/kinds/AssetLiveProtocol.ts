@@ -121,8 +121,16 @@ export interface AssetLiveProtocol<
   TRelay extends object = never
 > {
   readonly snapshotSchema: Schema;
+  /**
+   * `true` when authors rewrite their own copy the way `arbitrate` rewrites
+   * their command, so the room sends them no correction or snapshot.
+   * @default false
+   */
+  readonly authorRebases?: boolean;
 
   snapshot(): unknown;
+
+  reloaded?(): void;
 
   encodeSnapshot?(): Promise<unknown>;
 

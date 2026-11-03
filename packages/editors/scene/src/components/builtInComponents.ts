@@ -9,12 +9,10 @@ import {
   CameraDefinition,
   LightDefinition,
   MeshDefinition,
-  ScriptDefinition,
   TextDefinition,
   type CameraData,
   type LightSettings,
   type MeshRendererOptions,
-  type ScriptData,
   type TextSettings
 } from "@jolly-pixel/engine";
 
@@ -25,10 +23,8 @@ import {
   LIGHT_KINDS,
   lightForm,
   meshForm,
-  scriptForm,
   textForm
 } from "./componentForms.ts";
-import { EMPTY_ACTOR_ICON } from "./SceneComponents.ts";
 import {
   FONT_DOCUMENT_KIND,
   SceneFonts
@@ -62,15 +58,8 @@ const kText: SceneComponentKind<TextSettings> = {
   icon: "actor-text",
   form: textForm
 };
-const kScript: SceneComponentKind<ScriptData> = {
-  definition: new ScriptDefinition({}),
-  label: "Script",
-  icon: EMPTY_ACTOR_ICON,
-  form: scriptForm
-};
-
 export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
-  components: [kCamera, kLight, kMesh, kText, kScript],
+  components: [kCamera, kLight, kMesh, kText],
   presets: [
     {
       id: "empty",

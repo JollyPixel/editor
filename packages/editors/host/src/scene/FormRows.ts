@@ -1,3 +1,9 @@
+// Import Third-party Dependencies
+import type {
+  ScenePropertyType,
+  Systems
+} from "@jolly-pixel/engine";
+
 type DataKey<TData> = TData extends object ? keyof TData & string : never;
 type DataField<TData, TKey extends string> = TData extends object ?
   TKey extends keyof TData ? NonNullable<TData[TKey]> : never :
@@ -46,8 +52,21 @@ export interface TextRow<TData = unknown> extends RowBase<TData> {
   control: "text";
 }
 
+export interface DeclaredProperty {
+  key: string;
+  type: ScenePropertyType;
+  label: string;
+  description: string;
+  default: Systems.JSONValue | null;
+}
+
 export interface PropertiesRow<TData = unknown> extends RowBase<TData> {
   control: "properties";
+  /**
+   * Properties the component declares. They show first, with a fixed key
+   * and type, and fall back to their default.
+   */
+  declared?: readonly DeclaredProperty[];
 }
 
 export type FormRow<TData = unknown> =
@@ -58,7 +77,13 @@ export type FormRow<TData = unknown> =
   | TextRow<TData>
   | PropertiesRow<TData>;
 
-export type ComponentForm<TData> = (data: TData) => FormRow<TData>[];
+export type ComponentForm<
+  TData,
+  TAssets extends Systems.ComponentAssetValues = Systems.ComponentAssetValues
+> = (
+  data: TData,
+  assets: Systems.ComponentAssets<TAssets>
+) => FormRow<TData>[];
 
 export type NumberBounds = Pick<NumberRow, "min" | "max" | "step">;
 

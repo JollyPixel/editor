@@ -12,6 +12,7 @@ import type {
   JSONObject,
   JSONValue
 } from "@jolly-pixel/asset.scene/client";
+import type { DeclaredProperty } from "@jolly-pixel/editor.host/scene";
 import {
   SCENE_PROPERTY_TYPES,
   type ScenePropertyType
@@ -39,8 +40,9 @@ import {
   removeProperty,
   renameProperty,
   scriptProperties,
-  type ScriptListType,
-  type ScriptProperty
+  type ListedProperty,
+  type PropertyEntry,
+  type ScriptListType
 } from "../../components/scriptProperties.ts";
 import { axisValues } from "./axisValues.ts";
 
@@ -53,14 +55,21 @@ interface KeyError {
   message: string;
 }
 
-interface RowEdit {
+interface KeyEdit {
   rename: (key: string) => void;
   retype: (type: ScenePropertyType) => void;
+}
+
+interface ValueEdit {
   preview: (value: JSONValue) => void;
   commit: (value: JSONValue) => void;
 }
 
-type ValueEdit = Pick<RowEdit, "preview" | "commit">;
+interface RowParts {
+  kind: ListedProperty["kind"] | "draft";
+  head: TemplateResult;
+  action: TemplateResult | typeof nothing;
+}
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 
@@ -87,6 +96,7 @@ const kTypeOptions: JollyOption<ScenePropertyType>[] = SCENE_PROPERTY_TYPES.map(
 
 export class ScriptPropertiesEditor extends LitElement {
   #properties: Readonly<JSONObject> = {};
+  #declared: readonly DeclaredProperty[] = [];
   #preview: Readonly<JSONObject> | null = null;
   #draft = emptyDraft();
   #keyError: KeyError | null = null;
@@ -118,8 +128,19 @@ export class ScriptPropertiesEditor extends LitElement {
       grid-column: 1 / -1;
     }
 
-    .draft .value {
+    .value.fill {
       grid-column: 3 / -1;
+    }
+
+    .name,
+    .type {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .type {
+      color: var(--jolly-text-muted);
     }
   `;
 
@@ -131,41 +152,66 @@ export class ScriptPropertiesEditor extends LitElement {
     this.requestUpdate();
   }
 
+  set declared(
+    value: readonly DeclaredProperty[]
+  ) {
+    this.#declared = value;
+    this.requestUpdate();
+  }
+
   override render(): TemplateResult {
     return html`
       ${repeat(
-        scriptProperties(this.#preview ?? this.#properties),
+        scriptProperties(this.#preview ?? this.#properties, this.#declared),
         (property) => property.key,
-        (property) => this.#renderProperty(property)
+        (property) => this.#renderListed(property)
       )}
       ${this.#renderDraft()}
     `;
   }
 
-  #renderProperty(
-    property: ScriptProperty
+  #renderListed(
+    property: ListedProperty
   ): TemplateResult {
-    const commit = (value: JSONValue): void => this.#write({
-      ...this.#properties,
-      [property.key]: value
-    });
+    const { key } = property;
+    const edit: ValueEdit = {
+      preview: (value) => {
+        this.#preview = {
+          ...this.#properties,
+          [key]: value
+        };
+        this.requestUpdate();
+      },
+      commit: (value) => this.#write({
+        ...this.#properties,
+        [key]: value
+      })
+    };
+    const remove = (): void => this.#write(removeProperty(this.#properties, key));
 
-    return this.#renderRow(
-      property,
-      property.key,
-      {
-        rename: (key) => this.#rename(property.key, key),
-        retype: (type) => commit(convertProperty(property.value, type)),
-        preview: (value) => {
-          this.#preview = {
-            ...this.#properties,
-            [property.key]: value
-          };
-          this.requestUpdate();
-        },
-        commit
-      }
-    );
+    if (property.kind === "declared") {
+      const { declared } = property;
+
+      return renderRow(property, edit, {
+        kind: "declared",
+        head: html`
+          <span class="name" title=${declared.description || nothing}>${declared.label}</span>
+          <span class="type">${property.type}</span>
+        `,
+        action: Object.hasOwn(this.#properties, key) ?
+          renderAction("revert", "Reset to the script default", remove) :
+          nothing
+      });
+    }
+
+    return renderRow(property, edit, {
+      kind: "stored",
+      head: this.#renderKey(property, key, {
+        rename: (next) => this.#rename(key, next),
+        retype: (type) => edit.commit(convertProperty(property.value, type))
+      }),
+      action: renderAction("trash", "Remove property", remove)
+    });
   }
 
   #renderDraft(): TemplateResult {
@@ -175,59 +221,41 @@ export class ScriptPropertiesEditor extends LitElement {
       value
     });
 
-    return this.#renderRow(
-      draft,
-      null,
-      {
+    return renderRow(draft, { preview: commit, commit }, {
+      kind: "draft",
+      head: this.#renderKey(draft, null, {
         rename: (key) => this.#add(key),
         retype: (type) => this.#editDraft({
           ...draft,
           type,
           value: convertProperty(draft.value, type)
-        }),
-        preview: commit,
-        commit
-      }
-    );
+        })
+      }),
+      action: nothing
+    });
   }
 
-  #renderRow(
-    property: ScriptProperty,
+  #renderKey(
+    entry: PropertyEntry,
     row: string | null,
-    edit: RowEdit
+    edit: KeyEdit
   ): TemplateResult {
     const error = this.#keyError?.row === row ? this.#keyError.message : null;
-    const wide = kWideTypes.has(property.type);
-    const value = renderValue(property, edit);
 
     return html`
-      <div class=${row === null ? "property draft" : "property"}>
-        <jolly-text
-          label=""
-          placeholder=${row === null ? "New property" : nothing}
-          .value=${live(property.key)}
-          .error=${error}
-          @jolly-change=${(event: ChangeEvent<string>) => edit.rename(event.detail.value)}
-        ></jolly-text>
-        <jolly-select
-          label=""
-          .options=${kTypeOptions}
-          .value=${property.type}
-          @jolly-change=${(event: ChangeEvent<ScenePropertyType>) => edit.retype(event.detail.value)}
-        ></jolly-select>
-        ${wide ? nothing : html`<div class="value">${value}</div>`}
-        ${row === null ? nothing : html`
-          <jolly-button
-            class="remove"
-            icon="trash"
-            icon-only
-            label="Remove property"
-            title="Remove property"
-            @click=${() => this.#write(removeProperty(this.#properties, row))}
-          ></jolly-button>
-        `}
-        ${wide ? html`<div class="wide-value">${value}</div>` : nothing}
-      </div>
+      <jolly-text
+        label=""
+        placeholder=${row === null ? "New property" : nothing}
+        .value=${live(entry.key)}
+        .error=${error}
+        @jolly-change=${(event: ChangeEvent<string>) => edit.rename(event.detail.value)}
+      ></jolly-text>
+      <jolly-select
+        label=""
+        .options=${kTypeOptions}
+        .value=${entry.type}
+        @jolly-change=${(event: ChangeEvent<ScenePropertyType>) => edit.retype(event.detail.value)}
+      ></jolly-select>
     `;
   }
 
@@ -286,7 +314,7 @@ export class ScriptPropertiesEditor extends LitElement {
   }
 
   #editDraft(
-    draft: ScriptProperty
+    draft: PropertyEntry
   ): void {
     this.#draft = draft;
     this.#keyError = null;
@@ -307,7 +335,7 @@ export class ScriptPropertiesEditor extends LitElement {
   }
 }
 
-function emptyDraft(): ScriptProperty {
+function emptyDraft(): PropertyEntry {
   return {
     key: "",
     type: "number",
@@ -315,8 +343,44 @@ function emptyDraft(): ScriptProperty {
   };
 }
 
+function renderRow(
+  entry: PropertyEntry,
+  edit: ValueEdit,
+  parts: RowParts
+): TemplateResult {
+  const wide = kWideTypes.has(entry.type);
+  const value = renderValue(entry, edit);
+  const valueClass = parts.action === nothing ? "value fill" : "value";
+
+  return html`
+    <div class="property ${parts.kind}">
+      ${parts.head}
+      ${wide ? nothing : html`<div class=${valueClass}>${value}</div>`}
+      ${parts.action}
+      ${wide ? html`<div class="wide-value">${value}</div>` : nothing}
+    </div>
+  `;
+}
+
+function renderAction(
+  icon: string,
+  label: string,
+  click: () => void
+): TemplateResult {
+  return html`
+    <jolly-button
+      class="remove"
+      icon=${icon}
+      icon-only
+      label=${label}
+      title=${label}
+      @click=${click}
+    ></jolly-button>
+  `;
+}
+
 function renderValue(
-  property: ScriptProperty,
+  property: PropertyEntry,
   edit: ValueEdit
 ): TemplateResult {
   const { type, value } = property;

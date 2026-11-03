@@ -30,10 +30,15 @@ export class ComponentInspection {
 
   constructor(
     entry: SceneComponentJSON,
-    kind: SceneComponentKind
+    kind: SceneComponentKind,
+    resolver: Systems.ComponentAssetResolver
   ) {
     const data: ParsedData = kind.definition.parse(entry.data);
-    const rows = kind.form(data);
+    const rows = kind.form(data, new Systems.ComponentAssets(
+      kind.definition.assets ?? {},
+      entry.assets,
+      resolver
+    ));
     const defaults: ParsedData = kind.definition.parse(defaultsSource(data));
 
     this.#stored = entry.data;

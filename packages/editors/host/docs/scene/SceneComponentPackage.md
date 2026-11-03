@@ -86,16 +86,19 @@ the same asset kind or the same preset `id`.
 ## SceneComponentKind
 
 ```ts
-interface SceneComponentKind<TData extends object = any> {
-  definition: Systems.ComponentDefinition<TData, any, any>;
+interface SceneComponentKind<TData extends object = any, TAssets = any> {
+  definition: Systems.ComponentDefinition<TData, any, TAssets>;
   label: string;
   icon: string;
-  form: ComponentForm<TData>;
+  form: ComponentForm<TData, TAssets>;
   anchorAsset?: string;
   origin?: "center" | "corner";
 }
 
-type ComponentForm<TData> = (data: TData) => FormRow<TData>[];
+type ComponentForm<TData, TAssets> = (
+  data: TData,
+  assets: Systems.ComponentAssets<TAssets>
+) => FormRow<TData>[];
 ```
 
 `definition` is the engine definition a game registers too. Its `assets`
@@ -104,8 +107,10 @@ slots decide which asset pickers open when the component is added.
 `icon` names an icon registered with `registerIcon` from `@jolly-pixel/ui`.
 The package registers it when its module loads.
 
-`form` receives the data parsed by `definition.parse()` and returns the
-inspector rows.
+`form` receives the data parsed by `definition.parse()` and the component
+assets, and returns the inspector rows. `assets.resolve(slot)` returns the
+value the slot's asset source resolved, or `null` while it loads; the
+inspector renders again once it has loaded.
 
 - An edit of a top-level field patches that field; setting it back to its
   default unsets it.
@@ -138,6 +143,10 @@ class FormRows<TData> {
   row directly.
 - A `choice` row with `resets: true` replaces its parent object instead of
   merging into it.
+- A `properties` row edits a JSON object of named values. Its optional
+  `declared` list (`key`, `type`, `label`, `description`, `default`) shows
+  those properties first with a fixed key and type; a declared property
+  without a stored value shows its default.
 
 ## Presets
 

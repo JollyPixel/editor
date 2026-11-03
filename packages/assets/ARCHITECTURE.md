@@ -81,9 +81,11 @@ flowchart TB
     Animation["voxelanimation"]
     PixelArt["pixelart"]
     Terrain["terrain"]
+    Script["script"]
     Texture["texture (image)"]
 
     Scene -->|"components"| Map
+    Scene -->|"components"| Script
     Map --> Blockset
     Model --> PixelArt
     Model --> Animation

@@ -9,6 +9,7 @@ import type {
   JSONValue,
   SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
+import type { DeclaredProperty } from "@jolly-pixel/editor.host/scene";
 import { Systems } from "@jolly-pixel/engine";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/checkbox";
@@ -30,7 +31,7 @@ import type { ScriptPropertiesChangeDetail } from "./ScriptPropertiesEditor.ts";
 
 export type ComponentBodyContext = Pick<
   SceneEditing,
-  "writes" | "components" | "assetSlots" | "draft"
+  "writes" | "components" | "assetSlots" | "draft" | "assets"
 >;
 
 interface RowEdit {
@@ -56,7 +57,7 @@ export function renderComponentBody(
     `;
   }
 
-  const inspection = new ComponentInspection(entry, kind);
+  const inspection = new ComponentInspection(entry, kind, context.assets);
 
   return html`
     ${renderAssetSlots(entry, components.assetSlots(entry.type), context)}
@@ -133,6 +134,7 @@ function renderRow(
       return renderProperties(
         row.label,
         Systems.isJSONObject(value) ? value : {},
+        row.declared ?? [],
         commit
       );
   }
@@ -181,6 +183,7 @@ function renderAssetSlots(
 function renderProperties(
   label: string,
   properties: Readonly<JSONObject>,
+  declared: readonly DeclaredProperty[],
   write: (next: JSONObject) => void
 ): TemplateResult {
   function change(event: CustomEvent<ScriptPropertiesChangeDetail>): void {
@@ -191,6 +194,7 @@ function renderProperties(
     <jolly-separator label=${label}></jolly-separator>
     <jolly-scene-script-properties
       .properties=${properties}
+      .declared=${declared}
       @script-properties-change=${change}
     ></jolly-scene-script-properties>
   `;

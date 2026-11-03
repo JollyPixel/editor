@@ -8,14 +8,17 @@ import type { AssetDocumentKind } from "../lease/AssetLease.ts";
 import type { EditorSession } from "../session/EditorSession.ts";
 import type { ComponentForm } from "./FormRows.ts";
 
-export interface SceneComponentKind<TData extends object = any> {
-  definition: Systems.ComponentDefinition<TData, any, any>;
+export interface SceneComponentKind<
+  TData extends object = any,
+  TAssets extends Systems.ComponentAssetValues = any
+> {
+  definition: Systems.ComponentDefinition<TData, any, TAssets>;
   label: string;
   /**
    * Name of a registered `@jolly-pixel/ui` icon.
    */
   icon: string;
-  form: ComponentForm<TData>;
+  form: ComponentForm<TData, TAssets>;
   /**
    * The `definition.assets` slot whose asset the anchor keys belong to.
    */

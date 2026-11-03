@@ -38,6 +38,7 @@ Each editor is an `editor.<name>` workspace, and the formats it owns (the asset 
 - [Terrain](./packages/editors/terrain) 🚧 - Heightfield terrain editor for [`.terrain.json` terrains](./packages/assets/terrain)
 - [Scene](./packages/editors/scene) 🚧 - Actors, components and environment, saved as [`.scene.json` scenes](./packages/assets/scene)
 - [Sound](./packages/editors/sound) 🚧 - Plays and loops [`.ogg` sounds](./packages/assets/sound) converted from dropped audio files
+- [Script](./packages/editors/script) 🚧 - Collaborative code editor for [`.ts` and `.js` scripts](./packages/assets/script), whose behaviors and scene properties feed the scene's Script component
 
 #### UI
 

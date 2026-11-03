@@ -189,6 +189,24 @@ describe("AssetRoomExtension — acks", () => {
     });
   });
 
+  test("a reload tells the protocol before broadcasting its snapshot", async() => {
+    const broadcastsSeen: number[] = [];
+    const { extension, context, broadcast } = harness({
+      protocol: {
+        reloaded: () => {
+          broadcastsSeen.push(broadcast.length);
+        }
+      }
+    });
+    const peer = recordingClient("alice");
+    await extension.onClientConnect(peer, roomPeer(peer.id), context);
+
+    extension.reload();
+
+    assert.deepEqual(broadcastsSeen, [0]);
+    assert.equal(broadcast.length, 1);
+  });
+
   test("forgets a client's processed seq when it disconnects", async() => {
     const { extension, context, broadcast } = harness({
       protocol: {

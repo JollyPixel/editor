@@ -29,6 +29,28 @@ describe("scriptProperties", () => {
     );
   });
 
+  test("lists declared properties first with their default, then the other stored keys", () => {
+    const properties = scriptProperties(
+      {
+        speed: 4,
+        extra: "kept"
+      },
+      [
+        { key: "speed", type: "number", label: "Speed", description: "", default: 1 },
+        { key: "spawn", type: "Vector3", label: "Spawn", description: "", default: [0, 2, 0] }
+      ]
+    );
+
+    assert.deepEqual(
+      properties.map(({ key, type, value }) => [key, type, value]),
+      [
+        ["speed", "number", 4],
+        ["spawn", "Vector3", [0, 2, 0]],
+        ["extra", "string", "kept"]
+      ]
+    );
+  });
+
   test("converts a value to another type, keeping what carries over", () => {
     assert.deepEqual(convertProperty(5, "Vector3"), [5, 0, 0]);
     assert.deepEqual(convertProperty([1, 2, 3], "Vector2"), [1, 2]);
