@@ -21,7 +21,7 @@ import {
 } from "@jolly-pixel/e2e";
 
 // Import Internal Dependencies
-import { createSoundProject } from "./src/boot/soundProject.ts";
+import { createSoundProject } from "./src/seed/soundProject.ts";
 
 // CONSTANTS
 const kAssetsRoot = path.join(import.meta.dirname, "assets");

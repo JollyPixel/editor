@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/asset.sound";
 
 // Import Internal Dependencies
-import { chimeWaveFile } from "./chimeWaveFile.ts";
+import { Chime } from "./Chime.ts";
 
 export interface SoundProject {
   seed: AssetSeedMap;
@@ -18,7 +18,9 @@ export function createSoundProject(): SoundProject {
       "sounds/chime.ogg": {
         id: crypto.randomUUID(),
         kind: SOUND_KIND,
-        content: () => oggContentFromAudio(chimeWaveFile())
+        content: () => oggContentFromAudio(
+          new Chime().waveFile()
+        )
       }
     }
   };

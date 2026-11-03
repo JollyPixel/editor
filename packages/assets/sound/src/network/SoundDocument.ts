@@ -22,7 +22,9 @@ export class SoundDocument extends SnapshotDocument<
   }
 
   get bytes(): Uint8Array | null {
-    return this.value;
+    const { value } = this;
+
+    return value === null || value.byteLength === 0 ? null : value;
   }
 }
 

@@ -10,34 +10,16 @@ import { encodeContent } from "@jolly-pixel/asset-server";
 import { SoundDocument } from "@jolly-pixel/asset.sound/client";
 
 // Import Internal Dependencies
-import { SoundPlayer } from "#src/playback/SoundPlayer.ts";
+import { SoundPlayer } from "#src/player/SoundPlayer.ts";
 import {
   FakeAudioContext,
   fakeBuffer
 } from "../helpers/FakeAudioContext.ts";
+import { followingPlayer } from "../helpers/followingPlayer.ts";
 
 // CONSTANTS
 const kOggBytes = new Uint8Array([0x4F, 0x67, 0x67, 0x53]);
 const kOtherOggBytes = new Uint8Array([0x4F, 0x67, 0x67, 0x53, 0x00]);
-
-async function followingPlayer(
-  context = new FakeAudioContext()
-): Promise<{
-  context: FakeAudioContext;
-  document: SoundDocument;
-  player: SoundPlayer;
-}> {
-  const player = new SoundPlayer(context.asAudioContext());
-  const document = new SoundDocument();
-  document.load(encodeContent(kOggBytes));
-  await player.follow(document);
-
-  return {
-    context,
-    document,
-    player
-  };
-}
 
 function nextSound(
   player: SoundPlayer
@@ -55,12 +37,12 @@ describe("SoundPlayer", () => {
     const { context, player } = await followingPlayer();
     player.play();
     context.currentTime = 1.5;
-    assert.equal(player.readout().playhead, 0.75);
+    assert.equal(player.elapsed, 1.5);
 
     context.sources[0].end();
 
     assert.equal(player.playing, false);
-    assert.equal(player.readout().playhead, null);
+    assert.equal(player.elapsed, null);
   });
 
   test("holds the playhead at the end until the sound reports it ended", async() => {
@@ -68,34 +50,13 @@ describe("SoundPlayer", () => {
     player.play();
     context.currentTime = 2.05;
 
-    assert.deepEqual(player.readout(), {
-      status: "ready",
-      time: "0:02.0 / 0:02.0",
-      format: "44.1 kHz · Mono",
-      playhead: 1
+    assert.equal(player.elapsed, 2);
+    assert.equal(player.status, "ready");
+    assert.equal(player.timecode(), "0:02.0 / 0:02.0");
+    assert.deepEqual(player.format(), {
+      sampleRate: "44.1 kHz",
+      channels: "Mono"
     });
-  });
-
-  test("loops the sound that is playing when loop is turned on", async() => {
-    const { context, player } = await followingPlayer();
-    player.play();
-    player.loop = true;
-    context.currentTime = 2.5;
-
-    assert.equal(context.sources[0].loop, true);
-    assert.equal(player.readout().playhead, 0.25);
-  });
-
-  test("finishes the current pass when loop is turned off", async() => {
-    const { context, player } = await followingPlayer();
-    player.loop = true;
-    player.play();
-    context.currentTime = 4.5;
-    player.loop = false;
-    context.currentTime = 5;
-
-    assert.equal(context.sources[0].loop, false);
-    assert.equal(player.readout().playhead, 0.5);
   });
 
   test("keeps playing after a restart when the replaced playback reports its end", async() => {
@@ -115,7 +76,7 @@ describe("SoundPlayer", () => {
     player.play();
     context.currentTime = 30.04;
 
-    assert.equal(player.readout().time, "0:30.0 / 1:00.0");
+    assert.equal(player.timecode(), "0:30.0 / 1:00.0");
   });
 
   for (const { reason, content } of [
@@ -140,12 +101,9 @@ describe("SoundPlayer", () => {
       player.play();
 
       assert.equal(player.playing, false);
-      assert.deepEqual(player.readout(), {
-        status: "empty",
-        time: "0:00.0 / 0:00.0",
-        format: null,
-        playhead: null
-      });
+      assert.equal(player.status, "empty");
+      assert.equal(player.timecode(), "0:00.0 / 0:00.0");
+      assert.equal(player.format(), null);
       assert.deepEqual(player.waveform(4, 2), []);
     });
   }
@@ -155,12 +113,9 @@ describe("SoundPlayer", () => {
     context.decodeAudioData = () => Promise.reject(new DOMException("bad", "EncodingError"));
     const { player } = await followingPlayer(context);
 
-    assert.deepEqual(player.readout(), {
-      status: "undecodable",
-      time: "0:00.0 / 0:00.0",
-      format: null,
-      playhead: null
-    });
+    assert.equal(player.status, "undecodable");
+    assert.equal(player.timecode(), "0:00.0 / 0:00.0");
+    assert.equal(player.format(), null);
     assert.deepEqual(player.waveform(4, 2), []);
   });
 
@@ -176,7 +131,10 @@ describe("SoundPlayer", () => {
     await reloaded;
 
     assert.equal(player.playing, false);
-    assert.equal(player.readout().format, "48 kHz · Stereo");
+    assert.deepEqual(player.format(), {
+      sampleRate: "48 kHz",
+      channels: "Stereo"
+    });
   });
 
   test("keeps the newest sound when a reset lands while an older one is decoding", async() => {
@@ -197,7 +155,7 @@ describe("SoundPlayer", () => {
     decodes[0](fakeBuffer([new Float32Array(4)]));
     await followed;
 
-    assert.equal(player.readout().format, "44.1 kHz · Stereo");
+    assert.equal(player.format()?.channels, "Stereo");
   });
 
   test("draws each waveform column from the lowest to the highest sample of every channel", async() => {

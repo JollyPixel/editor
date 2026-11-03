@@ -21,6 +21,7 @@ import type { OfflineMode } from "../connection/OfflineMode.ts";
 import { ArchiveRootError } from "./errors/ArchiveRootError.ts";
 import { ArchiveImportDisabledError } from "./errors/ArchiveImportDisabledError.ts";
 import { askImportConflictPolicy } from "./dialogs/askImportConflictPolicy.ts";
+import { saveFile } from "../browser/saveFile.ts";
 
 // CONSTANTS
 const kArchiveExtension = ".zip";
@@ -46,14 +47,7 @@ const kDomArchiveBrowser: EditorArchiveBrowser = {
 
     return promise;
   },
-  save(blob, fileName) {
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  },
+  save: saveFile,
   askConflictPolicy: askImportConflictPolicy,
   confirmReset(message) {
     return showConfirm({

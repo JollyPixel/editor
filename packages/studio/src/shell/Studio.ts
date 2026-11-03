@@ -104,6 +104,7 @@ export class Studio extends LitElement {
       --jolly-tab-icon-size: 20px;
       --jolly-tab-close-size: 20px;
       --jolly-tab-close-icon-size: 12px;
+      --jolly-tab-text-max-width: 24ch;
     }
 
     #editor-tabs::part(list) {
