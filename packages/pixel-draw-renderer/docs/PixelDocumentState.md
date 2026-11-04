@@ -58,9 +58,11 @@ interface PixelDocumentSnapshot {
 [Serialization](./serialization/index.md) reads and writes a state.
 
 `palette` is an immutable [ColorPalette](./ColorPalette.md). A slot command
-calls `onPaletteChanged` with its index when its color changes. Loading a
-snapshot replaces the palette and calls the listener with `null`. A missing
-palette loads the defaults, including when replacing an already edited state.
+calls `onPaletteChanged` with its index when its color changes. A
+`palette-replaced` command that changes the palette, and loading a snapshot,
+call it with `null`. A missing palette loads the defaults, including when
+replacing an already edited state. `accepts` refuses a slot command past the
+end of the palette and a replacement that is not 1 to 256 colors.
 
 `uvNets` is an immutable [UVNetSet](./uv/UVNetSet.md). The UV net commands
 call `onUvNetsChanged` when they change it. Loading a snapshot replaces it and

@@ -11,7 +11,9 @@ export const PIXEL_ART_KEY_BINDINGS = Object.freeze({
   rotate: "r",
   rotateCounterClockwise: "Shift+r",
   flipHorizontal: "h",
-  flipVertical: "v"
+  flipVertical: "v",
+  previousPaletteColor: "BracketLeft",
+  nextPaletteColor: "BracketRight"
 } as const satisfies KeyBindingDefaults<string>);
 
 export type PixelArtAction = keyof typeof PIXEL_ART_KEY_BINDINGS;

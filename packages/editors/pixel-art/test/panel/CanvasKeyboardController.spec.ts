@@ -12,11 +12,6 @@ import {
   isApplePlatform,
   KeyBindingSettings
 } from "@jolly-pixel/controls";
-import type { CanvasShortcuts } from "@jolly-pixel/pixel-draw.renderer";
-import type {
-  ReactiveController,
-  ReactiveControllerHost
-} from "lit";
 
 // Import Internal Dependencies
 import {
@@ -25,114 +20,34 @@ import {
   type CanvasHoverChangeDetail
 } from "../../src/panel/CanvasKeyboardController.ts";
 import { PIXEL_ART_KEY_BINDINGS } from "../../src/keybindings/PixelArtKeyBindings.ts";
+import {
+  FakeShortcuts,
+  StubHost,
+  press
+} from "./fixtures/keyboard.ts";
 
 // CONSTANTS
 const kMod: KeyboardEventInit = isApplePlatform() ?
   { metaKey: true } :
   { ctrlKey: true };
 
-class FakeShortcuts implements CanvasShortcuts {
-  readonly calls: string[] = [];
-  handles = true;
-  panHeld = false;
-  lineHeld = false;
-  snapBypassHeld = false;
-
-  #record(
-    name: string
-  ): boolean {
-    this.calls.push(name);
-
-    return this.handles;
-  }
-
-  selectAll() {
-    return this.#record("selectAll");
-  }
-
-  copy() {
-    return this.#record("copy");
-  }
-
-  paste() {
-    return this.#record("paste");
-  }
-
-  delete() {
-    return this.#record("delete");
-  }
-
-  undo() {
-    return this.#record("undo");
-  }
-
-  redo() {
-    return this.#record("redo");
-  }
-
-  rotate(
-    direction: "cw" | "ccw"
-  ) {
-    return this.#record(`rotate:${direction}`);
-  }
-
-  flipHorizontal() {
-    return this.#record("flipHorizontal");
-  }
-
-  flipVertical() {
-    return this.#record("flipVertical");
-  }
-}
-
-class StubHost extends EventTarget implements ReactiveControllerHost {
-  readonly controllers: ReactiveController[] = [];
-  readonly updateComplete = Promise.resolve(true);
-
-  addController(
-    controller: ReactiveController
-  ): void {
-    this.controllers.push(controller);
-  }
-
-  removeController(): void {
-    return undefined;
-  }
-
-  requestUpdate(): void {
-    return undefined;
-  }
-}
-
-function press(
-  type: "keydown" | "keyup",
-  init: KeyboardEventInit,
-  target: EventTarget = document
-): KeyboardEvent {
-  const event = new KeyboardEvent(type, {
-    bubbles: true,
-    cancelable: true,
-    ...init
-  });
-  target.dispatchEvent(event);
-
-  return event;
-}
-
 describe("CanvasKeyboardController", () => {
   let active: FakeShortcuts | null;
   let claimed: boolean;
   let host: StubHost;
   let controller: CanvasKeyboardController;
+  let steps: number[];
 
   beforeEach(() => {
     active = new FakeShortcuts();
     claimed = false;
     host = new StubHost();
+    steps = [];
     controller = new CanvasKeyboardController(host, () => active, {
       guard: {
         blocks: () => claimed
-      }
+      },
+      stepPalette: (offset) => steps.push(offset) > 0
     });
     controller.hostConnected();
     controller.hover(true);
@@ -143,7 +58,7 @@ describe("CanvasKeyboardController", () => {
     document.body.replaceChildren();
   });
 
-  test("routes the default chords to the active canvas shortcuts", () => {
+  test("routes the default chords to the canvas shortcuts and the palette", () => {
     const shortcuts = active!;
 
     press("keydown", { key: "z", code: "KeyZ", ...kMod });
@@ -151,6 +66,8 @@ describe("CanvasKeyboardController", () => {
     press("keydown", { key: "R", code: "KeyR", shiftKey: true });
     press("keydown", { key: "h", code: "KeyH" });
     press("keydown", { key: "Delete", code: "Delete" });
+    press("keydown", { key: "]", code: "BracketRight" });
+    press("keydown", { key: "[", code: "BracketLeft" });
 
     assert.deepEqual(shortcuts.calls, [
       "undo",
@@ -159,6 +76,7 @@ describe("CanvasKeyboardController", () => {
       "flipHorizontal",
       "delete"
     ]);
+    assert.deepEqual(steps, [1, -1]);
   });
 
   test("a letter chord follows the printed letter, not the key position", () => {

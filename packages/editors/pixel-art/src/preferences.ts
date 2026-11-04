@@ -50,6 +50,35 @@ export const PIXEL_ART_PREFERENCES = definePreferences({
       label: "Size labels",
       group: "UV regions",
       default: false
+    },
+    rampSpace: {
+      type: "enum",
+      label: "Ramp blending",
+      group: "Palette",
+      description: "How the palette ramp blends the colors between the ends of a range",
+      options: [
+        {
+          value: "oklab",
+          label: "OKLab"
+        },
+        {
+          value: "oklch",
+          label: "OKLCH, shorter hue"
+        },
+        {
+          value: "oklch-longer",
+          label: "OKLCH, longer hue"
+        },
+        {
+          value: "linear",
+          label: "Linear light"
+        },
+        {
+          value: "srgb",
+          label: "sRGB"
+        }
+      ],
+      default: "oklab"
     }
   }
 });
@@ -102,6 +131,14 @@ export const PIXEL_ART_KEYBINDINGS = defineKeyBindings({
     flipVertical: {
       label: "Flip vertically",
       group: "Transform"
+    },
+    previousPaletteColor: {
+      label: "Previous palette color",
+      group: "Palette"
+    },
+    nextPaletteColor: {
+      label: "Next palette color",
+      group: "Palette"
     }
   }
 });

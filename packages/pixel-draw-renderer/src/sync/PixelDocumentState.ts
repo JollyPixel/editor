@@ -27,6 +27,7 @@ import type {
 } from "../types.ts";
 import {
   selectEditCommand,
+  paletteReplaced,
   strokeCommand,
   strokeCommands,
   textureCommand,
@@ -122,6 +123,14 @@ export class PixelDocumentState<
         }
         break;
       }
+      case "palette-replaced": {
+        const palette = ColorPalette.from(command.metadata.colors);
+        if (!palette.equals(this.#palette)) {
+          this.#palette = palette;
+          this.#onPaletteChanged?.(null);
+        }
+        break;
+      }
       case "stroke":
         this.#paint(command.metadata.positions, command.metadata.color);
         break;
@@ -178,6 +187,10 @@ export class PixelDocumentState<
     command: PixelDocumentCommand
   ): boolean {
     switch (command.action) {
+      case "palette-color-changed":
+        return command.metadata.index < this.#palette.size;
+      case "palette-replaced":
+        return ColorPalette.parse(command.metadata.colors) !== null;
       case "uv-region-deleted":
       case "uv-region-moved":
       case "uv-region-rotated":
@@ -207,6 +220,8 @@ export class PixelDocumentState<
           metadata: { index, color: this.#palette.colorAt(index) }
         }];
       }
+      case "palette-replaced":
+        return [paletteReplaced(this.#palette.toJSON())];
       case "stroke":
         return strokeCommands(
           command.metadata.positions,

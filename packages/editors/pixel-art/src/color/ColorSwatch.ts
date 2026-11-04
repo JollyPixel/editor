@@ -140,7 +140,7 @@ export class ColorSwatch extends LitElement {
         aria-haspopup="dialog"
         aria-expanded=${String(this._expanded)}
         ?disabled=${this.disabled}
-        style="background:${formatRgba(color)}"
+        style="--swatch-color:${formatRgba(color)}"
       ></button>
     `;
   }

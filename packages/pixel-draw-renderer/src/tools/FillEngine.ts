@@ -83,7 +83,7 @@ export class FillEngine implements FillTool {
     }
 
     const [beforeColor] = this.#canvasBuffer.samplePixels([seed]);
-    const fillColor = this.#brush[slot].asRGBA();
+    const fillColor = this.#brush.painter(slot)(beforeColor);
     const positions = Fill.floodFill(
       this.#canvasBuffer,
       seed,
@@ -102,7 +102,7 @@ export class FillEngine implements FillTool {
     slot: BrushColorSlot
   ): void {
     const [fromColor] = this.#canvasBuffer.samplePixels([seed]);
-    const toColor = this.#brush[slot].asRGBA();
+    const toColor = this.#brush.painter(slot)(fromColor);
     if (rgba8Equal(fromColor, toColor)) {
       return;
     }

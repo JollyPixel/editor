@@ -32,9 +32,10 @@ import { pixelEdits } from "./PixelEdits.ts";
 const kNormalMapKey = "normal-map";
 const kLabels: Readonly<Record<PixelDocumentCommand["action"], string>> = {
   "palette-color-changed": "Change palette color",
+  "palette-replaced": "Edit palette",
   stroke: "Paint",
   "global-fill": "Fill",
-  "select-edit": "Edit selection",
+  "select-edit": "Edit pixels",
   resized: "Resize texture",
   "texture-replaced": "Replace texture",
   "uv-region-created": "Create UV",
@@ -217,6 +218,16 @@ function namedEntries(
       const { index } = command.metadata;
 
       return [{ key: `palette:${index}`, read: () => document.palette.colorAt(index) }];
+    }
+    case "palette-replaced": {
+      const count = Math.max(document.palette.size, command.metadata.colors.length);
+
+      return Array.from({ length: count }, (_, index) => {
+        return {
+          key: `palette:${index}`,
+          read: () => (index < document.palette.size ? document.palette.colorAt(index) : null)
+        };
+      });
     }
     case "uv-region-created":
     case "uv-region-state-changed":

@@ -26,6 +26,10 @@ export const COLOR_PICKER_OPTIONS: ColorPickerOptions = {
     {
       value: "okhsv",
       label: "OKHSV"
+    },
+    {
+      value: "okhsl",
+      label: "OKHSL"
     }
   ],
   selector: [

@@ -110,7 +110,7 @@ export class PixelArtEditor {
 
     const target = session.targetLease(kTextureKind);
     const { record } = target;
-    const preferences = new EditorPreferences(kStorage, context.preferences);
+    const preferences = new EditorPreferences(kStorage, context.preferences, panel);
     const canvas = await panel.initialize({
       id: record.id,
       name: TextureName.fromPath(record.path).value,

@@ -78,6 +78,14 @@ export class ColorControls {
     );
   }
 
+  paletteTool(
+    name: string
+  ): Locator {
+    return this.dock
+      .getByRole("toolbar", { name: "Palette" })
+      .getByRole("button", { name });
+  }
+
   slot(
     index: number
   ): Locator {

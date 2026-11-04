@@ -64,6 +64,12 @@ export class Color extends JollyField<string> {
   @property({ type: Boolean })
   declare discrete: boolean | undefined;
 
+  @property({ type: Boolean, reflect: true })
+  declare settings: boolean;
+
+  @property({ type: Boolean, reflect: true })
+  declare eyedropper: boolean;
+
   @query(".swatch")
   declare _swatch: HTMLButtonElement;
 
@@ -101,6 +107,8 @@ export class Color extends JollyField<string> {
 
     this.value = Color.Defaults.value;
     this.alpha = false;
+    this.settings = false;
+    this.eyedropper = false;
   }
 
   protected override valuesEqual(
@@ -186,6 +194,8 @@ export class Color extends JollyField<string> {
           .channels=${this.channels}
           .harmony=${this.harmony}
           .discrete=${this.discrete}
+          ?settings=${this.settings}
+          ?eyedropper=${this.eyedropper}
           ?readonly=${!this.editable}
           @jolly-input=${this.#onPickerInput}
           @jolly-change=${this.#onPickerChange}

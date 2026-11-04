@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type {
+  BrushInkName,
   Mode,
   PixelArtCanvas
 } from "@jolly-pixel/pixel-draw.renderer";
@@ -19,6 +20,7 @@ import {
 export interface ToolSettingsInit {
   mode: Mode;
   brushSize: number;
+  ink: BrushInkName;
   options: ToolOptions;
   primary: ColorChangeDetail;
   secondary: ColorChangeDetail;
@@ -33,6 +35,7 @@ export class ToolSettings {
     return new ToolSettings({
       mode: canvas.mode,
       brushSize: brush.size,
+      ink: brush.ink,
       options: readToolOptions(canvas),
       primary: readBrushColor(brush.primary),
       secondary: readBrushColor(brush.secondary)
@@ -41,6 +44,7 @@ export class ToolSettings {
 
   readonly mode: Mode;
   readonly brushSize: number;
+  readonly ink: BrushInkName;
   readonly options: Readonly<ToolOptions>;
   readonly primary: Readonly<ColorChangeDetail>;
   readonly secondary: Readonly<ColorChangeDetail>;
@@ -50,6 +54,7 @@ export class ToolSettings {
   ) {
     this.mode = init.mode;
     this.brushSize = init.brushSize;
+    this.ink = init.ink;
     this.options = Object.freeze({
       ...init.options
     });
@@ -70,6 +75,7 @@ export class ToolSettings {
 
     canvas.mode = this.mode;
     brush.size = this.brushSize;
+    brush.ink = this.ink;
 
     writeToolOptions(
       canvas,

@@ -43,12 +43,12 @@ function createState(): PixelDocumentState {
 }
 
 describe("palette network commands", () => {
-  test("the protocol validates slot indices, channel bytes and snapshot length", () => {
+  test("the protocol validates slot indices, channel bytes and palette length", () => {
     const parser = new MessageParser(pixelCommandProtocol);
     assert.equal(parser.parse(command("palette-color-changed", {
-      index: 9, color: kColor
+      index: 255, color: kColor
     })).ok, true);
-    for (const index of [-1, 10, 0.5]) {
+    for (const index of [-1, 256, 0.5]) {
       assert.equal(parser.parse(command("palette-color-changed", {
         index, color: kColor
       })).ok, false);
@@ -57,6 +57,12 @@ describe("palette network commands", () => {
       assert.equal(parser.parse(command("palette-color-changed", {
         index: 0, color: { ...kColor, a }
       })).ok, false);
+    }
+    assert.equal(parser.parse(command("palette-replaced", {
+      colors: [kColor]
+    })).ok, true);
+    for (const colors of [[], Array.from({ length: 257 }, () => kColor)]) {
+      assert.equal(parser.parse(command("palette-replaced", { colors })).ok, false);
     }
     const snapshots = new SchemaParser(pixelSnapshotSchema);
     const snapshot = pixelArtSnapshot(createState());
@@ -93,6 +99,25 @@ describe("palette network commands", () => {
       assert.deepEqual(state.palette.colorAt(3), kColor);
       assert.deepEqual(state.palette.colorAt(4), kOtherColor);
     }
+  });
+
+  test("a replaced palette refuses concurrent slot edits and edits past its end", () => {
+    const state = createState();
+    const arbiter = new KeyedCommandArbiter(PIXEL_COMMAND_RULES);
+    const replaced = arbiter.admit(state, command("palette-replaced", {
+      colors: [kColor, kOtherColor]
+    }, { clientId: "B", timestamp: 900 }));
+    assert.ok(replaced);
+    applyPixelCommand(state, replaced.command);
+    replaced.commit(1);
+
+    assert.equal(arbiter.admit(state, command("palette-color-changed", {
+      index: 0, color: kOtherColor
+    }, { clientId: "A", timestamp: 500, basis: 0 })), null);
+    assert.equal(arbiter.admit(state, command("palette-color-changed", {
+      index: 5, color: kOtherColor
+    }, { clientId: "A", timestamp: 1000, basis: 1 })), null);
+    assert.deepEqual(state.palette.toJSON(), [kColor, kOtherColor]);
   });
 
   test("pending edits on one slot do not hide a peer's winning edit on another", () => {

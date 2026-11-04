@@ -24,8 +24,9 @@ describe("PixelArtFile — invalid payloads", () => {
     for (const palette of [
       null,
       [],
-      ColorPalette.create().toJSON().slice(1),
-      [...ColorPalette.create().toJSON(), { r: 0, g: 0, b: 0, a: 255 }],
+      Array.from({ length: 257 }, () => {
+        return { r: 0, g: 0, b: 0, a: 255 };
+      }),
       ColorPalette.create().toJSON().map((color) => {
         return { ...color, a: 256 };
       }),

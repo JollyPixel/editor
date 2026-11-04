@@ -128,14 +128,11 @@ export class ColorPickerPopover extends LitElement {
       >
         <jolly-color-picker
           alpha
-          settings
+          eyedropper
           .value=${this.#picker.value}
           @jolly-input=${this.#picker.input}
           @jolly-change=${this.#picker.commit}
         ></jolly-color-picker>
-        <button type="button" class="done" @click=${() => this.close()}>
-          Done
-        </button>
       </div>
     `;
   }

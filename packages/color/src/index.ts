@@ -48,7 +48,13 @@ export type {
   HarmonyKind
 } from "./mix/harmony.ts";
 
+export { shadeRamp } from "./mix/shade.ts";
+export type { ShadeRampOptions } from "./mix/shade.ts";
+
 export { contrastingColor } from "./contrast.ts";
 
 export * from "./palette/ColorSequence.ts";
 export { hashKey } from "./palette/hashKey.ts";
+export * from "./palette/PaletteFile.ts";
+export * from "./palette/errors/PaletteParseError.ts";
+export * from "./palette/sortColors.ts";

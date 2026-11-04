@@ -31,6 +31,7 @@ type HeldModifier = "panHeld" | "lineHeld" | "snapBypassHeld";
 export interface CanvasKeyboardControllerOptions {
   keyboard?: Keyboard;
   guard?: KeyboardGuard;
+  stepPalette: (offset: number) => boolean;
 }
 
 export class CanvasKeyboardController implements ReactiveController {
@@ -38,6 +39,7 @@ export class CanvasKeyboardController implements ReactiveController {
   readonly #shortcuts: () => CanvasShortcuts | null;
   readonly #keyboard: Keyboard;
   readonly #guard: KeyboardGuard;
+  readonly #stepPalette: (offset: number) => boolean;
   readonly #hoverGuard: KeyboardGuard = {
     blocks: () => !this.#hovering
   };
@@ -53,7 +55,7 @@ export class CanvasKeyboardController implements ReactiveController {
   constructor(
     host: CanvasKeyboardHost,
     shortcuts: () => CanvasShortcuts | null,
-    options: CanvasKeyboardControllerOptions = {}
+    options: CanvasKeyboardControllerOptions
   ) {
     this.#host = host;
     this.#shortcuts = shortcuts;
@@ -61,6 +63,7 @@ export class CanvasKeyboardController implements ReactiveController {
       preventControlKeys: false
     });
     this.#guard = options.guard ?? inputLayers;
+    this.#stepPalette = options.stepPalette;
     host.addController(this);
   }
 
@@ -130,7 +133,9 @@ export class CanvasKeyboardController implements ReactiveController {
       rotate: () => this.#shortcuts()?.rotate("cw") ?? false,
       rotateCounterClockwise: () => this.#shortcuts()?.rotate("ccw") ?? false,
       flipHorizontal: () => this.#shortcuts()?.flipHorizontal() ?? false,
-      flipVertical: () => this.#shortcuts()?.flipVertical() ?? false
+      flipVertical: () => this.#shortcuts()?.flipVertical() ?? false,
+      previousPaletteColor: () => this.#stepPalette(-1),
+      nextPaletteColor: () => this.#stepPalette(1)
     });
   }
 

@@ -59,6 +59,29 @@ test.describe("color picker: wheel", () => {
       .not.toHaveText("#c3567f");
   });
 
+  test("the wheel keeps its hues at value 0 and the hue axis wraps around", async({ page }) => {
+    const picker = panel(page, "wheel").locator("jolly-color-picker");
+    const area = picker.locator(".area.wheel");
+    await area.scrollIntoViewIfNeeded();
+    await picker.locator(".track.value input").focus();
+    await page.keyboard.press("Home");
+
+    const rim = await area.locator("canvas.surface").evaluate((canvas: HTMLCanvasElement) => {
+      const pixel = canvas.getContext("2d")!.getImageData(canvas.width - 2, canvas.height / 2, 1, 1).data;
+
+      return pixel[0] + pixel[1] + pixel[2];
+    });
+    expect(rim).toBeGreaterThan(200);
+
+    await axis(picker, "Hue").focus();
+    await page.keyboard.press("End");
+    await page.keyboard.press("ArrowRight");
+    await expect.poll(() => axisValue(picker, "Hue")).toBe(1);
+    await page.keyboard.press("ArrowLeft");
+    await page.keyboard.press("ArrowLeft");
+    await expect.poll(() => axisValue(picker, "Hue")).toBe(359);
+  });
+
   test("a discrete wheel snaps to hue sectors and saturation rings", async({ page }) => {
     const picker = panel(page, "okhsv discrete wheel").locator("jolly-color-picker");
     const area = picker.locator(".area.wheel");

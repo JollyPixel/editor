@@ -3,8 +3,10 @@ export {
   Brush,
   type BrushColorSlot,
   type BrushOptions,
+  type BrushPainter,
   type BrushPaintSource
 } from "./tools/Brush.ts";
+export type { BrushInkName } from "./tools/BrushInk.ts";
 export type { BrushTool } from "./tools/BrushEngine.ts";
 export type { FillTool } from "./tools/FillEngine.ts";
 export type {
@@ -139,3 +141,4 @@ export type {
   PeerUVSelectionState
 } from "./rendering/presence/PeerUVSelections.ts";
 export * from "./palette/ColorPalette.ts";
+export { visibleColors } from "./palette/visibleColors.ts";

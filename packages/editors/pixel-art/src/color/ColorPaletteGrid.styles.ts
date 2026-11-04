@@ -1,16 +1,27 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { swatchFill } from "./swatchFill.styles.ts";
+
 export const colorPaletteGridStyles = css`
   :host {
     display: block;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 43px;
+    max-width: 100%;
+    max-height: 112px;
+    overflow: hidden auto;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: thin;
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(2, 20px);
+    grid-template-columns: repeat(auto-fill, 20px);
     gap: 3px;
+    width: calc((var(--palette-columns, 2) * 23px) - 3px);
+    max-width: 100%;
   }
 
   .grid button {
@@ -22,14 +33,9 @@ export const colorPaletteGridStyles = css`
     border: 1px solid var(--color-divider);
     border-radius: var(--color-swatch-radius, 4px);
     cursor: pointer;
-    background: repeating-conic-gradient(#aaa 0% 25%, #eee 0% 50%)
-      0 0 / 8px 8px;
-  }
+    scroll-snap-align: start;
 
-  .grid span {
-    display: block;
-    width: 100%;
-    height: 100%;
+    ${swatchFill}
   }
 
   .grid button:focus,
@@ -52,8 +58,21 @@ export const colorPaletteGridStyles = css`
       inset 0 0 0 3px #fff;
   }
 
+  button.in-range:not([aria-pressed="true"], :focus-visible)::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 2px var(--color-accent, #48f);
+    pointer-events: none;
+  }
+
+  button.drop-target {
+    outline: 2px dashed var(--color-accent, #48f);
+    outline-offset: -2px;
+  }
+
   button:disabled {
     cursor: default;
   }
-
 `;

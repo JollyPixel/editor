@@ -30,7 +30,7 @@ interface PixelArtFile {
 
 `normalMap` holds the [normal map settings](../normal/NormalMapConfig.md). A file without it loads with the feature off, so `version` stays `1`. `PixelDocumentState.normalMap` carries it through `serializePixelDocument`, `deserializePixelDocument` and `pixelArtSnapshot`.
 
-`palette` holds exactly ten [RGBA8 colors](../ColorPalette.md), including
+`palette` holds 1 to 256 [RGBA8 colors](../ColorPalette.md), including
 alpha. New files and snapshots include it. Older version `1` files
 without it load the default palette. Invalid lengths or channel values are
 rejected. Palette data travels through `serializePixelDocument`,

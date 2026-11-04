@@ -18,6 +18,7 @@ const kActions: { readonly [TAction in PixelCommandAction]: true; } = {
   "uv-net-default-changed": true,
   "normal-map-toggled": true,
   "palette-color-changed": true,
+  "palette-replaced": true,
   "normal-map-defaults-patched": true,
   "normal-map-zone-set": true,
   "normal-map-zone-deleted": true

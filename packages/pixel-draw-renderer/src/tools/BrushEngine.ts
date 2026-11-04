@@ -3,6 +3,7 @@ import { formatHex8 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { Stroke } from "./Stroke.ts";
+import { groupPositionsByColor } from "../buffer/colorGroups.ts";
 import type {
   Brush,
   BrushColorSlot,
@@ -100,7 +101,7 @@ export class BrushEngine implements BrushTool {
     this.endStroke();
     this.#stroke = new Stroke(
       source,
-      this.#brush.paintColor(source)
+      this.#brush.painter(source)
     );
     this.#stamp(this.#stroke, tx, ty);
   }
@@ -133,9 +134,11 @@ export class BrushEngine implements BrushTool {
     tx: number,
     ty: number
   ): void {
-    const affected = [...this.#brush.affectedPixels(tx, ty)];
-    stroke.cover(affected, this.#canvasBuffer);
-    this.#canvasBuffer.drawPixels(affected, stroke.color);
+    const { positions, colors } = stroke.cover(
+      this.#brush.affectedPixels(tx, ty),
+      this.#canvasBuffer
+    );
+    this.#canvasBuffer.drawColorGroups(groupPositionsByColor(positions, colors));
     this.#onProgress?.(stroke.paintedPixels());
   }
 }

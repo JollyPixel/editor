@@ -36,6 +36,7 @@ export function makeToolCanvas(
     mode,
     brush: {
       size: 1,
+      ink: "blend",
       primary: new FakeBrushColor("#000000", 1),
       secondary: new FakeBrushColor("#ffffff", 1)
     },

@@ -102,6 +102,27 @@ describe("PixelArtCanvas — strokes", () => {
     manager.destroy();
   });
 
+  test("a translucent stroke blends each pixel once with what it covers, and undo restores them", () => {
+    const { manager, canvas, commands } = makeCanvas();
+    function sample() {
+      return [8, 9].map((x) => manager.document.buffer.samplePixel(x, 8));
+    }
+    canvas.dispatchEvent(mouseEvent("mousedown", 104, 100));
+    release(canvas);
+    manager.brush.primary.opacity = 128 / 255;
+
+    canvas.dispatchEvent(mouseEvent("mousedown", 100, 100));
+    canvas.dispatchEvent(mouseEvent("mousemove", 104, 100));
+    canvas.dispatchEvent(mouseEvent("mousemove", 100, 100));
+    release(canvas);
+
+    assert.deepStrictEqual(sample(), [[128, 0, 127, 255], kRedBytes]);
+    assert.strictEqual(commands.at(-1)?.action, "select-edit");
+    manager.undo();
+    assert.deepStrictEqual(sample(), [kBlueBytes, kRedBytes]);
+    manager.destroy();
+  });
+
   test("stroke progress reports every pixel painted so far, then an empty list when the stroke ends", () => {
     const { manager, canvas, progress } = makeCanvas();
 

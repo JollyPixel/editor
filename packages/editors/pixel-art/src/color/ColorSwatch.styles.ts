@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { swatchFill } from "./swatchFill.styles.ts";
+
 export const colorSwatchStyles = css`
   :host {
     display: inline-flex;
@@ -13,7 +16,8 @@ export const colorSwatchStyles = css`
     border-radius: var(--color-swatch-radius, 4px);
     cursor: pointer;
     padding: 0;
-    background: #000;
+
+    ${swatchFill}
     box-sizing: border-box;
     box-shadow:
       inset 0 1px 0 rgb(255 255 255 / 25%),

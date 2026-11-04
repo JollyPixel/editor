@@ -8,6 +8,9 @@ import type {
   RGBA8
 } from "../types.ts";
 
+// CONSTANTS
+const kChannels = ["r", "g", "b", "a"] as const;
+
 export function toRGBA8(
   color: RGBA
 ): RGBA8 {
@@ -28,6 +31,25 @@ export function fromRGBA8(
     b: color.b / BYTE_MAX,
     a: color.a / BYTE_MAX
   };
+}
+
+export function isRGBA8(
+  value: unknown
+): value is RGBA8 {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  return kChannels.every((key) => isByte(Reflect.get(value, key)));
+}
+
+function isByte(
+  value: unknown
+): boolean {
+  return typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= BYTE_MAX;
 }
 
 export function toByte(

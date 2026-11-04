@@ -15,6 +15,7 @@ import { ColorController } from "../../src/color/ColorController.ts";
 import type { ColorChangeDetail } from "../../src/color/ColorSwatch.ts";
 import type { TextureSetEvents } from "../../src/textures/TextureSet.ts";
 import { createElementHost as createHost } from "../fixtures/host.ts";
+import { FakeColorOptions } from "./fixtures/paletteCanvas.ts";
 
 class FakeDocument {
   palette = ColorPalette.create();
@@ -114,7 +115,8 @@ function setup() {
   const controller = new ColorController(
     host,
     () => canvas,
-    new Emitter<TextureSetEvents>()
+    new Emitter<TextureSetEvents>(),
+    new FakeColorOptions()
   );
 
   return {
@@ -139,7 +141,8 @@ describe("UI.ColorController", () => {
     const controller = new ColorController(
       createHost(),
       () => null,
-      new Emitter<TextureSetEvents>()
+      new Emitter<TextureSetEvents>(),
+      new FakeColorOptions()
     );
 
     assert.deepEqual(controller.foreground, color("#000000"));
@@ -197,7 +200,8 @@ describe("UI.ColorController", () => {
     const controller = new ColorController(
       createHost(),
       () => current,
-      new Emitter<TextureSetEvents>()
+      new Emitter<TextureSetEvents>(),
+      new FakeColorOptions()
     );
 
     controller.docked = true;

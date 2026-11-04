@@ -4,143 +4,18 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import {
-  ColorPalette,
-  type PixelArtCanvas,
-  type RGBA8
-} from "@jolly-pixel/pixel-draw.renderer";
+import { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { ColorController } from "../../src/color/ColorController.ts";
-import type { ColorChangeDetail } from "../../src/color/ColorSwatch.ts";
-import { rgba8ToColorChange } from "../../src/color/pickerChange.ts";
 import type { TextureSetEvents } from "../../src/textures/TextureSet.ts";
 import { createElementHost as createHost } from "../fixtures/host.ts";
-
-class FakeDocument {
-  palette = ColorPalette.create();
-  batches: number[][] = [];
-  #batch: number[] | null = null;
-  readonly #listeners = new Set<(index: number | null) => void>();
-
-  subscribe(
-    _event: "palette-changed",
-    listener: (index: number | null) => void
-  ): () => void {
-    this.#listeners.add(listener);
-
-    return () => this.#listeners.delete(listener);
-  }
-
-  changePaletteColor(
-    index: number,
-    color: RGBA8
-  ): void {
-    this.palette = this.palette.withColor(index, color);
-    this.#batch?.push(index);
-    for (const listener of this.#listeners) {
-      listener(index);
-    }
-  }
-
-  batch<T>(
-    edit: () => T
-  ): T {
-    this.#batch = [];
-    try {
-      return edit();
-    }
-    finally {
-      this.batches.push(this.#batch);
-      this.#batch = null;
-    }
-  }
-}
-
-class FakeBrushColor {
-  hex: string;
-  opacity: number;
-
-  constructor(
-    hex: string,
-    opacity = 1
-  ) {
-    this.hex = hex;
-    this.opacity = opacity;
-  }
-
-  set(
-    hex: string,
-    opacity = 1
-  ): void {
-    this.hex = hex;
-    this.opacity = opacity;
-  }
-
-  asString(): string {
-    return this.hex;
-  }
-}
-
-interface FakeBrush {
-  primary: FakeBrushColor;
-  secondary: FakeBrushColor;
-  swapColors(): void;
-}
-
-function makeCanvas(): {
-  canvas: PixelArtCanvas;
-  brush: FakeBrush;
-  doc: FakeDocument;
-} {
-  const brush: FakeBrush = {
-    primary: new FakeBrushColor("#111111"),
-    secondary: new FakeBrushColor("#eeeeee", 0.5),
-    swapColors() {
-      [brush.primary, brush.secondary] = [brush.secondary, brush.primary];
-    }
-  };
-  const doc = new FakeDocument();
-  const element = document.createElement("canvas");
-  const canvas = {
-    brush,
-    document: doc,
-    canvas: () => element
-  } as unknown as PixelArtCanvas;
-
-  return {
-    canvas,
-    brush,
-    doc
-  };
-}
-
-function color(
-  hex: string,
-  opacity = 1
-): ColorChangeDetail {
-  return {
-    hex,
-    opacity
-  };
-}
-
-function setup() {
-  const host = createHost();
-  const { canvas, brush, doc } = makeCanvas();
-  const controller = new ColorController(
-    host,
-    () => canvas,
-    new Emitter<TextureSetEvents>()
-  );
-
-  return {
-    host,
-    controller,
-    brush,
-    doc
-  };
-}
+import {
+  color,
+  makeCanvas,
+  setup,
+  FakeColorOptions
+} from "./fixtures/paletteCanvas.ts";
 
 describe("UI.ColorController palette", () => {
   test("selecting a slot writes its color into both brush slots", () => {
@@ -209,36 +84,6 @@ describe("UI.ColorController palette", () => {
     assert.deepEqual(controller.foreground, color("#0000ff"));
   });
 
-  test("a ramp fills the slots between two colors in OKLab as one batch", () => {
-    const { controller, doc } = setup();
-    controller.docked = true;
-    doc.changePaletteColor(2, { r: 0, g: 0, b: 0, a: 255 });
-    doc.changePaletteColor(4, { r: 255, g: 255, b: 255, a: 255 });
-    controller.selectPaletteColor(4);
-
-    controller.rampPalette(4, 2);
-
-    assert.deepEqual(doc.palette.colorAt(3), { r: 99, g: 99, b: 99, a: 255 });
-    assert.deepEqual(doc.batches, [[3]]);
-    assert.deepEqual(controller.foreground, color("#000000"));
-  });
-
-  test("a ramp leaves a locked palette and adjacent slots alone, and still selects", () => {
-    const { controller, doc } = setup();
-    controller.docked = true;
-    controller.selectPaletteColor(0);
-
-    controller.rampPalette(0, 1);
-    assert.deepEqual(controller.foreground, rgba8ToColorChange(doc.palette.colorAt(1)));
-
-    controller.paletteLocked = true;
-    controller.rampPalette(0, 5);
-
-    assert.deepEqual(doc.palette.toJSON(), ColorPalette.create().toJSON());
-    assert.deepEqual(doc.batches, []);
-    assert.deepEqual(controller.foreground, rgba8ToColorChange(doc.palette.colorAt(5)));
-  });
-
   test("a secondary pick becomes the background unless docked", () => {
     const { host, controller } = setup();
     host.connect();
@@ -258,7 +103,7 @@ describe("UI.ColorController palette", () => {
     const second = makeCanvas();
     const events = new Emitter<TextureSetEvents>();
     let current = first.canvas;
-    const controller = new ColorController(host, () => current, events);
+    const controller = new ColorController(host, () => current, events, new FakeColorOptions());
     host.connect();
     controller.docked = true;
     controller.selectPaletteColor(3);

@@ -8,10 +8,13 @@ import {
   createRef,
   ref
 } from "lit/directives/ref.js";
-import type {
-  BrushColorSlot,
-  PixelArtCanvas
+import {
+  COLOR_PALETTE_MAX_SIZE,
+  type BrushColorSlot,
+  type PixelArtCanvas,
+  type RGBA8
 } from "@jolly-pixel/pixel-draw.renderer";
+import type { PaletteFormat } from "@jolly-pixel/color";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -21,11 +24,22 @@ import type {
 } from "./ColorPickerPopover.ts";
 import type {
   PaletteEditDetail,
-  PaletteRampDetail
+  PaletteSelectDetail
 } from "./ColorPaletteGrid.ts";
-import { parseColorChange } from "./pickerChange.ts";
+import type {
+  PaletteAction,
+  PaletteDropDetail,
+  StripPickDetail
+} from "./PaletteAction.ts";
+import { PaletteTransfer } from "./PaletteTransfer.ts";
+import {
+  colorChangeToRgba8,
+  parseColorChange
+} from "./pickerChange.ts";
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
 import { PaletteController } from "./PaletteController.ts";
+import type { PaletteRampSpace } from "./PaletteState.ts";
+import { RecentColors } from "./RecentColors.ts";
 import {
   readBrushColor,
   writeBrushColor
@@ -41,6 +55,8 @@ const kDefaultBackground: ColorChangeDetail = {
   hex: "#ffffff",
   opacity: 1
 };
+const kActiveSlots: readonly BrushColorSlot[] = ["primary", "secondary"];
+const kTextureColorProbe = COLOR_PALETTE_MAX_SIZE + 1;
 
 export interface ColorPickedDetail extends ColorChangeDetail {
   slot?: BrushColorSlot;
@@ -51,11 +67,18 @@ interface ColorDraft {
   canvas: PixelArtCanvas | null;
 }
 
+export interface ColorControllerOptions {
+  notify: (message: string) => void;
+  rampSpace: () => PaletteRampSpace;
+}
+
 export class ColorController {
   readonly #host: ReactiveControllerHost & HTMLElement;
   readonly #canvas: () => PixelArtCanvas | null;
   readonly #palette: PaletteController;
   readonly #picker = createRef<ColorPickerPopover>();
+  readonly #options: ColorControllerOptions;
+  #recent = RecentColors.empty;
   #docked = false;
   #undockedBackground: ColorChangeDetail | null = null;
   #draft: ColorDraft | null = null;
@@ -64,10 +87,12 @@ export class ColorController {
   constructor(
     host: ReactiveControllerHost & HTMLElement,
     canvas: () => PixelArtCanvas | null,
-    events: TextureEvents
+    events: TextureEvents,
+    options: ColorControllerOptions
   ) {
     this.#host = host;
     this.#canvas = canvas;
+    this.#options = options;
     host.addController(this);
     this.#palette = new PaletteController(host, {
       canvas,
@@ -153,6 +178,10 @@ export class ColorController {
     this.#host.requestUpdate();
   }
 
+  get recentColors(): readonly ColorChangeDetail[] {
+    return this.#recent.colors;
+  }
+
   adopt(): void {
     if (this.#docked) {
       this.#dock();
@@ -171,14 +200,103 @@ export class ColorController {
     }
   }
 
-  rampPalette(
-    from: number,
-    to: number
+  extendPaletteSelection(
+    index: number
   ): void {
     this.#picker.value?.close();
     this.cancelDraft();
-    this.#palette.ramp(from, to);
-    this.selectPaletteColor(to);
+    const color = this.#palette.extend(index);
+    if (color !== null) {
+      this.#applyActive(color);
+      this.#host.requestUpdate();
+    }
+  }
+
+  stepPaletteColor(
+    offset: number
+  ): boolean {
+    if (!this.#docked) {
+      return false;
+    }
+
+    this.#picker.value?.close();
+    this.cancelDraft();
+    const color = this.#palette.step(offset);
+    if (color === null) {
+      return false;
+    }
+    this.#applyActive(color);
+    this.#host.requestUpdate();
+
+    return true;
+  }
+
+  editPalette(
+    action: PaletteAction
+  ): void {
+    this.#picker.value?.close();
+    this.cancelDraft();
+    switch (action.type) {
+      case "add":
+        this.#palette.apply({
+          type: "add",
+          color: colorChangeToRgba8(this.foreground)
+        });
+        break;
+      case "ramp":
+        this.#palette.apply({
+          type: "ramp",
+          space: this.#options.rampSpace()
+        });
+        break;
+      case "save":
+        this.#savePalette(action.format);
+        break;
+      case "load":
+        void this.#loadPalette();
+        break;
+      case "from-texture":
+        this.#paletteFromTexture();
+        break;
+      default:
+        this.#palette.apply(action);
+    }
+    this.#host.requestUpdate();
+  }
+
+  dropPaletteColors(
+    detail: PaletteDropDetail
+  ): void {
+    this.#picker.value?.close();
+    this.cancelDraft();
+    this.#palette.apply({
+      type: "drop",
+      ...detail
+    });
+  }
+
+  pickStripColor(
+    detail: StripPickDetail
+  ): void {
+    const color: ColorChangeDetail = {
+      hex: detail.hex,
+      opacity: detail.opacity
+    };
+    if (detail.add) {
+      this.#picker.value?.close();
+      this.cancelDraft();
+      this.#palette.apply({
+        type: "add",
+        color: colorChangeToRgba8(color)
+      });
+
+      return;
+    }
+
+    this.deselectPaletteColor();
+    this.#draft = null;
+    this.#use(color, kActiveSlots);
+    this.#host.requestUpdate();
   }
 
   pickSecondary(
@@ -209,7 +327,7 @@ export class ColorController {
       return;
     }
 
-    this.#write("primary", color);
+    this.#use(color, ["primary"]);
     this.#host.requestUpdate();
   }
 
@@ -220,7 +338,7 @@ export class ColorController {
       return;
     }
 
-    this.#write("secondary", color);
+    this.#use(color, ["secondary"]);
     this.#host.requestUpdate();
   }
 
@@ -239,7 +357,7 @@ export class ColorController {
     color: ColorChangeDetail
   ): void {
     this.#draft = null;
-    this.#applyActive(color);
+    this.#use(color, kActiveSlots);
     this.#palette.commit(color);
     this.#host.requestUpdate();
   }
@@ -272,11 +390,15 @@ export class ColorController {
   onColorPicked(
     detail: ColorPickedDetail
   ): void {
+    const color = {
+      hex: detail.hex,
+      opacity: detail.opacity
+    };
     if (this.#docked) {
-      this.changeActive({
-        hex: detail.hex,
-        opacity: detail.opacity
-      });
+      this.changeActive(color);
+    }
+    else {
+      this.#use(color, [detail.slot ?? "primary"]);
     }
     this.#host.requestUpdate();
   }
@@ -303,17 +425,29 @@ export class ColorController {
         .color=${hex}
         .opacity=${opacity}
         .palette=${this.#palette.palette}
-        .selected=${this.#palette.selected}
+        .selection=${this.#palette.selection}
         .editing=${this.#editing}
         .paletteLocked=${this.#palette.locked}
-        @palette-select=${(event: CustomEvent<number>) => {
-          this.selectPaletteColor(event.detail);
+        .recent=${this.#recent.colors}
+        @palette-select=${(event: CustomEvent<PaletteSelectDetail>) => {
+          if (event.detail.extend) {
+            this.extendPaletteSelection(event.detail.index);
+          }
+          else {
+            this.selectPaletteColor(event.detail.index);
+          }
         }}
         @palette-edit=${(event: CustomEvent<PaletteEditDetail>) => {
           this.#editPaletteColor(event.detail);
         }}
-        @palette-ramp=${(event: CustomEvent<PaletteRampDetail>) => {
-          this.rampPalette(event.detail.from, event.detail.to);
+        @palette-action=${(event: CustomEvent<PaletteAction>) => {
+          this.editPalette(event.detail);
+        }}
+        @palette-drop=${(event: CustomEvent<PaletteDropDetail>) => {
+          this.dropPaletteColors(event.detail);
+        }}
+        @strip-pick=${(event: CustomEvent<StripPickDetail>) => {
+          this.pickStripColor(event.detail);
         }}
         @jolly-secondary=${this.#onSecondary}
         @color-preview=${(event: CustomEvent<ColorChangeDetail>) => {
@@ -390,6 +524,68 @@ export class ColorController {
     if (selected !== null) {
       this.#applyActive(selected);
     }
+  }
+
+  async #loadPalette(): Promise<void> {
+    const file = await PaletteTransfer.open();
+    if (file === null) {
+      return;
+    }
+
+    try {
+      const palette = await PaletteTransfer.read(file);
+      this.#replacePalette(palette.colors, file.name);
+    }
+    catch (error) {
+      this.#options.notify(
+        error instanceof Error ? error.message : `Unable to read ${file.name}`
+      );
+    }
+    this.#host.requestUpdate();
+  }
+
+  #savePalette(
+    format: PaletteFormat
+  ): void {
+    const palette = this.#palette.palette;
+    if (palette !== null) {
+      PaletteTransfer.save(palette, format, "palette");
+    }
+  }
+
+  #paletteFromTexture(): void {
+    const colors = this.#palette.textureColors(kTextureColorProbe);
+    if (colors.length === 0) {
+      this.#options.notify("The texture has no visible colors");
+    }
+    else {
+      this.#replacePalette(colors, "the texture");
+    }
+  }
+
+  #replacePalette(
+    colors: readonly RGBA8[],
+    source: string
+  ): void {
+    this.#palette.apply({
+      type: "replace",
+      colors
+    });
+    if (colors.length > COLOR_PALETTE_MAX_SIZE) {
+      this.#options.notify(
+        `Kept the first ${COLOR_PALETTE_MAX_SIZE} colors of ${source}`
+      );
+    }
+  }
+
+  #use(
+    color: ColorChangeDetail,
+    slots: readonly BrushColorSlot[]
+  ): void {
+    for (const slot of slots) {
+      this.#write(slot, color);
+    }
+    this.#recent = this.#recent.with(color);
   }
 
   #dock(): void {

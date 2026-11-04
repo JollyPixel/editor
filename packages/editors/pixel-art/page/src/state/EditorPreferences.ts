@@ -22,10 +22,15 @@ const kModes = [
   "uv"
 ] as const satisfies readonly Mode[];
 
+export interface RampSpaceTarget {
+  rampSpace: PixelArtPreferences["rampSpace"];
+}
+
 export class EditorPreferences {
   readonly #storage: StorageAdapter;
   readonly #preferences: Preferences;
   readonly #view: ViewPreferences;
+  readonly #panel: RampSpaceTarget;
   #mode: Mode;
   #canvas: ViewCanvas | null = null;
   #gridSize = 0;
@@ -33,10 +38,12 @@ export class EditorPreferences {
 
   constructor(
     storage: StorageAdapter,
-    preferences: Preferences
+    preferences: Preferences,
+    panel: RampSpaceTarget
   ) {
     this.#storage = storage;
     this.#preferences = preferences;
+    this.#panel = panel;
     this.#view = new ViewPreferences(preferences);
     const stored = storage.get(MODE_STORAGE_KEY);
     this.#mode = kModes.find((mode) => mode === stored) ?? "paint";
@@ -65,11 +72,11 @@ export class EditorPreferences {
     this.dispose();
     this.#canvas = canvas;
     this.#view.follow(canvas);
-    this.#resize(this.#preferences.values(PIXEL_ART_PREFERENCES));
+    this.#applyValues(this.#preferences.values(PIXEL_ART_PREFERENCES));
     canvas.grid.on("changed", this.#saveSize);
     this.#unwatch = this.#preferences.watch(
       PIXEL_ART_PREFERENCES,
-      this.#resize
+      this.#applyValues
     );
   }
 
@@ -81,9 +88,10 @@ export class EditorPreferences {
     this.#canvas = null;
   }
 
-  readonly #resize = (
+  readonly #applyValues = (
     values: PixelArtPreferences
   ): void => {
+    this.#panel.rampSpace = values.rampSpace;
     if (this.#canvas !== null) {
       this.#gridSize = values.gridSize;
       this.#canvas.grid.size = values.gridSize;

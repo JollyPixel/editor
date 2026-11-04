@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import { downloadBlob } from "./dom.ts";
+
 export class PngFile {
   readonly name: string;
   readonly bytes: Uint8Array<ArrayBuffer>;
@@ -11,14 +14,9 @@ export class PngFile {
   }
 
   download(): void {
-    const url = URL.createObjectURL(
-      new Blob([this.bytes], { type: "image/png" })
+    downloadBlob(
+      new Blob([this.bytes], { type: "image/png" }),
+      this.name
     );
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = this.name;
-    anchor.click();
-
-    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }

@@ -60,6 +60,30 @@ colorRamp(black, white, 5, { space: "srgb" }).map((color) => formatHex(color));
 // ["#000000", "#404040", "#808080", "#bfbfbf", "#ffffff"]
 ```
 
+## `shadeRamp()`
+
+```ts
+interface ShadeRampOptions {
+  shades?: number; // default 3
+  tints?: number; // default 3
+  hueShift?: number; // degrees, default 20
+}
+
+function shadeRamp(color: RGBA, options?: ShadeRampOptions): RGBA[]
+```
+
+Returns `shades` darker colors, `color` itself, then `tints` lighter colors,
+from dark to light. It works in OKLCH:
+
+- Lightness moves evenly toward black and white without reaching them.
+- Shades turn their hue toward blue (265°) and tints toward yellow (85°). The
+  turn grows up to `hueShift` at the ends and never passes the target hue.
+- Chroma drops by up to 40% toward both ends. Out of gamut colors are mapped
+  like `oklchToRgb`, which can move hue a few degrees.
+- Grays stay gray, and alpha is kept.
+
+Throws a `RangeError` when `shades` or `tints` is not a non-negative integer.
+
 ## `colorHarmony()`
 
 ```ts

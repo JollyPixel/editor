@@ -55,6 +55,8 @@ function acceptsPixelCommand(
       return isValidNormalMap(command);
     case "uv-net-saved":
       return SavedUVNet.parse(command.metadata.net) !== null;
+    case "palette-color-changed":
+      return command.metadata.index < state.palette.size;
     default:
       return true;
   }
@@ -106,6 +108,11 @@ function pixelCommandWrites(
       return {
         scope: "palette",
         keys: [paletteKey(command.metadata.index)]
+      };
+    case "palette-replaced":
+      return {
+        scope: "palette",
+        reset: true
       };
     case "uv-net-saved":
     case "uv-net-deleted":

@@ -151,6 +151,7 @@ describe("pixelArtAssetKind", () => {
       "uv-net-default-changed",
       "normal-map-toggled",
       "palette-color-changed",
+      "palette-replaced",
       "normal-map-defaults-patched",
       "normal-map-zone-set",
       "normal-map-zone-deleted"

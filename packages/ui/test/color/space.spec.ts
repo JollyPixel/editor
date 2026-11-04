@@ -28,11 +28,26 @@ describe("Color.PickerSpace", () => {
       a: 1
     };
 
-    for (const space of [PickerSpace.hsv, PickerSpace.okhsv]) {
+    for (const space of [PickerSpace.hsv, PickerSpace.okhsv, PickerSpace.okhsl]) {
       const stops = space.valueRamp(point).split(", ");
       assert.equal(stops[0], "#000000");
       assert.equal(stops.at(-1), space.hex({ ...point, v: 1 }));
       assert.equal(space.hueRamp.split(", ").at(0), space.hueRamp.split(", ").at(-1));
     }
+  });
+
+  test("okhsl puts lightness on the value axis and its pure hues at half lightness", () => {
+    const space = PickerSpace.named("okhsl");
+    const teal = { r: 0.2, g: 0.6, b: 0.55, a: 1 };
+    const point = space.fromRgb(teal);
+
+    assert.equal(space.hex(point), "#33998c");
+    assert.equal(space.axisLabel, "Lightness");
+    assert.equal(space.hex({ ...point, v: 1 }), "#ffffff");
+    assert.notEqual(space.hueRamp.split(", ")[0], "#ffffff");
+    assert.equal(
+      PickerSpace.hsv.convert({ h: 75, s: 0, v: 0.5, a: 1 }, space).h,
+      75
+    );
   });
 });

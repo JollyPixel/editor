@@ -1,5 +1,6 @@
 export {
   fromRGBA8,
+  isRGBA8,
   toRGBA8
 } from "./bytes.ts";
 export * from "./ColorSpace.ts";

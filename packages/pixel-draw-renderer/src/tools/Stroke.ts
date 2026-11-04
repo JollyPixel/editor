@@ -1,5 +1,8 @@
 // Import Internal Dependencies
-import type { BrushPaintSource } from "./Brush.ts";
+import type {
+  BrushPainter,
+  BrushPaintSource
+} from "./Brush.ts";
 import type { DefaultPixelBuffer } from "../buffer/types.ts";
 import type { PixelDocument } from "../PixelDocument.ts";
 import { positionKey } from "../utils/math.ts";
@@ -12,26 +15,36 @@ import type {
 interface StrokePixel {
   position: Vec2;
   before: RGBA8;
+  after: RGBA8;
+}
+
+export interface StrokeCover {
+  positions: Vec2[];
+  colors: RGBA8[];
 }
 
 export class Stroke {
   readonly source: BrushPaintSource;
-  readonly color: RGBA8;
+  readonly #paint: BrushPainter;
   #pixels = new Map<string, StrokePixel>();
   #painted: PeerStrokePixel[] = [];
 
   constructor(
     source: BrushPaintSource,
-    color: RGBA8
+    paint: BrushPainter
   ) {
     this.source = source;
-    this.color = color;
+    this.#paint = paint;
   }
 
   cover(
     positions: Iterable<Vec2>,
     buffer: Pick<DefaultPixelBuffer, "samplePixels">
-  ): void {
+  ): StrokeCover {
+    const covered: StrokeCover = {
+      positions: [],
+      colors: []
+    };
     for (const position of positions) {
       const key = positionKey(position);
       if (this.#pixels.has(key)) {
@@ -41,15 +54,20 @@ export class Stroke {
       const [before] = buffer.samplePixels([
         position
       ]);
+      const after = this.#paint(before);
       this.#pixels.set(
         key,
-        { position, before }
+        { position, before, after }
       );
       this.#painted.push({
         ...position,
-        color: this.color
+        color: after
       });
+      covered.positions.push(position);
+      covered.colors.push(after);
     }
+
+    return covered;
   }
 
   paintedPixels(): PeerStrokePixel[] {
@@ -65,7 +83,7 @@ export class Stroke {
 
     document.recordStroke(
       pixels.map((pixel) => pixel.position),
-      this.color,
+      pixels.map((pixel) => pixel.after),
       pixels.map((pixel) => pixel.before)
     );
   }

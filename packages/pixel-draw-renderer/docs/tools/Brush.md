@@ -1,6 +1,6 @@
 # Brush
 
-Stores the colors, size and highlight colors used by the drawing tools. `PixelArtCanvas` exposes it as `canvas.brush`.
+Stores the colors, ink, size and highlight colors used by the drawing tools. `PixelArtCanvas` exposes it as `canvas.brush`.
 
 ```ts
 canvas.brush.primary.set("#ff6600", 0.8);
@@ -21,6 +21,7 @@ interface BrushOptions {
   color?: ColorInput;
   secondaryColor?: ColorInput;
   eraseColor?: ColorInput;
+  ink?: BrushInkName; // default "blend"
   size?: number;
   maxSize?: number;
   highlight?: {
@@ -56,6 +57,23 @@ Each slot stores a color and opacity. `erase` is what erase mode writes; assigni
 
 `asRGBA()` returns a mutable snapshot with byte-valued RGBA components. `asString()` returns `rgba(r, g, b, a)` by default. Pass `"hex"` for a six-digit hex color without opacity.
 
+### `ink`
+
+```ts
+type BrushInkName = "blend" | "replace" | "lock-alpha";
+
+get ink(): BrushInkName
+set ink(value: BrushInkName)
+```
+
+How strokes, lines and fills combine the brush color with the pixels under it. Erasing always replaces. Setting an unknown name throws a `RangeError`.
+
+- `"blend"` composites the color over the pixel with straight alpha in sRGB. Opaque colors and fully transparent ones are written as they are, so a transparent brush still clears.
+- `"replace"` writes the color, alpha included.
+- `"lock-alpha"` mixes the color into the pixel by the brush opacity and keeps the pixel's alpha. Transparent pixels stay untouched.
+
+A stroke inks each pixel once, against the color it had before the stroke, so going over a pixel twice in one drag does not darken it.
+
 ### `size`
 
 ```ts
@@ -85,7 +103,17 @@ Colors for the inner and outer strokes of the brush cursor.
 paintColor(source: BrushPaintSource): RGBA
 ```
 
-Returns the color a stroke takes for the given source, where `BrushPaintSource` is `"primary" | "secondary" | "erase"`. Every drawing tool resolves its color through it.
+Returns the raw color of the given source, where `BrushPaintSource` is `"primary" | "secondary" | "erase"`, before any ink.
+
+### `painter(source)`
+
+```ts
+type BrushPainter = (under: RGBA8) => RGBA8;
+
+painter(source: BrushPaintSource): BrushPainter
+```
+
+Returns the function that inks the current color of `source` over a pixel. It keeps that color and ink, so later brush changes do not affect it. Every drawing tool paints through it.
 
 ### `swapColors()`
 
