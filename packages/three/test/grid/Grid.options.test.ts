@@ -46,7 +46,8 @@ describe("toOptions()", () => {
       offset: 1.25,
       enabled: false,
       followCamera: false,
-      infiniteGrid: false
+      infiniteGrid: false,
+      doubleSided: true
     });
 
     assert.deepStrictEqual(grid.toOptions(), {
@@ -84,7 +85,8 @@ describe("toOptions()", () => {
       offset: 1.25,
       enabled: false,
       followCamera: false,
-      infiniteGrid: false
+      infiniteGrid: false,
+      doubleSided: true
     });
   });
 

@@ -7,6 +7,7 @@ import {
 } from "lit";
 import {
   AmbientThemeController,
+  FrameUpdateController,
   SubscriptionController
 } from "@jolly-pixel/ui";
 import { styleMap } from "lit/directives/style-map.js";
@@ -16,7 +17,6 @@ import type { PeerPlayhead } from "../../collaboration/Playheads.ts";
 import type { SoundCollaboration } from "../../collaboration/SoundCollaboration.ts";
 import type { UnplayableStatus } from "../../player/sound/UnplayableSound.ts";
 import type { SoundPlayer } from "../../player/SoundPlayer.ts";
-import { FrameUpdate } from "./FrameUpdate.ts";
 import { soundWaveStyles } from "./SoundWave.styles.ts";
 import {
   PLAYHEAD_TAG_HEIGHT,
@@ -46,7 +46,7 @@ export class SoundWave extends LitElement {
   #theme = new AmbientThemeController(this, {
     onChange: () => this.#drawWaveform()
   });
-  #frames = new FrameUpdate(this);
+  #frames = new FrameUpdateController(this);
   #width = 0;
   #playheads: PeerPlayhead[] = [];
   #resize = new ResizeObserver((entries) => {

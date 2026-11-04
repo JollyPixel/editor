@@ -304,13 +304,20 @@ export interface BuildGridMaterialOptions {
   uniforms: GridUniforms;
   fadeFrom: GridFadeFrom;
   infiniteGrid: boolean;
+  doubleSided: boolean;
 }
 
 export function buildGridMaterial(
   options: BuildGridMaterialOptions
 ): THREE.MeshBasicNodeMaterial {
   const {
-    plane, cellStyle, sectionStyle, uniforms, fadeFrom, infiniteGrid
+    plane,
+    cellStyle,
+    sectionStyle,
+    uniforms,
+    fadeFrom,
+    infiniteGrid,
+    doubleSided
   } = options;
 
   const material = new THREE.MeshBasicNodeMaterial();
@@ -418,7 +425,7 @@ export function buildGridMaterial(
   material.colorNode = colorNode;
   material.transparent = true;
   material.depthWrite = false;
-  material.side = THREE.FrontSide;
+  material.side = doubleSided ? THREE.DoubleSide : THREE.FrontSide;
 
   return material;
 }

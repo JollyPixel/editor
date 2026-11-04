@@ -14,7 +14,9 @@ export * from "./createDefaultAssetLoaders.ts";
 export {
   ModelAssetLoader,
   ModelAssetType,
-  type Model
+  parseModel,
+  type Model,
+  type ModelParseOptions
 } from "./model.ts";
 export {
   FontAssetLoader,

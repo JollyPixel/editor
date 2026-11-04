@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
 import { Grid } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
@@ -21,9 +20,9 @@ export function createModelGrid(): Grid {
     },
     axes: {
       show: true
-    }
+    },
+    doubleSided: true
   });
-  (grid.material as THREE.Material).side = THREE.DoubleSide;
   grid.renderOrder = RenderOrder.grid;
 
   return grid;

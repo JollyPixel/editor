@@ -74,6 +74,7 @@ interface GridOptions {
   enabled?: boolean;
   followCamera?: boolean;
   infiniteGrid?: boolean;
+  doubleSided?: boolean;
 }
 ```
 
@@ -95,6 +96,10 @@ Math.max(fade.distance * Grid.Defaults.extent.fadeMultiplier,
 The built-in values produce `Math.max(fade.distance * 4, 200)`.
 
 Set `infiniteGrid: true` to draw a full-viewport grid without a visible edge. Infinite mode ignores `extent` and `followCamera`; `plane`, `offset`, and fade settings still apply. `infiniteGrid` is read-only after construction.
+
+### `doubleSided`
+
+The grid draws only its front face by default, so it disappears when the camera goes under it. Set `doubleSided: true` to draw both faces, for example in a model viewer the camera can orbit below. `doubleSided` is read-only after construction.
 
 ## Cell and section options
 
@@ -157,6 +162,7 @@ readonly plane: GridPlaneValue
 readonly cellStyle: GridStyleValue
 readonly sectionStyle: GridStyleValue
 readonly infiniteGrid: boolean
+readonly doubleSided: boolean
 readonly extent: number
 
 cellSize: number
@@ -238,6 +244,7 @@ interface GridDefaults {
   offset: number;
   enabled: boolean;
   infiniteGrid: boolean;
+  doubleSided: boolean;
   extent: GridExtentDefaults;
 }
 ```
@@ -260,7 +267,7 @@ Reads the grid's current state back as a fully populated `GridOptions`, live pro
 cloneWith(overrides?: GridOptions): Grid
 ```
 
-Builds a new `Grid` from `toOptions()` with `overrides` applied. The `cell`, `section`, `fade`, and `axes` groups merge field by field, so an override names only what changes. Use it for settings fixed at construction (`plane`, `extent`, `infiniteGrid`, `cell.style`, `section.style`, `fade.from`).
+Builds a new `Grid` from `toOptions()` with `overrides` applied. The `cell`, `section`, `fade`, and `axes` groups merge field by field, so an override names only what changes. Use it for settings fixed at construction (`plane`, `extent`, `infiniteGrid`, `doubleSided`, `cell.style`, `section.style`, `fade.from`).
 
 The source grid is left untouched: remove and `dispose()` it yourself once the replacement is added.
 

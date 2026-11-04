@@ -302,6 +302,8 @@ import {
   their grip and commits the order to a model.
 - [`SubscriptionController`](./docs/api/subscription-controller.md): keeps a host subscribed to one
   source while connected.
+- [`FrameUpdateController`](./docs/api/frame-update-controller.md): repaints a host on the next
+  animation frame, once however often it is scheduled.
 - [`LazyTemplate`](./docs/api/lazy-template.md): renders part of a template once the module that
   defines its elements is loaded.
 

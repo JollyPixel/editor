@@ -94,6 +94,14 @@ describe("constructor", () => {
     assert.strictEqual(grid.fade.from, "camera");
     assert.ok(grid.followCamera);
     assert.strictEqual(grid.infiniteGrid, false);
+    assert.strictEqual(grid.doubleSided, false);
+  });
+
+  test("doubleSided draws the plane from both faces", () => {
+    const sides = [new Grid(), new Grid({ doubleSided: true })]
+      .map(({ material }) => [material].flat().map((entry) => entry.side));
+
+    assert.deepStrictEqual(sides, [[THREE.FrontSide], [THREE.DoubleSide]]);
   });
 
   test("fade: { from: \"origin\" } defaults followCamera to false", () => {

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model Viewer</title>
+  <link rel="stylesheet" href="./main.css">
+</head>
+
+<body>
+  <jolly-scope theme="dark" density="comfortable">
+    <jolly-dock-layout storage-key="model:layout">
+      <jolly-dock
+        key="left"
+        side="left"
+        collapsible
+        size="280"
+        min-size="200"
+        max-size="480"
+      >
+        <jolly-pane-group active="model">
+          <jolly-pane key="model" heading="Model" icon="model-cube" locked>
+            <jolly-model-file></jolly-model-file>
+            <jolly-model-details></jolly-model-details>
+          </jolly-pane>
+          <jolly-pane key="animate" heading="Animate" icon="model-animate" locked>
+            <jolly-model-animate></jolly-model-animate>
+          </jolly-pane>
+        </jolly-pane-group>
+      </jolly-dock>
+      <div class="viewport-column">
+        <jolly-editor-toolbar></jolly-editor-toolbar>
+        <section id="model-viewport">
+          <canvas tabindex="-1"></canvas>
+          <jolly-model-status></jolly-model-status>
+        </section>
+      </div>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./src/index.ts"></script>
+</body>
+
+</html>

@@ -145,12 +145,21 @@ describe("StudioProject", () => {
       );
       assert.deepEqual(
         project.editors.descriptors().map((editor) => editor.name),
-        ["pixel-art", "scene", "script", "sound", "voxel-map", "voxel-model"]
+        [
+          "model",
+          "pixel-art",
+          "scene",
+          "script",
+          "sound",
+          "voxel-map",
+          "voxel-model"
+        ]
       );
       assert.deepEqual(
         project.kinds.descriptors().map((descriptor) => descriptor.kind),
         [
           "font",
+          "model",
           "pixelart",
           "scene",
           "script",
