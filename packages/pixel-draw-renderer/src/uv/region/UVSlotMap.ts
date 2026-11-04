@@ -7,11 +7,11 @@ import {
   copyGeometry,
   geometryAt,
   geometryKey,
-  geometryRotation,
   quarterTurn,
   boundingRect,
   rotateGeometry,
-  rotateRect
+  rotateRect,
+  sameOrientation
 } from "../geometry/geometry.ts";
 import {
   DEFAULT_UV_SLOTS,
@@ -150,7 +150,7 @@ export class UVSlotMap {
 
       return theirs !== undefined &&
         geometryKey(theirs) === geometryKey(geometry) &&
-        geometryRotation(theirs) === geometryRotation(geometry);
+        sameOrientation(theirs, geometry);
     });
   }
 

@@ -152,6 +152,28 @@ describe("UVRegion.rotated", () => {
     assert.strictEqual(moved.slotGeometry("front").rotation, 1);
   });
 
+  test("moving and rotating a mirrored free slot keeps it mirrored", () => {
+    const region = freeRegion({
+      id: "a",
+      color: "#f00",
+      state: "free",
+      faces: {
+        front: { x: 0, y: 0, width: 4, height: 8, mirrored: true }
+      }
+    });
+
+    const turned = region.movedTo({ x: 10, y: 10 }, "front").rotated("cw", "front");
+
+    assert.deepStrictEqual(turned.slotGeometry("front"), {
+      x: 10,
+      y: 10,
+      width: 8,
+      height: 4,
+      rotation: 1,
+      mirrored: true
+    });
+  });
+
   test("withGeometry replaces one free slot and ignores other states", () => {
     const region = freeRegion({
       id: "a",

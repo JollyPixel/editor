@@ -112,6 +112,7 @@ export {
   rotateCorner,
   rotateGeometry,
   rotateUv,
+  geometryMirrored,
   geometryRotation,
   triangleCorner,
   withRotation

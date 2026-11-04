@@ -27,7 +27,7 @@ async function convert(
   const conversion = kHandler.conversions?.[extension];
   assert.ok(conversion !== undefined);
 
-  return conversion(content);
+  return (await conversion(content)).content;
 }
 
 describe("soundAssetKind", () => {

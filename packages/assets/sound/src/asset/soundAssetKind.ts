@@ -33,7 +33,11 @@ export function soundAssetKind(): AssetKindHandler<BinaryAssetState, never> {
     conversions: Object.fromEntries(
       SOUND_SOURCE_EXTENSIONS.map((extension) => [
         extension,
-        oggContentFromAudio
+        async(audio: Uint8Array) => {
+          return {
+            content: await oggContentFromAudio(audio)
+          };
+        }
       ])
     ),
 

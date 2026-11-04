@@ -28,6 +28,8 @@ type UVQuarterTurn = 0 | 1 | 2 | 3;
 
 type UVRect = SelectionRect & {
   rotation?: UVQuarterTurn;
+  // Flips the face left to right before `rotation` applies.
+  mirrored?: boolean;
 };
 
 type UVTriangle = {
@@ -296,6 +298,14 @@ geometryRotation(geometry: UVGeometry): UVQuarterTurn
 ```
 
 Returns the geometry's `rotation`, or `0`.
+
+### `geometryMirrored(geometry)`
+
+```ts
+geometryMirrored(geometry: UVGeometry): boolean
+```
+
+Returns `true` for a rect whose `mirrored` is set. Triangles and compounds are never mirrored. A mesh consumer flips `u` to `1 - u` before `rotateUv()`. Moving, resizing and rotating a rect keep the flag.
 
 ### `withRotation(geometry, rotation)`
 

@@ -22,7 +22,7 @@ describe("fontAssetKind", () => {
   test("loads the content its .otf conversion produces and serializes it back", async() => {
     const conversion = kHandler.conversions?.[".otf"];
     assert.ok(conversion !== undefined);
-    const content = await conversion(blockLetterFont());
+    const { content } = await conversion(blockLetterFont());
     const state = kHandler.create("font-1");
     kHandler.load(state, content);
 

@@ -15,7 +15,7 @@ async function convertPng(
   const conversion = pixelArtAssetKind().conversions?.[".png"];
   assert.ok(conversion);
 
-  return conversion(png);
+  return (await conversion(png)).content;
 }
 
 describe("pixelArtAssetKind .png conversion", () => {

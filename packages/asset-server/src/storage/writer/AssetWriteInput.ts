@@ -3,6 +3,7 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import type { ConvertedAsset } from "../../model/kinds/AssetKindHandler.ts";
 import type { PathConflictPolicy } from "../../model/PathConflictPolicy.ts";
 
 export interface AssetPayload {
@@ -28,14 +29,9 @@ export interface WriteOptions {
 
 interface PayloadWriteOptions extends WriteOptions, AssetPayload {}
 
-export interface CreateAssetInput extends Omit<PayloadWriteOptions, "data"> {
+interface CreateAssetTarget extends WriteOptions {
   path: string;
   kind?: string;
-  /**
-   * @default the serialized `create(assetId)` state of the kind, linked to
-   * a same-named asset of each of its companion kinds
-   */
-  data?: Uint8Array;
   /**
    * @default the id the asset index records for a vacant path, else a
    * random UUID
@@ -43,6 +39,30 @@ export interface CreateAssetInput extends Omit<PayloadWriteOptions, "data"> {
   assetId?: string;
   onPathConflict?: PathConflictPolicy;
 }
+
+export interface CreateAssetFromPayload
+  extends CreateAssetTarget, Omit<AssetPayload, "data"> {
+  /**
+   * @default the serialized `create(assetId)` state of the kind, linked to
+   * a same-named asset of each of its companion kinds
+   */
+  data?: Uint8Array;
+  converted?: never;
+}
+
+export interface CreateConvertedAsset extends CreateAssetTarget {
+  /**
+   * Content converted from another format. Each companion is created at the
+   * asset's path with its kind's extension, and its id replaces the one the
+   * content uses for it.
+   */
+  converted: ConvertedAsset;
+  data?: never;
+  dependencies?: never;
+  parts?: never;
+}
+
+export type CreateAssetInput = CreateAssetFromPayload | CreateConvertedAsset;
 
 export interface RestoredFrom {
   name: string;

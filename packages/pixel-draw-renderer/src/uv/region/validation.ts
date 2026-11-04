@@ -46,6 +46,14 @@ function hasValidRotation(
     isUVQuarterTurn(value.rotation);
 }
 
+function hasValidMirror(
+  value: object
+): boolean {
+  return !("mirrored" in value) ||
+    value.mirrored === undefined ||
+    typeof value.mirrored === "boolean";
+}
+
 export function isUVTextureRect(
   value: unknown
 ): value is SelectionRect {
@@ -99,7 +107,7 @@ export function isUVGeometry(
     return false;
   }
   if (!("shape" in value)) {
-    return isUVTextureRect(value);
+    return isUVTextureRect(value) && hasValidMirror(value);
   }
 
   if (value.shape === "compound") {

@@ -4,6 +4,7 @@ import {
   boundingRect,
   rotateCorner,
   rotateUv,
+  geometryMirrored,
   geometryRotation,
   triangleCorner,
   type UVGeometry,
@@ -28,6 +29,7 @@ export function applyUvGeometry(
 ): void {
   const rect = boundingRect(uvGeometry);
   const rotation = geometryRotation(uvGeometry);
+  const mirrored = geometryMirrored(uvGeometry);
   const corner = triangleCorner(uvGeometry);
   const orientation = corner === null ?
     null :
@@ -45,7 +47,9 @@ export function applyUvGeometry(
     const end = range.start + range.count;
 
     for (let index = range.start; index < end; index++) {
-      const baseU = baseUv[index * 2];
+      const baseU = mirrored ?
+        1 - baseUv[index * 2] :
+        baseUv[index * 2];
       const baseV = baseUv[(index * 2) + 1];
       const [u, v] = rotateUv(
         ...orientUv(baseU, baseV, orientation),

@@ -41,7 +41,11 @@ export function fontAssetKind(): AssetKindHandler<FontAssetState, never> {
     conversions: Object.fromEntries(
       FONT_SOURCE_EXTENSIONS.map((extension) => [
         extension,
-        typefaceContentFromFont
+        async(font: Uint8Array) => {
+          return {
+            content: await typefaceContentFromFont(font)
+          };
+        }
       ])
     ),
 

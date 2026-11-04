@@ -22,6 +22,7 @@ import {
   type CatalogApplied,
   type CatalogChange,
   type CatalogDeleteCommand,
+  type CreateAssetInput,
   type ImportPlan,
   type JsonAssetFileOptions
 } from "#src/index.ts";
@@ -248,6 +249,36 @@ describe("asset room message types", () => {
       ...commands,
       relay: { inbound: [kNudge], outbound: [] }
     }).type.not.toBeAssignableTo<AssetCommands<unknown, RoomCommand>>();
+  });
+});
+
+describe("asset creation input types", () => {
+  const target = {
+    path: "duo.owner",
+    actor: {
+      type: "user",
+      id: "alice"
+    }
+  } as const;
+  const converted = {
+    content: new Uint8Array(),
+    companions: [{ id: "texture", kind: "counter", content: new Uint8Array() }]
+  };
+
+  test("a create takes a payload or a converted asset", () => {
+    expect({ ...target, data: new Uint8Array(), parts: new Map<string, Uint8Array>() })
+      .type.toBeAssignableTo<CreateAssetInput>();
+    expect({ ...target, converted })
+      .type.toBeAssignableTo<CreateAssetInput>();
+  });
+
+  test("a converted asset refuses payload fields", () => {
+    expect({ ...target, converted, data: new Uint8Array() })
+      .type.not.toBeAssignableTo<CreateAssetInput>();
+    expect({ ...target, converted, parts: new Map<string, Uint8Array>() })
+      .type.not.toBeAssignableTo<CreateAssetInput>();
+    expect({ ...target, converted, dependencies: [] })
+      .type.not.toBeAssignableTo<CreateAssetInput>();
   });
 });
 

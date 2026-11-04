@@ -27,7 +27,9 @@ editing operation. The asset kind defines how the event changes live state.
 The behavior registered for one asset kind. It creates, loads, and clears live
 state, applies the kind's domain events, and serializes that state as asset
 content. Its conversions turn other formats, such as PNG, into that content
-when an asset is created.
+when an asset is created. A conversion can also return companion content, such
+as the texture inside a CraftStudio model, created next to the asset and linked
+through the kind's `rebind`.
 
 ### Asset File
 

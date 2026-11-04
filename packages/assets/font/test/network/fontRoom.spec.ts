@@ -25,7 +25,7 @@ describe("font room", () => {
     const handler = fontAssetKind();
     const conversion = handler.conversions?.[".ttf"];
     assert.ok(conversion !== undefined);
-    const content = await conversion(blockLetterFont());
+    const { content } = await conversion(blockLetterFont());
     const server = new LiveAssetRoom(handler);
     handler.load(server.state, content);
 

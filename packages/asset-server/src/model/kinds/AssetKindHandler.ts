@@ -55,9 +55,29 @@ export interface AssetCommands<
   ): AssetLiveProtocol<TCommand, TRelay>;
 }
 
+export interface ConvertedCompanion {
+  /**
+   * Id the converted content uses for this companion. The created companion's
+   * id replaces it through the owner kind's `rebind`.
+   */
+  readonly id: string;
+  readonly kind: string;
+  readonly content: Uint8Array;
+}
+
+export interface ConvertedAsset {
+  readonly content: Uint8Array;
+  /**
+   * Assets created next to the converted one, at its path with each companion
+   * kind's extension.
+   * @default []
+   */
+  readonly companions?: readonly ConvertedCompanion[];
+}
+
 export type AssetConversion = (
   content: Uint8Array
-) => Promise<Uint8Array>;
+) => Promise<ConvertedAsset>;
 
 export interface AssetKindCompanion<TState = unknown> {
   readonly kind: string;

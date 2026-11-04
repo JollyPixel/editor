@@ -44,7 +44,23 @@ function tallyCounter(): AssetKindHandler {
   return {
     ...counterHandler(),
     conversions: {
-      ".tally": async(content) => bytes(String(text(content).length))
+      ".tally": async(content) => {
+        return {
+          content: bytes(String(text(content).length))
+        };
+      },
+      ".split": async(content) => {
+        return {
+          content,
+          companions: [
+            {
+              id: "half",
+              kind: "counter",
+              content
+            }
+          ]
+        };
+      }
     }
   };
 }
@@ -109,6 +125,16 @@ describe("catalog:replace over loopback", () => {
     await project.connection.catalog.replace(project.assetId, bytes("|||"), { from: ".tally" });
 
     assert.strictEqual(await project.read(), "3");
+  });
+
+  test("a conversion that creates companions leaves the content alone", async() => {
+    await using project = await replaceProject();
+
+    await assert.rejects(
+      project.connection.catalog.replace(project.assetId, bytes("2"), { from: ".split" }),
+      /creates companion assets/
+    );
+    assert.strictEqual(await project.read(), "1");
   });
 
   test("the same content leaves the asset and its tags alone", async() => {

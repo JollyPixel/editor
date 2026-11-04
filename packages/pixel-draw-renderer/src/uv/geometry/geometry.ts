@@ -107,6 +107,38 @@ export function geometryRotation(
   return geometry.rotation ?? 0;
 }
 
+export function geometryMirrored(
+  geometry: UVGeometry
+): boolean {
+  return !("shape" in geometry) && geometry.mirrored === true;
+}
+
+export function sameOrientation(
+  a: UVGeometry,
+  b: UVGeometry
+): boolean {
+  return geometryRotation(a) === geometryRotation(b) &&
+    geometryMirrored(a) === geometryMirrored(b);
+}
+
+function orientedLike(
+  rect: SelectionRect,
+  source: UVGeometry,
+  turns = 0
+): UVGeometry {
+  const rotated = withRotation(
+    copyRect(rect),
+    geometryRotation(source) + turns
+  );
+
+  return geometryMirrored(source) ?
+    {
+      ...rotated,
+      mirrored: true
+    } :
+    rotated;
+}
+
 export function withRotation(
   geometry: UVGeometry,
   rotation: number
@@ -126,10 +158,7 @@ export function copyGeometry(
   geometry: UVGeometry
 ): UVGeometry {
   if (!("shape" in geometry)) {
-    return withRotation(
-      copyRect(geometry),
-      geometryRotation(geometry)
-    );
+    return orientedLike(geometry, geometry);
   }
 
   const copied: UVGeometry = geometry.shape === "compound" ?
@@ -166,7 +195,7 @@ export function geometryAt(
       ...copied,
       rect: copyRect(rect)
     } :
-    withRotation(copyRect(rect), geometryRotation(geometry));
+    orientedLike(rect, geometry);
 }
 
 export function rectKey(
@@ -347,9 +376,8 @@ export function rotateGeometry(
   }
 
   const rect = rotateRect(boundingRect(geometry), quarter);
-  const rotation = geometryRotation(geometry) + quarter;
   if (!("shape" in geometry)) {
-    return withRotation(rect, rotation);
+    return orientedLike(rect, geometry, quarter);
   }
 
   const rotated: UVGeometry = geometry.shape === "compound" ?
@@ -364,7 +392,7 @@ export function rotateGeometry(
       rect
     };
 
-  return withRotation(rotated, rotation);
+  return withRotation(rotated, geometryRotation(geometry) + quarter);
 }
 
 export function rotateUv(
