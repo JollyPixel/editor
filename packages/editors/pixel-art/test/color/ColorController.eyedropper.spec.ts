@@ -14,6 +14,7 @@ import {
 import { ColorController } from "../../src/color/ColorController.ts";
 import type { TextureSetEvents } from "../../src/textures/TextureSet.ts";
 import { createElementHost as createHost } from "../fixtures/host.ts";
+import { FakeColorOptions } from "./fixtures/paletteCanvas.ts";
 
 class FakeDocument {
   palette = ColorPalette.create();
@@ -103,7 +104,8 @@ function setup() {
   const controller = new ColorController(
     host,
     () => canvas,
-    new Emitter<TextureSetEvents>()
+    new Emitter<TextureSetEvents>(),
+    new FakeColorOptions()
   );
 
   return {

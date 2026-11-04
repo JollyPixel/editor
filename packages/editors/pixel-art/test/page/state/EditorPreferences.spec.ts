@@ -19,6 +19,12 @@ import {
   MODE_STORAGE_KEY
 } from "../../../page/src/state/EditorPreferences.ts";
 
+function createPanel() {
+  return {
+    rampSpace: "oklab" as const
+  };
+}
+
 function createCanvas() {
   return {
     uv: new UVMap({
@@ -36,7 +42,7 @@ describe("EditorPreferences", () => {
     storage.set(MODE_STORAGE_KEY, "uv");
     const preferences = new EditorPreferences(storage, new Preferences({
       overrides: [["pixel-art", { showSizeLabels: true, showGrid: true }]]
-    }));
+    }), createPanel());
     const canvas = createCanvas();
 
     preferences.activate(canvas);
@@ -52,20 +58,20 @@ describe("EditorPreferences", () => {
     const storage = new MemoryStorageAdapter();
     storage.set(MODE_STORAGE_KEY, "unknown");
 
-    assert.equal(new EditorPreferences(storage, new Preferences()).mode, "paint");
+    assert.equal(new EditorPreferences(storage, new Preferences(), createPanel()).mode, "paint");
   });
 
   test("grid changes on the active canvas are restored on the next canvas", () => {
     const storage = new MemoryStorageAdapter();
     const preferences = new Preferences();
     const first = createCanvas();
-    new EditorPreferences(storage, preferences).activate(first);
+    new EditorPreferences(storage, preferences, createPanel()).activate(first);
 
     first.grid.visible = true;
     first.grid.snap = true;
     first.grid.size = 32;
     const next = createCanvas();
-    new EditorPreferences(storage, preferences).activate(next);
+    new EditorPreferences(storage, preferences, createPanel()).activate(next);
 
     assert.deepEqual(
       [next.grid.visible, next.grid.snap, next.grid.size],
@@ -76,15 +82,17 @@ describe("EditorPreferences", () => {
   test("follows a change made in the Settings tab without writing it back", () => {
     const preferences = new Preferences();
     const canvas = createCanvas();
-    new EditorPreferences(new MemoryStorageAdapter(), preferences)
+    const panel = createPanel();
+    new EditorPreferences(new MemoryStorageAdapter(), preferences, panel)
       .activate(canvas);
 
-    preferences.receive("pixel-art", { showGrid: true, gridSize: 8 });
+    preferences.receive("pixel-art", { showGrid: true, gridSize: 8, rampSpace: "srgb" });
 
-    assert.deepEqual([canvas.grid.visible, canvas.grid.size], [true, 8]);
+    assert.deepEqual([canvas.grid.visible, canvas.grid.size, panel.rampSpace], [true, 8, "srgb"]);
     assert.deepEqual(preferences.overrides("pixel-art"), {
       showGrid: true,
-      gridSize: 8
+      gridSize: 8,
+      rampSpace: "srgb"
     });
   });
 });

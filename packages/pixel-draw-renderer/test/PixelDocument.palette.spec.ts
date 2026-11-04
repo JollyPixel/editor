@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 import { PixelDocument } from "#src/PixelDocument.ts";
 import { HistoryDocument } from "./helpers/document/HistoryDocument.ts";
 import { ColorPalette } from "#src/palette/ColorPalette.ts";
+import { PixelBuffer } from "#src/buffer/PixelBuffer.ts";
+import { PixelDocumentState } from "#src/sync/PixelDocumentState.ts";
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
 
 // CONSTANTS
@@ -28,6 +30,46 @@ describe("Pixel Document palette", () => {
     assert.deepEqual(peer.palette.colorAt(3), kColor);
     assert.equal(echoed.length, 0);
     assert.equal(peer.canUndo, false);
+  });
+
+  test("a replaced palette resizes, undoes and reaches another document as one command", () => {
+    const local = new HistoryDocument({ size: { x: 1, y: 1 } });
+    const peer = new HistoryDocument({ size: { x: 1, y: 1 } });
+    const sent: PixelCommand[] = [];
+    local.on("command", (command) => {
+      sent.push(command);
+      peer.applyRemoteCommand(command);
+    });
+    const before = local.palette.toJSON();
+
+    local.replacePalette(local.palette.withInserted(10, [kColor, kColor]));
+    assert.equal(peer.palette.size, 12);
+    assert.deepEqual(peer.palette.colorAt(11), kColor);
+    local.undo();
+    assert.deepEqual(peer.palette.toJSON(), before);
+    local.replacePalette(ColorPalette.from(before));
+    assert.deepEqual(sent.map((command) => command.action), ["palette-replaced", "palette-replaced"]);
+  });
+
+  test("slot edits past the end of the palette are refused", () => {
+    const state = new PixelDocumentState({
+      buffer: new PixelBuffer({ size: { x: 1, y: 1 } })
+    });
+    state.apply({
+      action: "palette-replaced",
+      metadata: { colors: [kColor] }
+    });
+
+    for (const index of [0, 1]) {
+      assert.equal(state.accepts({
+        action: "palette-color-changed",
+        metadata: { index, color: kColor }
+      }), index === 0);
+    }
+    assert.equal(state.accepts({
+      action: "palette-replaced",
+      metadata: { colors: [] }
+    }), false);
   });
 
   test("unchanged colors and invalid edits create no history or commands", () => {

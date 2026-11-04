@@ -43,10 +43,16 @@ const PIXEL_ART_KEY_BINDINGS: {
   rotateCounterClockwise: "Shift+r";
   flipHorizontal: "h";
   flipVertical: "v";
+  previousPaletteColor: "BracketLeft";
+  nextPaletteColor: "BracketRight";
 };
 
 type PixelArtAction = keyof typeof PIXEL_ART_KEY_BINDINGS;
 ```
+
+`previousPaletteColor` and `nextPaletteColor` step through the palette slots,
+wrapping at both ends. They work only while the color picker is docked and,
+like every canvas shortcut, while the pointer is over the canvas.
 
 Without preferences, build the settings directly:
 `new KeyBindingSettings({ defaults: PIXEL_ART_KEY_BINDINGS, overrides })`.

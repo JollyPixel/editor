@@ -18,7 +18,13 @@ test("the docked palette lays ten slots out in two columns beside the picker", a
   const { colors } = panel;
   await dock(panel);
   await expect(colors.gridSlots).toHaveCount(10);
-  await expect(colors.dockedPicker.root.getByRole("button", kPickerSettings)).toBeVisible();
+  const settings = colors.dockedPicker.root.getByRole("button", kPickerSettings);
+  const pickerWidth = (await colors.dockedPicker.root.boundingBox())!.width;
+  await settings.click();
+  await expect(colors.dockedPicker.root.getByRole("dialog", kPickerSettings)).toBeVisible();
+  expect((await colors.dockedPicker.root.boundingBox())!.width).toBe(pickerWidth);
+  await settings.press("Escape");
+  await expect(colors.dockedPicker.root.getByRole("dialog", kPickerSettings)).toBeHidden();
   const slot = colors.slot(4);
   await slot.click();
   const slots = await colors.gridSlots.all();
@@ -35,7 +41,10 @@ test("the docked palette lays ten slots out in two columns beside the picker", a
   const swatch = await slot.boundingBox();
   const picker = await colors.dockedPicker.root.boundingBox();
   expect(swatch!.x + swatch!.width).toBeLessThan(picker!.x);
-  const clusterCenter = (first.x + picker!.x + picker!.width) / 2;
+  const section = (await colors.dock.locator(".palette").boundingBox())!;
+  const strips = (await colors.dock.locator(".strips").boundingBox())!;
+  expect(strips.x).toBeGreaterThan(picker!.x + picker!.width);
+  const clusterCenter = (section.x + strips.x + strips.width) / 2;
   expect(Math.abs(clusterCenter - (dockBox.x + dockBox.width / 2))).toBeLessThan(1);
   const focus = await slot.evaluate((element) => {
     return {
@@ -84,6 +93,25 @@ test("a slot edit reaches the brush, a peer and the stored palette", async({
     primary: "#123456",
     secondary: "#123456"
   });
+});
+
+test("a shift click range ramps from the toolbar and dragging a slot moves it", async({ panel }) => {
+  const { colors } = panel;
+  await dock(panel);
+  const red = await colors.paletteColor(3);
+  await colors.slot(1).click();
+  await colors.slot(3).click({ modifiers: ["Shift"] });
+  await colors.paletteTool("Ramp between the ends of the selected range").click();
+  await expect.poll(async() => (await colors.paletteColor(1)).r).toBeLessThan(128);
+  const ramped = await colors.paletteColor(1);
+  expect(ramped.r).toBeGreaterThan(0);
+  expect([ramped.g, ramped.b]).toEqual([ramped.r, ramped.r]);
+
+  await colors.slot(4).click();
+  await colors.slot(4).dragTo(colors.slot(10));
+  await expect.poll(() => colors.paletteColor(9)).toEqual(red);
+  await panel.undoButton.click();
+  await expect.poll(() => colors.paletteColor(3)).toEqual(red);
 });
 
 test("Pick color replaces only the selected slot and undo restores it", async({ panel }) => {

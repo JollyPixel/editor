@@ -132,11 +132,16 @@ export class PickerFields {
     `;
   }
 
-  renderHex(): TemplateResult {
+  renderPreview(): TemplateResult {
     return html`
       <span class="preview checker">
         <span class="preview-face"></span>
       </span>
+    `;
+  }
+
+  renderHex(): TemplateResult {
+    return html`
       <input
         class="hex"
         type="text"

@@ -91,10 +91,15 @@ it, such as whether a fill is global.
 
 ### Brush
 
-The paint settings: primary, secondary and erase colors, and a size. A
+The paint settings: primary, secondary and erase colors, an ink and a size. A
 *stroke* is one paint drag applying a brush color to pixels; it keeps the color
-it started with. Erasing is a stroke too, written with the erase color, which
-is transparent by default.
+and ink it started with. Erasing is a stroke too, written with the erase color,
+which is transparent by default.
+
+The *ink* says how a brush color combines with the pixel under it: `blend`
+composites it over the pixel, `replace` overwrites the pixel, `lock-alpha`
+tints the pixel and keeps its alpha. A stroke inks each pixel once, against
+the color the pixel had before the stroke. Erasing always replaces.
 
 *In code:* `PixelArtCanvas.brush`.
 

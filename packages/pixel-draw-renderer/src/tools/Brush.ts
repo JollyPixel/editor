@@ -10,6 +10,10 @@ import {
 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
+import {
+  BrushInk,
+  type BrushInkName
+} from "./BrushInk.ts";
 import { clamp } from "../utils/math.ts";
 import type {
   ByteColorInput,
@@ -91,6 +95,8 @@ export type BrushColorSlot = "primary" | "secondary";
 
 export type BrushPaintSource = BrushColorSlot | "erase";
 
+export type BrushPainter = (under: RGBA8) => RGBA8;
+
 export interface BrushOptions {
   /**
    * Primary brush color.
@@ -107,6 +113,12 @@ export interface BrushOptions {
    * @default transparent
    */
   eraseColor?: ByteColorInput;
+  /**
+   * How a brush color combines with the pixels under it. Erasing always
+   * replaces them.
+   * @default "blend"
+   */
+  ink?: BrushInkName;
   /**
    * Brush size in pixels.
    * @default 32
@@ -131,6 +143,7 @@ export class Brush {
   readonly primary: BrushColor;
   readonly secondary: BrushColor;
   readonly erase: BrushColor;
+  #ink: BrushInk;
   #size: number;
   #maxSize: number;
   #colorInline: string;
@@ -143,6 +156,7 @@ export class Brush {
       color = "#000000",
       secondaryColor = "#FFFFFF",
       eraseColor,
+      ink = "blend",
       size = 32,
       maxSize = 32,
       highlight = {
@@ -156,6 +170,7 @@ export class Brush {
     this.erase = eraseColor === undefined ?
       new BrushColor("#000000", 0) :
       new BrushColor(eraseColor);
+    this.#ink = BrushInk.named(ink);
     this.#maxSize = Math.max(maxSize, 1);
     this.size = size;
 
@@ -167,6 +182,25 @@ export class Brush {
     source: BrushPaintSource
   ): RGBA8 {
     return this[source].asRGBA();
+  }
+
+  painter(
+    source: BrushPaintSource
+  ): BrushPainter {
+    const color = this[source].asRGBA();
+    const ink = source === "erase" ? BrushInk.replace : this.#ink;
+
+    return (under) => ink.over(color, under);
+  }
+
+  set ink(
+    name: BrushInkName
+  ) {
+    this.#ink = BrushInk.named(name);
+  }
+
+  get ink(): BrushInkName {
+    return this.#ink.name;
   }
 
   swapColors(): void {

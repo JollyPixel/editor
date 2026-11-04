@@ -2,7 +2,11 @@
 import { css } from "lit";
 
 // Import Internal Dependencies
-import { focusRing } from "../theme/styles/mixins.ts";
+import {
+  focusRing,
+  overlayMotion,
+  visuallyHidden
+} from "../theme/styles/mixins.ts";
 
 export const colorPickerStyles = css`
   :host {
@@ -120,8 +124,7 @@ export const colorPickerStyles = css`
     gap: 2px;
   }
 
-  .channels .harmony,
-  .channels .settings {
+  .channels .harmony {
     grid-column: 1 / -1;
   }
 
@@ -132,27 +135,77 @@ export const colorPickerStyles = css`
     gap: var(--jolly-space-1, 4px) var(--jolly-space-2, 8px);
   }
 
-  :host([layout="wide"]) .settings {
-    grid-template-columns: repeat(2, auto auto);
+  .settings-popover {
+    position: fixed;
+    inset: auto;
+    width: max-content;
+    margin: 0;
+    padding: var(--jolly-space-2, 8px);
+    overflow: visible;
+    border: none;
+    border-radius: var(--jolly-radius-md, 6px);
+    background: var(--jolly-surface-raised, Canvas);
+    box-shadow: var(--jolly-shadow-overlay);
+    color: var(--jolly-text, CanvasText);
+    font: inherit;
   }
 
-  :host([layout="wide"]) .setting-select {
-    width: 11ch;
-  }
-
-  .setting,
-  .setting-check {
+  .setting {
     display: contents;
   }
 
-  .setting-name,
-  .setting-check span {
+  .setting-name {
     color: var(--jolly-text-muted, inherit);
   }
 
-  .setting-check input {
-    justify-self: end;
+  .setting-switch {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-self: start;
+    height: var(--jolly-control-height, 20px);
+    cursor: pointer;
+  }
+
+  .setting-switch input {
+    ${visuallyHidden}
     margin: 0;
+    padding: 0;
+  }
+
+  .switch {
+    --jolly-toggle-knob: 8px;
+    --jolly-toggle-inset: 2px;
+
+    position: relative;
+    width: 22px;
+    height: 12px;
+    border-radius: var(--jolly-radius-sm, 2px);
+    background: var(--jolly-control-bg-active, ButtonFace);
+  }
+
+  .switch::before {
+    content: "";
+    position: absolute;
+    inset-block: var(--jolly-toggle-inset);
+    inset-inline-start: var(--jolly-toggle-inset);
+    width: var(--jolly-toggle-knob);
+    border-radius: 1px;
+    background: var(--jolly-text-muted, GrayText);
+    transition: inset-inline-start var(--jolly-duration-base, 160ms) var(--jolly-easing, ease);
+  }
+
+  .setting-switch input:checked + .switch {
+    background: var(--jolly-field-active-color, Highlight);
+  }
+
+  .setting-switch input:checked + .switch::before {
+    inset-inline-start: calc(100% - var(--jolly-toggle-knob) - var(--jolly-toggle-inset));
+    background: var(--jolly-surface-raised, Canvas);
+  }
+
+  .setting-switch input:focus-visible + .switch {
+    ${focusRing}
   }
 
   .setting-select {
@@ -167,11 +220,8 @@ export const colorPickerStyles = css`
   }
 
   .setting-select:focus-visible,
-  .setting-check input:focus-visible {
-    ${focusRing}
-  }
-
-  .settings-toggle {
+  .settings-toggle,
+  .eyedropper {
     --jolly-icon-size: 14px;
 
     display: inline-grid;
@@ -188,14 +238,25 @@ export const colorPickerStyles = css`
     cursor: pointer;
   }
 
+  .eyedropper + .settings-toggle {
+    margin-inline-start: 0;
+  }
+
   .settings-toggle:hover,
-  .settings-toggle[aria-expanded="true"] {
+  .settings-toggle[aria-expanded="true"],
+  .eyedropper:hover:not(:disabled) {
     background: var(--jolly-control-bg-hover, ButtonFace);
     color: inherit;
   }
 
-  .settings-toggle:focus-visible {
+  .settings-toggle:focus-visible,
+  .eyedropper:focus-visible {
     ${focusRing}
+  }
+
+  .eyedropper:disabled {
+    cursor: default;
+    opacity: 0.5;
   }
 
   .harmony-swatch {
@@ -420,10 +481,10 @@ export const colorPickerStyles = css`
   }
 
   .channels {
-    display: grid;
+    display: var(--jolly-picker-channels-display, grid);
     flex: 0 0 auto;
     grid-template-columns: repeat(2, auto);
-    align-content: space-between;
+    align-content: var(--jolly-picker-channels-align, space-between);
     gap: var(--jolly-space-1, 4px) var(--jolly-space-3, 12px);
     margin-inline-start: var(--jolly-space-2, 8px);
   }
@@ -433,7 +494,19 @@ export const colorPickerStyles = css`
   }
 
   .channels .hex {
-    width: 10ch;
+    width: 9ch;
+  }
+
+  .tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: var(--jolly-space-1, 4px);
+  }
+
+  .tools .settings-toggle,
+  .tools .eyedropper {
+    margin-inline-start: 0;
   }
 
   .channel {
@@ -441,6 +514,10 @@ export const colorPickerStyles = css`
     align-items: center;
     justify-content: space-between;
     gap: var(--jolly-space-1, 4px);
+  }
+
+  .channels > .channel {
+    display: var(--jolly-picker-fields-display, flex);
   }
 
   .channel-name {
@@ -524,4 +601,6 @@ export const colorPickerStyles = css`
       outline-color: Highlight;
     }
   }
+
+  ${overlayMotion}
 `;

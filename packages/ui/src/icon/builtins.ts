@@ -175,6 +175,20 @@ registerIcon("warning", svg`
   <circle cx="12" cy="17.4" r="1.35" fill="var(--jolly-surface, Canvas)" />
 `);
 
+registerIcon("eyedropper", svg`
+  <path
+    d="M14.5 4.5a2.5 2.5 0 0 1 3.5 0l1.5 1.5a2.5 2.5 0 0 1 0 3.5L17 12l-5-5Z"
+    fill="currentColor"
+  />
+  <path
+    d="M12.5 8.5 5 16v3h3l7.5-7.5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+`);
+
 registerIcon("trash", svg`
   <path
     class="tone-ink"

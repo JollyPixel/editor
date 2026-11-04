@@ -36,9 +36,11 @@ readonly uvNets: UVNetSet;
 
 ## Palette
 
-`palette` holds the document's ten [saved colors](./ColorPalette.md).
+`palette` holds the document's [saved colors](./ColorPalette.md).
 `changePaletteColor(index: number, color: RGBA8): void` changes one slot,
 emits a change and a document command.
+`replacePalette(palette: ColorPalette): void` replaces every slot, the count
+included, as one `palette-replaced` command.
 Unchanged colors are ignored. Invalid indices or channels throw before any
 state, change or command.
 
@@ -77,7 +79,7 @@ The document owns every UV region until `disownUvRegions` hands the ones `filter
 |---|---|---|
 | `change` | `PixelChange` | a command applied: a local edit, undo or redo (`origin` `local`), a peer's command (`remote`, naming its `clientId`) or this client's pending command replayed (`replay`) |
 | `command` | [`PixelCommand`](./PixelCommand.md), `PixelChange` | a local edit, undo or redo produced a command, after its `change`; remote commands and snapshots never emit it |
-| `palette-changed` | `number \| null` | one palette slot changed, or a snapshot replaced the whole palette (`null`); includes remote changes and undo/redo |
+| `palette-changed` | `number \| null` | one palette slot changed, or the whole palette was replaced or loaded (`null`); includes remote changes and undo/redo |
 | `uv-nets-changed` | none | a saved UV net or the default net changed, locally, remotely, through undo/redo or by a snapshot |
 | `changed` | `{ bounds }` | pixels were written |
 | `resized` | `{ size }` | the texture was resized |
@@ -101,7 +103,8 @@ hasTransparency(geometry: UVGeometry): boolean;
 ```ts
 paintPixels(pixels: Vec2[], color: RGBA8, beforeColor?: RGBA8): void;
 paintGlobalFill(fill: GlobalFill): void;
-recordStroke(pixels: Vec2[], color: RGBA8, beforeColors: RGBA8[]): void;
+paint(pixels: Vec2[], painter: BrushPainter): void;
+recordStroke(pixels: Vec2[], colors: RGBA8[], beforeColors: RGBA8[]): void;
 paintSelectionEdit(edit: SelectionEdit): void;
 resize(size: Vec2): void;
 replaceTexture(source: HTMLCanvasElement | HTMLImageElement): void;
@@ -124,7 +127,7 @@ interface SelectionEdit {
 }
 ```
 
-`paint*` methods write the pixels, then record them. `recordStroke` records pixels the brush already wrote to the buffer. `paintSelectionEdit` writes `afterColors` at `positions`; the canvas records the footprints in the same history step. Each edit emits one `change`, carrying the commands that undo it, and one command. `paintPixels` ignores an empty list; pass `beforeColor` when every pixel had that color, which skips sampling them. `paintGlobalFill` paints `positions` and emits one `global-fill` command, every receiver recoloring the pixels of `fromColor` itself; its change carries the equivalent `stroke`.
+`paint*` methods write the pixels, then record them. `recordStroke` records pixels the brush already wrote to the buffer. `paint` samples the pixels and runs each through `painter`, usually [`brush.painter()`](./tools/Brush.md); `paint` and `recordStroke` then hold one color per pixel and emit a `stroke` command when every color is the same and a `select-edit` command otherwise, as a translucent brush blending with varied pixels produces. `paintSelectionEdit` writes `afterColors` at `positions`; the canvas records the footprints in the same history step. Each edit emits one `change`, carrying the commands that undo it, and one command. `paintPixels` ignores an empty list; pass `beforeColor` when every pixel had that color, which skips sampling them. `paintGlobalFill` paints `positions` and emits one `global-fill` command, every receiver recoloring the pixels of `fromColor` itself; its change carries the equivalent `stroke`.
 
 `resize` emits `resized`. Its change holds the texture before it, so undo and redo restore the exact pixels and emit `texture-replaced`.
 

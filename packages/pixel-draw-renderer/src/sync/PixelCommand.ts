@@ -21,6 +21,7 @@ import type {
   NormalMapSettings
 } from "../normal/types.ts";
 import type { SavedUVNetData } from "../uv/region/SavedUVNet.ts";
+import { rgba8Equal } from "../utils/colors.ts";
 
 export type UVRegionRotation =
   | {
@@ -64,6 +65,12 @@ type CommandOf<TPixels> =
     metadata: {
       index: number;
       color: RGBA8;
+    };
+  }
+  | {
+    action: "palette-replaced";
+    metadata: {
+      colors: RGBA8[];
     };
   }
   | {
@@ -199,6 +206,17 @@ export function strokeCommand(
   };
 }
 
+export function paintCommand(
+  positions: Vec2[],
+  colors: RGBA8[]
+): PixelDocumentCommand {
+  const [first] = colors;
+
+  return colors.every((color) => rgba8Equal(color, first)) ?
+    strokeCommand(positions, first) :
+    selectEditCommand(positions, colors);
+}
+
 export function strokeCommands(
   positions: Vec2[],
   colors: RGBA8[]
@@ -206,6 +224,15 @@ export function strokeCommands(
   return groupPositionsByColor(positions, colors).map(
     (group) => strokeCommand(group.positions, group.color)
   );
+}
+
+export function paletteReplaced(
+  colors: RGBA8[]
+): PixelDocumentCommand {
+  return {
+    action: "palette-replaced",
+    metadata: { colors }
+  };
 }
 
 export function selectEditCommand(

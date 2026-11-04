@@ -234,6 +234,35 @@ export const panelStyles = css`
     user-select: none;
   }
 
+  .ink-overlay {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .ink-option {
+    padding: 2px 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-text-muted);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .ink-option:hover {
+    color: var(--color-text-emphasis);
+  }
+
+  .ink-option[aria-pressed="true"] {
+    background: var(--color-accent);
+    color: var(--color-text-on-accent);
+  }
+
+  .ink-option:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
+
   .brush-preview {
     flex-shrink: 0;
     border-radius: 50%;

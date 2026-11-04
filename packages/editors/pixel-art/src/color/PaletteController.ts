@@ -4,18 +4,20 @@ import type {
   ReactiveControllerHost
 } from "lit";
 import {
-  colorRamp,
-  fromRGBA8,
-  toRGBA8
-} from "@jolly-pixel/color";
-import {
   ColorPalette,
+  visibleColors,
   type PixelArtCanvas,
-  type PixelDocument
+  type PixelDocument,
+  type RGBA8
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
+import { PaletteSelection } from "./PaletteSelection.ts";
+import {
+  PaletteState,
+  type PaletteEdit
+} from "./PaletteState.ts";
 import {
   rgba8ToColorChange,
   colorChangeToRgba8
@@ -25,7 +27,7 @@ import type { TextureEvents } from "../textures/TextureSet.ts";
 // CONSTANTS
 const kDefaultPalette = ColorPalette.create();
 const kKeepsSelection =
-  "color-dock, color-picker-popover, [data-option='pickColor']";
+  "color-dock, color-picker-popover, jolly-context-menu, [data-option='pickColor']";
 
 export interface PaletteControllerOptions {
   canvas: () => PixelArtCanvas | null;
@@ -38,7 +40,7 @@ export interface PaletteControllerOptions {
 export class PaletteController implements ReactiveController {
   readonly #host: ReactiveControllerHost & HTMLElement;
   readonly #options: PaletteControllerOptions;
-  readonly #selected = new WeakMap<PixelDocument, number>();
+  readonly #selected = new WeakMap<PixelDocument, PaletteSelection>();
   #document: PixelDocument | null = null;
   #unsubscribe: (() => void) | null = null;
   locked = false;
@@ -57,10 +59,14 @@ export class PaletteController implements ReactiveController {
     return this.#activeDocument()?.palette ?? null;
   }
 
-  get selected(): number | null {
+  get selection(): PaletteSelection | null {
     const doc = this.#activeDocument();
 
-    return doc === null ? null : this.#selected.get(doc) ?? null;
+    return doc === null ? null : this.#state(doc).selection;
+  }
+
+  get selected(): number | null {
+    return this.selection?.focus ?? null;
   }
 
   hostConnected(): void {
@@ -89,23 +95,37 @@ export class PaletteController implements ReactiveController {
     if (doc === null) {
       return null;
     }
-    const index = this.#selected.get(doc);
+    const selection = this.#state(doc).selection;
 
-    return index === undefined ?
+    return selection === null ?
       null :
-      rgba8ToColorChange(doc.palette.colorAt(index));
+      rgba8ToColorChange(doc.palette.colorAt(selection.focus));
   }
 
   select(
     index: number
   ): ColorChangeDetail | null {
-    const doc = this.#activeDocument();
-    if (doc === null) {
+    return this.#focus(PaletteSelection.at(index));
+  }
+
+  extend(
+    index: number
+  ): ColorChangeDetail | null {
+    return this.#focus(
+      this.selection?.extendTo(index) ?? PaletteSelection.at(index)
+    );
+  }
+
+  step(
+    offset: number
+  ): ColorChangeDetail | null {
+    const palette = this.palette;
+    if (palette === null) {
       return null;
     }
-    this.#selected.set(doc, index);
+    const current = this.selected ?? (offset > 0 ? -1 : 0);
 
-    return rgba8ToColorChange(doc.palette.colorAt(index));
+    return this.select((((current + offset) % palette.size) + palette.size) % palette.size);
   }
 
   deselect(): void {
@@ -130,27 +150,58 @@ export class PaletteController implements ReactiveController {
     }
   }
 
-  ramp(
-    from: number,
-    to: number
-  ): void {
+  apply(
+    edit: PaletteEdit
+  ): boolean {
     const doc = this.#activeDocument();
-    const count = Math.abs(to - from) + 1;
-    if (doc === null || this.locked || count < 3) {
-      return;
+    if (doc === null || this.locked) {
+      return false;
     }
 
-    const step = to > from ? 1 : -1;
-    const colors = colorRamp(
-      fromRGBA8(doc.palette.colorAt(from)),
-      fromRGBA8(doc.palette.colorAt(to)),
-      count
-    );
-    doc.batch(() => {
-      for (let offset = 1; offset < count - 1; offset++) {
-        doc.changePaletteColor(from + (offset * step), toRGBA8(colors[offset]));
-      }
-    });
+    const state = this.#state(doc);
+    const next = state.apply(edit);
+    if (next === state) {
+      return false;
+    }
+
+    if (next.selection === null) {
+      this.#selected.delete(doc);
+    }
+    else {
+      this.#selected.set(doc, next.selection);
+    }
+    doc.replacePalette(next.palette);
+    this.#host.requestUpdate();
+
+    return true;
+  }
+
+  textureColors(
+    limit: number
+  ): RGBA8[] {
+    const doc = this.#activeDocument();
+
+    return doc === null ?
+      [] :
+      visibleColors(doc.buffer.pixels({ copy: false }), limit);
+  }
+
+  #state(
+    doc: PixelDocument
+  ): PaletteState {
+    return new PaletteState(doc.palette, this.#selected.get(doc) ?? null);
+  }
+
+  #focus(
+    selection: PaletteSelection
+  ): ColorChangeDetail | null {
+    const doc = this.#activeDocument();
+    if (doc === null) {
+      return null;
+    }
+    this.#selected.set(doc, selection);
+
+    return rgba8ToColorChange(doc.palette.colorAt(selection.focus));
   }
 
   #activeDocument(): PixelDocument | null {

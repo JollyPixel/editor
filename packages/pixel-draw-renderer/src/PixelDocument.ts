@@ -15,6 +15,8 @@ import {
   type EditGrouping
 } from "./sync/EditRecorder.ts";
 import {
+  paintCommand,
+  paletteReplaced,
   selectEditCommand,
   strokeCommand,
   strokeCommands,
@@ -48,6 +50,7 @@ import { RectArea } from "./utils/RectArea.ts";
 import { NormalMap } from "./normal/NormalMap.ts";
 import { NormalMapConfig } from "./normal/NormalMapConfig.ts";
 import { ColorPalette } from "./palette/ColorPalette.ts";
+import type { BrushPainter } from "./tools/Brush.ts";
 import { IslandMap } from "./normal/IslandMap.ts";
 import type {
   IslandFace,
@@ -194,6 +197,19 @@ export class PixelDocument extends Emitter<
     this.#recorder.record({ command: redo, inverse: [undo] });
   }
 
+  replacePalette(
+    palette: ColorPalette
+  ): void {
+    if (palette.equals(this.palette)) {
+      return;
+    }
+
+    const undo = paletteReplaced(this.palette.toJSON());
+    const redo = paletteReplaced(palette.toJSON());
+    this.#state.apply(redo);
+    this.#recorder.record({ command: redo, inverse: [undo] });
+  }
+
   get uvNets(): UVNetSet {
     return this.#state.uvNets;
   }
@@ -324,13 +340,32 @@ export class PixelDocument extends Emitter<
     });
   }
 
+  paint(
+    pixels: Vec2[],
+    painter: BrushPainter
+  ): void {
+    if (pixels.length === 0) {
+      return;
+    }
+
+    const before = this.buffer.samplePixels(pixels);
+    const inverse = this.#undoable(() => strokeCommands(pixels, before));
+    const command = paintCommand(pixels, before.map(painter));
+    this.#state.apply(command);
+    this.#commitDrawing({ command, inverse });
+  }
+
   recordStroke(
     pixels: Vec2[],
-    color: RGBA8,
+    colors: RGBA8[],
     beforeColors: RGBA8[]
   ): void {
+    if (pixels.length === 0) {
+      return;
+    }
+
     this.#commitDrawing({
-      command: strokeCommand(pixels, color),
+      command: paintCommand(pixels, colors),
       inverse: this.#undoable(() => strokeCommands(pixels, beforeColors))
     });
   }

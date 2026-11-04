@@ -16,6 +16,7 @@ import { makeToolCanvas } from "./fixtures/toolCanvas.ts";
 const kInit: ToolSettingsInit = {
   mode: "paint",
   brushSize: 7,
+  ink: "lock-alpha",
   options: {
     pickColor: true,
     fillGlobal: true,

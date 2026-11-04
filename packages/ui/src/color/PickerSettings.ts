@@ -58,17 +58,21 @@ export class PickerSettings {
         ${this.#renderSelect("Selector", "selector", preferences)}
         ${this.#renderSelect("Channels", "channels", preferences)}
         ${this.#renderSelect("Harmony", "harmony", preferences)}
-        <label class="setting-check">
-          <input
-            type="checkbox"
-            .checked=${preferences.discrete}
-            @change=${(event: Event) => {
-              if (isInputElement(event.target)) {
-                this.#options.configure({ discrete: event.target.checked });
-              }
-            }}
-          >
-          <span>Discrete wheel</span>
+        <label class="setting">
+          <span class="setting-name">Discrete wheel</span>
+          <span class="setting-switch">
+            <input
+              type="checkbox"
+              role="switch"
+              .checked=${preferences.discrete}
+              @change=${(event: Event) => {
+                if (isInputElement(event.target)) {
+                  this.#options.configure({ discrete: event.target.checked });
+                }
+              }}
+            >
+            <span class="switch" aria-hidden="true"></span>
+          </span>
         </label>
       </div>
     `;

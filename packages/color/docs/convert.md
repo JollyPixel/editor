@@ -46,6 +46,16 @@ Byte-based code can skip the round trip: [`assertColor8`](./parse.md) parses
 straight to `RGBA8`, and [`formatHex8`, `formatRgb8` and
 `formatRgba8`](./format.md) read it.
 
+### `isRGBA8()`
+
+```ts
+function isRGBA8(value: unknown): value is RGBA8
+```
+
+Returns `true` when `value` is an object whose `r`, `g`, `b` and `a` are
+integers from 0 to 255. Use it to check untrusted data, such as a parsed file,
+before treating it as `RGBA8`.
+
 ## `ColorInput` and `ColorInput8`
 
 ```ts

@@ -4,7 +4,7 @@ import {
   MessageProtocol,
   withCommandHeader
 } from "@jolly-pixel/network";
-import { COLOR_PALETTE_SIZE } from "@jolly-pixel/pixel-draw.renderer";
+import { COLOR_PALETTE_MAX_SIZE } from "@jolly-pixel/pixel-draw.renderer";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
@@ -46,6 +46,10 @@ const kPaletteColorSchema = z.strictObject({
   b: kChannel,
   a: kChannel
 });
+const kPaletteColorsSchema = z.array(kPaletteColorSchema).check(
+  z.minLength(1),
+  z.maxLength(COLOR_PALETTE_MAX_SIZE)
+);
 
 const kUvNetIdSchema = z.string().check(z.minLength(1));
 const kSavedUvNetSchema = z.object({
@@ -131,8 +135,11 @@ const kPixelCommandMetadata: Record<
     config: z.nullable(normalMapDataSchema)
   }],
   "palette-color-changed": [{
-    index: z.int().check(z.minimum(0), z.maximum(COLOR_PALETTE_SIZE - 1)),
+    index: z.int().check(z.minimum(0), z.maximum(COLOR_PALETTE_MAX_SIZE - 1)),
     color: kPaletteColorSchema
+  }],
+  "palette-replaced": [{
+    colors: kPaletteColorsSchema
   }],
   "normal-map-defaults-patched": [{
     patch: normalMapSettingsPatchSchema
@@ -175,9 +182,7 @@ export const pixelSnapshotSchema = z.object({
     })
   ]),
   uvRegions: z.optional(z.array(uvRegionSchema)),
-  palette: z.optional(z.array(kPaletteColorSchema).check(
-    z.length(COLOR_PALETTE_SIZE)
-  )),
+  palette: z.optional(kPaletteColorsSchema),
   normalMap: z.optional(normalMapDataSchema),
   uvNets: z.optional(z.object({
     defaultId: z.optional(kUvNetIdSchema),

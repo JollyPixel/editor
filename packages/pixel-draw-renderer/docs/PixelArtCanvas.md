@@ -212,7 +212,7 @@ The clear is one history step and one `texture-replaced` command. The document e
 
 ### `commitPixels()`
 
-Paints a precomputed set of texture coordinates as one edit with the brush color of the slot, `"primary"` by default, through [`document.paintPixels()`](./PixelDocument.md#edits). An empty array does nothing.
+Paints a precomputed set of texture coordinates as one edit with the brush color of the slot, `"primary"` by default, inked with the [brush ink](./tools/Brush.md#ink), through [`document.paint()`](./PixelDocument.md#edits). An empty array does nothing.
 
 ### `hasTransparency()`
 

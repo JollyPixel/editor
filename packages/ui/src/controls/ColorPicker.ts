@@ -50,8 +50,11 @@ import {
   DISCRETE_SATURATION_STEPS,
   hueSaturationFromPointer,
   snapToWheel,
-  wheelPosition
+  wheelPosition,
+  wrapHue
 } from "../color/wheel.ts";
+import { PickerEyedropper } from "../color/PickerEyedropper.ts";
+import { PickerSettingsPopover } from "../color/PickerSettingsPopover.ts";
 import { colorPickerStyles } from "./ColorPicker.styles.ts";
 import { emitComposedEvent } from "../events.ts";
 import {
@@ -95,6 +98,7 @@ interface SliderTemplate {
   className?: string;
   step?: number;
   vertical?: boolean;
+  wraps?: boolean;
 }
 
 @customElement("jolly-color-picker")
@@ -155,6 +159,9 @@ export class ColorPicker extends LitElement {
   declare settings: boolean;
 
   @property({ type: Boolean, reflect: true })
+  declare eyedropper: boolean;
+
+  @property({ type: Boolean, reflect: true })
   declare disabled: boolean;
 
   @property({ type: Boolean, reflect: true })
@@ -183,6 +190,18 @@ export class ColorPicker extends LitElement {
     preferences: () => this.#preferences,
     configure: (patch) => ColorPicker.configure(patch)
   });
+  #settingsPopover = new PickerSettingsPopover(
+    this,
+    () => this.#settings.renderPanel()
+  );
+  #eyedropper = new PickerEyedropper({
+    enabled: () => this.eyedropper,
+    editable: () => this.editable,
+    pick: (color) => this.#commitPoint({
+      ...this.#pointSpace.fromRgb(color, this.#point),
+      a: this.#point.a
+    })
+  });
 
   constructor() {
     super();
@@ -194,6 +213,7 @@ export class ColorPicker extends LitElement {
     this.disabled = false;
     this.readonly = false;
     this.settings = false;
+    this.eyedropper = false;
   }
 
   override connectedCallback(): void {
@@ -242,7 +262,7 @@ export class ColorPicker extends LitElement {
     return this.#wheel ?
       new WheelSurface(
         this.#pointSpace,
-        this.#point.v,
+        this.#pointSpace.pureLevel,
         this.#preferences.discrete
       ) :
       new SquareSurface(this.#pointSpace, this.#point.h);
@@ -326,6 +346,8 @@ export class ColorPicker extends LitElement {
           ${this.#renderTrack(this.#wheel ? "value" : "hue")}
           ${this.alpha ? this.#renderTrack("alpha") : nothing}
           ${this.#renderChannels()}
+          ${this.#renderBar()}
+          ${this.settings ? this.#settingsPopover.render() : nothing}
         </div>
       `;
     }
@@ -336,7 +358,7 @@ export class ColorPicker extends LitElement {
         ${this.#renderTrack(this.#wheel ? "value" : "hue")}
         ${this.alpha ? this.#renderAlpha() : nothing}
         ${this.#settingsShown ? this.#settings.renderPanel() : this.#renderHarmony()}
-        ${this.hexInput || this.settings ? this.#renderFooter(nothing) : nothing}
+        ${this.#renderBar()}
       </div>
     `;
   }
@@ -379,7 +401,8 @@ export class ColorPicker extends LitElement {
             max: kHueSteps,
             step: discrete ? DISCRETE_HUE_STEP : 1,
             value: h,
-            onChange: this.#onHue
+            onChange: this.#onHue,
+            wraps: true
           })}
         </div>
       `;
@@ -389,7 +412,7 @@ export class ColorPicker extends LitElement {
       <div
         class="area"
         role="group"
-        aria-label="Saturation and value"
+        aria-label=${`Saturation and ${this.#pointSpace.axisLabel.toLowerCase()}`}
         @pointerdown=${this.#onAreaPointerDown}
       >
         <canvas class="surface"></canvas>
@@ -403,7 +426,7 @@ export class ColorPicker extends LitElement {
         })}
         ${this.#renderSlider({
           className: "axis axis-value",
-          label: "Value",
+          label: this.#pointSpace.axisLabel,
           max: kAxisSteps,
           value: v * kAxisSteps,
           onChange: this.#onValue
@@ -418,22 +441,41 @@ export class ColorPicker extends LitElement {
     const { h, v, a } = this.#point;
     const tracks = {
       hue: [kHueSteps, h, "Hue", this.#onHue],
-      value: [kAxisSteps, v * kAxisSteps, "Value", this.#onValue],
+      value: [kAxisSteps, v * kAxisSteps, this.#pointSpace.axisLabel, this.#onValue],
       alpha: [kAlphaSteps, a * kAlphaSteps, "Alpha", this.#onAlpha]
     } as const;
     const [max, value, label, onChange] = tracks[kind];
 
     return html`
       <div class="track ${kind}">
+        ${kind === "hue" ? this.#renderHueTicks() : nothing}
         ${this.#renderSlider({
           label,
           max,
           value,
           onChange,
-          vertical: this.layout === "wide"
+          vertical: this.layout === "wide",
+          wraps: kind === "hue"
         })}
       </div>
     `;
+  }
+
+  #renderHueTicks(): TemplateResult[] {
+    const wide = this.layout === "wide";
+
+    return this.#harmonyPoints().map((point) => {
+      const position = point.h / kHueSteps;
+      const x = wide ? 0.5 : position;
+      const y = wide ? 1 - position : 0.5;
+
+      return html`
+        <span
+          class="harmony-marker"
+          style="--jolly-marker-x:${x};--jolly-marker-y:${y}"
+        ></span>
+      `;
+    });
   }
 
   #renderSlider(
@@ -451,6 +493,7 @@ export class ColorPicker extends LitElement {
         aria-label=${slider.label}
         aria-orientation=${slider.vertical ? "vertical" : nothing}
         aria-readonly=${this.readonly ? "true" : nothing}
+        @keydown=${slider.wraps ? this.#onWrapKey : nothing}
         @input=${slider.onChange}
         @change=${slider.onChange}
       >
@@ -516,32 +559,49 @@ export class ColorPicker extends LitElement {
 
     return html`
       <div class="channels">
-        ${this.#settingsShown ? this.#settings.renderPanel() : html`
-          ${rows.map(([left, right]) => html`
-            ${this.#fields.renderChannel(left, values)}
-            ${this.#fields.renderChannel(right, values)}
-          `)}
-          ${this.#renderHarmony()}
-        `}
-        ${this.hexInput || this.alpha || this.settings ?
-          this.#renderFooter(
-            this.alpha ? this.#fields.renderChannel("a", values) : nothing
-          ) :
-          nothing}
+        ${rows.map(([left, right]) => html`
+          ${this.#fields.renderChannel(left, values)}
+          ${this.#fields.renderChannel(right, values)}
+        `)}
+        ${this.#renderHarmony()}
+        ${this.hexInput || this.alpha ? html`
+          <div class="footer">
+            ${this.hexInput ? this.#fields.renderHex() : nothing}
+            ${this.alpha ? this.#fields.renderChannel("a", values) : nothing}
+          </div>
+        ` : nothing}
       </div>
     `;
   }
 
-  #renderFooter(
-    alpha: TemplateResult | typeof nothing
-  ): TemplateResult {
+  #renderBar(): TemplateResult | typeof nothing {
+    const wide = this.layout === "wide";
+    const eyedropper = this.#eyedropper.shown;
+    if (!this.hexInput && !eyedropper && !this.settings) {
+      return nothing;
+    }
+    const settings = wide ? this.#settingsPopover : this.#settings;
+
     return html`
-      <div class="footer">
-        ${this.hexInput ? this.#fields.renderHex() : nothing}
-        ${alpha}
-        ${this.settings ? this.#settings.renderToggle() : nothing}
+      <div class=${wide ? "tools" : "footer"}>
+        ${this.hexInput ? this.#fields.renderPreview() : nothing}
+        ${this.hexInput && !wide ? this.#fields.renderHex() : nothing}
+        ${eyedropper ? this.#eyedropper.render() : nothing}
+        ${this.settings ? settings.renderToggle() : nothing}
       </div>
     `;
+  }
+
+  #onWrapKey(
+    event: KeyboardEvent
+  ): void {
+    const h = isInputElement(event.target) ?
+      wrapHue(event.key, Number(event.target.value), Number(event.target.step) || 1) :
+      null;
+    if (h !== null && this.editable) {
+      event.preventDefault();
+      this.#commitPoint({ ...this.#point, h });
+    }
   }
 
   #commitPoint(

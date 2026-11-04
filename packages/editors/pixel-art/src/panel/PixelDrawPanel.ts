@@ -39,6 +39,8 @@ import { TextureDropController } from "../textures/import/TextureDropController.
 import type { TextureFileDrop } from "../textures/import/TextureFileDrop.ts";
 import { renderHistoryFileToolbar } from "./historyFileToolbar.ts";
 import { renderBrushSizeOverlay } from "../tools/brushSizeOverlay.ts";
+import { renderInkOverlay } from "../tools/inkOverlay.ts";
+import type { PaletteRampSpace } from "../color/PaletteState.ts";
 import { NormalMapController } from "../normal/NormalMapController.ts";
 import { DockSlot } from "./DockSlot.ts";
 import {
@@ -121,6 +123,12 @@ function isBrushMode(
   mode: Mode
 ): boolean {
   return mode === "paint" || mode === "erase";
+}
+
+function isInkMode(
+  mode: Mode
+): boolean {
+  return mode === "paint" || mode === "fill";
 }
 
 @customElement("pixel-draw-panel")
@@ -218,6 +226,9 @@ export class PixelDrawPanel extends LitElement {
   @property({ attribute: false })
   declare fileDrops: readonly TextureFileDrop[];
 
+  @property({ type: String, attribute: "ramp-space" })
+  declare rampSpace: PaletteRampSpace;
+
   readonly #status = new TransientStatus(this);
   readonly #dialogs = new LazyTemplate(this, () => Promise.all([
     import("../textures/dialogs/ClearTextureDialog.ts"),
@@ -269,7 +280,11 @@ export class PixelDrawPanel extends LitElement {
   readonly #colors = new ColorController(
     this,
     this.#activeCanvas,
-    this.#textures
+    this.#textures,
+    {
+      notify: (message) => this.#status.set(message),
+      rampSpace: () => this.rampSpace
+    }
   );
   readonly #docks = new DockSlot(this, () => this.#syncColorDocked());
   readonly #normalMaps = new NormalMapController(this, {
@@ -281,7 +296,10 @@ export class PixelDrawPanel extends LitElement {
   });
   readonly #keyboard = new CanvasKeyboardController(
     this,
-    () => this.canvasManager?.shortcuts ?? null
+    () => this.canvasManager?.shortcuts ?? null,
+    {
+      stepPalette: (offset) => this.#colors.stepPaletteColor(offset)
+    }
   );
   readonly #ambientTheme = new AmbientThemeController(this, {
     onChange: (mode) => this.#adoptAmbientTheme(mode)
@@ -309,6 +327,7 @@ export class PixelDrawPanel extends LitElement {
     this.textureTabsLine = false;
     this.gridSizeLocked = false;
     this.fileDrops = [];
+    this.rampSpace = "oklab";
     this.#textures.subscribe("active-change", () => {
       this.#status.clear();
       this.#uvNets.followActiveTexture();
@@ -679,6 +698,9 @@ export class PixelDrawPanel extends LitElement {
           <div class="top-row" part="top-row">
             ${canvas && isBrushMode(mode) ?
               renderBrushSizeOverlay(canvas, () => this.requestUpdate()) :
+              nothing}
+            ${canvas && isInkMode(mode) ?
+              renderInkOverlay(canvas, () => this.requestUpdate()) :
               nothing}
             ${this.#selectToolbar.render(mode === "select")}
             ${this.#uvToolbar.render(

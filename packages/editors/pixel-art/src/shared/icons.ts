@@ -14,6 +14,8 @@ import type { TextureIconName } from "./textureIcons.ts";
 import "./textureIcons.ts";
 import type { GridIconName } from "./gridIcons.ts";
 import "./gridIcons.ts";
+import type { PaletteIconName } from "./paletteIcons.ts";
+import "./paletteIcons.ts";
 
 // CONSTANTS
 const kTextGlyphs = {
@@ -60,7 +62,8 @@ export type IconName =
   | "dockPicker"
   | NormalMapIconName
   | TextureIconName
-  | GridIconName;
+  | GridIconName
+  | PaletteIconName;
 
 registerIcon("move", svg`
     <path

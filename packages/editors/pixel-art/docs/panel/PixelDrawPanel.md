@@ -39,6 +39,7 @@ interface PixelDrawPanelProperties {
   normalMap: boolean; // normal-map, false
   colorDocked: boolean; // color-docked, false
   gridSizeLocked: boolean; // grid-size-locked, false
+  rampSpace: PaletteRampSpace; // ramp-space, "oklab"
   textureImportPolicy: TextureImportPolicy; // texture-import-policy, "replace"
   textureTabs: TextureTabsMode; // texture-tabs, "auto"
   textureTabsVariant: TextureTabsVariant; // texture-tabs-variant, "default"
@@ -71,6 +72,10 @@ interface PixelDrawPanelProperties {
   always. `texture-tabs-line` draws them as a thin line and hides Add.
 - `texture-import-policy`: `replace` replaces the active texture, `add` emits
   `texture-add-request`, `ask` lets the user choose.
+- `ramp-space` is how the palette Ramp blends a range: `oklab`, `oklch`,
+  `oklch-longer` (OKLCH along the longer hue arc), `linear` or `srgb`. The
+  `rampSpace` field of the `pixel-art` preference scope sets it in the editor
+  page.
 - `keyBindings`: see [Pixel-art key bindings](../keybindings/PixelArtKeyBindings.md).
 - `uvNets`: see [`UvNetLibrary`](../uv/UvNetLibrary.md). The panel points it at
   the active texture's document.
@@ -181,6 +186,36 @@ interface TextureFileDrop {
   drop(file: File): void;
 }
 ```
+
+## Docked palette
+
+The docked color picker shows the texture's palette, a toolbar, the picker,
+and two strips.
+
+- Click uses a slot. Shift click selects the range from the selected slot.
+  Double click or F2 edits a slot. Drag moves a slot, or the whole range when
+  the slot is in it; Ctrl or Cmd drag copies instead.
+- The toolbar adds the active color after the selected slot, ramps between the
+  ends of the range (three slots or more), duplicates the range after itself,
+  and deletes it. The palette keeps at least one color and at most 256.
+- The `⋯` button and a right click on a slot open the palette menu: Ramp, Sort
+  by hue, chroma, lightness or alpha, Reverse, Duplicate, Delete, Palette from
+  texture, Load palette, and Save palette as GIMP (`.gpl`) or hex (`.hex`).
+  Sort and Reverse act on the range, or on the whole palette without one.
+- Palette from texture replaces the palette with the visible colors of the
+  active texture, up to 256. Load keeps the first 256 colors of a file.
+- Every palette edit is one undo step and reaches peers as one command. A
+  locked palette disables every edit except Save.
+- Shades shows three darker and three lighter versions of the active color,
+  hue-shifted in OKLCH. Recent shows the last eight committed colors, for this
+  session only. Click uses a color and deselects the slot; Shift click adds it
+  to the palette.
+
+## Brush ink
+
+In Paint and Fill modes the top row shows the brush ink: Blend, Replace or
+Lock alpha, as described for the renderer's brush. The ink is part of the
+tool settings that carry over between textures.
 
 ## View settings
 

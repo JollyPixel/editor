@@ -6,6 +6,12 @@ import type {
 
 // CONSTANTS
 const kTurn = 360;
+const kHueKeyDirections = new Map<string, number>([
+  ["ArrowRight", 1],
+  ["ArrowUp", 1],
+  ["ArrowLeft", -1],
+  ["ArrowDown", -1]
+]);
 const kRadians = Math.PI / 180;
 
 export const DISCRETE_HUE_STEP = 30;
@@ -59,4 +65,25 @@ export function snapToWheel(
     h: sector % kTurn,
     s: Math.round(point.s * DISCRETE_SATURATION_STEPS) / DISCRETE_SATURATION_STEPS
   };
+}
+
+export function wrapHue(
+  key: string,
+  hue: number,
+  step: number
+): number | null {
+  const direction = kHueKeyDirections.get(key);
+  if (direction === undefined) {
+    return null;
+  }
+
+  const next = hue + (step * direction);
+  if (next > kTurn) {
+    return (next - kTurn) % kTurn;
+  }
+  if (next < 0) {
+    return next + kTurn;
+  }
+
+  return null;
 }

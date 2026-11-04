@@ -1,8 +1,12 @@
+// Import Third-party Dependencies
+import { isRGBA8 } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
 import type { RGBA8 } from "../types.ts";
+import { rgba8Equal } from "../utils/colors.ts";
 
 // CONSTANTS
-export const COLOR_PALETTE_SIZE = 10;
+export const COLOR_PALETTE_MAX_SIZE = 256;
 const kDefaultColors: RGBA8[] = [
   { r: 0, g: 0, b: 0, a: 255 },
   { r: 255, g: 255, b: 255, a: 255 },
@@ -26,7 +30,9 @@ export class ColorPalette {
   ): ColorPalette {
     const palette = ColorPalette.parse(colors);
     if (palette === null) {
-      throw new TypeError("A color palette requires ten RGBA8 colors");
+      throw new TypeError(
+        `A color palette requires 1 to ${COLOR_PALETTE_MAX_SIZE} RGBA8 colors`
+      );
     }
 
     return palette;
@@ -37,8 +43,9 @@ export class ColorPalette {
   ): ColorPalette | null {
     if (
       !Array.isArray(value) ||
-      value.length !== COLOR_PALETTE_SIZE ||
-      !value.every(isPaletteColor)
+      value.length === 0 ||
+      value.length > COLOR_PALETTE_MAX_SIZE ||
+      !value.every(isRGBA8)
     ) {
       return null;
     }
@@ -54,10 +61,14 @@ export class ColorPalette {
     this.#colors = colors.map(copyColor);
   }
 
+  get size(): number {
+    return this.#colors.length;
+  }
+
   colorAt(
     index: number
   ): RGBA8 {
-    assertPaletteIndex(index);
+    this.#assertIndex(index, this.size - 1);
 
     return copyColor(this.#colors[index]);
   }
@@ -66,58 +77,108 @@ export class ColorPalette {
     index: number,
     color: RGBA8
   ): ColorPalette {
-    assertPaletteIndex(index);
-    if (!isPaletteColor(color)) {
-      throw new TypeError("Palette channels must be integer bytes");
-    }
-    const previous = this.#colors[index];
-    if (
-      previous.r === color.r &&
-      previous.g === color.g &&
-      previous.b === color.b &&
-      previous.a === color.a
-    ) {
-      return this;
+    return this.withColors(index, [color]);
+  }
+
+  withColors(
+    start: number,
+    colors: readonly RGBA8[]
+  ): ColorPalette {
+    this.#assertIndex(start, this.size - colors.length);
+    assertColors(colors);
+
+    const next = this.#colors.slice();
+    next.splice(start, colors.length, ...colors);
+
+    return this.#changed(next);
+  }
+
+  withInserted(
+    index: number,
+    colors: readonly RGBA8[]
+  ): ColorPalette {
+    this.#assertIndex(index, this.size);
+    assertColors(colors);
+    if (this.size + colors.length > COLOR_PALETTE_MAX_SIZE) {
+      throw new RangeError(
+        `A color palette holds at most ${COLOR_PALETTE_MAX_SIZE} colors`
+      );
     }
 
-    const colors = this.toJSON();
-    colors[index] = copyColor(color);
+    const next = this.#colors.slice();
+    next.splice(index, 0, ...colors);
 
-    return new ColorPalette(colors);
+    return this.#changed(next);
+  }
+
+  withRemoved(
+    start: number,
+    count = 1
+  ): ColorPalette {
+    this.#assertIndex(start, this.size - count);
+    if (count >= this.size) {
+      throw new RangeError("A color palette keeps at least one color");
+    }
+
+    const next = this.#colors.slice();
+    next.splice(start, count);
+
+    return this.#changed(next);
+  }
+
+  withMoved(
+    start: number,
+    count: number,
+    to: number
+  ): ColorPalette {
+    this.#assertIndex(start, this.size - count);
+    this.#assertIndex(to, this.size - count);
+
+    const next = this.#colors.slice();
+    const moved = next.splice(start, count);
+    next.splice(to, 0, ...moved);
+
+    return this.#changed(next);
+  }
+
+  equals(
+    other: ColorPalette
+  ): boolean {
+    return other.size === this.size && this.#colors.every(
+      (color, index) => rgba8Equal(color, other.#colors[index])
+    );
   }
 
   toJSON(): RGBA8[] {
     return this.#colors.map(copyColor);
   }
+
+  #changed(
+    colors: RGBA8[]
+  ): ColorPalette {
+    const next = new ColorPalette(colors);
+
+    return next.equals(this) ? this : next;
+  }
+
+  #assertIndex(
+    index: number,
+    max: number
+  ): void {
+    if (!Number.isInteger(index) || index < 0 || index > max) {
+      throw new RangeError(
+        `Palette index must be an integer from 0 to ${Math.max(max, 0)}`
+      );
+    }
+  }
 }
 
-function assertPaletteIndex(
-  index: number
+function assertColors(
+  colors: readonly RGBA8[]
 ): void {
-  if (
-    !Number.isInteger(index) ||
-    index < 0 ||
-    index >= COLOR_PALETTE_SIZE
-  ) {
-    throw new RangeError("Palette slot index must be an integer from 0 to 9");
+  if (!colors.every(isRGBA8)) {
+    throw new TypeError("Palette channels must be integer bytes");
   }
-}
-
-function isPaletteColor(
-  value: unknown
-): value is RGBA8 {
-  if (
-    typeof value !== "object" ||
-    value === null
-  ) {
-    return false;
-  }
-
-  return ["r", "g", "b", "a"].every((key) => {
-    const channel = Reflect.get(value, key);
-
-    return Number.isInteger(channel) && channel >= 0 && channel <= 255;
-  });
 }
 
 function copyColor(

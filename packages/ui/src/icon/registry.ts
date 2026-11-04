@@ -21,7 +21,8 @@ export type BuiltinIconName =
   | "info"
   | "warning"
   | "trash"
-  | "settings";
+  | "settings"
+  | "eyedropper";
 export type IconName = BuiltinIconName | (string & {});
 export type IconGlyph = string | SVGTemplateResult;
 

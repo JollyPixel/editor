@@ -24,14 +24,14 @@ interface PendingLine {
 export interface LineEngineOptions {
   brush: Brush;
   linePreview: LinePreview;
-  document: Pick<PixelDocument, "paintPixels">;
+  document: Pick<PixelDocument, "buffer" | "paint">;
   onProgress?: (pixels: PeerStrokePixel[]) => void;
 }
 
 export class LineEngine {
   #brush: Brush;
   #linePreview: LinePreview;
-  #document: Pick<PixelDocument, "paintPixels">;
+  #document: Pick<PixelDocument, "buffer" | "paint">;
   #onProgress?: (pixels: PeerStrokePixel[]) => void;
 
   #cursor: Vec2 | null = null;
@@ -104,9 +104,9 @@ export class LineEngine {
       this.rememberClick(pending.end);
     }
     this.#linePreview.clear();
-    this.#document.paintPixels(
+    this.#document.paint(
       this.#stamp(pending),
-      this.#brush.paintColor(lineSource)
+      this.#brush.painter(lineSource)
     );
     this.#onProgress?.([]);
     this.arm("mousedown", lineSource);
@@ -131,10 +131,12 @@ export class LineEngine {
 
     this.#linePreview.drawLine(pending.start, pending.end);
 
-    const color = this.#brush.paintColor(pending.source);
+    const positions = this.#stamp(pending);
+    const paint = this.#brush.painter(pending.source);
+    const under = this.#document.buffer.samplePixels(positions);
     this.#onProgress?.(
-      this.#stamp(pending).map((position) => {
-        return { ...position, color };
+      positions.map((position, index) => {
+        return { ...position, color: paint(under[index]) };
       })
     );
   }

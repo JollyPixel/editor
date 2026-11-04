@@ -42,6 +42,23 @@ describe("PixelArtCanvas — line tool (Shift)", () => {
     manager.destroy();
   });
 
+  test("a translucent line blends with the pixels it crosses", () => {
+    const events: PixelCommand[] = [];
+    const manager = makeManager((event) => events.push(event));
+    const canvas = manager.canvas();
+    manager.brush.primary.set("#ff0000", 128 / 255);
+
+    moveTo(canvas, 100, 100);
+    manager.shortcuts.lineHeld = true;
+    moveTo(canvas, 104, 100);
+    canvas.dispatchEvent(mouseEvent("mousedown", 104, 100));
+
+    const [event] = events;
+    assert.strictEqual(event.action, "stroke");
+    assert.deepStrictEqual(event.metadata.color, { r: 255, g: 127, b: 127, a: 255 });
+    manager.destroy();
+  });
+
   test("Shift then mousedown with no movement paints a single pixel (zero-length fallback)", () => {
     const events: PixelCommand[] = [];
     const manager = makeManager((event) => events.push(event));

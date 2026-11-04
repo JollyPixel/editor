@@ -32,6 +32,7 @@ export const PIXEL_ART_CAPABILITIES = new CapabilityTable<
   "uv-net-deleted": "uv",
   "uv-net-default-changed": "uv",
   "palette-color-changed": "palette",
+  "palette-replaced": "palette",
   "normal-map-toggled": "normalMap",
   "normal-map-defaults-patched": "normalMap",
   "normal-map-zone-set": "normalMap",
