@@ -9,6 +9,7 @@ root entry point.
 interface FlatTreeRow<TData = unknown> {
   node: TreeNode<TData>;
   depth: number;
+  indent: number; // indent steps drawn before the row
   parentId: string | null;
 }
 
@@ -66,7 +67,8 @@ row gets an expand toggle.
 
 ### `flattenVisible(nodes, expanded: ReadonlySet<string>): FlatTreeRow[]`
 
-The visible rows, with depth.
+The visible rows, with depth and indent. `indent` equals the depth, plus one
+under each `collapsible: false` ancestor that reserves the toggle width.
 
 ### `findNode(nodes, id): TreeNode | null`
 

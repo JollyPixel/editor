@@ -315,6 +315,8 @@ export class AssetBrowser extends LitElement {
           renamable
           reorderable
           row-drag
+          indent-guides
+          toggle-style="box"
           activate-on-double-click
           .nodes=${view?.nodes ?? AssetTreeModel.EMPTY.nodes}
           .expanded=${[...view?.expanded ?? []]}

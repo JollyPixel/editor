@@ -31,6 +31,21 @@ export const FOLDER_TREE: TreeNode[] = [
   }
 ];
 
+export const OWNER_TREE: TreeNode[] = [
+  {
+    id: "folder",
+    label: "Folder",
+    children: [{ id: "file", label: "File" }]
+  },
+  { id: "loose", label: "Loose" },
+  {
+    id: "owner",
+    label: "Owner",
+    collapsible: false,
+    children: [{ id: "companion", label: "Companion" }]
+  }
+];
+
 export function reparentTree(): TreeNode[] {
   return [
     {

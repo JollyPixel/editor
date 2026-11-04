@@ -75,6 +75,12 @@ Opens the header search of a `searchable` pane.
 - Parts: `header`, `icon`, `title`, `actions`, `content`, `search`,
   `no-matches`.
 
+## Styling
+
+- `--jolly-header-texture-color`: header texture color, default
+  `--jolly-text-on-fill`.
+- `--jolly-header-texture-opacity`: default `0.07`.
+
 ## Tone
 
 A pane with a tone is a [toned area](../theme/tokens.md#toned-areas): its

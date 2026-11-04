@@ -110,15 +110,26 @@ export class StudioHome extends LitElement {
     }
 
     #users-dock jolly-pane {
+      --jolly-header-texture-color: var(--jolly-ink);
+      --jolly-header-texture-opacity: 0.04;
+
       background: transparent;
     }
 
     #users-dock jolly-pane::part(header),
     #users-dock jolly-pane-group::part(tabs) {
+      box-sizing: border-box;
       min-height: var(--studio-card-head-height);
-      padding-inline: var(--jolly-space-1);
       background: transparent;
       color: var(--jolly-text-muted);
+    }
+
+    #users-dock jolly-pane::part(header) {
+      padding: 0 var(--jolly-space-3);
+    }
+
+    #users-dock jolly-pane-group::part(tabs) {
+      padding-inline: var(--jolly-space-1);
     }
 
     #users-dock jolly-pane-group::part(tab) {

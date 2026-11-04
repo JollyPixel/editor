@@ -152,6 +152,9 @@ An open dialog holds an [input layer](../interaction/input-layers.md).
 ## Styling
 
 - `--jolly-dialog-header-bg`: header fill, default `--jolly-accent-fill`.
+- `--jolly-header-texture-color`: header texture color, default
+  `--jolly-text-on-fill`.
+- `--jolly-header-texture-opacity`: default `0.07`.
 - `--jolly-dialog-chrome-bg`: footer fill, default `--jolly-ink` at 4% over
   `--jolly-surface-raised`.
 - `--jolly-dialog-chrome-padding`: header and footer padding, default

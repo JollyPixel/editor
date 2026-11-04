@@ -9,6 +9,7 @@ import { TreeDrop } from "./TreeDrop.ts";
 export interface FlatTreeRow<TData = unknown> {
   node: TreeNode<TData>;
   depth: number;
+  indent: number;
   parentId: string | null;
 }
 
@@ -53,6 +54,7 @@ interface IndexedNode<TData> extends TreePlacement {
   parent: IndexedNode<TData> | null;
   parentId: string | null;
   depth: number;
+  indent: number;
   order: number;
 }
 
@@ -72,6 +74,7 @@ export class TreeSnapshot<
       list: readonly TreeNode<TData>[],
       parent: IndexedNode<TData> | null,
       depth: number,
+      indent: number,
       visible: boolean
     ): void => {
       const parentId = parent === null ? null : parent.node.id;
@@ -87,7 +90,8 @@ export class TreeSnapshot<
           order,
           position,
           size: list.length,
-          levelHasBranches
+          levelHasBranches,
+          indent
         };
         this.#nodes.set(node.id, indexed);
 
@@ -95,7 +99,8 @@ export class TreeSnapshot<
           this.#visibleRows.push({
             node,
             parentId,
-            depth
+            depth,
+            indent
           });
         }
         order += 1;
@@ -105,13 +110,14 @@ export class TreeSnapshot<
             node.children,
             indexed,
             depth + 1,
+            indent + childIndentStep(node, levelHasBranches),
             visible && isOpen(node, expanded)
           );
         }
       }
     };
 
-    visit(nodes, null, 0, true);
+    visit(nodes, null, 0, 0, true);
   }
 
   get visibleRows(): readonly FlatTreeRow<TData>[] {
@@ -135,7 +141,8 @@ export class TreeSnapshot<
     return {
       node: indexed.node,
       parentId: indexed.parentId,
-      depth: indexed.depth
+      depth: indexed.depth,
+      indent: indexed.indent
     };
   }
 
@@ -221,6 +228,20 @@ export function isOpen<TData>(
   expanded: ReadonlySet<string>
 ): boolean {
   return node.collapsible === false || expanded.has(node.id);
+}
+
+export function reservesToggle<TData>(
+  node: TreeNode<TData>,
+  levelHasBranches: boolean
+): boolean {
+  return levelHasBranches && !isExpandable(node);
+}
+
+function childIndentStep<TData>(
+  node: TreeNode<TData>,
+  levelHasBranches: boolean
+): number {
+  return reservesToggle(node, levelHasBranches) && hasChildren(node) ? 2 : 1;
 }
 
 export function flattenVisible<TData>(
@@ -393,7 +414,7 @@ export function canDrop<TData>(
 export interface DropIndicatorRow {
   rowId: string;
   where: TreeDropWhere;
-  depth: number;
+  indent: number;
 }
 
 export interface DropIndicatorTarget {
@@ -406,11 +427,11 @@ export function resolveDropIndicatorRow<TData>(
   snapshot: TreeSnapshot<TData>,
   target: DropIndicatorTarget
 ): DropIndicatorRow | null {
-  const depth = snapshot.row(target.targetId)?.depth;
+  const indent = snapshot.row(target.targetId)?.indent;
 
-  return depth === undefined ?
+  return indent === undefined ?
     null :
-    { rowId: target.anchorId, where: target.where, depth };
+    { rowId: target.anchorId, where: target.where, indent };
 }
 
 export interface RowDropStyle {
@@ -429,7 +450,7 @@ export function resolveRowDropStyle(
 
   return {
     drop: dropIndicator.where,
-    dropIndent: `calc(${dropIndicator.depth} * var(--jolly-tree-indent, 16px))`
+    dropIndent: `calc(${dropIndicator.indent} * var(--jolly-tree-indent, 16px))`
   };
 }
 

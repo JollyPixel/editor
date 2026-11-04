@@ -392,7 +392,7 @@ export class Tree<TData = unknown> extends LitElement
       const placement = this.#snapshot.placement(id);
       const { drop, dropIndent } = this.#drag.rowDropStyle(
         id,
-        TreeRowView.indentStyle(row.depth)
+        TreeRowView.indentStyle(row.indent)
       );
       state.position = placement?.position ?? 1;
       state.setSize = placement?.size ?? 1;

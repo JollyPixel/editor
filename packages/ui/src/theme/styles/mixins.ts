@@ -46,9 +46,12 @@ export const headerTexture = css`
       currentcolor 0
     )
     0 / 12px 12px;
-  color: var(--jolly-text-on-fill, white);
+  color: var(
+    --jolly-header-texture-color,
+    var(--jolly-text-on-fill, white)
+  );
   content: "";
-  opacity: 0.07;
+  opacity: var(--jolly-header-texture-opacity, 0.07);
   pointer-events: none;
   mask-image: linear-gradient(to right, black, transparent);
 `;

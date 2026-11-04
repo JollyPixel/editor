@@ -59,7 +59,7 @@ describe("Data.resolveDropIndicatorRow", () => {
 
     assert.deepEqual(
       resolveDropIndicatorRow(snapshot, { targetId: "a", anchorId: "a", where: "below" }),
-      { rowId: "a", where: "below", depth: 0 }
+      { rowId: "a", where: "below", indent: 0 }
     );
   });
 
@@ -68,20 +68,20 @@ describe("Data.resolveDropIndicatorRow", () => {
 
     assert.deepEqual(
       resolveDropIndicatorRow(snapshot, { targetId: "a2", anchorId: "a2", where: "above" }),
-      { rowId: "a2", where: "above", depth: 1 }
+      { rowId: "a2", where: "above", indent: 1 }
     );
     assert.deepEqual(
       resolveDropIndicatorRow(snapshot, { targetId: "a", anchorId: "a", where: "inside" }),
-      { rowId: "a", where: "inside", depth: 0 }
+      { rowId: "a", where: "inside", indent: 0 }
     );
   });
 
-  test("renders at the promoted boundary row, using the promoted target's depth", () => {
+  test("renders at the promoted boundary row, using the promoted target's indent", () => {
     const snapshot = new TreeSnapshot(TREE, new Set(["a", "a2"]));
 
     assert.deepEqual(
       resolveDropIndicatorRow(snapshot, { targetId: "a", anchorId: "a2a", where: "below" }),
-      { rowId: "a2a", where: "below", depth: 0 }
+      { rowId: "a2a", where: "below", indent: 0 }
     );
   });
 
@@ -99,7 +99,7 @@ describe("Data.resolveDropIndicatorRow", () => {
 
     assert.deepEqual(
       resolveDropIndicatorRow(snapshot, { targetId: "r2", anchorId: "r2", where: "below" }),
-      { rowId: "r2", where: "below", depth: 0 }
+      { rowId: "r2", where: "below", indent: 0 }
     );
   });
 });
@@ -110,7 +110,7 @@ describe("Data.resolveRowDropStyle", () => {
       resolveRowDropStyle("a1", "calc(1 * 16px)", {
         rowId: "a2a",
         where: "below",
-        depth: 0
+        indent: 0
       }),
       { drop: null, dropIndent: "calc(1 * 16px)" }
     );
@@ -123,12 +123,12 @@ describe("Data.resolveRowDropStyle", () => {
     );
   });
 
-  test("uses the indicator's target depth for the anchor row's drop line", () => {
+  test("uses the indicator's target indent for the anchor row's drop line", () => {
     assert.deepEqual(
       resolveRowDropStyle("a2a", "calc(2 * 16px)", {
         rowId: "a2a",
         where: "below",
-        depth: 0
+        indent: 0
       }),
       { drop: "below", dropIndent: "calc(0 * var(--jolly-tree-indent, 16px))" }
     );
