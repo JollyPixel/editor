@@ -4,7 +4,7 @@ import type {
   ReactiveControllerHost
 } from "lit";
 
-export class FrameUpdate implements ReactiveController {
+export class FrameUpdateController implements ReactiveController {
   #host: ReactiveControllerHost;
   #frame: number | null = null;
 

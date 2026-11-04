@@ -1,0 +1,35 @@
+{
+  "extends": "../../../tsconfig/lib.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vite/client"
+    ]
+  },
+  "references": [
+    {
+      "path": "../host"
+    },
+    {
+      "path": "../../assets/model"
+    },
+    {
+      "path": "../../asset-server"
+    },
+    {
+      "path": "../../engine"
+    },
+    {
+      "path": "../../preferences"
+    },
+    {
+      "path": "../../runtime"
+    },
+    {
+      "path": "../../three"
+    },
+    {
+      "path": "../../ui"
+    }
+  ]
+}

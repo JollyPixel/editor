@@ -15,6 +15,15 @@ export type Model = {
   animations: THREE.AnimationClip[];
 };
 
+export interface ModelParseOptions {
+  /**
+   * Folder the file's external resources (textures, buffers) resolve against.
+   * @default ""
+   */
+  resourcePath?: string;
+  manager?: THREE.LoadingManager;
+}
+
 export const ModelAssetType = new AssetType<Model>("model");
 
 export class ModelAssetLoader implements AssetLoader<Model> {
@@ -32,17 +41,22 @@ export class ModelAssetLoader implements AssetLoader<Model> {
     const source = parse(record.path.toString());
 
     try {
-      switch (source.ext) {
-        case ".obj":
-          return await this.#loadObject(source);
-        case ".fbx":
-          return await this.#loadFbx(source);
-        case ".glb":
-        case ".gltf":
-          return await this.#loadGltf(source);
-        default:
-          throw new Error(`Unsupported model type: ${source.ext}`);
+      if (source.ext === ".obj") {
+        return await this.#loadObjectWithMtl(source);
       }
+
+      const content = await new THREE.FileLoader(this.#manager)
+        .setResponseType("arraybuffer")
+        .loadAsync(source.dir + source.base);
+
+      return await parseModel(
+        new Uint8Array(content as ArrayBuffer),
+        source.base,
+        {
+          resourcePath: source.dir,
+          manager: this.#manager
+        }
+      );
     }
     catch (error: unknown) {
       throw new Error(
@@ -52,7 +66,7 @@ export class ModelAssetLoader implements AssetLoader<Model> {
     }
   }
 
-  async #loadObject(
+  async #loadObjectWithMtl(
     source: ReturnType<typeof parse>
   ): Promise<Model> {
     const [{ OBJLoader }, { MTLLoader }] = await Promise.all([
@@ -74,57 +88,115 @@ export class ModelAssetLoader implements AssetLoader<Model> {
       animations: []
     };
   }
+}
 
-  async #loadFbx(
-    source: ReturnType<typeof parse>
-  ): Promise<Model> {
-    const { FBXLoader } = await import("three/addons/loaders/FBXLoader.js");
-    const object = await new FBXLoader(this.#manager)
-      .setPath(source.dir)
-      .loadAsync(source.base);
-    object.name = source.name;
+export async function parseModel(
+  content: Uint8Array,
+  fileName: string,
+  options: ModelParseOptions = {}
+): Promise<Model> {
+  const {
+    resourcePath = "",
+    manager = THREE.DefaultLoadingManager
+  } = options;
+  const source = parse(fileName);
 
-    object.traverse((child) => {
-      if (!(child instanceof THREE.Mesh)) {
-        return;
+  switch (source.ext) {
+    case ".obj":
+      return parseObject(content, source.name, manager);
+    case ".fbx":
+      return parseFbx(content, source.name, resourcePath, manager);
+    case ".glb":
+    case ".gltf":
+      return parseGltf(content, resourcePath, manager);
+    default:
+      throw new Error(`Unsupported model type: ${source.ext}`);
+  }
+}
+
+async function parseObject(
+  content: Uint8Array,
+  name: string,
+  manager: THREE.LoadingManager
+): Promise<Model> {
+  const { OBJLoader } = await import("three/addons/loaders/OBJLoader.js");
+  const object = new OBJLoader(manager)
+    .parse(new TextDecoder().decode(content));
+  object.name = name;
+
+  return {
+    object,
+    animations: []
+  };
+}
+
+async function parseFbx(
+  content: Uint8Array,
+  name: string,
+  resourcePath: string,
+  manager: THREE.LoadingManager
+): Promise<Model> {
+  const { FBXLoader } = await import("three/addons/loaders/FBXLoader.js");
+  const object = new FBXLoader(manager)
+    .parse(toArrayBuffer(content), resourcePath);
+  object.name = name;
+
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) {
+      return;
+    }
+
+    child.castShadow = true;
+    child.receiveShadow = true;
+
+    const materials = Array.isArray(child.material) ?
+      child.material :
+      [child.material];
+    for (const material of materials) {
+      if (isMaterialWithMap(material) && material.map) {
+        material.map.magFilter = THREE.NearestFilter;
       }
+    }
+  });
 
-      child.castShadow = true;
-      child.receiveShadow = true;
+  return {
+    object,
+    animations: object.animations
+  };
+}
 
-      const materials = Array.isArray(child.material) ?
-        child.material :
-        [child.material];
-      for (const material of materials) {
-        if (isMaterialWithMap(material) && material.map) {
-          material.map.magFilter = THREE.NearestFilter;
-        }
-      }
-    });
+async function parseGltf(
+  content: Uint8Array,
+  resourcePath: string,
+  manager: THREE.LoadingManager
+): Promise<Model> {
+  const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([
+    import("three/addons/loaders/GLTFLoader.js"),
+    import("three/addons/libs/meshopt_decoder.module.js")
+  ]);
+  const gltf = await new GLTFLoader(manager)
+    .setMeshoptDecoder(MeshoptDecoder)
+    .parseAsync(toArrayBuffer(content), resourcePath);
 
-    return {
-      object,
-      animations: object.animations
-    };
+  return {
+    object: gltf.scene,
+    animations: gltf.animations
+  };
+}
+
+function toArrayBuffer(
+  content: Uint8Array
+): ArrayBuffer {
+  const { buffer } = content;
+  if (
+    buffer instanceof ArrayBuffer &&
+    content.byteOffset === 0 &&
+    content.byteLength === buffer.byteLength
+  ) {
+    return buffer;
   }
 
-  async #loadGltf(
-    source: ReturnType<typeof parse>
-  ): Promise<Model> {
-    const [{ GLTFLoader }, { MeshoptDecoder }] = await Promise.all([
-      import("three/addons/loaders/GLTFLoader.js"),
-      import("three/addons/libs/meshopt_decoder.module.js")
-    ]);
-    const object = await new GLTFLoader(this.#manager)
-      .setMeshoptDecoder(MeshoptDecoder)
-      .setPath(source.dir)
-      .loadAsync(source.base);
-
-    return {
-      object: object.scene,
-      animations: object.animations
-    };
-  }
+  return content.slice().buffer;
 }
 
 function loadMtlMaterials(

@@ -81,6 +81,23 @@ const coordinator = new AssetCoordinator({
 });
 ```
 
+### Models from bytes
+
+`parseModel(content, fileName, options?)` reads a model already in memory,
+picking the format from `fileName`'s extension. The model loader uses it
+after fetching a file.
+
+```ts
+const model = await parseModel(bytes, "knight.glb", {
+  resourcePath: "models/",
+  manager
+});
+```
+
+- `resourcePath` (default `""`) is the folder external textures and buffers resolve against.
+- An `.obj` file read this way has no `.mtl` materials.
+- An unknown extension rejects with `Unsupported model type`.
+
 ### KTX2 textures
 
 `TextureAssetLoader` sends `.ktx2` paths to the `ktx2` option, any object

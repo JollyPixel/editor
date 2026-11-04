@@ -6,6 +6,7 @@ import {
   type TemplateResult
 } from "lit";
 import {
+  FrameUpdateController,
   SubscriptionController,
   readDetail,
   type JollyChangeDetail,
@@ -29,7 +30,6 @@ import {
 } from "../../player/PlaybackMode.ts";
 import type { SoundPlayer } from "../../player/SoundPlayer.ts";
 import { Volume } from "../../player/volume/Volume.ts";
-import { FrameUpdate } from "./FrameUpdate.ts";
 import { soundTrackStyles } from "./SoundTrack.styles.ts";
 
 // CONSTANTS
@@ -63,7 +63,7 @@ export class SoundTrack extends LitElement {
       collaboration.subscribe("change", () => this.requestUpdate())
     ]
   );
-  #frames = new FrameUpdate(this);
+  #frames = new FrameUpdateController(this);
 
   #onSpeed = (
     event: Event

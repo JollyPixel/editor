@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig/lib.json",
+  "references": [
+    {
+      "path": "../../asset-server"
+    },
+    {
+      "path": "../../history"
+    },
+    {
+      "path": "../../network"
+    }
+  ]
+}

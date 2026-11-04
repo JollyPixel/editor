@@ -210,6 +210,11 @@ export interface GridOptions {
    * @default false
    */
   infiniteGrid?: boolean;
+  /**
+   * Draw the plane from below as well as from above.
+   * @default false
+   */
+  doubleSided?: boolean;
 }
 
 export interface GridCellDefaults {
@@ -264,6 +269,7 @@ export interface GridDefaults {
   offset: number;
   enabled: boolean;
   infiniteGrid: boolean;
+  doubleSided: boolean;
   extent: GridExtentDefaults;
 }
 
@@ -317,6 +323,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
     offset: 0,
     enabled: true,
     infiniteGrid: false,
+    doubleSided: false,
     extent: {
       minimum: 200,
       fadeMultiplier: 4
@@ -333,6 +340,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
   readonly zAxisColor: GridColor;
   readonly fade: GridFadeValue;
   readonly infiniteGrid: boolean;
+  readonly doubleSided: boolean;
   readonly extent: number;
   followCamera: boolean;
 
@@ -359,6 +367,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
       new GridStyleValue(section.style, "sectionStyle");
 
     const infiniteGrid = options.infiniteGrid ?? defaults.infiniteGrid;
+    const doubleSided = options.doubleSided ?? defaults.doubleSided;
 
     const fadeDistance = fadeOptions.distance ?? defaults.fade.distance;
     const extent = options.extent ?? Math.max(
@@ -403,7 +412,8 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
       sectionStyle: sectionStyle.value,
       uniforms,
       fadeFrom: fade.from,
-      infiniteGrid
+      infiniteGrid,
+      doubleSided
     });
 
     super(geometry, material);
@@ -418,6 +428,7 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
     this.zAxisColor = new GridColor(uniforms.zAxisColor.value);
     this.fade = fade;
     this.infiniteGrid = infiniteGrid;
+    this.doubleSided = doubleSided;
     this.extent = extent;
     this.followCamera = options.followCamera ?? (fade.from !== "origin");
     this.frustumCulled = false;
@@ -525,7 +536,8 @@ export class Grid extends THREE.Mesh<THREE.PlaneGeometry> {
       offset: this.offset,
       enabled: this.enabled,
       followCamera: this.followCamera,
-      infiniteGrid: this.infiniteGrid
+      infiniteGrid: this.infiniteGrid,
+      doubleSided: this.doubleSided
     };
   }
 

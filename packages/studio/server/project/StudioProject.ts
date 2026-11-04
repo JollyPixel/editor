@@ -33,6 +33,7 @@ const kSnapshot = {
 export const DEFAULT_PROJECT_FILE: ProjectFileData = {
   version: 1,
   editors: [
+    "@jolly-pixel/editor.model",
     "@jolly-pixel/editor.pixel-art",
     "@jolly-pixel/editor.scene",
     "@jolly-pixel/editor.script",
@@ -42,6 +43,7 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
   ],
   kinds: {
     "@jolly-pixel/asset.font": {},
+    "@jolly-pixel/asset.model": {},
     "@jolly-pixel/asset.pixel-art": {
       defaultSize: TEXTURE_SIZE,
       snapshot: kSnapshot

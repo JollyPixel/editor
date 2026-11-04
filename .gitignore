@@ -153,6 +153,7 @@ packages/editors/terrain/assets/
 packages/editors/scene/assets/
 packages/editors/sound/assets/
 packages/editors/script/assets/
+packages/editors/model/assets/
 packages/studio/project/
 
 # Pixel-art editor page served by the studio

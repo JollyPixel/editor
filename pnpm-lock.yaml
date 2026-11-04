@@ -376,6 +376,21 @@ importers:
         specifier: workspace:*
         version: link:../../event-store
 
+  packages/assets/model:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
   packages/assets/pixel-art:
     dependencies:
       '@jolly-pixel/asset-server':
@@ -743,6 +758,46 @@ importers:
       fake-indexeddb:
         specifier: 6.2.7
         version: 6.2.7
+
+  packages/editors/model:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/asset.model':
+        specifier: workspace:*
+        version: link:../../assets/model
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../../preferences
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
+      '@jolly-pixel/three':
+        specifier: workspace:*
+        version: link:../../three
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
+    devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../../e2e
 
   packages/editors/pixel-art:
     dependencies:
@@ -1374,6 +1429,9 @@ importers:
       '@jolly-pixel/asset.font':
         specifier: workspace:*
         version: link:../assets/font
+      '@jolly-pixel/asset.model':
+        specifier: workspace:*
+        version: link:../assets/model
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art
@@ -1401,6 +1459,9 @@ importers:
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../editors/host
+      '@jolly-pixel/editor.model':
+        specifier: workspace:*
+        version: link:../editors/model
       '@jolly-pixel/editor.pixel-art':
         specifier: workspace:*
         version: link:../editors/pixel-art
