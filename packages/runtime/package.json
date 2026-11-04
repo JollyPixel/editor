@@ -54,6 +54,6 @@
   },
   "devDependencies": {
     "@jolly-pixel/e2e": "workspace:*",
-    "electron": "45.0.0"
+    "electron": "45.1.0"
   }
 }
