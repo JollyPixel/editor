@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/asset.script/client";
 
 // Import Internal Dependencies
-import { ScriptCaret } from "#src/collaboration/ScriptCaret.ts";
+import { ScriptCaret } from "#src/text/ScriptCaret.ts";
 import { ScriptCollaboration } from "#src/collaboration/ScriptCollaboration.ts";
 import { FakeNetwork } from "../helpers/FakeNetwork.ts";
 

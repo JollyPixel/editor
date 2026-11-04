@@ -15,8 +15,8 @@ import "@jolly-pixel/editor.host/ui";
 
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
-import type { ScriptLanguage } from "./code/ScriptHighlighter.ts";
-import { OutlineRefresh } from "./outline/OutlineRefresh.ts";
+import type { ScriptLanguage } from "./panes/code/ScriptHighlighter.ts";
+import { OutlineRefresh } from "./panes/outline/OutlineRefresh.ts";
 
 // CONSTANTS
 const kScriptKind = scriptDocumentKind();

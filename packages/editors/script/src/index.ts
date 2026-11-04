@@ -8,8 +8,8 @@ import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import "./icons.ts";
-import "./code/ScriptCode.ts";
-import "./outline/ScriptOutlinePane.ts";
+import "./panes/code/ScriptCode.ts";
+import "./panes/outline/ScriptOutlinePane.ts";
 import { ScriptEditor } from "./ScriptEditor.ts";
 
 declare global {

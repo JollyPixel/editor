@@ -13,8 +13,8 @@ import {
 import {
   OUTLINE_REFRESH_DELAY,
   OutlineRefresh
-} from "#src/outline/OutlineRefresh.ts";
-import { FakeNetwork } from "../helpers/FakeNetwork.ts";
+} from "#src/panes/outline/OutlineRefresh.ts";
+import { FakeNetwork } from "../../helpers/FakeNetwork.ts";
 
 describe("OutlineRefresh", () => {
   test("requests one outline once local typing pauses, and none for peer edits", (t) => {

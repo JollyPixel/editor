@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   LineTokenCache,
   type LineTokenizer
-} from "#src/code/LineTokenCache.ts";
+} from "#src/panes/code/LineTokenCache.ts";
 
 const kCommentTokenizer: LineTokenizer<string, boolean> = {
   tokenize: (line, state) => {

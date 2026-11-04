@@ -5,10 +5,11 @@ import type {
 } from "lit";
 
 // Import Internal Dependencies
+import { LineRange } from "../../text/LineRange.ts";
 import type {
   LinePosition,
   TextLines
-} from "./TextLines.ts";
+} from "../../text/TextLines.ts";
 
 export interface CodeViewportElements {
   scroller(): HTMLElement | null;
@@ -17,17 +18,18 @@ export interface CodeViewportElements {
 }
 
 // CONSTANTS
-export const LINE_HEIGHT = 20;
+const kLineHeight = 20;
 const kLineHeightProperty = "--script-line-height";
 const kOverscan = 8;
 const kProbeLength = 10;
 const kRevealMargin = 4;
+const kTrailingLines = 4;
+const kTrailingColumns = 4;
 
 export class CodeViewport implements ReactiveController {
   #host: ReactiveControllerHost & HTMLElement;
   #elements: CodeViewportElements;
-  #first = 0;
-  #last = 0;
+  #visible = new LineRange(0, 0);
   #charWidth = 0;
   #frame: number | null = null;
   #resize = new ResizeObserver(() => this.schedule());
@@ -42,7 +44,7 @@ export class CodeViewport implements ReactiveController {
   }
 
   hostConnected(): void {
-    this.#host.style.setProperty(kLineHeightProperty, `${LINE_HEIGHT}px`);
+    this.#host.style.setProperty(kLineHeightProperty, `${kLineHeight}px`);
     this.#resize.observe(this.#host);
   }
 
@@ -62,22 +64,28 @@ export class CodeViewport implements ReactiveController {
     }
   }
 
-  visibleLines(
-    count: number
-  ): number[] {
-    const lines: number[] = [];
-    for (let line = this.#first; line <= Math.min(this.#last, count - 1); line++) {
-      lines.push(line);
-    }
-
-    return lines;
+  visible(
+    lines: LineRange
+  ): LineRange {
+    return this.#visible.intersect(lines);
   }
 
-  clampToVisible(
-    first: number,
-    last: number
-  ): readonly [number, number] {
-    return [Math.max(first, this.#first), Math.min(last, this.#last)];
+  top(
+    line: number
+  ): string {
+    return `${lineTop(line)}px`;
+  }
+
+  height(
+    lines: TextLines
+  ): string {
+    return `${lineTop(lines.count + kTrailingLines)}px`;
+  }
+
+  width(
+    lines: TextLines
+  ): string {
+    return `${lines.widest + kTrailingColumns}ch`;
   }
 
   schedule(): void {
@@ -100,12 +108,12 @@ export class CodeViewport implements ReactiveController {
       return;
     }
 
-    const top = position.line * LINE_HEIGHT;
+    const top = lineTop(position.line);
     if (top < scroller.scrollTop) {
       scroller.scrollTop = top;
     }
-    else if (top + LINE_HEIGHT > scroller.scrollTop + scroller.clientHeight) {
-      scroller.scrollTop = top + LINE_HEIGHT - scroller.clientHeight;
+    else if (top + kLineHeight > scroller.scrollTop + scroller.clientHeight) {
+      scroller.scrollTop = top + kLineHeight - scroller.clientHeight;
     }
 
     const margin = this.#charWidth * kRevealMargin;
@@ -126,12 +134,19 @@ export class CodeViewport implements ReactiveController {
       return;
     }
 
-    const first = Math.max(Math.floor(scroller.scrollTop / LINE_HEIGHT) - kOverscan, 0);
-    const last = Math.ceil((scroller.scrollTop + scroller.clientHeight) / LINE_HEIGHT) + kOverscan;
-    if (first !== this.#first || last !== this.#last) {
-      this.#first = first;
-      this.#last = last;
+    const visible = new LineRange(
+      Math.max(Math.floor(scroller.scrollTop / kLineHeight) - kOverscan, 0),
+      Math.ceil((scroller.scrollTop + scroller.clientHeight) / kLineHeight) + kOverscan
+    );
+    if (!visible.equals(this.#visible)) {
+      this.#visible = visible;
       this.#host.requestUpdate();
     }
   }
+}
+
+function lineTop(
+  line: number
+): number {
+  return line * kLineHeight;
 }

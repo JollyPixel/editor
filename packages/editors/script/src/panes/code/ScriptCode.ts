@@ -19,24 +19,21 @@ import type { ThemedToken } from "@shikijs/core";
 import type {
   PeerCaret,
   ScriptCollaboration
-} from "../collaboration/ScriptCollaboration.ts";
-import { ScriptCaret } from "../collaboration/ScriptCaret.ts";
-import {
-  CodeViewport,
-  LINE_HEIGHT
-} from "./CodeViewport.ts";
+} from "../../collaboration/ScriptCollaboration.ts";
 import {
   insertIndent,
   insertNewline,
   removeIndent,
-  type KeyEdit,
-  type TextSelection
-} from "./EditingKeys.ts";
+  type KeyEdit
+} from "../../text/EditingKeys.ts";
+import { LineRange } from "../../text/LineRange.ts";
+import { ScriptCaret } from "../../text/ScriptCaret.ts";
+import { TextLines } from "../../text/TextLines.ts";
+import { CodeViewport } from "./CodeViewport.ts";
 import {
   ScriptHighlighter,
   type ScriptLanguage
 } from "./ScriptHighlighter.ts";
-import { TextLines } from "./TextLines.ts";
 
 export interface ScriptCodeOptions {
   document: ScriptDocument;
@@ -192,6 +189,16 @@ export class ScriptCode extends LitElement {
     probe: () => this.renderRoot.querySelector(".probe")
   });
 
+  #onSelectionChange = (): void => {
+    const textarea = this.#textarea;
+    if (textarea === null || this.shadowRoot?.activeElement !== textarea) {
+      return;
+    }
+
+    this.#collaboration?.publish(ScriptCaret.from(textarea));
+    this.requestUpdate();
+  };
+
   attach(
     options: ScriptCodeOptions
   ): () => void {
@@ -202,12 +209,15 @@ export class ScriptCode extends LitElement {
     this.#readOnly = readOnly;
     this.#lines = new TextLines(document.text);
     this.#carets = collaboration.carets;
+    const page = this.ownerDocument;
+    page.addEventListener("selectionchange", this.#onSelectionChange);
     this.#release = [
       document.subscribe("change", (change) => this.#follow(change)),
       collaboration.subscribe("caretsChange", (carets) => {
         this.#carets = carets;
         this.requestUpdate();
-      })
+      }),
+      () => page.removeEventListener("selectionchange", this.#onSelectionChange)
     ];
     void ScriptHighlighter.create(language).then((highlighter) => {
       if (this.#document !== document) {
@@ -217,10 +227,7 @@ export class ScriptCode extends LitElement {
       highlighter.update(this.#lines.lines);
       this.requestUpdate();
     });
-    this.#syncTextarea({
-      start: 0,
-      end: 0
-    });
+    this.#syncTextarea(ScriptCaret.collapsed(0));
     this.requestUpdate();
 
     return () => this.#detach();
@@ -238,17 +245,13 @@ export class ScriptCode extends LitElement {
   protected override firstUpdated(
     _changed: PropertyValues
   ): void {
-    this.#syncTextarea({
-      start: 0,
-      end: 0
-    });
+    this.#syncTextarea(ScriptCaret.collapsed(0));
   }
 
   override render(): TemplateResult {
-    const { count } = this.#lines;
-    const height = `${(count + 4) * LINE_HEIGHT}px`;
-    const width = `${this.#lines.widest + 4}ch`;
-    const visible = this.#viewport.visibleLines(count);
+    const height = this.#viewport.height(this.#lines);
+    const width = this.#viewport.width(this.#lines);
+    const visible = this.#viewport.visible(this.#lines.range);
     const current = this.#textarea === null ?
       -1 :
       this.#lines.position(this.#textarea.selectionStart).line;
@@ -260,7 +263,7 @@ export class ScriptCode extends LitElement {
             ${visible.map((line) => html`
               <div
                 class="number ${line === current ? "current" : ""}"
-                style=${styleMap({ top: `${line * LINE_HEIGHT}px` })}
+                style=${styleMap({ top: this.#viewport.top(line) })}
               >${line + 1}</div>
             `)}
           </div>
@@ -268,7 +271,7 @@ export class ScriptCode extends LitElement {
             <div aria-hidden="true">
               ${this.#carets.map((caret) => this.#renderSelection(caret))}
               ${visible.map((line) => html`
-                <div class="line" style=${styleMap({ top: `${line * LINE_HEIGHT}px` })}>${
+                <div class="line" style=${styleMap({ top: this.#viewport.top(line) })}>${
                   this.#renderTokens(line)
                 }</div>
               `)}
@@ -284,8 +287,7 @@ export class ScriptCode extends LitElement {
               @input=${() => this.#onInput()}
               @keydown=${(event: KeyboardEvent) => this.#onKeyDown(event)}
               @beforeinput=${(event: InputEvent) => this.#onBeforeInput(event)}
-              @selectionchange=${() => this.#onCaretMove()}
-              @focus=${() => this.#onCaretMove()}
+              @focus=${() => this.#revealCaret()}
             ></textarea>
             <span class="probe">0000000000</span>
           </div>
@@ -303,7 +305,7 @@ export class ScriptCode extends LitElement {
   ): TemplateResult | string {
     const tokens = this.#highlighter?.tokens(line) ?? null;
     if (tokens === null) {
-      return this.#lines.lines[line];
+      return this.#lines.line(line);
     }
 
     return html`${tokens.map(tokenSpan)}`;
@@ -318,7 +320,7 @@ export class ScriptCode extends LitElement {
       <div
         class="caret"
         style=${styleMap({
-          top: `${head.line * LINE_HEIGHT}px`,
+          top: this.#viewport.top(head.line),
           left: `${this.#lines.visualColumn(head)}ch`,
           borderColor: peer.color
         })}
@@ -329,31 +331,30 @@ export class ScriptCode extends LitElement {
   #renderSelection(
     { peer, caret }: PeerCaret
   ): TemplateResult | typeof nothing {
-    if (caret.start === caret.end) {
+    if (caret.collapsed) {
       return nothing;
     }
 
     const start = this.#lines.position(caret.start);
     const end = this.#lines.position(caret.end);
-    const rows: TemplateResult[] = [];
-    const [first, last] = this.#viewport.clampToVisible(start.line, end.line);
-    for (let line = first; line <= last; line++) {
+    const rows = this.#viewport.visible(new LineRange(start.line, end.line)).map((line) => {
       const from = line === start.line ? this.#lines.visualColumn(start) : 0;
       const to = line === end.line ?
         this.#lines.visualColumn(end) :
-        this.#lines.visualColumn({ line, column: this.#lines.lines[line].length }) + 1;
-      rows.push(html`
+        this.#lines.visualWidth(line) + 1;
+
+      return html`
         <div
           class="selection"
           style=${styleMap({
-            top: `${line * LINE_HEIGHT}px`,
+            top: this.#viewport.top(line),
             left: `${from}ch`,
             width: `${Math.max(to - from, 0)}ch`,
             background: peer.color
           })}
         ></div>
-      `);
-    }
+      `;
+    });
 
     return html`${rows}`;
   }
@@ -370,13 +371,15 @@ export class ScriptCode extends LitElement {
     this.#highlighter?.update(this.#lines.lines);
     const textarea = this.#textarea;
     if (origin !== "input" && textarea !== null) {
-      this.#syncTextarea(selectionAfter(edit, origin, textarea, document.text.length));
+      this.#syncTextarea(
+        caretAfter(edit, origin, ScriptCaret.from(textarea), document.text.length)
+      );
     }
     this.requestUpdate();
   }
 
   #syncTextarea(
-    selection: TextSelection
+    caret: ScriptCaret
   ): void {
     const textarea = this.#textarea;
     const text = this.#document?.text ?? "";
@@ -386,7 +389,7 @@ export class ScriptCode extends LitElement {
     if (textarea.value !== text) {
       textarea.value = text;
     }
-    textarea.setSelectionRange(selection.start, selection.end);
+    caret.selectIn(textarea);
   }
 
   #onInput(): void {
@@ -397,7 +400,7 @@ export class ScriptCode extends LitElement {
     }
 
     document.edit(TextEdit.between(document.text, textarea.value, textarea.selectionEnd));
-    this.#onCaretMove();
+    this.#revealCaret();
   }
 
   #onBeforeInput(
@@ -441,11 +444,11 @@ export class ScriptCode extends LitElement {
     else {
       this.#document.undo();
     }
-    this.#onCaretMove();
+    this.#revealCaret();
   }
 
   #applyKey(
-    command: (text: string, selection: TextSelection) => KeyEdit
+    command: (lines: TextLines, caret: ScriptCaret) => KeyEdit
   ): void {
     const textarea = this.#textarea;
     const document = this.#document;
@@ -453,34 +456,20 @@ export class ScriptCode extends LitElement {
       return;
     }
 
-    const { edit, selection } = command(document.text, {
-      start: textarea.selectionStart,
-      end: textarea.selectionEnd
-    });
+    const { edit, caret } = command(this.#lines, ScriptCaret.from(textarea));
     document.edit(edit);
-    this.#syncTextarea(selection);
-    this.#onCaretMove();
+    this.#syncTextarea(caret);
+    this.#revealCaret();
   }
 
-  #onCaretMove(): void {
+  #revealCaret(): void {
     const textarea = this.#textarea;
     if (textarea === null) {
       return;
     }
 
-    const { selectionStart, selectionEnd, selectionDirection } = textarea;
-    this.#collaboration?.publish(
-      selectionDirection === "backward" ?
-        new ScriptCaret(selectionEnd, selectionStart) :
-        new ScriptCaret(selectionStart, selectionEnd)
-    );
-    this.#viewport.reveal(
-      this.#lines.position(
-        selectionDirection === "backward" ? selectionStart : selectionEnd
-      ),
-      this.#lines
-    );
-    this.requestUpdate();
+    const { head } = ScriptCaret.from(textarea);
+    this.#viewport.reveal(this.#lines.position(head), this.#lines);
   }
 
   #detach(): void {
@@ -522,34 +511,24 @@ function tokenStyle(
   return style;
 }
 
-function selectionAfter(
+function caretAfter(
   edit: TextEdit,
   origin: ScriptChange["origin"],
-  textarea: HTMLTextAreaElement,
+  caret: ScriptCaret,
   length: number
-): TextSelection {
+): ScriptCaret {
   if (origin === "history") {
     const last = edit.changes.at(-1);
-    const caret = last === undefined ?
-      textarea.selectionEnd :
-      last.at + ("insert" in last ? last.insert.length : 0);
 
-    return {
-      start: caret,
-      end: caret
-    };
+    return ScriptCaret.collapsed(last === undefined ?
+      caret.end :
+      last.at + ("insert" in last ? last.insert.length : 0));
   }
   if (origin === "load") {
-    return {
-      start: Math.min(textarea.selectionStart, length),
-      end: Math.min(textarea.selectionEnd, length)
-    };
+    return caret.clamp(length);
   }
 
-  return {
-    start: edit.mapPosition(textarea.selectionStart, "before"),
-    end: edit.mapPosition(textarea.selectionEnd, "before")
-  };
+  return caret.follow(edit);
 }
 
 customElements.define("jolly-script-code", ScriptCode);
