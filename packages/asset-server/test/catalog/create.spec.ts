@@ -33,6 +33,8 @@ import {
 } from "../helpers/bytes.ts";
 import {
   counterHandler,
+  linkContent,
+  ownerHandler,
   type CounterState
 } from "../helpers/kinds.ts";
 import { recordingClient } from "../helpers/rooms.ts";
@@ -114,7 +116,29 @@ function tallyCounter(): AssetKindHandler {
           throw new Error("not a tally");
         }
 
-        return bytes(String(marks.length));
+        return {
+          content: bytes(String(marks.length))
+        };
+      }
+    }
+  };
+}
+
+function pairedOwner(): AssetKindHandler {
+  return {
+    ...ownerHandler(),
+    conversions: {
+      ".pair": async(content) => {
+        return {
+          content: linkContent("converted-counter"),
+          companions: [
+            {
+              id: "converted-counter",
+              kind: "counter",
+              content
+            }
+          ]
+        };
       }
     }
   };
@@ -217,11 +241,31 @@ describe("catalog:create from another format", () => {
     assert.strictEqual(catalog.sync.assetIndex.byPath("score.counter"), undefined);
   });
 
+  test("writes converted companions next to the asset and links them", async() => {
+    await using catalog = await catalogServer([pairedOwner(), counterHandler()]);
+
+    const reply = await catalog.create("duo.owner", {
+      content: bytes("5"),
+      from: ".pair"
+    });
+    await catalog.sync.projector.flush();
+
+    assert.strictEqual(reply.type, CATALOG_APPLIED);
+    const counter = catalog.sync.assetIndex.byPath("duo.counter");
+    assert.strictEqual(counter?.kind, "counter");
+    assert.strictEqual(text(await catalog.sync.source.read("duo.counter")), "5");
+    assert.strictEqual(text(await catalog.sync.source.read("duo.owner")), counter.id);
+  });
+
   test("refuses a format without content to convert", async() => {
     await using catalog = await catalogServer([{
       ...counterHandler(),
       conversions: {
-        ".tally": async() => bytes("1")
+        ".tally": async() => {
+          return {
+            content: bytes("1")
+          };
+        }
       }
     }]);
 

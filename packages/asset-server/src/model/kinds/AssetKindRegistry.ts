@@ -7,7 +7,10 @@ import {
 } from "@openally/result";
 
 // Import Internal Dependencies
-import type { AnyAssetKindHandler } from "./AssetKindHandler.ts";
+import type {
+  AnyAssetKindHandler,
+  ConvertedAsset
+} from "./AssetKindHandler.ts";
 import {
   binaryAssetKind,
   BINARY_KIND
@@ -122,7 +125,7 @@ export class AssetKindRegistry {
     kind: string,
     from: string,
     content: Uint8Array
-  ): Promise<Result<Uint8Array, Error>> {
+  ): Promise<Result<ConvertedAsset, Error>> {
     if (!this.has(kind)) {
       const error = new UnknownAssetKindError(kind);
 

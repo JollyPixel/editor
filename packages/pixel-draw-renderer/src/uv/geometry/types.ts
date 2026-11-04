@@ -18,6 +18,7 @@ export type UVTriangleCorner =
 
 export interface UVRect extends SelectionRect {
   rotation?: UVQuarterTurn;
+  mirrored?: boolean;
 }
 
 export interface UVTriangle {

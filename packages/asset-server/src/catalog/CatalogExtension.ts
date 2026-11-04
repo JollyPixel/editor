@@ -51,6 +51,7 @@ import {
 import type { CatalogFolders } from "./CatalogFolders.ts";
 import { CatalogOutbox } from "./CatalogOutbox.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
+import { CompanionReplacementError } from "./errors/CompanionReplacementError.ts";
 import { AssetHasDependentsError } from "./errors/AssetHasDependentsError.ts";
 import {
   toActor,
@@ -70,6 +71,10 @@ import {
   planAssetImport
 } from "./archive/import/importAssetArchive.ts";
 import type { AssetTags } from "./tags/AssetTags.ts";
+import type {
+  CreateAssetFromPayload,
+  CreateConvertedAsset
+} from "../storage/writer/AssetWriteInput.ts";
 import { asError } from "../common/asError.ts";
 import { TaskChain } from "../common/TaskChain.ts";
 import { UnknownAssetError } from "../storage/writer/errors/UnknownAssetError.ts";
@@ -105,6 +110,10 @@ export interface CatalogExtensionOptions extends CatalogPolicy {
   backend: CatalogBackend;
   id?: string;
 }
+
+type CreatedContent =
+  | Pick<CreateAssetFromPayload, "data">
+  | Pick<CreateConvertedAsset, "converted">;
 
 export class CatalogExtension extends Extension<CatalogCommand> {
   readonly id: string;
@@ -351,7 +360,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     const decoded = this.#decode(command.content);
     const data = !decoded.ok || from === undefined ?
       decoded :
-      await this.#backend.kinds.convert(record.kind.value, from, decoded.val);
+      await this.#convertedReplacement(record.kind.value, from, decoded.val);
     if (!data.ok) {
       return data;
     }
@@ -371,21 +380,39 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     });
   }
 
+  async #convertedReplacement(
+    kind: string,
+    from: string,
+    content: Uint8Array
+  ): Promise<Result<Uint8Array, Error>> {
+    const converted = await this.#backend.kinds.convert(kind, from, content);
+
+    return converted.andThen(({ content, companions = [] }) => {
+      if (companions.length > 0) {
+        const error = new CompanionReplacementError(kind, from);
+
+        return Err(error);
+      }
+
+      return Ok(content);
+    });
+  }
+
   async #create(
     command: CatalogCreateCommand,
     actor: EventStore.Actor
   ): Promise<Result<CatalogApplied, Error>> {
-    const data = await this.#createdContent(command);
-    if (!data.ok) {
-      return data;
+    const created = await this.#createdContent(command);
+    if (!created.ok) {
+      return created;
     }
 
     const written = await this.#backend.writer.create({
       path: command.path,
       kind: command.kind,
       onPathConflict: command.onConflict,
-      data: data.val,
-      actor
+      actor,
+      ...created.val
     });
 
     return written.map((event) => {
@@ -398,25 +425,41 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
   async #createdContent(
     command: CatalogCreateCommand
-  ): Promise<Result<Uint8Array | undefined, Error>> {
+  ): Promise<Result<CreatedContent, Error>> {
     const { content, from } = command;
     if (content === undefined) {
-      return Ok(undefined);
+      return Ok({});
+    }
+
+    const decoded = this.#decode(content);
+    if (!decoded.ok) {
+      return decoded;
     }
 
     const { kinds } = this.#backend;
     const kind = command.kind ?? kinds.resolve(command.path).kind;
-    const decoded = this.#decode(content);
-    const data = !decoded.ok || from === undefined ?
-      decoded :
-      await kinds.convert(kind, from, decoded.val);
-    if (!data.ok || !kinds.has(kind)) {
-      return data;
+    if (from === undefined) {
+      return this.#loadable(kind, decoded.val).map(() => {
+        return { data: decoded.val };
+      });
     }
 
-    return kinds
-      .decode(kind, kCreatedAssetId, data.val)
-      .map(() => data.val);
+    const converted = await kinds.convert(kind, from, decoded.val);
+
+    return converted.andThen((asset) => this.#loadable(kind, asset.content).map(() => {
+      return { converted: asset };
+    }));
+  }
+
+  #loadable(
+    kind: string,
+    content: Uint8Array
+  ): Result<unknown, Error> {
+    const { kinds } = this.#backend;
+
+    return kinds.has(kind) ?
+      kinds.decode(kind, kCreatedAssetId, content) :
+      Ok(undefined);
   }
 
   async #export(

@@ -41,7 +41,9 @@ import {
 import { DependencyReader } from "./DependencyReader.ts";
 import type {
   AssetPayload,
+  CreateAssetFromPayload,
   CreateAssetInput,
+  CreateConvertedAsset,
   DeleteAssetInput,
   RenameAssetInput,
   UpdateAssetInput,
@@ -103,7 +105,9 @@ export class AssetWriter {
   create(
     input: CreateAssetInput
   ): Promise<Result<EventStore.Event, Error>> {
-    const snapshot = copyContentInput(input);
+    const snapshot = input.converted === undefined ?
+      copyContentInput(input) :
+      copyConvertedInput(input);
 
     return this.#writes.run(() => this.#create(snapshot));
   }
@@ -470,8 +474,30 @@ export class AssetWriter {
   }
 }
 
+function copyConvertedInput(
+  input: CreateConvertedAsset
+): CreateConvertedAsset {
+  const { content, companions = [] } = input.converted;
+
+  return {
+    ...input,
+    actor: {
+      ...input.actor
+    },
+    converted: {
+      content: Uint8Array.from(content),
+      companions: companions.map((companion) => {
+        return {
+          ...companion,
+          content: Uint8Array.from(companion.content)
+        };
+      })
+    }
+  };
+}
+
 function copyContentInput<
-  TInput extends CreateAssetInput | UpdateAssetInput
+  TInput extends CreateAssetFromPayload | UpdateAssetInput
 >(
   input: TInput
 ): TInput {

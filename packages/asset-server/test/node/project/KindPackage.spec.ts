@@ -54,7 +54,9 @@ describe("KindPackage", () => {
               {
                 ...handler,
                 conversions: {
-                  ".png": async(content: Uint8Array) => content
+                  ".png": async(content: Uint8Array) => {
+                    return { content };
+                  }
                 }
               } :
               handler

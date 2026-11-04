@@ -5,6 +5,7 @@ import {
   clamp,
   dot,
   float,
+  floor,
   Fn,
   int,
   materialColor,
@@ -49,7 +50,8 @@ const kClampedMapColor = Fn(({ material }) => {
     region.xy,
     region.zw
   );
-  const sampled = texture(map, texel.div(size)).level(float(0));
+  const wrapped = texel.sub(floor(texel.div(size)).mul(size));
+  const sampled = texture(map, wrapped.div(size)).level(float(0));
 
   return vec4(reference("color", "color", material), float(1)).mul(sampled);
 })();

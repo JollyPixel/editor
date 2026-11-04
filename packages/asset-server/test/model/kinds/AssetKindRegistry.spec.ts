@@ -207,7 +207,9 @@ describe("AssetKindRegistry — registration guards", () => {
         () => registry.register({
           ...handler("bad", { ".bad": "text/plain" }),
           conversions: {
-            [extension]: async(content) => content
+            [extension]: async(content) => {
+              return { content };
+            }
           }
         }),
         { name: "TypeError", message: /invalid extension/ }

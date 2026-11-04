@@ -4,48 +4,39 @@ import {
   arbitrated,
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
-  JsonAssetFile,
   SNAPSHOT_OPTIONS_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
-import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 
 // Import Internal Dependencies
 import {
-  compactVoxelModelFile,
   createVoxelModelFile,
   VOXEL_MODEL_ASSET,
   VOXEL_MODEL_COMMAND,
   VOXEL_MODEL_FILE_VERSION,
   VOXEL_MODEL_EXTENSION,
   VOXEL_MODEL_KIND,
-  compactVoxelModelFileSchema,
-  expandVoxelModelFile,
   type VoxelModelFile
 } from "./voxelModel.ts";
+import { VOXEL_MODEL_FILE } from "./voxelModelFile.ts";
 import { ModelTree } from "../model/ModelTree.ts";
 import {
   voxelModelCommandProtocol,
   voxelModelSnapshotSchema
 } from "../network/VoxelModelCommand.schema.ts";
 import { voxelModelConflictKeys } from "../network/VoxelModelCommandKeys.ts";
+import {
+  CSMODEL_EXTENSION,
+  voxelModelFromCsModel
+} from "../conversion/csmodel/csModelConversion.ts";
 import type {
   VoxelModelCommand,
   VoxelModelNetworkCommand,
   VoxelModelSnapshot
 } from "../network/types.ts";
-
-// CONSTANTS
-export const VOXEL_MODEL_FILE = new JsonAssetFile({
-  kind: VOXEL_MODEL_KIND,
-  schema: compactVoxelModelFileSchema,
-  expand: expandVoxelModelFile,
-  compact: compactVoxelModelFile,
-  isInvalid: (error) => error instanceof InvalidEntryError
-});
 
 export class VoxelModelState {
   #tree = new ModelTree();
@@ -129,6 +120,9 @@ export function voxelModelAssetKind(
       [VOXEL_MODEL_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
+    conversions: {
+      [CSMODEL_EXTENSION]: voxelModelFromCsModel
+    },
     companions: [
       {
         kind: PIXEL_ART_KIND,

@@ -249,6 +249,31 @@ describe("applyUvGeometry — rotation", () => {
     ]);
   });
 
+  test("mirrors the face across its vertical axis before the turn", () => {
+    const baseUv = Float32Array.from([
+      0, 1,
+      1, 1,
+      0, 0,
+      1, 0
+    ]);
+    const geometry = createGeometry(baseUv);
+
+    applyUvGeometry(
+      geometry,
+      baseUv,
+      { x: 0, y: 0, width: 16, height: 16, rotation: 1, mirrored: true },
+      kTextureSize,
+      [{ start: 0, count: 4 }]
+    );
+
+    assert.deepStrictEqual(readUvs(geometry), [
+      0.25, 0.75,
+      0.25, 1,
+      0, 0.75,
+      0, 1
+    ]);
+  });
+
   test("orients a rotated triangle from its original corner", () => {
     const baseUv = Float32Array.from(kCanonicalTriangle.flat());
     const geometry = createGeometry(baseUv);

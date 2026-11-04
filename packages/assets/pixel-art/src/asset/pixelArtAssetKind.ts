@@ -108,7 +108,11 @@ export function pixelArtAssetKind(
       [PIXEL_ART_EXTENSION]: JSON_CONTENT_TYPE
     },
     conversions: {
-      ".png": pixelArtContentFromPng
+      ".png": async(png) => {
+        return {
+          content: await pixelArtContentFromPng(png)
+        };
+      }
     },
     snapshot,
 

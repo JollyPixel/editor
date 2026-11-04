@@ -11,8 +11,8 @@ import {
   VOXEL_MODEL_EXTENSION,
   VOXEL_MODEL_KIND
 } from "#src/asset/voxelModel.ts";
+import { VOXEL_MODEL_FILE } from "#src/asset/voxelModelFile.ts";
 import {
-  VOXEL_MODEL_FILE,
   voxelModelAssetKind,
   VoxelModelState
 } from "#src/asset/voxelModelAssetKind.ts";

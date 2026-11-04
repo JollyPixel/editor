@@ -21,7 +21,8 @@ export const textureRectSchema = z.object({
 });
 
 const kUVRectSchema = z.extend(textureRectSchema, {
-  rotation: z.optional(kQuarterTurnSchema)
+  rotation: z.optional(kQuarterTurnSchema),
+  mirrored: z.optional(z.boolean())
 });
 
 const kNormalizedRectSchema = z.object({
