@@ -19,14 +19,4 @@ export const colorPickerPopoverStyles = css`
     color: var(--jolly-text, CanvasText);
     font-family: var(--jolly-font-family, ui-monospace, monospace);
   }
-
-  .done {
-    display: block;
-    margin: 8px 0 0 auto;
-    color: inherit;
-    background: transparent;
-    border: 1px solid var(--color-divider);
-    border-radius: 4px;
-    cursor: pointer;
-  }
 `;

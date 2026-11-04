@@ -2,6 +2,11 @@
 import { test, expect } from "./fixtures.ts";
 import type { PixelArtPanel } from "./support/panel.ts";
 
+// CONSTANTS
+const kPickerSettings = {
+  name: "Picker settings"
+};
+
 async function dock(
   panel: PixelArtPanel
 ): Promise<void> {
@@ -13,6 +18,7 @@ test("the docked palette lays ten slots out in two columns beside the picker", a
   const { colors } = panel;
   await dock(panel);
   await expect(colors.gridSlots).toHaveCount(10);
+  await expect(colors.dockedPicker.root.getByRole("button", kPickerSettings)).toBeVisible();
   const slot = colors.slot(4);
   await slot.click();
   const slots = await colors.gridSlots.all();
@@ -42,7 +48,8 @@ test("the docked palette lays ten slots out in two columns beside the picker", a
 
 test("a slot edit reaches the brush, a peer and the stored palette", async({
   panel,
-  peerPanel
+  peerPanel,
+  page
 }) => {
   const { colors } = panel;
   await dock(panel);
@@ -67,7 +74,7 @@ test("a slot edit reaches the brush, a peer and the stored palette", async({
   await expect.poll(() => colors.paletteColor(3)).toEqual(color);
   await expect.poll(() => peerPanel.colors.paletteColor(3)).toEqual(color);
   await expect(peerPanel.colors.slot(4)).toHaveAttribute("aria-pressed", "false");
-  await dialog.getByRole("button", { name: "Done" }).click();
+  await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
 
   await panel.reload();
@@ -126,12 +133,16 @@ test("F2 edits a palette slot and dismissing a picker cancels an uncommitted dra
   });
 });
 
-test("foreground, background and palette slots reuse one popover picker", async({ panel }) => {
+test("foreground, background and palette slots reuse one popover picker", async({
+  panel,
+  page
+}) => {
   const { colors } = panel;
   const picker = colors.popoverPicker;
   const handle = await picker.root.elementHandle();
   await colors.foreground.click();
   await expect(colors.popoverDialog).toBeVisible();
+  await expect(picker.root.getByRole("button", kPickerSettings)).toHaveCount(0);
   await picker.commit("#112233");
   await colors.background.click();
   await expect(colors.popoverDialog).toBeVisible();
@@ -139,7 +150,8 @@ test("foreground, background and palette slots reuse one popover picker", async(
   await expect.poll(() => colors.brush()).toEqual({
     primary: "#112233", secondary: "#445566"
   });
-  await colors.popover.getByRole("button", { name: "Done" }).click();
+  await page.keyboard.press("Escape");
+  await expect(colors.popoverDialog).toBeHidden();
   await dock(panel);
   await colors.slot(10).dblclick();
   await expect(colors.popover.getByRole("dialog", { name: "Edit palette color" })).toBeVisible();

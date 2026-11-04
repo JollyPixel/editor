@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { css } from "lit";
 
+// Import Internal Dependencies
+import { swatchFill } from "./swatchFill.styles.ts";
+
 export const colorPaletteGridStyles = css`
   :host {
     display: block;
@@ -22,14 +25,8 @@ export const colorPaletteGridStyles = css`
     border: 1px solid var(--color-divider);
     border-radius: var(--color-swatch-radius, 4px);
     cursor: pointer;
-    background: repeating-conic-gradient(#aaa 0% 25%, #eee 0% 50%)
-      0 0 / 8px 8px;
-  }
 
-  .grid span {
-    display: block;
-    width: 100%;
-    height: 100%;
+    ${swatchFill}
   }
 
   .grid button:focus,

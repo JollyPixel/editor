@@ -72,6 +72,7 @@ export class ColorPaletteGrid extends LitElement {
               aria-expanded=${this.locked ? nothing : String(this.editing === index)}
               title=${`${formatHex8(color, true)}: ${hint}`}
               ?disabled=${this.disabled}
+              style=${`--swatch-color:${formatRgba8(color)}`}
               @click=${(event: MouseEvent) => this.#select(event, index)}
               @dblclick=${(event: MouseEvent) => this.#edit(event, index)}
               @keydown=${(event: KeyboardEvent) => {
@@ -80,7 +81,7 @@ export class ColorPaletteGrid extends LitElement {
                   this.#edit(event, index);
                 }
               }}
-            ><span style=${`background:${formatRgba8(color)}`}></span></button>
+            ></button>
           `)}
       </div>
     `;
