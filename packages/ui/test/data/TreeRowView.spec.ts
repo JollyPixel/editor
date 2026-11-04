@@ -58,15 +58,17 @@ const kState: TreeRowState = {
 
 function createRow(
   node: Partial<TreeNode> = {},
-  depth = 1
+  place: Partial<Pick<FlatTreeRow, "depth" | "indent">> = {}
 ): FlatTreeRow<unknown> {
   return {
     node: {
       ...kNode,
       ...node
     },
-    depth,
-    parentId: "root"
+    depth: 1,
+    indent: 1,
+    parentId: "root",
+    ...place
   };
 }
 
@@ -89,9 +91,9 @@ function matches(
   view: TreeRowView,
   node: Partial<TreeNode> = {},
   state: Partial<TreeRowState> = {},
-  depth = 1
+  place: Partial<Pick<FlatTreeRow, "depth" | "indent">> = {}
 ): boolean {
-  return view.matches(createRow(node, depth), stateWith(state));
+  return view.matches(createRow(node, place), stateWith(state));
 }
 
 describe("Data.TreeRowView", () => {
@@ -160,8 +162,9 @@ describe("Data.TreeRowView", () => {
     }
   });
 
-  test("a deeper row no longer matches", () => {
-    assert.ok(!matches(createView(), {}, {}, 2));
+  test("a deeper or further indented row no longer matches", () => {
+    assert.ok(!matches(createView(), {}, {}, { depth: 2 }));
+    assert.ok(!matches(createView(), {}, {}, { indent: 2 }));
   });
 
   test("a swatch or badge mutated in place no longer matches", () => {
@@ -194,6 +197,7 @@ describe("Data.TreeRowViewList", () => {
           label: id
         },
         depth: 0,
+        indent: 0,
         parentId: null
       };
     });

@@ -11,6 +11,7 @@ import {
 } from "../../src/data/tree/TreeRowLayout.ts";
 import {
   FOLDER_TREE,
+  OWNER_TREE,
   TREE
 } from "../fixtures/tree.ts";
 
@@ -92,6 +93,27 @@ describe("Data.TreeRowLayout", () => {
 
   test("an unknown row has no rails", () => {
     assert.deepEqual(createLayout(TREE).rails("missing"), []);
+  });
+
+  test("a non-collapsible branch beside a toggle drops its line from the reserved width", () => {
+    const layout = createLayout(OWNER_TREE, ["folder"]);
+    const ids = ["folder", "file", "loose", "owner", "companion"];
+
+    assert.deepEqual(ids.map((id) => layout.rails(id, "all")), [
+      ["start"],
+      ["elbow"],
+      [],
+      ["blank", "start"],
+      ["blank", "elbow"]
+    ]);
+    layout.follow(["companion"]);
+    assert.deepEqual(ids.map((id) => layout.rails(id, "selected")), [
+      [],
+      [],
+      [],
+      ["blank", "start"],
+      ["blank", "elbow"]
+    ]);
   });
 
   test("a leaf reserves the toggle width only beside a branch sibling", () => {

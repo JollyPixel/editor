@@ -36,7 +36,7 @@ export class UsersPane extends LitElement {
   static override styles = css`
     :host {
       display: block;
-      padding: var(--jolly-space-2);
+      padding: 0 var(--jolly-space-2) var(--jolly-space-2);
     }
 
     jolly-tree {

@@ -1,8 +1,8 @@
 // Import Internal Dependencies
 import type { TreeIndentGuidesScope } from "./contract.ts";
 import {
-  isExpandable,
   isOpen,
+  reservesToggle,
   type TreeSnapshot
 } from "./model.ts";
 
@@ -47,11 +47,8 @@ export class TreeRowLayout<TData = unknown> {
     guides: boolean
   ): TreeRowSpacer {
     const node = this.#snapshot.node(id);
-    if (
-      node === null ||
-      isExpandable(node) ||
-      !this.#snapshot.placement(id)?.levelHasBranches
-    ) {
+    const levelHasBranches = this.#snapshot.placement(id)?.levelHasBranches;
+    if (node === null || !reservesToggle(node, levelHasBranches === true)) {
       return "none";
     }
 
@@ -97,12 +94,10 @@ export class TreeRowLayout<TData = unknown> {
 
       return next ? "line" : "blank";
     });
-    if (this.#startsLine(id)) {
-      rails.push("start");
-    }
-    this.#rails.set(id, rails);
+    const drawn = withStart(rails, this.#startColumn(id));
+    this.#rails.set(id, drawn);
 
-    return rails;
+    return drawn;
   }
 
   #selectedRails(
@@ -113,18 +108,27 @@ export class TreeRowLayout<TData = unknown> {
       return cached;
     }
 
-    const rails: TreeRail[] = [];
-    let childId = id;
-    let parentId = this.#snapshot.parentId(childId);
-    while (parentId !== undefined && parentId !== null) {
-      rails.unshift(this.#pathRail(childId, parentId, childId === id));
-      childId = parentId;
-      parentId = this.#snapshot.parentId(childId);
+    let row = this.#snapshot.row(id);
+    const rails = Array.from(
+      { length: row?.indent ?? 0 },
+      (): TreeRail => "blank"
+    );
+    while (row !== null && row.parentId !== null) {
+      const childId = row.node.id;
+      rails[row.indent - 1] = this.#pathRail(
+        childId,
+        row.parentId,
+        childId === id
+      );
+      row = this.#snapshot.row(row.parentId);
     }
-    if (this.#pathEnds.has(id) && this.#startsLine(id)) {
-      rails.push("start");
-    }
-    const drawn = rails.every((rail) => rail === "blank") ? kNoRails : rails;
+    const started = withStart(
+      rails,
+      this.#pathEnds.has(id) ? this.#startColumn(id) : undefined
+    );
+    const drawn = started.every((rail) => rail === "blank") ?
+      kNoRails :
+      started;
     this.#pathRails.set(id, drawn);
 
     return drawn;
@@ -138,11 +142,16 @@ export class TreeRowLayout<TData = unknown> {
       return cached;
     }
 
-    const parentId = this.#snapshot.parentId(id);
+    const row = this.#snapshot.row(id);
     const placement = this.#snapshot.placement(id);
-    const continues = parentId === undefined || parentId === null || placement === undefined ?
+    const continues = row === null ||
+      row.parentId === null ||
+      placement === undefined ?
       [] :
-      [...this.#railContinuations(parentId), placement.position < placement.size];
+      [
+        ...padEnd(this.#railContinuations(row.parentId), row.indent - 1, false),
+        placement.position < placement.size
+      ];
     this.#continues.set(id, continues);
 
     return continues;
@@ -168,14 +177,41 @@ export class TreeRowLayout<TData = unknown> {
     return "line";
   }
 
-  #startsLine(
+  #startColumn(
     id: string
-  ): boolean {
+  ): number | undefined {
     const node = this.#snapshot.node(id);
+    const firstChild = node?.children?.[0];
+    if (
+      node === null ||
+      firstChild === undefined ||
+      !isOpen(node, this.#expanded)
+    ) {
+      return undefined;
+    }
 
-    return node !== null &&
-      node.children !== undefined &&
-      node.children.length > 0 &&
-      isOpen(node, this.#expanded);
+    const indent = this.#snapshot.row(firstChild.id)?.indent;
+
+    return indent === undefined ? undefined : indent - 1;
   }
+}
+
+function withStart(
+  rails: readonly TreeRail[],
+  column: number | undefined
+): readonly TreeRail[] {
+  return column === undefined ?
+    rails :
+    [...padEnd(rails, column, "blank"), "start"];
+}
+
+function padEnd<T>(
+  values: readonly T[],
+  length: number,
+  filler: T
+): T[] {
+  return [
+    ...values,
+    ...Array.from({ length: length - values.length }, () => filler)
+  ];
 }

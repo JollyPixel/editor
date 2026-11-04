@@ -41,6 +41,8 @@ export class AssetDeleteDialog extends LitElement {
     }
 
     jolly-checkbox {
+      --jolly-label-max-width: none;
+
       margin-block-start: var(--jolly-space-2, 8px);
     }
   `;
@@ -106,6 +108,7 @@ export class AssetDeleteDialog extends LitElement {
         ${companions.length > 0 ? html`
           <jolly-checkbox
             label=${formatCompanionLabel(companions)}
+            align="end"
             clickable-background
             .value=${this._companions}
             @jolly-change=${this.#onCompanionsChange}

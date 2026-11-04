@@ -114,7 +114,7 @@ export class TreeRowView {
     this.branch = isExpandable(node);
     this.leaf = node.children === undefined;
     this.depth = depth;
-    this.indent = TreeRowView.indentStyle(depth);
+    this.indent = TreeRowView.indentStyle(row.indent);
     this.position = state.position;
     this.setSize = state.setSize;
     this.expanded = state.expanded;
@@ -153,6 +153,7 @@ export class TreeRowView {
       this.branch === isExpandable(node) &&
       this.leaf === (node.children === undefined) &&
       this.depth === row.depth &&
+      this.indent === TreeRowView.indentStyle(row.indent) &&
       this.position === state.position &&
       this.setSize === state.setSize &&
       this.expanded === state.expanded &&

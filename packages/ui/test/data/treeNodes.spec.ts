@@ -13,7 +13,10 @@ import {
   TreeSnapshot
 } from "../../src/data/tree/model.ts";
 import type { TreeNode } from "../../src/data/tree/contract.ts";
-import { TREE } from "../fixtures/tree.ts";
+import {
+  OWNER_TREE,
+  TREE
+} from "../fixtures/tree.ts";
 
 describe("Data.flattenVisible", () => {
   test("skips a collapsed branch's children", () => {
@@ -194,5 +197,15 @@ describe("Data.TreeSnapshot", () => {
     assert.deepEqual(snapshot.placement("a2"), { position: 2, size: 2, levelHasBranches: true });
     assert.deepEqual(snapshot.placement("a2a"), { position: 1, size: 1, levelHasBranches: false });
     assert.equal(snapshot.placement("missing"), undefined);
+  });
+
+  test("indents a non-collapsible branch's children past its reserved toggle width", () => {
+    const snapshot = new TreeSnapshot(OWNER_TREE);
+    const alone = new TreeSnapshot(OWNER_TREE.slice(2));
+
+    assert.equal(snapshot.row("file")?.indent, 1);
+    assert.equal(snapshot.row("companion")?.indent, 2);
+    assert.equal(snapshot.row("companion")?.depth, 1);
+    assert.equal(alone.row("companion")?.indent, 1);
   });
 });

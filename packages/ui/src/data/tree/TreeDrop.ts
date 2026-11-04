@@ -128,10 +128,12 @@ export class TreeDrop<TData = unknown> {
     }
 
     const chain = this.#snapshot.ancestorChain(rowId);
-    const depth = Math.floor(
+    const band = Math.floor(
       (pointer.clientX - pointer.container.left) / pointer.indentUnit
     );
-    const targetId = chain[Math.min(Math.max(depth, 0), chain.length - 1)];
+    const targetId = chain.findLast(
+      (id) => (this.#snapshot.row(id)?.indent ?? 0) <= band
+    ) ?? chain[0];
 
     return this.allows(targetId, where) ?
       {

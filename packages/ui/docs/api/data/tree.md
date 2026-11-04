@@ -312,6 +312,8 @@ diacritics, plus their ancestors.
 - `collapsible: false` drops the toggle and keeps the children shown.
   ArrowRight and ArrowLeft then move to the first child and to the parent.
 - A leaf reserves the toggle width when a sibling has one, so labels align.
+  A `collapsible: false` branch reserves it too, and its children are indented
+  one extra step so they stay nested under its icon.
 - `indentGuides` draws a line from each parent to its children.
   `indentGuidesScope="selected"` draws only the lines leading to the selected
   rows.

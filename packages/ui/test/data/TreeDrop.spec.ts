@@ -11,7 +11,10 @@ import type {
   TreeNode
 } from "../../src/data/tree/contract.ts";
 import type { TreePointerDropPreview } from "../../src/data/tree/interaction.ts";
-import { FOLDER_TREE } from "../fixtures/tree.ts";
+import {
+  FOLDER_TREE,
+  OWNER_TREE
+} from "../fixtures/tree.ts";
 
 // CONSTANTS
 const kRowHeight = 20;
@@ -127,6 +130,19 @@ describe("Data.TreeDrop at the last row", () => {
     assert.deepEqual(
       probe.hover({ id: "c2", where: "below", clientX: 1000 }),
       { targetId: "c2", where: "below", anchorId: "c2" }
+    );
+  });
+
+  test("reads the bands from the drawn indent, not the depth", () => {
+    const probe = new DropProbe(OWNER_TREE, [], ["loose"]);
+
+    assert.deepEqual(
+      probe.hover({ id: "companion", where: "below", clientX: kIndent }),
+      { targetId: "owner", where: "below", anchorId: "companion" }
+    );
+    assert.deepEqual(
+      probe.hover({ id: "companion", where: "below", clientX: 2 * kIndent }),
+      { targetId: "companion", where: "below", anchorId: "companion" }
     );
   });
 
