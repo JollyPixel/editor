@@ -9,7 +9,28 @@ const kCaretSchema = z.object({
   head: kOffset
 });
 
+export type CaretField = Pick<
+  HTMLTextAreaElement,
+  "selectionStart" | "selectionEnd" | "selectionDirection" | "setSelectionRange"
+>;
+
 export class ScriptCaret {
+  static collapsed(
+    offset: number
+  ): ScriptCaret {
+    return new ScriptCaret(offset, offset);
+  }
+
+  static from(
+    field: CaretField
+  ): ScriptCaret {
+    const { selectionStart, selectionEnd, selectionDirection } = field;
+
+    return selectionDirection === "backward" ?
+      new ScriptCaret(selectionEnd, selectionStart) :
+      new ScriptCaret(selectionStart, selectionEnd);
+  }
+
   static parse(
     value: unknown
   ): ScriptCaret | null | undefined {
@@ -41,6 +62,33 @@ export class ScriptCaret {
 
   get end(): number {
     return Math.max(this.anchor, this.head);
+  }
+
+  get collapsed(): boolean {
+    return this.anchor === this.head;
+  }
+
+  get backward(): boolean {
+    return this.anchor > this.head;
+  }
+
+  resized(
+    start: number,
+    end: number
+  ): ScriptCaret {
+    return this.backward ?
+      new ScriptCaret(end, start) :
+      new ScriptCaret(start, end);
+  }
+
+  selectIn(
+    field: CaretField
+  ): void {
+    field.setSelectionRange(
+      this.start,
+      this.end,
+      this.backward ? "backward" : "forward"
+    );
   }
 
   follow(

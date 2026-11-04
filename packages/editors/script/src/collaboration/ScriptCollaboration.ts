@@ -9,7 +9,7 @@ import { PeerRoster } from "@jolly-pixel/ui/network";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { ScriptCaret } from "./ScriptCaret.ts";
+import { ScriptCaret } from "../text/ScriptCaret.ts";
 
 export interface PeerCaret {
   readonly peer: PresencePeer;

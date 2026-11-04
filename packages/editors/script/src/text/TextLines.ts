@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import { LineRange } from "./LineRange.ts";
+
 export interface LinePosition {
   readonly line: number;
   readonly column: number;
@@ -7,6 +10,7 @@ export interface LinePosition {
 const kTabSize = 2;
 
 export class TextLines {
+  readonly text: string;
   readonly lines: readonly string[];
 
   #starts: number[];
@@ -14,6 +18,7 @@ export class TextLines {
   constructor(
     text: string
   ) {
+    this.text = text;
     this.lines = text.split("\n");
     this.#starts = [];
     let start = 0;
@@ -27,16 +32,23 @@ export class TextLines {
     return this.lines.length;
   }
 
+  get range(): LineRange {
+    return new LineRange(0, this.lines.length - 1);
+  }
+
   get widest(): number {
     let widest = 0;
     for (let line = 0; line < this.lines.length; line++) {
-      widest = Math.max(widest, this.visualColumn({
-        line,
-        column: this.lines[line].length
-      }));
+      widest = Math.max(widest, this.visualWidth(line));
     }
 
     return widest;
+  }
+
+  line(
+    line: number
+  ): string {
+    return this.lines[line] ?? "";
   }
 
   position(
@@ -66,10 +78,16 @@ export class TextLines {
     return this.#starts[line];
   }
 
+  lineBefore(
+    offset: number
+  ): string {
+    return this.text.slice(this.lineStart(this.position(offset).line), offset);
+  }
+
   visualColumn(
     position: LinePosition
   ): number {
-    const text = this.lines[position.line] ?? "";
+    const text = this.line(position.line);
     let column = 0;
     for (let index = 0; index < position.column; index++) {
       column = text[index] === "\t" ?
@@ -78,5 +96,14 @@ export class TextLines {
     }
 
     return column;
+  }
+
+  visualWidth(
+    line: number
+  ): number {
+    return this.visualColumn({
+      line,
+      column: this.line(line).length
+    });
   }
 }
