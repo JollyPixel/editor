@@ -36,7 +36,6 @@ import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { SettingsSections } from "./settings/SettingsSections.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
-import type { EditorTab } from "../tabs/EditorTabs.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
 import "./home/StudioHome.ts";
 import "./account/AccountBadge.ts";
@@ -213,9 +212,6 @@ export class Studio extends LitElement {
   declare _assets: AssetBrowserOptions | null;
 
   @state()
-  declare _openTabs: readonly EditorTab[];
-
-  @state()
   declare _sections: SettingsSections;
 
   @query("jolly-tabs")
@@ -255,7 +251,6 @@ export class Studio extends LitElement {
   constructor() {
     super();
     this._assets = null;
-    this._openTabs = [];
     this._sections = SettingsSections.EMPTY;
   }
 
@@ -296,7 +291,7 @@ export class Studio extends LitElement {
       },
       browserState: this.#browserState,
       notifications: this.#notifications,
-      onTabsChange: this.#syncOpenTabs
+      onTabsChange: this.#onTabsChange
     });
     this.#session = session;
     this.#scopes = options.scopes;
@@ -311,7 +306,7 @@ export class Studio extends LitElement {
       notifications: this.#notifications
     };
     await session.restoreTabs();
-    this.#syncOpenTabs();
+    this.#onTabsChange();
   }
 
   openSettings(
@@ -372,7 +367,6 @@ export class Studio extends LitElement {
             role="region"
             aria-label="Home"
             .assets=${this._assets}
-            .openTabs=${this._openTabs}
             @asset-open=${this.#onAssetOpen}
             @console-toggle=${this.#toggleConsole}
             @settings-open=${this.#openSettings}
@@ -427,8 +421,7 @@ export class Studio extends LitElement {
     }
   };
 
-  readonly #syncOpenTabs = (): void => {
-    this._openTabs = this.#session?.tabs.list() ?? [];
+  readonly #onTabsChange = (): void => {
     if (this.#session?.tabs.active === SETTINGS_TAB_ID) {
       void this.#settingsPage.ready().catch((error: unknown) => {
         this.#fail(

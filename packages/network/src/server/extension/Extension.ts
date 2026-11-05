@@ -33,6 +33,7 @@ export abstract class Extension<
   abstract readonly id: string;
   abstract readonly name: string;
   abstract readonly protocols: MessageProtocols;
+  readonly queries?: readonly string[];
 
   onClientConnect?(
     client: ClientHandle,

@@ -5,6 +5,7 @@ import "@jolly-pixel/ui/elements/dock-layout";
 import "@jolly-pixel/ui/elements/pane";
 import "@jolly-pixel/ui/elements/presence-stack";
 import "@jolly-pixel/ui/elements/scope";
+import "@jolly-pixel/asset.script/markdown";
 
 // Import Internal Dependencies
 import "./icons.ts";

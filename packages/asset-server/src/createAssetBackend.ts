@@ -226,6 +226,7 @@ async function assembleAssetBackend(
     writer,
     afterPass: () => folders.refresh(),
     partFiles,
+    kinds,
     logger
   });
   teardown.defer(() => sync.close());

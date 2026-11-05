@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type * as EventStore from "@jolly-pixel/event-store";
+import * as EventStore from "@jolly-pixel/event-store";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
@@ -41,6 +41,26 @@ describe("Reconciler — cold start", () => {
       "counter"
     );
     assert.strictEqual(harness.assetIndex.byPath("a.png")?.kind, "binary");
+  });
+
+  test("re-creates a binary asset with the kind that now claims its path", async() => {
+    const source = new MemoryAssetSource([["a.counter", bytes("2")]]);
+    await using eventStore = EventStore.persistence.memory();
+    {
+      await using first = await syncHarness({ source, eventStore });
+      await first.reconciler.reconcile();
+    }
+
+    await using harness = await syncHarness({
+      source,
+      eventStore,
+      handlers: [counterHandler()]
+    });
+    const report = (await harness.reconciler.reconcile()).unwrap();
+
+    assert.strictEqual(report.deleted, 1);
+    assert.strictEqual(report.created, 1);
+    assert.strictEqual(harness.assetIndex.byPath("a.counter")?.kind, "counter");
   });
 
   test("a second pass over the same directory emits nothing", async() => {

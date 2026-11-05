@@ -46,12 +46,29 @@ jolly-dock {
   position: relative;
   display: flex;
   flex: 1;
-  flex-direction: column;
+  flex-direction: row;
   min-height: 0;
 }
 
 #script-view jolly-script-code {
   flex: 1;
+  min-width: 0;
+}
+
+#script-view jolly-markdown {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--jolly-space-4) var(--jolly-space-5);
+  border-inline-start: 1px solid var(--jolly-border);
+  color: var(--jolly-text);
+  background: var(--jolly-surface);
+  font-family: var(--jolly-font-family);
+  font-size: 14px;
+}
+
+#script-view > [hidden] {
+  display: none;
 }
 
 #script-view jolly-presence-stack {

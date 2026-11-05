@@ -163,6 +163,7 @@ describe("StudioProject", () => {
           "pixelart",
           "scene",
           "script",
+          "text",
           "sound",
           "blockset",
           "voxelmap",

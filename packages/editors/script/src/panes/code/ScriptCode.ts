@@ -38,7 +38,7 @@ import {
 export interface ScriptCodeOptions {
   document: ScriptDocument;
   collaboration: ScriptCollaboration;
-  language: ScriptLanguage;
+  language: ScriptLanguage | null;
   readOnly: boolean;
 }
 
@@ -219,14 +219,16 @@ export class ScriptCode extends LitElement {
       }),
       () => page.removeEventListener("selectionchange", this.#onSelectionChange)
     ];
-    void ScriptHighlighter.create(language).then((highlighter) => {
-      if (this.#document !== document) {
-        return;
-      }
-      this.#highlighter = highlighter;
-      highlighter.update(this.#lines.lines);
-      this.requestUpdate();
-    });
+    if (language !== null) {
+      void ScriptHighlighter.create(language).then((highlighter) => {
+        if (this.#document !== document) {
+          return;
+        }
+        this.#highlighter = highlighter;
+        highlighter.update(this.#lines.lines);
+        this.requestUpdate();
+      });
+    }
     this.#syncTextarea(ScriptCaret.collapsed(0));
     this.requestUpdate();
 

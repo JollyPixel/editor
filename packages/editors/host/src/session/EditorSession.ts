@@ -88,7 +88,9 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     const assetId = launch.target.value;
     let target: AssetRoomLease | null = null;
     try {
-      const kind = this.#kinds.get(options.accepts);
+      const recorded = this.catalog.record(assetId)?.kind ?? options.accepts;
+      const kind = this.#kinds.get(recorded) ??
+        this.#kinds.get(options.accepts);
       if (kind === undefined) {
         target = this.assets.openRoom(
           options.accepts,
@@ -119,10 +121,17 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
   }
 
   targetLease<TDocument, TCommand, TMessage>(
-    kind: AssetDocumentKind<TDocument, TCommand, TMessage>
+    ...kinds: [
+      AssetDocumentKind<TDocument, TCommand, TMessage>,
+      ...Array<AssetDocumentKind<TDocument, TCommand, TMessage>>
+    ]
   ): AssetLease<TDocument, TCommand, TMessage> {
+    const { kind } = this.targetRecord;
+    const matched = kinds.find((candidate) => candidate.kind === kind) ??
+      kinds[0];
+
     return this.#hold(() => this.assets.open(
-      kind,
+      matched,
       this.target.record.id,
       this.tag
     ));

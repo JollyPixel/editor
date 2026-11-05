@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { AssetPath } from "@jolly-pixel/asset";
 import type {
   IconName,
   JollyOption
@@ -83,9 +84,18 @@ export class AssetKindSet implements AssetKindPresenter {
   resolve(
     name: string
   ): AssetKindEntry | undefined {
-    return this.entries.find(
-      (entry) => entry.extensions.some((extension) => name.endsWith(extension))
-    );
+    const path = new AssetPath(name);
+    let resolved: AssetKindEntry | undefined;
+    let longest = 0;
+    for (const entry of this.entries) {
+      const length = path.matchExtension(entry.extensions)?.length ?? 0;
+      if (length > longest) {
+        resolved = entry;
+        longest = length;
+      }
+    }
+
+    return resolved;
   }
 
   contentLimit(

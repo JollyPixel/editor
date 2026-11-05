@@ -29,10 +29,11 @@ readonly target: AssetRoomLease;
 
 ## Methods
 
-### targetLease(kind)
+### targetLease(...kinds)
 
 The target document as a typed [`AssetLease`](../lease/AssetLeases.md#leases).
-Pass the same kind object as the definition's `kinds`. On a `?tag=` page it
+Pass the same kind objects as the definition's `kinds`. The lease uses the one
+matching the target record's kind, or the first one. On a `?tag=` page it
 reads that tag, and the server grants only `read` there.
 
 ```ts

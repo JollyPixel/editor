@@ -33,8 +33,8 @@ kind handler or editor code.
 ### Home
 
 The fixed first tab and the `<studio-home>` page it shows: the asset browser
-in the asset dock, and the project overview, which counts the assets per kind
-and lists the open editors.
+in the asset dock, and the root `README.md` rendered as Markdown, or a button to
+create it when the project has none.
 
 ### Asset browser
 

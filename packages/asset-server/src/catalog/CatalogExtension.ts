@@ -27,6 +27,7 @@ import {
   CATALOG_IMPORT,
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
+  CATALOG_READ,
   CATALOG_RENAME,
   CATALOG_REJECTED,
   CATALOG_REPLACE,
@@ -44,6 +45,7 @@ import {
   type CatalogImportCommand,
   type CatalogMessage,
   type CatalogPlanCommand,
+  type CatalogReadCommand,
   type CatalogReplaceCommand,
   type CatalogRestoreCommand,
   type CatalogTagCommand
@@ -121,6 +123,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   readonly id: string;
   readonly name = CATALOG_ROOM;
   readonly protocols: MessageProtocols = catalogProtocols;
+  override readonly queries = [CATALOG_READ];
 
   #backend: CatalogBackend;
   #maxContentBytes: number;
@@ -307,6 +310,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
         }))
       .with({ type: CATALOG_RESTORE }, (restore) => this.#restore(restore, actor))
       .with({ type: CATALOG_REPLACE }, (replace) => this.#replace(replace, actor))
+      .with({ type: CATALOG_READ }, (read) => this.#read(read))
       .exhaustive();
   }
 
@@ -382,6 +386,33 @@ export class CatalogExtension extends Extension<CatalogCommand> {
         assetId,
         report
       };
+    });
+  }
+
+  async #read(
+    command: CatalogReadCommand
+  ): Promise<Result<CatalogApplied, Error>> {
+    const { assetId } = command;
+    await this.#backend.flush(assetId);
+    const record = this.#backend.catalog.record(assetId);
+    if (record === undefined) {
+      const error = new UnknownAssetError(assetId);
+
+      return Err(error);
+    }
+
+    const data = await this.#backend.source.read(record.path.toString());
+    const limit = this.#kindContentLimit(record.kind.value);
+    if (data.byteLength > limit) {
+      const error = new CatalogContentTooLargeError(data.byteLength, limit);
+
+      return Err(error);
+    }
+
+    return Ok({
+      command: command.type,
+      assetId,
+      content: encodeContent(data)
     });
   }
 

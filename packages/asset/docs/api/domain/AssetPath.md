@@ -18,6 +18,7 @@ class AssetPath {
   withName(name: string): AssetPath;
   withExtension(extension: string): AssetPath;
   withoutExtension(): AssetPath;
+  matchExtension(extensions: Iterable<string>): string | null;
   equals(other: AssetPath): boolean;
   toJSON(): string;
   toString(): string;
@@ -44,6 +45,11 @@ Both parse the result into a new `AssetPath`, so a value containing `/` or `.`
 can move the split points. `withExtension()` throws `TypeError` unless
 `extension` is empty or starts with `.`. `withoutExtension()` is
 `withExtension("")`.
+
+`matchExtension()` returns the longest of `extensions` that the full path ends
+with, or `null` when none does. The first one wins a tie. It compares the end
+of the path string, so `.json` matches `forest.vmap.json` even though
+`extension` is `.vmap.json`.
 
 `from()` constructs a path from a string and returns an existing `AssetPath`
 unchanged. `equals()` compares full path strings. `toJSON()` and `toString()`

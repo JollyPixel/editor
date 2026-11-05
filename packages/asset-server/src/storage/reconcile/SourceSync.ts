@@ -10,6 +10,7 @@ import {
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetPartFiles } from "../AssetPartFiles.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
+import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import {
   Reconciler,
   type ReconcileReport
@@ -40,6 +41,7 @@ export interface SourceSyncOptions extends ReconcilePolicy {
   writer: AssetWriter;
   afterPass: () => Promise<void>;
   partFiles: AssetPartFiles;
+  kinds: AssetKindRegistry;
   logger?: Logger;
 }
 
@@ -66,6 +68,7 @@ export class SourceSync {
       projector: options.projector,
       writer: options.writer,
       partFiles: options.partFiles,
+      kinds: options.kinds,
       logger: this.#logger
     });
     this.#watcher = new SourceWatcher({

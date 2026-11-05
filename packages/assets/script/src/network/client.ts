@@ -3,11 +3,16 @@ export {
   SCRIPT_EXTENSION,
   SCRIPT_KIND
 } from "../asset/script.ts";
+export {
+  TEXT_ASSET,
+  TEXT_EXTENSION,
+  TEXT_KIND
+} from "../asset/text.ts";
 export * from "../model/ScriptDocument.ts";
 export * from "../model/ScriptHistory.ts";
 export * from "../outline/ScriptOutline.schema.ts";
 export * from "../text/TextEdit.ts";
 export * from "../text/errors/TextEditMismatchError.ts";
-export * from "./scriptDocumentKind.ts";
+export * from "./textDocumentKind.ts";
 export * from "./ScriptOutlineFeed.ts";
 export * from "./types.ts";
