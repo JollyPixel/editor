@@ -7,6 +7,7 @@ import { ElasticFocus } from "./ElasticFocus.ts";
 import { SmoothedVelocity } from "./SmoothedVelocity.ts";
 import { NumberRange } from "./NumberRange.ts";
 import { LookAngles } from "./LookAngles.ts";
+import { WorldScale } from "./WorldScale.ts";
 import {
   type CameraFocus,
   type FlyBody,
@@ -143,6 +144,11 @@ export interface FlyRigSettings {
    * @default true
    */
   showPivotMarker?: boolean;
+  /**
+   * Half-length of each pivot marker axis line, in world units.
+   * @default 0.2
+   */
+  pivotMarkerSize?: number;
 }
 
 export interface FlyRigOptions extends FlyRigSettings {
@@ -165,6 +171,7 @@ export class FlyRig {
   #angles: LookAngles;
   #moveSpeed: number;
   #speedRange: NumberRange;
+  #scale = new WorldScale();
   #responsiveness: number;
   #keyLookSpeed: number;
   #speedAdjustStep: number;
@@ -204,6 +211,7 @@ export class FlyRig {
       pivotZoomStep = 0.1,
       pivotNudgeStep = 1,
       showPivotMarker = true,
+      pivotMarkerSize = 0.2,
       sceneProvider
     } = options;
 
@@ -217,7 +225,8 @@ export class FlyRig {
     this.#moveSpeed = this.#speedRange.clamp(moveSpeed);
     this.#velocity = new SmoothedVelocity({
       accelerationTime,
-      brakingTime
+      brakingTime,
+      scale: this.#scale
     });
     this.#responsiveness = responsiveness;
     this.#keyLookSpeed = keyLookSpeed;
@@ -231,6 +240,8 @@ export class FlyRig {
           pivotZoomStep,
           pivotNudgeStep,
           showPivotMarker,
+          pivotMarkerSize,
+          scale: this.#scale,
           sceneProvider
         });
         break;
@@ -241,6 +252,8 @@ export class FlyRig {
           trailScrollStep: scrollSpeed,
           initialTrailDistance,
           showPivotMarker,
+          pivotMarkerSize,
+          scale: this.#scale,
           sceneProvider
         });
         break;
@@ -262,8 +275,23 @@ export class FlyRig {
     this.#moveSpeed = this.#speedRange.clamp(speed);
   }
 
+  get worldScale(): number {
+    return this.#scale.value;
+  }
+
+  set worldScale(
+    scale: number
+  ) {
+    this.#scale.value = scale;
+    this.#updateFocusPose(0);
+  }
+
   get moving(): boolean {
     return !this.#velocity.resting || !this.#focus.settled;
+  }
+
+  get #cruiseSpeed(): number {
+    return this.#scale.length(this.#moveSpeed);
   }
 
   get isOrbiting(): boolean {
@@ -306,7 +334,7 @@ export class FlyRig {
       this.#move.y += intent.move.up;
 
       if (this.#move.lengthSq() > 0) {
-        this.#move.normalize().multiplyScalar(this.#moveSpeed);
+        this.#move.normalize().multiplyScalar(this.#cruiseSpeed);
       }
     }
 
@@ -326,7 +354,7 @@ export class FlyRig {
       );
     }
     if (pan !== null && (pan.x !== 0 || pan.y !== 0)) {
-      const step = this.#moveSpeed * kPanPerNotch;
+      const step = this.#cruiseSpeed * kPanPerNotch;
       this.#offset
         .copy(this.#right)
         .multiplyScalar(-pan.x * step)

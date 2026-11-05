@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { DEFAULT_CATALOG_MAX_CONTENT_BYTES } from "@jolly-pixel/asset-server";
 import {
   bytesSource,
   servo,
@@ -28,7 +29,8 @@ export class ManifestRoute {
           name: kindPackage.name,
           kinds: kindPackage.descriptors.map(({ kind }) => kind)
         };
-      })
+      }),
+      maxContentBytes: DEFAULT_CATALOG_MAX_CONTENT_BYTES
     }));
     const bytes = new TextEncoder().encode(this.source);
     const serve = servo(

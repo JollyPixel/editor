@@ -51,6 +51,9 @@ import {
   decodeContent,
   encodeContent
 } from "../../model/events/inlineContent.ts";
+import type { AssetInlineContent } from "../../model/events/AssetEvents.schema.ts";
+import { MAX_KIND_CONTENT_BYTES } from "../../model/kinds/KindLimits.ts";
+import { CatalogContentTooLargeError } from "../errors/CatalogContentTooLargeError.ts";
 import { CatalogRejectedError } from "./errors/CatalogRejectedError.ts";
 import { CatalogUnavailableError } from "./errors/CatalogUnavailableError.ts";
 import {
@@ -244,7 +247,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       path,
       kind: options.kind,
       onConflict: options.onConflict,
-      content: content === null ? undefined : encodeContent(content),
+      content: content === null ? undefined : encodeKindContent(content),
       from: options.from
     });
 
@@ -438,7 +441,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     const reply = await this.#request({
       type: CATALOG_REPLACE,
       assetId,
-      content: encodeContent(content),
+      content: encodeKindContent(content),
       from: options.from
     });
 
@@ -641,4 +644,17 @@ function throwOnFailure(
       command
     );
   }
+}
+
+function encodeKindContent(
+  content: Uint8Array
+): AssetInlineContent {
+  if (content.byteLength > MAX_KIND_CONTENT_BYTES) {
+    throw new CatalogContentTooLargeError(
+      content.byteLength,
+      MAX_KIND_CONTENT_BYTES
+    );
+  }
+
+  return encodeContent(content);
 }

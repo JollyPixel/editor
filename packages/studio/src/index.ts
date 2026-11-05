@@ -149,7 +149,10 @@ function createEditorRegistry(
   manifest: ProjectManifest,
   query: Readonly<Record<string, string>>
 ): EditorRegistry {
-  const registry = new EditorRegistry({ query });
+  const registry = new EditorRegistry({
+    query,
+    maxContentBytes: manifest.maxContentBytes
+  });
   for (const descriptor of manifest.kinds) {
     registry.registerKind(descriptor);
   }

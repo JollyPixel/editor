@@ -26,7 +26,8 @@ export function loadedKind(
 ): LoadedAssetKind {
   return {
     ...kindDescriptor(kind),
-    convertsFrom
+    convertsFrom,
+    extensions: [`.${kind}`]
   };
 }
 

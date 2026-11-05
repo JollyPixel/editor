@@ -29,13 +29,16 @@ const kKinds = [
       svg: "<path/>",
       tone: "green"
     },
-    convertsFrom: []
+    convertsFrom: [],
+    extensions: [".voxelmap.json"]
   },
   {
     kind: "blockset",
     label: "Blockset",
     extension: ".blockset.json",
-    convertsFrom: [".png"]
+    convertsFrom: [".png"],
+    extensions: [".blockset.json"],
+    maxContentBytes: 2048
   }
 ];
 const kKindPackages = [
@@ -51,13 +54,15 @@ describe("ProjectManifest", () => {
       new ProjectManifest({
         editors: kEditors,
         kinds: kKinds,
-        kindPackages: kKindPackages
+        kindPackages: kKindPackages,
+        maxContentBytes: 2048
       })
     )));
 
     assert.deepEqual(manifest.editors, kEditors);
     assert.deepEqual(manifest.kinds, kKinds);
     assert.deepEqual(manifest.kindPackages, kKindPackages);
+    assert.equal(manifest.maxContentBytes, 2048);
   });
 
   test("drops the properties a descriptor does not declare", () => {
@@ -74,7 +79,8 @@ describe("ProjectManifest", () => {
           handler: "code"
         }
       ],
-      kindPackages: []
+      kindPackages: [],
+      maxContentBytes: 2048
     });
 
     assert.deepEqual(manifest.editors, kEditors);
@@ -119,7 +125,8 @@ describe("ProjectManifest", () => {
         }
       ],
       kinds: [],
-      kindPackages: []
+      kindPackages: [],
+      maxContentBytes: 2048
     });
     const [voxelMap] = manifest.editorScopes();
 

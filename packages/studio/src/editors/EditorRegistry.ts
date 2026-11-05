@@ -24,6 +24,7 @@ export interface EditorRegistryOptions {
    * @default EDITOR_PAGES_PATH
    */
   prefix?: string;
+  maxContentBytes: number;
 }
 
 export class EditorRegistry {
@@ -31,12 +32,14 @@ export class EditorRegistry {
   #editors = new Map<string, EditorDescriptor>();
   #query: Readonly<Record<string, string>>;
   #prefix: string;
+  #maxContentBytes: number;
 
   constructor(
-    options: EditorRegistryOptions = {}
+    options: EditorRegistryOptions
   ) {
     this.#query = { ...options.query };
     this.#prefix = options.prefix ?? EDITOR_PAGES_PATH;
+    this.#maxContentBytes = options.maxContentBytes;
   }
 
   registerKind(
@@ -53,7 +56,9 @@ export class EditorRegistry {
       extension: descriptor.extension,
       icon: registerKindIcon(descriptor),
       creatable: descriptor.creatable,
-      convertsFrom: descriptor.convertsFrom
+      convertsFrom: descriptor.convertsFrom,
+      extensions: descriptor.extensions,
+      maxContentBytes: descriptor.maxContentBytes
     });
 
     return this;
@@ -85,7 +90,8 @@ export class EditorRegistry {
   kindSet(): AssetKindSet {
     return new AssetKindSet({
       kinds: this.#kinds.values(),
-      editable: this.#editors.keys()
+      editable: this.#editors.keys(),
+      maxContentBytes: this.#maxContentBytes
     });
   }
 

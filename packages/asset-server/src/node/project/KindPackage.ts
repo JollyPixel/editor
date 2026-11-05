@@ -118,9 +118,13 @@ export class KindPackage {
         );
       }
 
+      const { maxContentBytes } = handler;
+
       return {
         ...descriptor,
-        convertsFrom: Object.keys(handler.conversions ?? {})
+        convertsFrom: Object.keys(handler.conversions ?? {}),
+        extensions: Object.keys(handler.extensions),
+        ...(maxContentBytes === undefined ? {} : { maxContentBytes })
       };
     });
     this.name = data.name;

@@ -17,6 +17,7 @@ import {
 } from "./handlers/binary.ts";
 import { UnknownAssetKindError } from "./errors/UnknownAssetKindError.ts";
 import { UnsupportedAssetConversionError } from "./errors/UnsupportedAssetConversionError.ts";
+import { MAX_KIND_CONTENT_BYTES } from "./KindLimits.ts";
 import { asError } from "../../common/asError.ts";
 
 interface RegisteredKind {
@@ -195,6 +196,12 @@ function registeredKind(
   if (invalid !== undefined) {
     throw new TypeError(
       `Asset kind "${handler.kind}" declares an invalid extension "${invalid}".`
+    );
+  }
+  if ((handler.maxContentBytes ?? 0) > MAX_KIND_CONTENT_BYTES) {
+    throw new TypeError(
+      `Asset kind "${handler.kind}" accepts ${handler.maxContentBytes} bytes ` +
+      `of content, more than the ${MAX_KIND_CONTENT_BYTES} bytes limit.`
     );
   }
 

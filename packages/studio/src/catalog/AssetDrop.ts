@@ -3,11 +3,9 @@ import type {
   AssetKindEntry,
   AssetKindSet
 } from "./AssetKindSet.ts";
-import { DroppedFile } from "../browser/DroppedFile.ts";
+import type { DroppedFile } from "../browser/DroppedFile.ts";
 
 // CONSTANTS
-export const MAX_DROPPED_FILE_MB = 10;
-const kMaxDroppedFileBytes = MAX_DROPPED_FILE_MB * 1024 * 1024;
 const kArchiveFormat = ".zip";
 
 export interface ConvertibleFiles {
@@ -24,22 +22,16 @@ export class AssetDrop {
   readonly archives: readonly DroppedFile[];
   readonly convertible: readonly ConvertibleFiles[];
   readonly files: readonly DroppedFile[];
-  readonly oversized: readonly DroppedFile[];
 
   constructor(
-    files: Iterable<File>,
+    files: Iterable<DroppedFile>,
     kinds: AssetKindSet
   ) {
     const archives: DroppedFile[] = [];
     const plain: DroppedFile[] = [];
-    const oversized: DroppedFile[] = [];
     const byFormat = new Map<string, DroppedFile[]>();
-    for (const file of files) {
-      const dropped = new DroppedFile(file);
-      if (dropped.size > kMaxDroppedFileBytes) {
-        oversized.push(dropped);
-      }
-      else if (dropped.format === kArchiveFormat) {
+    for (const dropped of files) {
+      if (dropped.format === kArchiveFormat) {
         archives.push(dropped);
       }
       else if (kinds.convertingFrom(dropped.format).length > 0) {
@@ -55,7 +47,6 @@ export class AssetDrop {
 
     this.archives = archives;
     this.files = plain;
-    this.oversized = oversized;
     this.convertible = Array.from(byFormat, ([format, grouped]) => {
       return {
         format,

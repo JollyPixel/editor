@@ -22,27 +22,34 @@ export const MODEL_RECORD: AssetRecordData = {
   kind: "voxelmodel",
   path: "maps/hero.voxelmodel.json"
 };
+export const MODEL_MAX_CONTENT_BYTES = 12 * 1024 * 1024;
+export const CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
 export const TREE_KINDS = new AssetKindSet({
   kinds: [
     {
       kind: "voxelmap",
       label: "Voxel map",
-      extension: ".voxelmap.json"
+      extension: ".voxelmap.json",
+      extensions: [".voxelmap.json"]
     },
     {
       kind: "voxelmodel",
       label: "Voxel model",
       extension: ".voxelmodel.json",
-      convertsFrom: [".vox"]
+      extensions: [".voxelmodel.json"],
+      convertsFrom: [".vox"],
+      maxContentBytes: MODEL_MAX_CONTENT_BYTES
     },
     {
       kind: "pixelart",
       label: "Pixel art",
       extension: ".pixelart",
+      extensions: [".pixelart"],
       convertsFrom: [".png"]
     }
   ],
-  editable: ["voxelmap", "voxelmodel"]
+  editable: ["voxelmap", "voxelmodel"],
+  maxContentBytes: CATALOG_MAX_CONTENT_BYTES
 });
 
 export interface TreeViewProbe {
@@ -58,6 +65,7 @@ export interface TreeViewOptions {
   sharing?: boolean;
   picks?: Array<File | null>;
   kindFilter?: KindFilterSource;
+  acceptLargeFiles?: boolean;
 }
 
 export function treeView(
@@ -67,7 +75,8 @@ export function treeView(
   const {
     sharing = false,
     picks = [],
-    kindFilter = null
+    kindFilter = null,
+    acceptLargeFiles = false
   } = options;
   const browserState = new BrowserState(new MemoryStorageAdapter());
   const errors: string[] = [];
@@ -89,6 +98,11 @@ export function treeView(
         prompted.push("confirm delete");
 
         return null;
+      },
+      confirmLargeFiles: async(files) => {
+        prompted.push(`confirm large ${files.map((file) => file.name).join(",")}`);
+
+        return acceptLargeFiles;
       },
       pickFile: async(accept) => {
         prompted.push(`pick ${accept.join(",")}`);

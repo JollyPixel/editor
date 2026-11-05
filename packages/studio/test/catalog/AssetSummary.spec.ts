@@ -28,15 +28,18 @@ const kKinds = new AssetKindSet({
       kind: "voxelmap",
       label: "Voxel map",
       extension: ".voxelmap.json",
+      extensions: [".voxelmap.json"],
       icon: "voxel-map"
     },
     {
       kind: "blockset",
       label: "Blockset",
-      extension: ".blockset.json"
+      extension: ".blockset.json",
+      extensions: [".blockset.json"]
     }
   ],
-  editable: ["voxelmap"]
+  editable: ["voxelmap"],
+  maxContentBytes: 1024
 });
 
 function createSummary(

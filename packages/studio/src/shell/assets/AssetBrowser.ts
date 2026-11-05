@@ -41,7 +41,8 @@ import type { BrowserState } from "../../browser/BrowserState.ts";
 import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
 import { cardStyles } from "../cardStyles.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
-import { askConversion } from "./askConversion.ts";
+import { askConversion } from "./dialogs/askConversion.ts";
+import { askLargeFiles } from "./dialogs/askLargeFiles.ts";
 import { assetOpenEvent } from "./assetOpen.ts";
 import {
   AssetTreeView,
@@ -190,8 +191,8 @@ export class AssetBrowser extends LitElement {
   declare _dropFolder: AssetPath | null;
 
   #dialogs = new LazyTemplate(this, () => Promise.all([
-    import("./AssetDeleteDialog.ts"),
-    import("./AssetShareDialog.ts")
+    import("./dialogs/AssetDeleteDialog.ts"),
+    import("./dialogs/AssetShareDialog.ts")
   ]));
   #view: AssetTreeView | null = null;
   #bound: AssetBrowserOptions | null = null;
@@ -389,6 +390,7 @@ export class AssetBrowser extends LitElement {
               return null;
             }
           ),
+        confirmLargeFiles: askLargeFiles,
         pickFile: (accept) => this.#pickFile(accept)
       },
       onChange: () => this.requestUpdate(),

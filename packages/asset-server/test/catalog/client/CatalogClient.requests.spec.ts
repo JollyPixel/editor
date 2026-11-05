@@ -12,11 +12,13 @@ import {
   CATALOG_REJECTED,
   CATALOG_SNAPSHOT,
   CatalogClient,
+  CatalogContentTooLargeError,
   CatalogRejectedError,
   type CatalogCommand,
   type CatalogMessage,
   type CatalogRoom
 } from "#src/catalog/client/index.ts";
+import { MAX_KIND_CONTENT_BYTES } from "#src/index.ts";
 
 class FakeCatalogRoom implements CatalogRoom {
   readonly sent: CatalogCommand[] = [];
@@ -107,6 +109,23 @@ describe("CatalogClient", () => {
       content: undefined,
       from: undefined
     });
+  });
+
+  test("refuses kind content over MAX_KIND_CONTENT_BYTES without sending it", async() => {
+    const room = new FakeCatalogRoom();
+    const client = new CatalogClient(room);
+    snapshot(room);
+    const oversized = new Uint8Array(MAX_KIND_CONTENT_BYTES + 1);
+
+    await assert.rejects(
+      client.create("models/hero.glb", oversized),
+      CatalogContentTooLargeError
+    );
+    await assert.rejects(
+      client.replace("a1", oversized),
+      CatalogContentTooLargeError
+    );
+    assert.deepEqual(room.sent, []);
   });
 
   test("rejects a request the server refuses", async() => {

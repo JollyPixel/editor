@@ -9,7 +9,6 @@ import type {
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
 import {
   AssetDrop,
-  MAX_DROPPED_FILE_MB,
   type ConversionChoice,
   type ConvertibleFiles
 } from "../../catalog/AssetDrop.ts";
@@ -43,10 +42,13 @@ import {
   type ConflictQuestion,
   type RelocationVerb
 } from "./AssetCommands.ts";
+import {
+  LARGE_FILE_BYTES,
+  formatMegabytes
+} from "./fileSize.ts";
 
 // CONSTANTS
 const kNewFolderName = "New folder";
-const kMaxReplaceBytes = MAX_DROPPED_FILE_MB * 1024 * 1024;
 const kAllKinds: JollyOption<string> = {
   value: "",
   label: "All kinds",
@@ -81,6 +83,12 @@ export interface AssetDeleteChoice {
   companions: boolean;
 }
 
+interface Upload {
+  readonly file: DroppedFile;
+  readonly convertTo: AssetKindEntry | null;
+  readonly limit: number;
+}
+
 export interface AssetDropQuestions {
   conversion(
     files: ConvertibleFiles
@@ -96,6 +104,7 @@ export interface AssetActionPrompts {
    */
   share: ((asset: AssetLeafData) => void) | null;
   confirmDelete(deletion: AssetDeletion): Promise<AssetDeleteChoice | null>;
+  confirmLargeFiles(files: readonly DroppedFile[]): Promise<boolean>;
   pickFile(accept: readonly string[]): Promise<File | null>;
 }
 
@@ -388,16 +397,56 @@ export class AssetTreeView {
       return;
     }
 
-    const file = new DroppedFile(picked);
-    if (file.size > kMaxReplaceBytes) {
-      this.#onError(
-        `Could not replace "${asset.path.name}": "${file.name}" is larger than ${MAX_DROPPED_FILE_MB} MB`
-      );
+    const replacement: Upload = {
+      file: new DroppedFile(picked),
+      convertTo: null,
+      limit: this.#kinds.contentLimit(entry)
+    };
+    const [upload] = await this.#admitted(
+      [replacement],
+      ({ file, limit }) => `Could not replace "${asset.path.name}": ` +
+        `"${file.name}" is larger than ${formatMegabytes(limit)}`
+    );
+    if (upload !== undefined) {
+      await this.#commands.replace(asset, upload.file, entry);
+    }
+  }
 
-      return;
+  #upload(
+    file: DroppedFile,
+    convertTo: AssetKindEntry | null
+  ): Upload {
+    return {
+      file,
+      convertTo,
+      limit: this.#kinds.contentLimit(
+        convertTo ?? this.#kinds.resolve(file.name)
+      )
+    };
+  }
+
+  async #admitted(
+    uploads: readonly Upload[],
+    refusal: (upload: Upload) => string
+  ): Promise<readonly Upload[]> {
+    const fitting: Upload[] = [];
+    for (const upload of uploads) {
+      if (upload.file.size > upload.limit) {
+        this.#onError(refusal(upload));
+      }
+      else {
+        fitting.push(upload);
+      }
+    }
+    const large = fitting.filter(({ file }) => file.size > LARGE_FILE_BYTES);
+    if (
+      large.length === 0 ||
+      await this.#prompts.confirmLargeFiles(large.map(({ file }) => file))
+    ) {
+      return fitting;
     }
 
-    await this.#commands.replace(asset, file, entry);
+    return fitting.filter((upload) => !large.includes(upload));
   }
 
   async #remove(
@@ -421,12 +470,24 @@ export class AssetTreeView {
     files: Iterable<File>,
     questions: AssetDropQuestions
   ): Promise<void> {
-    const drop = new AssetDrop(files, this.#kinds);
-    for (const file of drop.oversized) {
-      this.#onError(
-        `Could not add "${file.name}": it is larger than ${MAX_DROPPED_FILE_MB} MB`
-      );
+    const drop = new AssetDrop(
+      Array.from(files, (file) => new DroppedFile(file)),
+      this.#kinds
+    );
+    const uploads = drop.files.map((file) => this.#upload(file, null));
+    for (const group of drop.convertible) {
+      const choice = await questions.conversion(group);
+      if (choice !== null) {
+        uploads.push(...group.files.map(
+          (file) => this.#upload(file, choice.convertTo)
+        ));
+      }
     }
+    const admitted = await this.#admitted(
+      [...uploads, ...drop.archives.map((file) => this.#upload(file, null))],
+      ({ file, limit }) => `Could not add "${file.name}": ` +
+        `it is larger than ${formatMegabytes(limit)}`
+    );
     this.#expandFolder(folder);
     let revealed = false;
     const reveal = (nodeId: string): void => {
@@ -436,20 +497,13 @@ export class AssetTreeView {
       }
     };
 
-    const adding = drop.files.map(
-      (file) => this.#add(folder, file, null, reveal)
-    );
-    for (const archive of drop.archives) {
-      if (!await this.#commands.importArchive(archive, questions.conflicts)) {
-        adding.push(this.#add(folder, archive, null, reveal));
-      }
-    }
-    for (const group of drop.convertible) {
-      const choice = await questions.conversion(group);
-      if (choice !== null) {
-        adding.push(...group.files.map(
-          (file) => this.#add(folder, file, choice.convertTo, reveal)
-        ));
+    const adding: Promise<void>[] = [];
+    for (const { file, convertTo } of admitted) {
+      if (
+        !drop.archives.includes(file) ||
+        !await this.#commands.importArchive(file, questions.conflicts)
+      ) {
+        adding.push(this.#add(folder, file, convertTo, reveal));
       }
     }
     await Promise.all(adding);

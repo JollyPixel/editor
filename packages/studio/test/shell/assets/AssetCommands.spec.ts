@@ -22,7 +22,8 @@ const kMaps = folderNodeId(AssetPath.parse("maps"));
 const kMapKind: AssetKindEntry = {
   kind: "voxelmap",
   label: "Voxel map",
-  extension: ".voxelmap.json"
+  extension: ".voxelmap.json",
+  extensions: [".voxelmap.json"]
 };
 
 function createRelocation(

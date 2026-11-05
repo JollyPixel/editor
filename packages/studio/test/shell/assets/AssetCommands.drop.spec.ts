@@ -19,6 +19,7 @@ const kPixelArtKind: AssetKindEntry = {
   kind: "pixelart",
   label: "Pixel art",
   extension: ".pixelart",
+  extensions: [".pixelart"],
   convertsFrom: [".png"]
 };
 

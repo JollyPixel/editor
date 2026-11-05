@@ -29,4 +29,13 @@ export interface LoadedAssetKind extends AssetKindDescriptor {
    * `conversions`.
    */
   convertsFrom: readonly string[];
+  /**
+   * Extensions of the kind's own content, the keys of its handler's
+   * `extensions`.
+   */
+  extensions: readonly string[];
+  /**
+   * The handler's `maxContentBytes`, absent when the catalog's limit applies.
+   */
+  maxContentBytes?: number;
 }

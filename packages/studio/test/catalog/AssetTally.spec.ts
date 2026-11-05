@@ -16,15 +16,18 @@ const kKinds = new AssetKindSet({
       kind: "voxelmap",
       label: "Voxel map",
       extension: ".voxelmap.json",
+      extensions: [".voxelmap.json"],
       icon: "kind:voxelmap"
     },
     {
       kind: "texture",
       label: "Texture",
-      extension: ".png"
+      extension: ".png",
+      extensions: [".png"]
     }
   ],
-  editable: ["voxelmap"]
+  editable: ["voxelmap"],
+  maxContentBytes: 1024
 });
 
 describe("AssetTally", () => {

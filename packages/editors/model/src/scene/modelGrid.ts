@@ -23,7 +23,7 @@ export function createModelGrid(
   const section = cell * kCellsPerSection;
   const extent = Math.ceil(halfSize * 2 * kMargin / section) * section;
 
-  const grid = new Grid({
+  return new Grid({
     extent,
     cell: {
       size: cell,
@@ -41,9 +41,7 @@ export function createModelGrid(
     axes: {
       show: true
     },
+    offset: bounds.isEmpty() ? 0 : Math.min(0, bounds.min.y),
     doubleSided: true
   });
-  grid.position.y = bounds.isEmpty() ? 0 : Math.min(0, bounds.min.y);
-
-  return grid;
 }

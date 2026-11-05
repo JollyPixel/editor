@@ -10,6 +10,7 @@ import {
   AssetKindRegistry,
   BINARY_KIND,
   binaryAssetKind,
+  MAX_KIND_CONTENT_BYTES,
   type AssetKindHandler
 } from "#src/index.ts";
 
@@ -215,5 +216,26 @@ describe("AssetKindRegistry — registration guards", () => {
         { name: "TypeError", message: /invalid extension/ }
       );
     }
+  });
+
+  test("rejects a kind accepting more content than MAX_KIND_CONTENT_BYTES", () => {
+    const registry = new AssetKindRegistry();
+    const over = MAX_KIND_CONTENT_BYTES + 1;
+
+    registry.register({
+      ...handler("model", { ".glb": "model/gltf-binary" }),
+      maxContentBytes: MAX_KIND_CONTENT_BYTES
+    });
+    assert.throws(
+      () => registry.replace({
+        ...handler("model", { ".glb": "model/gltf-binary" }),
+        maxContentBytes: over
+      }),
+      {
+        name: "TypeError",
+        message: `Asset kind "model" accepts ${over} bytes of content, ` +
+          `more than the ${MAX_KIND_CONTENT_BYTES} bytes limit.`
+      }
+    );
   });
 });

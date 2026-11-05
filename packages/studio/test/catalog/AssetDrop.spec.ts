@@ -6,10 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  AssetDrop,
-  MAX_DROPPED_FILE_MB
-} from "../../src/catalog/AssetDrop.ts";
+import { AssetDrop } from "../../src/catalog/AssetDrop.ts";
 import {
   AssetKindSet,
   type AssetKindEntry
@@ -21,6 +18,7 @@ const kPixelArt: AssetKindEntry = {
   kind: "pixelart",
   label: "Pixel art",
   extension: ".pixelart",
+  extensions: [".pixelart"],
   convertsFrom: [".png"]
 };
 const kKinds = new AssetKindSet({
@@ -29,10 +27,12 @@ const kKinds = new AssetKindSet({
     {
       kind: "texture",
       label: "Texture",
-      extension: ".png"
+      extension: ".png",
+      extensions: [".png"]
     }
   ],
-  editable: ["pixelart"]
+  editable: ["pixelart"],
+  maxContentBytes: 1024
 });
 
 function names(
@@ -48,7 +48,7 @@ describe("AssetDrop", () => {
       new File(["png"], "hero.png"),
       new File(["txt"], "notes.txt"),
       new File(["png"], "hero.idle.PNG")
-    ], kKinds);
+    ].map((file) => new DroppedFile(file)), kKinds);
 
     assert.deepEqual(names(drop.archives), ["pack.ZIP"]);
     assert.deepEqual(names(drop.files), ["notes.txt"]);
@@ -65,18 +65,6 @@ describe("AssetDrop", () => {
         kinds: [kPixelArt]
       }
     ]);
-  });
-
-  test("sets aside a file over the size limit", () => {
-    const limit = MAX_DROPPED_FILE_MB * 1024 * 1024;
-    const drop = new AssetDrop([
-      new File([new Uint8Array(limit + 1)], "huge.png"),
-      new File([new Uint8Array(limit)], "large.bin")
-    ], kKinds);
-
-    assert.deepEqual(names(drop.oversized), ["huge.png"]);
-    assert.deepEqual(names(drop.files), ["large.bin"]);
-    assert.deepEqual(drop.convertible, []);
   });
 });
 

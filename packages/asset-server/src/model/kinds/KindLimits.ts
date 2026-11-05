@@ -1,0 +1,2 @@
+// CONSTANTS
+export const MAX_KIND_CONTENT_BYTES = 128 * 1024 * 1024;

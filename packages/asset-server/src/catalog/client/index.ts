@@ -13,6 +13,7 @@ export type {
   AssetArchiveEntry
 } from "../archive/AssetArchive.ts";
 export * from "../archive/ArchiveLimits.ts";
+export * from "../errors/CatalogContentTooLargeError.ts";
 export type {
   ImportConflictPolicy,
   ImportFailure,
