@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
-import { MemoryStorageAdapter } from "@jolly-pixel/ui";
+import {
+  MemoryStorageAdapter,
+  NotificationQueue
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../src/catalog/AssetKindSet.ts";
@@ -55,6 +58,7 @@ export const TREE_KINDS = new AssetKindSet({
 export interface TreeViewProbe {
   view: AssetTreeView;
   browserState: BrowserState;
+  notifications: NotificationQueue;
   errors: string[];
   created: string[];
   imported: string[];
@@ -79,6 +83,7 @@ export function treeView(
     acceptLargeFiles = false
   } = options;
   const browserState = new BrowserState(new MemoryStorageAdapter());
+  const notifications = new NotificationQueue();
   const errors: string[] = [];
   const created: string[] = [];
   const imported: string[] = [];
@@ -110,6 +115,7 @@ export function treeView(
         return picks.shift() ?? null;
       }
     },
+    notifications,
     onChange: () => undefined,
     onError: (message) => errors.push(message),
     onCreated: (nodeId) => created.push(nodeId),
@@ -119,6 +125,7 @@ export function treeView(
   return {
     view,
     browserState,
+    notifications,
     errors,
     created,
     imported,

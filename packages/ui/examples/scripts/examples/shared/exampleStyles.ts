@@ -348,6 +348,12 @@ export const exampleStyles = css`
     font-size: 16px;
   }
 
+  .notifications-example {
+    display: grid;
+    gap: var(--jolly-space-3);
+    max-width: 720px;
+  }
+
   .log-example {
     display: grid;
     gap: var(--jolly-space-4);

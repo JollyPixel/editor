@@ -20,6 +20,7 @@ export type BuiltinIconName =
   | "check"
   | "info"
   | "warning"
+  | "error"
   | "trash"
   | "settings"
   | "eyedropper";

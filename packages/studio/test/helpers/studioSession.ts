@@ -3,6 +3,7 @@ import type { AssetRecordData } from "@jolly-pixel/asset";
 import { Preferences } from "@jolly-pixel/preferences";
 import {
   MemoryStorageAdapter,
+  NotificationQueue,
   type StorageAdapter
 } from "@jolly-pixel/ui";
 
@@ -100,6 +101,7 @@ export function session(
   current = new StudioSession({
     catalog,
     share: idleShare(),
+    notifications: new NotificationQueue(),
     user: {
       identity: null,
       preferences: new Preferences(),

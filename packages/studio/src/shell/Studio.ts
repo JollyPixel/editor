@@ -13,10 +13,9 @@ import {
 import type { CatalogShare } from "@jolly-pixel/editor.host";
 import {
   LazyTemplate,
-  LogQueue,
-  type LogEntry
+  NotificationQueue
 } from "@jolly-pixel/ui";
-import "@jolly-pixel/ui/elements/log";
+import "@jolly-pixel/ui/elements/notifications";
 import "@jolly-pixel/ui/elements/tabs";
 import "@jolly-pixel/ui/elements/toolbar";
 
@@ -205,10 +204,8 @@ export class Studio extends LitElement {
       display: none;
     }
 
-    jolly-log {
-      position: absolute;
-      inset-block-end: calc(var(--studio-gutter) * 3);
-      inset-inline-start: calc(var(--studio-gutter) * 3);
+    jolly-notifications {
+      --jolly-notifications-inset: calc(var(--studio-gutter) * 3);
     }
   `;
 
@@ -217,9 +214,6 @@ export class Studio extends LitElement {
 
   @state()
   declare _openTabs: readonly EditorTab[];
-
-  @state()
-  declare _log: readonly LogEntry[];
 
   @state()
   declare _sections: SettingsSections;
@@ -239,6 +233,9 @@ export class Studio extends LitElement {
   @query("studio-settings")
   declare _settingsPage: StudioSettings | null;
 
+  @query("jolly-notifications")
+  declare _notifications: HTMLElementTagNameMap["jolly-notifications"] | null;
+
   #session: StudioSession | null = null;
   #scopes: PreferenceScopes | null = null;
   #browserState = new BrowserState();
@@ -246,13 +243,12 @@ export class Studio extends LitElement {
     this,
     () => import("./settings/StudioSettings.ts")
   );
-  #queue = new LogQueue();
-  #unsubscribe: (() => void) | null = null;
+  #notifications = new NotificationQueue();
   #user = new ChangeController<StudioUser>(
     this,
     STUDIO_USER_CHANGE,
     (user) => [
-      user.onPreferenceError((message) => this.#queue.push(message))
+      user.onPreferenceError((message) => this.#fail(message))
     ]
   );
 
@@ -260,7 +256,6 @@ export class Studio extends LitElement {
     super();
     this._assets = null;
     this._openTabs = [];
-    this._log = [];
     this._sections = SettingsSections.EMPTY;
   }
 
@@ -300,6 +295,7 @@ export class Studio extends LitElement {
         settings: this._settings
       },
       browserState: this.#browserState,
+      notifications: this.#notifications,
       onTabsChange: this.#syncOpenTabs
     });
     this.#session = session;
@@ -311,7 +307,8 @@ export class Studio extends LitElement {
       kinds: session.kinds,
       kindFilter: user.online ? user.project : null,
       shares: user.online ? user.shares : null,
-      browserState: this.#browserState
+      browserState: this.#browserState,
+      notifications: this.#notifications
     };
     await session.restoreTabs();
     this.#syncOpenTabs();
@@ -341,20 +338,15 @@ export class Studio extends LitElement {
     ) ?? Promise.resolve(false);
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this._log = this.#queue.entries;
-    this.#unsubscribe = this.#queue.subscribe((entries) => {
-      this._log = entries;
-    });
+  protected override firstUpdated(): void {
+    this._notifications?.attach(this.#notifications);
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.#unsubscribe?.();
-    this.#unsubscribe = null;
     this.#session?.dispose();
     this.#session = null;
+    this.#notifications.dispose();
   }
 
   override render(): TemplateResult {
@@ -405,7 +397,7 @@ export class Studio extends LitElement {
             ></studio-settings>
           `)}</div>
         </div>
-        <jolly-log .entries=${this._log}></jolly-log>
+        <jolly-notifications></jolly-notifications>
       </section>
     `;
   }
@@ -429,7 +421,7 @@ export class Studio extends LitElement {
       await user.replaceAvatar(event.detail.image);
     }
     catch (error) {
-      this.#queue.push(
+      this.#fail(
         `Avatar not changed: ${error instanceof Error ? error.message : String(error)}`
       );
     }
@@ -439,7 +431,7 @@ export class Studio extends LitElement {
     this._openTabs = this.#session?.tabs.list() ?? [];
     if (this.#session?.tabs.active === SETTINGS_TAB_ID) {
       void this.#settingsPage.ready().catch((error: unknown) => {
-        this.#queue.push(
+        this.#fail(
           `Settings failed to load: ${error instanceof Error ? error.message : String(error)}`
         );
       });
@@ -463,8 +455,17 @@ export class Studio extends LitElement {
   readonly #logError = (
     event: StudioErrorEvent
   ): void => {
-    this.#queue.push(event.detail.message);
+    this.#fail(event.detail.message);
   };
+
+  #fail(
+    message: string
+  ): void {
+    this.#notifications.notify({
+      tone: "error",
+      title: message
+    });
+  }
 }
 
 declare global {

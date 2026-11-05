@@ -3,11 +3,13 @@ import {
   LitElement,
   css,
   html,
-  nothing,
   type TemplateResult
 } from "lit";
 import { saveFile } from "@jolly-pixel/editor.host";
-import { SubscriptionController } from "@jolly-pixel/ui";
+import {
+  SubscriptionController,
+  type Notifier
+} from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/folder";
 
@@ -15,17 +17,12 @@ import "@jolly-pixel/ui/elements/folder";
 import "../icons.ts";
 import type { ModelFile } from "../file/ModelFile.ts";
 
-interface ModelFileStatus {
-  readonly text: string;
-  readonly failed: boolean;
-}
-
 export class ModelFileFolder extends LitElement {
   #file = new SubscriptionController<ModelFile>(this, (file) => [
     file.subscribe(() => this.requestUpdate())
   ]);
   #replacing = false;
-  #status: ModelFileStatus | null = null;
+  #notifications: Notifier | null = null;
 
   static override styles = css`
     :host {
@@ -38,28 +35,18 @@ export class ModelFileFolder extends LitElement {
       gap: var(--jolly-space-2);
       padding: var(--jolly-space-1) var(--jolly-space-2);
     }
-
-    .status {
-      margin: 0;
-      padding: 0 var(--jolly-space-2) var(--jolly-space-1);
-      color: var(--jolly-text-muted);
-      overflow-wrap: anywhere;
-    }
-
-    .status[data-failed] {
-      color: var(--jolly-danger);
-    }
   `;
 
   attach(
-    file: ModelFile
+    file: ModelFile,
+    notifications: Notifier
   ): void {
+    this.#notifications = notifications;
     this.#file.attach(file);
   }
 
   override render(): TemplateResult {
     const file = this.#file.current;
-    const status = this.#status;
 
     return html`
       <jolly-folder
@@ -84,11 +71,6 @@ export class ModelFileFolder extends LitElement {
             @click=${() => this.#export()}
           >Export</jolly-button>
         </div>
-        ${status === null ? nothing : html`
-          <p class="status" role="status" ?data-failed=${status.failed}>
-            ${status.text}
-          </p>
-        `}
         <input
           type="file"
           hidden
@@ -118,23 +100,35 @@ export class ModelFileFolder extends LitElement {
     selected: File
   ): Promise<void> {
     const file = this.#file.current;
-    if (file === null) {
+    const notifications = this.#notifications;
+    if (file === null || notifications === null) {
       return;
     }
 
     this.#replacing = true;
-    this.#show(`Replacing with "${selected.name}"…`);
+    this.requestUpdate();
+    const replacing = notifications.notify({
+      tone: "loading",
+      title: `Replacing with "${selected.name}"`
+    });
     try {
       const replaced = await file.replace(selected);
-      this.#show(replaced ?
-        `Replaced with "${selected.name}".` :
-        `"${selected.name}" is already this model.`);
+      replacing.update(replaced ?
+        {
+          tone: "success",
+          title: `Replaced with "${selected.name}"`
+        } :
+        {
+          tone: "info",
+          title: `"${selected.name}" is already this model`
+        });
     }
     catch (error) {
-      this.#show(
-        error instanceof Error ? error.message : String(error),
-        true
-      );
+      replacing.update({
+        tone: "error",
+        title: `Could not replace with "${selected.name}"`,
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
     finally {
       this.#replacing = false;
@@ -147,17 +141,6 @@ export class ModelFileFolder extends LitElement {
     if (download !== null) {
       saveFile(download.blob, download.name);
     }
-  }
-
-  #show(
-    text: string,
-    failed = false
-  ): void {
-    this.#status = {
-      text,
-      failed
-    };
-    this.requestUpdate();
   }
 }
 

@@ -19,7 +19,8 @@ import {
   LazyTemplate,
   type JollyChangeDetail,
   type JollyOption,
-  type JollyReparentDetail
+  type JollyReparentDetail,
+  type Notifier
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
@@ -69,6 +70,7 @@ export interface AssetBrowserOptions {
   kindFilter: KindFilterSource | null;
   shares: StudioShareLinks | null;
   browserState: BrowserState;
+  notifications: Notifier;
 }
 
 @customElement("asset-browser")
@@ -393,6 +395,7 @@ export class AssetBrowser extends LitElement {
         confirmLargeFiles: askLargeFiles,
         pickFile: (accept) => this.#pickFile(accept)
       },
+      notifications: options.notifications,
       onChange: () => this.requestUpdate(),
       onError: (message) => this.#error(message),
       onCreated: (nodeId) => {

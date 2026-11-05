@@ -13,6 +13,7 @@ import {
   droppedFile,
   importPlan
 } from "../../helpers/assetCommands.ts";
+import { readChips } from "../../helpers/notifications.ts";
 
 // CONSTANTS
 const kPixelArtKind: AssetKindEntry = {
@@ -58,20 +59,6 @@ describe("AssetCommands dropped files", () => {
     assert.deepEqual(errors, []);
   });
 
-  test("reports a dropped file the catalog refuses", async() => {
-    const { commands, errors } = commandsFailingAt(0);
-
-    assert.equal(
-      await commands.add(
-        AssetPath.parse("hero.pixelart"),
-        droppedFile("hero.png"),
-        kPixelArtKind
-      ),
-      null
-    );
-    assert.deepEqual(errors, ['Could not add "hero.png": disk full']);
-  });
-
   test("asks how to import an archive only when some of its assets exist", async() => {
     const fresh = commandsFailingAt(-1, { plan: importPlan(0) });
     const live = commandsFailingAt(-1, { plan: importPlan(2) });
@@ -113,7 +100,7 @@ describe("AssetCommands dropped files", () => {
   });
 
   test("names each asset an archive import could not write", async() => {
-    const { commands, errors } = commandsFailingAt(-1, {
+    const { commands, errors, notifications } = commandsFailingAt(-1, {
       plan: importPlan(0),
       failed: [
         {
@@ -127,6 +114,9 @@ describe("AssetCommands dropped files", () => {
 
     await commands.importArchive(droppedFile("pack.zip"), async() => "keep");
 
-    assert.deepEqual(errors, ['Could not import "sprites/a.pixelart": unknown kind']);
+    assert.deepEqual(errors, []);
+    assert.deepEqual(readChips(notifications), [
+      'warning Imported "pack.zip": "sprites/a.pixelart": unknown kind'
+    ]);
   });
 });

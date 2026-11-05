@@ -2,6 +2,7 @@
 import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
 import { Preferences } from "@jolly-pixel/preferences";
+import type { Notifier } from "@jolly-pixel/ui";
 import { ColorPicker } from "@jolly-pixel/ui/elements/color-picker";
 
 // Import Internal Dependencies
@@ -41,6 +42,7 @@ import {
   type EditorToolbarArchives
 } from "../session/EditorToolbarSources.ts";
 import { mountLantern } from "../ui/lantern/mountLantern.ts";
+import { mountNotifications } from "../ui/mountNotifications.ts";
 import { provideTourKeys } from "../ui/lantern/provideTourKeys.ts";
 import type { EditorContext } from "./EditorDefinition.ts";
 import type { MountRequest } from "./MountedEditor.ts";
@@ -70,6 +72,7 @@ export type PlacedContext = Pick<
   | "lantern"
   | "preferences"
   | "keyboardLayout"
+  | "notifications"
 >;
 
 export interface PlacementOptions {
@@ -87,6 +90,7 @@ export class Placement {
   readonly #console: PageConsole;
   readonly #preferences: Preferences;
   readonly #lantern: Lantern;
+  readonly #notifications: Notifier;
 
   constructor(
     launch: EditorLaunch,
@@ -107,6 +111,7 @@ export class Placement {
       teardown.defer(() => pageConsole.dispose());
       this.#console = pageConsole;
       this.#preferences = this.#openPreferences();
+      this.#notifications = this.#openNotifications();
       const pageLantern = mountLantern({
         commands: pageConsole.commands,
         storage: new PreferenceStorage(
@@ -152,7 +157,8 @@ export class Placement {
       commands: this.#console.commands,
       lantern: this.#lantern,
       preferences,
-      keyboardLayout: this.#keyboardLayout
+      keyboardLayout: this.#keyboardLayout,
+      notifications: this.#notifications
     };
   }
 
@@ -231,6 +237,17 @@ export class Placement {
         this.#teardown.signal
       );
     }
+  }
+
+  #openNotifications(): Notifier {
+    if (this.#shell !== null) {
+      return this.#shell;
+    }
+
+    const page = mountNotifications();
+    this.#teardown.defer(() => page.dispose());
+
+    return page.queue;
   }
 
   #openPreferences(): Preferences {

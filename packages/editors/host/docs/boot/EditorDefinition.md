@@ -73,6 +73,7 @@ interface EditorContext {
   preferences: Preferences;
   keyboardLayout: KeyboardLayoutStore;
   archives: EditorArchives;
+  notifications: Notifier;
 }
 
 interface RuntimeEditorContext extends EditorContext {
@@ -94,6 +95,10 @@ interface RuntimeEditorContext extends EditorContext {
   prints.
 - `archives` holds the export and import flows of the
   [archives](../session/Archives.md).
+- `notifications` raises notification chips. Under a shell they show in the
+  shell's stack (see [Shell](../shell/Shell.md#notifications)); otherwise in a
+  `jolly-notifications` stack in the bottom-end corner of the page, mounted in
+  its first `jolly-scope`.
 
 ## Handle
 

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Preferences } from "@jolly-pixel/preferences";
+import { NotificationQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -26,6 +27,7 @@ export function editorFrames(
     container,
     launchOrigin: FRAME_ORIGIN,
     share: idleShare(),
+    notifications: new NotificationQueue(),
     ...options,
     preferences: options.preferences ?? new Preferences(),
     scopes: options.scopes ?? new PreferenceScopes([], [])

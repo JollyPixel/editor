@@ -16,5 +16,10 @@ export const FEEDBACK_EXAMPLES: readonly GalleryEntry[] = [
     id: "feedback/log",
     title: "Log",
     load: async() => (await import("./log.ts")).LOG_EXAMPLE
+  },
+  {
+    id: "feedback/notifications",
+    title: "Notifications",
+    load: async() => (await import("./notifications.ts")).NOTIFICATIONS_EXAMPLE
   }
 ];

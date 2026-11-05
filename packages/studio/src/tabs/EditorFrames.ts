@@ -5,6 +5,7 @@ import {
   isShellCommand,
   launchMessage,
   PageAppearance,
+  parseNotificationMessage,
   preferencesMessage,
   readDebugLogger,
   revealMessage,
@@ -18,10 +19,12 @@ import {
   type ShellCommand
 } from "@jolly-pixel/editor.host";
 import type { PreferenceOverrides, Preferences } from "@jolly-pixel/preferences";
+import type { Notifier } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { EditorTab } from "./EditorTabs.ts";
 import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
+import { FrameNotifications } from "./FrameNotifications.ts";
 
 interface EditorFrame {
   element: HTMLIFrameElement;
@@ -59,6 +62,10 @@ export interface EditorFramesOptions {
   scopes: Pick<PreferenceScopes, "readBy">;
   onShellCommand?: (command: ShellCommand, from: string) => void;
   /**
+   * Shows the frames' notifications, each named by its frame's title.
+   */
+  notifications: Notifier;
+  /**
    * @default readDebugLogger()
    */
   logger?: HostLogger;
@@ -75,6 +82,7 @@ export class EditorFrames {
   #scopes: Pick<PreferenceScopes, "readBy">;
   #stopPreferences: () => void;
   #onShellCommand: ((command: ShellCommand, from: string) => void) | undefined;
+  #notifications: FrameNotifications;
   #logger: HostLogger;
   #frames = new Map<string, EditorFrame>();
   #launched = new Map<string, () => void>();
@@ -93,6 +101,7 @@ export class EditorFrames {
     this.#preferences = options.preferences;
     this.#scopes = options.scopes;
     this.#onShellCommand = options.onShellCommand;
+    this.#notifications = new FrameNotifications(options.notifications);
     this.#logger = (options.logger ?? readDebugLogger()).child({
       namespace: "studio.tabs"
     });
@@ -161,6 +170,7 @@ export class EditorFrames {
   ): void {
     this.#stopPorts(id);
     this.#unsentReveals.delete(id);
+    this.#notifications.release(id);
     this.#frames.get(id)?.element.remove();
     this.#frames.delete(id);
   }
@@ -168,6 +178,7 @@ export class EditorFrames {
   dispose(): void {
     this.#listening.abort();
     this.#stopPreferences();
+    this.#notifications.dispose();
     for (const id of [...this.#launched.keys()]) {
       this.#stopPorts(id);
     }
@@ -229,6 +240,7 @@ export class EditorFrames {
     frame: EditorFrame
   ): void {
     this.#stopPorts(id);
+    this.#notifications.release(id);
     const catalog = new MessageChannel();
     const ports: LaunchPorts = {
       catalog: catalog.port2
@@ -294,6 +306,12 @@ export class EditorFrames {
       });
       if (this.#accepts(frame, event.data)) {
         this.#onShellCommand?.(event.data, id);
+      }
+    }
+    else {
+      const notification = parseNotificationMessage(event.data);
+      if (notification !== undefined) {
+        this.#notifications.receive(id, frame.element.title, notification);
       }
     }
   };
