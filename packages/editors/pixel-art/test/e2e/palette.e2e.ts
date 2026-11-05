@@ -46,13 +46,15 @@ test("the docked palette lays ten slots out in two columns beside the picker", a
   expect(strips.x).toBeGreaterThan(picker!.x + picker!.width);
   const clusterCenter = (section.x + strips.x + strips.width) / 2;
   expect(Math.abs(clusterCenter - (dockBox.x + dockBox.width / 2))).toBeLessThan(1);
-  const focus = await slot.evaluate((element) => {
+  const mark = await slot.evaluate((element) => {
+    const style = getComputedStyle(element);
+
     return {
-      outline: getComputedStyle(element).outlineWidth,
-      inset: getComputedStyle(element, "::after").top
+      outline: style.outlineWidth,
+      ring: style.borderTopWidth
     };
   });
-  expect(focus).toEqual({ outline: "0px", inset: "0px" });
+  expect(mark).toEqual({ outline: "0px", ring: "2px" });
 });
 
 test("a slot edit reaches the brush, a peer and the stored palette", async({

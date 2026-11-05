@@ -133,13 +133,6 @@ export const colorDockStyles = css`
 
   @container (max-width: 460px) {
     jolly-color-picker {
-      --jolly-picker-fields-display: none;
-      --jolly-picker-channels-align: end;
-    }
-  }
-
-  @container (max-width: 380px) {
-    jolly-color-picker {
       --jolly-picker-channels-display: none;
     }
   }

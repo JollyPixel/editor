@@ -38,7 +38,7 @@ export const colorStripStyles = css`
   }
 
   button[aria-current="true"] {
-    box-shadow: 0 0 0 1px var(--color-text);
+    border: 2px solid var(--swatch-ring, var(--color-text));
   }
 
   button:focus-visible {

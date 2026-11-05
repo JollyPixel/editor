@@ -122,6 +122,14 @@ export const panelStyles = css`
     visibility: visible;
   }
 
+  :host(:not([data-ready])) .dock-slot {
+    height: 0;
+  }
+
+  :host(:not([data-ready])) .dock-slot > [open] {
+    visibility: hidden;
+  }
+
   .dock-slot:has(> [open]) > :not([open]) {
     transition: none;
   }

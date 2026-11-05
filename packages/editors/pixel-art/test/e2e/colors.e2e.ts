@@ -20,6 +20,20 @@ test("the color picker docking preference survives reloads", async({ panel }) =>
   }
 });
 
+test("a docked picker stays hidden and folded until the panel is ready", async({ page, panel }) => {
+  await panel.root.evaluate(async() => {
+    const unready = document.createElement("pixel-draw-panel");
+    unready.id = "unready";
+    unready.colorDocked = true;
+    document.body.append(unready);
+    await unready.updateComplete;
+  });
+
+  await expect(page.locator("#unready color-dock")).toBeHidden();
+  expect((await page.locator("#unready .dock-slot").boundingBox())?.height)
+    .toBe(0);
+});
+
 test("picking a foreground color in the swatch paints with it", async({ panel }) => {
   const { colors } = panel;
   await panel.modes.select("paint");
