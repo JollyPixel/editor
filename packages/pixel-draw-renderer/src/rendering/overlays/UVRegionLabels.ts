@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { contrastingColor } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
@@ -118,7 +118,7 @@ export class UVRegionLabels {
       screen.y + kPadding + kFontSize;
 
     el.setAttribute("fill", entry.region.color);
-    el.setAttribute("stroke", contrastingColor(entry.region.color));
+    el.setAttribute("stroke", Color.from(entry.region.color).ink().hex());
     el.setAttribute("x", String(x));
     el.setAttribute("y", String(y));
     el.setAttribute("text-anchor", anchor.right ? "end" : "start");

@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
-import type { RGBA } from "@jolly-pixel/color";
+import type {
+  HueSpace,
+  RGBA
+} from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import type { PickerSpace } from "./space.ts";
 import {
   hueSaturationAt,
   snapToWheel
@@ -23,11 +25,11 @@ export interface PickerSurface {
 export class SquareSurface implements PickerSurface {
   readonly key: string;
   readonly resolution = kResolution;
-  readonly #space: PickerSpace;
+  readonly #space: HueSpace;
   readonly #hue: number;
 
   constructor(
-    space: PickerSpace,
+    space: HueSpace,
     hue: number
   ) {
     this.#space = space;
@@ -51,13 +53,13 @@ export class SquareSurface implements PickerSurface {
 export class WheelSurface implements PickerSurface {
   readonly key: string;
   readonly resolution: number;
-  readonly #space: PickerSpace;
+  readonly #space: HueSpace;
   readonly #value: number;
   readonly #discrete: boolean;
   readonly #cells = new Map<string, RGBA>();
 
   constructor(
-    space: PickerSpace,
+    space: HueSpace,
     value: number,
     discrete: boolean
   ) {

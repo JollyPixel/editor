@@ -9,7 +9,7 @@ import type {
   RGBA,
   RGBA8
 } from "../src/types.ts";
-import { toRGBA8 } from "../src/convert/bytes.ts";
+import { Color } from "../src/Color.ts";
 
 declare const unit: RGBA;
 declare const byte: RGBA8;
@@ -25,7 +25,13 @@ test("neither scale assigns to the other", () => {
   expect<RGBA8>().type.not.toBeAssignableFrom({ ...unit, a: 0.5 });
 });
 
-test("a byte color cannot be converted to bytes again", () => {
-  expect(toRGBA8).type.toBeCallableWith(unit);
-  expect(toRGBA8).type.not.toBeCallableWith(byte);
+test("a Color is a unit color and never a byte color", () => {
+  expect<RGBA>().type.toBeAssignableFrom<Color>();
+  expect<RGBA8>().type.not.toBeAssignableFrom<Color>();
+});
+
+test("only byte colors and strings convert from bytes", () => {
+  expect(Color.fromBytes).type.toBeCallableWith(byte);
+  expect(Color.fromBytes).type.toBeCallableWith("#ff6600");
+  expect(Color.fromBytes).type.not.toBeCallableWith(unit);
 });

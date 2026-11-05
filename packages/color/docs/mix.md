@@ -1,6 +1,6 @@
 # Mixing and harmonies
 
-## `mixColor()`
+## `Gradient`
 
 ```ts
 type MixSpace = "srgb" | "linear" | "oklab" | ColorSpaceName;
@@ -11,16 +11,14 @@ interface MixOptions {
   hue?: HueInterpolation; // default "shorter", used by hue-based spaces
 }
 
-function mixColor(
-  from: RGBA,
-  to: RGBA,
-  amount: number,
-  options?: MixOptions
-): RGBA
+class Gradient {
+  static between(from: RGBA, to: RGBA, options?: MixOptions): Gradient;
+}
 ```
 
-Returns the color `amount` of the way from `from` to `to`. `amount` is clamped
-to 0..1, and alpha is interpolated linearly in every space.
+A blend from one color to another in one space. `between` converts both ends
+once, so reading many points costs one conversion back each. Alpha is
+interpolated linearly in every space.
 
 - `"srgb"` averages the encoded channels, the way most paint programs blend.
 - `"linear"` averages light, so black and white meet at `#bcbcbc`.
@@ -33,34 +31,30 @@ to 0..1, and alpha is interpolated linearly in every space.
   Only hue is carried, like CSS `color-mix()`.
 
 ```ts
-import { mixColor } from "@jolly-pixel/color";
+import { Gradient } from "@jolly-pixel/color";
 
-mixColor(gray, cyan, 0.5, { space: "oklch" });
-mixColor(red, blue, 0.5, { space: "oklch", hue: "longer" });
+Gradient.between(gray, cyan, { space: "oklch" }).at(0.5);
+Gradient.between(red, blue, { space: "oklch", hue: "longer" }).at(0.5);
 ```
 
-## `colorRamp()`
+### `at(amount: number): Color`
+
+Returns the [`Color`](./Color.md) `amount` of the way along. `amount` is
+clamped to 0..1.
+
+### `steps(count: number): Color[]`
+
+Returns `count` evenly spaced colors, both ends included. Throws a
+`RangeError` when `count` is not an integer of at least 2.
 
 ```ts
-function colorRamp(
-  from: RGBA,
-  to: RGBA,
-  count: number,
-  options?: MixOptions
-): RGBA[]
-```
-
-Returns `count` evenly spaced colors from `from` to `to`, both included.
-Throws a `RangeError` when `count` is not an integer of at least 2.
-
-```ts
-import { colorRamp, formatHex } from "@jolly-pixel/color";
-
-colorRamp(black, white, 5, { space: "srgb" }).map((color) => formatHex(color));
+Gradient.between(black, white, { space: "srgb" })
+  .steps(5)
+  .map((color) => color.hex());
 // ["#000000", "#404040", "#808080", "#bfbfbf", "#ffffff"]
 ```
 
-## `shadeRamp()`
+## `Color.shadeRamp()`
 
 ```ts
 interface ShadeRampOptions {
@@ -69,17 +63,19 @@ interface ShadeRampOptions {
   hueShift?: number; // degrees, default 20
 }
 
-function shadeRamp(color: RGBA, options?: ShadeRampOptions): RGBA[]
+class Color {
+  shadeRamp(options?: ShadeRampOptions): Color[];
+}
 ```
 
-Returns `shades` darker colors, `color` itself, then `tints` lighter colors,
-from dark to light. It works in OKLCH:
+Returns `shades` darker colors, the color itself, then `tints` lighter
+colors, from dark to light. It works in OKLCH:
 
 - Lightness moves evenly toward black and white without reaching them.
 - Shades turn their hue toward blue (265°) and tints toward yellow (85°). The
   turn grows up to `hueShift` at the ends and never passes the target hue.
 - Chroma drops by up to 40% toward both ends. Out of gamut colors are mapped
-  like `oklchToRgb`, which can move hue a few degrees.
+  like `ColorSpace.oklch.toRgb`, which can move hue a few degrees.
 - Grays stay gray, and alpha is kept.
 
 Throws a `RangeError` when `shades` or `tints` is not a non-negative integer.

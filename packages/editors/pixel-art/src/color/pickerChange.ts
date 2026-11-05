@@ -1,24 +1,12 @@
 // Import Third-party Dependencies
 import {
-  formatHex,
-  fromRGBA8,
-  parseColor,
-  toRGBA8,
-  type RGBA,
+  Color,
   type RGBA8
 } from "@jolly-pixel/color";
 import type { FieldSource } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
-
-// CONSTANTS
-const kBlack: RGBA = {
-  r: 0,
-  g: 0,
-  b: 0,
-  a: 1
-};
 
 export interface ColorValueElement extends HTMLElement {
   color: string;
@@ -28,38 +16,32 @@ export interface ColorValueElement extends HTMLElement {
 export function colorWithOpacity(
   hex: string,
   opacity: number
-): RGBA {
-  return {
-    ...(parseColor(hex) ?? kBlack),
-    a: opacity
-  };
+): Color {
+  return (Color.parse(hex) ?? Color.black).withAlpha(opacity);
 }
 
 export function rgba8ToColorChange(
   color: RGBA8
 ): ColorChangeDetail {
-  const rgba = fromRGBA8(color);
+  const unit = Color.fromBytes(color);
 
   return {
-    hex: formatHex(rgba),
-    opacity: rgba.a
+    hex: unit.hex(),
+    opacity: unit.a
   };
 }
 
 export function colorChangeToRgba8(
   color: ColorChangeDetail
 ): RGBA8 {
-  return toRGBA8(colorWithOpacity(color.hex, color.opacity));
+  return colorWithOpacity(color.hex, color.opacity).toBytes();
 }
 
 export function pickerSource(
   element: ColorValueElement
 ): FieldSource<string> {
   return {
-    read: () => formatHex(
-      colorWithOpacity(element.color, element.opacity),
-      true
-    ),
+    read: () => colorWithOpacity(element.color, element.opacity).hex(true),
     write: (value, last) => applyPickerChange(element, value, last)
   };
 }
@@ -89,13 +71,13 @@ export function applyPickerChange(
 export function parseColorChange(
   value: string
 ): ColorChangeDetail | null {
-  const parsed = parseColor(value);
+  const parsed = Color.parse(value);
   if (parsed === null) {
     return null;
   }
 
   return {
-    hex: formatHex(parsed),
+    hex: parsed.hex(),
     opacity: parsed.a
   };
 }

@@ -5,10 +5,9 @@ import {
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
-import { fromRGBA8 } from "../src/convert/bytes.ts";
+import { Color } from "../src/Color.ts";
 import {
   formatHex,
-  formatHex8,
   formatHsl,
   formatRgb,
   formatRgba
@@ -36,13 +35,13 @@ const suite = defineSuite("format", (bench) => {
   bench
     .add("formatHex", () => totalLength(units, (color) => formatHex(color)))
     .add("formatHex alpha", () => totalLength(units, (color) => formatHex(color, true)))
-    .add("formatHex8", () => totalLength(bytes8, (color) => formatHex8(color)))
+    .add("Color.fromBytes hex", () => totalLength(bytes8, (color) => Color.fromBytes(color).hex()))
     .add("formatRgb", () => totalLength(units, formatRgb))
     .add("formatRgba byte alpha", () => totalLength(bytes, formatRgba))
     .add("formatRgba unit alpha", () => totalLength(units, formatRgba))
-    .add("formatRgba(fromRGBA8)", () => totalLength(
+    .add("Color.fromBytes rgba", () => totalLength(
       bytes8,
-      (color: RGBA8) => formatRgba(fromRGBA8(color))
+      (color: RGBA8) => Color.fromBytes(color).rgba()
     ))
     .add("formatHsl", () => totalLength(hslColors, formatHsl));
 }, { opsPerIteration: BATCH });

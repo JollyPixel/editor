@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { contrastingColor } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
@@ -87,7 +87,7 @@ export class UVRegionBorder {
     const showCasing = style.casing ?? true;
     this.#casing.style.display = showCasing ? "" : "none";
     if (showCasing) {
-      this.#casing.setAttribute("stroke", contrastingColor(style.color));
+      this.#casing.setAttribute("stroke", Color.from(style.color).ink().hex());
       this.#casing.style.strokeWidth = String(
         style.strokeWidth + kCasingWidth
       );

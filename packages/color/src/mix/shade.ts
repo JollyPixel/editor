@@ -3,6 +3,7 @@ import {
   oklchToRgb,
   rgbToOklch
 } from "../convert/oklab/oklch.ts";
+import { hueDelta } from "../hue.ts";
 import { lerp } from "../math.ts";
 import type {
   OKLCHA,
@@ -13,8 +14,6 @@ import type {
 const kCoolHue = 265;
 const kWarmHue = 85;
 const kChromaFalloff = 0.4;
-const kTurn = 360;
-const kHalfTurn = 180;
 
 export interface ShadeRampOptions {
   /**
@@ -80,7 +79,7 @@ function shiftColor(
   base: OKLCHA,
   step: ShadeStep
 ): RGBA {
-  const delta = (((step.hue - base.h) % kTurn) + kTurn + kHalfTurn) % kTurn - kHalfTurn;
+  const delta = hueDelta(base.h, step.hue);
   const turn = Math.sign(delta) * Math.min(Math.abs(delta), Math.abs(step.turn));
 
   return oklchToRgb({

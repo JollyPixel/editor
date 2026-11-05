@@ -5,9 +5,9 @@ import {
 } from "../srgb.ts";
 import {
   clampUnit,
-  cube,
-  wrapHue
+  cube
 } from "../../math.ts";
+import { wrapHue } from "../../hue.ts";
 import type { RGBA } from "../../types.ts";
 
 // CONSTANTS

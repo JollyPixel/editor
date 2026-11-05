@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { assertColor8 } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { RectArea } from "../utils/RectArea.ts";
@@ -110,7 +110,7 @@ export class PixelBuffer implements DefaultPixelBuffer {
 
     this.#width = size.x;
     this.#height = size.y;
-    const fillColor = assertColor8(defaultColor);
+    const fillColor = Color.fromBytes(defaultColor).toBytes();
     this.#masterWidth = size.x;
     this.#masterHeight = size.y;
     this.#masterFill = { ...fillColor };

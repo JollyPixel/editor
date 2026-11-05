@@ -13,7 +13,6 @@ import {
   type PopoverSide
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/color-picker";
-import { formatHex } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import {
@@ -103,7 +102,7 @@ export class ColorPickerPopover extends LitElement {
       return;
     }
     const color = this.#request.color();
-    this._value = formatHex(colorWithOpacity(color.hex, color.opacity), true);
+    this._value = colorWithOpacity(color.hex, color.opacity).hex(true);
   }
 
   override disconnectedCallback(): void {

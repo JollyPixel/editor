@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import {
-  ColorSequence,
-  formatHex,
-  parseColor
+  Color,
+  ColorSequence
 } from "@jolly-pixel/color";
 import { formatVector } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
@@ -274,10 +273,10 @@ function createAreaDialog() {
   confirm.variant = "accent";
   confirm.textContent = "Create";
   confirm.addEventListener("click", () => {
-    const fill = parseColor(draft.color);
+    const fill = Color.parse(draft.color);
     const area = addArea({
       displayName: draft.displayName,
-      color: fill === null ? paletteColor(0) : formatHex(fill),
+      color: fill === null ? paletteColor(0) : fill.hex(),
       position: draft.position,
       size: draft.size,
       opacity: fill === null ? AreaBox.Defaults.opacity : fill.a,
@@ -467,7 +466,7 @@ function withAlpha(
   hex: string,
   alpha: number
 ): string {
-  const color = parseColor(hex);
+  const color = Color.parse(hex);
 
-  return color === null ? hex : formatHex({ ...color, a: alpha }, true);
+  return color === null ? hex : color.withAlpha(alpha).hex(true);
 }

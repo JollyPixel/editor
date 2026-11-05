@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { sortColors } from "../src/palette/sortColors.ts";
 import { formatHex } from "../src/format.ts";
-import { parseColor } from "../src/parse/index.ts";
+import { parseColor } from "../src/parse/parseColor.ts";
 import type { RGBA } from "../src/types.ts";
 
 describe("sortColors", () => {

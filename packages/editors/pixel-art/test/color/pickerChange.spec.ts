@@ -45,14 +45,14 @@ function listening(
 describe("colorWithOpacity", () => {
   test("keeps the channels and replaces alpha", () => {
     assert.deepEqual(
-      colorWithOpacity("#336699", 0.5),
+      { ...colorWithOpacity("#336699", 0.5) },
       { r: 0.2, g: 0.4, b: 0.6, a: 0.5 }
     );
   });
 
   test("falls back to black for an unparsable color", () => {
     assert.deepEqual(
-      colorWithOpacity("not-a-color", 0.25),
+      { ...colorWithOpacity("not-a-color", 0.25) },
       { r: 0, g: 0, b: 0, a: 0.25 }
     );
   });

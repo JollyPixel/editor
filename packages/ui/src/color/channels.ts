@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type {
   HSVA,
+  HueSpace,
   RGBA
 } from "@jolly-pixel/color";
 
@@ -8,7 +9,6 @@ import type {
 import { clamp } from "../numeric/bounds.ts";
 import type { NumericBounds } from "../numeric/entry.ts";
 import { ChannelModel } from "./ChannelModel.ts";
-import type { PickerSpace } from "./space.ts";
 
 // CONSTANTS
 export const CHANNEL_BOUNDS: Readonly<Record<ColorChannel, NumericBounds>> = {
@@ -98,7 +98,7 @@ export type ChannelValues = Record<ColorChannel, number>;
 
 export function channelValues(
   point: HSVA,
-  space: PickerSpace
+  space: HueSpace
 ): ChannelValues {
   const rgb = space.toRgb(point);
 
@@ -116,7 +116,7 @@ export function applyChannel(
   point: HSVA,
   channel: ColorChannel,
   value: number,
-  space: PickerSpace
+  space: HueSpace
 ): HSVA {
   const { min, max } = CHANNEL_BOUNDS[channel];
   const bounded = clamp(value, min, max);
@@ -146,7 +146,7 @@ function applyRgbChannel(
   point: HSVA,
   channel: "r" | "g" | "b",
   value: number,
-  space: PickerSpace
+  space: HueSpace
 ): HSVA {
   const rgb = space.toRgb(point);
   const next: RGBA = {

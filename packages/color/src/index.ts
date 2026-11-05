@@ -1,6 +1,6 @@
 export type {
+  ByteColorInput,
   ColorInput,
-  ColorInput8,
   HSLA,
   HSVA,
   HWBA,
@@ -11,34 +11,13 @@ export type {
   RGBA8
 } from "./types.ts";
 
+export { Color } from "./Color.ts";
+export { ColorParseError } from "./parse/errors/ColorParseError.ts";
 export * from "./convert/index.ts";
 
-export {
-  assertColor,
-  assertColor8,
-  ColorParseError,
-  parseColor
-} from "./parse/index.ts";
-
-export {
-  formatHex,
-  formatHex8,
-  formatHsl,
-  formatOklch,
-  formatRgb,
-  formatRgb8,
-  formatRgba,
-  formatRgba8
-} from "./format.ts";
-
-export {
-  colorRamp,
-  mixColor
-} from "./mix/mix.ts";
-export type {
-  MixOptions,
-  MixSpace
-} from "./mix/mix.ts";
+export * from "./mix/Gradient.ts";
+export type { HueInterpolation } from "./hue.ts";
+export type { ShadeRampOptions } from "./mix/shade.ts";
 
 export {
   colorHarmony,
@@ -48,13 +27,14 @@ export type {
   HarmonyKind
 } from "./mix/harmony.ts";
 
-export { shadeRamp } from "./mix/shade.ts";
-export type { ShadeRampOptions } from "./mix/shade.ts";
-
-export { contrastingColor } from "./contrast.ts";
-
 export * from "./palette/ColorSequence.ts";
 export { hashKey } from "./palette/hashKey.ts";
 export * from "./palette/PaletteFile.ts";
+export {
+  PaletteFormat,
+  type PaletteContent,
+  type PaletteExtension,
+  type PaletteFormatInit
+} from "./palette/PaletteFormat.ts";
 export * from "./palette/errors/PaletteParseError.ts";
 export * from "./palette/sortColors.ts";

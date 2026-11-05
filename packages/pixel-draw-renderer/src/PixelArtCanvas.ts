@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { assertColor8 } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 import type { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -163,7 +163,7 @@ export class PixelArtCanvas {
     const eraseColor = new SelectionEraseColor(
       options.select?.eraseColor === undefined ?
         null :
-        assertColor8(options.select.eraseColor)
+        Color.fromBytes(options.select.eraseColor).toBytes()
     );
 
     const textureSize: Vec2 = options.texture?.size

@@ -1,13 +1,10 @@
 // Import Third-party Dependencies
-import {
-  parseColor,
-  toRGBA8
-} from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 function parseCSSColor(
   color: string
 ): [number, number, number, number] {
-  const parsed = parseColor(color);
+  const parsed = Color.parse(color);
   if (parsed === null) {
     return [0, 0, 0, 255];
   }
@@ -17,7 +14,7 @@ function parseCSSColor(
     g,
     b,
     a
-  } = toRGBA8(parsed);
+  } = parsed.toBytes();
 
   return [r, g, b, a];
 }

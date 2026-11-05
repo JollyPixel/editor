@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { HSVA } from "@jolly-pixel/color";
+import {
+  Color,
+  type HSVA,
+  type HueSpace
+} from "@jolly-pixel/color";
 import {
   html,
   nothing,
@@ -14,8 +18,6 @@ import {
   type ChannelValues,
   type ColorChannel
 } from "./channels.ts";
-import { parseFieldColor } from "./draft.ts";
-import type { PickerSpace } from "./space.ts";
 import { DraftController } from "../field/DraftController.ts";
 import {
   formatNumber,
@@ -45,7 +47,7 @@ export interface PickerFieldsHost extends ReactiveControllerHost {
 
 export interface PickerFieldsOptions {
   point(): HSVA;
-  space(): PickerSpace;
+  space(): HueSpace;
   hex(): string;
   alpha(): boolean;
   change(point: HSVA): void;
@@ -240,7 +242,7 @@ export class PickerFields {
       return;
     }
 
-    const parsed = parseFieldColor(draft);
+    const parsed = Color.parseDraft(draft);
     if (parsed === null) {
       this.#invalid = true;
       this.#host.requestUpdate();

@@ -1,8 +1,18 @@
 // Import Internal Dependencies
-import { wrapHue } from "../math.ts";
+import { clampUnit } from "../math.ts";
+import { wrapHue } from "../hue.ts";
+import type { RGBA } from "../types.ts";
 
 // CONSTANTS
 const kSector = 60;
+const kAchromatic = 1e-7;
+
+export interface RgbExtent {
+  max: number;
+  min: number;
+  chroma: number;
+  hue: number;
+}
 
 export function hueSector(
   hue: number
@@ -10,18 +20,31 @@ export function hueSector(
   return hue / kSector;
 }
 
-export function computeHue(
-  r: number,
-  g: number,
-  b: number,
-  max: number,
-  chroma: number
-): number {
-  if (chroma === 0) {
-    return 0;
+export function rgbExtent(
+  color: RGBA
+): RgbExtent {
+  const r = clampUnit(color.r);
+  const g = clampUnit(color.g);
+  const b = clampUnit(color.b);
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const chroma = max - min;
+  if (chroma < kAchromatic) {
+    return {
+      max,
+      min: max,
+      chroma: 0,
+      hue: 0
+    };
   }
 
-  return wrapHue(sectorOffset(r, g, b, max, chroma) * kSector);
+  return {
+    max,
+    min,
+    chroma,
+    hue: wrapHue(sectorOffset(r, g, b, max, chroma) * kSector)
+  };
 }
 
 export function sectorChannels(

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { contrastingColor } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { SVG_NS } from "../constants.ts";
@@ -40,7 +40,7 @@ export class UVResizeHandles {
     }
 
     const half = kHandleSize / 2;
-    const fill = contrastingColor(region.color);
+    const fill = Color.from(region.color).ink().hex();
     corners.forEach((corner, index) => {
       const square = this.#squares[index] ?? this.#createSquare();
       square.setAttribute("x", String(corner.x - half));

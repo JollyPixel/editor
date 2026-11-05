@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
-import type { RGBA } from "@jolly-pixel/color";
+import {
+  Color,
+  type RGBA
+} from "@jolly-pixel/color";
 import {
   html,
   type TemplateResult
 } from "lit";
-
-// Import Internal Dependencies
-import { parseFieldColor } from "./draft.ts";
 
 interface EyeDropperResult {
   sRGBHex: string;
@@ -61,7 +61,7 @@ export class PickerEyedropper {
     }
 
     const picked = await new EyeDropper().open().catch(() => null);
-    const color = picked === null ? null : parseFieldColor(picked.sRGBHex);
+    const color = picked === null ? null : Color.parseDraft(picked.sRGBHex);
     if (color !== null) {
       this.#options.pick(color);
     }

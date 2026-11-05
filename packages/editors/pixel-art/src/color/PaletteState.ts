@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
 import {
-  colorRamp,
-  fromRGBA8,
+  Color,
+  Gradient,
   sortColors,
-  toRGBA8,
   type ColorSortKey,
   type MixOptions
 } from "@jolly-pixel/color";
@@ -96,24 +95,26 @@ export class PaletteState {
         );
       }
       case "ramp": {
-        const ramp = colorRamp(
-          fromRGBA8(palette.colorAt(run.start)),
-          fromRGBA8(palette.colorAt(run.end)),
-          run.count,
+        const ramp = Gradient.between(
+          Color.fromBytes(palette.colorAt(run.start)),
+          Color.fromBytes(palette.colorAt(run.end)),
           kRampOptions[edit.space]
-        );
+        ).steps(run.count);
 
         return this.#next(
-          palette.withColors(run.start, ramp.map(toRGBA8)),
+          palette.withColors(run.start, ramp.map((color) => color.toBytes())),
           this.selection
         );
       }
       case "sort": {
         const target = this.#target();
-        const sorted = sortColors(this.#colors(target).map(fromRGBA8), edit.key);
+        const sorted = sortColors(
+          this.#colors(target).map((color) => Color.fromBytes(color)),
+          edit.key
+        );
 
         return this.#next(
-          palette.withColors(target.start, sorted.map(toRGBA8)),
+          palette.withColors(target.start, sorted.map((color) => color.toBytes())),
           this.selection
         );
       }

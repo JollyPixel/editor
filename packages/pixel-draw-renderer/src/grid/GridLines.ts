@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
-import {
-  assertColor,
-  contrastingColor,
-  formatRgba
-} from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import type { TextureGrid } from "./TextureGrid.ts";
@@ -72,12 +68,10 @@ export class GridLines {
     color: string
   ): string {
     if (this.#casingCache.color !== color) {
+      const parsed = Color.from(color);
       this.#casingCache = {
         color,
-        value: formatRgba({
-          ...assertColor(contrastingColor(color)),
-          a: assertColor(color).a
-        })
+        value: parsed.ink().withAlpha(parsed.a).rgba()
       };
     }
 

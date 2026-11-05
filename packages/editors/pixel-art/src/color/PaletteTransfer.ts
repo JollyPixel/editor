@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   PaletteFile,
-  type PaletteFormat
+  PaletteFormat
 } from "@jolly-pixel/color";
 import type { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -12,21 +12,15 @@ import { downloadBlob } from "../shared/dom.ts";
 const kAccept = ".gpl,.hex,text/plain";
 
 export class PaletteTransfer {
-  static format(
-    fileName: string
-  ): PaletteFormat {
-    return fileName.toLowerCase().endsWith(".hex") ? "hex" : "gpl";
-  }
-
   static save(
     palette: ColorPalette,
     format: PaletteFormat,
     name: string
   ): void {
-    const text = new PaletteFile(palette.toJSON(), name).serialize(format);
+    const text = format.serialize(new PaletteFile(palette.toJSON(), name));
     downloadBlob(
       new Blob([text], { type: "text/plain" }),
-      `${name}.${format}`
+      `${name}.${format.extension}`
     );
   }
 
@@ -46,6 +40,6 @@ export class PaletteTransfer {
   static async read(
     file: File
   ): Promise<PaletteFile> {
-    return PaletteFile.parse(await file.text(), PaletteTransfer.format(file.name));
+    return PaletteFormat.fromFileName(file.name).parse(await file.text());
   }
 }

@@ -1,18 +1,14 @@
 // Import Internal Dependencies
-import {
-  clampByte,
-  toByte
-} from "./convert/bytes.ts";
+import { toByte } from "./convert/bytes.ts";
 import {
   BYTE_MAX,
-  clampUnit,
-  wrapHue
+  clampUnit
 } from "./math.ts";
+import { wrapHue } from "./hue.ts";
 import type {
   HSLA,
   OKLCHA,
-  RGBA,
-  RGBA8
+  RGBA
 } from "./types.ts";
 
 // CONSTANTS
@@ -21,7 +17,7 @@ const kPercentDigits = 1;
 const kHueDigits = 1;
 const kPercentScale = 100;
 const kOklchLightnessDigits = 2;
-const kOklchChromaDigits = 4;
+const kOklchChromaDigits = 5;
 const kOklchHueDigits = 2;
 const kHexPairs = byteTable(
   (byte) => byte.toString(16).padStart(2, "0")
@@ -44,35 +40,12 @@ export function formatHex(
     `#${rgb}`;
 }
 
-export function formatHex8(
-  color: RGBA8,
-  withAlpha = false
-): string {
-  const rgb = hex(clampByte(color.r)) +
-    hex(clampByte(color.g)) +
-    hex(clampByte(color.b));
-
-  return withAlpha ?
-    `#${rgb}${hex(clampByte(color.a))}` :
-    `#${rgb}`;
-}
-
 export function formatRgb(
   color: RGBA
 ): string {
   const r = decimal(toByte(color.r));
   const g = decimal(toByte(color.g));
   const b = decimal(toByte(color.b));
-
-  return `rgb(${r}, ${g}, ${b})`;
-}
-
-export function formatRgb8(
-  color: RGBA8
-): string {
-  const r = decimal(clampByte(color.r));
-  const g = decimal(clampByte(color.g));
-  const b = decimal(clampByte(color.b));
 
   return `rgb(${r}, ${g}, ${b})`;
 }
@@ -85,16 +58,6 @@ export function formatRgba(
   const b = decimal(toByte(color.b));
 
   return `rgba(${r}, ${g}, ${b}, ${alpha(color.a)})`;
-}
-
-export function formatRgba8(
-  color: RGBA8
-): string {
-  const r = decimal(clampByte(color.r));
-  const g = decimal(clampByte(color.g));
-  const b = decimal(clampByte(color.b));
-
-  return `rgba(${r}, ${g}, ${b}, ${kByteAlphas[clampByte(color.a)]})`;
 }
 
 export function formatHsl(

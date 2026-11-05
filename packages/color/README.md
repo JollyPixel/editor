@@ -15,31 +15,27 @@ $ yarn add @jolly-pixel/color
 ## 👀 Usage example
 
 ```ts
-import { formatHex, parseColor } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
-const color = parseColor("hsl(210 40% 17%)");
-// { r: 0.102, g: 0.17, b: 0.238, a: 1 }
+const color = Color.parse("hsl(210 40% 17%)");
+// Color { r: 0.102, g: 0.17, b: 0.238, a: 1 }, or null when invalid
 
-formatHex(color);  // "#1a2b3d"
+color?.hex();  // "#1a2b3d"
 ```
 
-`parseColor` returns `null` for invalid or incomplete input. Use `assertColor`
-when an invalid value is a programming error:
+Use `Color.from` when an invalid value is a programming error:
 
 ```ts
-import { assertColor } from "@jolly-pixel/color";
-
-assertColor("rgb(255 102 0 / 50%)");  // { r: 1, g: 0.4, b: 0, a: 0.5 }
-assertColor("not-a-color");           // throws ColorParseError
+Color.from("rgb(255 102 0 / 50%)").rgba();  // "rgba(255, 102, 0, 0.5)"
+Color.from("not-a-color");                  // throws ColorParseError
 ```
 
-`RGBA` uses channels from 0 to 1. Convert to the byte-based `RGBA8` type for
-`ImageData` or network payloads:
+A `Color` uses channels from 0 to 1. Convert to and from the byte-based
+`RGBA8` type for `ImageData` or network payloads:
 
 ```ts
-import { toRGBA8 } from "@jolly-pixel/color";
-
-toRGBA8({ r: 1, g: 0.4, b: 0, a: 1 });  // { r: 255, g: 102, b: 0, a: 255 }
+Color.from("#ff6600").toBytes();                    // { r: 255, g: 102, b: 0, a: 255 }
+Color.fromBytes({ r: 255, g: 102, b: 0, a: 128 });  // Color { r: 1, g: 0.4, b: 0, a: 0.502 }
 ```
 
 Convert through a `ColorSpace`. Passing the previous point keeps its hue on
@@ -63,11 +59,9 @@ ColorSequence.goldenAngle().at(index);      // hues a golden angle apart
 
 ## 📚 API
 
-- [Parsing](./docs/parse.md)
-- [Formatting](./docs/format.md)
+- [Color](./docs/Color.md): parsing, writing, compositing and contrast
 - [Types and conversion](./docs/convert.md)
 - [Mixing and harmonies](./docs/mix.md)
-- [Contrast](./docs/contrast.md)
 - [Palettes](./docs/palette.md)
 
 ## 🧪 Benchmarks

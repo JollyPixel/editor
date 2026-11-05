@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { equalRGBA8 } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
 import { groupPositionsByColor } from "../buffer/colorGroups.ts";
 import {
@@ -21,7 +24,6 @@ import type {
   NormalMapSettings
 } from "../normal/types.ts";
 import type { SavedUVNetData } from "../uv/region/SavedUVNet.ts";
-import { rgba8Equal } from "../utils/colors.ts";
 
 export type UVRegionRotation =
   | {
@@ -212,7 +214,7 @@ export function paintCommand(
 ): PixelDocumentCommand {
   const [first] = colors;
 
-  return colors.every((color) => rgba8Equal(color, first)) ?
+  return colors.every((color) => equalRGBA8(color, first)) ?
     strokeCommand(positions, first) :
     selectEditCommand(positions, colors);
 }

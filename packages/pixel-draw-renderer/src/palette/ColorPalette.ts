@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
-import { isRGBA8 } from "@jolly-pixel/color";
+import {
+  equalRGBA8,
+  isRGBA8
+} from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import type { RGBA8 } from "../types.ts";
-import { rgba8Equal } from "../utils/colors.ts";
 
 // CONSTANTS
 export const COLOR_PALETTE_MAX_SIZE = 256;
@@ -145,7 +147,7 @@ export class ColorPalette {
     other: ColorPalette
   ): boolean {
     return other.size === this.size && this.#colors.every(
-      (color, index) => rgba8Equal(color, other.#colors[index])
+      (color, index) => equalRGBA8(color, other.#colors[index])
     );
   }
 

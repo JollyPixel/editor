@@ -22,29 +22,8 @@ interface RGBA8 {
 `RGBA8` uses channels from 0 to 255 for byte-based storage such as
 `ImageData`. The two types do not assign to each other.
 
-### `toRGBA8()` and `fromRGBA8()`
-
-```ts
-function toRGBA8(color: RGBA): RGBA8
-function fromRGBA8(color: RGBA8): RGBA
-```
-
-`toRGBA8` rounds and clamps each channel, while `fromRGBA8` divides each
-channel by 255 without clamping.
-
-```ts
-import { fromRGBA8, toRGBA8 } from "@jolly-pixel/color";
-
-toRGBA8({ r: 1.5, g: 0.5, b: -0.2, a: 1 });
-// { r: 255, g: 128, b: 0, a: 255 }
-
-fromRGBA8({ r: 255, g: 128, b: 0, a: 255 });
-// { r: 1, g: 0.502…, b: 0, a: 1 }
-```
-
-Byte-based code can skip the round trip: [`assertColor8`](./parse.md) parses
-straight to `RGBA8`, and [`formatHex8`, `formatRgb8` and
-`formatRgba8`](./format.md) read it.
+[`Color.fromBytes`](./Color.md) and
+[`toBytes`](./Color.md) convert between the two.
 
 ### `isRGBA8()`
 
@@ -56,14 +35,24 @@ Returns `true` when `value` is an object whose `r`, `g`, `b` and `a` are
 integers from 0 to 255. Use it to check untrusted data, such as a parsed file,
 before treating it as `RGBA8`.
 
-## `ColorInput` and `ColorInput8`
+### `equalRGBA8()`
+
+```ts
+function equalRGBA8(left: RGBA8, right: RGBA8): boolean
+```
+
+Returns `true` when all four byte channels match. It allocates nothing, so
+pixel loops can call it per pixel.
+
+## `ColorInput` and `ByteColorInput`
 
 ```ts
 type ColorInput = string | RGBA;
-type ColorInput8 = string | RGBA8;
+type ByteColorInput = string | RGBA8;
 ```
 
-APIs that accept either type parse strings and use color objects directly.
+What [`Color.from`](./Color.md) and `Color.fromBytes` accept. A string has no
+channel scale, so it parses the same way in both.
 
 ## `ColorSpace`
 
@@ -82,15 +71,18 @@ class ColorSpace<TChannel extends string> {
   static named(name: ColorSpaceName): ColorSpace;
 
   readonly name: string;
+  readonly channels: readonly TChannel[];
 
   toRgb(color: HueColor<TChannel>): RGBA;
   fromRgb(color: RGBA, previous?: Partial<HueColor<TChannel>>): HueColor<TChannel>;
-  mix(from: RGBA, to: RGBA, amount: number, hue?: HueInterpolation): RGBA;
 }
 ```
 
-One object per hue-based color model. Hue uses degrees and wraps. Every other
-channel uses 0 to 1 and is clamped, except OKLCH chroma.
+One object per hue-based color model. `channels` lists every channel except
+hue and alpha, such as `["s", "l"]` for HSL. Hue uses degrees and wraps. Every
+other channel uses 0 to 1 and is clamped, except OKLCH chroma.
+`ColorSpace.named(name)` returns the space for a preference string. To blend in
+a space, use a [`Gradient`](./mix.md#gradient).
 
 ```ts
 import { ColorSpace } from "@jolly-pixel/color";
@@ -124,11 +116,6 @@ ColorSpace.hsv.fromRgb({ r: 0, g: 0, b: 0, a: 1 }, previous);
 
 A picker passes its current point, so dragging through gray or black keeps
 the hue and saturation it had.
-
-### `mix()`
-
-Same as [`mixColor`](./mix.md) with this space. `ColorSpace.named(name)`
-returns the space for a `MixSpace` or preference string.
 
 ### HSV, HSL and HWB
 
@@ -175,51 +162,51 @@ interface OKHSLA { h: number; s: number; l: number; a: number }
 
 Named shapes of the `HueColor` each `ColorSpace` reads and returns.
 
-## `hsvToHsl()` and `hslToHsv()`
+## `HueSpace`
 
 ```ts
-function hsvToHsl(color: HSVA): HSLA
-function hslToHsv(color: HSLA): HSVA
+type HueSpaceName = "hsv" | "okhsv" | "okhsl";
+type HueLevel = "value" | "lightness";
+
+class HueSpace {
+  static readonly hsv: HueSpace;
+  static readonly okhsv: HueSpace;
+  static readonly okhsl: HueSpace;
+  static named(name: HueSpaceName): HueSpace;
+
+  readonly name: HueSpaceName;
+  readonly level: HueLevel;
+  readonly pureLevel: number;
+
+  toRgb(point: HSVA): RGBA;
+  fromRgb(color: RGBA, previous?: HSVA): HSVA;
+  pureHue(point: HSVA): RGBA;
+  convert(point: HSVA, target: HueSpace): HSVA;
+  read<TChannel>(point: HSVA, space: ColorSpace<TChannel>): HueColor<TChannel>;
+  write<TChannel>(point: HSVA, space: ColorSpace<TChannel>, channel: TChannel | "h", value: number): HSVA;
+}
 ```
 
-These convert between the two models directly, without an RGB round trip, so
-hue passes through (wrapped) on grays. Saturation, value, lightness and alpha
-are clamped.
+The hue, saturation and level model a color picker moves through. Every point
+is an `HSVA` whose `v` is the level: value for `hsv` and `okhsv`,
+lightness for `okhsl` (`level` says which).
 
-At the black point, where HSL saturation is undefined, both functions return
-the limit as lightness approaches 0 at the same HSV saturation:
-`hsvToHsl` gives `s / (2 - s)` and `hslToHsv` gives `2s / (1 + s)`. A color
-converted to black and back keeps its saturation. At white, HSL saturation is
-0.
-
-```ts
-import { hslToHsv, hsvToHsl } from "@jolly-pixel/color";
-
-hslToHsv(hsvToHsl({ h: 24, s: 1, v: 0, a: 1 }));
-// { h: 24, s: 1, v: 0, a: 1 }
-```
-
-## `isOklchInGamut()`
+- `pureLevel` is the level where full saturation gives the pure hue: 1 for
+  value, 0.5 for lightness. `pureHue` returns that color.
+- `fromRgb` and `convert` carry hue and saturation from the previous point
+  on grays and black, like [`ColorSpace.fromRgb`](#fromrgb).
+- `read` returns the point in another `ColorSpace` and `write` changes one
+  of its channels. A space that shares the hue axis (`hsl` for `hsv`,
+  `oklch` for `okhsv` and `okhsl`) takes hue straight from the point, so a
+  gray keeps it.
+- HSL from an `hsv` point skips RGB. At black, where HSL saturation is
+  undefined, it uses the limit as lightness reaches 0, so a color written to
+  black and back keeps its saturation.
 
 ```ts
-function isOklchInGamut(color: OKLCHA): boolean
-```
+import { ColorSpace, HueSpace } from "@jolly-pixel/color";
 
-Returns whether the color fits in sRGB before gamut mapping.
-
-## sRGB transfer functions
-
-```ts
-function srgbToLinear(channel: number): number
-function linearToSrgb(channel: number): number
-```
-
-These functions convert a single channel between gamma-encoded sRGB and linear
-light; averaging or blending should use the linear-light value.
-
-```ts
-import { linearToSrgb, srgbToLinear } from "@jolly-pixel/color";
-
-const linear = srgbToLinear(0.5);
-linearToSrgb(linear);  // 0.5
+const point = { h: 24, s: 1, v: 1, a: 1 };
+HueSpace.hsv.read(point, ColorSpace.hsl);        // { h: 24, s: 1, l: 0.5, a: 1 }
+HueSpace.hsv.write(point, ColorSpace.hsl, "l", 0.25);
 ```

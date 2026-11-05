@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
-import { contrastingColor } from "../src/contrast.ts";
+import { Color } from "../src/Color.ts";
 import { formatHex } from "../src/format.ts";
 import {
   BATCH,
@@ -18,21 +18,21 @@ const suite = defineSuite("contrast", (bench) => {
   const hexColors = colors.map((color) => formatHex(color));
 
   bench
-    .add("contrastingColor RGBA", () => {
-      let length = 0;
+    .add("Color.ink RGBA", () => {
+      let sum = 0;
       for (const color of colors) {
-        length += contrastingColor(color).length;
+        sum += Color.from(color).ink().r;
       }
 
-      return length;
+      return sum;
     })
-    .add("contrastingColor hex string", () => {
-      let length = 0;
+    .add("Color.ink hex string", () => {
+      let sum = 0;
       for (const color of hexColors) {
-        length += contrastingColor(color).length;
+        sum += Color.from(color).ink().r;
       }
 
-      return length;
+      return sum;
     });
 }, { opsPerIteration: BATCH });
 

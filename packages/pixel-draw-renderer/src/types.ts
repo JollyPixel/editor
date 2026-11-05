@@ -1,7 +1,13 @@
 // Import Third-party Dependencies
-import type { RGBA8 } from "@jolly-pixel/color";
+import type {
+  ByteColorInput,
+  RGBA8
+} from "@jolly-pixel/color";
 
-export type { RGBA8 };
+export type {
+  ByteColorInput,
+  RGBA8
+};
 
 export type Vec2 = {
   x: number;
@@ -26,8 +32,6 @@ export interface SelectionRect {
   width: number;
   height: number;
 }
-
-export type ByteColorInput = string | RGBA8;
 
 export interface PeerStrokePixel {
   x: number;

@@ -1,13 +1,5 @@
 // Import Third-party Dependencies
-import {
-  assertColor8,
-  formatHex,
-  formatRgb8,
-  formatRgba,
-  fromRGBA8,
-  toRGBA8,
-  type RGBA
-} from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import {
@@ -22,7 +14,7 @@ import type {
 } from "../types.ts";
 
 export class BrushColor {
-  #color: RGBA;
+  #color: Color;
   #opacity: number;
   #rgba: RGBA8;
 
@@ -30,7 +22,7 @@ export class BrushColor {
     color: ByteColorInput,
     opacity: number = 1
   ) {
-    this.#color = opaqueColor(color);
+    this.#color = Color.fromBytes(color).withAlpha(1);
     this.#opacity = clamp(opacity, 0, 1);
     this.#rgba = this.#readRgba();
   }
@@ -39,7 +31,7 @@ export class BrushColor {
     color: ByteColorInput,
     opacity?: number
   ): void {
-    this.#color = opaqueColor(color);
+    this.#color = Color.fromBytes(color).withAlpha(1);
     if (opacity !== undefined) {
       this.#opacity = clamp(opacity, 0, 1);
     }
@@ -47,10 +39,7 @@ export class BrushColor {
   }
 
   #readRgba(): RGBA8 {
-    return toRGBA8({
-      ...this.#color,
-      a: this.#opacity
-    });
+    return this.#color.withAlpha(this.#opacity).toBytes();
   }
 
   asRGBA(): RGBA8 {
@@ -61,13 +50,10 @@ export class BrushColor {
     format: "rgba" | "hex" = "rgba"
   ): string {
     if (format === "hex") {
-      return formatHex(this.#color);
+      return this.#color.hex();
     }
 
-    return formatRgba({
-      ...this.#color,
-      a: this.#opacity
-    });
+    return this.#color.withAlpha(this.#opacity).rgba();
   }
 
   set opacity(
@@ -80,15 +66,6 @@ export class BrushColor {
   get opacity(): number {
     return this.#opacity;
   }
-}
-
-function opaqueColor(
-  color: ByteColorInput
-): RGBA {
-  return {
-    ...fromRGBA8(assertColor8(color)),
-    a: 1
-  };
 }
 
 export type BrushColorSlot = "primary" | "secondary";
@@ -217,7 +194,7 @@ export class Brush {
   set colorInline(
     color: ByteColorInput
   ) {
-    this.#colorInline = formatRgb8(assertColor8(color));
+    this.#colorInline = Color.fromBytes(color).rgb();
   }
 
   get colorInline(): string {
@@ -227,7 +204,7 @@ export class Brush {
   set colorOutline(
     color: ByteColorInput
   ) {
-    this.#colorOutline = formatRgb8(assertColor8(color));
+    this.#colorOutline = Color.fromBytes(color).rgb();
   }
 
   get colorOutline(): string {

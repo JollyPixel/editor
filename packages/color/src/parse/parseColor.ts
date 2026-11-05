@@ -15,14 +15,7 @@ import {
   parseOklchFunction
 } from "./oklab.ts";
 import { parseRgbFunction } from "./rgb.ts";
-import { ColorParseError } from "./errors/ColorParseError.ts";
-import { toRGBA8 } from "../convert/bytes.ts";
-import type {
-  ColorInput,
-  ColorInput8,
-  RGBA,
-  RGBA8
-} from "../types.ts";
+import type { RGBA } from "../types.ts";
 
 // CONSTANTS
 const kHash = 0x23;
@@ -50,31 +43,6 @@ export function parseColor(
   }
 
   return parseHex(value);
-}
-
-export function assertColor(
-  input: ColorInput
-): RGBA {
-  if (typeof input !== "string") {
-    return input;
-  }
-
-  const parsed = parseColor(input);
-  if (parsed === null) {
-    throw new ColorParseError(input);
-  }
-
-  return parsed;
-}
-
-export function assertColor8(
-  input: ColorInput8
-): RGBA8 {
-  if (typeof input !== "string") {
-    return input;
-  }
-
-  return toRGBA8(assertColor(input));
 }
 
 function fromFunction(

@@ -2,15 +2,17 @@
 import {
   clamp,
   clampUnit,
-  BYTE_MAX,
-  wrapHue
+  BYTE_MAX
 } from "../math.ts";
+import {
+  TURN,
+  wrapHue
+} from "../hue.ts";
 
 // CONSTANTS
 const kNumberPattern = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
 const kAnglePattern = /^([+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(deg|grad|rad|turn)?$/i;
 const kMissing = "none";
-const kTurn = 360;
 const kGradsPerTurn = 400;
 const kPercentMax = 100;
 
@@ -117,11 +119,11 @@ function toDegrees(
 ): number {
   switch (unit) {
     case "rad":
-      return (value * kTurn) / (2 * Math.PI);
+      return (value * TURN) / (2 * Math.PI);
     case "turn":
-      return value * kTurn;
+      return value * TURN;
     case "grad":
-      return (value * kTurn) / kGradsPerTurn;
+      return (value * TURN) / kGradsPerTurn;
     default:
       return value;
   }

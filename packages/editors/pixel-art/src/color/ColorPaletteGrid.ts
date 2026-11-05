@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
 import {
-  formatHex8,
-  formatRgba8,
-  fromRGBA8,
+  Color,
   type RGBA8
 } from "@jolly-pixel/color";
 import { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
@@ -117,7 +115,7 @@ export class ColorPaletteGrid extends LitElement {
             aria-pressed=${String(this.selection?.focus === index)}
             aria-haspopup=${this.locked ? nothing : "dialog"}
             aria-expanded=${this.locked ? nothing : String(this.editing === index)}
-            title=${`${formatHex8(color, true)}: ${hint}`}
+            title=${`${Color.fromBytes(color).hex(true)}: ${hint}`}
             draggable=${editable ? "true" : "false"}
             ?disabled=${this.disabled}
             style=${this.#swatchStyle(color, index)}
@@ -145,10 +143,11 @@ export class ColorPaletteGrid extends LitElement {
     color: RGBA8,
     index: number
   ): string {
-    const fill = `--swatch-color:${formatRgba8(color)}`;
+    const unit = Color.fromBytes(color);
+    const fill = `--swatch-color:${unit.rgba()}`;
 
     return this.selection?.focus === index ?
-      `${fill};--swatch-ring:${formatSwatchRing(fromRGBA8(color))}` :
+      `${fill};--swatch-ring:${formatSwatchRing(unit)}` :
       fill;
   }
 

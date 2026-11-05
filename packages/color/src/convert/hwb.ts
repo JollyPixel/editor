@@ -14,18 +14,14 @@ export function rgbToHwb(
 ): HWBA {
   const {
     h,
+    s,
     v,
     a
   } = rgbToHsv(color);
-  const min = Math.min(
-    clampUnit(color.r),
-    clampUnit(color.g),
-    clampUnit(color.b)
-  );
 
   return {
     h,
-    w: min,
+    w: (1 - s) * v,
     b: 1 - v,
     a
   };

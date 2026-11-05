@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { contrastingColor } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import {
@@ -50,7 +50,7 @@ export class UVSizeLabels {
     for (const [key, entry] of measured) {
       const paint = {
         fill: entry.region.color,
-        stroke: contrastingColor(entry.region.color)
+        stroke: Color.from(entry.region.color).ink().hex()
       };
       const label = this.#labels.get(key) ?? this.#create(key, paint);
       label.paint(paint);

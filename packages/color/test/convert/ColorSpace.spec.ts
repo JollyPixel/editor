@@ -50,6 +50,17 @@ describe("ColorSpace.fromRgb / previous", () => {
     assert.equal(ColorSpace.oklch.fromRgb(kGray, { h: 200 }).h, 200);
   });
 
+  test("hsv, hsl and hwb treat a gray with rounding noise as a gray", () => {
+    const noisyGray: RGBA = { r: 0.6 + 1e-15, g: 0.6, b: 0.6 - 1e-15, a: 1 };
+
+    for (const space of [ColorSpace.hsv, ColorSpace.hsl]) {
+      const gray = space.fromRgb(noisyGray, { h: 200 });
+      assert.equal(gray.h, 200, space.name);
+      assert.equal(gray.s, 0, space.name);
+    }
+    assert.equal(ColorSpace.hwb.fromRgb(noisyGray, { h: 200 }).h, 200);
+  });
+
   test("carries only the channels it is given", () => {
     assert.deepEqual(
       ColorSpace.hsv.fromRgb(kBlack, { h: 140 }),

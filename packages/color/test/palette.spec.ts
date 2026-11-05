@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { ColorSequence } from "../src/palette/ColorSequence.ts";
 import { hashKey } from "../src/palette/hashKey.ts";
-import { parseColor } from "../src/parse/index.ts";
+import { parseColor } from "../src/parse/parseColor.ts";
 import { ColorSpace } from "../src/convert/index.ts";
 
 // CONSTANTS

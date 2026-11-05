@@ -5,15 +5,16 @@ import {
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
+import { Color } from "../src/Color.ts";
+import { ColorSpace } from "../src/convert/index.ts";
 import {
-  ColorSpace,
-  fromRGBA8,
   hslToHsv,
-  hsvToHsl,
+  hsvToHsl
+} from "../src/convert/hsl.ts";
+import {
   linearToSrgb,
-  srgbToLinear,
-  toRGBA8
-} from "../src/convert/index.ts";
+  srgbToLinear
+} from "../src/convert/srgb.ts";
 import {
   BATCH,
   createBatch,
@@ -39,6 +40,7 @@ const suite = defineSuite("convert", (bench) => {
   const hsvColors = createBatch(hsva);
   const hwbColors = rgbColors.map((color) => hwb.fromRgb(color));
   const bytes8 = createBatch(rgba8);
+  const units = rgbColors.map((color) => new Color(color));
   const oklchColors = rgbColors.map((color) => oklch.fromRgb(color));
   const okhsvColors = rgbColors.map((color) => okhsv.fromRgb(color));
   const okhslColors = rgbColors.map((color) => okhsl.fromRgb(color));
@@ -52,8 +54,8 @@ const suite = defineSuite("convert", (bench) => {
     .add("hwb.toRgb", () => sumBy(hwbColors, (color) => hwb.toRgb(color).r))
     .add("hslToHsv", () => sumBy(hslColors, (color) => hslToHsv(color).v))
     .add("hsvToHsl", () => sumBy(hsvColors, (color) => hsvToHsl(color).l))
-    .add("toRGBA8", () => sumBy(rgbColors, (color) => toRGBA8(color).r))
-    .add("fromRGBA8", () => sumBy(bytes8, (color) => fromRGBA8(color).r))
+    .add("Color.toBytes", () => sumBy(units, (color) => color.toBytes().r))
+    .add("Color.fromBytes", () => sumBy(bytes8, (color) => Color.fromBytes(color).r))
     .add("oklch.fromRgb", () => sumBy(rgbColors, (color) => oklch.fromRgb(color).h))
     .add("oklch.toRgb", () => sumBy(oklchColors, (color) => oklch.toRgb(color).r))
     .add("okhsv.fromRgb", () => sumBy(rgbColors, (color) => okhsv.fromRgb(color).h))
