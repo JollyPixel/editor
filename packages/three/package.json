@@ -19,13 +19,12 @@
   },
   "scripts": {
     "prepublishOnly": "pnpm run build",
-    "build": "tsc -b && node scripts/copyAssets.ts",
-    "bake:environment": "node scripts/bakeRoomEnvironment.ts",
+    "build": "tsc -b",
     "test-only": "node --import ./test/setup.ts --test --test-isolation=none \"test/**/*.test.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "dev": "vite",
-    "lint": "oxlint src test examples scripts",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json"
+    "lint": "oxlint src test examples",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p examples/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -49,15 +48,13 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "peerDependencies": {
-    "@jolly-pixel/network": "workspace:^"
+    "@jolly-pixel/network": "workspace:^",
+    "three": "^0.186.0"
   },
   "peerDependenciesMeta": {
     "@jolly-pixel/network": {
       "optional": true
     }
-  },
-  "dependencies": {
-    "three": "0.186.1"
   },
   "devDependencies": {
     "@jolly-pixel/color": "workspace:*",

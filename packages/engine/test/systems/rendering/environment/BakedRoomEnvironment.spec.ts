@@ -7,11 +7,13 @@ import { describe, test } from "node:test";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { BakedRoomEnvironment } from "#src/index.ts";
+import {
+  BakedRoomEnvironment
+} from "../../../../src/systems/rendering/environment/BakedRoomEnvironment.ts";
 
 // CONSTANTS
 const kAtlasPath = new URL(
-  "../../src/environment/roomEnvironment.bin",
+  "../../../../src/systems/rendering/environment/roomEnvironment.bin",
   import.meta.url
 );
 
@@ -25,7 +27,7 @@ async function shippedTexels(): Promise<Uint16Array> {
   );
 }
 
-describe("BakedRoomEnvironment", () => {
+describe("Systems.BakedRoomEnvironment", () => {
   test("rejects texels of another size than the atlas", () => {
     assert.throws(
       () => new BakedRoomEnvironment(new Uint16Array(8)),

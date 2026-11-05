@@ -35,7 +35,9 @@ interface LoggerOptions {
 A message is written when its level is at least `level` and its logger's
 namespace matches one of `namespaces`. With no namespaces, nothing is written;
 `"void"` silences every level. Patterns use dots: `"boot.*"` matches `boot`
-and everything below it, `"*"` matches every namespace. `adapter` is described
+and everything below it, `"*"` matches every namespace. Elsewhere a `*`
+segment matches one level (`"boot.*.assets"`), `**` any number of levels, and
+`*` or `?` inside a segment any characters or one. `adapter` is described
 in [Adapters](../internals/adapters.md#console).
 
 ## Children

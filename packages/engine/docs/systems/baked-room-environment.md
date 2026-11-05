@@ -3,9 +3,9 @@
 `BakedRoomEnvironment` loads a prefiltered copy of three.js's `RoomEnvironment` reflection map, so the renderer does not generate it when the page opens.
 
 ```ts
-import { BakedRoomEnvironment } from "@jolly-pixel/three";
+import { Systems } from "@jolly-pixel/engine";
 
-const room = await BakedRoomEnvironment.load();
+const room = await Systems.BakedRoomEnvironment.load();
 const target = room.createRenderTarget(renderer);
 
 scene.environment = target.texture;
@@ -33,4 +33,4 @@ Copies the texels into a new render target set up like the one `PMREMGenerator` 
 
 ## Baking
 
-`pnpm run bake:environment` regenerates `src/environment/roomEnvironment.bin` in a headed Chromium with WebGPU. It renders a mirror-like object with the generated map and with the copy from `createRenderTarget`, and fails unless both renders are identical.
+`pnpm run bake:environment` regenerates `src/systems/rendering/environment/roomEnvironment.bin` in a headed Chromium with WebGPU. It renders a mirror-like object with the generated map and with the copy from `createRenderTarget`, and fails unless both renders are identical.

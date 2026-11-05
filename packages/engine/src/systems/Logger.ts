@@ -1,8 +1,9 @@
-// Import Third-party Dependencies
-import pm from "picomatch";
-
 // Import Internal Dependencies
 import type { ConsoleAdapter } from "../adapters/console.ts";
+import {
+  compileSegments,
+  type PathMatcher
+} from "../utils/glob.ts";
 
 export type LogLevel = "void" | "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 type EmittedLogLevel = Exclude<LogLevel, "void">;
@@ -63,7 +64,7 @@ class LoggerState {
   namespaces: string[];
   adapter: ConsoleAdapter;
 
-  #matchers: Map<string, (str: string) => boolean> = new Map();
+  #matchers: Map<string, PathMatcher> = new Map();
 
   constructor(
     options: LoggerOptions
@@ -90,17 +91,21 @@ class LoggerState {
       return false;
     }
 
-    const normalized = normalizeNamespace(namespace);
+    if (namespace === "") {
+      return true;
+    }
+
+    const segments = namespace.split(".");
 
     for (const pattern of this.namespaces) {
       let matcher = this.#matchers.get(pattern);
 
       if (!matcher) {
-        matcher = pm(normalizePattern(pattern));
+        matcher = compileNamespacePattern(pattern);
         this.#matchers.set(pattern, matcher);
       }
 
-      if (normalized === "" || matcher(normalized)) {
+      if (matcher(segments)) {
         return true;
       }
     }
@@ -277,24 +282,12 @@ export class Logger {
   }
 }
 
-function normalizePattern(
+function compileNamespacePattern(
   pattern: string
-): string {
-  const normalized = pattern.replaceAll(".", "/");
+): PathMatcher {
+  const parts = pattern.split(".");
 
-  if (normalized === "*") {
-    return "**";
-  }
-
-  if (normalized.endsWith("/*")) {
-    return `${normalized.slice(0, -1)}**`;
-  }
-
-  return normalized;
-}
-
-function normalizeNamespace(
-  namespace: string
-): string {
-  return namespace.replaceAll(".", "/");
+  return compileSegments(
+    parts.at(-1) === "*" ? parts.with(-1, "**") : parts
+  );
 }

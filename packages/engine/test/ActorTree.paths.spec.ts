@@ -37,6 +37,14 @@ describe("ActorTree path patterns", () => {
     assert.deepEqual(names(tree.getActors("Player/**/Mesh_*")), ["Mesh_Body"]);
   });
 
+  test("should match a name glob at any depth, with dots read literally", () => {
+    const { tree } = createTree();
+
+    assert.deepEqual(names(tree.getActors("Mesh_*")), ["Mesh_Body"]);
+    assert.deepEqual(names(tree.getActors("?ody")), ["Body"]);
+    assert.deepEqual(names(tree.getActors("B.dy")), []);
+  });
+
   test("should match single-level globs along a path", () => {
     const { tree } = createTree();
 

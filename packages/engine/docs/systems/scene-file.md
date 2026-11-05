@@ -533,8 +533,9 @@ Composes the local matrix `writeSceneTransform` would give an object, into
 
 - `apply(file)` sets the background color, the fog and the environment
   intensity.
-- The `room` environment is `BakedRoomEnvironment` from
-  `@jolly-pixel/three`. It loads in the background; the map is set once it
+- The `room` environment is
+  [BakedRoomEnvironment](baked-room-environment.md). It loads in the
+  background; the map is set once it
   arrives and the world is invalidated. A failed load logs a warning.
 - `dispose()` clears the background, fog and environment map.
 

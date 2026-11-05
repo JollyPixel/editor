@@ -1,10 +1,12 @@
-// Import Third-party Dependencies
-import pm from "picomatch";
-
 // Import Internal Dependencies
 import type {
   WorldDefaultContext
 } from "../systems/World.ts";
+import {
+  compileSegment,
+  compileWildcard,
+  type SegmentMatcher
+} from "../utils/glob.ts";
 import type { Actor } from "./Actor.ts";
 
 export type ActorTreeNode<
@@ -20,8 +22,6 @@ export interface ActorTreeOptions<
   addCallback?: (actor: Actor<TContext>) => void;
   removeCallback?: (actor: Actor<TContext>) => void;
 }
-
-type PathMatcher = ((name: string) => boolean) | "**";
 
 export class ActorTree<
   TContext = WorldDefaultContext
@@ -57,15 +57,13 @@ export class ActorTree<
     pattern: string
   ): IterableIterator<Actor<TContext>> {
     if (pattern.includes("/")) {
-      const matchers = splitPath(pattern).map(
-        (part): PathMatcher => (part === "**" ? part : pm(part))
-      );
+      const matchers = splitPath(pattern).map(compileSegment);
       yield* matchPath(this.children, matchers, 0);
 
       return;
     }
 
-    const isPatternMatching = pm(pattern);
+    const isPatternMatching = compileWildcard(pattern);
 
     for (const { actor } of this.walk()) {
       if (isPatternMatching(actor.name) && !actor.pendingForDestruction) {
@@ -175,7 +173,7 @@ function* walkDepthFirst<TContext>(
 
 function* matchPath<TContext>(
   candidates: Iterable<Actor<TContext>>,
-  matchers: PathMatcher[],
+  matchers: SegmentMatcher[],
   index: number
 ): IterableIterator<Actor<TContext>> {
   const matcher = matchers[index];

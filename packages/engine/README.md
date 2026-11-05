@@ -48,6 +48,7 @@ each frame.
 - [World](./docs/systems/world.md) — top-level orchestrator that ties the renderer, scene,
   input, and audio into a unified game loop.
   - [Renderer](./docs/systems/renderer.md) — abstracts the Three.js WebGPU render pipeline.
+    - [BakedRoomEnvironment](./docs/systems/baked-room-environment.md): prefiltered `RoomEnvironment` reflection map, loaded instead of generated at runtime.
   - [SceneManager](./docs/systems/scene-manager.md) — the ECS world manager that owns the actor tree and drives
     per-frame lifecycle (awake → start → update → destroy).
   - [Logger](./docs/systems/logger.md): leveled, namespaced logging and timed steps.

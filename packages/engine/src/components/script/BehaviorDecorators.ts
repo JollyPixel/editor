@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import "reflect-metadata";
 import type {
   Input,
   InputListenerType
@@ -119,29 +118,25 @@ export function InputListener(
 export function getBehaviorMetadata(
   object: Object
 ): BehaviorMetadata | undefined {
-  return Reflect.getMetadata(
-    BehaviorMetadataKey,
-    object
-  );
-}
-
-export function createBehaviorMetadata(): BehaviorMetadata {
-  return {
-    properties: new Map(),
-    components: new Map(),
-    inputListeners: []
-  };
+  return Reflect.get(object, BehaviorMetadataKey);
 }
 
 function getOrCreateBehaviorMetadata(
   object: Object
 ): BehaviorMetadata {
-  const metadata = getBehaviorMetadata(object) ?? createBehaviorMetadata();
-  Reflect.defineMetadata(
-    BehaviorMetadataKey,
-    metadata,
-    object
-  );
+  const current = getBehaviorMetadata(object);
+  if (current !== undefined && Object.hasOwn(object, BehaviorMetadataKey)) {
+    return current;
+  }
+
+  const metadata: BehaviorMetadata = {
+    properties: new Map(current?.properties),
+    components: new Map(current?.components),
+    inputListeners: [...current?.inputListeners ?? []]
+  };
+  Object.defineProperty(object, BehaviorMetadataKey, {
+    value: metadata
+  });
 
   return metadata;
 }
