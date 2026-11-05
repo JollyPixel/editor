@@ -11,10 +11,10 @@ import {
 
 // CONSTANTS
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
-const kForbiddenModules = /\/node_modules\/(three|reflect-metadata)\//;
+const kForbiddenModules = /\/(node_modules\/three|engine\/(dist|src)\/components)\//;
 
 describe("EditorFrames bundle", () => {
-  test("leaves three.js and reflect-metadata out of the shell", async() => {
+  test("leaves three.js and engine components out of the shell", async() => {
     const result = await build({
       configFile: false,
       logLevel: "silent",

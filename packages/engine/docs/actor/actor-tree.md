@@ -76,10 +76,12 @@ Actors pending for destruction are excluded.
 
 ### `getActors(pattern): IterableIterator<Actor>`
 
-Returns an iterator of all actors matching a glob `pattern`
-(powered by picomatch). Supports:
+Returns an iterator of all actors matching a glob `pattern`. `*`
+matches any run of characters within a name and `?` one character;
+every other character, `.` included, matches itself. Supports:
 
-- Simple globs — `"Enemy_*"`, `"Mesh_??"`.
+- Simple globs — `"Enemy_*"`, `"Mesh_??"`. A pattern without `/`
+  matches names at any depth.
 - Path globs — `"Player/*/Mesh"`, `"**/Light_*"`. Paths are anchored
   at the root actors.
 - Double-star `**` — matches zero or more levels, and can be followed

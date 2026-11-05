@@ -127,6 +127,35 @@ describe("Components.ScriptDefinition", () => {
     });
   });
 
+  test("captures a subclass property on the subclass only", () => {
+    class TaggedMover extends Mover {
+      tag = "red";
+    }
+    SceneProperty({ type: "string" })(TaggedMover.prototype, "tag");
+    const { actor, component } = createScript("play", {
+      behavior: "Mover"
+    });
+    const tagged = actor.addComponentAndGet(TaggedMover);
+    const properties = {
+      speed: 5,
+      label: "idle",
+      offset: [0, 0, 0],
+      tint: "#ffffff"
+    };
+
+    assert.deepEqual(new ScriptDefinition({ Mover }).capture(component!), {
+      behavior: "Mover",
+      properties
+    });
+    assert.deepEqual(new ScriptDefinition({ TaggedMover }).capture(tagged), {
+      behavior: "TaggedMover",
+      properties: {
+        ...properties,
+        tag: "red"
+      }
+    });
+  });
+
   test("owns registered behaviors only, by their exact class", () => {
     class FastMover extends Mover {}
     const { actor, component } = createScript("play", {

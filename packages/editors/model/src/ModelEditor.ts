@@ -12,7 +12,7 @@ import {
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
 import type { Runtime } from "@jolly-pixel/runtime";
-import { BakedRoomEnvironment } from "@jolly-pixel/three";
+import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { ModelFile } from "./file/ModelFile.ts";
@@ -49,7 +49,7 @@ export class ModelEditor {
   static createRuntime(
     logger: HostLogger
   ): Promise<EditorRuntime> {
-    void BakedRoomEnvironment.load();
+    void Systems.BakedRoomEnvironment.load();
 
     return EditorRuntime.create(kCanvas, {
       includePerformanceStats: {

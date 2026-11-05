@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import type { Systems } from "@jolly-pixel/engine";
-import type { BakedRoomEnvironment } from "@jolly-pixel/three";
 import type { BlockLightFalloff } from "@jolly-pixel/voxel.renderer";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 
@@ -37,7 +36,7 @@ export interface SceneEnvironmentOptions {
   renderer: Systems.Renderer<THREE.WebGPURenderer>;
   scene: THREE.Scene;
   lighting: SceneLighting;
-  roomEnvironment: BakedRoomEnvironment | null;
+  roomEnvironment: Systems.BakedRoomEnvironment | null;
   chunks: ChunkRendering;
   casters: ShadowCasters;
   theme: ResolvedThemeMode;
@@ -47,7 +46,7 @@ export class SceneEnvironment {
   #renderer: Systems.Renderer<THREE.WebGPURenderer>;
   #scene: THREE.Scene;
   #lighting: SceneLighting;
-  #roomEnvironment: BakedRoomEnvironment | null;
+  #roomEnvironment: Systems.BakedRoomEnvironment | null;
   #chunks: ChunkRendering;
   #casters: ShadowCasters;
   #casterVersion = -1;

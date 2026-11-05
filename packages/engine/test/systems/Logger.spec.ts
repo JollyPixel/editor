@@ -101,6 +101,30 @@ describe("Systems.Logger", () => {
     ]);
   });
 
+  test("should enable the namespaces a dotted pattern matches", () => {
+    const cases: Array<[pattern: string, namespace: string, enabled: boolean]> = [
+      ["*", "editor.panel", true],
+      ["boot.*", "boot", true],
+      ["boot.*", "boot.scene.assets", true],
+      ["boot.*", "bootstrap", false],
+      ["boot.*.assets", "boot.scene.assets", true],
+      ["boot.*.assets", "boot.scene.deep.assets", false],
+      ["boot.scene", "boot.scene", true],
+      ["boot.scene", "boot", false]
+    ];
+
+    for (const [pattern, namespace, enabled] of cases) {
+      const logger = new Logger({ namespaces: [pattern] })
+        .child({ namespace });
+
+      assert.equal(
+        logger.isNamespaceEnabled(),
+        enabled,
+        `${pattern} against ${namespace}`
+      );
+    }
+  });
+
   test("should leave a pending step at its started line", () => {
     const adapter = createAdapter();
     const logger = new Logger({ level: "debug", namespaces: ["*"], adapter });

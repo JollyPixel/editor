@@ -3,7 +3,6 @@ import { PeerFrustums } from "@jolly-pixel/editor.host/viewport";
 import { Systems } from "@jolly-pixel/engine";
 import {
   Grid,
-  type BakedRoomEnvironment,
   type GridOptions
 } from "@jolly-pixel/three";
 import type { MaterialGroup } from "@jolly-pixel/voxel.renderer";
@@ -126,7 +125,7 @@ export interface EditorSceneOptions {
   state: EditorState;
   session: EditorSceneSession;
   samples?: number;
-  roomEnvironment: BakedRoomEnvironment | null;
+  roomEnvironment: Systems.BakedRoomEnvironment | null;
 }
 
 export class EditorScene extends Systems.Scene {

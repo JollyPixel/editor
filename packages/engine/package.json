@@ -10,15 +10,19 @@
       "default": "./dist/index.js"
     }
   },
+  "imports": {
+    "#src/*": "./src/*"
+  },
   "scripts": {
-    "prepublishOnly": "tsc -b",
-    "build": "tsc -b",
+    "prepublishOnly": "pnpm run build",
+    "build": "tsc -b && node scripts/copyAssets.ts",
+    "bake:environment": "node scripts/bakeRoomEnvironment.ts",
     "test-only": "node --test --test-isolation=none test/**/*.spec.ts",
     "test-gpu": "node --test test/systems/rendering/compositing/postProcessing.gpu.ts",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
-    "lint": "oxlint src test",
+    "lint": "oxlint src test scripts",
     "bench": "jolly-bench",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json"
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json && tsc --noEmit -p scripts/tsconfig.json"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -44,14 +48,10 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/loop": "workspace:*",
-    "@jolly-pixel/three": "workspace:*",
-    "@openally/emitt": "1.1.0",
-    "picomatch": "4.0.7",
-    "reflect-metadata": "^0.2.2"
+    "@openally/emitt": "1.1.0"
   },
   "devDependencies": {
-    "@jolly-pixel/bench": "workspace:*",
-    "@types/picomatch": "^4.0.2"
+    "@jolly-pixel/bench": "workspace:*"
   },
   "peerDependencies": {
     "three": "^0.186.0"

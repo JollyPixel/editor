@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { BakedRoomEnvironment } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import type { World } from "../../../World.ts";
 import type { Logger } from "../../../Logger.ts";
+import {
+  BakedRoomEnvironment
+} from "../../../rendering/environment/BakedRoomEnvironment.ts";
 import type {
   SceneEnvironmentFile,
   SceneFogFile

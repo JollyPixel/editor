@@ -1204,18 +1204,9 @@ importers:
       '@jolly-pixel/loop':
         specifier: workspace:*
         version: link:../loop
-      '@jolly-pixel/three':
-        specifier: workspace:*
-        version: link:../three
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
-      picomatch:
-        specifier: 4.0.7
-        version: 4.0.7
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
       three:
         specifier: ^0.186.0
         version: 0.186.1
@@ -1223,9 +1214,6 @@ importers:
       '@jolly-pixel/bench':
         specifier: workspace:*
         version: link:../bench
-      '@types/picomatch':
-        specifier: ^4.0.2
-        version: 4.0.3
 
   packages/event-store:
     dependencies:
@@ -1534,7 +1522,7 @@ importers:
   packages/three:
     dependencies:
       three:
-        specifier: 0.186.1
+        specifier: ^0.186.0
         version: 0.186.1
     devDependencies:
       '@jolly-pixel/color':
@@ -1578,7 +1566,7 @@ importers:
         specifier: 1.1.0
         version: 1.1.0
       three:
-        specifier: 0.186.1
+        specifier: ^0.186.0
         version: 0.186.1
     devDependencies:
       '@dimforge/rapier3d':
@@ -9024,7 +9012,8 @@ snapshots:
 
   real-require@1.0.0: {}
 
-  reflect-metadata@0.2.2: {}
+  reflect-metadata@0.2.2:
+    optional: true
 
   regex-recursion@6.0.2:
     dependencies:
