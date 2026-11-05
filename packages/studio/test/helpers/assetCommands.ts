@@ -7,6 +7,7 @@ import {
   type ImportFailure,
   type ImportPlan
 } from "@jolly-pixel/asset-server/client";
+import { NotificationQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { DroppedFile } from "../../src/browser/DroppedFile.ts";
@@ -17,6 +18,7 @@ import {
 
 export interface CommandsProbe {
   commands: AssetCommands;
+  notifications: NotificationQueue;
   errors: string[];
   calls: string[];
   lists: string[];
@@ -118,12 +120,15 @@ export function commandsFailingAt(
     }
   };
   const errors: string[] = [];
+  const notifications = new NotificationQueue();
 
   return {
     commands: new AssetCommands({
       catalog,
+      notifications,
       onError: (message) => errors.push(message)
     }),
+    notifications,
     errors,
     calls,
     lists,

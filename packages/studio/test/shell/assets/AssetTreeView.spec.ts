@@ -23,6 +23,7 @@ import {
   TREE_KINDS,
   treeView
 } from "../../helpers/assetTreeView.ts";
+import { readChips } from "../../helpers/notifications.ts";
 
 function pendingRows(
   nodes: readonly AssetTreeNode[],
@@ -72,7 +73,7 @@ describe("AssetTreeView", () => {
 
   test("asks once per convertible format and adds the dropped files in the folder", async() => {
     const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
-    const { view, errors } = treeView(catalog);
+    const { view, errors, notifications } = treeView(catalog);
     const asked: string[] = [];
 
     await view.importFiles(AssetPath.parse("maps"), [
@@ -106,6 +107,7 @@ describe("AssetTreeView", () => {
     );
     assert.ok(view.expanded.has(folderNodeId(AssetPath.parse("maps"))));
     assert.deepEqual(errors, []);
+    assert.deepEqual(readChips(notifications), ["success Added 4 files"]);
   });
 
   test("shows dropped files as pending rows until the catalog lists them", async() => {
@@ -174,7 +176,7 @@ describe("AssetTreeView", () => {
   test("removes the pending row of a file the catalog refuses", async() => {
     const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
     catalog.failure = "disk full";
-    const { view, errors, imported } = treeView(catalog);
+    const { view, errors, imported, notifications } = treeView(catalog);
 
     await view.importFiles(AssetPath.parse("maps"), [
       new File(["txt"], "notes.txt")
@@ -184,8 +186,11 @@ describe("AssetTreeView", () => {
     });
 
     assert.deepEqual(pendingRows(view.nodes), []);
-    assert.deepEqual(errors, ["Could not add \"notes.txt\": disk full"]);
+    assert.deepEqual(errors, []);
     assert.deepEqual(imported, []);
+    assert.deepEqual(readChips(notifications), [
+      "error Could not add \"notes.txt\": disk full"
+    ]);
   });
 
   test("selects a new asset and asks to rename it once the catalog lists it", async() => {
@@ -243,7 +248,7 @@ describe("AssetTreeView actions", () => {
 
   test("replaces an asset with a file of its format or one its kind converts, refusing others", async() => {
     const catalog = new FakeTreeCatalog([MAP_RECORD, MODEL_RECORD], ["maps"]);
-    const { view, prompted, errors } = treeView(catalog, {
+    const { view, prompted, errors, notifications } = treeView(catalog, {
       picks: [
         new File(["json"], "Hero.VoxelModel.json"),
         new File(["vox"], "tree.vox"),
@@ -266,7 +271,27 @@ describe("AssetTreeView actions", () => {
     assert.deepEqual(errors, [
       "Could not replace \"hero.voxelmodel.json\" with \"notes.txt\": it is not a .voxelmodel.json file"
     ]);
+    assert.deepEqual(readChips(notifications), [
+      "success Replaced \"hero.voxelmodel.json\": with \"tree.vox\"",
+      "success Replaced \"hero.voxelmodel.json\": with \"Hero.VoxelModel.json\""
+    ]);
     assert.deepEqual(new Set(prompted), new Set(["pick .voxelmodel.json,.vox"]));
     assert.equal(prompted.length, 4);
+  });
+
+  test("turns the replace notification into the catalog's refusal", async() => {
+    const catalog = new FakeTreeCatalog([MODEL_RECORD], []);
+    catalog.failure = "disk full";
+    const { view, errors, notifications } = treeView(catalog, {
+      picks: [new File(["json"], "Hero.VoxelModel.json")]
+    });
+
+    view.run("replace", [assetNodeId(MODEL_RECORD.id)]);
+    await setImmediate();
+
+    assert.deepEqual(errors, []);
+    assert.deepEqual(readChips(notifications), [
+      "error Could not replace \"hero.voxelmodel.json\": disk full"
+    ]);
   });
 });

@@ -8,6 +8,7 @@ import {
   type ImportConflictPolicy,
   type ImportPlan
 } from "@jolly-pixel/asset-server/client";
+import type { Notifier } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -50,17 +51,20 @@ export type ConflictQuestion = (
 
 export interface AssetCommandsOptions {
   catalog: AssetCommandCatalog;
+  notifications: Notifier;
   onError: (message: string) => void;
 }
 
 export class AssetCommands {
   #catalog: AssetCommandCatalog;
+  #notifications: Notifier;
   #onError: (message: string) => void;
 
   constructor(
     options: AssetCommandsOptions
   ) {
     this.#catalog = options.catalog;
+    this.#notifications = options.notifications;
     this.#onError = options.onError;
   }
 
@@ -90,23 +94,16 @@ export class AssetCommands {
     path: AssetPath,
     file: DroppedFile,
     convertTo: AssetKindEntry | null = null
-  ): Promise<string | null> {
-    try {
-      return await this.#catalog.create(
-        path.toString(),
-        await file.bytes(),
-        {
-          kind: convertTo?.kind,
-          from: convertTo === null ? undefined : file.format,
-          onConflict: "suffix"
-        }
-      );
-    }
-    catch (error) {
-      this.#onError(`Could not add "${file.name}": ${formatReason(error)}`);
-
-      return null;
-    }
+  ): Promise<string> {
+    return this.#catalog.create(
+      path.toString(),
+      await file.bytes(),
+      {
+        kind: convertTo?.kind,
+        from: convertTo === null ? undefined : file.format,
+        onConflict: "suffix"
+      }
+    );
   }
 
   async importArchive(
@@ -119,13 +116,8 @@ export class AssetCommands {
       const onConflict = plan.live.length === 0 ?
         "keep" :
         await askConflicts(plan);
-      if (onConflict === null) {
-        return true;
-      }
-
-      const report = await this.#catalog.importArchive(content, { onConflict });
-      for (const failure of report.failed) {
-        this.#onError(`Could not import "${failure.path}": ${failure.reason}`);
+      if (onConflict !== null) {
+        await this.#import(file.name, content, onConflict);
       }
     }
     catch (error) {
@@ -229,15 +221,28 @@ export class AssetCommands {
       return false;
     }
 
+    const replacing = this.#notifications.notify({
+      tone: "loading",
+      title: `Replacing "${name}"`,
+      message: `with "${file.name}"`
+    });
     try {
       await this.#catalog.replace(asset.id, await file.bytes(), {
         from: sameFormat ? undefined : file.format
+      });
+      replacing.update({
+        tone: "success",
+        title: `Replaced "${name}"`
       });
 
       return true;
     }
     catch (error) {
-      this.#onError(`Could not replace "${name}": ${formatReason(error)}`);
+      replacing.update({
+        tone: "error",
+        title: `Could not replace "${name}"`,
+        message: formatReason(error)
+      });
 
       return false;
     }
@@ -255,6 +260,36 @@ export class AssetCommands {
     }
     catch (error) {
       this.#onError(`Could not export "${asset.path.name}": ${formatReason(error)}`);
+    }
+  }
+
+  async #import(
+    name: string,
+    content: Uint8Array,
+    onConflict: ImportConflictPolicy
+  ): Promise<void> {
+    const importing = this.#notifications.notify({
+      tone: "loading",
+      title: `Importing "${name}"`
+    });
+    try {
+      const { failed } = await this.#catalog.importArchive(content, {
+        onConflict
+      });
+      importing.update({
+        tone: failed.length === 0 ? "success" : "warning",
+        title: `Imported "${name}"`,
+        message: failed
+          .map((failure) => `"${failure.path}": ${failure.reason}`)
+          .join("\n")
+      });
+    }
+    catch (error) {
+      importing.update({
+        tone: "error",
+        title: `Could not import "${name}"`,
+        message: formatReason(error)
+      });
     }
   }
 

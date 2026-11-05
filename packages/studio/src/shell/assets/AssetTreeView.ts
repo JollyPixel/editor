@@ -2,7 +2,8 @@
 import type { AssetRecordData } from "@jolly-pixel/asset";
 import type {
   JollyOption,
-  JollyReparentDetail
+  JollyReparentDetail,
+  Notifier
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -124,6 +125,7 @@ export interface AssetTreeViewOptions {
    * What the actions need from the page: dialogs, inline rename, opening.
    */
   prompts: AssetActionPrompts;
+  notifications: Notifier;
   onChange: () => void;
   onError: (message: string) => void;
   /**
@@ -143,6 +145,7 @@ export class AssetTreeView {
   #browserState: AssetTreeState;
   #prompts: AssetActionPrompts;
   #commands: AssetCommands;
+  #notifications: Notifier;
   #onChange: () => void;
   #onError: (message: string) => void;
   #onCreated: (nodeId: string) => void;
@@ -173,8 +176,10 @@ export class AssetTreeView {
     this.#onError = options.onError;
     this.#onCreated = options.onCreated;
     this.#onImported = options.onImported;
+    this.#notifications = options.notifications;
     this.#commands = new AssetCommands({
       catalog: options.catalog,
+      notifications: options.notifications,
       onError: options.onError
     });
     this.#kind = options.browserState.assetKind;
@@ -497,16 +502,16 @@ export class AssetTreeView {
       }
     };
 
-    const adding: Promise<void>[] = [];
-    for (const { file, convertTo } of admitted) {
+    const adding: Upload[] = [];
+    for (const upload of admitted) {
       if (
-        !drop.archives.includes(file) ||
-        !await this.#commands.importArchive(file, questions.conflicts)
+        !drop.archives.includes(upload.file) ||
+        !await this.#commands.importArchive(upload.file, questions.conflicts)
       ) {
-        adding.push(this.#add(folder, file, convertTo, reveal));
+        adding.push(upload);
       }
     }
-    await Promise.all(adding);
+    await this.#addAll(folder, adding, reveal);
   }
 
   dispose(): void {
@@ -534,6 +539,63 @@ export class AssetTreeView {
     }
   }
 
+  async #addAll(
+    folder: AssetPath,
+    uploads: readonly Upload[],
+    onShown: (nodeId: string) => void
+  ): Promise<void> {
+    const [first] = uploads;
+    if (first === undefined) {
+      return;
+    }
+
+    const total = uploads.length;
+    const label = total === 1 ? `"${first.file.name}"` : `${total} files`;
+    const adding = this.#notifications.notify({
+      tone: "loading",
+      title: `Adding ${label}`,
+      progress: 0
+    });
+    let settled = 0;
+    const failures: string[] = [];
+    await Promise.all(uploads.map(async({ file, convertTo }) => {
+      try {
+        await this.#add(folder, file, convertTo, onShown);
+      }
+      catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        failures.push(total === 1 ? reason : `"${file.name}": ${reason}`);
+      }
+      settled++;
+      adding.update({ progress: settled / total });
+    }));
+
+    const message = failures.join("\n");
+    if (failures.length === 0) {
+      adding.update({
+        tone: "success",
+        title: `Added ${label}`,
+        progress: null
+      });
+    }
+    else if (failures.length === total) {
+      adding.update({
+        tone: "error",
+        title: `Could not add ${label}`,
+        message,
+        progress: null
+      });
+    }
+    else {
+      adding.update({
+        tone: "warning",
+        title: `Added ${total - failures.length} of ${total} files`,
+        message,
+        progress: null
+      });
+    }
+  }
+
   async #add(
     folder: AssetPath,
     file: DroppedFile,
@@ -549,12 +611,15 @@ export class AssetTreeView {
     );
     this.#present();
 
-    const assetId = await this.#commands.add(path, file, convertTo);
-    if (assetId === null) {
+    let assetId: string;
+    try {
+      assetId = await this.#commands.add(path, file, convertTo);
+    }
+    catch (error) {
       this.#pendingAssets.remove(rowId);
       this.#present();
 
-      return;
+      throw error;
     }
 
     this.#arrivals.set(assetId, (nodeId) => {

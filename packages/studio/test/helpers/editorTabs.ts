@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Preferences } from "@jolly-pixel/preferences";
+import { NotificationQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { EditorFrames } from "../../src/tabs/EditorFrames.ts";
@@ -63,6 +64,7 @@ export function harness(
   const editorFrames = new EditorFrames({
     container: frames,
     share: idleShare(),
+    notifications: new NotificationQueue(),
     preferences: new Preferences(),
     scopes: new PreferenceScopes([], [])
   });

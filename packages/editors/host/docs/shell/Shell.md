@@ -32,6 +32,9 @@ with `shell.onReveal(listener, signal)` once it is ready.
 { type: "jolly-shell", command: "unsaved", unsaved: boolean }
 { type: "jolly-shell", command: "editor-state", state: EditorState }
 { type: "jolly-shell", command: "update-preferences", scope: string, patch: PreferenceOverrides }
+{ type: "jolly-notification", action: "notify", id: string, notification: NotificationInit }
+{ type: "jolly-notification", action: "update", id: string, patch: NotificationPatch }
+{ type: "jolly-notification", action: "dismiss", id: string }
 
 // shell → frame
 {
@@ -50,7 +53,8 @@ with `shell.onReveal(listener, signal)` once it is ready.
 
 The shell builds its messages with `launchMessage`, `appearanceMessage`,
 `preferencesMessage`, `sessionRenewedMessage` and `revealMessage`, and narrows
-what a frame posts with `isReadyMessage` and `isShellCommand`.
+what a frame posts with `isReadyMessage`, `isShellCommand` and
+`parseNotificationMessage`.
 
 - The frame posts `jolly-ready` and waits one second for `jolly-launch` from
   an allowed origin.
@@ -65,6 +69,17 @@ what a frame posts with `isReadyMessage` and `isShellCommand`.
 - `session-refused` is posted when the server refuses the frame's session.
   The frame reconnects on `jolly-session-renewed` and keeps its rooms and
   pending changes.
+
+## Notifications
+
+`ShellChannel` is a `Notifier` from `@jolly-pixel/ui`:
+`shell.notify(init)` posts `notify`, and the returned handle posts `update`
+and `dismiss` under the same id.
+
+- Ids are unique per frame, so the shell keys them by frame.
+- The shell sets `source` to the frame's name, replacing any the frame sent.
+- Under no shell, [`context.notifications`](../boot/EditorDefinition.md#context)
+  is a `NotificationQueue` shown by a `jolly-notifications` stack in the page.
 
 ## Catalog port
 

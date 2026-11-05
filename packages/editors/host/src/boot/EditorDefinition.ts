@@ -4,6 +4,7 @@ import type { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
 import type { Preferences } from "@jolly-pixel/preferences";
 import type { Runtime } from "@jolly-pixel/runtime";
+import type { Notifier } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
@@ -35,6 +36,10 @@ export interface EditorContext {
   preferences: Preferences;
   keyboardLayout: KeyboardLayoutStore;
   archives: EditorArchives;
+  /**
+   * The shell's notifications under a shell, otherwise a stack in the page.
+   */
+  notifications: Notifier;
 }
 
 export interface RuntimeEditorContext extends EditorContext {

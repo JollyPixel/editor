@@ -82,7 +82,7 @@ export class SoundEditor {
         catalog: session.catalog,
         assetId: session.targetRecord.id,
         document: target.document
-      }));
+      }), context.notifications);
       details.attach(player);
 
       const presenceStack = document.querySelector("jolly-presence-stack");

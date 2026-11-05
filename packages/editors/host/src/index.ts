@@ -6,6 +6,7 @@ export * from "./launch/sources/QueryLaunchSource.ts";
 export type { LaunchNavigator } from "./launch/LaunchNavigator.ts";
 export * from "./launch/errors/LaunchNotFoundError.ts";
 export * from "./shell/ShellChannel.ts";
+export * from "./shell/NotificationMessage.ts";
 export * from "./shell/catalog/CatalogShare.ts";
 export * from "./shell/catalog/ShellCatalog.ts";
 export * from "./shell/FrameConsoles.ts";

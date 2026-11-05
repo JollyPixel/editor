@@ -15,7 +15,7 @@ import {
 SVG grid:
 
 `chevron`, `settings`, `close`, `plus`, `revert`, `drag`, `lock`, `eye`,
-`search`, `folder`, `check`, `info`, `warning`, and `trash`. `plus` carries the `lime` tone and
+`search`, `folder`, `check`, `info`, `warning`, `error`, and `trash`. `plus` carries the `lime` tone and
 `trash` the `coral` tone; the others have none.
 
 ## Register a Lit SVG glyph
@@ -161,7 +161,7 @@ its accessible label.
 ```ts
 type BuiltinIconName =
   | "chevron" | "close" | "plus" | "revert" | "drag" | "lock"
-  | "eye" | "search" | "folder" | "check" | "info" | "warning"
+  | "eye" | "search" | "folder" | "check" | "info" | "warning" | "error"
   | "trash" | "settings";
 type IconName = BuiltinIconName | (string & {}); // completion for built-ins
 type IconGlyph = string | SVGTemplateResult;

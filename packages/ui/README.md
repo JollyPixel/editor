@@ -157,6 +157,8 @@ The root entry point also exports `DockAlign`, `DockSide`, `DockSlot`, `RailOrie
 
 - [`jolly-loading`](./docs/api/feedback/loading.md) (`Loading`)
 - [`jolly-log`](./docs/api/feedback/log.md) (`LogElement`), with its `LogQueue`
+- [`jolly-notifications`](./docs/api/feedback/notifications.md)
+  (`Notifications`), with its `NotificationQueue`
 - [`jolly-progress`](./docs/api/feedback/progress.md) (`Progress`)
 - [`jolly-spinner`](./docs/api/feedback/spinner.md) (`Spinner`)
 

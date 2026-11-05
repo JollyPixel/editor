@@ -275,5 +275,8 @@ export type * from "./feedback/Loading.ts";
 export type * from "./feedback/Log.ts";
 export * from "./feedback/LogQueue.ts";
 export * from "./feedback/LogQueue.types.ts";
+export type * from "./feedback/Notifications.ts";
+export * from "./feedback/NotificationQueue.ts";
+export * from "./feedback/NotificationQueue.types.ts";
 
 export * from "./dom.ts";

@@ -92,6 +92,7 @@ export interface StudioSessionOptions extends Pick<
 > {
   catalog: StudioCatalog;
   share: EditorFramesOptions["share"];
+  notifications: EditorFramesOptions["notifications"];
   user: StudioSessionUser;
   scopes: PreferenceScopes;
   editors: EditorRegistry;
@@ -147,6 +148,7 @@ export class StudioSession {
         new FrameConsoles({ commands }),
       preferences: user.preferences,
       scopes: options.scopes,
+      notifications: options.notifications,
       onShellCommand: this.#onShellCommand
     });
     this.tabs = new EditorTabs({

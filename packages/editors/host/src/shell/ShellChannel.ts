@@ -5,6 +5,9 @@ import {
   DENSITIES,
   THEME_MODES,
   peerIdentity,
+  type NotificationHandle,
+  type NotificationInit,
+  type Notifier,
   type PeerIdentity
 } from "@jolly-pixel/ui";
 import * as z from "zod/mini";
@@ -16,6 +19,10 @@ import {
   type EditorState
 } from "./EditorState.ts";
 import type { ShellCatalog } from "./catalog/ShellCatalog.ts";
+import {
+  NOTIFICATION_MESSAGE_TYPE,
+  type NotificationMessage
+} from "./NotificationMessage.ts";
 
 // CONSTANTS
 export const READY_MESSAGE_TYPE = "jolly-ready";
@@ -254,7 +261,7 @@ export interface ShellChannelOptions {
   preferences?: Readonly<Record<string, PreferenceOverrides>>;
 }
 
-export class ShellChannel {
+export class ShellChannel implements Notifier {
   readonly origin: string;
   readonly appearance: Appearance | null;
   readonly catalog: ShellCatalog | null;
@@ -265,6 +272,7 @@ export class ShellChannel {
   #port: ShellPort;
   #unreadReveal: string | null = null;
   #revealListener: ((key: string) => void) | null = null;
+  #notifications = 0;
 
   constructor(
     options: ShellChannelOptions
@@ -341,6 +349,34 @@ export class ShellChannel {
       scope,
       patch
     });
+  }
+
+  notify(
+    init: NotificationInit
+  ): NotificationHandle {
+    this.#notifications += 1;
+    const id = `notification-${this.#notifications}`;
+    this.#post({
+      type: NOTIFICATION_MESSAGE_TYPE,
+      action: "notify",
+      id,
+      notification: init
+    });
+
+    return {
+      id,
+      update: (patch) => this.#post({
+        type: NOTIFICATION_MESSAGE_TYPE,
+        action: "update",
+        id,
+        patch
+      }),
+      dismiss: () => this.#post({
+        type: NOTIFICATION_MESSAGE_TYPE,
+        action: "dismiss",
+        id
+      })
+    };
   }
 
   renewWhenRefused(
@@ -432,9 +468,9 @@ export class ShellChannel {
   }
 
   #post(
-    command: ShellCommand
+    message: ShellCommand | NotificationMessage
   ): void {
-    this.#port.postMessage(command, this.origin);
+    this.#port.postMessage(message, this.origin);
   }
 }
 
