@@ -1,7 +1,8 @@
 # Runtime
 
 `Runtime` creates the renderer, world, and game loop for one canvas, then
-drives them. How the parts fit together is in
+drives them. It is the three.js runtime, built on
+[`RuntimeCore`](./RuntimeCore.md). How the parts fit together is in
 [ARCHITECTURE.md](../../ARCHITECTURE.md).
 
 ```ts
@@ -80,6 +81,7 @@ fails to initialize.
 | `frames(count)` | Awaits `nextFrame()` `count` times. |
 | `compiledFrame()` | Awaits `nextFrame()`, then, while the renderer has [pipelines compiling](../../../engine/docs/systems/renderer.md#pipeline-compiles), waits for them and awaits another frame. Resolves once a frame has drawn every object. Never resolves while stopped. |
 | `mountMetricsPanel(options?)` | `metrics.mountPanel()` with the world keyboard as `keyboard`. |
+| `mountPerformanceStats(option?)` | Mounts the corner HUD from an `includePerformanceStats` value, `true` by default, and disposes the previous HUD. Resolves to the HUD, or `null` with `mount: false`. `create()` calls it for `includePerformanceStats`. |
 
 ## Loading and startup
 
@@ -139,7 +141,7 @@ namespace.
 | `stats` | `create()`, with `includePerformanceStats` |
 | `device` | `load()` |
 | `assets` | `load()` |
-| `scene` | `load()`, with `scene`; meta `scene` holds its name |
+| `scene` | `load()`, with `scene` |
 
 Once started, an enabled logger writes `waiting for first frame` with
 `visibility` (`document.visibilityState`), then `first frame`. A missing

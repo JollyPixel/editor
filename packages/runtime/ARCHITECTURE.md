@@ -18,6 +18,25 @@ flowchart TB
 Runtime owns the wiring; each part keeps its behavior in its own package. The
 sections below follow one part at a time.
 
+## Core and backend
+
+```mermaid
+flowchart TB
+    Runtime["Runtime<br/>src/three"] -->|"extends"| Core["RuntimeCore<br/>src/core"]
+    Runtime -->|"creates"| Backend["ThreeRuntimeBackend<br/>world, frame source, metrics"]
+    Core -->|"drives"| Contract["RuntimeBackend contract<br/>src/core/contract"]
+    Backend -.->|"implements"| Contract
+```
+
+- `src/core/` is the `@jolly-pixel/runtime/core` entry. `RuntimeCore` sits on
+  `startup/` (load, device, loading screen, catalog), `session/` (what
+  `start()` attaches), `metrics/` (HUD and panel), and two leaves:
+  `overlay/` and `contract/`.
+- Nothing under `src/core/` imports three.js or the engine; a lint rule and a
+  bundle test guard that.
+- Everything three.js lives in `src/three/`. Another renderer adds a backend
+  next to it.
+
 | Part | Runtime's role | Owner of the behavior |
 |---|---|---|
 | Canvas and renderer | Resolve the canvas and create `ThreeRenderer` | Engine renderer |

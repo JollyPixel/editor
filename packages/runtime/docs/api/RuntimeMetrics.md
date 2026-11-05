@@ -12,7 +12,7 @@ const release = runtime.metrics.addSource(engine.inspector);
 
 | Property | Type | Description |
 |---|---|---|
-| `renderer` | `RendererMetrics` | The [renderer counters](#renderer-counters). |
+| `renderer` | `RendererMetrics` | The [renderer counters](#renderer-counters). On a [`RuntimeCore`](./RuntimeCore.md), the backend's `metrics`. |
 | `panel` | `MetricsPanel \| null` | The mounted [readout panel](#metricspanel). |
 
 ## Methods

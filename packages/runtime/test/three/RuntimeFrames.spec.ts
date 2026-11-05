@@ -1,0 +1,130 @@
+// Import Node.js Dependencies
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+import { setImmediate } from "node:timers/promises";
+
+// Import Internal Dependencies
+import { Runtime } from "../../src/three/Runtime.ts";
+
+class SteppedWorld {
+  #listeners: Array<() => void> = [];
+
+  invalidations = 0;
+
+  invalidate(): void {
+    this.invalidations++;
+  }
+
+  once(
+    _event: "afterUpdate",
+    listener: () => void
+  ): void {
+    this.#listeners.push(listener);
+  }
+
+  async step(): Promise<void> {
+    for (const listener of this.#listeners.splice(0)) {
+      listener();
+    }
+    await setImmediate();
+  }
+}
+
+class CompilingRenderer {
+  pendingCompiles = 0;
+
+  #settled = Promise.withResolvers<void>();
+
+  start(): void {
+    this.pendingCompiles = 1;
+  }
+
+  finish(): void {
+    this.pendingCompiles = 0;
+    this.#settled.resolve();
+  }
+
+  compiled(): Promise<void> {
+    return this.#settled.promise;
+  }
+}
+
+function steppedRuntime(
+  world: SteppedWorld,
+  renderer = new CompilingRenderer()
+): Runtime {
+  return Object.assign(
+    Object.create(Runtime.prototype),
+    { world, renderer }
+  ) as Runtime;
+}
+
+function track(
+  promise: Promise<void>
+): { settled: boolean; } {
+  const state = { settled: false };
+  void promise.then(() => {
+    state.settled = true;
+  });
+
+  return state;
+}
+
+describe("Runtime frame stepping", () => {
+  test("nextFrame resolves after the next update", async() => {
+    const world = new SteppedWorld();
+    const frame = track(steppedRuntime(world).nextFrame());
+
+    await setImmediate();
+    assert.equal(frame.settled, false);
+
+    await world.step();
+    assert.equal(frame.settled, true);
+  });
+
+  test("frames(n) resolves after n updates", async() => {
+    const world = new SteppedWorld();
+    const frames = track(steppedRuntime(world).frames(3));
+
+    await world.step();
+    await world.step();
+    assert.equal(frames.settled, false);
+
+    await world.step();
+    assert.equal(frames.settled, true);
+  });
+
+  test("each awaited frame requests one", async() => {
+    const world = new SteppedWorld();
+    const frames = track(steppedRuntime(world).frames(2));
+
+    await world.step();
+    await world.step();
+
+    assert.equal(frames.settled, true);
+    assert.equal(world.invalidations, 2);
+  });
+
+  test("frames(0) resolves without an update", async() => {
+    const world = new SteppedWorld();
+
+    await steppedRuntime(world).frames(0);
+  });
+
+  test("compiledFrame waits for the pipelines a frame started, then draws once more", async() => {
+    const world = new SteppedWorld();
+    const renderer = new CompilingRenderer();
+    const frame = track(steppedRuntime(world, renderer).compiledFrame());
+
+    renderer.start();
+    await world.step();
+    assert.equal(frame.settled, false);
+
+    renderer.finish();
+    await setImmediate();
+    assert.equal(frame.settled, false);
+
+    await world.step();
+    assert.equal(frame.settled, true);
+  });
+});
