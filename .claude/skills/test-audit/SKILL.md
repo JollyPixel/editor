@@ -135,7 +135,7 @@ Before judging a candidate, read the complete test and production owner, its
 entry point, callers, callees, sibling implementations, overlapping tests
 across tiers, CI routing, and relevant history. Read the root `AGENTS.md` and
 the workspace `AGENTS.md` first, then the workspace's `GLOSSARY.md`,
-`ARCHITECTURE.md`, and, for `@jolly-pixel/ui`, `docs/adr/`. When the test
+`ARCHITECTURE.md`. When the test
 claims dependency-backed behavior (Three.js, Lit, happy-dom, node:sqlite),
 inspect the dependency source or types in `node_modules` directly.
 
