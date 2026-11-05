@@ -41,8 +41,7 @@ flowchart TB
 - An exact variable name wins over search.
 - `complete` may await `autocomplete()`. Each request is numbered; a late one is dropped.
 - Every result is a `Suggestion` that already holds the line and caret it leaves.
-- The list lives in the prompt shadow root so ARIA IDREFs resolve
-  ([ADR-0007](./docs/adr/0007-the-suggestion-list-shares-the-prompt-shadow-root.md)).
+- The list lives in the prompt shadow root so ARIA IDREFs resolve.
 
 ## Submitting a line
 
@@ -62,8 +61,7 @@ flowchart TB
 ## Reverting
 
 - `RevertStack` keeps applied changes only. `InputHistory` cannot: it keeps no-op lines.
-- `/revert` pops newest first and skips a change whose address no longer resolves
-  ([ADR-0009](./docs/adr/0009-revert-is-opt-in-per-command.md)).
+- `/revert` pops newest first and skips a change whose address no longer resolves.
 - A variable revert writes the previous value through `set`, so mirrors need nothing more.
 - A mirrored command's revert stays in `ConsoleServer` under a `revertId`.
 
@@ -84,14 +82,11 @@ flowchart TB
 - The editor is a transparent `textarea` over a colored `pre`, in one grid cell
   and one scroller. Nothing to sync, and native undo still works.
 
-See [ADR-0010](./docs/adr/0010-scripts-edit-variables-as-ini-all-or-nothing.md).
-
 ## Registration
 
-- The last registration wins, for commands, variables and namespaces
-  ([ADR-0003](./docs/adr/0003-last-registration-wins.md)).
+- The last registration wins, for commands, variables and namespaces.
 - Namespaces are flat entries keyed by dotted address; parents with no registration of their
-  own are derived ([ADR-0011](./docs/adr/0011-namespaces-nest-by-address.md)).
+  own are derived.
 - A handle only removes the entry it created.
 - Replacing or unregistering a command aborts its signal.
 - Every change emits `registry-changed`.
@@ -102,8 +97,7 @@ See [ADR-0010](./docs/adr/0010-scripts-edit-variables-as-ini-all-or-nothing.md).
 - `CommandConsole` keeps the scope as an address; `scope` walks up to the nearest registered
   namespace.
 - The prompt reads through `scoped`, a `ScopedRegistry` that tries `<scope>.<name>` first.
-  `registry`, the mirror and the server always use full addresses
-  ([ADR-0012](./docs/adr/0012-the-scope-is-a-prompt-view.md)).
+  `registry`, the mirror and the server always use full addresses.
 
 ## In an editor
 
@@ -119,5 +113,4 @@ The host owns the instance. A new command is a feature module plus one line in
 the editor's feature list.
 
 API: [CommandConsole](./docs/CommandConsole.md), [features](./docs/guides/registering-features.md),
-[grammar](./docs/grammar.md), [jolly-console](./docs/element.md),
-[ADRs](./docs/adr/README.md).
+[grammar](./docs/grammar.md), [jolly-console](./docs/element.md).
