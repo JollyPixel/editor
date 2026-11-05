@@ -188,6 +188,21 @@ export default defineConfig(typescriptConfig({
       }
     },
     {
+      files: ["packages/runtime/src/core/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error", {
+            patterns: [
+              {
+                group: ["three", "three/*", "@jolly-pixel/engine", "**/three/**"],
+                message: "The runtime core stays renderer-agnostic: three.js code lives in src/three/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       files: [
         "packages/studio/server/**",
         "packages/studio/shared/**",

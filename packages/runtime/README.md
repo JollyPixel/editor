@@ -100,6 +100,8 @@ the build setup differs.
 
 - [`Runtime`](./docs/api/Runtime.md): construction, loading, services, and
   lifecycle.
+- [`RuntimeCore`](./docs/api/RuntimeCore.md): the renderer-agnostic core at
+  `@jolly-pixel/runtime/core` and the backend contract.
 - [`RuntimeMetrics`](./docs/api/RuntimeMetrics.md): metrics, renderer
   counters, and the readout panel.
 - [`OverlayLayer`](./docs/api/OverlayLayer.md): HTML mounted over the canvas.
