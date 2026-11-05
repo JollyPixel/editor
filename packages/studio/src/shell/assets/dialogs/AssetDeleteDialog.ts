@@ -21,7 +21,7 @@ import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
-import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
+import type { AssetDeletion } from "../../../catalog/AssetDeletion.ts";
 
 export interface AssetDeleteConfirmation {
   companions: boolean;

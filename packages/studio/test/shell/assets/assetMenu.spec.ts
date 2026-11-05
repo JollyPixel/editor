@@ -30,21 +30,25 @@ const kKinds = new AssetKindSet({
       kind: "voxelmap",
       label: "Voxel map",
       extension: ".voxelmap.json",
+      extensions: [".voxelmap.json"],
       icon: "kind:voxelmap"
     },
     {
       kind: "pixelart",
       label: "Pixel art",
-      extension: ".pixelart"
+      extension: ".pixelart",
+      extensions: [".pixelart"]
     },
     {
       kind: "font",
       label: "Font",
       extension: ".typeface.json",
+      extensions: [".typeface.json"],
       creatable: false
     }
   ],
-  editable: []
+  editable: [],
+  maxContentBytes: 1024
 });
 const kCreation: Outline = [
   "new-folder",

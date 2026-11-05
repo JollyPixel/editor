@@ -11,6 +11,7 @@ import path from "node:path";
 // Import Third-party Dependencies
 import {
   CatalogViewExtension,
+  MAX_CATALOG_MESSAGE_BYTES,
   type CatalogProjection
 } from "@jolly-pixel/asset-server";
 import { AssetServer } from "@jolly-pixel/asset-server/node";
@@ -59,6 +60,7 @@ const kRoomGraceMs = 5 * 60_000;
 const kSocketCompression = {
   threshold: 1024
 };
+const kMaxBufferedBytes = MAX_CATALOG_MESSAGE_BYTES + 32 * 1024 * 1024;
 
 export type StudioBackendMiddleware = (
   request: IncomingMessage,
@@ -222,6 +224,8 @@ export class StudioBackend implements AsyncDisposable {
       httpServer,
       server: this.#assetServer.network,
       compression: kSocketCompression,
+      maxPayload: MAX_CATALOG_MESSAGE_BYTES,
+      maxBufferedBytes: kMaxBufferedBytes,
       allowedHosts: options.allowedHosts
     }));
   }

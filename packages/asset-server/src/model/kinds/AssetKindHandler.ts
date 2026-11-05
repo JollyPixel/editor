@@ -138,6 +138,12 @@ export interface AssetKindHandler<
    * when a catalog create names that extension in `from`.
    */
   readonly conversions?: Readonly<Record<string, AssetConversion>>;
+  /**
+   * Largest content, in bytes, a catalog create or replace accepts for this
+   * kind, measured before any conversion. At most `MAX_KIND_CONTENT_BYTES`.
+   * @default the catalog's `maxContentBytes`
+   */
+  readonly maxContentBytes?: number;
 
   create(
     assetId: string

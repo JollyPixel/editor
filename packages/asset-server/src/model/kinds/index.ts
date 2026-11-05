@@ -7,6 +7,7 @@ export * from "./readOnlyCommands.ts";
 export * from "./JsonAssetFile.ts";
 export * from "./errors/InvalidAssetFileError.ts";
 export * from "./AssetKindRegistry.ts";
+export * from "./KindLimits.ts";
 export * from "./errors/UnknownAssetKindError.ts";
 export * from "./errors/UnsupportedAssetConversionError.ts";
 export * from "./foldAssetEvent.ts";

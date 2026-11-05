@@ -2,6 +2,7 @@
 import {
   binaryAssetKind,
   binaryCommands,
+  MAX_KIND_CONTENT_BYTES,
   type AssetKindHandler,
   type AssetKindPackage,
   type BinaryAssetState
@@ -16,17 +17,38 @@ import {
   MODEL_KIND
 } from "./model.ts";
 
-export function modelAssetKind(): AssetKindHandler<BinaryAssetState, never> {
+// CONSTANTS
+const kBytesPerMb = 1024 * 1024;
+const kDefaultMaxFileMb = 64;
+const kOptionsSchema = z.strictObject({
+  maxFileMb: z.optional(z.int().check(
+    z.minimum(1),
+    z.maximum(MAX_KIND_CONTENT_BYTES / kBytesPerMb),
+    z.meta({
+      title: "Max file size (MB)",
+      default: kDefaultMaxFileMb
+    })
+  ))
+});
+
+export type ModelAssetKindOptions = z.infer<typeof kOptionsSchema>;
+
+export function modelAssetKind(
+  options: ModelAssetKindOptions = {}
+): AssetKindHandler<BinaryAssetState, never> {
+  const { maxFileMb = kDefaultMaxFileMb } = options;
+
   return {
     ...binaryAssetKind,
     kind: MODEL_KIND,
     extensions: MODEL_EXTENSIONS,
+    maxContentBytes: maxFileMb * kBytesPerMb,
     commands: binaryCommands(MODEL_COMMAND)
   };
 }
 
-export const ASSET_KINDS: AssetKindPackage = {
+export const ASSET_KINDS: AssetKindPackage<ModelAssetKindOptions> = {
   descriptors: [MODEL_ASSET],
-  optionsSchema: z.strictObject({}),
-  handlers: () => [modelAssetKind()]
+  optionsSchema: kOptionsSchema,
+  handlers: (options) => [modelAssetKind(options)]
 };

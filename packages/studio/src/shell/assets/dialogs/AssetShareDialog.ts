@@ -22,15 +22,15 @@ import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
-import type { AssetLeafData } from "../../catalog/AssetTreeModel.ts";
+import type { AssetLeafData } from "../../../catalog/AssetTreeModel.ts";
 import {
   ShareLifetime,
   type ShareLifetimeName
-} from "../../../shared/ShareLifetime.ts";
-import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
-import { RemoteStateController } from "../RemoteStateController.ts";
-import type { ShareLinkList } from "../shares/ShareLinkList.ts";
-import "../shares/ShareLinkList.ts";
+} from "../../../../shared/ShareLifetime.ts";
+import type { StudioShareLinks } from "../../../shares/StudioShareLinks.ts";
+import { RemoteStateController } from "../../RemoteStateController.ts";
+import type { ShareLinkList } from "../../shares/ShareLinkList.ts";
+import "../../shares/ShareLinkList.ts";
 
 // CONSTANTS
 const kDefaultLifetime: ShareLifetimeName = "7d";

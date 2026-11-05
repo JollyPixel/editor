@@ -5,7 +5,7 @@ import { showChoice } from "@jolly-pixel/ui/elements/dialog";
 import type {
   ConversionChoice,
   ConvertibleFiles
-} from "../../catalog/AssetDrop.ts";
+} from "../../../catalog/AssetDrop.ts";
 
 // CONSTANTS
 const kKeep = "keep";

@@ -2,10 +2,6 @@
 import { ModelFileError } from "./errors/ModelFileError.ts";
 import { fileExtension } from "./fileExtension.ts";
 
-// CONSTANTS
-const kMaxFileMb = 64;
-const kMaxFileBytes = kMaxFileMb * 1024 * 1024;
-
 export class ModelUpload {
   #file: File;
 
@@ -16,11 +12,6 @@ export class ModelUpload {
     if (fileExtension(file.name) !== extension) {
       throw new ModelFileError(
         `"${file.name}" is not a ${extension} file.`
-      );
-    }
-    if (file.size > kMaxFileBytes) {
-      throw new ModelFileError(
-        `"${file.name}" is larger than ${kMaxFileMb} MB.`
       );
     }
 

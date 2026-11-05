@@ -11,8 +11,12 @@ import type {
   catalogMessageProtocol
 } from "../protocol.schema.ts";
 import type { Immutable, Without } from "../../common/types.ts";
+import { MAX_KIND_CONTENT_BYTES } from "../../model/kinds/KindLimits.ts";
 
 // CONSTANTS
+const kEnvelopeBytes = 1024 * 1024;
+export const MAX_CATALOG_MESSAGE_BYTES =
+  Math.ceil(MAX_KIND_CONTENT_BYTES / 3) * 4 + kEnvelopeBytes;
 export const CATALOG_ROOM = "asset-catalog";
 export const CATALOG_VIEW_ROOM = "asset-catalog-view";
 export const ARCHIVE_MIME_TYPE = "application/zip";

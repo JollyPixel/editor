@@ -91,6 +91,8 @@ export interface CatalogBackend extends ArchiveBackend {
 export interface CatalogPolicy {
   /**
    * Decoded size cap of a catalog payload: created content and archives.
+   * The `maxContentBytes` of a kind's handler replaces it for content of that
+   * kind.
    * @default DEFAULT_CATALOG_MAX_CONTENT_BYTES
    */
   maxContentBytes?: number;
@@ -357,7 +359,10 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       return Err(error);
     }
 
-    const decoded = this.#decode(command.content);
+    const decoded = this.#decode(
+      command.content,
+      this.#kindContentLimit(record.kind.value)
+    );
     const data = !decoded.ok || from === undefined ?
       decoded :
       await this.#convertedReplacement(record.kind.value, from, decoded.val);
@@ -431,13 +436,13 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       return Ok({});
     }
 
-    const decoded = this.#decode(content);
+    const { kinds } = this.#backend;
+    const kind = command.kind ?? kinds.resolve(command.path).kind;
+    const decoded = this.#decode(content, this.#kindContentLimit(kind));
     if (!decoded.ok) {
       return decoded;
     }
 
-    const { kinds } = this.#backend;
-    const kind = command.kind ?? kinds.resolve(command.path).kind;
     if (from === undefined) {
       return this.#loadable(kind, decoded.val).map(() => {
         return { data: decoded.val };
@@ -593,22 +598,34 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   #readArchive(
     content: AssetInlineContent
   ): Result<AssetArchive, Error> {
-    return this.#decode(content).andThen(
+    return this.#decode(content, this.#maxContentBytes).andThen(
       (bytes) => readAssetArchive(bytes, this.#archiveLimits)
     );
   }
 
+  #kindContentLimit(
+    kind: string
+  ): number {
+    const { kinds } = this.#backend;
+    const limit = kinds.has(kind) ?
+      kinds.get(kind).maxContentBytes :
+      undefined;
+
+    return limit ?? this.#maxContentBytes;
+  }
+
   #decode(
-    content: AssetInlineContent
+    content: AssetInlineContent,
+    limit: number
   ): Result<Uint8Array, Error> {
     const data = decodeContent(content);
-    if (data.byteLength <= this.#maxContentBytes) {
+    if (data.byteLength <= limit) {
       return Ok(data);
     }
 
     const error = new CatalogContentTooLargeError(
       data.byteLength,
-      this.#maxContentBytes
+      limit
     );
 
     return Err(error);

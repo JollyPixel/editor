@@ -90,10 +90,12 @@ describe("AssetTreeModel empty folders", () => {
           {
             kind: "scene",
             label: "Scene",
-            extension: ".scene.json"
+            extension: ".scene.json",
+            extensions: [".scene.json"]
           }
         ],
-        editable: []
+        editable: [],
+        maxContentBytes: 1024
       })
     });
     const scene = assetNodeId("scene");

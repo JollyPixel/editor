@@ -116,12 +116,13 @@ export function session(
     cap,
     browserState: new BrowserState(storage),
     ...extra,
-    editors: new EditorRegistry()
+    editors: new EditorRegistry({ maxContentBytes: 1024 })
       .registerKind({
         kind: "voxelmap",
         label: "Voxel map",
         extension: ".voxelmap.json",
-        convertsFrom: []
+        convertsFrom: [],
+        extensions: [".voxelmap.json"]
       })
       .registerEditor({
         name: "voxel-map",

@@ -18,6 +18,7 @@ import {
   BLOCKSET_ASSET,
   VOXEL_MAP_ASSET
 } from "@jolly-pixel/asset.voxel-map";
+import { DEFAULT_CATALOG_MAX_CONTENT_BYTES } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import { PROJECT_MANIFEST_FILE } from "../../shared/ProjectManifest.ts";
@@ -44,7 +45,8 @@ const kManifest = {
   kinds: [BLOCKSET_ASSET, VOXEL_MAP_ASSET].map((descriptor) => {
     return {
       ...descriptor,
-      convertsFrom: []
+      convertsFrom: [],
+      extensions: [descriptor.extension]
     };
   }),
   kindPackages: [
@@ -52,7 +54,8 @@ const kManifest = {
       name: "@jolly-pixel/asset.voxel-map",
       kinds: [BLOCKSET_ASSET.kind, VOXEL_MAP_ASSET.kind]
     }
-  ]
+  ],
+  maxContentBytes: DEFAULT_CATALOG_MAX_CONTENT_BYTES
 };
 
 describe("projectManifest", () => {

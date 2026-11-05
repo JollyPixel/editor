@@ -68,21 +68,25 @@ const kKinds = new AssetKindSet({
       kind: "voxelmap",
       label: "Voxel map",
       extension: ".voxelmap.json",
+      extensions: [".voxelmap.json"],
       icon: "kind:voxelmap"
     },
     {
       kind: "pixelart",
       label: "Pixel art",
       extension: ".pixelart.json",
+      extensions: [".pixelart.json"],
       icon: "kind:pixelart"
     },
     {
       kind: "blockset",
       label: "Blockset",
-      extension: ".blockset.json"
+      extension: ".blockset.json",
+      extensions: [".blockset.json"]
     }
   ],
-  editable: ["voxelmap", "pixelart"]
+  editable: ["voxelmap", "pixelart"],
+  maxContentBytes: 1024
 });
 const kEveryRight = new ProjectRights({
   share: true,

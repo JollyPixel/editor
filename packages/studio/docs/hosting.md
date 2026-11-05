@@ -30,7 +30,7 @@ To run it outside the workspace, `pnpm --filter @jolly-pixel/studio deploy --pro
 
 The builds write a `.br` and a `.gz` copy next to every JavaScript, CSS, HTML, SVG, JSON and WebAssembly file of 1 KB or more, and the server sends the one the client accepts. The proxy does not need to compress these files again.
 
-The proxy must forward WebSocket upgrades on `/ws-sync`. Changes to `.jollypixel/project.json` apply on restart. On `SIGINT` or `SIGTERM` the server drops its connections, then closes the back-end.
+The proxy must forward WebSocket upgrades on `/ws-sync`, with messages of up to 172 MB: a file of 128 MB, the most an asset kind accepts, travels as base64 in one message. Changes to `.jollypixel/project.json` apply on restart. On `SIGINT` or `SIGTERM` the server drops its connections, then closes the back-end.
 
 Rooms live in process memory, events go to `node:sqlite` and clients keep WebSockets open, so the server needs a long-running Node 24 process with a persistent disk. Serverless platforms do not fit. Hosting several projects takes one process each and a router in front.
 

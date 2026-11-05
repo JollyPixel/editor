@@ -29,7 +29,7 @@ const kHiddenAtStart = [
   /console[\\/]dist[\\/]element[\\/]index\.js$/,
   /lantern[\\/]dist[\\/]element[\\/]index\.js$/,
   /shell[\\/]settings[\\/]StudioSettings\.ts$/,
-  /shell[\\/]assets[\\/]AssetDeleteDialog\.ts$/,
+  /shell[\\/]assets[\\/]dialogs[\\/]AssetDeleteDialog\.ts$/,
   /blocks[\\/]dialogs[\\/]BlockEditDialog\.ts$/,
   /blocksets[\\/]dialogs[\\/]AddBlocksetDialog\.ts$/,
   /layers[\\/]dialogs[\\/]AddLayerDialog\.ts$/,

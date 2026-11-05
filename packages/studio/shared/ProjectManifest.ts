@@ -26,12 +26,15 @@ const kProjectManifestSchema = z.object({
       viewBox: z.string().optional()
     }).optional(),
     creatable: z.boolean().optional(),
-    convertsFrom: z.array(z.string())
+    convertsFrom: z.array(z.string()),
+    extensions: z.array(z.string()),
+    maxContentBytes: z.number().optional()
   })),
   kindPackages: z.array(z.object({
     name: z.string(),
     kinds: z.array(z.string())
-  }))
+  })),
+  maxContentBytes: z.number()
 });
 
 export interface KindPackageDescriptor {
@@ -47,12 +50,14 @@ export interface ProjectManifestData {
   editors: readonly EditorDescriptor[];
   kinds: readonly LoadedAssetKind[];
   kindPackages: readonly KindPackageDescriptor[];
+  maxContentBytes: number;
 }
 
 export class ProjectManifest implements ProjectManifestData {
   readonly editors: readonly EditorDescriptor[];
   readonly kinds: readonly LoadedAssetKind[];
   readonly kindPackages: readonly KindPackageDescriptor[];
+  readonly maxContentBytes: number;
 
   static async fetch(
     base: string | URL
@@ -85,6 +90,7 @@ export class ProjectManifest implements ProjectManifestData {
     this.editors = [...data.editors];
     this.kinds = [...data.kinds];
     this.kindPackages = [...data.kindPackages];
+    this.maxContentBytes = data.maxContentBytes;
   }
 
   * editorScopes(): IterableIterator<EditorScopes> {

@@ -19,20 +19,25 @@ export interface AssetKindEntry {
   readonly icon?: IconName;
   readonly creatable?: boolean;
   readonly convertsFrom?: readonly string[];
+  readonly extensions: readonly string[];
+  readonly maxContentBytes?: number;
 }
 
 export interface AssetKindSetInit {
   kinds: Iterable<AssetKindEntry>;
   editable: Iterable<string>;
+  maxContentBytes: number;
 }
 
 export class AssetKindSet implements AssetKindPresenter {
   static readonly EMPTY = new AssetKindSet({
     kinds: [],
-    editable: []
+    editable: [],
+    maxContentBytes: 0
   });
 
   readonly entries: readonly AssetKindEntry[];
+  readonly maxContentBytes: number;
 
   #byKind: ReadonlyMap<string, AssetKindEntry>;
   #editable: ReadonlySet<string>;
@@ -52,6 +57,7 @@ export class AssetKindSet implements AssetKindPresenter {
     this.#editable = new Set(
       init.editable
     );
+    this.maxContentBytes = init.maxContentBytes;
   }
 
   has(
@@ -72,6 +78,20 @@ export class AssetKindSet implements AssetKindPresenter {
     return this.entries.filter(
       (entry) => entry.convertsFrom?.includes(format) === true
     );
+  }
+
+  resolve(
+    name: string
+  ): AssetKindEntry | undefined {
+    return this.entries.find(
+      (entry) => entry.extensions.some((extension) => name.endsWith(extension))
+    );
+  }
+
+  contentLimit(
+    entry: AssetKindEntry | undefined
+  ): number {
+    return entry?.maxContentBytes ?? this.maxContentBytes;
   }
 
   kindLabel(

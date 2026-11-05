@@ -17,7 +17,11 @@ const kMapKind = {
     svg: "<path d=\"M3 6h18\" />",
     tone: "lime"
   },
-  convertsFrom: []
+  convertsFrom: [],
+  extensions: [".voxelmap.json"]
+};
+const kOptions = {
+  maxContentBytes: 1024
 };
 const kMapEditor = {
   name: "voxel-map",
@@ -26,14 +30,14 @@ const kMapEditor = {
 
 describe("EditorRegistry", () => {
   test("resolves the editor that opens a kind", () => {
-    const registry = new EditorRegistry().registerEditor(kMapEditor);
+    const registry = new EditorRegistry(kOptions).registerEditor(kMapEditor);
 
     assert.deepEqual(registry.findEditor("voxelmap"), kMapEditor);
     assert.equal(registry.findEditor("texture"), undefined);
   });
 
   test("builds the page url with the encoded target", () => {
-    const registry = new EditorRegistry();
+    const registry = new EditorRegistry(kOptions);
 
     assert.equal(
       registry.pageUrl("voxel-map", "map a&b"),
@@ -42,7 +46,7 @@ describe("EditorRegistry", () => {
   });
 
   test("builds a page url that stays under the shell's sub-path", () => {
-    const registry = new EditorRegistry();
+    const registry = new EditorRegistry(kOptions);
     const url = registry.pageUrl("voxel-map", "map");
 
     assert.equal(
@@ -60,7 +64,8 @@ describe("EditorRegistry", () => {
       query: {
         offline: "studio"
       },
-      prefix: "/pages/"
+      prefix: "/pages/",
+      maxContentBytes: 1024
     });
 
     assert.equal(
@@ -70,22 +75,26 @@ describe("EditorRegistry", () => {
   });
 
   test("snapshots the registered kinds in registration order", () => {
-    const registry = new EditorRegistry()
+    const registry = new EditorRegistry(kOptions)
       .registerKind(kMapKind)
       .registerKind({
         kind: "pixelart",
         label: "Pixel art",
         extension: ".pixelart",
-        convertsFrom: [".png"]
+        convertsFrom: [".png"],
+        extensions: [".pixelart"]
       })
       .registerKind({
         kind: "font",
         label: "Font",
         extension: ".typeface.json",
         creatable: false,
-        convertsFrom: [".ttf"]
+        convertsFrom: [".ttf"],
+        extensions: [".typeface.json"],
+        maxContentBytes: 2048
       });
 
+    assert.equal(registry.kindSet().maxContentBytes, kOptions.maxContentBytes);
     assert.deepEqual(registry.kindSet().entries, [
       {
         kind: "voxelmap",
@@ -93,7 +102,9 @@ describe("EditorRegistry", () => {
         extension: ".voxelmap.json",
         icon: "kind:voxelmap",
         creatable: undefined,
-        convertsFrom: []
+        convertsFrom: [],
+        extensions: [".voxelmap.json"],
+        maxContentBytes: undefined
       },
       {
         kind: "pixelart",
@@ -101,7 +112,9 @@ describe("EditorRegistry", () => {
         extension: ".pixelart",
         icon: undefined,
         creatable: undefined,
-        convertsFrom: [".png"]
+        convertsFrom: [".png"],
+        extensions: [".pixelart"],
+        maxContentBytes: undefined
       },
       {
         kind: "font",
@@ -109,13 +122,15 @@ describe("EditorRegistry", () => {
         extension: ".typeface.json",
         icon: undefined,
         creatable: false,
-        convertsFrom: [".ttf"]
+        convertsFrom: [".ttf"],
+        extensions: [".typeface.json"],
+        maxContentBytes: 2048
       }
     ]);
   });
 
   test("snapshots the kinds an editor opens", () => {
-    const registry = new EditorRegistry().registerEditor(kMapEditor);
+    const registry = new EditorRegistry(kOptions).registerEditor(kMapEditor);
     const kinds = registry.kindSet();
 
     assert.equal(kinds.kindDetail("voxelmap"), undefined);
@@ -123,7 +138,7 @@ describe("EditorRegistry", () => {
   });
 
   test("a snapshot ignores later registrations", () => {
-    const registry = new EditorRegistry();
+    const registry = new EditorRegistry(kOptions);
     const kinds = registry.kindSet();
     registry.registerKind(kMapKind).registerEditor(kMapEditor);
 
@@ -132,13 +147,13 @@ describe("EditorRegistry", () => {
   });
 
   test("rejects a kind registered twice", () => {
-    const registry = new EditorRegistry().registerKind(kMapKind);
+    const registry = new EditorRegistry(kOptions).registerKind(kMapKind);
 
     assert.throws(() => registry.registerKind(kMapKind), TypeError);
   });
 
   test("rejects a kind opened by two editors", () => {
-    const registry = new EditorRegistry().registerEditor(kMapEditor);
+    const registry = new EditorRegistry(kOptions).registerEditor(kMapEditor);
 
     assert.throws(
       () => registry.registerEditor({
@@ -152,7 +167,7 @@ describe("EditorRegistry", () => {
 
   test("copies the registered editor", () => {
     const kinds = ["voxelmap"];
-    const registry = new EditorRegistry().registerEditor({
+    const registry = new EditorRegistry(kOptions).registerEditor({
       name: "voxel-map",
       kinds
     });
