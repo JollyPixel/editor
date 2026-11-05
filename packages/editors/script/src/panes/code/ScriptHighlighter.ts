@@ -15,8 +15,6 @@ import {
   type TokenizedLine
 } from "./LineTokenCache.ts";
 
-export type ScriptLanguage = "typescript" | "javascript";
-
 // CONSTANTS
 const kTheme = createCssVariablesTheme({
   name: "jolly-script",
@@ -25,8 +23,42 @@ const kTheme = createCssVariablesTheme({
 
 const kGrammars = {
   typescript: () => import("@shikijs/langs/typescript"),
-  javascript: () => import("@shikijs/langs/javascript")
-} satisfies Record<ScriptLanguage, unknown>;
+  javascript: () => import("@shikijs/langs/javascript"),
+  json: () => import("@shikijs/langs/json"),
+  jsonc: () => import("@shikijs/langs/jsonc"),
+  yaml: () => import("@shikijs/langs/yaml"),
+  toml: () => import("@shikijs/langs/toml"),
+  xml: () => import("@shikijs/langs/xml"),
+  html: () => import("@shikijs/langs/html"),
+  css: () => import("@shikijs/langs/css"),
+  markdown: () => import("@shikijs/langs/markdown")
+};
+
+const kLanguages = new Map<string, ScriptLanguage>([
+  [".ts", "typescript"],
+  [".js", "javascript"],
+  [".json", "json"],
+  [".jsonc", "jsonc"],
+  [".yml", "yaml"],
+  [".yaml", "yaml"],
+  [".toml", "toml"],
+  [".xml", "xml"],
+  [".html", "html"],
+  [".css", "css"],
+  [".md", "markdown"]
+]);
+
+export type ScriptLanguage = keyof typeof kGrammars;
+
+export function fileLanguage(
+  path: string
+): ScriptLanguage | null {
+  const dot = path.lastIndexOf(".");
+
+  return dot === -1 ?
+    null :
+    kLanguages.get(path.slice(dot).toLowerCase()) ?? null;
+}
 
 let highlighter: Promise<HighlighterCore> | null = null;
 

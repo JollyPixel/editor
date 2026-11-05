@@ -61,6 +61,19 @@ describe("AssetKindRegistry — resolution", () => {
     assert.strictEqual(registry.resolve("a/b.wav").kind, BINARY_KIND);
   });
 
+  test("the longest claimed extension wins over registration order", () => {
+    const registry = new AssetKindRegistry([
+      handler("text", { ".json": "application/json" }),
+      handler("voxelmap", { ".voxelmap.json": "application/json" })
+    ]);
+
+    assert.strictEqual(
+      registry.resolve("maps/world.voxelmap.json").kind,
+      "voxelmap"
+    );
+    assert.strictEqual(registry.resolve("maps/world.json").kind, "text");
+  });
+
   test("the first registration claiming a path wins", () => {
     const registry = new AssetKindRegistry([
       handler("first", { ".png": "image/png" }, ["textures/**"]),

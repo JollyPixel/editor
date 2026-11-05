@@ -27,9 +27,8 @@ import { BrowserState } from "../../browser/BrowserState.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
-import type { EditorTab } from "../../tabs/EditorTabs.ts";
 import "../assets/AssetBrowser.ts";
-import "./ProjectOverview.ts";
+import "./ProjectReadme.ts";
 import "../users/UsersPane.ts";
 
 // CONSTANTS
@@ -152,9 +151,6 @@ export class StudioHome extends LitElement {
   declare assets: AssetBrowserOptions | null;
 
   @property({ attribute: false })
-  declare openTabs: readonly EditorTab[];
-
-  @property({ attribute: false })
   declare browserState: BrowserState;
 
   @state()
@@ -165,7 +161,6 @@ export class StudioHome extends LitElement {
   constructor() {
     super();
     this.assets = null;
-    this.openTabs = [];
     this.browserState = new BrowserState();
     this._exporting = false;
   }
@@ -199,10 +194,7 @@ export class StudioHome extends LitElement {
             <asset-browser .options=${this.assets}></asset-browser>
           </jolly-pane>
         </jolly-dock>
-        <project-overview
-          .options=${this.assets}
-          .openTabs=${this.openTabs}
-        ></project-overview>
+        <project-readme .options=${this.assets}></project-readme>
         ${user?.online ? this.#usersDock(user) : nothing}
       </jolly-dock-layout>
       ${user?.online ?

@@ -19,6 +19,7 @@ import {
   CATALOG_IMPORT,
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
+  CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
   CATALOG_REPLACE,
@@ -446,6 +447,17 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     });
 
     return reply.report;
+  }
+
+  async read(
+    assetId: string
+  ): Promise<Uint8Array> {
+    const reply = await this.#request({
+      type: CATALOG_READ,
+      assetId
+    });
+
+    return decodeContent(reply.content);
   }
 
   dispose(): void {

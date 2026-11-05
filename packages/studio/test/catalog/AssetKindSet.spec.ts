@@ -59,6 +59,13 @@ describe("AssetKindSet", () => {
     const kinds = new AssetKindSet({
       kinds: [
         {
+          kind: "text",
+          label: "Text",
+          extension: ".md",
+          extensions: [".md", ".json"],
+          maxContentBytes: 8
+        },
+        {
           kind: "model",
           label: "Model",
           extension: ".glb",
@@ -79,7 +86,8 @@ describe("AssetKindSet", () => {
       ["hero.FBX", 16],
       ["world.voxelmap.json", 4],
       ["tiles.png", 16],
-      ["notes.json", 16]
+      ["notes.json", 8],
+      ["notes.txt", 16]
     ];
 
     for (const [name, limit] of cases) {

@@ -20,6 +20,8 @@ export interface CodeViewportElements {
 // CONSTANTS
 const kLineHeight = 20;
 const kLineHeightProperty = "--script-line-height";
+const kPaddingTop = 8;
+const kPaddingTopProperty = "--script-padding-top";
 const kOverscan = 8;
 const kProbeLength = 10;
 const kRevealMargin = 4;
@@ -45,6 +47,7 @@ export class CodeViewport implements ReactiveController {
 
   hostConnected(): void {
     this.#host.style.setProperty(kLineHeightProperty, `${kLineHeight}px`);
+    this.#host.style.setProperty(kPaddingTopProperty, `${kPaddingTop}px`);
     this.#resize.observe(this.#host);
   }
 
@@ -109,11 +112,12 @@ export class CodeViewport implements ReactiveController {
     }
 
     const top = lineTop(position.line);
+    const bottom = kPaddingTop + top + kLineHeight;
     if (top < scroller.scrollTop) {
       scroller.scrollTop = top;
     }
-    else if (top + kLineHeight > scroller.scrollTop + scroller.clientHeight) {
-      scroller.scrollTop = top + kLineHeight - scroller.clientHeight;
+    else if (bottom > scroller.scrollTop + scroller.clientHeight) {
+      scroller.scrollTop = bottom - scroller.clientHeight;
     }
 
     const margin = this.#charWidth * kRevealMargin;
@@ -134,9 +138,10 @@ export class CodeViewport implements ReactiveController {
       return;
     }
 
+    const scrollTop = scroller.scrollTop - kPaddingTop;
     const visible = new LineRange(
-      Math.max(Math.floor(scroller.scrollTop / kLineHeight) - kOverscan, 0),
-      Math.ceil((scroller.scrollTop + scroller.clientHeight) / kLineHeight) + kOverscan
+      Math.max(Math.floor(scrollTop / kLineHeight) - kOverscan, 0),
+      Math.ceil((scrollTop + scroller.clientHeight) / kLineHeight) + kOverscan
     );
     if (!visible.equals(this.#visible)) {
       this.#visible = visible;

@@ -20,16 +20,3 @@ registerIcon("script-code", svg`
     stroke-linecap="round"
   />
 `, { tone: "sky" });
-
-registerIcon("script-outline", svg`
-  <path
-    class="tone-ink"
-    d="M5 6h14M9 12h10M9 18h10"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-  />
-  <circle class="tone-fill" cx="5" cy="12" r="1.5" />
-  <circle class="tone-fill" cx="5" cy="18" r="1.5" />
-`, { tone: "amber" });

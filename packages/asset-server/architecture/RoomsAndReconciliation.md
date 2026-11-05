@@ -11,6 +11,11 @@ and changes filtered by the closure recomputed on each catalog change. An
 asset linked later shows up as created, one unlinked as deleted. Every
 command is rejected. `CatalogClient.connect(client, { room })` joins it.
 
+Most catalog commands need `write`. `catalog:read` is a query: a member with
+`read` may send it too, and gets back one asset's current content, flushed
+first. Members with `read` already receive every asset snapshot, so the query
+shows them nothing new.
+
 A room named with a tag (`counter@v1:<assetId>`, see `AssetRoom`) holds the
 content of that tagged event in a state of its own. It is resolved read-only,
 so members receive `read` rights and every command is denied. It appends
@@ -90,5 +95,8 @@ flowchart TB
 
 The reconciler records detected creates, updates, renames, and deletions as
 system lifecycle events. Unique matching content hashes identify renames;
-ambiguous matches become a deletion and creation. A write already present
+ambiguous matches become a deletion and creation. A file recorded as `binary`
+whose path a registered kind now claims is deleted and created again, so it
+takes that kind and a new id. When several kinds claim a path, the longest
+matching extension wins: `.voxelmap.json` before `.json`. A write already present
 in the source is marked projected, so it is not written back as an echo.

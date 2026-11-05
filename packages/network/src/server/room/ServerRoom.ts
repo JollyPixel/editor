@@ -109,6 +109,7 @@ export class ServerRoom {
   }
 
   #extension: AnyExtension;
+  #queries: ReadonlySet<string>;
   #rights: RightsGate;
   #members: RoomMembers;
   #logger: Logger;
@@ -127,6 +128,7 @@ export class ServerRoom {
   ) {
     this.id = id;
     this.#extension = extension;
+    this.#queries = new Set(extension.queries);
     this.#rights = rights;
     this.#members = new RoomMembers(this.#rights);
     this.#logger = (options.logger ?? createLogger()).child().withContext({
@@ -162,7 +164,8 @@ export class ServerRoom {
     request: AuthorizeRequest
   ): boolean {
     const { role, event } = request;
-    if (this.#rights.canWrite(role, event)) {
+    const right = this.#rights.check(role, event);
+    if (right === "write" || (right === "read" && this.#queries.has(event))) {
       return true;
     }
 

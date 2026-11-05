@@ -75,6 +75,7 @@ and role while rooms show the new profile.
 
 Rules match `${extension.name}.${event}`. First match wins; `*` matches any text.
 `write` permits both directions, `read` receiving, and `void` neither.
+`read` also permits sending the events an extension lists in `queries`.
 
 Joining requires `write` on `$join`. A nonempty table denies unmatched keys;
 no table or `{}` permits all. Set `defaultRole` when using named roles.

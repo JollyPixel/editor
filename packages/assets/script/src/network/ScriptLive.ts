@@ -10,34 +10,30 @@ import type {
 import type { ScriptText } from "../asset/ScriptText.ts";
 import { TextEdit } from "../text/TextEdit.ts";
 import { EditWindow } from "./EditWindow.ts";
-import {
-  scriptSnapshotSchema,
-  type ScriptOutlineRequest
-} from "./ScriptCommand.schema.ts";
+import { scriptSnapshotSchema } from "./ScriptCommand.schema.ts";
 import type {
   ScriptNetworkCommand,
   ScriptSnapshot
 } from "./types.ts";
 
-export interface ScriptLiveOptions {
-  relay: AssetRelay<ScriptOutlineRequest>;
+export interface ScriptLiveOptions<TRelay extends object> {
+  relay?: AssetRelay<TRelay>;
   capacity?: number;
 }
 
-export class ScriptLive implements AssetLiveProtocol<
-  ScriptNetworkCommand,
-  ScriptOutlineRequest
-> {
+export class ScriptLive<
+  TRelay extends object = never
+> implements AssetLiveProtocol<ScriptNetworkCommand, TRelay> {
   readonly snapshotSchema = scriptSnapshotSchema;
   readonly authorRebases = true;
-  readonly relay: AssetRelay<ScriptOutlineRequest>;
+  readonly relay: AssetRelay<TRelay> | undefined;
 
   #binding: AssetRoomBinding<ScriptText>;
   #window: EditWindow;
 
   constructor(
     binding: AssetRoomBinding<ScriptText>,
-    options: ScriptLiveOptions
+    options: ScriptLiveOptions<TRelay> = {}
   ) {
     this.#binding = binding;
     this.#window = new EditWindow(this.#version(), options.capacity);

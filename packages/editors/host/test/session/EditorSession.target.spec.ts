@@ -84,6 +84,25 @@ describe("EditorSession target document", () => {
     session.dispose();
   });
 
+  test("leases the target with its own kind when the editor registers several", async() => {
+    const map = fakeDocumentKind("voxelmap");
+    const texture = fakeDocumentKind("pixelart");
+    const { client, session } = await open({
+      target: "grass",
+      kinds: [map, texture],
+      resolveDocuments: texture
+    });
+
+    await session.targetReady;
+    const lease = session.targetLease(map, texture);
+
+    assert.equal(map.documents.length, 0);
+    assert.equal(texture.documents.length, 1);
+    assert.equal(lease.document, texture.documents[0]);
+    assert.equal(client.fakeRoom("pixelart:grass").joins, 1);
+    session.dispose();
+  });
+
   test("rejects and leaves the target room when the target never becomes ready", async() => {
     const kind = fakeDocumentKind("voxelmap");
     const failure = new Error("target failed");

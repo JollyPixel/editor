@@ -5,7 +5,6 @@ import {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { SCRIPT_KIND } from "../asset/script.ts";
 import { ScriptDocument } from "../model/ScriptDocument.ts";
 import { ScriptSyncClient } from "./ScriptSyncClient.ts";
 import type { ScriptRoom } from "./types.ts";
@@ -22,15 +21,17 @@ export class SyncedScript extends SyncedDocument<ScriptDocument> {
   }
 }
 
-export type ScriptDocumentKind = DocumentKind<
-  typeof SCRIPT_KIND,
+export type TextDocumentKind<TKind extends string = string> = DocumentKind<
+  TKind,
   ScriptRoom,
   SyncedScript
 >;
 
-export function scriptDocumentKind(): ScriptDocumentKind {
+export function textDocumentKind<TKind extends string>(
+  kind: TKind
+): TextDocumentKind<TKind> {
   return {
-    kind: SCRIPT_KIND,
+    kind,
     syncDocument: (room) => new SyncedScript(room)
   };
 }

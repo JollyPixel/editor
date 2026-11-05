@@ -13,6 +13,7 @@ import {
 // CONSTANTS
 export const MAP_TAB = "overworld";
 export const TEXTURE_TAB = "model";
+export const README_TAB = "README";
 const kEditorBootTimeout = 30_000;
 
 export class EditorTabs {

@@ -23,6 +23,8 @@ import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetWriter } from "../writer/AssetWriter.ts";
 import type { AssetPartFiles } from "../AssetPartFiles.ts";
 import type { AssetPartRef } from "../../model/events/AssetEvents.ts";
+import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
+import { BINARY_KIND } from "../../model/kinds/handlers/binary.ts";
 import { asError } from "../../common/asError.ts";
 import { TaskChain } from "../../common/TaskChain.ts";
 
@@ -93,6 +95,7 @@ export interface ReconcilerOptions {
   projector: AssetProjector;
   writer: AssetWriter;
   partFiles: AssetPartFiles;
+  kinds: AssetKindRegistry;
   actor?: EventStore.Actor;
   logger?: Logger;
 }
@@ -102,6 +105,7 @@ export class Reconciler {
   #projector: AssetProjector;
   #writer: AssetWriter;
   #partFiles: AssetPartFiles;
+  #kinds: AssetKindRegistry;
   #actor: EventStore.Actor;
   #logger: Logger;
   #passes = new TaskChain();
@@ -113,6 +117,7 @@ export class Reconciler {
     this.#projector = options.projector;
     this.#writer = options.writer;
     this.#partFiles = options.partFiles;
+    this.#kinds = options.kinds;
     this.#actor = options.actor ?? kWatcherActor;
     this.#logger = options.logger ?? silentLogger();
   }
@@ -139,6 +144,7 @@ export class Reconciler {
     }
 
     const projected: ProjectedEntry[] = [];
+    const rekinded: ProjectedEntry[] = [];
     const projectedParts = new Map<string, ProjectedParts>();
     for (const { assetId, projection } of this.#projector.projections()) {
       if (
@@ -149,12 +155,17 @@ export class Reconciler {
         continue;
       }
 
-      projected.push({
+      const entry: ProjectedEntry = {
         id: assetId,
         path: projection.path,
         kind: projection.kind,
         hash: projection.hash
-      });
+      };
+      if (this.#nowClaimed(entry)) {
+        rekinded.push(entry);
+        continue;
+      }
+      projected.push(entry);
       if (projection.parts !== undefined) {
         projectedParts.set(projection.path, {
           assetId,
@@ -163,10 +174,14 @@ export class Reconciler {
       }
     }
 
-    const diff = matchRenames(
+    const matched = matchRenames(
       projected,
       scan.entries
     );
+    const diff: RenameMatch = {
+      ...matched,
+      deleted: [...rekinded, ...matched.deleted]
+    };
     if (
       scope !== null &&
       (diff.created.length > 0 || diff.deleted.length > 0)
@@ -270,6 +285,13 @@ export class Reconciler {
     }
 
     return { parts };
+  }
+
+  #nowClaimed(
+    entry: ProjectedEntry
+  ): boolean {
+    return entry.kind === BINARY_KIND &&
+      this.#kinds.resolve(entry.path).kind !== BINARY_KIND;
   }
 
   #withOwners(

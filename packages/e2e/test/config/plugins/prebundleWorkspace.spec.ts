@@ -11,6 +11,7 @@ import {
 // Import Third-party Dependencies
 import {
   createServer,
+  resolveConfig,
   type Plugin,
   type ViteDevServer
 } from "vite";
@@ -94,8 +95,8 @@ async function fixtureServer(
 }
 
 describe("prebundleWorkspace", () => {
-  it("pre-bundles the scope entries of the page in e2e mode", async() => {
-    await using fixture = await fixtureServer("e2e");
+  it("pre-bundles the scope entries of the page in every serve mode", async() => {
+    await using fixture = await fixtureServer("development");
     const { include, force } = fixture.server.environments.client.config.optimizeDeps;
 
     assert.deepEqual(include, [kKeptEntry, ...EXPECTED_ENTRIES]);
@@ -135,11 +136,23 @@ describe("prebundleWorkspace", () => {
     );
   });
 
-  it("leaves other modes alone", async() => {
-    await using fixture = await fixtureServer("development");
-    const { include, force } = fixture.server.environments.client.config.optimizeDeps;
+  it("leaves builds alone", async() => {
+    const config = await resolveConfig(
+      {
+        configFile: false,
+        root: FIXTURE_ROOT,
+        logLevel: "silent",
+        optimizeDeps: {
+          include: [kKeptEntry]
+        },
+        plugins: [
+          prebundleWorkspace()
+        ]
+      },
+      "build"
+    );
 
-    assert.deepEqual(include, [kKeptEntry]);
-    assert.notStrictEqual(force, true);
+    assert.deepEqual(config.optimizeDeps.include, [kKeptEntry]);
+    assert.notStrictEqual(config.optimizeDeps.force, true);
   });
 });

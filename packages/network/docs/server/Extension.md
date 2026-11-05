@@ -21,10 +21,13 @@ server.register(
 readonly id: string;
 readonly name: string;
 readonly protocols: MessageProtocols;
+readonly queries?: readonly string[];
 ```
 
 `id` is the static room name; `name` is the feature namespace for rights rules.
 `protocols` defines inbound/outbound [message contracts](../protocol/Messages.md).
+`queries` lists inbound events a member with `read` may still send. Reply to
+them with `sendTo`, never with `broadcast`.
 
 ## Hooks
 

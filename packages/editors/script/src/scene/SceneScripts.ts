@@ -2,7 +2,8 @@
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   ScriptOutlineFeed,
-  scriptDocumentKind,
+  SCRIPT_KIND,
+  textDocumentKind,
   type ScriptDocument,
   type ScriptOutline
 } from "@jolly-pixel/asset.script/client";
@@ -14,7 +15,7 @@ import type {
 } from "@jolly-pixel/editor.host/scene";
 
 // CONSTANTS
-export const SCRIPT_DOCUMENT_KIND = scriptDocumentKind();
+export const SCRIPT_DOCUMENT_KIND = textDocumentKind(SCRIPT_KIND);
 
 interface OpenScript {
   lease: AssetLease<ScriptDocument>;

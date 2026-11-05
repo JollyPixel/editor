@@ -96,6 +96,18 @@ describe("AssetPath", () => {
     });
   });
 
+  describe("matchExtension", () => {
+    test("returns the longest extension the path ends with", () => {
+      const path = new AssetPath("maps/forest.vmap.json");
+
+      assert.strictEqual(
+        path.matchExtension([".json", ".vmap.json", ".map.json"]),
+        ".vmap.json"
+      );
+      assert.strictEqual(path.matchExtension([".md"]), null);
+    });
+  });
+
   describe("equals", () => {
     test("compares the full path", () => {
       const path = new AssetPath("maps/world.voxelmap.json");

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import picomatch from "picomatch";
+import { AssetPath } from "@jolly-pixel/asset";
 import {
   Err,
   Ok,
@@ -154,16 +155,18 @@ export class AssetKindRegistry {
   resolve(
     path: string
   ): AnyAssetKindHandler {
+    const assetPath = new AssetPath(path);
+    let resolved: AnyAssetKindHandler = binaryAssetKind;
+    let longest = 0;
     for (const { handler, extensions, isMatch } of this.#kinds.values()) {
-      if (
-        extensions.some((extension) => path.endsWith(extension)) &&
-        (isMatch === null || isMatch(path))
-      ) {
-        return handler;
+      const length = assetPath.matchExtension(extensions)?.length ?? 0;
+      if (length > longest && (isMatch === null || isMatch(path))) {
+        resolved = handler;
+        longest = length;
       }
     }
 
-    return binaryAssetKind;
+    return resolved;
   }
 
   kinds(): IterableIterator<string> {

@@ -163,7 +163,8 @@ export async function syncHarness(
     source,
     projector,
     writer,
-    partFiles
+    partFiles,
+    kinds
   });
   const watcher = new SourceWatcher({
     source,

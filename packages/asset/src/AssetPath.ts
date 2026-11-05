@@ -51,6 +51,23 @@ export class AssetPath {
     return this.withExtension("");
   }
 
+  matchExtension(
+    extensions: Iterable<string>
+  ): string | null {
+    const path = this.toString();
+    let matched: string | null = null;
+    for (const extension of extensions) {
+      if (
+        extension.length > (matched?.length ?? 0) &&
+        path.endsWith(extension)
+      ) {
+        matched = extension;
+      }
+    }
+
+    return matched;
+  }
+
   equals(
     other: AssetPath
   ): boolean {

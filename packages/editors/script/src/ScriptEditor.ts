@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import {
   SCRIPT_KIND,
-  ScriptOutlineFeed,
-  scriptDocumentKind,
+  TEXT_KIND,
+  textDocumentKind,
   type ScriptDocument
 } from "@jolly-pixel/asset.script/client";
 import {
@@ -15,11 +15,12 @@ import "@jolly-pixel/editor.host/ui";
 
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
-import type { ScriptLanguage } from "./panes/code/ScriptHighlighter.ts";
-import { OutlineRefresh } from "./panes/outline/OutlineRefresh.ts";
+import { fileLanguage } from "./panes/code/ScriptHighlighter.ts";
+import { bindMarkdownPreview } from "./panes/preview/bindMarkdownPreview.ts";
 
 // CONSTANTS
-const kScriptKind = scriptDocumentKind();
+const kScriptKind = textDocumentKind(SCRIPT_KIND);
+const kTextKind = textDocumentKind(TEXT_KIND);
 
 export interface ScriptEditorParts {
   session: EditorSession;
@@ -33,7 +34,7 @@ export class ScriptEditor {
   static readonly identity = {
     title: "Join script"
   };
-  static readonly kinds = [kScriptKind];
+  static readonly kinds = [kScriptKind, kTextKind];
   static readonly archive = {
     fallbackName: "script",
     resetWarning: "Every script stored in this browser is deleted. " +
@@ -44,7 +45,9 @@ export class ScriptEditor {
     context: EditorContext
   ): Promise<ScriptEditor> {
     const { session } = context;
-    const target = session.targetLease(kScriptKind);
+    const { path } = session.targetRecord;
+    const target = session.targetLease(kScriptKind, kTextKind);
+    const language = fileLanguage(path);
     const teardown = new Teardown();
 
     try {
@@ -53,8 +56,8 @@ export class ScriptEditor {
         editorToolbar.sources = context.toolbar;
       }
       const code = document.querySelector("jolly-script-code");
-      const outlinePane = document.querySelector("jolly-script-outline");
-      if (code === null || outlinePane === null) {
+      const preview = document.querySelector("jolly-markdown");
+      if (code === null || preview === null) {
         throw new Error("ScriptEditor: the page is missing a script pane.");
       }
 
@@ -63,11 +66,6 @@ export class ScriptEditor {
         document: target.document
       });
       teardown.defer(() => collaboration.dispose());
-      const outline = new ScriptOutlineFeed(target.room);
-      teardown.defer(() => outline.dispose());
-      const refresh = new OutlineRefresh(target.document, outline);
-      teardown.defer(() => refresh.dispose());
-      outlinePane.attach(outline);
 
       const presenceStack = document.querySelector("jolly-presence-stack");
       if (presenceStack !== null) {
@@ -79,13 +77,17 @@ export class ScriptEditor {
       }
 
       const ready = target.ready.then(() => {
+        const readOnly = target.room.access !== "write";
         teardown.defer(code.attach({
           document: target.document,
           collaboration,
-          language: scriptLanguage(session.targetRecord.path),
-          readOnly: target.room.access !== "write"
+          language,
+          readOnly
         }));
-        outline.request();
+        if (language === "markdown") {
+          code.hidden = readOnly;
+          teardown.defer(bindMarkdownPreview(preview, target.document));
+        }
       });
 
       return new ScriptEditor({
@@ -121,10 +123,4 @@ export class ScriptEditor {
   dispose(): void {
     this.#teardown.run();
   }
-}
-
-function scriptLanguage(
-  path: string
-): ScriptLanguage {
-  return path.endsWith(".js") ? "javascript" : "typescript";
 }

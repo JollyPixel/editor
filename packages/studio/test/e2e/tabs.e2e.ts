@@ -12,6 +12,7 @@ import {
 } from "./support/assets.ts";
 import {
   MAP_TAB,
+  README_TAB,
   TEXTURE_TAB
 } from "./support/tabs.ts";
 
@@ -64,10 +65,8 @@ test("an editor tab stops loading once its editor is ready", async({ studio }) =
   await expect(tabs.tab(MAP_TAB)).not.toHaveAttribute("aria-description");
 });
 
-test("an editor takes the full width and home lists it among open editors", async({ studio, page }) => {
-  const { home, tabs } = studio;
+test("an editor takes the full width and hides the asset browser", async({ studio, page }) => {
   await studio.openOffline();
-  await expect(home.assetTotal).toHaveText("4");
 
   await studio.assets.open(MAP);
   await expect(studio.assets.root).toBeHidden();
@@ -78,9 +77,23 @@ test("an editor takes the full width and home lists it among open editors", asyn
   expect(frame.x).toBe(frames.x);
   expect(frame.width).toBe(frames.width);
 
-  await tabs.home.click();
+  await studio.tabs.home.click();
   await expect(studio.assets.root).toBeVisible();
-  await expect(home.openEditor(MAP_TAB)).toHaveAttribute("title", `maps/${MAP}`);
-  await home.openEditor(MAP_TAB).click();
-  await expect(tabs.tab(MAP_TAB)).toHaveAttribute("aria-selected", "true");
+});
+
+test("home creates the project README, then presents it", async({ studio }) => {
+  const { home, tabs } = studio;
+  await studio.openOffline();
+
+  await home.readmeButton("Create README.md").click();
+  await expect(tabs.tab(README_TAB)).toHaveAttribute("aria-selected", "true");
+  const preview = studio.frames.only().locator("jolly-markdown");
+  await expect(preview.getByRole("heading", { name: "Project" })).toBeVisible({
+    timeout: 30_000
+  });
+
+  await tabs.home.click();
+  await expect(home.readme.getByRole("heading", { name: "Project" })).toBeVisible();
+  await home.readmeButton("Edit").click();
+  await expect(tabs.tab(README_TAB)).toHaveAttribute("aria-selected", "true");
 });

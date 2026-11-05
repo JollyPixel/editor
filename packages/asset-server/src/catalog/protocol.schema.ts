@@ -19,6 +19,7 @@ import {
   CATALOG_IMPORT,
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
+  CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
   CATALOG_REPLACE,
@@ -77,7 +78,8 @@ const kCommandTypes = [
   CATALOG_TAG,
   CATALOG_UNTAG,
   CATALOG_RESTORE,
-  CATALOG_REPLACE
+  CATALOG_REPLACE,
+  CATALOG_READ
 ] as const;
 
 export const assetRecordSchema = z.object({
@@ -187,6 +189,9 @@ export const catalogCommandProtocol = new MessageProtocol(
       assetId: kString,
       content: assetInlineContentSchema,
       from: z.optional(kString)
+    }),
+    requestVariant(CATALOG_READ, {
+      assetId: kString
     })
   ]),
   {
@@ -259,6 +264,10 @@ export const catalogMessageProtocol = new MessageProtocol(
       appliedVariant(z.literal(CATALOG_REPLACE), {
         assetId: kString,
         report: replaceReportSchema
+      }),
+      appliedVariant(z.literal(CATALOG_READ), {
+        assetId: kString,
+        content: assetInlineContentSchema
       })
     ]),
     requestVariant(CATALOG_REJECTED, {

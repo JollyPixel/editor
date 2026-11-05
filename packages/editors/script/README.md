@@ -1,10 +1,10 @@
 ## 📌 About
 
-Private editor workspace for `@jolly-pixel/asset.script` scripts, booted through `@jolly-pixel/editor.host`.
+Private editor workspace for `@jolly-pixel/asset.script` scripts and text files, booted through `@jolly-pixel/editor.host`.
 
-- The code view is a transparent `<textarea>` over the highlighted lines. Highlighting uses Shiki's JavaScript regex engine with the TypeScript or JavaScript grammar, loaded on demand. Each line keeps its tokenizer state, so an edit retokenizes from its line until the state matches again. Only the visible lines render.
+- The code view is a transparent `<textarea>` over the highlighted lines. Highlighting uses Shiki's JavaScript regex engine with the grammar of the file extension (TypeScript, JavaScript, JSON, YAML, TOML, XML, HTML, CSS or Markdown), loaded on demand. A `.txt` file is not highlighted. Each line keeps its tokenizer state, so an edit retokenizes from its line until the state matches again. Only the visible lines render.
 - Peers see each other's carets and selections. Tab and Shift+Tab indent, Enter keeps the indentation, and Ctrl+Z / Ctrl+Y undo and redo local edits only.
-- The Outline pane shows the behaviors and scene properties the room reads from the script.
+- A Markdown file opens next to a rendered preview, updated 150 ms after the last edit. A member who cannot edit sees the preview only.
 
 The package also contributes the scene `Script` component (`jollypixel.scene`, export `./scene`). Its script slot takes a script asset; the inspector then offers that script's behaviors and lists the picked behavior's properties with their types and defaults. The standalone scene editor loads no component package, so try it through the studio.
 

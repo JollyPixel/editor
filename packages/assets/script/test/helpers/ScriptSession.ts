@@ -10,12 +10,13 @@ import {
   scriptAssetKind,
   type ScriptAssetKindOptions
 } from "#src/asset/scriptAssetKind.ts";
+import { SCRIPT_KIND } from "#src/asset/script.ts";
 import type { ScriptText } from "#src/asset/ScriptText.ts";
 import type { ScriptOutlineRequest } from "#src/network/ScriptCommand.schema.ts";
 import {
-  scriptDocumentKind,
+  textDocumentKind,
   type SyncedScript
-} from "#src/network/scriptDocumentKind.ts";
+} from "#src/network/textDocumentKind.ts";
 import type {
   ScriptNetworkCommand,
   ScriptSnapshot
@@ -46,7 +47,7 @@ export class ScriptSession {
     const peer: ScriptPeer = {
       clientId,
       room,
-      script: scriptDocumentKind().syncDocument(room)
+      script: textDocumentKind(SCRIPT_KIND).syncDocument(room)
     };
     this.peers.push(peer);
     await this.server.connect(clientId);
