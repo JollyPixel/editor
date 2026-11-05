@@ -59,13 +59,16 @@ export class LiveAssetRoom<
 
     this.state = handler.create(kAssetId);
     const store = EventStore.persistence.memory();
-    store.subscribe(
-      (event) => foldAssetEvent(handler, this.state, event)
-    );
+    let version: number | undefined;
+    store.subscribe((event) => {
+      version = event.eventVersion;
+      foldAssetEvent(handler, this.state, event);
+    });
     const binding: AssetRoomBinding<TState> = {
       assetId: kAssetId,
       kind: handler.kind,
       roomId: new AssetRoom(handler.kind, kAssetId).toString(),
+      version: () => version,
       state: this.state
     };
     const live = commands.live(binding);
