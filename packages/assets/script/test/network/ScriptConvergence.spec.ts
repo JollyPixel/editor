@@ -88,6 +88,25 @@ describe("script convergence", () => {
     assert.equal(bob.script.document.text, "Xab1");
   });
 
+  test("an edit typed right after a snapshot builds on the snapshot's version", async() => {
+    const session = new ScriptSession("a");
+    const alice = await session.join("A");
+    const bob = await session.join("B");
+
+    alice.script.document.edit(new TextEdit([
+      { at: 0, delete: "a" },
+      { at: 0, insert: "x" }
+    ]));
+    await session.upload(alice);
+    await session.resnapshot(bob);
+    bob.script.document.edit(TextEdit.deletion(0, "x"));
+    await session.settle();
+
+    assert.equal(session.server.state.text, "");
+    assert.equal(alice.script.document.text, "");
+    assert.equal(bob.script.document.text, "");
+  });
+
   test("a peer edit that does not fit the local text asks the room for one snapshot", async() => {
     const session = new ScriptSession("ab");
     const alice = await session.join("A");
