@@ -54,6 +54,28 @@ describe("Components.Renderers.ModelRenderer", () => {
     assert.strictEqual(model.object.parent, null);
   });
 
+  test("should override only the shadow flags its options set", () => {
+    const model = createModel();
+    const [loaded] = model.object.children as THREE.Mesh[];
+    loaded.castShadow = true;
+    loaded.receiveShadow = true;
+    const renderer = new Actor({ sceneManager: new SceneManager() } as any, {
+      name: "lit"
+    }).addComponentAndGet(ModelRenderer, {
+      model,
+      castShadow: false
+    });
+
+    renderer.awake();
+
+    const [mesh] = renderer.group.children as THREE.Mesh[];
+    assert.deepEqual(
+      [mesh.castShadow, mesh.receiveShadow],
+      [false, true]
+    );
+    assert.notStrictEqual(renderer.group, model.object);
+  });
+
   test("should keep the shared geometry alive when its actor is destroyed", () => {
     const model = createModel();
     const mesh = model.object.children[0] as THREE.Mesh;

@@ -224,7 +224,7 @@ new Scenario<ScenePage, SceneExpectation>({
       play: async(scene) => {
         const undo = scene.tool("undo");
         await expect(undo).toHaveAttribute("disabled");
-        await scene.addActor(["Primitive", "Box"]);
+        await scene.addActor(["3D", "Box"]);
         await expect(scene.row("Box")).toHaveAttribute("aria-selected", "true");
         await undo.click();
         await expect(scene.row("Box")).toHaveCount(0);

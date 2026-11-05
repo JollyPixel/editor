@@ -11,6 +11,9 @@
       "path": "../host"
     },
     {
+      "path": "../../asset"
+    },
+    {
       "path": "../../assets/model"
     },
     {

@@ -14,7 +14,6 @@ import {
 
 // Import Internal Dependencies
 import { VoxelMapViewer } from "../viewer/VoxelMapViewer.ts";
-import "./componentIcons.ts";
 
 // CONSTANTS
 const kRows = new FormRows<VoxelMapSettings>();
@@ -22,7 +21,6 @@ const kRows = new FormRows<VoxelMapSettings>();
 const kVoxelMap: SceneComponentKind<VoxelMapSettings> = {
   definition: new VoxelMapDefinition(),
   label: "Voxel map",
-  icon: "actor-voxel-map",
   form: () => [
     kRows.boolean(["castShadow"], "Cast shadow"),
     kRows.boolean(["receiveShadow"], "Receive shadow")
@@ -35,12 +33,17 @@ export const SCENE_COMPONENTS: SceneComponentPackage = {
   components: [kVoxelMap],
   presets: [
     {
-      id: "voxel-map",
-      label: "Voxel map",
-      components: [
+      category: "3d",
+      presets: [
         {
-          type: "VoxelMap",
-          data: {}
+          id: "voxel-map",
+          label: "Voxel map",
+          components: [
+            {
+              type: "VoxelMap",
+              data: {}
+            }
+          ]
         }
       ]
     }

@@ -40,10 +40,6 @@ export class ActorPreset {
     this.#picksAssets = types.some((type) => registry.picksAssets(type));
   }
 
-  get presets(): readonly ActorPreset[] {
-    return [this];
-  }
-
   get menuEntry(): MenuItem<AddActorAction> {
     return {
       id: this.action,

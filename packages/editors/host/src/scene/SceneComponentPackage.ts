@@ -7,6 +7,7 @@ import type { Systems } from "@jolly-pixel/engine";
 import type { AssetDocumentKind } from "../lease/AssetLease.ts";
 import type { EditorSession } from "../session/EditorSession.ts";
 import type { ComponentForm } from "./FormRows.ts";
+import type { SceneActorCategory } from "./SceneActorCategory.ts";
 
 export interface SceneComponentKind<
   TData extends object = any,
@@ -15,9 +16,10 @@ export interface SceneComponentKind<
   definition: Systems.ComponentDefinition<TData, any, TAssets>;
   label: string;
   /**
-   * Name of a registered `@jolly-pixel/ui` icon.
+   * Name of a registered `@jolly-pixel/ui` icon, used when no asset slot
+   * names an asset kind with an icon.
    */
-  icon: string;
+  icon?: string;
   form: ComponentForm<TData, TAssets>;
   /**
    * The `definition.assets` slot whose asset the anchor keys belong to.
@@ -47,12 +49,10 @@ export interface SceneActorPreset {
   components: readonly SceneComponentSeed[];
 }
 
-export interface SceneActorPresetGroup {
-  label: string;
+export interface SceneActorPresetSection {
+  category: SceneActorCategory;
   presets: readonly SceneActorPreset[];
 }
-
-export type SceneActorPresetEntry = SceneActorPreset | SceneActorPresetGroup;
 
 export interface SceneAssetResolver<TValue = unknown> {
   resolve(
@@ -84,9 +84,6 @@ export interface SceneAssetSource<TValue = unknown> {
 
 export interface SceneComponentPackage {
   components: readonly SceneComponentKind[];
-  /**
-   * One section of the hierarchy Add menu.
-   */
-  presets?: readonly SceneActorPresetEntry[];
+  presets?: readonly SceneActorPresetSection[];
   assets?: readonly SceneAssetSource[];
 }
