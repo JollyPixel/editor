@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { formatHex8 } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { Stroke } from "./Stroke.ts";
@@ -78,7 +78,7 @@ export class BrushEngine implements BrushTool {
     }
 
     const [color] = this.#canvasBuffer.samplePixels([{ x: tx, y: ty }]);
-    const hex = formatHex8({ ...color, a: 255 });
+    const hex = Color.fromBytes(color).hex();
     const opacity = color.a / 255;
     this.#brush[slot].set(hex, opacity);
     this.#pickArmed = false;

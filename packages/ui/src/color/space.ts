@@ -1,67 +1,26 @@
 // Import Third-party Dependencies
 import {
-  ColorSpace,
-  formatHex,
+  Color,
+  HueSpace,
   type HSVA,
-  type RGBA
+  type HueSpaceName
 } from "@jolly-pixel/color";
 
 // CONSTANTS
 const kHueRampSteps = 12;
 const kValueRampSteps = 6;
 const kTurn = 360;
+const kAxisLabels = {
+  value: "Value",
+  lightness: "Lightness"
+} as const;
 
-export type ColorPickerSpace = "hsv" | "okhsv" | "okhsl";
-
-interface PointModel {
-  toRgb(point: HSVA): RGBA;
-  fromRgb(color: RGBA, previous?: HSVA): HSVA;
-}
-
-interface PickerAxis {
-  label: "Value" | "Lightness";
-  pure: number;
-}
-
-const kValueAxis: PickerAxis = {
-  label: "Value",
-  pure: 1
-};
-
-const kOkhslModel: PointModel = {
-  toRgb: (point) => ColorSpace.okhsl.toRgb({
-    h: point.h,
-    s: point.s,
-    l: point.v,
-    a: point.a
-  }),
-  fromRgb: (color, previous) => {
-    const { h, s, l, a } = ColorSpace.okhsl.fromRgb(
-      color,
-      previous && {
-        h: previous.h,
-        s: previous.s,
-        l: previous.v,
-        a: previous.a
-      }
-    );
-
-    return {
-      h,
-      s,
-      v: l,
-      a
-    };
-  }
-};
+export type ColorPickerSpace = HueSpaceName;
 
 export class PickerSpace {
-  static readonly hsv = new PickerSpace("hsv", ColorSpace.hsv, kValueAxis);
-  static readonly okhsv = new PickerSpace("okhsv", ColorSpace.okhsv, kValueAxis);
-  static readonly okhsl = new PickerSpace("okhsl", kOkhslModel, {
-    label: "Lightness",
-    pure: 0.5
-  });
+  static readonly hsv = new PickerSpace(HueSpace.hsv);
+  static readonly okhsv = new PickerSpace(HueSpace.okhsv);
+  static readonly okhsl = new PickerSpace(HueSpace.okhsl);
 
   static named(
     name: ColorPickerSpace
@@ -76,21 +35,15 @@ export class PickerSpace {
     }
   }
 
-  readonly name: ColorPickerSpace;
-  readonly axisLabel: PickerAxis["label"];
-  readonly pureLevel: number;
-  readonly #model: PointModel;
+  readonly model: HueSpace;
+  readonly axisLabel: typeof kAxisLabels[keyof typeof kAxisLabels];
   #hueRamp: string | null = null;
 
   constructor(
-    name: ColorPickerSpace,
-    model: PointModel,
-    axis: PickerAxis
+    model: HueSpace
   ) {
-    this.name = name;
-    this.#model = model;
-    this.axisLabel = axis.label;
-    this.pureLevel = axis.pure;
+    this.model = model;
+    this.axisLabel = kAxisLabels[model.level];
   }
 
   get hueRamp(): string {
@@ -99,7 +52,7 @@ export class PickerSpace {
       (_, index) => this.hex({
         h: (index / kHueRampSteps) * kTurn,
         s: 1,
-        v: this.pureLevel,
+        v: this.model.pureLevel,
         a: 1
       })
     ).join(", ");
@@ -107,34 +60,10 @@ export class PickerSpace {
     return this.#hueRamp;
   }
 
-  toRgb(
-    point: HSVA
-  ): RGBA {
-    return this.#model.toRgb(point);
-  }
-
   hex(
     point: HSVA
   ): string {
-    return formatHex(this.#model.toRgb(point));
-  }
-
-  fromRgb(
-    color: RGBA,
-    previous?: HSVA
-  ): HSVA {
-    return this.#model.fromRgb(color, previous);
-  }
-
-  pureHue(
-    point: HSVA
-  ): RGBA {
-    return this.#model.toRgb({
-      h: point.h,
-      s: 1,
-      v: this.pureLevel,
-      a: 1
-    });
+    return new Color(this.model.toRgb(point)).hex();
   }
 
   valueRamp(
@@ -147,19 +76,5 @@ export class PickerSpace {
         v: index / kValueRampSteps
       })
     ).join(", ");
-  }
-
-  convert(
-    point: HSVA,
-    target: PickerSpace
-  ): HSVA {
-    if (target === this) {
-      return point;
-    }
-
-    return target.fromRgb(
-      this.#model.toRgb(point),
-      point
-    );
   }
 }

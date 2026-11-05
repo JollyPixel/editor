@@ -1,13 +1,11 @@
 // Import Internal Dependencies
 import {
-  computeHue,
   hueSector,
+  rgbExtent,
   sectorChannels
-} from "./hue.ts";
-import {
-  clampUnit,
-  wrapHue
-} from "../math.ts";
+} from "./sector.ts";
+import { clampUnit } from "../math.ts";
+import { wrapHue } from "../hue.ts";
 import type {
   HSVA,
   RGBA
@@ -16,16 +14,10 @@ import type {
 export function rgbToHsv(
   color: RGBA
 ): HSVA {
-  const r = clampUnit(color.r);
-  const g = clampUnit(color.g);
-  const b = clampUnit(color.b);
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const chroma = max - min;
+  const { max, chroma, hue } = rgbExtent(color);
 
   return {
-    h: computeHue(r, g, b, max, chroma),
+    h: hue,
     s: max === 0 ? 0 : chroma / max,
     v: max,
     a: clampUnit(color.a)

@@ -29,10 +29,10 @@ const kCompare: Record<ColorSortKey, Compare> = {
   alpha: (left, right) => left.a - right.a
 };
 
-export function sortColors(
-  colors: readonly RGBA[],
+export function sortColors<TColor extends RGBA>(
+  colors: readonly TColor[],
   key: ColorSortKey
-): RGBA[] {
+): TColor[] {
   const compare = kCompare[key];
 
   return colors

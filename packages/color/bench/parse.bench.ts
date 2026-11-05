@@ -5,7 +5,7 @@ import {
 } from "@jolly-pixel/bench";
 
 // Import Internal Dependencies
-import { parseColor } from "../src/parse/index.ts";
+import { parseColor } from "../src/parse/parseColor.ts";
 import {
   BATCH,
   createBatch,

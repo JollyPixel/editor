@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { formatRgba } from "@jolly-pixel/color";
 import {
   LitElement,
   html,
@@ -140,7 +139,7 @@ export class ColorSwatch extends LitElement {
         aria-haspopup="dialog"
         aria-expanded=${String(this._expanded)}
         ?disabled=${this.disabled}
-        style="--swatch-color:${formatRgba(color)}"
+        style="--swatch-color:${color.rgba()}"
       ></button>
     `;
   }

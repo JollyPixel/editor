@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { parseColor } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import "../../../../src/controls/ColorPicker.ts";
@@ -186,5 +186,5 @@ function buildPanel(
 function swatchInk(
   value: string
 ): string {
-  return parseColor(value) === null ? "" : value;
+  return Color.parse(value) === null ? "" : value;
 }

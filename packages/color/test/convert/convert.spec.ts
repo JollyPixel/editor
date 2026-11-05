@@ -3,15 +3,15 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { ColorSpace } from "../../src/convert/index.ts";
 import {
-  ColorSpace,
-  fromRGBA8,
   hslToHsv,
-  hsvToHsl,
+  hsvToHsl
+} from "../../src/convert/hsl.ts";
+import {
   linearToSrgb,
-  srgbToLinear,
-  toRGBA8
-} from "../../src/convert/index.ts";
+  srgbToLinear
+} from "../../src/convert/srgb.ts";
 import type {
   HSLA,
   HSVA,
@@ -165,27 +165,5 @@ describe("convert / hsv and hsl", () => {
       hslToHsv({ h: 450, s: -1, l: 2, a: 3 }),
       hslToHsv({ h: 90, s: 0, l: 1, a: 1 })
     );
-  });
-});
-
-describe("convert / bytes", () => {
-  test("toRGBA8 rounds and clamps", () => {
-    assert.deepEqual(
-      toRGBA8({ r: 1.5, g: 0.5, b: -0.2, a: 1 }),
-      { r: 255, g: 128, b: 0, a: 255 }
-    );
-  });
-
-  test("fromRGBA8 round trips within one byte", () => {
-    for (let value = 0; value <= 255; value++) {
-      const color = {
-        r: value,
-        g: value,
-        b: value,
-        a: value
-      };
-
-      assert.deepEqual(toRGBA8(fromRGBA8(color)), color);
-    }
   });
 });

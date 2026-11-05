@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { equalRGBA8 } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
 import { Fill } from "./Fill.ts";
 import type {
@@ -14,7 +17,6 @@ import {
   uvSlotGeometries,
   uvSlotMask
 } from "../uv/region/uvSlotMask.ts";
-import { rgba8Equal } from "../utils/colors.ts";
 import type { Vec2 } from "../types.ts";
 
 export interface FillEngineOptions {
@@ -103,7 +105,7 @@ export class FillEngine implements FillTool {
   ): void {
     const [fromColor] = this.#canvasBuffer.samplePixels([seed]);
     const toColor = this.#brush.painter(slot)(fromColor);
-    if (rgba8Equal(fromColor, toColor)) {
+    if (equalRGBA8(fromColor, toColor)) {
       return;
     }
 

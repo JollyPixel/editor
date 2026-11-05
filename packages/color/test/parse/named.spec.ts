@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { parseColor } from "../../src/parse/index.ts";
+import { parseColor } from "../../src/parse/parseColor.ts";
 import { kNamedColors } from "../../src/parse/namedColors.ts";
 import type { RGBA } from "../../src/types.ts";
 import { unit } from "../helpers/channels.ts";

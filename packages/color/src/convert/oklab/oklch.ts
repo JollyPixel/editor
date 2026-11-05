@@ -1,8 +1,5 @@
 // Import Internal Dependencies
-import {
-  isOklabInGamut,
-  oklabToGamutRgb
-} from "./gamut.ts";
+import { oklabToGamutRgb } from "./gamut.ts";
 import {
   hueDirection,
   oklabPolar,
@@ -39,12 +36,6 @@ export function oklchToRgb(
     }),
     color.a
   );
-}
-
-export function isOklchInGamut(
-  color: OKLCHA
-): boolean {
-  return isOklabInGamut(toLab(color));
 }
 
 function toLab(

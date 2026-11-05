@@ -23,27 +23,15 @@ import {
   oklchToRgb,
   rgbToOklch
 } from "./oklab/oklch.ts";
-import {
-  clampUnit,
-  lerp
-} from "../math.ts";
 import type { RGBA } from "../types.ts";
 
 // CONSTANTS
-const kTurn = 360;
-const kHalfTurn = 180;
 const kWhiteEdge = 1 - 1e-6;
 
 export type HueColor<TChannel extends string> = Record<
   TChannel | "h" | "a",
   number
 >;
-
-export type HueInterpolation =
-  | "shorter"
-  | "longer"
-  | "increasing"
-  | "decreasing";
 
 export interface ColorSpaces {
   hsv: ColorSpace<"s" | "v">;
@@ -162,12 +150,14 @@ export class ColorSpace<TChannel extends string> {
   }
 
   readonly name: string;
+  readonly channels: readonly TChannel[];
   readonly #init: ColorSpaceInit<TChannel>;
 
   constructor(
     init: ColorSpaceInit<TChannel>
   ) {
     this.name = init.name;
+    this.channels = init.channels;
     this.#init = init;
   }
 
@@ -188,36 +178,6 @@ export class ColorSpace<TChannel extends string> {
       this.#carry(converted, (channel) => previous[channel]);
   }
 
-  mix(
-    from: RGBA,
-    to: RGBA,
-    amount: number,
-    hue: HueInterpolation = "shorter"
-  ): RGBA {
-    const t = clampUnit(amount);
-    const source = this.#init.fromRgb(from);
-    const target = this.#init.fromRgb(to);
-    const start = this.#carry(
-      source,
-      (channel) => (channel === "h" ? target.h : undefined)
-    );
-    const end = this.#carry(
-      target,
-      (channel) => (channel === "h" ? start.h : undefined)
-    );
-    const [first, second] = ColorSpace.#hueArc(start.h, end.h, hue);
-    const mixed: HueColor<TChannel> = {
-      ...start,
-      h: lerp(first, second, t),
-      a: lerp(start.a, end.a, t)
-    };
-    for (const channel of this.#init.channels) {
-      mixed[channel] = lerp(start[channel], end[channel], t);
-    }
-
-    return this.#init.toRgb(mixed);
-  }
-
   #carry(
     color: HueColor<TChannel>,
     previous: (channel: TChannel | "h") => number | undefined
@@ -233,38 +193,6 @@ export class ColorSpace<TChannel extends string> {
     }
 
     return carried;
-  }
-
-  static #hueArc(
-    first: number,
-    second: number,
-    method: HueInterpolation
-  ): [number, number] {
-    const delta = second - first;
-    switch (method) {
-      case "longer":
-        if (delta > 0 && delta < kHalfTurn) {
-          return [first + kTurn, second];
-        }
-        if (delta > -kHalfTurn && delta <= 0) {
-          return [first, second + kTurn];
-        }
-
-        return [first, second];
-      case "increasing":
-        return second < first ? [first, second + kTurn] : [first, second];
-      case "decreasing":
-        return first < second ? [first + kTurn, second] : [first, second];
-      default:
-        if (delta > kHalfTurn) {
-          return [first + kTurn, second];
-        }
-        if (delta < -kHalfTurn) {
-          return [first, second + kTurn];
-        }
-
-        return [first, second];
-    }
   }
 
   static #isLightnessEdge(

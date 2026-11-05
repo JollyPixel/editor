@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { parseColor } from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import type { PixelDocument } from "./PixelDocument.ts";
@@ -271,7 +271,7 @@ export class CanvasView {
 function isOpaqueEnough(
   color: string
 ): boolean {
-  const parsed = parseColor(color);
+  const parsed = Color.parse(color);
 
   return parsed !== null && parsed.a > 0;
 }

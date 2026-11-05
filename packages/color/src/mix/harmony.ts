@@ -1,8 +1,6 @@
 // Import Internal Dependencies
-import {
-  clampUnit,
-  wrapHue
-} from "../math.ts";
+import { clampUnit } from "../math.ts";
+import { wrapHue } from "../hue.ts";
 import type { HSVA } from "../types.ts";
 
 // CONSTANTS

@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  assertColor8,
-  formatRgba8
-} from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -50,7 +47,7 @@ export class TextureGrid extends Emitter<TextureGridEvent> {
     this.#size = cellSize(options.size ?? kDefaultSize, kDefaultSize);
     this.#visible = options.visible ?? false;
     this.#snap = options.snap ?? false;
-    this.#color = formatRgba8(assertColor8(options.color ?? kDefaultColor));
+    this.#color = Color.fromBytes(options.color ?? kDefaultColor).rgba();
   }
 
   get size(): number {
@@ -100,7 +97,7 @@ export class TextureGrid extends Emitter<TextureGridEvent> {
   set color(
     value: ByteColorInput
   ) {
-    const color = formatRgba8(assertColor8(value));
+    const color = Color.fromBytes(value).rgba();
     if (color !== this.#color) {
       this.#color = color;
       this.emit("changed");

@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
+  Color,
   colorHarmony,
-  formatHex,
   type HSVA
 } from "@jolly-pixel/color";
 import {
@@ -24,7 +24,6 @@ import {
   CHANNEL_ROWS,
   type ColorPickerChannels
 } from "../color/channels.ts";
-import { parseFieldColor } from "../color/draft.ts";
 import { PickerFields } from "../color/PickerFields.ts";
 import { PickerPreferences } from "../color/PickerPreferences.ts";
 import { PickerSettings } from "../color/PickerSettings.ts";
@@ -181,7 +180,7 @@ export class ColorPicker extends LitElement {
   #preferences: ColorPickerPreferences = COLOR_PICKER_DEFAULTS;
   #fields = new PickerFields(this, {
     point: () => this.#point,
-    space: () => this.#pointSpace,
+    space: () => this.#pointSpace.model,
     hex: () => this.#hex,
     alpha: () => this.alpha,
     change: (point) => this.#commitPoint(point)
@@ -198,7 +197,7 @@ export class ColorPicker extends LitElement {
     enabled: () => this.eyedropper,
     editable: () => this.editable,
     pick: (color) => this.#commitPoint({
-      ...this.#pointSpace.fromRgb(color, this.#point),
+      ...this.#pointSpace.model.fromRgb(color, this.#point),
       a: this.#point.a
     })
   });
@@ -238,7 +237,7 @@ export class ColorPicker extends LitElement {
     this.#preferences = this.#resolvePreferences();
     const space = PickerSpace.named(this.#preferences.space);
     if (space !== this.#pointSpace) {
-      this.#point = this.#pointSpace.convert(this.#point, space);
+      this.#point = this.#pointSpace.model.convert(this.#point, space.model);
       this.#pointSpace = space;
     }
 
@@ -261,11 +260,11 @@ export class ColorPicker extends LitElement {
   get #surface(): PickerSurface {
     return this.#wheel ?
       new WheelSurface(
-        this.#pointSpace,
-        this.#pointSpace.pureLevel,
+        this.#pointSpace.model,
+        this.#pointSpace.model.pureLevel,
         this.#preferences.discrete
       ) :
-      new SquareSurface(this.#pointSpace, this.#point.h);
+      new SquareSurface(this.#pointSpace.model, this.#point.h);
   }
 
   get #settingsShown(): boolean {
@@ -285,17 +284,17 @@ export class ColorPicker extends LitElement {
   }
 
   #adoptValue(): void {
-    const incoming = parseFieldColor(this.value ?? "");
+    const incoming = Color.parseDraft(this.value ?? "");
     if (incoming === null) {
       return;
     }
 
-    if (formatHex(incoming, this.alpha) === this.#hex) {
+    if (incoming.hex(this.alpha) === this.#hex) {
       return;
     }
 
     this.#point = {
-      ...this.#pointSpace.fromRgb(incoming, this.#point),
+      ...this.#pointSpace.model.fromRgb(incoming, this.#point),
       a: this.alpha ? incoming.a : 1
     };
   }
@@ -311,10 +310,7 @@ export class ColorPicker extends LitElement {
   #formatPoint(
     point: HSVA
   ): string {
-    return formatHex(
-      this.#pointSpace.toRgb(point),
-      this.alpha
-    );
+    return new Color(this.#pointSpace.model.toRgb(point)).hex(this.alpha);
   }
 
   protected get editable(): boolean {
@@ -554,7 +550,7 @@ export class ColorPicker extends LitElement {
   }
 
   #renderChannels(): TemplateResult {
-    const values = channelValues(this.#point, this.#pointSpace);
+    const values = channelValues(this.#point, this.#pointSpace.model);
     const rows = CHANNEL_ROWS[this.#preferences.channels];
 
     return html`

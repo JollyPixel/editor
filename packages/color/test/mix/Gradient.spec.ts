@@ -4,15 +4,11 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  colorRamp,
-  mixColor,
+  Gradient,
   type MixSpace
-} from "../../src/mix/mix.ts";
-import {
-  ColorSpace,
-  type HueInterpolation
-} from "../../src/convert/index.ts";
-import { formatHex } from "../../src/format.ts";
+} from "../../src/mix/Gradient.ts";
+import { ColorSpace } from "../../src/convert/index.ts";
+import type { HueInterpolation } from "../../src/hue.ts";
 import type { RGBA } from "../../src/types.ts";
 
 // CONSTANTS
@@ -34,20 +30,16 @@ const kCyan: RGBA = { r: 0, g: 1, b: 1, a: 1 };
 const kRed: RGBA = { r: 1, g: 0, b: 0, a: 1 };
 const kBlue: RGBA = { r: 0, g: 0, b: 1, a: 1 };
 
-describe("mixColor", () => {
+describe("Gradient.at", () => {
   test("returns the endpoints at amounts 0 and 1 in every space", () => {
     for (const space of kSpaces) {
-      assert.equal(formatHex(mixColor(kRed, kBlue, 0, { space })), "#ff0000", space);
-      assert.equal(formatHex(mixColor(kRed, kBlue, 1, { space })), "#0000ff", space);
+      assert.equal(Gradient.between(kRed, kBlue, { space }).at(0).hex(), "#ff0000", space);
+      assert.equal(Gradient.between(kRed, kBlue, { space }).at(1).hex(), "#0000ff", space);
     }
   });
 
   test("interpolates alpha linearly", () => {
-    const mixed = mixColor(
-      { ...kRed, a: 0 },
-      kBlue,
-      0.25
-    );
+    const mixed = Gradient.between({ ...kRed, a: 0 }, kBlue).at(0.25);
 
     assert.equal(mixed.a, 0.25);
   });
@@ -56,7 +48,7 @@ describe("mixColor", () => {
     function mid(
       space: MixSpace
     ): string {
-      return formatHex(mixColor(kBlack, kWhite, 0.5, { space }));
+      return Gradient.between(kBlack, kWhite, { space }).at(0.5).hex();
     }
 
     assert.equal(mid("srgb"), "#808080");
@@ -66,9 +58,9 @@ describe("mixColor", () => {
   });
 
   test("keeps the hue of the chromatic side when one end is gray", () => {
-    const mixed = mixColor(kGray, kCyan, 0.5, { space: "oklch" });
+    const mixed = Gradient.between(kGray, kCyan, { space: "oklch" }).at(0.5);
 
-    assert.ok(mixed.r < mixed.g && mixed.r < mixed.b, formatHex(mixed));
+    assert.ok(mixed.r < mixed.g && mixed.r < mixed.b, mixed.hex());
     assert.ok(
       Math.abs(
         ColorSpace.oklch.fromRgb(mixed).h - ColorSpace.oklch.fromRgb(kCyan).h
@@ -79,7 +71,7 @@ describe("mixColor", () => {
 
   test("carries only the hue of a gray end, like CSS color-mix", () => {
     assert.equal(
-      formatHex(mixColor(kBlack, kRed, 0.5, { space: "hsl" })),
+      Gradient.between(kBlack, kRed, { space: "hsl" }).at(0.5).hex(),
       "#602020"
     );
   });
@@ -89,7 +81,7 @@ describe("mixColor", () => {
       hue: HueInterpolation
     ): number {
       return ColorSpace.oklch.fromRgb(
-        mixColor(kRed, kBlue, 0.5, { space: "oklch", hue })
+        Gradient.between(kRed, kBlue, { space: "oklch", hue }).at(0.5)
       ).h;
     }
 
@@ -100,18 +92,18 @@ describe("mixColor", () => {
   });
 });
 
-describe("colorRamp", () => {
+describe("Gradient.steps", () => {
   test("includes both endpoints and the requested count", () => {
-    const ramp = colorRamp(kBlack, kWhite, 5, { space: "srgb" });
+    const ramp = Gradient.between(kBlack, kWhite, { space: "srgb" }).steps(5);
 
     assert.deepEqual(
-      ramp.map((color) => formatHex(color)),
+      ramp.map((color) => color.hex()),
       ["#000000", "#404040", "#808080", "#bfbfbf", "#ffffff"]
     );
   });
 
-  test("rejects counts below two", () => {
-    assert.throws(() => colorRamp(kBlack, kWhite, 1), RangeError);
-    assert.throws(() => colorRamp(kBlack, kWhite, 2.5), RangeError);
+  test("rejects step counts below two", () => {
+    assert.throws(() => Gradient.between(kBlack, kWhite).steps(1), RangeError);
+    assert.throws(() => Gradient.between(kBlack, kWhite).steps(2.5), RangeError);
   });
 });

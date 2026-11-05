@@ -3,10 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import {
-  ColorSpace,
-  isOklchInGamut
-} from "../../src/convert/index.ts";
+import { ColorSpace } from "../../src/convert/index.ts";
 import type {
   OKLCHA,
   RGBA
@@ -87,8 +84,6 @@ describe("convert / oklch", () => {
 
   test("maps out of gamut colors by reducing chroma, keeping lightness and hue", () => {
     const vivid = { l: 0.7, c: 0.4, h: 150, a: 1 };
-    assert.equal(isOklchInGamut(vivid), false);
-
     const mapped = ColorSpace.oklch.toRgb(vivid);
     assertInRange(mapped);
 

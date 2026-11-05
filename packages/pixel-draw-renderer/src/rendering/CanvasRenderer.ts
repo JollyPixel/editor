@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  assertColor8,
-  formatRgba8
-} from "@jolly-pixel/color";
+import { Color } from "@jolly-pixel/color";
 import type { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
@@ -102,10 +99,10 @@ export class CanvasRenderer {
     );
     this.#bgSquareSize = bgSquareSize;
     this.#bgColors = {
-      odd: formatRgba8(assertColor8(bgColors.odd)),
-      even: formatRgba8(assertColor8(bgColors.even))
+      odd: Color.fromBytes(bgColors.odd).rgba(),
+      even: Color.fromBytes(bgColors.even).rgba()
     };
-    this.#backgroundColor = formatRgba8(assertColor8(backgroundColor));
+    this.#backgroundColor = Color.fromBytes(backgroundColor).rgba();
 
     ({ canvas: this.#canvas, context: this.#ctx } = createCanvas2D(0, 0));
     ({ canvas: this.#bgCanvas, context: this.#bgCtx } = createCanvas2D(0, 0));
@@ -132,7 +129,7 @@ export class CanvasRenderer {
   set backgroundColor(
     color: ByteColorInput
   ) {
-    this.#backgroundColor = formatRgba8(assertColor8(color));
+    this.#backgroundColor = Color.fromBytes(color).rgba();
     this.drawFrame();
   }
 

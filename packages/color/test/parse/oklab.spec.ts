@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { parseColor } from "../../src/parse/index.ts";
+import { parseColor } from "../../src/parse/parseColor.ts";
 import { formatHex } from "../../src/format.ts";
 
 // CONSTANTS

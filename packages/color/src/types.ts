@@ -1,4 +1,4 @@
-declare const kChannelScale: unique symbol;
+export declare const kChannelScale: unique symbol;
 
 export interface RGBA {
   r: number;
@@ -60,4 +60,4 @@ export interface OKHSLA {
 
 export type ColorInput = string | RGBA;
 
-export type ColorInput8 = string | RGBA8;
+export type ByteColorInput = string | RGBA8;

@@ -1,14 +1,9 @@
 // Import Third-party Dependencies
 import {
   ColorSpace,
-  hslToHsv,
-  hsvToHsl,
   type HSVA,
-  type HueColor
+  type HueSpace
 } from "@jolly-pixel/color";
-
-// Import Internal Dependencies
-import { PickerSpace } from "./space.ts";
 
 // CONSTANTS
 const kPercent = 100;
@@ -20,26 +15,14 @@ interface ChannelField<TChannel extends string> {
   digits?: number;
 }
 
-interface HueSibling<TChannel extends string> {
-  space: PickerSpace;
-  fromPoint?: (point: HSVA) => HueColor<TChannel>;
-  toPoint?: (coordinates: HueColor<TChannel>) => HSVA;
-}
-
 interface ChannelModelInit<TChannel extends string, TField extends string> {
   space: ColorSpace<TChannel>;
-  sibling: HueSibling<TChannel>;
   fields: Readonly<Record<TField, ChannelField<TChannel>>>;
 }
 
 export class ChannelModel<TChannel extends string, TField extends string> {
   static readonly hsl = new ChannelModel<"s" | "l", "h" | "s" | "l">({
     space: ColorSpace.hsl,
-    sibling: {
-      space: PickerSpace.hsv,
-      fromPoint: hsvToHsl,
-      toPoint: hslToHsv
-    },
     fields: {
       h: {
         key: "h",
@@ -58,9 +41,6 @@ export class ChannelModel<TChannel extends string, TField extends string> {
 
   static readonly oklch = new ChannelModel<"l" | "c", "okl" | "okc" | "okh">({
     space: ColorSpace.oklch,
-    sibling: {
-      space: PickerSpace.okhsv
-    },
     fields: {
       okl: {
         key: "l",
@@ -88,9 +68,9 @@ export class ChannelModel<TChannel extends string, TField extends string> {
 
   read(
     point: HSVA,
-    space: PickerSpace
+    space: HueSpace
   ): Record<TField, number> {
-    const coordinates = this.#coordinates(point, space);
+    const coordinates = space.read(point, this.#init.space);
     const entries = Object.entries<ChannelField<TChannel>>(this.#init.fields).map(
       ([channel, field]) => [
         channel,
@@ -105,50 +85,10 @@ export class ChannelModel<TChannel extends string, TField extends string> {
     point: HSVA,
     channel: TField,
     value: number,
-    space: PickerSpace
+    space: HueSpace
   ): HSVA {
     const { key, scale } = this.#init.fields[channel];
-    const { sibling } = this.#init;
-    const shared = space === sibling.space;
-    if (shared && key === "h") {
-      return {
-        ...point,
-        h: value
-      };
-    }
 
-    const next: HueColor<TChannel> = {
-      ...this.#coordinates(point, space),
-      [key]: value / scale
-    };
-    if (shared && sibling.toPoint !== undefined) {
-      const { s, v } = sibling.toPoint(next);
-
-      return {
-        ...point,
-        s,
-        v
-      };
-    }
-
-    return space.fromRgb(this.#init.space.toRgb(next), point);
-  }
-
-  #coordinates(
-    point: HSVA,
-    space: PickerSpace
-  ): HueColor<TChannel> {
-    const { space: target, sibling } = this.#init;
-    if (space !== sibling.space) {
-      const previous: Partial<HueColor<TChannel>> = {};
-      previous.h = target.fromRgb(space.pureHue(point)).h;
-
-      return target.fromRgb(space.toRgb(point), previous);
-    }
-
-    return {
-      ...(sibling.fromPoint?.(point) ?? target.fromRgb(space.toRgb(point))),
-      h: point.h
-    };
+    return space.write(point, this.#init.space, key, value / scale);
   }
 }

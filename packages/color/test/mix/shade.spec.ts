@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { shadeRamp } from "../../src/mix/shade.ts";
 import { ColorSpace } from "../../src/convert/index.ts";
 import { formatHex } from "../../src/format.ts";
-import { parseColor } from "../../src/parse/index.ts";
+import { parseColor } from "../../src/parse/parseColor.ts";
 import type { RGBA } from "../../src/types.ts";
 
 // CONSTANTS

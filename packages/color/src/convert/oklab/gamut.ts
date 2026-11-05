@@ -36,7 +36,7 @@ export function oklabToGamutRgb(
   return mapIntoGamut(lab, alpha);
 }
 
-export function isOklabInGamut(
+function isOklabInGamut(
   lab: Lab
 ): boolean {
   const { r, g, b } = oklabToLinearRgb(lab);

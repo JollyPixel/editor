@@ -309,7 +309,6 @@ import {
 
 #### Utilities
 
-- [Colour](./docs/api/color.md): `parseColor` and `formatHex`.
 - [Search queries](./docs/api/search.md): `SearchQuery` and the `Searchable` hook.
 - [Geometry](./docs/api/geometry.md): `Rect` and anchored placement.
 - [DOM](./docs/api/dom.md): DOM guards and field event helpers.

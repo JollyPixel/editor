@@ -66,11 +66,14 @@ new THREE.Color(ColorSequence.default.pick(object.id));
 ```ts
 type ColorSortKey = "hue" | "chroma" | "lightness" | "alpha";
 
-function sortColors(colors: readonly RGBA[], key: ColorSortKey): RGBA[]
+function sortColors<TColor extends RGBA>(
+  colors: readonly TColor[],
+  key: ColorSortKey
+): TColor[]
 ```
 
-Returns a sorted copy, ascending, using OKLCH channels. The sort is stable, so
-ties keep their order.
+Returns a sorted copy of the same color objects, ascending, using OKLCH
+channels. The sort is stable, so ties keep their order.
 
 - `"hue"` puts grays (chroma under 0.02) first by lightness, then the other
   colors by hue, then by lightness.
@@ -78,30 +81,45 @@ ties keep their order.
 ## `PaletteFile`
 
 ```ts
-type PaletteFormat = "gpl" | "hex";
-
 class PaletteFile {
-  static parse(text: string, format: PaletteFormat): PaletteFile;
-
   readonly colors: readonly RGBA8[];
   readonly name: string | null;
 
   constructor(colors: readonly RGBA8[], name?: string | null);
-
-  serialize(format: PaletteFormat): string;
 }
 ```
 
-A list of byte colors read from or written to a palette file.
+A named list of byte colors. The constructor copies `colors`. It throws a
+`RangeError` when the list is empty and a `TypeError` when a channel is not
+an integer byte.
 
-- `"gpl"` is the GIMP palette format used by GIMP, Aseprite and Lospec. A
+## `PaletteFormat`
+
+```ts
+type PaletteExtension = "gpl" | "hex";
+
+class PaletteFormat {
+  static readonly gpl: PaletteFormat;
+  static readonly hex: PaletteFormat;
+  static fromFileName(fileName: string): PaletteFormat;
+
+  readonly extension: PaletteExtension;
+
+  parse(text: string): PaletteFile;
+  serialize(file: PaletteFile): string;
+}
+```
+
+One object per palette file format.
+
+- `gpl` is the GIMP palette format used by GIMP, Aseprite and Lospec. A
   `Channels: RGBA` header adds an alpha column, as Aseprite writes it.
-- `"hex"` is the Lospec format: one `rrggbb` or `rrggbbaa` color per line,
+- `hex` is the Lospec format: one `rrggbb` or `rrggbbaa` color per line,
   with an optional `#`.
+- `fromFileName` picks `hex` for a `.hex` name, in any case, and `gpl`
+  otherwise.
 - `serialize` writes the alpha column or the eight digit form only when a
   color is translucent. GPL rows are named after their hex value.
-- The constructor copies `colors`. It throws a `RangeError` when the list is
-  empty and a `TypeError` when a channel is not an integer byte.
 
 ### `PaletteParseError`
 
@@ -115,8 +133,8 @@ Thrown by `parse` for a missing GPL header, a broken row or an empty palette.
 `line` is 1-based, or `null` when the error is not tied to a line.
 
 ```ts
-import { PaletteFile } from "@jolly-pixel/color";
+import { PaletteFormat } from "@jolly-pixel/color";
 
-const file = PaletteFile.parse(text, "gpl");
-file.serialize("hex");
+const file = PaletteFormat.fromFileName("sunset.gpl").parse(text);
+PaletteFormat.hex.serialize(file);
 ```

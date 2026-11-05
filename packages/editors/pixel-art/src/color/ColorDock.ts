@@ -17,8 +17,7 @@ import "@jolly-pixel/ui/elements/color-picker";
 import "@jolly-pixel/ui/elements/context-menu";
 import type { ContextMenu } from "@jolly-pixel/ui/elements/context-menu";
 import {
-  formatHex,
-  shadeRamp,
+  PaletteFormat,
   type ColorSortKey
 } from "@jolly-pixel/color";
 import { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
@@ -86,8 +85,8 @@ const kMenuActions = new Map<string, PaletteAction>([
   ["remove", { type: "remove" }],
   ["from-texture", { type: "from-texture" }],
   ["load", { type: "load" }],
-  ["save:gpl", { type: "save", format: "gpl" }],
-  ["save:hex", { type: "save", format: "hex" }],
+  ["save:gpl", { type: "save", format: PaletteFormat.gpl }],
+  ["save:hex", { type: "save", format: PaletteFormat.hex }],
   ...kSortKeys.map(({ key }): [string, PaletteAction] => [
     `sort:${key}`,
     { type: "sort", key }
@@ -280,12 +279,12 @@ export class ColorDock extends LitElement {
   }
 
   #shades(): ColorChangeDetail[] {
-    return shadeRamp(colorWithOpacity(this.color, this.opacity), {
+    return colorWithOpacity(this.color, this.opacity).shadeRamp({
       shades: kShadeCount,
       tints: kShadeCount
     }).map((color) => {
       return {
-        hex: formatHex(color),
+        hex: color.hex(),
         opacity: color.a
       };
     });

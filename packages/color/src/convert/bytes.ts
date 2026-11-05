@@ -3,35 +3,10 @@ import {
   clamp,
   BYTE_MAX
 } from "../math.ts";
-import type {
-  RGBA,
-  RGBA8
-} from "../types.ts";
+import type { RGBA8 } from "../types.ts";
 
 // CONSTANTS
 const kChannels = ["r", "g", "b", "a"] as const;
-
-export function toRGBA8(
-  color: RGBA
-): RGBA8 {
-  return {
-    r: toByte(color.r),
-    g: toByte(color.g),
-    b: toByte(color.b),
-    a: toByte(color.a)
-  };
-}
-
-export function fromRGBA8(
-  color: RGBA8
-): RGBA {
-  return {
-    r: color.r / BYTE_MAX,
-    g: color.g / BYTE_MAX,
-    b: color.b / BYTE_MAX,
-    a: color.a / BYTE_MAX
-  };
-}
 
 export function isRGBA8(
   value: unknown
@@ -52,17 +27,21 @@ function isByte(
     value <= BYTE_MAX;
 }
 
+export function equalRGBA8(
+  left: RGBA8,
+  right: RGBA8
+): boolean {
+  return left.r === right.r &&
+    left.g === right.g &&
+    left.b === right.b &&
+    left.a === right.a;
+}
+
 export function toByte(
   channel: number
 ): number {
-  return clampByte(channel * BYTE_MAX);
-}
-
-export function clampByte(
-  value: number
-): number {
   return clamp(
-    Math.round(value),
+    Math.round(channel * BYTE_MAX),
     0,
     BYTE_MAX
   );

@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import { equalRGBA8 } from "@jolly-pixel/color";
+
 // Import Internal Dependencies
-import { rgba8Equal } from "../utils/colors.ts";
 import type {
   RGBA8,
   Vec2
@@ -100,7 +102,7 @@ export class Fill {
     }
 
     const [seedColor] = buffer.samplePixels([seed]);
-    if (rgba8Equal(seedColor, fillColor)) {
+    if (equalRGBA8(seedColor, fillColor)) {
       return [];
     }
 

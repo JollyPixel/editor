@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { formatRgba } from "@jolly-pixel/color";
 import {
   LitElement,
   html,
@@ -66,11 +65,11 @@ export class ColorStrip extends LitElement {
     color: ColorChangeDetail,
     index: number
   ): string {
-    const rgba = colorWithOpacity(color.hex, color.opacity);
-    const fill = `--swatch-color:${formatRgba(rgba)}`;
+    const swatch = colorWithOpacity(color.hex, color.opacity);
+    const fill = `--swatch-color:${swatch.rgba()}`;
 
     return this.current === index ?
-      `${fill};--swatch-ring:${formatSwatchRing(rgba)}` :
+      `${fill};--swatch-ring:${formatSwatchRing(swatch)}` :
       fill;
   }
 

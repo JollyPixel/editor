@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  Color,
   ColorSpace,
-  parseColor,
   type RGBA
 } from "@jolly-pixel/color";
 
@@ -30,7 +30,7 @@ const kOpaqueSwatches = [
 function rgba(
   input: string
 ): RGBA {
-  const color = parseColor(input);
+  const color = Color.parse(input);
   assert.ok(color !== null);
 
   return color;
