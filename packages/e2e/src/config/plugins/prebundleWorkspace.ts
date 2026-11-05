@@ -11,7 +11,6 @@ import {
 } from "./WorkspaceImportScan.ts";
 
 // CONSTANTS
-const kE2EMode = "e2e";
 const kWorkspaceScope = "@jolly-pixel/";
 const kPage = "index.html";
 const kPageExtension = ".html";
@@ -22,7 +21,7 @@ export function prebundleWorkspace(): Plugin {
 
   return {
     name: "jolly-pixel:prebundle-workspace",
-    apply: (_config, env) => env.command === "serve" && env.mode === kE2EMode,
+    apply: "serve",
     config() {
       return {
         optimizeDeps: {
