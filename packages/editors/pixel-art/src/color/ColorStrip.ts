@@ -15,6 +15,7 @@ import type { ColorChangeDetail } from "./ColorSwatch.ts";
 import type { StripPickDetail } from "./PaletteAction.ts";
 import { colorWithOpacity } from "./pickerChange.ts";
 import { colorStripStyles } from "./ColorStrip.styles.ts";
+import { formatSwatchRing } from "./swatchRing.ts";
 
 @customElement("color-strip")
 export class ColorStrip extends LitElement {
@@ -53,12 +54,24 @@ export class ColorStrip extends LitElement {
             aria-label=${`${this.label} ${index + 1}: ${color.hex}`}
             aria-current=${this.current === index ? "true" : nothing}
             title=${`${color.hex}: ${hint}`}
-            style=${`--swatch-color:${formatRgba(colorWithOpacity(color.hex, color.opacity))}`}
+            style=${this.#swatchStyle(color, index)}
             @click=${(event: MouseEvent) => this.#pick(event, color)}
           ></button>
         `)}
       </div>
     `;
+  }
+
+  #swatchStyle(
+    color: ColorChangeDetail,
+    index: number
+  ): string {
+    const rgba = colorWithOpacity(color.hex, color.opacity);
+    const fill = `--swatch-color:${formatRgba(rgba)}`;
+
+    return this.current === index ?
+      `${fill};--swatch-ring:${formatSwatchRing(rgba)}` :
+      fill;
   }
 
   #pick(

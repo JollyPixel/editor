@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
 import {
   formatHex8,
-  formatRgba8
+  formatRgba8,
+  fromRGBA8,
+  type RGBA8
 } from "@jolly-pixel/color";
 import { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
 import {
@@ -21,6 +23,7 @@ import { classMap } from "lit/directives/class-map.js";
 import { colorPaletteGridStyles } from "./ColorPaletteGrid.styles.ts";
 import type { PaletteDropDetail } from "./PaletteAction.ts";
 import type { PaletteSelection } from "./PaletteSelection.ts";
+import { formatSwatchRing } from "./swatchRing.ts";
 
 // CONSTANTS
 const kRows = 5;
@@ -117,7 +120,7 @@ export class ColorPaletteGrid extends LitElement {
             title=${`${formatHex8(color, true)}: ${hint}`}
             draggable=${editable ? "true" : "false"}
             ?disabled=${this.disabled}
-            style=${`--swatch-color:${formatRgba8(color)}`}
+            style=${this.#swatchStyle(color, index)}
             @click=${(event: MouseEvent) => this.#select(event, index)}
             @dblclick=${(event: MouseEvent) => this.#edit(event, index)}
             @contextmenu=${(event: MouseEvent) => this.#context(event, index)}
@@ -136,6 +139,17 @@ export class ColorPaletteGrid extends LitElement {
         `)}
       </div>
     `;
+  }
+
+  #swatchStyle(
+    color: RGBA8,
+    index: number
+  ): string {
+    const fill = `--swatch-color:${formatRgba8(color)}`;
+
+    return this.selection?.focus === index ?
+      `${fill};--swatch-ring:${formatSwatchRing(fromRGBA8(color))}` :
+      fill;
   }
 
   #select(

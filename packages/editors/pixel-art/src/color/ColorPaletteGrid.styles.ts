@@ -43,19 +43,18 @@ export const colorPaletteGridStyles = css`
     outline: 0;
   }
 
-  button[aria-pressed="true"]::after,
+  button[aria-pressed="true"] {
+    border: 2px solid var(--swatch-ring, var(--color-text));
+  }
+
   button:focus-visible::after {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: inset 0 0 0 1px #fff, inset 0 0 0 2px #111;
-    pointer-events: none;
-  }
-
-  button:focus-visible::after {
     box-shadow: inset 0 0 0 2px var(--color-accent, #48f),
       inset 0 0 0 3px #fff;
+    pointer-events: none;
   }
 
   button.in-range:not([aria-pressed="true"], :focus-visible)::after {
