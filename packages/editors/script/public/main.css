@@ -26,15 +26,6 @@ jolly-scope {
   --jolly-label-width: 12ch;
 }
 
-jolly-pane::part(content) {
-  padding: 0;
-}
-
-jolly-dock {
-  --jolly-dock-handle-size: 8px;
-  --jolly-dock-resize-bg: transparent;
-}
-
 .script-column {
   display: flex;
   flex: 1;

@@ -77,6 +77,7 @@ export class ScriptCode extends LitElement {
       position: absolute;
       inset: 0;
       overflow: auto;
+      padding-block-start: var(--script-padding-top);
     }
 
     .sizer {

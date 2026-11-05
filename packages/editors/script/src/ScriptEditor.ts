@@ -1,11 +1,9 @@
 // Import Third-party Dependencies
 import {
   SCRIPT_KIND,
-  ScriptOutlineFeed,
   TEXT_KIND,
   textDocumentKind,
-  type ScriptDocument,
-  type ScriptRoom
+  type ScriptDocument
 } from "@jolly-pixel/asset.script/client";
 import {
   bindPresenceStack,
@@ -18,8 +16,6 @@ import "@jolly-pixel/editor.host/ui";
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
 import { fileLanguage } from "./panes/code/ScriptHighlighter.ts";
-import { OutlineRefresh } from "./panes/outline/OutlineRefresh.ts";
-import type { ScriptOutlinePane } from "./panes/outline/ScriptOutlinePane.ts";
 import { bindMarkdownPreview } from "./panes/preview/bindMarkdownPreview.ts";
 
 // CONSTANTS
@@ -49,7 +45,7 @@ export class ScriptEditor {
     context: EditorContext
   ): Promise<ScriptEditor> {
     const { session } = context;
-    const { kind, path } = session.targetRecord;
+    const { path } = session.targetRecord;
     const target = session.targetLease(kScriptKind, kTextKind);
     const language = fileLanguage(path);
     const teardown = new Teardown();
@@ -60,9 +56,8 @@ export class ScriptEditor {
         editorToolbar.sources = context.toolbar;
       }
       const code = document.querySelector("jolly-script-code");
-      const outlinePane = document.querySelector("jolly-script-outline");
       const preview = document.querySelector("jolly-markdown");
-      if (code === null || outlinePane === null || preview === null) {
+      if (code === null || preview === null) {
         throw new Error("ScriptEditor: the page is missing a script pane.");
       }
 
@@ -71,13 +66,6 @@ export class ScriptEditor {
         document: target.document
       });
       teardown.defer(() => collaboration.dispose());
-      let outline: ScriptOutlineFeed | null = null;
-      if (kind === SCRIPT_KIND) {
-        outline = attachOutline(target.room, target.document, outlinePane, teardown);
-      }
-      else {
-        outlinePane.closest("jolly-dock")?.remove();
-      }
 
       const presenceStack = document.querySelector("jolly-presence-stack");
       if (presenceStack !== null) {
@@ -100,7 +88,6 @@ export class ScriptEditor {
           code.hidden = readOnly;
           teardown.defer(bindMarkdownPreview(preview, target.document));
         }
-        outline?.request();
       });
 
       return new ScriptEditor({
@@ -136,19 +123,4 @@ export class ScriptEditor {
   dispose(): void {
     this.#teardown.run();
   }
-}
-
-function attachOutline(
-  room: ScriptRoom,
-  document: ScriptDocument,
-  pane: ScriptOutlinePane,
-  teardown: Teardown
-): ScriptOutlineFeed {
-  const outline = new ScriptOutlineFeed(room);
-  teardown.defer(() => outline.dispose());
-  const refresh = new OutlineRefresh(document, outline);
-  teardown.defer(() => refresh.dispose());
-  pane.attach(outline);
-
-  return outline;
 }
