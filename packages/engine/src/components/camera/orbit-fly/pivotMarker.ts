@@ -3,19 +3,26 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { disposeObject3D } from "../../../utils/disposeObject3D.ts";
+import type { WorldScale } from "./WorldScale.ts";
 
 // CONSTANTS
 const kPivotMarkerColor = 0x999999;
-const kPivotMarkerSize = 0.2;
 const kPivotMarkerRenderOrder = 999;
 
 export interface PivotMarkerOptions {
   enabled: boolean;
+  /**
+   * Half-length of each axis line, in world units.
+   */
+  size: number;
+  scale: WorldScale;
   sceneProvider: () => THREE.Object3D;
 }
 
 export class PivotMarker {
   #enabled: boolean;
+  #size: number;
+  #scale: WorldScale;
   #sceneProvider: () => THREE.Object3D;
   #object: THREE.Object3D | null = null;
 
@@ -23,6 +30,8 @@ export class PivotMarker {
     options: PivotMarkerOptions
   ) {
     this.#enabled = options.enabled;
+    this.#size = options.size;
+    this.#scale = options.scale;
     this.#sceneProvider = options.sceneProvider;
   }
 
@@ -44,10 +53,11 @@ export class PivotMarker {
     }
   }
 
-  moveTo(
+  placeAt(
     position: THREE.Vector3Like
   ): void {
     this.#object?.position.copy(position);
+    this.#object?.scale.setScalar(this.#scale.length(this.#size));
   }
 
   dispose(): void {
@@ -59,11 +69,10 @@ export class PivotMarker {
 }
 
 function createPivotMarkerObject(): THREE.Object3D {
-  const halfSize = kPivotMarkerSize;
   const geometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-halfSize, 0, 0), new THREE.Vector3(halfSize, 0, 0),
-    new THREE.Vector3(0, -halfSize, 0), new THREE.Vector3(0, halfSize, 0),
-    new THREE.Vector3(0, 0, -halfSize), new THREE.Vector3(0, 0, halfSize)
+    new THREE.Vector3(-1, 0, 0), new THREE.Vector3(1, 0, 0),
+    new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0, 1)
   ]);
   const material = new THREE.LineBasicMaterial({
     color: kPivotMarkerColor,

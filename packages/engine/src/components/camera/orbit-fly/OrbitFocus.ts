@@ -5,6 +5,7 @@ import * as THREE from "three/webgpu";
 import { PivotMarker } from "./pivotMarker.ts";
 import { NumberRange } from "./NumberRange.ts";
 import type { LookOrientation } from "./LookAngles.ts";
+import type { WorldScale } from "./WorldScale.ts";
 import {
   type CameraFocus,
   type CameraFocusEnterRequest,
@@ -35,6 +36,8 @@ export interface OrbitFocusOptions {
    */
   pivotNudgeStep: number;
   showPivotMarker: boolean;
+  pivotMarkerSize: number;
+  scale: WorldScale;
   /**
    * Resolves the scene root lazily, on first use.
    */
@@ -45,6 +48,7 @@ export class OrbitFocus implements CameraFocus {
   #distanceRange: NumberRange;
   #pivotZoomStep: number;
   #pivotNudgeStep: number;
+  #scale: WorldScale;
   #marker: PivotMarker;
 
   #hasPivot = false;
@@ -75,8 +79,11 @@ export class OrbitFocus implements CameraFocus {
     );
     this.#pivotZoomStep = options.pivotZoomStep;
     this.#pivotNudgeStep = options.pivotNudgeStep;
+    this.#scale = options.scale;
     this.#marker = new PivotMarker({
       enabled: options.showPivotMarker,
+      size: options.pivotMarkerSize,
+      scale: options.scale,
       sceneProvider: options.sceneProvider
     });
   }
@@ -110,7 +117,7 @@ export class OrbitFocus implements CameraFocus {
     const { point, cameraPosition, angles, up } = request;
     this.#pivotPoint.copy(point ?? cameraPosition);
     this.#targetPivotPoint.copy(this.#pivotPoint);
-    this.#pivotDistance = this.#distanceRange.clamp(
+    this.#pivotDistance = this.#clampDistance(
       cameraPosition.distanceTo(this.#pivotPoint)
     );
     this.#targetPivotDistance = this.#pivotDistance;
@@ -118,7 +125,7 @@ export class OrbitFocus implements CameraFocus {
     this.#isOrbiting = true;
 
     this.#marker.show();
-    this.#marker.moveTo(this.#pivotPoint);
+    this.#marker.placeAt(this.#pivotPoint);
 
     if (point === undefined) {
       return {
@@ -162,12 +169,19 @@ export class OrbitFocus implements CameraFocus {
     const { body, angles, deltaTime, responsiveness } = pose;
     const smoothing = smoothingFactor(responsiveness, deltaTime);
 
+    this.#targetPivotDistance = this.#clampDistance(this.#targetPivotDistance);
     this.#pivotDistance = dampScalar(
-      this.#pivotDistance,
+      this.#clampDistance(this.#pivotDistance),
       this.#targetPivotDistance,
-      smoothing
+      smoothing,
+      this.#scale
     );
-    dampVector(this.#pivotPoint, this.#targetPivotPoint, smoothing);
+    dampVector(
+      this.#pivotPoint,
+      this.#targetPivotPoint,
+      smoothing,
+      this.#scale
+    );
 
     angles.writeTo(this.#orientation);
     this.#orbitOffset
@@ -180,7 +194,7 @@ export class OrbitFocus implements CameraFocus {
     body.orientation.setFromRotationMatrix(
       this.#lookMatrix.lookAt(body.position, this.#pivotPoint, kUp)
     );
-    this.#marker.moveTo(this.#pivotPoint);
+    this.#marker.placeAt(this.#pivotPoint);
   }
 
   handleScroll(
@@ -190,19 +204,23 @@ export class OrbitFocus implements CameraFocus {
       return false;
     }
 
-    this.#targetPivotDistance = this.#distanceRange.clamp(
+    this.#targetPivotDistance = this.#clampDistance(
       this.#targetPivotDistance * Math.pow(1 + this.#pivotZoomStep, -scrollY)
     );
 
     return true;
   }
 
+  #clampDistance(
+    distance: number
+  ): number {
+    return this.#scale.clamp(this.#distanceRange, distance);
+  }
+
   #snapCardinal(
     vector: THREE.Vector3,
-    sign: number
+    step: number
   ): THREE.Vector3 {
-    const step = sign * this.#pivotNudgeStep;
-
     return Math.abs(vector.x) >= Math.abs(vector.z) ?
       this.#nudgeStep.set(Math.sign(vector.x) * step, 0, 0) :
       this.#nudgeStep.set(0, 0, Math.sign(vector.z) * step);
@@ -221,19 +239,21 @@ export class OrbitFocus implements CameraFocus {
     forward: THREE.Vector3,
     right: THREE.Vector3
   ): THREE.Vector3 {
+    const step = this.#scale.length(this.#pivotNudgeStep);
+
     switch (direction) {
       case "forward":
-        return this.#snapCardinal(forward, 1);
+        return this.#snapCardinal(forward, step);
       case "back":
-        return this.#snapCardinal(forward, -1);
+        return this.#snapCardinal(forward, -step);
       case "right":
-        return this.#snapCardinal(right, 1);
+        return this.#snapCardinal(right, step);
       case "left":
-        return this.#snapCardinal(right, -1);
+        return this.#snapCardinal(right, -step);
       case "up":
-        return this.#nudgeStep.set(0, this.#pivotNudgeStep, 0);
+        return this.#nudgeStep.set(0, step, 0);
       case "down":
-        return this.#nudgeStep.set(0, -this.#pivotNudgeStep, 0);
+        return this.#nudgeStep.set(0, -step, 0);
     }
   }
 

@@ -12,11 +12,15 @@ import * as THREE from "three/webgpu";
 import type { AnimationPlayer } from "../player/AnimationPlayer.ts";
 import type { ModelPreview } from "../preview/ModelPreview.ts";
 import { createModelGrid } from "./modelGrid.ts";
+import { modelScale } from "./modelScale.ts";
 
 // CONSTANTS
 const kFraming = {
-  margin: 1.5,
-  minDistance: 1
+  margin: 1.5
+} as const;
+const kLens = {
+  near: 0.01,
+  far: 400
 } as const;
 
 export interface ModelStageOptions {
@@ -58,7 +62,12 @@ export class ModelStage extends ActorComponent {
   }
 
   frame(): void {
-    const bounds = this.#bounds();
+    this.#frame(this.#bounds());
+  }
+
+  #frame(
+    bounds: THREE.Box3
+  ): void {
     if (bounds.isEmpty()) {
       return;
     }
@@ -88,8 +97,10 @@ export class ModelStage extends ActorComponent {
       this.actor.addChildren(model.object);
       player.load(model.object, model.animations);
     }
-    this.#placeGrid(this.#bounds());
-    this.frame();
+    const bounds = this.#bounds();
+    this.#placeGrid(bounds);
+    this.#scaleCamera(bounds);
+    this.#frame(bounds);
     this.actor.world.invalidate();
   }
 
@@ -99,6 +110,19 @@ export class ModelStage extends ActorComponent {
     return this.#shown === null ?
       bounds :
       bounds.setFromObject(this.#shown.object);
+  }
+
+  #scaleCamera(
+    bounds: THREE.Box3
+  ): void {
+    const { camera } = this.#options;
+    const scale = modelScale(bounds);
+
+    camera.worldScale = scale;
+    camera.configure({
+      near: kLens.near * scale,
+      far: kLens.far * scale
+    });
   }
 
   #placeGrid(

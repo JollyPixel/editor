@@ -34,6 +34,6 @@ describe("createModelGrid", () => {
   test("sits under a model that reaches below the ground", () => {
     const grid = createModelGrid(box([-1, -2, -1], [1, 2, 1]));
 
-    assert.equal(grid.position.y, -2);
+    assert.equal(grid.offset, -2);
   });
 });

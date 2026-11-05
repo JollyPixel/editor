@@ -1,12 +1,16 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 
+// Import Internal Dependencies
+import type { WorldScale } from "./WorldScale.ts";
+
 // CONSTANTS
-const kRestingSpeedSq = 1e-6;
+const kRestingSpeed = 1e-3;
 
 export interface SmoothedVelocityOptions {
   accelerationTime: number;
   brakingTime: number;
+  scale: WorldScale;
 }
 
 export class SmoothedVelocity {
@@ -14,6 +18,7 @@ export class SmoothedVelocity {
 
   #accelerationTime: number;
   #brakingTime: number;
+  #scale: WorldScale;
   #acceleration = new THREE.Vector3();
   #change = new THREE.Vector3();
   #impulse = new THREE.Vector3();
@@ -23,6 +28,7 @@ export class SmoothedVelocity {
   ) {
     this.#accelerationTime = options.accelerationTime;
     this.#brakingTime = options.brakingTime;
+    this.#scale = options.scale;
   }
 
   get resting(): boolean {
@@ -57,7 +63,8 @@ export class SmoothedVelocity {
       .copy(this.#change.add(this.#impulse).multiplyScalar(decay))
       .add(target);
 
-    if (braking && this.value.lengthSq() < kRestingSpeedSq) {
+    const restingSpeed = this.#scale.length(kRestingSpeed);
+    if (braking && this.value.lengthSq() < restingSpeed ** 2) {
       this.stop();
     }
   }

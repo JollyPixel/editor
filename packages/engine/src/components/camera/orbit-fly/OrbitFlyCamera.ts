@@ -87,6 +87,18 @@ export class OrbitFlyCamera extends CameraComponent {
     this.#rig.moveSpeed = speed;
   }
 
+  get worldScale(): number {
+    return this.#rig.worldScale;
+  }
+
+  set worldScale(
+    scale: number
+  ) {
+    this.#rig.worldScale = scale;
+    this.#writeBody();
+    this.actor.world.invalidate();
+  }
+
   get mouseSensitivity(): number {
     return this.#rig.mouseSensitivity;
   }

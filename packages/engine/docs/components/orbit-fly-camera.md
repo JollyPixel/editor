@@ -76,6 +76,7 @@ interface OrbitFlyCameraOptions extends CameraOptions {
   pivotZoomStep?: number;
   pivotNudgeStep?: number;
   showPivotMarker?: boolean;
+  pivotMarkerSize?: number;
   fov?: number;
   far?: number;
 }
@@ -106,6 +107,7 @@ interface OrbitFlyCameraOptions extends CameraOptions {
 | `pivotZoomStep` | `0.1` | While orbiting in "lock" mode, each wheel notch multiplies or divides the pivot distance by `1 + pivotZoomStep` |
 | `pivotNudgeStep` | `1` | Distance nudged per key press while orbiting in "lock" mode |
 | `showPivotMarker` | `true` | Draws a marker at the pivot in "lock" and "elastic" modes |
+| `pivotMarkerSize` | `0.2` | Half-length of each pivot marker axis line, in world units |
 | `fov` | `60` | Vertical field of view, in degrees |
 | `far` | `2000` | Far clipping plane |
 
@@ -185,6 +187,9 @@ interface OrbitFlyCamera {
   // Change moveSpeed at runtime (clamped to minMoveSpeed/maxMoveSpeed).
   set moveSpeed(value: number);
 
+  // Multiplies every world-unit option, see World scale.
+  worldScale: number;
+
   // The look options, read and written at runtime.
   mouseSensitivity: number;
   touchpadLookSensitivity: number;
@@ -239,6 +244,33 @@ The camera keeps an on-demand host rendering through
 [`world.keepAlive()`](../systems/world.md#rendering-on-demand) while it is
 enabled and `moving`. `teleport()`, `frame()`, `enterOrbitFocus()` and
 `exitOrbitFocus()` call `world.invalidate()`.
+
+## World scale
+
+`worldScale` (default `1`) multiplies `moveSpeed`, `minMoveSpeed`,
+`maxMoveSpeed`, `minPivotDistance`, `maxPivotDistance`, `pivotNudgeStep`,
+`scrollSpeed` and `pivotMarkerSize` where the camera uses them, so the
+options keep working on a scene far smaller or larger than a few units.
+The options keep their own values: `moveSpeed` reads the same at any scale.
+Changing the scale pulls an engaged pivot or trail distance inside the new
+bounds at once. The distances under which a pivot or trail stops damping
+and a glide stops braking follow it too, so motion stays smooth on a tiny
+scene. A value that is not a finite number greater than 0 throws a
+`RangeError`.
+
+`worldScale` never changes `near` or `far`. Scale the clipping planes with
+[`configure`](camera.md#runtime-changes):
+
+```ts
+const { radius } = bounds.getBoundingSphere(new THREE.Sphere());
+
+camera.worldScale = radius;
+camera.configure({
+  near: radius * 0.01,
+  far: radius * 400
+});
+camera.frame(bounds);
+```
 
 ## bindOrbitFocus(camera, keyboard)
 

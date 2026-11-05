@@ -4,6 +4,7 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import { PivotMarker } from "./pivotMarker.ts";
 import { NumberRange } from "./NumberRange.ts";
+import type { WorldScale } from "./WorldScale.ts";
 import {
   type CameraFocus,
   type CameraFocusPose,
@@ -27,6 +28,8 @@ export interface ElasticFocusOptions {
    */
   initialTrailDistance?: number;
   showPivotMarker: boolean;
+  pivotMarkerSize: number;
+  scale: WorldScale;
   /**
    * Resolves the scene root lazily, on first use.
    */
@@ -38,6 +41,7 @@ export class ElasticFocus implements CameraFocus {
 
   #trailRange: NumberRange;
   #trailScrollStep: number;
+  #scale: WorldScale;
   #marker: PivotMarker;
 
   #pivotPosition: THREE.Vector3;
@@ -51,8 +55,11 @@ export class ElasticFocus implements CameraFocus {
   ) {
     this.#trailRange = new NumberRange(0, options.maxTrailDistance);
     this.#trailScrollStep = options.trailScrollStep;
+    this.#scale = options.scale;
     this.#marker = new PivotMarker({
       enabled: options.showPivotMarker,
+      size: options.pivotMarkerSize,
+      scale: options.scale,
       sceneProvider: options.sceneProvider
     });
     this.#pivotPosition = new THREE.Vector3().copy(options.initialPosition);
@@ -107,14 +114,15 @@ export class ElasticFocus implements CameraFocus {
     this.#pivotPosition
       .copy(position)
       .addScaledVector(this.#forward, this.#trailDistance);
-    this.#marker.moveTo(this.#pivotPosition);
+    this.#marker.placeAt(this.#pivotPosition);
   }
 
   handleScroll(
     scrollY: number
   ): boolean {
-    this.#targetTrailDistance = this.#trailRange.clamp(
-      this.#targetTrailDistance - (scrollY * this.#trailScrollStep)
+    const step = this.#scale.length(this.#trailScrollStep);
+    this.#targetTrailDistance = this.#clampTrail(
+      this.#targetTrailDistance - (scrollY * step)
     );
 
     if (this.#targetTrailDistance > 0) {
@@ -132,17 +140,25 @@ export class ElasticFocus implements CameraFocus {
   ): void {
     const { body, deltaTime, responsiveness } = pose;
 
+    this.#targetTrailDistance = this.#clampTrail(this.#targetTrailDistance);
     this.#trailDistance = dampScalar(
-      this.#trailDistance,
+      this.#clampTrail(this.#trailDistance),
       this.#targetTrailDistance,
-      smoothingFactor(responsiveness, deltaTime)
+      smoothingFactor(responsiveness, deltaTime),
+      this.#scale
     );
 
     this.#forward.set(0, 0, -1).applyQuaternion(body.orientation);
     body.position
       .copy(this.#pivotPosition)
       .addScaledVector(this.#forward, -this.#trailDistance);
-    this.#marker.moveTo(this.#pivotPosition);
+    this.#marker.placeAt(this.#pivotPosition);
+  }
+
+  #clampTrail(
+    distance: number
+  ): number {
+    return this.#scale.clamp(this.#trailRange, distance);
   }
 
   dispose(): void {

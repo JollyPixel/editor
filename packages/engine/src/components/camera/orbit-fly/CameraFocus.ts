@@ -7,6 +7,7 @@ import type {
   LookAngles,
   LookOrientation
 } from "./LookAngles.ts";
+import type { WorldScale } from "./WorldScale.ts";
 
 // CONSTANTS
 const kSmoothingSnapEpsilon = 1e-3;
@@ -119,20 +120,25 @@ export function smoothingFactor(
 export function dampScalar(
   current: number,
   target: number,
-  smoothing: number
+  smoothing: number,
+  scale: WorldScale
 ): number {
   const next = current + ((target - current) * smoothing);
+  const snap = scale.length(kSmoothingSnapEpsilon);
 
-  return Math.abs(target - next) < kSmoothingSnapEpsilon ? target : next;
+  return Math.abs(target - next) < snap ? target : next;
 }
 
 export function dampVector(
   current: THREE.Vector3,
   target: THREE.Vector3,
-  smoothing: number
+  smoothing: number,
+  scale: WorldScale
 ): void {
+  const snap = scale.length(kSmoothingSnapEpsilon);
+
   current.lerp(target, smoothing);
-  if (current.distanceToSquared(target) < kSmoothingSnapEpsilon ** 2) {
+  if (current.distanceToSquared(target) < snap ** 2) {
     current.copy(target);
   }
 }

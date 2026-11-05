@@ -20,10 +20,13 @@ const kCameraPreset = {
   position: { x: 3, y: 2.5, z: 4 },
   pitch: -0.4,
   yaw: 0.6,
-  moveSpeed: 4,
-  minMoveSpeed: 0.5,
-  maxMoveSpeed: 60,
-  maxPivotDistance: 200
+  moveSpeed: 2,
+  minMoveSpeed: 0.25,
+  maxMoveSpeed: 30,
+  minPivotDistance: 0.1,
+  maxPivotDistance: 200,
+  pivotNudgeStep: 0.25,
+  pivotMarkerSize: 0.05
 } as const;
 
 export interface ModelViewerSceneOptions {
