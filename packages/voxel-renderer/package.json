@@ -56,6 +56,7 @@
   "peerDependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/physics": "workspace:*",
     "three": "^0.186.0"
   },
   "peerDependenciesMeta": {
@@ -64,13 +65,17 @@
     },
     "@jolly-pixel/engine": {
       "optional": true
+    },
+    "@jolly-pixel/physics": {
+      "optional": true
     }
   },
   "devDependencies": {
-    "@dimforge/rapier3d": "0.21.0",
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/loop": "workspace:*",
+    "@jolly-pixel/physics": "workspace:*",
+    "@jolly-pixel/physics.rapier": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "math": "0.1.0"

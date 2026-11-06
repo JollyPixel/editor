@@ -46,5 +46,3 @@ export type {
 
 export type { VoxelLogger } from "./VoxelLogger.ts";
 export { FACE as Face } from "./document/geometry/faceDirection.ts";
-
-export * from "./plugins/rapier/index.ts";

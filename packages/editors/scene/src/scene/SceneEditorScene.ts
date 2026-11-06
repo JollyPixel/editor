@@ -170,7 +170,10 @@ export class SceneEditorScene extends Systems.Scene {
     const gizmo = new GizmoSettings();
     world
       .createActor("scene-helpers")
-      .addComponent(SceneHelpers, { binding });
+      .addComponent(SceneHelpers, {
+        binding,
+        preferences: this.#options.preferences
+      });
     world
       .createActor("selection-highlight")
       .addComponent(SelectionHighlight, {

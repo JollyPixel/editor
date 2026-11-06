@@ -111,7 +111,7 @@ describe("SceneComponents", () => {
 
     assert.deepEqual(
       labels.map((label) => (typeof label === "string" ? label : label[0])),
-      ["Empty", "-", "Camera", "Light", "3D", "Note"]
+      ["Empty", "-", "Camera", "Light", "3D", "Physics", "Note"]
     );
     assert.deepEqual(folders.get("3D")?.slice(-3), ["-", "Text…", "Map…"]);
     assert.deepEqual(components.descriptors, [FONT_ASSET, kMapSource.descriptor]);

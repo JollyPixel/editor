@@ -1,8 +1,8 @@
+// Import Third-party Dependencies
+import type { ColliderDesc } from "@jolly-pixel/physics";
+
 // Import Internal Dependencies
-import type {
-  VoxelCollider,
-  VoxelChunkCollision
-} from "../../view/collision/VoxelCollider.ts";
+import type { VoxelChunkCollision } from "./VoxelCollider.ts";
 import type { BlockRegistry } from "../../document/blocks/BlockRegistry.ts";
 import type { BlockShape } from "../../document/blocks/shape/BlockShape.ts";
 import type { BlockShapeRegistry } from "../../document/blocks/shape/BlockShapeRegistry.ts";
@@ -23,67 +23,7 @@ import {
   rotateVertex
 } from "../../document/geometry/rotation.ts";
 
-export interface RapierColliderDesc {
-  setTranslation(
-    x: number,
-    y: number,
-    z: number
-  ): this;
-}
-
-export interface RapierRigidBodyDesc {
-  setTranslation(
-    x: number,
-    y: number,
-    z: number
-  ): this;
-}
-
-export interface RapierRigidBody {
-  readonly handle: number;
-}
-
-export interface RapierCollider {
-  readonly handle: number;
-}
-
-export interface RapierWorld {
-  createRigidBody(
-    desc: RapierRigidBodyDesc
-  ): RapierRigidBody;
-  createCollider(
-    desc: RapierColliderDesc,
-    parent?: RapierRigidBody
-  ): RapierCollider;
-  removeCollider(
-    collider: RapierCollider,
-    wakeUp: boolean
-  ): void;
-  removeRigidBody(
-    body: RapierRigidBody
-  ): void;
-}
-
-export interface RapierAPI {
-  RigidBodyDesc: {
-    fixed(): RapierRigidBodyDesc;
-  };
-  ColliderDesc: {
-    cuboid(
-      hx: number,
-      hy: number,
-      hz: number
-    ): RapierColliderDesc;
-    trimesh(
-      vertices: Float32Array,
-      indices: Uint32Array
-    ): RapierColliderDesc;
-  };
-}
-
-export interface RapierVoxelColliderOptions {
-  api: RapierAPI;
-  world: RapierWorld;
+export interface VoxelCollisionShapesOptions {
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
 }
@@ -104,23 +44,18 @@ interface ChunkSolids {
   indices: number[];
 }
 
-export class RapierVoxelCollider implements VoxelCollider {
-  #rapier: RapierAPI;
-  #world: RapierWorld;
+export class VoxelCollisionShapes {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
   #complements: BlockComplements;
 
-  #bodies = new Map<string, RapierRigidBody>();
   #bounds = new Map<string, ShapeBounds>();
   #shapeVersion = -1;
   #filled = new Uint8Array(0);
 
   constructor(
-    options: RapierVoxelColliderOptions
+    options: VoxelCollisionShapesOptions
   ) {
-    this.#rapier = options.api;
-    this.#world = options.world;
     this.#blockRegistry = options.blockRegistry;
     this.#shapeRegistry = options.shapeRegistry;
     this.#complements = new BlockComplements({
@@ -129,47 +64,15 @@ export class RapierVoxelCollider implements VoxelCollider {
     });
   }
 
-  rebuildChunk(
-    key: string,
+  extract(
     collision: VoxelChunkCollision
-  ): void {
-    this.removeChunk(key);
+  ): ColliderDesc[] {
     if (this.#shapeVersion !== this.#shapeRegistry.version) {
       this.#bounds.clear();
       this.#shapeVersion = this.#shapeRegistry.version;
     }
 
-    const body = this.#buildChunkBody(collision);
-    if (body) {
-      this.#bodies.set(key, body);
-    }
-  }
-
-  removeChunk(
-    key: string
-  ): void {
-    const body = this.#bodies.get(key);
-    if (!body) {
-      return;
-    }
-
-    this.#world.removeRigidBody(body);
-    this.#bodies.delete(key);
-  }
-
-  dispose(): void {
-    for (const body of this.#bodies.values()) {
-      this.#world.removeRigidBody(body);
-    }
-    this.#bodies.clear();
-    this.#bounds.clear();
-    this.#filled = new Uint8Array(0);
-  }
-
-  #buildChunkBody(
-    collision: VoxelChunkCollision
-  ): RapierRigidBody | null {
-    const { origin, chunks } = collision;
+    const { chunks } = collision;
     const solids: ChunkSolids = {
       cubes: [],
       boxes: [],
@@ -184,30 +87,32 @@ export class RapierVoxelCollider implements VoxelCollider {
       solids.boxes.length === 0 &&
       solids.indices.length === 0
     ) {
-      return null;
+      return [];
     }
 
-    const body = this.#world.createRigidBody(
-      this.#rapier.RigidBodyDesc
-        .fixed()
-        .setTranslation(origin.x, origin.y, origin.z)
-    );
-
-    this.#buildCubes(body, solids.cubes, chunks[0].size);
+    const colliders = this.#mergeCubes(solids.cubes, chunks[0].size);
     for (const { origin, bounds } of solids.boxes) {
-      this.#buildBox(body, origin, bounds);
+      const box = boundsBox(origin, bounds);
+      if (box !== null) {
+        colliders.push(box);
+      }
     }
     if (solids.indices.length > 0) {
-      this.#world.createCollider(
-        this.#rapier.ColliderDesc.trimesh(
-          new Float32Array(solids.vertices),
-          new Uint32Array(solids.indices)
-        ),
-        body
-      );
+      colliders.push({
+        shape: {
+          type: "trimesh",
+          vertices: new Float32Array(solids.vertices),
+          indices: new Uint32Array(solids.indices)
+        }
+      });
     }
 
-    return body;
+    return colliders;
+  }
+
+  clear(): void {
+    this.#bounds.clear();
+    this.#filled = new Uint8Array(0);
   }
 
   #collectSolids(
@@ -329,13 +234,13 @@ export class RapierVoxelCollider implements VoxelCollider {
     return bounds;
   }
 
-  #buildCubes(
-    body: RapierRigidBody,
+  #mergeCubes(
     cubes: number[],
     size: number
-  ): void {
+  ): ColliderDesc[] {
+    const boxes: ColliderDesc[] = [];
     if (cubes.length === 0) {
-      return;
+      return boxes;
     }
 
     const volume = size * size * size;
@@ -344,49 +249,58 @@ export class RapierVoxelCollider implements VoxelCollider {
     }
     cubes.sort((a, b) => a - b);
 
-    try {
-      for (const [x, y, z, sx, sy, sz] of mergeCubes(
-        cubes, size, this.#filled
-      )) {
-        this.#world.createCollider(
-          this.#rapier.ColliderDesc
-            .cuboid(sx / 2, sy / 2, sz / 2)
-            .setTranslation(x + (sx / 2), y + (sy / 2), z + (sz / 2)),
-          body
-        );
-      }
-    }
-    finally {
-      for (const index of cubes) {
-        this.#filled[index] = 0;
-      }
-    }
-  }
-
-  #buildBox(
-    body: RapierRigidBody,
-    origin: readonly [number, number, number],
-    bounds: ShapeBounds
-  ): void {
-    const { min, max } = bounds;
-    const hx = (max[0] - min[0]) / 2;
-    const hy = (max[1] - min[1]) / 2;
-    const hz = (max[2] - min[2]) / 2;
-    if (hx <= 0 || hy <= 0 || hz <= 0) {
-      return;
+    for (const [x, y, z, sx, sy, sz] of mergeCubes(cubes, size, this.#filled)) {
+      boxes.push(boxCollider(
+        [x + (sx / 2), y + (sy / 2), z + (sz / 2)],
+        [sx / 2, sy / 2, sz / 2]
+      ));
     }
 
-    this.#world.createCollider(
-      this.#rapier.ColliderDesc
-        .cuboid(hx, hy, hz)
-        .setTranslation(
-          origin[0] + min[0] + hx,
-          origin[1] + min[1] + hy,
-          origin[2] + min[2] + hz
-        ),
-      body
-    );
+    return boxes;
   }
+}
+
+function boxCollider(
+  center: readonly [number, number, number],
+  halfExtents: readonly [number, number, number]
+): ColliderDesc {
+  return {
+    shape: {
+      type: "box",
+      halfExtents: {
+        x: halfExtents[0],
+        y: halfExtents[1],
+        z: halfExtents[2]
+      }
+    },
+    offset: {
+      x: center[0],
+      y: center[1],
+      z: center[2]
+    }
+  };
+}
+
+function boundsBox(
+  origin: readonly [number, number, number],
+  bounds: ShapeBounds
+): ColliderDesc | null {
+  const { min, max } = bounds;
+  const hx = (max[0] - min[0]) / 2;
+  const hy = (max[1] - min[1]) / 2;
+  const hz = (max[2] - min[2]) / 2;
+  if (hx <= 0 || hy <= 0 || hz <= 0) {
+    return null;
+  }
+
+  return boxCollider(
+    [
+      origin[0] + min[0] + hx,
+      origin[1] + min[1] + hy,
+      origin[2] + min[2] + hz
+    ],
+    [hx, hy, hz]
+  );
 }
 
 function appendShapeTriangles(

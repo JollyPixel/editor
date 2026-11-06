@@ -23,9 +23,6 @@ export default defineConfig({
     }),
     glsl(),
     wasm()
-  ],
-  optimizeDeps: {
-    exclude: ["@dimforge/rapier3d"]
-  }
+  ]
 });
 

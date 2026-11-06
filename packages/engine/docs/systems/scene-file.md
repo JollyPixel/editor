@@ -216,7 +216,7 @@ interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
     data: TData,
     context: ComponentContext<TAssets>
   ): TComponent | null;
-  apply?(component: TComponent, data: TData): void;
+  apply?(component: TComponent, data: TData): boolean | void;
   owns?(component: Component): component is TComponent;
   capture?(component: TComponent): JSONObject;
   anchors?(component: TComponent): ComponentAnchors;
@@ -235,8 +235,8 @@ interface ComponentContext<TAssets> {
   values.
 - `create` returns `null` when the mode needs no component, such as a
   script in edit mode.
-- `apply` patches a live component with the full data. Without it, a data
-  change rebuilds the component.
+- `apply` patches a live component with the full data. Without it, or when
+  it returns `false`, a data change rebuilds the component.
 - `capture` is the inverse of `parse`: it writes the current state of a live
   component as `data`. `owns` tells whether a component the scene file did
   not build is one the definition captures; without it, only the components
@@ -287,7 +287,8 @@ the asset arrives.
   Returns `null` for an unknown type or when the definition builds nothing.
 - `apply(component, type, data): boolean` patches a live component through
   its definition's `apply` and remembers `data` as the component's latest.
-  Returns `false` when the definition has no `apply`.
+  Returns `false`, remembering nothing, when the definition has no `apply`
+  or its `apply` returns `false`.
 - `anchors(component): ComponentAnchors | null` returns the anchors of a
   component it built, or `null` when its definition has no `anchors`.
 - `capture(component): SceneComponentFile | null` writes a live component
@@ -501,8 +502,8 @@ Destroys the component and forgets it.
 ### applyComponent(id, type, data): boolean
 
 Parses `data` with the definition of `type` and passes it to the definition's
-`apply`. Returns `false`, changing nothing, when the component is not built or
-the definition has no `apply`; rebuild the component in that case.
+`apply`. Returns `false` when the component is not built, the definition has
+no `apply`, or its `apply` returns `false`; rebuild the component in that case.
 
 ### clear(): void
 

@@ -4,7 +4,7 @@ Two layers. The document never imports the view; a lint rule enforces it.
 
 - `src/document`: `VoxelDocument`, the headless state and its commands.
 - `src/view`: `VoxelView`, the Three.js meshes that draw a document.
-- `src/plugins`: the `engine` actor component and the `rapier` collider.
+- `src/plugins`: the `engine` actor component.
 
 ## Map
 

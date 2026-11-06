@@ -1,0 +1,48 @@
+{
+  "name": "@jolly-pixel/physics.rapier",
+  "description": "Rapier backend for @jolly-pixel/physics",
+  "version": "1.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "prepublishOnly": "tsc -b",
+    "build": "tsc -b",
+    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/physics-rapier"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "0.21.0",
+    "@jolly-pixel/physics": "workspace:*"
+  }
+}

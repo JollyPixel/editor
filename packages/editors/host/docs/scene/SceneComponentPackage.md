@@ -124,6 +124,7 @@ inspector renders again once it has loaded.
 - An edit of a top-level field patches that field; setting it back to its
   default unsets it.
 - An edit of a nested field rewrites the whole object.
+- An edit inside a `list` row rewrites the whole list.
 
 `anchorAsset` names the `definition.assets` slot whose asset the anchor keys
 from `definition.anchors()` belong to. An anchor row then offers to show the
@@ -143,6 +144,14 @@ class FormRows<TData> {
   boolean(path: FieldPath<TData>, label: string): BooleanRow<TData>;
   color(path: FieldPath<TData>, label: string): ColorRow<TData>;
   choice(path: FieldPath<TData>, label: string, options: readonly ChoiceOption[]): ChoiceRow<TData>;
+  vector(path: FieldPath<TData>, label: string, bounds?: NumberBounds): VectorRow<TData>;
+  list(key: ListKey<TData>, label: string, list: ListItems<Item>): ListRow;
+}
+
+interface ListItems<TItem> {
+  itemLabel: string;
+  seed: Systems.JSONObject;
+  rows(item: TItem): readonly FieldRow<TItem>[];
 }
 ```
 
@@ -151,7 +160,14 @@ class FormRows<TData> {
 - Rows are plain objects, so a form can also write a `text` or `properties`
   row directly.
 - A `choice` row with `resets: true` replaces its parent object instead of
-  merging into it.
+  merging into it. Its value also picks the defaults that the other rows of
+  that object show.
+- A `vector` row edits an `{ x, y, z }` object.
+- A `list` row edits an array field of objects. `rows` returns the rows of
+  one parsed item; their paths start at the item. Each item shows as a folder
+  titled `itemLabel` and its number,
+  with a remove button, and the add button appends `seed`. The parsed items
+  must keep the stored layout, because an edit writes them back.
 - A `properties` row edits a JSON object of named values. Its optional
   `declared` list (`key`, `type`, `label`, `description`, `default`) shows
   those properties first with a fixed key and type; a declared property
@@ -172,7 +188,7 @@ interface SceneActorPresetSection {
 }
 
 type SceneActorCategory =
-  "camera" | "light" | "3d" | "2d" | "audio" | "logic" | "ui";
+  "camera" | "light" | "3d" | "2d" | "physics" | "audio" | "logic" | "ui";
 
 interface SceneComponentSeed {
   type: string;

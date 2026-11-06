@@ -901,6 +901,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../../physics
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
@@ -1342,6 +1345,28 @@ importers:
         specifier: 4.10.2
         version: 4.10.2
 
+  packages/physics:
+    dependencies:
+      three:
+        specifier: ^0.186.0
+        version: 0.186.1
+    devDependencies:
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@jolly-pixel/loop':
+        specifier: workspace:*
+        version: link:../loop
+
+  packages/physics-rapier:
+    dependencies:
+      '@dimforge/rapier3d-compat':
+        specifier: 0.21.0
+        version: 0.21.0
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../physics
+
   packages/pixel-draw-renderer:
     dependencies:
       '@jolly-pixel/color':
@@ -1578,9 +1603,6 @@ importers:
         specifier: ^0.186.0
         version: 0.186.1
     devDependencies:
-      '@dimforge/rapier3d':
-        specifier: 0.21.0
-        version: 0.21.0
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../asset
@@ -1590,6 +1612,12 @@ importers:
       '@jolly-pixel/loop':
         specifier: workspace:*
         version: link:../loop
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../physics
+      '@jolly-pixel/physics.rapier':
+        specifier: workspace:*
+        version: link:../physics-rapier
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -1912,8 +1940,8 @@ packages:
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
 
-  '@dimforge/rapier3d@0.21.0':
-    resolution: {integrity: sha512-wpyT3jc6otNV5LPTomj7A85VTI2QKZl/vCnhFwuOSMWoopZqxCgWLt/jCQUUugcIQmLI/pD5aAuswtUc5owo+w==}
+  '@dimforge/rapier3d-compat@0.21.0':
+    resolution: {integrity: sha512-tCl1HPGwOhn5aCQbgqWbOH+Nx/5fnr3IPAnzQuR7zIhC/raqi2yxC6LhvZqjdI2El5hQgY5RDAwDrAjAi2FdPA==}
 
   '@docsearch/css@3.8.2':
     resolution: {integrity: sha512-y05ayQFyUmCXze79+56v/4HpycYF3uFqB78pLPrSV5ZKAlDuIAAJNhaRi8tTdRNXh05yxX/TyNnzD6LwSM89vQ==}
@@ -6097,7 +6125,7 @@ snapshots:
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 
-  '@dimforge/rapier3d@0.21.0': {}
+  '@dimforge/rapier3d-compat@0.21.0': {}
 
   '@docsearch/css@3.8.2': {}
 

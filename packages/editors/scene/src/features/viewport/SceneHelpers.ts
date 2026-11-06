@@ -7,8 +7,11 @@ import {
   type Actor,
   type Component
 } from "@jolly-pixel/engine";
+import { ColliderOutline } from "@jolly-pixel/physics/engine";
+import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
+import { SCENE_PREFERENCES } from "../../preferences.ts";
 import type {
   BoundComponent,
   SceneBinding
@@ -19,6 +22,7 @@ import { LightMarker } from "./helpers/LightMarker.ts";
 
 export interface SceneHelpersOptions {
   binding: SceneBinding;
+  preferences: Preferences;
 }
 
 interface DrawnHelper {
@@ -30,10 +34,19 @@ export class SceneHelpers extends ActorComponent {
   #binding: SceneBinding;
   #scene: THREE.Scene;
   #helpers = new Map<Component, DrawnHelper>();
+  #preferences: Preferences;
 
   #add = (
     bound: BoundComponent
   ): void => {
+    if (bound.component instanceof ColliderOutline) {
+      bound.component.shown = this.#preferences
+        .values(SCENE_PREFERENCES)
+        .colliders;
+
+      return;
+    }
+
     const helper = createHelper(bound.component);
     if (helper === null) {
       return;
@@ -70,12 +83,21 @@ export class SceneHelpers extends ActorComponent {
     });
     this.#binding = options.binding;
     this.#scene = actor.world.sceneManager.getSource();
+    this.#preferences = options.preferences;
 
     for (const bound of this.#binding.components()) {
       this.#add(bound);
     }
     this.#binding.on("componentBuilt", this.#add);
     this.#binding.on("componentDropped", this.#drop);
+    this.addTeardown(this.#preferences.watch(SCENE_PREFERENCES, (values) => {
+      for (const { component } of this.#binding.components()) {
+        if (component instanceof ColliderOutline) {
+          component.shown = values.colliders;
+        }
+      }
+      actor.world.invalidate();
+    }));
     this.addTeardown(() => {
       this.#binding.off("componentBuilt", this.#add);
       this.#binding.off("componentDropped", this.#drop);

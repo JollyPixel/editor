@@ -5,6 +5,7 @@ import {
 } from "lit";
 import type { AssetType } from "@jolly-pixel/asset";
 import type {
+  ComponentChange,
   JSONObject,
   JSONValue,
   SceneComponentJSON
@@ -12,18 +13,22 @@ import type {
 import type { DeclaredProperty } from "@jolly-pixel/editor.host/scene";
 import { Systems } from "@jolly-pixel/engine";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/color";
+import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/reference";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/vector3";
 
 // Import Internal Dependencies
 import {
   ComponentInspection,
-  type InspectedRow
+  type InspectedField,
+  type InspectedList
 } from "../../components/ComponentInspection.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import "./ScriptPropertiesEditor.ts";
@@ -37,6 +42,12 @@ export type ComponentBodyContext = Pick<
 interface RowEdit {
   preview: (next: JSONValue) => void;
   commit: (next: JSONValue) => void;
+}
+
+interface ListEdit {
+  add: () => void;
+  remove: (index: number) => void;
+  item: (index: number, field: InspectedField) => RowEdit;
 }
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
@@ -58,24 +69,73 @@ export function renderComponentBody(
   }
 
   const inspection = new ComponentInspection(entry, kind, context.assets);
+  function preview(change: ComponentChange): void {
+    draft.editComponent(entry.id, change);
+  }
+  function commit(change: ComponentChange): void {
+    draft.commitComponent(entry.id, change);
+  }
 
   return html`
     ${renderAssetSlots(entry, components.assetSlots(entry.type), context)}
-    ${inspection.rows.map((inspected) => renderRow(inspected, {
-      preview: (next) => draft.editComponent(
-        entry.id,
-        inspection.edit(inspected, next)
-      ),
-      commit: (next) => draft.commitComponent(
-        entry.id,
-        inspection.edit(inspected, next)
-      )
-    }))}
+    ${inspection.rows.map((inspected) => (inspected.kind === "list" ?
+      renderList(inspected, {
+        add: () => commit(inspection.addItem(inspected)),
+        remove: (index) => commit(inspection.removeItem(inspected, index)),
+        item: (index, field) => {
+          return {
+            preview: (next) => preview(inspection.editItem(inspected, index, field, next)),
+            commit: (next) => commit(inspection.editItem(inspected, index, field, next))
+          };
+        }
+      }) :
+      renderRow(inspected, {
+        preview: (next) => preview(inspection.edit(inspected, next)),
+        commit: (next) => commit(inspection.edit(inspected, next))
+      })
+    ))}
+  `;
+}
+
+function renderList(
+  list: InspectedList,
+  edit: ListEdit
+): TemplateResult {
+  const { row, items } = list;
+
+  return html`
+    <jolly-separator label=${row.label}>
+      <jolly-button
+        slot="actions"
+        icon="plus"
+        icon-only
+        label=${`Add ${row.itemLabel.toLowerCase()}`}
+        title=${`Add ${row.itemLabel.toLowerCase()}`}
+        @click=${edit.add}
+      ></jolly-button>
+    </jolly-separator>
+    ${items.map((fields, index) => html`
+      <jolly-folder
+        label=${`${row.itemLabel} ${index + 1}`}
+        open
+        flush
+      >
+        <jolly-button
+          slot="actions"
+          icon="trash"
+          icon-only
+          label=${`Remove ${row.itemLabel.toLowerCase()} ${index + 1}`}
+          title=${`Remove ${row.itemLabel.toLowerCase()}`}
+          @click=${() => edit.remove(index)}
+        ></jolly-button>
+        ${fields.map((field) => renderRow(field, edit.item(index, field)))}
+      </jolly-folder>
+    `)}
   `;
 }
 
 function renderRow(
-  inspected: InspectedRow,
+  inspected: InspectedField,
   edit: RowEdit
 ): TemplateResult {
   const { row, value, fallback } = inspected;
@@ -121,6 +181,19 @@ function renderRow(
           .value=${String(value)}
           @jolly-change=${(event: ChangeEvent<string>) => commit(event.detail.value)}
         ></jolly-select>
+      `;
+    case "vector":
+      return html`
+        <jolly-vector3
+          label=${row.label}
+          .value=${Systems.isJSONObject(value) ? { ...value } : {}}
+          .default=${fallback}
+          .min=${row.min ?? -Infinity}
+          .max=${row.max ?? Infinity}
+          .step=${row.step ?? 0.1}
+          @jolly-input=${(event: ChangeEvent<JSONObject>) => preview(event.detail.value)}
+          @jolly-change=${(event: ChangeEvent<JSONObject>) => commit(event.detail.value)}
+        ></jolly-vector3>
       `;
     case "text":
       return html`

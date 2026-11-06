@@ -162,6 +162,24 @@ registerIcon("actor-mesh", svg`
   />
 `, { tone: "lime" });
 
+registerIcon("actor-rigid-body", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="10"
+    r="6"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+  <path
+    d="M3 20h18"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.4"
+    stroke-linecap="round"
+  />
+`, { tone: "coral" });
+
 registerIcon("action-duplicate", svg`
   <rect
     class="tone-fill"

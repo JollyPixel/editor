@@ -15,7 +15,9 @@ export const packageGroups: PackageGroup[] = [
       { dir: "engine", text: "Engine" },
       { dir: "runtime", text: "Runtime" },
       { dir: "loop", text: "Loop" },
-      { dir: "controls", text: "Controls" }
+      { dir: "controls", text: "Controls" },
+      { dir: "physics", text: "Physics" },
+      { dir: "physics-rapier", text: "Physics Rapier" }
     ]
   },
   {

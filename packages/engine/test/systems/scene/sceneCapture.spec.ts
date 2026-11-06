@@ -157,6 +157,25 @@ describe("Systems.FileScene capture", () => {
     );
   });
 
+  test("keeps the built data when apply declines the patch", () => {
+    const { world } = createSceneSetup(createSceneAssets());
+    const sign = new Actor(world as any, { name: "sign" });
+    const components = new ComponentDefinitions().register({
+      type: "Label",
+      parse: (data) => data,
+      create: (actor) => new ActorComponent({ actor, typeName: "Label" }),
+      apply: () => false
+    });
+    const entry = createComponentFile("label", "Label", { text: "old" });
+    const label = components.create(sign, entry, {
+      mode: "edit",
+      resolver: { resolve: () => null as never }
+    })!;
+
+    assert.strictEqual(components.apply(label, "Label", { text: "new" }), false);
+    assert.deepEqual(components.capture(label), entry);
+  });
+
   test("reloads a capture into the state it was taken from", async() => {
     const level = createLevel();
     const first = await load(level.file, level);
