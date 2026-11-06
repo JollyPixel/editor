@@ -1,10 +1,13 @@
+// Import Third-party Dependencies
+import type { Locator } from "@playwright/test";
+
 // Import Internal Dependencies
 import {
   test,
   expect
 } from "../fixtures.ts";
 import { fieldRow as row, openExample } from "../support/gallery.ts";
-import { readStyle } from "../support/styles.ts";
+import { readStyle, resolveColor } from "../support/styles.ts";
 
 test("field messages use visible, aligned semantic badges", async({ page }) => {
   await openExample(page, "controls/number");
@@ -27,7 +30,13 @@ test("field messages use visible, aligned semantic badges", async({ page }) => {
   const infoColor = await readStyle(info, "color");
   expect(infoColor).not.toBe(await readStyle(description, "color"));
   expect(await readStyle(info.locator("svg > circle").first(), "fill"))
-    .toBe(infoColor);
+    .toBe(await glyphColor(info));
   expect(await readStyle(warning.locator("svg > path").first(), "fill"))
-    .toBe(await readStyle(warning, "color"));
+    .toBe(await glyphColor(warning));
 });
+
+async function glyphColor(icon: Locator): Promise<string> {
+  const color = await readStyle(icon, "color");
+
+  return resolveColor(icon.locator(".."), `color-mix(in oklab, ${color}, ${color})`);
+}
