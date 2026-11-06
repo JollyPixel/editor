@@ -11,68 +11,33 @@ import { keyed } from "lit/directives/keyed.js";
 import type {
   AssetReferenceJSON,
   SceneActorView,
-  SceneComponentView,
-  SceneTransformField,
-  SceneTransformPatch
+  SceneComponentView
 } from "@jolly-pixel/asset.scene/client";
 import {
-  ContextMenuController,
-  MenuSession,
   SubscriptionController,
-  menuPointBelow,
-  type ContextMenu,
   type JollyChangeDetail,
-  type JollyOption
+  type TransformChangeDetail
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
-import "@jolly-pixel/ui/elements/button-group";
-import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/reference";
 import "@jolly-pixel/ui/elements/show-more";
 import "@jolly-pixel/ui/elements/text";
-import "@jolly-pixel/ui/elements/toggle";
-import "@jolly-pixel/ui/elements/vector3";
+import "@jolly-pixel/ui/elements/transform";
 
 // Import Internal Dependencies
 import "../../app/sceneIcons.ts";
-import {
-  addComponentEntries,
-  addedComponentType
-} from "../../components/addComponentEntries.ts";
 import type { ActorRole } from "../../editing/InstanceOverrides.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import type { SceneDraft } from "../../state/SceneDraft.ts";
-import { axisValues } from "./axisValues.ts";
 import { renderComponentBody } from "./componentBody.ts";
+import { transformPatch } from "./transformPatch.ts";
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
-
-// CONSTANTS
-const kAxes = ["x", "y", "z"] as const;
-const kTransformOptions: JollyOption<SceneTransformField>[] = [
-  {
-    value: "position",
-    label: "Position"
-  },
-  {
-    value: "rotation",
-    label: "Rotation"
-  },
-  {
-    value: "scale",
-    label: "Scale"
-  }
-];
-const kTransformSteps: Record<SceneTransformField, number> = {
-  position: 0.1,
-  rotation: 1,
-  scale: 0.1
-};
+type TransformEvent = CustomEvent<TransformChangeDetail>;
 
 export class InspectorPanel extends LitElement {
-  #transformField: SceneTransformField = "position";
-
   #editing = new SubscriptionController<SceneEditing>(this, (editing) => {
     const repaint = (): void => this.requestUpdate();
 
@@ -86,11 +51,6 @@ export class InspectorPanel extends LitElement {
     ];
   });
 
-  #menu = new ContextMenuController(
-    () => this.#contextMenu(),
-    () => MenuSession.EMPTY
-  );
-
   static override styles = css`
     :host {
       display: flex;
@@ -101,6 +61,10 @@ export class InspectorPanel extends LitElement {
 
       --jolly-label-width: 12ch;
       --jolly-field-inset-start: 0px;
+    }
+
+    jolly-transform {
+      --jolly-gutter-width: 0px;
     }
 
     .empty {
@@ -151,10 +115,6 @@ export class InspectorPanel extends LitElement {
     return html`
       ${this.#renderActor(editing, actor, role)}
       ${this.#renderTransform(editing.draft, actor)}
-      <jolly-context-menu
-        label="Add component"
-        @jolly-context-action=${this.#menu.onContextAction}
-      ></jolly-context-menu>
     `;
   }
 
@@ -190,28 +150,6 @@ export class InspectorPanel extends LitElement {
     `;
   }
 
-  #renderAddComponent(
-    editing: SceneEditing,
-    actor: SceneActorView,
-    role: ActorRole
-  ): TemplateResult | typeof nothing {
-    if (role === "inner" || !editing.document.tree.canHoldComponents(actor.id)) {
-      return nothing;
-    }
-
-    return html`
-      <jolly-button
-        slot="actions"
-        icon="plus"
-        icon-only
-        label="Add component"
-        title="Add component"
-        aria-haspopup="menu"
-        @click=${(event: MouseEvent) => this.#openAddComponent(event, editing, actor.id)}
-      ></jolly-button>
-    `;
-  }
-
   #renderActor(
     editing: SceneEditing,
     actor: SceneActorView,
@@ -226,7 +164,6 @@ export class InspectorPanel extends LitElement {
         storage-key="scene-inspector:actor"
         flush
       >
-        ${this.#renderAddComponent(editing, actor, role)}
         ${this.#renderOverrideActions(editing, actor.id, role)}
         <jolly-text
           label="Name"
@@ -236,14 +173,14 @@ export class InspectorPanel extends LitElement {
             event.detail.value
           )}
         ></jolly-text>
-        <jolly-toggle
+        <jolly-checkbox
           label="Visible"
           .value=${actor.visible}
           @jolly-change=${(event: ChangeEvent<boolean>) => writes.changeVisibility(
             actor.id,
             event.detail.value
           )}
-        ></jolly-toggle>
+        ></jolly-checkbox>
         ${actor.prefab === undefined ? nothing : this.#renderPrefab(editing, actor.prefab)}
       </jolly-folder>
     `;
@@ -270,19 +207,7 @@ export class InspectorPanel extends LitElement {
     draft: SceneDraft,
     actor: SceneActorView
   ): TemplateResult {
-    const field = this.#transformField;
-    const current = draft.transform(actor)[field];
-    function patch(
-      event: ChangeEvent<Record<string, unknown>>
-    ): SceneTransformPatch {
-      const [x, y, z] = axisValues(
-        event.detail.value,
-        kAxes,
-        kAxes.map((axis) => current[axis])
-      );
-
-      return { [field]: { x, y, z } };
-    }
+    const transform = draft.transform(actor);
 
     return html`
       <jolly-folder
@@ -291,27 +216,19 @@ export class InspectorPanel extends LitElement {
         storage-key="scene-inspector:transform"
         flush
       >
-        <jolly-button-group
-          aria-label="Transform"
-          .options=${kTransformOptions}
-          .value=${field}
-          @jolly-change=${(event: ChangeEvent<SceneTransformField>) => {
-            this.#transformField = event.detail.value;
-            this.requestUpdate();
-          }}
-        ></jolly-button-group>
-        <jolly-vector3
-          .step=${kTransformSteps[field]}
-          .value=${{ ...current }}
-          @jolly-input=${(event: ChangeEvent<Record<string, unknown>>) => draft.editTransform(
+        <jolly-transform
+          rotation-format="euler"
+          label-position="top"
+          .value=${transform}
+          @jolly-input=${(event: TransformEvent) => draft.editTransform(
             actor.id,
-            patch(event)
+            transformPatch(event.detail, transform)
           )}
-          @jolly-change=${(event: ChangeEvent<Record<string, unknown>>) => draft.commitTransform(
+          @jolly-change=${(event: TransformEvent) => draft.commitTransform(
             actor.id,
-            patch(event)
+            transformPatch(event.detail, transform)
           )}
-        ></jolly-vector3>
+        ></jolly-transform>
       </jolly-folder>
     `;
   }
@@ -363,31 +280,6 @@ export class InspectorPanel extends LitElement {
         @click=${() => overrides.revertComponent(id)}
       ></jolly-button>
     ` : nothing;
-  }
-
-  #contextMenu(): ContextMenu {
-    const menu = this.renderRoot.querySelector("jolly-context-menu");
-    if (menu === null) {
-      throw new Error("InspectorPanel: the context menu is not rendered.");
-    }
-
-    return menu;
-  }
-
-  #openAddComponent(
-    event: MouseEvent,
-    editing: SceneEditing,
-    actorId: string
-  ): void {
-    this.#menu.open(
-      MenuSession.from(
-        addComponentEntries(editing.components),
-        async(action) => {
-          await editing.actions.addComponent(actorId, addedComponentType(action));
-        }
-      ),
-      menuPointBelow(event)
-    );
   }
 }
 

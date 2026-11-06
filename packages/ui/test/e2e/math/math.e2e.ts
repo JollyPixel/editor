@@ -14,7 +14,8 @@ import {
 import { fieldRow as row, openExample } from "../support/gallery.ts";
 import {
   fieldChanges as changes,
-  recordFieldChanges as recordChanges
+  recordFieldChanges as recordChanges,
+  recordedEvents
 } from "../support/events.ts";
 import { readStyle } from "../support/styles.ts";
 
@@ -218,29 +219,55 @@ test.describe("quaternion", () => {
 });
 
 test.describe("transform", () => {
-  test("relays one sub-row commit as a single merged change", async({ page }) => {
-    await openExample(page, "math/transform");
+  async function commitAxis(
+    transform: Locator,
+    label: string,
+    axis: string,
+    value: string
+  ): Promise<void> {
+    const input = transform.locator(`[label='${label}']`)
+      .locator(`.axis-box[data-axis="${axis}"] input`);
+    await input.fill(value);
+    await input.press("Enter");
+  }
 
+  test("relays one sub-row commit as a single merged change naming its row", async({ page }) => {
+    await openExample(page, "math/transform");
+    await recordChanges(page);
     const transform = page.locator("jolly-transform");
     await transform.evaluate((element) => {
-      window.__events = [];
       element.addEventListener("jolly-change", (event) => {
-        if (event.composedPath()[0] === element && event instanceof CustomEvent) {
-          window.__events?.push(["jolly-change", event.detail.value]);
+        if (event instanceof CustomEvent) {
+          window.__events?.push(["field", event.detail.field]);
         }
       });
     });
 
-    const scaleX = transform.locator("jolly-vector3[label='Scale']")
-      .locator('.axis-box[data-axis="x"] input');
-    await scaleX.fill("2");
-    await scaleX.press("Enter");
+    await commitAxis(transform, "Scale", "x", "2");
 
     await expect.poll(() => changes(page)).toEqual([
       {
         position: { x: 0, y: 1, z: 0 },
         rotation: { x: 0, y: 0, z: 0, w: 1 },
         scale: { x: 2, y: 1, z: 1 }
+      }
+    ]);
+    expect(await recordedEvents(page)).toContainEqual(["field", "scale"]);
+  });
+
+  test("an euler rotation row commits degrees as typed", async({ page }) => {
+    await openExample(page, "math/transform", {
+      options: { eulerRotation: true, lockedRotation: false }
+    });
+    await recordChanges(page);
+
+    await commitAxis(page.locator("jolly-transform"), "Rotation", "y", "200");
+
+    await expect.poll(() => changes(page)).toEqual([
+      {
+        position: { x: 0, y: 1, z: 0 },
+        rotation: { x: 0, y: 200, z: 0 },
+        scale: { x: 1, y: 1, z: 1 }
       }
     ]);
   });

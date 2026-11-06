@@ -203,13 +203,13 @@ export class ScenePage {
   }
 
   visible(): Locator {
-    return this.inspectedActor.getByRole("checkbox", { name: "Visible" });
+    return this.inspectedActor.locator("jolly-checkbox")
+      .filter({ hasText: "Visible" })
+      .getByRole("checkbox");
   }
 
   async hide(): Promise<void> {
-    await this.inspectedActor.locator("jolly-toggle")
-      .filter({ hasText: "Visible" })
-      .click();
+    await this.visible().click();
     await expect(this.visible()).not.toBeChecked();
   }
 
