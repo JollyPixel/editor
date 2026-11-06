@@ -30,6 +30,12 @@ function countVertices(
   return overlay.geometry.getAttribute("position").count;
 }
 
+function attributeNames(
+  overlay: HighlightSilhouette
+): string[] {
+  return Object.keys(overlay.geometry.attributes).sort();
+}
+
 describe("HighlightMeshSilhouette", () => {
   test("outlines only the six contour edges of a box mesh seen corner-on", () => {
     const target = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1).toNonIndexed());
@@ -72,7 +78,7 @@ describe("HighlightMeshSilhouette", () => {
     assert.notStrictEqual(overlay.geometry, geometry);
   });
 
-  test("draws box bars on a BoxGeometry and the contour on any other geometry, as its target changes", () => {
+  test("draws box bars or the contour as its target changes, with one vertex layout", () => {
     const camera = new THREE.Vector3(100, 100, 100);
     const boxBars = new HighlightBoxSilhouette({ target: createBoxMesh() });
     boxBars.update(camera);
@@ -85,10 +91,12 @@ describe("HighlightMeshSilhouette", () => {
 
     overlay.update(camera);
     assert.strictEqual(countVertices(overlay), countVertices(boxBars));
+    assert.deepStrictEqual(attributeNames(overlay), ["color", "position"]);
 
     target.geometry = new THREE.ConeGeometry(0.5, 1, 4);
     overlay.update(camera);
     assert.strictEqual(countVertices(overlay), countVertices(coneContour));
+    assert.deepStrictEqual(attributeNames(overlay), ["color", "position"]);
     assert.strictEqual(findBackPass(overlay)?.geometry, overlay.geometry);
 
     target.geometry = new THREE.BoxGeometry(1, 1, 1);

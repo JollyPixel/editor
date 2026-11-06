@@ -135,12 +135,9 @@ export class ModelBlock extends BlockBody {
   set texture(
     texture: THREE.Texture | null
   ) {
-    this.mesh.material.map = texture;
-    this.mesh.material.needsUpdate = true;
-
+    clampUvRegion(this.mesh, texture);
     if (this.#selectionTextureGhost !== null) {
-      this.#selectionTextureGhost.material.map = texture;
-      this.#selectionTextureGhost.material.needsUpdate = true;
+      clampUvRegion(this.#selectionTextureGhost, texture);
     }
   }
 
@@ -304,7 +301,6 @@ export class ModelBlock extends BlockBody {
     const ghost = new THREE.Mesh(
       this.mesh.geometry,
       new THREE.MeshStandardNodeMaterial({
-        map: this.mesh.material.map,
         side: THREE.FrontSide,
         transparent: true,
         depthFunc: THREE.GreaterDepth,
@@ -313,7 +309,7 @@ export class ModelBlock extends BlockBody {
     );
     this.#flat.shade(ghost.material);
     this.#paintGhost(ghost);
-    clampUvRegion(ghost);
+    clampUvRegion(ghost, this.mesh.material.map);
     ghost.name = "selection-texture-ghost";
     ghost.renderOrder = RenderOrder.selectionGhost;
     this.mesh.add(ghost);

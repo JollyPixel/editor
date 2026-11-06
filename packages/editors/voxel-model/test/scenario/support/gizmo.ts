@@ -5,10 +5,7 @@ import type {
   Object3D,
   Vector3Like
 } from "three";
-import {
-  nextFrames,
-  pressAt
-} from "@jolly-pixel/e2e/editor";
+import { nextFrames } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
 import {
@@ -18,11 +15,15 @@ import {
 } from "./projection.ts";
 import { resolveEditor } from "./scene.ts";
 
-type Axis = "X" | "Y" | "Z";
+// CONSTANTS
+const kCenter = { x: 0, y: 0, z: 0 };
 
-async function blockPoint(
+export type Axis = "X" | "Y" | "Z";
+
+export async function blockPoint(
   page: Page,
-  name: string
+  name: string,
+  offset: Vector3Like = kCenter
 ): Promise<ScreenPoint> {
   const editor = await resolveEditor(page);
 
@@ -60,7 +61,11 @@ async function blockPoint(
     };
   }, name);
 
-  return toClientPoint(view, point);
+  return toClientPoint(view, {
+    x: point.x + offset.x,
+    y: point.y + offset.y,
+    z: point.z + offset.z
+  });
 }
 
 export async function gizmoHandlePoints(
@@ -146,11 +151,4 @@ export async function gizmoHandlePoints(
     toClientPoint(view, points[0]),
     toClientPoint(view, points[1])
   ];
-}
-
-export async function clickBlock(
-  page: Page,
-  name: string
-): Promise<void> {
-  await pressAt(page, [await blockPoint(page, name)]);
 }

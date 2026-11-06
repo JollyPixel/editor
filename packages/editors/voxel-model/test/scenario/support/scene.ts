@@ -9,7 +9,10 @@ import type { MaterialSurfaceJSON } from "@jolly-pixel/asset.voxel-model/client"
 // Import Internal Dependencies
 import type { VoxelModelEditor } from "#src/boot/VoxelModelEditor.ts";
 
+export type SurfaceSource = "scene" | "document";
+
 export interface BlockSummary {
+  visible: boolean;
   position: Vector3Like;
   worldPosition: Vector3Like;
   rotation: Vector3Like;
@@ -29,14 +32,6 @@ export function resolveEditor(
 
     return editor;
   });
-}
-
-export async function runtimeIdle(
-  page: Page
-): Promise<boolean> {
-  const editor = await resolveEditor(page);
-
-  return editor.evaluate(({ runtime }) => runtime.idle);
 }
 
 export async function outline(
@@ -90,78 +85,41 @@ export async function materialOutline(
   });
 }
 
-export async function selectedBlock(
-  page: Page
-): Promise<string | null> {
-  const editor = await resolveEditor(page);
-
-  return editor.evaluate(({ editing }) => {
-    const { blocks, selection } = editing;
-    const uuid = selection.selected;
-
-    return uuid === null ? null : blocks.get(uuid)?.name ?? null;
-  });
-}
-
 export async function blockSurface(
   page: Page,
   name: string,
-  source: "scene" | "document" = "scene"
-): Promise<MaterialSurfaceJSON | null> {
+  source: SurfaceSource
+): Promise<MaterialSurfaceJSON> {
   const editor = await resolveEditor(page);
 
   return editor.evaluate(({ editing }, query) => {
-    if (query.source === "scene") {
-      return [...editing.blocks.values()]
-        .find((block) => block.name === query.name)?.surface ?? null;
+    function findSurface(): MaterialSurfaceJSON | null | undefined {
+      if (query.source === "scene") {
+        return [...editing.blocks.values()]
+          .find((block) => block.name === query.name)?.surface;
+      }
+
+      const { tree } = editing.document;
+      const node = [...tree.blocks()].find((block) => block.name === query.name);
+
+      return node?.materialId === undefined ?
+        undefined :
+        tree.materials.material(node.materialId)?.surface;
     }
 
-    const { tree } = editing.document;
-    const node = [...tree.blocks()].find((block) => block.name === query.name);
+    const surface = findSurface();
+    if (surface === null || surface === undefined) {
+      throw new Error(`No material on the ${query.source} block "${query.name}".`);
+    }
 
-    return node?.materialId === undefined ?
-      null :
-      tree.materials.material(node.materialId)?.surface ?? null;
+    return surface;
   }, { name, source });
-}
-
-export async function materialUses(
-  page: Page
-): Promise<Array<[string, number]>> {
-  const editor = await resolveEditor(page);
-
-  return editor.evaluate(({ editing }) => {
-    const { tree } = editing.document;
-    const uses = tree.materialUses();
-
-    return [...tree.materials.materials()].map(
-      (material): [string, number] => [material.name, uses.get(material.id) ?? 0]
-    );
-  });
-}
-
-export async function gizmoAttached(
-  page: Page
-): Promise<boolean> {
-  const editor = await resolveEditor(page);
-
-  return editor.evaluate(({ editing }) => (editing.gizmo.activeControls?.target ?? null) !== null);
-}
-
-export async function blockVisible(
-  page: Page,
-  name: string
-): Promise<boolean | null> {
-  const editor = await resolveEditor(page);
-
-  return editor.evaluate(({ editing }, blockName) => [...editing.blocks.values()]
-    .find((block) => block.name === blockName)?.visible ?? null, name);
 }
 
 export async function blockSummary(
   page: Page,
   name: string
-): Promise<BlockSummary | null> {
+): Promise<BlockSummary> {
   const editor = await resolveEditor(page);
 
   return editor.evaluate(({ editing }, blockName) => {
@@ -169,7 +127,7 @@ export async function blockSummary(
     const block = [...blocks.values()]
       .find((candidate) => candidate.name === blockName);
     if (block === undefined) {
-      return null;
+      throw new Error(`No block named "${blockName}".`);
     }
 
     function roundAxis(
@@ -192,6 +150,7 @@ export async function blockSummary(
     }
 
     return {
+      visible: block.visible,
       position: rounded(block.position),
       worldPosition: rounded(block.worldPosition),
       rotation: rounded(block.rotation, 180 / Math.PI),

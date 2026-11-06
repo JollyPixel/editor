@@ -1,5 +1,6 @@
 export * from "./browser/CommandConsole.ts";
 export * from "./browser/locators.ts";
+export * from "./browser/pixels.ts";
 export * from "./browser/pointer.ts";
 export * from "./browser/sockets.ts";
 export * from "./config/playwright.ts";

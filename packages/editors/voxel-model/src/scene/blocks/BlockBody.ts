@@ -47,11 +47,10 @@ export class BlockBody {
       this.#shapeMesh.geometry,
       new THREE.MeshStandardNodeMaterial({
         alphaTest: 0.01,
-        side: THREE.DoubleSide,
-        map: texture
+        side: THREE.DoubleSide
       })
     );
-    clampUvRegion(this.mesh);
+    clampUvRegion(this.mesh, texture);
     this.node.add(this.mesh);
   }
 
@@ -131,7 +130,7 @@ export class BlockBody {
     }
 
     this.mesh.geometry = this.#shapeMesh.geometry;
-    clampUvRegion(this.mesh);
+    clampUvRegion(this.mesh, this.mesh.material.map);
 
     return true;
   }
