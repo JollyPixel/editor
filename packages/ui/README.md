@@ -291,6 +291,8 @@ import {
 
 - [Presence and locking](./docs/api/peer/presence-source.md): the `PresenceSource` port, and its
   `RoomPresenceSource` network adapter.
+- [`bindPresenceStack`](./docs/api/peer/bind-presence-stack.md): a
+  `jolly-presence-stack` kept in step with a `PeerListSource`.
 - [Peer identity](./docs/api/peer/identity.md): `promptPeerIdentity`, `peerIdentity` and the
   profile helpers.
 - [Room roster and peer marks](./docs/api/peer/roster.md): the `PeerRoster`, `PeerMarkTracker` and

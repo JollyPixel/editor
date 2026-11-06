@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
-import {
-  bindPresenceStack,
-  type EditorRuntime,
-  type EditorToolbarSources,
-  type HostLogger
+import type {
+  EditorRuntime,
+  EditorToolbarSources,
+  HostLogger
 } from "@jolly-pixel/editor.host";
 import {
   CANVAS_HOVER_CHANGE_EVENT,
@@ -12,11 +11,12 @@ import {
 } from "@jolly-pixel/editor.pixel-art";
 import type { KeyBindingSettings } from "@jolly-pixel/controls";
 import "@jolly-pixel/editor.host/ui";
-import type {
-  DockLayout,
-  PaneElement,
-  PaneGroup,
-  PresenceStack
+import {
+  bindPresenceStack,
+  type DockLayout,
+  type PaneElement,
+  type PaneGroup,
+  type PresenceStack
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

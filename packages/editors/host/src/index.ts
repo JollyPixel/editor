@@ -67,7 +67,6 @@ export * from "./preferences/adapters/followKeyBindings.ts";
 export * from "./preferences/appearance/PageAppearance.ts";
 export * from "./console/mountConsole.ts";
 export * from "./debug/readDebugLogger.ts";
-export * from "./ui/bindPresenceStack.ts";
 export * from "./ui/registerKindIcon.ts";
 export * from "./ui/lantern/replayTourStep.ts";
 export * from "./ui/lantern/provideTourKeys.ts";

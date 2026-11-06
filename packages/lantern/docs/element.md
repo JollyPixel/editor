@@ -14,6 +14,35 @@ element.run = lantern.start(basics);
 Append it inside the page's `jolly-scope` so the theme and density apply. `editor.host` already
 mounts one per editor page.
 
+## Loading on demand
+
+`LazyLanternElement`, exported from the root entry, keeps Lit out of the page until a tour starts:
+
+```ts
+import { Lantern, LazyLanternElement } from "@jolly-pixel/lantern";
+
+const lazyElement = new LazyLanternElement(scope, (message) => console.warn(message));
+const lantern = new Lantern({
+  storage,
+  present: (run) => lazyElement.present(run)
+});
+```
+
+### `new LazyLanternElement(parent: HTMLElement, warn: (message: string) => void)`
+
+`warn` receives the message when `@jolly-pixel/lantern/element` fails to load; the next
+`present` tries again.
+
+### `lazyElement.present(run: TourRun): void`
+
+The first call imports the element entry, then appends one `jolly-lantern` to `parent`. Later
+calls assign the run to that element. A run presented while the import is pending replaces the
+one before it.
+
+### `lazyElement.dispose(): void`
+
+Removes the element. Called while the import is pending, nothing is appended.
+
 ## Overlay
 
 The overlay sits in the top layer (`popover="manual"`), above floating panes and the log. It dims

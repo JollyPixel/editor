@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
-import {
-  bindPresenceStack,
-  type EditorRuntime,
-  type EditorToolbarSources
+import type {
+  EditorRuntime,
+  EditorToolbarSources
 } from "@jolly-pixel/editor.host";
 import { CANVAS_HOVER_CHANGE_EVENT } from "@jolly-pixel/editor.pixel-art";
-import type { PresenceStack } from "@jolly-pixel/ui";
+import {
+  bindPresenceStack,
+  type PresenceStack
+} from "@jolly-pixel/ui";
 import "@jolly-pixel/editor.host/ui";
 
 // Import Internal Dependencies

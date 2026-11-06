@@ -1,7 +1,6 @@
-// Import Third-party Dependencies
-import type { TourRun } from "@jolly-pixel/lantern";
-
-type LanternElement = HTMLElementTagNameMap["jolly-lantern"];
+// Import Internal Dependencies
+import type { LanternElement } from "./element/LanternElement.ts";
+import type { TourRun } from "./tour/TourRun.ts";
 
 export class LazyLanternElement {
   readonly #parent: HTMLElement;
@@ -44,7 +43,7 @@ export class LazyLanternElement {
   }
 
   async #mount(): Promise<void> {
-    await import("@jolly-pixel/lantern/element");
+    await import("./element/index.ts");
     if (this.#disposed || this.#run === null) {
       return;
     }

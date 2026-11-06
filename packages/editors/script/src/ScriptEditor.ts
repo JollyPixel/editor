@@ -6,12 +6,12 @@ import {
   type ScriptDocument
 } from "@jolly-pixel/asset.script/client";
 import {
-  bindPresenceStack,
   Teardown,
   type EditorContext,
   type EditorSession
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
+import { bindPresenceStack } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";

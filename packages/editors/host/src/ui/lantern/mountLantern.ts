@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { CommandConsole } from "@jolly-pixel/console";
-import { Lantern } from "@jolly-pixel/lantern";
+import {
+  Lantern,
+  LazyLanternElement
+} from "@jolly-pixel/lantern";
 import {
   LocalStorageAdapter,
   type StorageAdapter
@@ -9,7 +12,6 @@ import {
 // Import Internal Dependencies
 import { tourConsole } from "../../console/namespaces/tour.ts";
 import type { HostLogger } from "../../debug/readDebugLogger.ts";
-import { LazyLanternElement } from "./LazyLanternElement.ts";
 
 export interface PageLantern {
   readonly lantern: Lantern;

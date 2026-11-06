@@ -4,12 +4,12 @@ import {
   soundDocumentKind
 } from "@jolly-pixel/asset.sound/client";
 import {
-  bindPresenceStack,
   Teardown,
   type EditorContext,
   type EditorSession
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
+import { bindPresenceStack } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { SoundCollaboration } from "./collaboration/SoundCollaboration.ts";

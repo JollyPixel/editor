@@ -111,8 +111,6 @@ void bootStandalone(MyEditor, {
 ### UI
 
 - [`EditorToolbar`](./docs/ui/EditorToolbar.md): the bar above the viewport.
-- [`bindPresenceStack`](./docs/ui/bindPresenceStack.md): a presence stack
-  bound to a room's peers.
 
 ### Preferences
 

@@ -2,8 +2,12 @@
 import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
 import { Preferences } from "@jolly-pixel/preferences";
-import type { Notifier } from "@jolly-pixel/ui";
+import {
+  NotificationQueue,
+  type Notifier
+} from "@jolly-pixel/ui";
 import { ColorPicker } from "@jolly-pixel/ui/elements/color-picker";
+import "@jolly-pixel/ui/elements/notifications";
 
 // Import Internal Dependencies
 import { forwardConsole } from "../console/forwardConsole.ts";
@@ -42,7 +46,6 @@ import {
   type EditorToolbarArchives
 } from "../session/EditorToolbarSources.ts";
 import { mountLantern } from "../ui/lantern/mountLantern.ts";
-import { mountNotifications } from "../ui/mountNotifications.ts";
 import { provideTourKeys } from "../ui/lantern/provideTourKeys.ts";
 import type { EditorContext } from "../contract/EditorDefinition.ts";
 import type { MountRequest } from "../mount/MountedEditor.ts";
@@ -244,10 +247,16 @@ export class Placement {
       return this.#shell;
     }
 
-    const page = mountNotifications();
-    this.#teardown.defer(() => page.dispose());
+    const queue = new NotificationQueue();
+    const stack = document.createElement("jolly-notifications");
+    (document.querySelector("jolly-scope") ?? document.body).append(stack);
+    stack.attach(queue);
+    this.#teardown.defer(() => {
+      queue.dispose();
+      stack.remove();
+    });
 
-    return page.queue;
+    return queue;
   }
 
   #openPreferences(): Preferences {

@@ -1,11 +1,9 @@
-// Import Third-party Dependencies
-import type {
-  JollyPeerSelectDetail,
-  PresencePeer,
-  PresenceStack
-} from "@jolly-pixel/ui";
+// Import Internal Dependencies
+import type { JollyPeerSelectDetail } from "./events.ts";
+import type { PresenceStack } from "./PresenceStack.ts";
+import type { PresencePeer } from "./types.ts";
 
-export interface PresenceSource {
+export interface PeerListSource {
   readonly peers: readonly PresencePeer[];
   subscribe(
     event: "peersChange",
@@ -15,7 +13,7 @@ export interface PresenceSource {
 
 export function bindPresenceStack(
   element: PresenceStack,
-  presence: PresenceSource,
+  source: PeerListSource,
   onSelect: (clientId: string) => void
 ): () => void {
   function show(
@@ -31,8 +29,8 @@ export function bindPresenceStack(
     onSelect(event.detail.clientId);
   }
 
-  show(presence.peers);
-  const unsubscribe = presence.subscribe("peersChange", show);
+  show(source.peers);
+  const unsubscribe = source.subscribe("peersChange", show);
   element.addEventListener("jolly-peer-select", select);
 
   return () => {
