@@ -22,7 +22,11 @@ export function isTabHistoryScope(
 }
 
 export interface ScopeRecorder<TScope extends EditorHistoryScope> {
-  record<T>(scope: TScope, label: string | null, edit: () => T): T;
+  record<T>(
+    scope: TScope,
+    label: string | null,
+    edit: () => T
+  ): T;
 }
 
 export interface EditorHistoryOptions {

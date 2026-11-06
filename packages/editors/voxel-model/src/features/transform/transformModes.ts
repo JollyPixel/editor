@@ -11,7 +11,11 @@ export interface TransformModeSpec {
   readonly spaces: boolean;
   readonly showsPivot: boolean;
   read(block: ModelBlock, world: boolean): THREE.Vector3Like;
-  write(block: ModelBlock, value: THREE.Vector3, world: boolean): void;
+  write(
+    block: ModelBlock,
+    value: THREE.Vector3,
+    world: boolean
+  ): void;
 }
 
 export const TRANSFORM_MODES: Readonly<Record<TransformMode, TransformModeSpec>> = {
@@ -21,7 +25,11 @@ export const TRANSFORM_MODES: Readonly<Record<TransformMode, TransformModeSpec>>
     spaces: true,
     showsPivot: true,
     read: (block, world) => (world ? block.worldPosition : block.position),
-    write(block, value, world) {
+    write(
+      block,
+      value,
+      world
+    ) {
       if (world) {
         block.worldPosition = value;
       }
@@ -44,7 +52,11 @@ export const TRANSFORM_MODES: Readonly<Record<TransformMode, TransformModeSpec>>
         z: THREE.MathUtils.radToDeg(rotation.z)
       };
     },
-    write(block, value, world) {
+    write(
+      block,
+      value,
+      world
+    ) {
       const rotation = new THREE.Euler(
         THREE.MathUtils.degToRad(value.x),
         THREE.MathUtils.degToRad(value.y),
@@ -72,7 +84,11 @@ export const TRANSFORM_MODES: Readonly<Record<TransformMode, TransformModeSpec>>
     spaces: true,
     showsPivot: true,
     read: (block, world) => (world ? block.worldPosition : block.pivotOffset),
-    write(block, value, world) {
+    write(
+      block,
+      value,
+      world
+    ) {
       if (world) {
         block.movePivotTo(value);
       }

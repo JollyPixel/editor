@@ -90,7 +90,11 @@ describe("VoxelView - material groups", () => {
       ],
       rendering: {
         material: "standard",
-        customizer(material, _blocksetId, surface) {
+        customizer(
+          material,
+          _blocksetId,
+          surface
+        ) {
           if (
             material instanceof THREE.MeshStandardMaterial &&
             surface.materialGroup === "gold"

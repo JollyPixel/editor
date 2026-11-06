@@ -47,6 +47,15 @@ export function apronSamples(
   return data.slice(layer * APRON_TEXELS, (layer + 1) * APRON_TEXELS);
 }
 
+export function apronTexel(
+  store: ChunkTextureStore,
+  coord: ChunkCoord,
+  localX: number,
+  localZ: number
+): number {
+  return apronSamples(store, coord)[(localZ + APRON_MARGIN) * APRON_SIZE + localX + APRON_MARGIN];
+}
+
 export function sampledApron(
   terrain: Terrain,
   coord: ChunkCoord

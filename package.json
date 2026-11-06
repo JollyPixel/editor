@@ -10,7 +10,7 @@
     "build:libraries": "node scripts/build/libraries.ts",
     "test": "pnpm -r --if-present run test && pnpm run test:scripts",
     "test:scripts": "node --test \"scripts/test/**/*.spec.ts\"",
-    "lint": "oxlint packages scripts && node scripts/exports/check.ts && pnpm -r --if-present run lint:css",
+    "lint": "oxlint packages scripts && node scripts/exports/check.ts && node scripts/agents/check.ts && pnpm -r --if-present run lint:css",
     "ci:publish": "changeset publish",
     "ci:version": "changeset version",
     "clear": "clear-ts-build",
