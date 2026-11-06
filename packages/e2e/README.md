@@ -98,8 +98,8 @@ Configures a suite and drives the `@jolly-pixel/ui` components a page renders, w
 
 - Config: `defineE2EConfig`, `PORTS`, `baseUrl`, `RunMode` and the `prebundleWorkspace` Vite plugin
 - Roles: `CookieAuthentication` and `ContextAccess`, one network role per browser context
-- Browser: locators for dialogs, fields and tree rows, pointer geometry and drags, `recordSockets`
-  and `CommandConsole`
+- Browser: locators for dialogs, fields and tree rows, pointer geometry and drags, `pixelAt` (the
+  rendered color under a client point), `recordSockets` and `CommandConsole`
 
 ### Editor
 

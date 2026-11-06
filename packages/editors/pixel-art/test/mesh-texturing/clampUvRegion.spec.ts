@@ -34,9 +34,18 @@ function makeGeometry(
 function clamp(
   geometry: THREE.BufferGeometry
 ): THREE.BufferGeometry {
-  clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()));
+  clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()), null);
 
   return geometry;
+}
+
+function clampedMaterial(
+  map: THREE.Texture
+): THREE.MeshBasicNodeMaterial {
+  const material = new THREE.MeshBasicNodeMaterial();
+  clampUvRegion(new THREE.Mesh(makeGeometry(4), material), map);
+
+  return material;
 }
 
 describe("clampUvRegion", () => {
@@ -63,28 +72,23 @@ describe("clampUvRegion", () => {
     assert.deepStrictEqual(readRegion(geometry, 0), [16.5, 48.5, 31.5, 55.5]);
   });
 
-  test("gives the material a colour node that outlives map changes", () => {
-    const material = new THREE.MeshBasicNodeMaterial();
-    const mesh = new THREE.Mesh(makeGeometry(4), material);
+  test("gives every material on one map the same shader cache key so meshes share one build", () => {
+    const map = new THREE.Texture();
+    const first = clampedMaterial(map);
+    const second = clampedMaterial(map);
 
-    clampUvRegion(mesh);
-    const colorNode = material.colorNode;
-    material.map = new THREE.Texture();
-
-    assert.ok(colorNode);
-    assert.strictEqual(material.colorNode, colorNode);
+    assert.strictEqual(first.customProgramCacheKey(), second.customProgramCacheKey());
   });
 
-  test("gives every material the same shader cache key so meshes share one build", () => {
-    const materials = [
-      new THREE.MeshBasicNodeMaterial(),
-      new THREE.MeshBasicNodeMaterial()
-    ];
-    for (const material of materials) {
-      clampUvRegion(new THREE.Mesh(makeGeometry(4), material));
-    }
+  test("moves the material to the map it is clamped with again", () => {
+    const map = new THREE.Texture();
+    const onMap = clampedMaterial(map);
+    const material = clampedMaterial(new THREE.Texture());
+    assert.notStrictEqual(material.customProgramCacheKey(), onMap.customProgramCacheKey());
 
-    const [first, second] = materials;
-    assert.strictEqual(first.customProgramCacheKey(), second.customProgramCacheKey());
+    clampUvRegion(new THREE.Mesh(makeGeometry(4), material), map);
+
+    assert.strictEqual(material.map, map);
+    assert.strictEqual(material.customProgramCacheKey(), onMap.customProgramCacheKey());
   });
 });

@@ -61,6 +61,8 @@ function buildBoxGeometry(
   excludeFaces: ReadonlySet<BoxFace>
 ): THREE.BufferGeometry {
   const box = new THREE.BoxGeometry(...size);
+  box.deleteAttribute("normal");
+  box.deleteAttribute("uv");
   if (excludeFaces.size === 0) {
     return box;
   }

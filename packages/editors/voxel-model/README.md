@@ -20,9 +20,10 @@ $ pnpm --filter @jolly-pixel/editor.voxel-model dev
 ```bash
 $ pnpm --filter @jolly-pixel/editor.voxel-model test
 $ pnpm --filter @jolly-pixel/editor.voxel-model lint
-$ pnpm exec playwright install chromium
-$ pnpm --filter @jolly-pixel/editor.voxel-model test:e2e
+$ pnpm --filter @jolly-pixel/editor.voxel-model test:scenario
 ```
+
+`test:scenario` builds and animates a small figure in installed Chrome, checking each step through an exported archive; see [the scenario guide](./test/scenario/README.md).
 
 ## Contributors Guide
 

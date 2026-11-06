@@ -59,7 +59,7 @@ describe("UVGeometryBinding region attributes", () => {
     geometry: THREE.BufferGeometry,
     faceRanges: FaceRanges = boxFaceRanges()
   ): UVGeometryBinding {
-    clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()));
+    clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()), null);
 
     return new UVGeometryBinding({
       geometry,
@@ -78,7 +78,7 @@ describe("UVGeometryBinding region attributes", () => {
       textureSize: kTextureSize,
       faceRanges: boxFaceRanges()
     });
-    clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()));
+    clampUvRegion(new THREE.Mesh(geometry, new THREE.MeshBasicNodeMaterial()), null);
 
     assert.deepStrictEqual(readRegion(geometry, 0), [0.5, 48.5, 15.5, 63.5]);
   });

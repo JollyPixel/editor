@@ -6,11 +6,10 @@ import {
   dot,
   float,
   floor,
-  Fn,
   int,
   materialColor,
+  materialReference,
   max,
-  reference,
   texture,
   textureSize,
   uv,
@@ -28,16 +27,43 @@ import {
 
 export type UvRegionClampedMesh = THREE.Mesh<
   THREE.BufferGeometry,
-  THREE.NodeMaterial
+  THREE.NodeMaterial & {
+    map: THREE.Texture | null;
+  }
 >;
 
 // CONSTANTS
-const kClampedMapColor = Fn(({ material }) => {
-  const map = readTextureMap(material);
+const kClampedMapColors = new WeakMap<THREE.Texture, Node<"vec4">>();
+
+export function clampUvRegion(
+  mesh: UvRegionClampedMesh,
+  map: THREE.Texture | null
+): void {
+  ensureUvRegionAttributes(mesh.geometry);
+  mesh.material.map = map;
+  mesh.material.colorNode = clampedMapColor(map);
+  mesh.material.needsUpdate = true;
+}
+
+function clampedMapColor(
+  map: THREE.Texture | null
+): Node<"vec3"> | Node<"vec4"> {
   if (map === null) {
     return materialColor;
   }
 
+  let colorNode = kClampedMapColors.get(map);
+  if (colorNode === undefined) {
+    colorNode = sampleClamped(map);
+    kClampedMapColors.set(map, colorNode);
+  }
+
+  return colorNode;
+}
+
+function sampleClamped(
+  map: THREE.Texture
+): Node<"vec4"> {
   const texels = textureSize(texture(map), int(0)) as unknown as Node<"ivec2">;
   const size = vec2(texels);
   const region = attribute<"vec4">(UV_REGION_ATTRIBUTE, "vec4");
@@ -53,21 +79,7 @@ const kClampedMapColor = Fn(({ material }) => {
   const wrapped = texel.sub(floor(texel.div(size)).mul(size));
   const sampled = texture(map, wrapped.div(size)).level(float(0));
 
-  return vec4(reference("color", "color", material), float(1)).mul(sampled);
-})();
+  const tint = materialReference("color", "color") as unknown as Node<"vec3">;
 
-export function clampUvRegion(
-  mesh: UvRegionClampedMesh
-): void {
-  ensureUvRegionAttributes(mesh.geometry);
-  mesh.material.colorNode = kClampedMapColor;
-  mesh.material.needsUpdate = true;
-}
-
-function readTextureMap(
-  material: THREE.Material
-): THREE.Texture | null {
-  return "map" in material && material.map instanceof THREE.Texture ?
-    material.map :
-    null;
+  return vec4(tint, float(1)).mul(sampled);
 }
