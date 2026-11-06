@@ -2,15 +2,10 @@
 
 ## More component types
 
-GLB models and sprites.
+Sprites.
 
 Note:
 - `VoxelModel` does not play the model's animation sets yet.
-
-## Scripts
-
-v1 scripts name a behavior the game registers. A script asset will fill
-`assets.script` next to `behavior`.
 
 ## Play from studio
 

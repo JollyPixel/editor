@@ -1,12 +1,16 @@
 // Import Third-party Dependencies
-import RAPIER from "@dimforge/rapier3d";
 import {
   CameraComponent
 } from "@jolly-pixel/engine";
 import {
+  PhysicsSystem,
+  RigidBody
+} from "@jolly-pixel/physics/engine";
+import { RapierBackend } from "@jolly-pixel/physics.rapier";
+import {
   Face,
   loadBlocksets,
-  RapierVoxelCollider,
+  PhysicsVoxelCollider,
   type BlockDefinition,
   type TileRef
 } from "@jolly-pixel/voxel.renderer";
@@ -51,12 +55,12 @@ const kBottomTile: TileRef = {
   row: 0
 };
 
-const rapierWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
-
 const runtime = await Runtime.create("canvas", {
   includePerformanceStats: true,
   focusCanvas: false
 });
+const backend = await RapierBackend.load();
+const physicsSystem = new PhysicsSystem(runtime.world, backend.createWorld());
 
 const blocksets = await loadBlocksets([
   {
@@ -109,7 +113,8 @@ function dirtBlock(
   };
 }
 
-const voxelMap = world.createActor("map")
+const mapActor = world.createActor("map");
+const voxelMap = mapActor
   .addComponentAndGet(
     VoxelRenderer,
     {
@@ -122,9 +127,8 @@ const voxelMap = world.createActor("map")
         alphaTest: 0.5,
         material: "lambert"
       },
-      collider: (context) => new RapierVoxelCollider({
-        api: RAPIER,
-        world: rapierWorld,
+      collider: (context) => new PhysicsVoxelCollider({
+        world: physicsSystem.ownedBodies(mapActor),
         ...context
       }),
       blocksets
@@ -197,39 +201,32 @@ for (let x = 23; x <= 29; x += 3) {
   place(x, 2, 24, kPoleId);
 }
 
-const sphereBodyDesc = RAPIER.RigidBodyDesc.dynamic()
-  .setTranslation(15.5, 9, 15.5)
-  .setLinearDamping(3.0)
-  .setAngularDamping(1.0);
-
-const sphereBody = rapierWorld.createRigidBody(sphereBodyDesc);
-
-rapierWorld.createCollider(
-  RAPIER.ColliderDesc.ball(kSphereRadius)
-    .setRestitution(0.3)
-    .setFriction(0.8),
-  sphereBody
-);
-
-const sphereMesh = new THREE.Mesh(
+const sphere = world.createActor("sphere");
+sphere.object3D.position.set(15.5, 9, 15.5);
+sphere.object3D.add(new THREE.Mesh(
   new THREE.SphereGeometry(kSphereRadius, 24, 16),
   new THREE.MeshLambertMaterial({ color: 0xff3333 })
-);
-scene.add(sphereMesh);
+));
+sphere
+  .addComponent(RigidBody, {
+    linearDamping: 3.0,
+    angularDamping: 1.0,
+    colliders: [
+      {
+        shape: { type: "sphere", radius: kSphereRadius },
+        restitution: 0.3,
+        friction: 0.8
+      }
+    ]
+  })
+  .addComponent(SphereBehavior);
 
 world.createActor("camera")
   .addComponent(CameraComponent)
   .addComponent(FollowCamera, {
-    target: sphereMesh,
+    target: sphere.object3D,
     offset: { x: 0, y: 6, z: 9 }
   });
-
-world.on("beforeFixedUpdate", (_dt) => {
-  rapierWorld.step();
-});
-
-world.createActor("sphere")
-  .addComponent(SphereBehavior, { body: sphereBody, mesh: sphereMesh });
 
 const pane = createExamplePane();
 pane.hidden = true;

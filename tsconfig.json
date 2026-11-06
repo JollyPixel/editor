@@ -41,6 +41,12 @@
       "path": "./packages/engine"
     },
     {
+      "path": "./packages/physics"
+    },
+    {
+      "path": "./packages/physics-rapier"
+    },
+    {
       "path": "./packages/runtime"
     },
     {

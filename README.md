@@ -68,6 +68,11 @@ Planned. It will turn a project's assets into the catalog manifest the runtime l
 - [loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
 - [controls](./packages/controls) - Input controls (screen, mouse, touchpad, keyboard, gamepad)
 
+#### Physics
+
+- [physics](./packages/physics) - Engine-neutral physics contract and engine components (PhysicsSystem, RigidBody)
+- [physics.rapier](./packages/physics-rapier) - Rapier backend for physics
+
 #### Renderers
 
 - [voxel.renderer](./packages/voxel-renderer) - Voxel engine and renderer

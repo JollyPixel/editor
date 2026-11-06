@@ -2,7 +2,7 @@
 
 The interface between a [`VoxelView`](../core/VoxelView.md) and a physics
 engine. Collision is off unless `VoxelViewOptions.collider` provides a
-factory. [`RapierVoxelCollider`](./RapierVoxelCollider.md) is the bundled
+factory. [`PhysicsVoxelCollider`](./PhysicsVoxelCollider.md) is the bundled
 implementation; see [adding physics](../../guides/adding-physics.md).
 
 ## API

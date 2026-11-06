@@ -9,6 +9,9 @@
     },
     {
       "path": "../engine"
+    },
+    {
+      "path": "../physics"
     }
   ]
 }

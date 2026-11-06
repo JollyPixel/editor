@@ -143,7 +143,7 @@ the renderer package does not depend on an ECS runtime.
 ### Collision
 
 - [`VoxelCollider`](docs/api/collision/VoxelCollider.md)
-- [`RapierVoxelCollider`](docs/api/collision/RapierVoxelCollider.md)
+- [`PhysicsVoxelCollider`](docs/api/collision/PhysicsVoxelCollider.md)
 
 ### Serialization and integration
 
