@@ -17,9 +17,11 @@ import {
   type Rolldown
 } from "vite";
 
+// Import Internal Dependencies
+import { StudioProject } from "../../server/project/StudioProject.ts";
+
 // CONSTANTS
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
-const kEditorPages = ["model", "pixel-art", "scene", "script", "sound", "voxel-map", "voxel-model"];
 const kThreeCore = /[\\/]three[\\/]build[\\/]three\.core\.js$/;
 const kUiModule = /[\\/]packages[\\/]ui[\\/]dist[\\/]/;
 const kAtaValidator = /[\\/]ata-validator[\\/]/;
@@ -71,8 +73,15 @@ describe("@jolly-pixel/studio bundle", () => {
   let chunks: Map<string, Rolldown.OutputChunk>;
   let eager: Map<string, Set<Rolldown.OutputChunk>>;
   let pages: Map<string, string>;
+  let editorPages: string[];
 
   before(async() => {
+    const project = await StudioProject.open(
+      StudioProject.resolveRoot(kStudioRoot)
+    );
+    editorPages = Array.from(project.editors)
+      .filter((editor) => editor.page.kind === "source")
+      .map((editor) => editor.name);
     const result = await build({
       configFile: path.join(kStudioRoot, "vite.config.ts"),
       root: kStudioRoot,
@@ -118,7 +127,7 @@ describe("@jolly-pixel/studio bundle", () => {
     const entries = [...chunks.values()].filter((chunk) => chunk.isEntry);
     assert.deepStrictEqual(
       entries.map((entry) => entry.name).sort(),
-      ["index", ...kEditorPages].sort()
+      ["index", ...editorPages].sort()
     );
     for (const [name, closure] of eager) {
       assert.deepStrictEqual(
@@ -142,7 +151,7 @@ describe("@jolly-pixel/studio bundle", () => {
     const shell = chunksWith(eager.get("index")!, kUiModule);
 
     assert.strictEqual(shell.length, 1);
-    for (const name of kEditorPages) {
+    for (const name of editorPages) {
       assert.deepStrictEqual(chunksWith(eager.get(name)!, kUiModule), shell);
     }
   });

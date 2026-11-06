@@ -46,7 +46,11 @@ export interface ControlsHarness {
     point: THREE.Vector3,
     options?: SendOptions
   ): void;
-  drag(from: THREE.Vector3, to: THREE.Vector3, options?: SendOptions): void;
+  drag(
+    from: THREE.Vector3,
+    to: THREE.Vector3,
+    options?: SendOptions
+  ): void;
 }
 
 export function createHarness(

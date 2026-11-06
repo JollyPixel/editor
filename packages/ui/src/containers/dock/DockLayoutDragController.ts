@@ -33,7 +33,11 @@ export interface DockTarget {
 
 export interface DockLayoutDragOptions {
   docks(): Dock[];
-  dock(pane: PaneElement, target: DockTarget, index: number): void;
+  dock(
+    pane: PaneElement,
+    target: DockTarget,
+    index: number
+  ): void;
   stack(
     pane: PaneElement,
     target: DockTarget,

@@ -8,6 +8,7 @@ import { noEnum } from "./rules/noEnum.ts";
 import { noGetSetPrefix } from "./rules/noGetSetPrefix.ts";
 import { noOfNames } from "./rules/noOfNames.ts";
 import { noTsPrivate } from "./rules/noTsPrivate.ts";
+import { paramsPerLine } from "./rules/paramsPerLine.ts";
 
 export default {
   meta: {
@@ -22,6 +23,7 @@ export default {
     "no-enum": noEnum,
     "no-get-set-prefix": noGetSetPrefix,
     "no-of-names": noOfNames,
-    "no-ts-private": noTsPrivate
+    "no-ts-private": noTsPrivate,
+    "params-per-line": paramsPerLine
   }
 };

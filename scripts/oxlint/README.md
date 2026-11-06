@@ -22,6 +22,9 @@ oxlint's `RuleTester`.
   `For`. Name what it does instead.
 - `no-get-set-prefix`: no method named `getX`/`setX`. `override` methods and
   common Web APIs that test fakes implement are allowed.
+- `params-per-line`: a function, method, constructor or method signature with
+  more than two parameters puts each on its own line. Arrow functions are
+  exempt.
 
 `no-of-names` and `no-get-set-prefix` accept `{ allow: string[] }`.
 `oxlint.config.ts` allows the published `engine` and `voxel-renderer`

@@ -14,7 +14,7 @@ Record the workspace's test and support line counts, its c8 coverage summary,
 and every test file's pass/fail state at a pinned commit, per tier:
 `test-only`, `test-types` when present, and `test:e2e` when present. Keep
 baseline failures in their own list; treat each as a possible product bug, not
-a stale test. For voxel-map and voxel-model e2e, run a failing spec alone
+a stale test. For voxel-model e2e, run a failing spec alone
 before recording it: full runs time out at random under load.
 
 Done when every in-scope test file has a recorded baseline result.

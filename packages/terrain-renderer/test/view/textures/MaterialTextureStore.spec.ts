@@ -25,7 +25,12 @@ function recordingStore() {
   const copies: Copy[] = [];
   const replaced: MaterialArrays[] = [];
   const copier: TextureCopier = {
-    copyTextureToTexture(source, destination, region, position) {
+    copyTextureToTexture(
+      source,
+      destination,
+      region,
+      position
+    ) {
       copies.push({
         source,
         destination,

@@ -17,7 +17,11 @@ export interface StrokeSegment {
 
 export interface BrushStroke {
   readonly segment?: StrokeSegment | null;
-  update(point: GroundPoint | null, elapsed: number, inverted: boolean): void;
+  update(
+    point: GroundPoint | null,
+    elapsed: number,
+    inverted: boolean
+  ): void;
   end(): void;
   cancel?(): void;
 }

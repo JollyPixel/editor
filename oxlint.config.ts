@@ -2,7 +2,10 @@
 import { readdirSync } from "node:fs";
 
 // Import Third-party Dependencies
-import { defineConfig } from "oxlint";
+import {
+  defineConfig,
+  type OxlintOverride
+} from "oxlint";
 import { typescriptConfig } from "@openally/config.oxlint";
 
 // CONSTANTS
@@ -98,6 +101,28 @@ const kPublicAccessors = [
   "setVoxelBulk",
   "setWireframe"
 ];
+const kAssetServerLayers = ["common", "model", "storage", "catalog", "live", "node"];
+
+function assetServerLayer(
+  layer: string,
+  index: number
+): OxlintOverride {
+  return {
+    files: [`packages/asset-server/src/${layer}/**`],
+    rules: {
+      "no-restricted-imports": [
+        "error", {
+          patterns: [
+            {
+              group: kAssetServerLayers.slice(index + 1).map((upper) => `**/${upper}/**`),
+              message: `asset-server layers import downward only: ${kAssetServerLayers.join(" <- ")}.`
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
 
 export default defineConfig(typescriptConfig({
   ignorePatterns: [
@@ -132,6 +157,7 @@ export default defineConfig(typescriptConfig({
     ],
     "@jolly-pixel/no-enum": "error",
     "@jolly-pixel/no-ts-private": "error",
+    "@jolly-pixel/params-per-line": "error",
     "@jolly-pixel/no-comments": "error",
     "@jolly-pixel/no-of-names": "error",
     "@jolly-pixel/no-get-set-prefix": [
@@ -187,6 +213,7 @@ export default defineConfig(typescriptConfig({
         ]
       }
     },
+    ...kAssetServerLayers.slice(0, -1).map(assetServerLayer),
     {
       files: ["packages/runtime/src/core/**"],
       rules: {

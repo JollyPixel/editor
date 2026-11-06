@@ -18,11 +18,8 @@ import {
   lookupSlot
 } from "#src/view/textures/ChunkTextureStore.ts";
 import {
-  APRON_MARGIN,
-  APRON_SIZE
-} from "#src/view/textures/heightApron.ts";
-import {
   apronSamples,
+  apronTexel,
   applyRandomEdit,
   knownFlags,
   rebuildStore,
@@ -46,15 +43,6 @@ function rampHeights(
   return heights;
 }
 
-function apronTexel(
-  store: ChunkTextureStore,
-  coord: ChunkCoord,
-  localX: number,
-  localZ: number
-): number {
-  return apronSamples(store, coord)[(localZ + APRON_MARGIN) * APRON_SIZE + localX + APRON_MARGIN];
-}
-
 function setup() {
   const terrain = new Terrain();
   const store = new ChunkTextureStore(terrain);
@@ -62,7 +50,11 @@ function setup() {
   return {
     terrain,
     store,
-    add(x: number, z: number, base = 0) {
+    add(
+      x: number,
+      z: number,
+      base = 0
+    ) {
       const coord = new ChunkCoord(x, z);
       terrain.addChunk(coord, rampHeights(base));
       store.chunkAdded(coord);
@@ -79,7 +71,12 @@ function setup() {
 
       return [...data.subarray(lookupSlot(coord) * 4, lookupSlot(coord) * 4 + 3)];
     },
-    texel(x: number, z: number, localX: number, localZ: number) {
+    texel(
+      x: number,
+      z: number,
+      localX: number,
+      localZ: number
+    ) {
       return apronTexel(store, new ChunkCoord(x, z), localX, localZ);
     },
     updatedLayers(...coords: ChunkCoord[]) {

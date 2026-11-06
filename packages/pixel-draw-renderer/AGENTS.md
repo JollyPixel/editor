@@ -1,5 +1,7 @@
 # AGENTS.md
 
-## Domain vocabulary
+## Consumers
 
-Before changing behavior, public APIs, tests, or documentation in this package, read `GLOSSARY.md`. Use its preferred terms in code, tests, documentation, issues, and commit messages. Update the glossary when introducing or materially changing a domain concept.
+- `editor.pixel-art` and `editor.voxel-map` load this package from `dist/`.
+  Run `pnpm run build` here before checking either editor.
+- Unit tests draw on `skia-canvas`, not a hand-written 2D context mock.

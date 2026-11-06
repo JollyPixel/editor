@@ -35,7 +35,11 @@ export interface CameraHarness {
   invalidations: () => number;
   hold(...codes: string[]): void;
   advance(frames?: number, deltaTime?: number): void;
-  lookDrag(deltaX: number, deltaY: number, button?: "middle" | "left"): void;
+  lookDrag(
+    deltaX: number,
+    deltaY: number,
+    button?: "middle" | "left"
+  ): void;
   stopLookDrag(): void;
   scroll(amount: number): void;
   swipe(x: number, y: number): void;
@@ -147,7 +151,11 @@ export function createHarness(
         justPressed.clear();
       }
     },
-    lookDrag(deltaX: number, deltaY: number, button: "middle" | "left" = "middle"): void {
+    lookDrag(
+      deltaX: number,
+      deltaY: number,
+      button: "middle" | "left" = "middle"
+    ): void {
       if (button === "middle") {
         middleDown = true;
       }
