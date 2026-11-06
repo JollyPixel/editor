@@ -7,6 +7,8 @@ Private editor workspace for `@jolly-pixel/asset.model` models, booted through `
 - The Animate pane lists the clips and plays, pauses, stops, loops and scrubs the selected one, at 0.25× to 2×.
 - Replace… takes a file of the same format, so the asset path keeps matching its content. Export downloads the stored file.
 
+The package also exports the `Model` scene component (`@jolly-pixel/editor.model/scene`), built on the engine's `ModelDefinition`. The scene editor shows the model in its rest pose and redraws it when the file is replaced; the chosen animation clip plays only in play mode.
+
 ## 🚀 Running the editor
 
 ```bash

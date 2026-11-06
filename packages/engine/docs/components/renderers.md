@@ -25,7 +25,10 @@ actor.addComponent(ModelRenderer, {
 | Option | Default | Description |
 | ------ | ------- | ----------- |
 | `asset` | — | Typed model reference declared by the owning scene |
+| `model` | — | An already loaded model, used instead of `asset` |
 | `debug` | `false` | Log loaded object and animations to the console |
+| `castShadow` | as loaded | Set on every mesh of the clone |
+| `receiveShadow` | as loaded | Set on every mesh of the clone |
 | `animations.default` | — | Name of the animation clip to play on start |
 | `animations.clipNameRewriter` | identity | Transforms clip names before storing them |
 
@@ -43,6 +46,22 @@ renderer.animation.stop();
 
 `animation.isAnimating` is `true` while a clip plays or fades; the renderer
 only updates in that state.
+
+### ModelDefinition
+
+The scene file definition of type `"Model"`. Its `model` asset slot takes a
+`model` asset, and it builds no component until that asset resolves.
+
+```ts
+interface ModelSettings {
+  animation: string; // "", the clip played in play mode
+  castShadow: boolean; // false
+  receiveShadow: boolean; // false
+}
+```
+
+`MODEL_DEFAULTS` holds these defaults. In edit mode the model keeps its
+rest pose, and a clip the model does not have plays nothing.
 
 ## SpriteRenderer
 

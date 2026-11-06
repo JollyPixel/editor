@@ -20,7 +20,6 @@ import {
   SceneScripts
 } from "./SceneScripts.ts";
 import { scriptForm } from "./scriptForm.ts";
-import "./componentIcons.ts";
 
 type ScriptAssets = {
   script: ScriptOutline;
@@ -42,7 +41,6 @@ class ScriptAssetDefinition extends ScriptDefinition {
 const kScript: SceneComponentKind<ScriptData, ScriptAssets> = {
   definition: new ScriptAssetDefinition(),
   label: "Script",
-  icon: "actor-script",
   form: (data, assets) => scriptForm(data, assets.resolve("script"))
 };
 
@@ -50,12 +48,17 @@ export const SCENE_COMPONENTS: SceneComponentPackage = {
   components: [kScript],
   presets: [
     {
-      id: "script",
-      label: "Script",
-      components: [
+      category: "logic",
+      presets: [
         {
-          type: "Script",
-          data: {}
+          id: "script",
+          label: "Script",
+          components: [
+            {
+              type: "Script",
+              data: {}
+            }
+          ]
         }
       ]
     }

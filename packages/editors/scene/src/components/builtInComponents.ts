@@ -55,29 +55,28 @@ const kMesh: SceneComponentKind<MeshRendererOptions> = {
 const kText: SceneComponentKind<TextSettings> = {
   definition: new TextDefinition(),
   label: "Text",
-  icon: "actor-text",
   form: textForm
 };
 export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
   components: [kCamera, kLight, kMesh, kText],
   presets: [
     {
-      id: "empty",
-      label: "Empty",
-      components: []
-    },
-    {
-      id: "camera",
-      label: "Camera",
-      components: [
+      category: "camera",
+      presets: [
         {
-          type: "Camera",
-          data: {}
+          id: "camera",
+          label: "Camera",
+          components: [
+            {
+              type: "Camera",
+              data: {}
+            }
+          ]
         }
       ]
     },
     {
-      label: "Light",
+      category: "light",
       presets: LIGHT_KINDS.map(({ value: kind, label }): SceneActorPreset => {
         return {
           id: `light:${kind}`,
@@ -94,19 +93,7 @@ export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
       })
     },
     {
-      id: "text",
-      label: "Text",
-      components: [
-        {
-          type: "Text",
-          data: {
-            text: "Text"
-          }
-        }
-      ]
-    },
-    {
-      label: "Primitive",
+      category: "3d",
       presets: GEOMETRY_KINDS.map(({ value: kind, label }) => {
         return {
           id: `mesh:${kind}`,
@@ -123,6 +110,23 @@ export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
           ]
         };
       })
+    },
+    {
+      category: "3d",
+      presets: [
+        {
+          id: "text",
+          label: "Text",
+          components: [
+            {
+              type: "Text",
+              data: {
+                text: "Text"
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   assets: [

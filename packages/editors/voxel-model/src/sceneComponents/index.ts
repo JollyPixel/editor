@@ -14,7 +14,6 @@ import {
   VoxelModelDefinition,
   type VoxelModelSettings
 } from "./VoxelModelDefinition.ts";
-import "./componentIcons.ts";
 
 // CONSTANTS
 const kRows = new FormRows<VoxelModelSettings>();
@@ -22,7 +21,6 @@ const kRows = new FormRows<VoxelModelSettings>();
 const kVoxelModel: SceneComponentKind<VoxelModelSettings> = {
   definition: new VoxelModelDefinition(),
   label: "Voxel model",
-  icon: "actor-voxel-model",
   form: () => [
     kRows.boolean(["castShadow"], "Cast shadow"),
     kRows.boolean(["receiveShadow"], "Receive shadow")
@@ -33,12 +31,17 @@ export const SCENE_COMPONENTS: SceneComponentPackage = {
   components: [kVoxelModel],
   presets: [
     {
-      id: "voxel-model",
-      label: "Voxel model",
-      components: [
+      category: "3d",
+      presets: [
         {
-          type: "VoxelModel",
-          data: {}
+          id: "voxel-model",
+          label: "Voxel model",
+          components: [
+            {
+              type: "VoxelModel",
+              data: {}
+            }
+          ]
         }
       ]
     }

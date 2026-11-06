@@ -767,6 +767,9 @@ importers:
 
   packages/editors/model:
     dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server

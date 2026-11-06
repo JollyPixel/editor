@@ -19,24 +19,46 @@ export interface ModelRendererAnimationOptions<
   fadeDuration?: number;
 }
 
-export interface ModelRendererOptions<
+export type ModelSource =
+  | {
+    /**
+     * Model resolved from the world's asset coordinator when the actor awakes.
+     */
+    asset: AssetReference<Model>;
+    model?: never;
+  }
+  | {
+    model: Model;
+    asset?: never;
+  };
+
+export type ModelRendererOptions<
   TClipName extends string = string
-> {
-  asset: AssetReference<Model>;
+> = ModelSource & {
   /**
    * @default false
    */
   debug?: boolean;
+  /**
+   * Omitted, every mesh keeps the flag set by the model loader.
+   */
+  castShadow?: boolean;
+  /**
+   * Omitted, every mesh keeps the flag set by the model loader.
+   */
+  receiveShadow?: boolean;
   animations?: ModelRendererAnimationOptions<TClipName>;
-}
+};
 
 export class ModelRenderer<
   TClipName extends string = string
 > extends ActorComponent<any> {
   group: THREE.Group<THREE.Object3DEventMap>;
 
-  #asset: AssetReference<Model>;
+  #source: ModelSource;
   #debug = false;
+  #castShadow: boolean | undefined;
+  #receiveShadow: boolean | undefined;
   #mixer: THREE.AnimationMixer | null = null;
 
   animation = new ModelAnimation<TClipName>(() => {
@@ -53,8 +75,10 @@ export class ModelRenderer<
       needUpdate: false
     });
 
-    this.#asset = options.asset;
+    this.#source = options;
     this.#debug = options.debug ?? false;
+    this.#castShadow = options.castShadow;
+    this.#receiveShadow = options.receiveShadow;
 
     const { animations } = options;
     if (animations) {
@@ -71,12 +95,19 @@ export class ModelRenderer<
   }
 
   awake() {
-    const { object, animations } = this.getAsset(this.#asset);
+    const { object, animations } = this.#source.model ??
+      this.getAsset(this.#source.asset);
     if (this.#debug) {
       console.log({ object, animations });
     }
 
     this.group = cloneSkinned(object) as THREE.Group<THREE.Object3DEventMap>;
+    this.group.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = this.#castShadow ?? child.castShadow;
+        child.receiveShadow = this.#receiveShadow ?? child.receiveShadow;
+      }
+    });
     this.actor.addChildren(this.group);
 
     this.#mixer = new THREE.AnimationMixer(this.group);
