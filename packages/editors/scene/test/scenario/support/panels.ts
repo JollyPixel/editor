@@ -22,7 +22,7 @@ export function sceneTool(
   tool: string
 ): Locator {
   return page.locator(
-    `jolly-scene-toolbar jolly-tool-button[data-tool="${tool}"]`
+    `#scene-viewport jolly-tool-button[data-tool="${tool}"]`
   );
 }
 

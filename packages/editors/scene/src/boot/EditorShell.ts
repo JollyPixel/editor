@@ -20,7 +20,8 @@ const kAttachedTags = [
   "jolly-scene-hierarchy",
   "jolly-scene-inspector",
   "jolly-scene-environment",
-  "jolly-scene-toolbar"
+  "jolly-scene-toolbar",
+  "jolly-scene-top-bar"
 ] as const satisfies readonly (keyof HTMLElementTagNameMap)[];
 
 export interface EditorShellOptions {

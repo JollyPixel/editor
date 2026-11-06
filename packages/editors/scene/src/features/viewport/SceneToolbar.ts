@@ -13,7 +13,6 @@ import "@jolly-pixel/ui/elements/tool-button";
 import "../../app/sceneIcons.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import type { SceneAction } from "../../keybindings/sceneActions.ts";
-import { SCENE_PREFERENCES } from "../../preferences.ts";
 import { SCENE_HISTORY_SCOPE } from "../history/sceneHistory.ts";
 import type { GizmoMode } from "./GizmoSettings.ts";
 import { sceneToolbarStyles } from "./SceneToolbar.styles.ts";
@@ -53,8 +52,7 @@ export class SceneToolbar extends LitElement {
       editing.gizmo.subscribe("change", repaint),
       editing.history.subscribe("change", repaint),
       editing.selection.subscribe("change", repaint),
-      editing.shortcuts.subscribe(repaint),
-      editing.preferences.watch(SCENE_PREFERENCES, repaint)
+      editing.shortcuts.subscribe(repaint)
     ];
   });
 
@@ -155,52 +153,10 @@ export class SceneToolbar extends LitElement {
   #renderView(
     editing: SceneEditing
   ): TemplateResult {
-    const { selection, shortcuts, preferences } = editing;
-    const view = preferences.values(SCENE_PREFERENCES);
+    const { selection, shortcuts } = editing;
 
     return html`
       <div class="group divided" role="group" aria-label="View">
-        <jolly-tool-button
-          data-tool="grid"
-          icon="view-grid"
-          flyout-side="above"
-          label="Grid"
-          ?active=${view.grid}
-          @click=${() => preferences.update(SCENE_PREFERENCES, {
-            grid: !view.grid
-          })}
-        ></jolly-tool-button>
-        <jolly-tool-button
-          data-tool="grid-axes"
-          icon="view-axes"
-          flyout-side="above"
-          label="Grid axes"
-          ?active=${view.axes}
-          ?disabled=${!view.grid}
-          @click=${() => preferences.update(SCENE_PREFERENCES, {
-            axes: !view.axes
-          })}
-        ></jolly-tool-button>
-        <jolly-tool-button
-          data-tool="colliders"
-          icon="actor-rigid-body"
-          flyout-side="above"
-          label="Colliders"
-          ?active=${view.colliders}
-          @click=${() => preferences.update(SCENE_PREFERENCES, {
-            colliders: !view.colliders
-          })}
-        ></jolly-tool-button>
-        <jolly-tool-button
-          data-tool="snap"
-          icon="view-snap"
-          flyout-side="above"
-          label=${shortcuts.label("Snap", "gizmo.snap")}
-          ?active=${view.snap}
-          @click=${() => preferences.update(SCENE_PREFERENCES, {
-            snap: !view.snap
-          })}
-        ></jolly-tool-button>
         <jolly-tool-button
           data-tool="frame"
           icon="view-frame"
