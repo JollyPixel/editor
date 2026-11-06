@@ -79,7 +79,7 @@ export interface ComponentDefinition<
   apply?(
     component: TComponent,
     data: TData
-  ): void;
+  ): boolean | void;
   owns?(
     component: Component
   ): component is TComponent;

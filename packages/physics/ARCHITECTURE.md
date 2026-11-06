@@ -48,4 +48,5 @@ flowchart TB
 
 - The world steps on the engine `World`'s `afterFixedUpdate`, once per fixed
   step.
-- Physics only runs in play mode; scene definitions build nothing when editing.
+- Physics only runs in play mode. In edit mode the scene definition builds a
+  `ColliderOutline`, which draws the colliders and creates no body.

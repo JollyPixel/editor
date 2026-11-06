@@ -7,7 +7,8 @@ import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { RigidBody } from "#src/engine/RigidBody.ts";
-import { RigidBodyDefinition } from "#src/engine/definitions.ts";
+import { RigidBodyDefinition } from "#src/engine/RigidBodyDefinition.ts";
+import { ColliderOutline } from "#src/engine/ColliderOutline.ts";
 import { createPhysicsHarness } from "../helpers/engineWorld.ts";
 
 // CONSTANTS
@@ -53,21 +54,45 @@ describe("RigidBodyDefinition", () => {
   it("keeps an empty collider list and reads each invalid entry leniently", () => {
     assert.deepEqual(definition.parse({ colliders: [] }).colliders, []);
     assert.deepEqual(
-      definition.parse({ colliders: [42, { shape: "cone" }] }).colliders,
+      definition.parse({ colliders: [42, { shape: { type: "cone" } }] }).colliders,
       [kUnitBox]
     );
   });
 
-  it("builds nothing in edit mode and a RigidBody in play mode", () => {
-    const { world } = createPhysicsHarness();
+  it("outlines the colliders in edit mode without creating a body", () => {
+    const { world, physics } = createPhysicsHarness();
     const actor = world.createActor("box");
-    const data = definition.parse({ kind: "kinematic" });
 
-    assert.equal(definition.create(actor, data, context("edit")), null);
-    const component = definition.create(actor, data, context("play"));
+    const component = definition.create(
+      actor,
+      definition.parse({ kind: "kinematic" }),
+      context("edit")
+    );
 
-    assert.ok(component instanceof RigidBody);
-    assert.equal(component.body.kind, "kinematic");
+    assert.ok(component instanceof ColliderOutline);
+    assert.equal(physics.bodies.length, 0);
+  });
+
+  it("redraws an outline on apply and asks to rebuild a RigidBody", () => {
+    const { world } = createPhysicsHarness();
+    const data = definition.parse({});
+    const next = definition.parse({ colliders: [] });
+    const outline = definition.create(
+      world.createActor("edited"),
+      data,
+      context("edit")
+    );
+    const body = definition.create(
+      world.createActor("played"),
+      data,
+      context("play")
+    );
+
+    assert.equal(definition.apply(outline, next), true);
+    assert.deepEqual(outline.settings.colliders, []);
+    assert.ok(body instanceof RigidBody);
+    assert.equal(definition.apply(body, next), false);
+    assert.equal(body.settings.colliders.length, 1);
   });
 
   it("round-trips every scene shape through a play-mode component", () => {
@@ -83,19 +108,25 @@ describe("RigidBodyDefinition", () => {
     const colliders: Systems.JSONObject[] = [
       {
         ...material,
-        shape: "box",
-        halfExtents: { x: 1, y: 2, z: 3 }
+        shape: {
+          type: "box",
+          halfExtents: { x: 1, y: 2, z: 3 }
+        }
       },
       {
         ...material,
-        shape: "sphere",
-        radius: 2
+        shape: {
+          type: "sphere",
+          radius: 2
+        }
       },
       {
         ...material,
-        shape: "capsule",
-        halfHeight: 1,
-        radius: 0.25
+        shape: {
+          type: "capsule",
+          halfHeight: 1,
+          radius: 0.25
+        }
       }
     ];
     const data = definition.parse({

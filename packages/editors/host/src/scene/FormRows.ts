@@ -13,6 +13,14 @@ type NestedPath<TData> = {
   [TKey in DataKey<TData>]: readonly [TKey, DataKey<DataField<TData, TKey>>];
 }[DataKey<TData>];
 
+type ListKey<TData> = {
+  [TKey in DataKey<TData>]: DataField<TData, TKey> extends readonly unknown[] ?
+    TKey :
+    never;
+}[DataKey<TData>];
+type ListItem<TData, TKey extends string> =
+  DataField<TData, TKey> extends readonly (infer TItem)[] ? TItem : never;
+
 export type FieldPath<TData = unknown> = unknown extends TData ?
   readonly [string] | readonly [string, string] :
   readonly [DataKey<TData>] | NestedPath<TData>;
@@ -69,13 +77,43 @@ export interface PropertiesRow<TData = unknown> extends RowBase<TData> {
   declared?: readonly DeclaredProperty[];
 }
 
-export type FormRow<TData = unknown> =
+export interface VectorRow<TData = unknown> extends RowBase<TData> {
+  control: "vector";
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export type FieldRow<TData = unknown> =
   | NumberRow<TData>
   | BooleanRow<TData>
   | ColorRow<TData>
   | ChoiceRow<TData>
   | TextRow<TData>
+  | VectorRow<TData>
   | PropertiesRow<TData>;
+
+export interface ListItems<TItem = unknown> {
+  /**
+   * Title of each item, numbered from 1.
+   */
+  itemLabel: string;
+  /**
+   * Data of an added item.
+   */
+  seed: Systems.JSONObject;
+  rows(item: TItem): readonly FieldRow<TItem>[];
+}
+
+export interface ListRow extends ListItems {
+  control: "list";
+  path: readonly [string];
+  label: string;
+}
+
+export type FormRow<TData = unknown> =
+  | FieldRow<TData>
+  | ListRow;
 
 export type ComponentForm<
   TData,
@@ -133,6 +171,32 @@ export class FormRows<TData> {
       path,
       label,
       options
+    };
+  }
+
+  vector(
+    path: FieldPath<TData>,
+    label: string,
+    bounds: NumberBounds = {}
+  ): VectorRow<TData> {
+    return {
+      control: "vector",
+      path,
+      label,
+      ...bounds
+    };
+  }
+
+  list<TKey extends ListKey<TData>>(
+    key: TKey,
+    label: string,
+    list: ListItems<ListItem<TData, TKey>>
+  ): ListRow {
+    return {
+      control: "list",
+      path: [key],
+      label,
+      ...list
     };
   }
 }

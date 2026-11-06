@@ -16,12 +16,25 @@ import {
 // Import Internal Dependencies
 import {
   ComponentInspection,
+  type InspectedField,
+  type InspectedList,
   type InspectedRow
 } from "../../src/components/ComponentInspection.ts";
 import { createSceneComponents } from "../helpers/sceneComponents.ts";
 
 // CONSTANTS
 const kComponents = createSceneComponents();
+const kUnitBoxCollider = {
+  shape: {
+    type: "box",
+    halfExtents: { x: 0.5, y: 0.5, z: 0.5 }
+  },
+  offset: { x: 0, y: 0, z: 0 },
+  friction: 0.5,
+  restitution: 0,
+  density: 1,
+  sensor: false
+};
 
 function inspect(
   type: string,
@@ -41,14 +54,47 @@ function inspect(
   });
 }
 
-function rowAt(
+function find(
   inspection: ComponentInspection,
-  ...path: string[]
+  path: string[]
 ): InspectedRow {
   const inspected = inspection.rows.find(
     (candidate) => candidate.row.path.join(".") === path.join(".")
   );
   assert.ok(inspected, `no row for ${path.join(".")}`);
+
+  return inspected;
+}
+
+function rowAt(
+  inspection: ComponentInspection,
+  ...path: string[]
+): InspectedField {
+  const inspected = find(inspection, path);
+  assert.ok(inspected.kind === "field", `${path.join(".")} is a list`);
+
+  return inspected;
+}
+
+function listAt(
+  inspection: ComponentInspection,
+  key: string
+): InspectedList {
+  const inspected = find(inspection, [key]);
+  assert.ok(inspected.kind === "list", `${key} is not a list`);
+
+  return inspected;
+}
+
+function itemRow(
+  list: InspectedList,
+  index: number,
+  ...path: string[]
+): InspectedField {
+  const inspected = list.items[index]?.find(
+    (candidate) => candidate.row.path.join(".") === path.join(".")
+  );
+  assert.ok(inspected, `no item row for ${path.join(".")}`);
 
   return inspected;
 }
@@ -108,5 +154,88 @@ describe("ComponentInspection", () => {
 
     assert.strictEqual(radius.value, 4);
     assert.strictEqual(radius.fallback, MESH_GEOMETRY_DEFAULTS.sphere.radius);
+  });
+
+  test("writes the whole list back when a nested field of an item changes", () => {
+    const inspection = inspect("RigidBody", {});
+    const colliders = listAt(inspection, "colliders");
+    const halfExtents = itemRow(colliders, 0, "shape", "halfExtents");
+
+    assert.deepEqual(halfExtents.value, { x: 0.5, y: 0.5, z: 0.5 });
+    assert.deepEqual(
+      inspection.editItem(colliders, 0, halfExtents, { x: 2, y: 0.5, z: 0.5 }),
+      new ComponentChange({
+        data: {
+          colliders: [
+            {
+              ...kUnitBoxCollider,
+              shape: {
+                type: "box",
+                halfExtents: { x: 2, y: 0.5, z: 0.5 }
+              }
+            }
+          ]
+        }
+      })
+    );
+  });
+
+  test("drops the previous shape's fields when an item's shape type changes", () => {
+    const inspection = inspect("RigidBody", { colliders: [kUnitBoxCollider] });
+    const colliders = listAt(inspection, "colliders");
+
+    const change = inspection.editItem(
+      colliders,
+      0,
+      itemRow(colliders, 0, "shape", "type"),
+      "sphere"
+    );
+    const sphere = listAt(inspect("RigidBody", change.applyTo({})), "colliders");
+
+    assert.deepEqual(change.data.colliders, [
+      {
+        ...kUnitBoxCollider,
+        shape: { type: "sphere" }
+      }
+    ]);
+    assert.strictEqual(itemRow(sphere, 0, "shape", "radius").value, 0.5);
+  });
+
+  test("reads an item field's default from that item's shape type", () => {
+    const colliders = listAt(inspect("RigidBody", {
+      colliders: [
+        kUnitBoxCollider,
+        {
+          shape: {
+            type: "capsule",
+            halfHeight: 2,
+            radius: 1
+          }
+        }
+      ]
+    }), "colliders");
+    const halfHeight = itemRow(colliders, 1, "shape", "halfHeight");
+
+    assert.strictEqual(halfHeight.value, 2);
+    assert.strictEqual(halfHeight.fallback, 0.5);
+    assert.deepEqual(
+      itemRow(colliders, 0, "shape", "halfExtents").fallback,
+      kUnitBoxCollider.shape.halfExtents
+    );
+  });
+
+  test("appends the seed and removes an item by its position", () => {
+    const sensor = {
+      ...kUnitBoxCollider,
+      sensor: true
+    };
+    const inspection = inspect("RigidBody", { colliders: [kUnitBoxCollider, sensor] });
+    const colliders = listAt(inspection, "colliders");
+
+    assert.deepEqual(
+      inspection.addItem(colliders).data.colliders,
+      [kUnitBoxCollider, sensor, kUnitBoxCollider]
+    );
+    assert.deepEqual(inspection.removeItem(colliders, 0).data.colliders, [sensor]);
   });
 });

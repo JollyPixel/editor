@@ -9,8 +9,7 @@ import * as THREE from "three";
 // Import Internal Dependencies
 import {
   COLLIDER_DEFAULTS,
-  type ColliderDesc,
-  type ColliderShape
+  type ColliderDesc
 } from "../ColliderShape.ts";
 import {
   BODY_DEFAULTS,
@@ -27,6 +26,7 @@ import {
   type ActorContact,
   type PhysicsStepObserver
 } from "./PhysicsSystem.ts";
+import { scaleCollider } from "./shapes/scale.ts";
 
 // CONSTANTS
 const kPosition = new THREE.Vector3();
@@ -219,62 +219,4 @@ function resolveSettings(
       RIGID_BODY_DEFAULTS.colliders :
       Object.freeze(colliders)
   });
-}
-
-function scaleCollider(
-  collider: Readonly<ColliderSettings>,
-  scale: THREE.Vector3
-): ColliderDesc {
-  const { shape, offset, ...material } = collider;
-
-  return {
-    ...material,
-    shape: scaleShape(shape, scale),
-    offset: {
-      x: offset.x * scale.x,
-      y: offset.y * scale.y,
-      z: offset.z * scale.z
-    }
-  };
-}
-
-function scaleShape(
-  shape: ColliderShape,
-  scale: THREE.Vector3
-): ColliderShape {
-  const x = Math.abs(scale.x);
-  const y = Math.abs(scale.y);
-  const z = Math.abs(scale.z);
-  const factors = [x, y, z];
-
-  switch (shape.type) {
-    case "box":
-      return {
-        type: "box",
-        halfExtents: {
-          x: shape.halfExtents.x * x,
-          y: shape.halfExtents.y * y,
-          z: shape.halfExtents.z * z
-        }
-      };
-    case "sphere":
-      return {
-        type: "sphere",
-        radius: shape.radius * Math.max(x, y, z)
-      };
-    case "capsule":
-      return {
-        type: "capsule",
-        halfHeight: shape.halfHeight * y,
-        radius: shape.radius * Math.max(x, z)
-      };
-    case "trimesh":
-      return {
-        type: "trimesh",
-        vertices: shape.vertices.map((value, index) => value * factors[index % 3]),
-        indices: shape.indices
-      };
-    default:
-      return shape satisfies never;
-  }
 }

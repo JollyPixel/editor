@@ -8,15 +8,8 @@ import { PhysicsSystem } from "@jolly-pixel/physics/engine";
 import { RapierBackend } from "@jolly-pixel/physics.rapier";
 
 const backend = await RapierBackend.load();
-const physicsSystem = new PhysicsSystem(runtime.world, backend.createWorld());
+const physicsSystem = PhysicsSystem.attach(runtime.world, backend);
 ```
-
-## Constructor
-
-### new PhysicsSystem(world: World, physics: PhysicsWorld)
-
-Throws when `world` already has a system. Create it before loading a scene
-that holds physics components.
 
 ## Properties
 
@@ -27,6 +20,13 @@ class PhysicsSystem {
 ```
 
 ## Methods
+
+### static attach(world: World, backend: PhysicsBackend, options?: PhysicsWorldOptions): PhysicsSystem
+
+Creates `physics` with `backend.createWorld(options)` and attaches the system
+to `world`. The system owns `physics` and disposes it in `dispose()`. Throws
+when `world` already has a system, before anything is created. Attach it
+before loading a scene that holds physics components.
 
 ### static require(world: World): PhysicsSystem
 

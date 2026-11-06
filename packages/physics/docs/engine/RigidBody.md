@@ -100,9 +100,12 @@ pose. `rotation` defaults to the current one.
 
 ## Scene files
 
-`RigidBodyDefinition` registers the component under the type `"RigidBody"`. It
-builds nothing in edit mode, and saves box, sphere and capsule colliders; it
-does not own a `RigidBody` with a trimesh collider.
+`RigidBodyDefinition` registers the component under the type `"RigidBody"`. In
+play mode it builds a `RigidBody`. In edit mode it builds a
+[`ColliderOutline`](./ColliderOutline.md) instead, and `apply` redraws it;
+`apply` returns `false` for a `RigidBody`, so the scene rebuilds it. It saves
+box, sphere and capsule colliders, and does not own a `RigidBody` with a
+trimesh collider.
 
 ```ts
 import { RigidBodyDefinition } from "@jolly-pixel/physics/engine";
@@ -122,15 +125,19 @@ interface RigidBodyData {
 }
 
 interface ColliderData {
-  shape: "box" | "sphere" | "capsule"; // default "box"
-  halfExtents: Vector3Like; // box
-  radius: number; // sphere and capsule, default 0.5
-  halfHeight: number; // capsule, default 0.5
+  shape: ShapeData;
   offset: Vector3Like;
   friction: number;
   restitution: number;
   density: number;
   sensor: boolean;
+}
+
+interface ShapeData {
+  type: "box" | "sphere" | "capsule"; // default "box"
+  halfExtents: Vector3Like; // box
+  radius: number; // sphere and capsule, default 0.5
+  halfHeight: number; // capsule, default 0.5
 }
 ```
 

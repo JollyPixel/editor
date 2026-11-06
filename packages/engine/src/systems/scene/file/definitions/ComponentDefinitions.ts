@@ -87,11 +87,13 @@ export class ComponentDefinitions {
     data: Readonly<JSONObject>
   ): boolean {
     const definition = this.#definitions.get(type);
-    if (definition?.apply === undefined) {
+    if (
+      definition?.apply === undefined ||
+      definition.apply(component, definition.parse(data)) === false
+    ) {
       return false;
     }
 
-    definition.apply(component, definition.parse(data));
     const built = this.#built.get(component);
     if (built !== undefined) {
       this.#built.set(component, {

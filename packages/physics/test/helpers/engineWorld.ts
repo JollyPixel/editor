@@ -4,7 +4,7 @@ import type { FrameSchedule } from "@jolly-pixel/loop";
 
 // Import Internal Dependencies
 import { PhysicsSystem } from "#src/engine/PhysicsSystem.ts";
-import { FakePhysicsWorld } from "./fakePhysics.ts";
+import { FakePhysicsBackend } from "./fakePhysics.ts";
 
 // CONSTANTS
 const kFixedDelta = 1000 / 60;
@@ -48,11 +48,13 @@ export function createEngineWorld() {
 
 export function createPhysicsHarness() {
   const world = createEngineWorld();
-  const physics = new FakePhysicsWorld();
-  const system = new PhysicsSystem(world, physics);
+  const backend = new FakePhysicsBackend();
+  const system = PhysicsSystem.attach(world, backend);
+  const [physics] = backend.worlds;
 
   return {
     world,
+    backend,
     physics,
     system,
     tick(

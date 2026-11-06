@@ -22,6 +22,10 @@ export const SCENE_ACTOR_CATEGORIES = [
     label: "2D"
   },
   {
+    id: "physics",
+    label: "Physics"
+  },
+  {
     id: "audio",
     label: "Audio"
   },

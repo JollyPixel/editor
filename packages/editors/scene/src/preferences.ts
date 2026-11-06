@@ -24,6 +24,12 @@ export const SCENE_PREFERENCES = definePreferences({
       group: "View",
       default: true
     },
+    colliders: {
+      type: "boolean",
+      label: "Colliders",
+      group: "View",
+      default: true
+    },
     snap: {
       type: "boolean",
       label: "Snap",

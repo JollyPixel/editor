@@ -9,6 +9,7 @@ import {
 import type { BodyKind } from "../PhysicsBody.ts";
 import type { ColliderShape } from "../ColliderShape.ts";
 import type { Vector3Like } from "../vectors.ts";
+import { ColliderOutline } from "./ColliderOutline.ts";
 import {
   COLLIDER_SETTINGS_DEFAULTS,
   RigidBody,
@@ -41,9 +42,11 @@ export interface SceneRigidBodySettings extends RigidBodySettings {
   colliders: readonly Readonly<SceneColliderSettings>[];
 }
 
+export type SceneRigidBody = RigidBody | ColliderOutline;
+
 export class RigidBodyDefinition implements Systems.ComponentDefinition<
   SceneRigidBodySettings,
-  RigidBody
+  SceneRigidBody
 > {
   readonly type = "RigidBody";
 
@@ -68,12 +71,23 @@ export class RigidBodyDefinition implements Systems.ComponentDefinition<
     actor: Actor<any>,
     data: SceneRigidBodySettings,
     context: Systems.ComponentContext
-  ): RigidBody | null {
-    if (context.mode === "edit") {
-      return null;
+  ): SceneRigidBody {
+    return context.mode === "edit" ?
+      actor.addComponentAndGet(ColliderOutline, data) :
+      actor.addComponentAndGet(RigidBody, data);
+  }
+
+  apply(
+    component: SceneRigidBody,
+    data: SceneRigidBodySettings
+  ): boolean {
+    if (component instanceof ColliderOutline) {
+      component.draw(data);
+
+      return true;
     }
 
-    return actor.addComponentAndGet(RigidBody, data);
+    return false;
   }
 
   owns(
@@ -86,7 +100,7 @@ export class RigidBodyDefinition implements Systems.ComponentDefinition<
   }
 
   capture(
-    component: RigidBody
+    component: SceneRigidBody
   ): Systems.JSONObject {
     const { colliders, ...body } = component.settings;
 
@@ -115,7 +129,9 @@ function parseCollider(
   const defaults = COLLIDER_SETTINGS_DEFAULTS;
 
   return {
-    shape: parseShape(fields),
+    shape: parseShape(
+      fields.object("shape") ?? new Systems.ComponentData({})
+    ),
     offset: parseVector(fields, "offset", defaults.offset),
     friction: fields.number("friction", defaults.friction),
     restitution: fields.number("restitution", defaults.restitution),
@@ -134,7 +150,7 @@ function captureCollider(
 
   return {
     ...material,
-    ...captureShape(shape),
+    shape: captureShape(shape),
     offset: { ...offset }
   };
 }
@@ -143,7 +159,7 @@ function parseShape(
   fields: Systems.ComponentData
 ): SceneColliderShape {
   const { shape } = COLLIDER_SETTINGS_DEFAULTS;
-  const type = fields.choice("shape", kSceneShapes, shape.type);
+  const type = fields.choice("type", kSceneShapes, shape.type);
   switch (type) {
     case "box":
       return {
@@ -172,17 +188,17 @@ function captureShape(
   switch (shape.type) {
     case "box":
       return {
-        shape: shape.type,
+        type: shape.type,
         halfExtents: { ...shape.halfExtents }
       };
     case "sphere":
       return {
-        shape: shape.type,
+        type: shape.type,
         radius: shape.radius
       };
     case "capsule":
       return {
-        shape: shape.type,
+        type: shape.type,
         halfHeight: shape.halfHeight,
         radius: shape.radius
       };

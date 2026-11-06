@@ -25,14 +25,10 @@ import {
 } from "@jolly-pixel/physics/engine";
 import { RapierBackend } from "@jolly-pixel/physics.rapier";
 
-const runtime = await Runtime.create("canvas");
-const backend = await RapierBackend.load();
-new PhysicsSystem(
-  runtime.world,
-  backend.createWorld()
-);
+const { world } = await Runtime.create("canvas");
+PhysicsSystem.attach(world, await RapierBackend.load());
 
-runtime.world.createActor("ground")
+world.createActor("ground")
   .addComponent(RigidBody, {
     kind: "fixed",
     colliders: [
@@ -45,7 +41,7 @@ runtime.world.createActor("ground")
     ]
   });
 
-const crate = runtime.world.createActor("crate");
+const crate = world.createActor("crate");
 crate.object3D.position.set(0, 5, 0);
 crate.addComponent(RigidBody);
 ```
@@ -83,6 +79,7 @@ import { RigidBody } from "@jolly-pixel/physics/engine";
 
 - [`PhysicsSystem`](docs/engine/PhysicsSystem.md)
 - [`RigidBody`](docs/engine/RigidBody.md)
+- [`ColliderOutline`](docs/engine/ColliderOutline.md)
 
 ### Testing
 

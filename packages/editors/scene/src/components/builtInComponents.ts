@@ -15,6 +15,10 @@ import {
   type MeshRendererOptions,
   type TextSettings
 } from "@jolly-pixel/engine";
+import {
+  RigidBodyDefinition,
+  type SceneRigidBodySettings
+} from "@jolly-pixel/physics/engine";
 
 // Import Internal Dependencies
 import {
@@ -25,6 +29,7 @@ import {
   meshForm,
   textForm
 } from "./componentForms.ts";
+import { rigidBodyForm } from "./rigidBodyForm.ts";
 import {
   FONT_DOCUMENT_KIND,
   SceneFonts
@@ -57,8 +62,14 @@ const kText: SceneComponentKind<TextSettings> = {
   label: "Text",
   form: textForm
 };
+const kRigidBody: SceneComponentKind<SceneRigidBodySettings> = {
+  definition: new RigidBodyDefinition(),
+  label: "Rigid body",
+  icon: "actor-rigid-body",
+  form: rigidBodyForm
+};
 export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
-  components: [kCamera, kLight, kMesh, kText],
+  components: [kCamera, kLight, kMesh, kText, kRigidBody],
   presets: [
     {
       category: "camera",
@@ -122,6 +133,50 @@ export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
               type: "Text",
               data: {
                 text: "Text"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      category: "physics",
+      presets: [
+        {
+          id: "rigid-body",
+          label: "Rigid body",
+          components: [
+            {
+              type: "RigidBody",
+              data: {}
+            }
+          ]
+        },
+        {
+          id: "static-collider",
+          label: "Static collider",
+          components: [
+            {
+              type: "RigidBody",
+              data: {
+                kind: "fixed"
+              }
+            }
+          ]
+        },
+        {
+          id: "trigger",
+          label: "Trigger",
+          components: [
+            {
+              type: "RigidBody",
+              data: {
+                kind: "fixed",
+                colliders: [
+                  {
+                    sensor: true
+                  }
+                ]
               }
             }
           ]

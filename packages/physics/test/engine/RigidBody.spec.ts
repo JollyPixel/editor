@@ -15,9 +15,10 @@ import {
   createEngineWorld,
   createPhysicsHarness
 } from "../helpers/engineWorld.ts";
-import type {
-  FakeBody,
-  FakeCollider
+import {
+  FakePhysicsBackend,
+  type FakeBody,
+  type FakeCollider
 } from "../helpers/fakePhysics.ts";
 
 // CONSTANTS
@@ -43,10 +44,23 @@ describe("PhysicsSystem", () => {
     assert.throws(() => actor.addComponentAndGet(RigidBody), /No PhysicsSystem/);
   });
 
-  it("refuses a second system on the same world", () => {
-    const { world, physics } = createPhysicsHarness();
+  it("creates its physics world from the backend with the given options", () => {
+    const world = createEngineWorld();
+    const backend = new FakePhysicsBackend();
+    const gravity = { x: 0, y: -1.62, z: 0 };
 
-    assert.throws(() => new PhysicsSystem(world, physics), /already attached/);
+    const system = PhysicsSystem.attach(world, backend, { gravity });
+
+    assert.equal(system.physics, backend.worlds[0]);
+    assert.deepEqual(system.physics.gravity, gravity);
+    assert.equal(PhysicsSystem.require(world), system);
+  });
+
+  it("refuses a second system without creating its physics world", () => {
+    const { world, backend } = createPhysicsHarness();
+
+    assert.throws(() => PhysicsSystem.attach(world, backend), /already attached/);
+    assert.equal(backend.worlds.length, 1);
   });
 
   it("steps the physics world once per fixed step with the fixed delta", () => {

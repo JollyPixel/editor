@@ -15,7 +15,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 const backend = await RapierBackend.load();
-const physicsSystem = new PhysicsSystem(runtime.world, backend.createWorld());
+const physicsSystem = PhysicsSystem.attach(runtime.world, backend);
 
 const map = runtime.world.createActor("map");
 const document = new VoxelDocument({ layers: ["Ground"] });

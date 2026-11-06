@@ -5,9 +5,11 @@ import type {
   ColliderDesc,
   ContactEvent,
   ContactListener,
+  PhysicsBackend,
   PhysicsBody,
   PhysicsCollider,
   PhysicsWorld,
+  PhysicsWorldOptions,
   QuaternionLike,
   Ray,
   RayHit,
@@ -209,5 +211,22 @@ export class FakePhysicsWorld implements PhysicsWorld {
     if (this.disposed) {
       throw new Error("The physics world was disposed.");
     }
+  }
+}
+
+export class FakePhysicsBackend implements PhysicsBackend {
+  readonly name = "fake";
+  readonly worlds: FakePhysicsWorld[] = [];
+
+  createWorld(
+    options: PhysicsWorldOptions = {}
+  ): FakePhysicsWorld {
+    const world = new FakePhysicsWorld();
+    if (options.gravity !== undefined) {
+      world.gravity = { ...options.gravity };
+    }
+    this.worlds.push(world);
+
+    return world;
   }
 }

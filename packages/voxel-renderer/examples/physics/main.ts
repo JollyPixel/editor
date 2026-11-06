@@ -60,7 +60,7 @@ const runtime = await Runtime.create("canvas", {
   focusCanvas: false
 });
 const backend = await RapierBackend.load();
-const physicsSystem = new PhysicsSystem(runtime.world, backend.createWorld());
+const physicsSystem = PhysicsSystem.attach(runtime.world, backend);
 
 const blocksets = await loadBlocksets([
   {

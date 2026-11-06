@@ -901,6 +901,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../../physics
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences

@@ -182,6 +182,16 @@ export class SceneToolbar extends LitElement {
           })}
         ></jolly-tool-button>
         <jolly-tool-button
+          data-tool="colliders"
+          icon="actor-rigid-body"
+          flyout-side="above"
+          label="Colliders"
+          ?active=${view.colliders}
+          @click=${() => preferences.update(SCENE_PREFERENCES, {
+            colliders: !view.colliders
+          })}
+        ></jolly-tool-button>
+        <jolly-tool-button
           data-tool="snap"
           icon="view-snap"
           flyout-side="above"

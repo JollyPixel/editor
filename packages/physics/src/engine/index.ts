@@ -1,3 +1,4 @@
 export * from "./PhysicsSystem.ts";
 export * from "./RigidBody.ts";
-export * from "./definitions.ts";
+export * from "./RigidBodyDefinition.ts";
+export * from "./ColliderOutline.ts";

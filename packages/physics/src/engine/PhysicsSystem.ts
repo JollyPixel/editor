@@ -9,7 +9,9 @@ import type { PhysicsBody } from "../PhysicsBody.ts";
 import type { PhysicsCollider } from "../PhysicsCollider.ts";
 import type {
   ContactEvent,
+  PhysicsBackend,
   PhysicsWorld,
+  PhysicsWorldOptions,
   Ray,
   RayHit
 } from "../PhysicsWorld.ts";
@@ -43,6 +45,16 @@ interface BodyOwner {
 }
 
 export class PhysicsSystem {
+  static attach(
+    world: EngineWorld,
+    backend: PhysicsBackend,
+    options?: PhysicsWorldOptions
+  ): PhysicsSystem {
+    assertDetached(world);
+
+    return new PhysicsSystem(world, backend.createWorld(options));
+  }
+
   static require(
     world: EngineWorld
   ): PhysicsSystem {
@@ -64,9 +76,7 @@ export class PhysicsSystem {
     world: EngineWorld,
     physics: PhysicsWorld
   ) {
-    if (kSystems.has(world)) {
-      throw new Error("A PhysicsSystem is already attached to this world.");
-    }
+    assertDetached(world);
 
     this.#world = world;
     this.physics = physics;
@@ -157,4 +167,12 @@ export class PhysicsSystem {
       actor: first?.actor ?? null
     });
   };
+}
+
+function assertDetached(
+  world: EngineWorld
+): void {
+  if (kSystems.has(world)) {
+    throw new Error("A PhysicsSystem is already attached to this world.");
+  }
 }
