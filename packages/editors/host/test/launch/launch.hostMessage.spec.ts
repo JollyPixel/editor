@@ -9,12 +9,6 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { ShellCatalog } from "#src/shell/catalog/ShellCatalog.ts";
 import { HostMessageLaunchSource } from "#src/launch/sources/HostMessageLaunchSource.ts";
-import {
-  LAUNCH_MESSAGE_TYPE,
-  READY_MESSAGE_TYPE,
-  revealMessage,
-  SHELL_MESSAGE_TYPE
-} from "#src/shell/ShellChannel.ts";
 
 // CONSTANTS
 const kStudioOrigin = "http://studio.test";
@@ -95,14 +89,14 @@ describe("HostMessageLaunchSource", () => {
     }).read();
     assert.deepEqual(parent.posted, [
       {
-        message: { type: READY_MESSAGE_TYPE },
+        message: { type: "jolly-ready" },
         origin: kStudioOrigin
       }
     ]);
 
     window.dispatchEvent(new MessageEvent("message", {
       source: window,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "ignored" }
+      data: { type: "jolly-launch", target: "ignored" }
     }));
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,
@@ -110,9 +104,9 @@ describe("HostMessageLaunchSource", () => {
     }));
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: 1 }
+      data: { type: "jolly-launch", target: 1 }
     }));
-    postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host" });
+    postFromStudio(parent, { type: "jolly-launch", target: "from-host" });
 
     const launch = await pending;
     assert.equal(launch?.target.value, "from-host");
@@ -128,7 +122,7 @@ describe("HostMessageLaunchSource", () => {
       origins: [kStudioOrigin]
     }).read();
     postFromStudio(parent, {
-      type: LAUNCH_MESSAGE_TYPE,
+      type: "jolly-launch",
       target: "from-host",
       identity: {
         username: "alice",
@@ -148,7 +142,7 @@ describe("HostMessageLaunchSource", () => {
     const pending = new HostMessageLaunchSource({
       origins: [kStudioOrigin]
     }).read();
-    postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host" });
+    postFromStudio(parent, { type: "jolly-launch", target: "from-host" });
     const launch = await pending;
     parent.posted.length = 0;
 
@@ -158,31 +152,32 @@ describe("HostMessageLaunchSource", () => {
     assert.deepEqual(parent.posted, [
       {
         message: {
-          type: SHELL_MESSAGE_TYPE,
-          command: "open-asset",
+          type: "jolly-open-asset",
           target: "blockset-1"
         },
         origin: kStudioOrigin
       },
       {
         message: {
-          type: SHELL_MESSAGE_TYPE,
-          command: "toggle-console"
+          type: "jolly-toggle-console"
         },
         origin: kStudioOrigin
       }
     ]);
   });
 
-  test("keeps a reveal posted right after the launch for the editor's listener", async(context) => {
+  test("keeps the launch reveal for the editor's listener", async(context) => {
     const parent = fakeParent();
     context.after(frameIn(parent));
 
     const pending = new HostMessageLaunchSource({
       origins: [kStudioOrigin]
     }).read();
-    postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host" });
-    postFromStudio(parent, revealMessage("object:spawn"));
+    postFromStudio(parent, {
+      type: "jolly-launch",
+      target: "from-host",
+      reveal: "object:spawn"
+    });
     const launch = await pending;
     const received: string[] = [];
     launch?.shell?.onReveal((key) => received.push(key), new AbortController().signal);
@@ -211,7 +206,7 @@ describe("HostMessageLaunchSource", () => {
       const pending = new HostMessageLaunchSource({
         origins: [kStudioOrigin]
       }).read();
-      postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host", ports });
+      postFromStudio(parent, { type: "jolly-launch", target: "from-host", ports });
       const shell = (await pending)?.shell;
       received.push([
         shell?.catalog instanceof ShellCatalog,
@@ -240,16 +235,21 @@ describe("HostMessageLaunchSource", () => {
       const pending = new HostMessageLaunchSource({
         origins: [kStudioOrigin]
       }).read();
-      postFromStudio(parent, { type: LAUNCH_MESSAGE_TYPE, target: "from-host", appearance });
+      postFromStudio(parent, { type: "jolly-launch", target: "from-host", appearance });
       const launch = await pending;
       assert.equal(launch?.target.value, "from-host");
-      appearances.push(launch?.shell?.appearance);
+      const received: unknown[] = [];
+      launch?.shell?.onAppearance(
+        (current) => received.push(current),
+        new AbortController().signal
+      );
+      appearances.push(received);
     }
 
     assert.deepEqual(appearances, [
-      { theme: "light", density: "compact" },
-      null,
-      null
+      [{ theme: "light", density: "compact" }],
+      [],
+      []
     ]);
   });
 

@@ -2,7 +2,7 @@
 import {
   EDITOR_STATE_ATTRIBUTE,
   type EditorState
-} from "../shell/EditorState.ts";
+} from "./EditorState.ts";
 import { LoadingBar } from "../ui/LoadingBar.ts";
 
 export type EditorStateListener = (state: EditorState) => void;

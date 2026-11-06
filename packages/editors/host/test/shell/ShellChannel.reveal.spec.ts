@@ -4,41 +4,37 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  isShellCommand,
-  revealMessage,
-  SHELL_MESSAGE_TYPE,
-  ShellChannel
-} from "#src/shell/ShellChannel.ts";
-
-// CONSTANTS
-const kShellOrigin = "http://studio.test";
+  parseFrameMessage,
+  type ShellMessage
+} from "#src/shell/protocol.ts";
+import {
+  SHELL_ORIGIN,
+  shellChannel
+} from "../helpers/shell.ts";
 
 describe("ShellChannel reveals", () => {
   test("asks the shell to open an asset at a reveal", () => {
     const posted: unknown[] = [];
-    const shell = new ShellChannel({
-      port: { postMessage: (message) => posted.push(message) },
-      origin: kShellOrigin
+    const shell = shellChannel({
+      port: { postMessage: (message) => posted.push(message) }
     });
 
     shell.openAsset("map-1", "object:spawn");
 
     assert.deepEqual(posted, [{
-      type: SHELL_MESSAGE_TYPE,
-      command: "open-asset",
+      type: "jolly-open-asset",
       target: "map-1",
       reveal: "object:spawn"
     }]);
-    assert.equal(isShellCommand(posted[0]), true);
+    assert.deepEqual(parseFrameMessage(posted[0]), posted[0]);
   });
 
   test("keeps the last reveal until a listener takes it, then hands over the shell's later ones", () => {
     const parent = Object.assign(new MessageChannel().port1, {
       postMessage: () => undefined
     });
-    const shell = new ShellChannel({
-      port: parent,
-      origin: kShellOrigin
+    const shell = shellChannel({
+      port: parent
     });
     const received: string[] = [];
 
@@ -48,8 +44,8 @@ describe("ShellChannel reveals", () => {
     ): void {
       window.dispatchEvent(new MessageEvent("message", {
         source,
-        origin: kShellOrigin,
-        data: revealMessage(key)
+        origin: SHELL_ORIGIN,
+        data: { type: "jolly-reveal", key } satisfies ShellMessage
       }));
     }
 

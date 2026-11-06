@@ -6,17 +6,17 @@ import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
-import { AssetLeases } from "../lease/AssetLeases.ts";
+import {
+  AssetLeases,
+  type EditorSessionClient
+} from "../lease/AssetLeases.ts";
 import type { PendingOutboxes } from "../lease/outbox/PendingOutboxes.ts";
 import {
   ConnectionStatus,
   type ServerConnection
 } from "../connection/ConnectionStatus.ts";
 import type { OfflineMode } from "../connection/OfflineMode.ts";
-import type {
-  EditorSessionClient,
-  StandaloneConnection
-} from "../connection/StandaloneConnection.ts";
+import type { StandaloneConnection } from "../connection/StandaloneConnection.ts";
 import {
   EditorSession,
   type EditorSessionTarget

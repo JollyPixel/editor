@@ -6,22 +6,22 @@ export * from "./launch/sources/QueryLaunchSource.ts";
 export type { LaunchNavigator } from "./launch/LaunchNavigator.ts";
 export * from "./launch/errors/LaunchNotFoundError.ts";
 export * from "./shell/ShellChannel.ts";
-export * from "./shell/NotificationMessage.ts";
+export * from "./shell/protocol.ts";
 export * from "./shell/catalog/CatalogShare.ts";
 export * from "./shell/catalog/ShellCatalog.ts";
 export * from "./shell/FrameConsoles.ts";
 export {
   EDITOR_STATE_ATTRIBUTE,
   type EditorState
-} from "./shell/EditorState.ts";
+} from "./mount/EditorState.ts";
 export * from "./lease/AssetLease.ts";
-export { AssetLeases } from "./lease/AssetLeases.ts";
+export {
+  AssetLeases,
+  type EditorSessionClient
+} from "./lease/AssetLeases.ts";
 export * from "./lease/errors/AssetDocumentConflictError.ts";
 export * from "./lease/errors/UnsettledChangesError.ts";
-export type {
-  EditorSessionClient,
-  StandaloneConnection
-} from "./connection/StandaloneConnection.ts";
+export type { StandaloneConnection } from "./connection/StandaloneConnection.ts";
 export * from "./connection/openCatalog.ts";
 export * from "./connection/server.ts";
 export type {
@@ -54,12 +54,12 @@ export {
   type PerformancePaneOptions
 } from "./runtime/EditorRuntime.ts";
 export * from "./runtime/RuntimeWidgets.ts";
-export * from "./boot/EditorDefinition.ts";
+export * from "./contract/EditorDefinition.ts";
 export * from "./boot/mountStandalone.ts";
 export { DEBUG_HANDLE } from "./boot/StandaloneEditor.ts";
-export * from "./boot/Teardown.ts";
+export * from "./contract/Teardown.ts";
 export * from "./boot/bootStandalone.ts";
-export * from "./boot/offerOffline.ts";
+export * from "./connection/offerOffline.ts";
 export * from "./preferences/hostPreferences.ts";
 export * from "./preferences/LocalPreferences.ts";
 export * from "./preferences/adapters/PreferenceStorage.ts";
@@ -68,7 +68,6 @@ export * from "./preferences/appearance/PageAppearance.ts";
 export * from "./console/mountConsole.ts";
 export * from "./debug/readDebugLogger.ts";
 export * from "./ui/bindPresenceStack.ts";
-export * from "./browser/saveFile.ts";
 export * from "./ui/registerKindIcon.ts";
 export * from "./ui/lantern/replayTourStep.ts";
 export * from "./ui/lantern/provideTourKeys.ts";

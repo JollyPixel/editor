@@ -44,10 +44,10 @@ import {
 import { mountLantern } from "../ui/lantern/mountLantern.ts";
 import { mountNotifications } from "../ui/mountNotifications.ts";
 import { provideTourKeys } from "../ui/lantern/provideTourKeys.ts";
-import type { EditorContext } from "./EditorDefinition.ts";
-import type { MountRequest } from "./MountedEditor.ts";
-import type { PageState } from "./PageState.ts";
-import { Teardown } from "./Teardown.ts";
+import type { EditorContext } from "../contract/EditorDefinition.ts";
+import type { MountRequest } from "../mount/MountedEditor.ts";
+import type { PageState } from "../mount/PageState.ts";
+import { Teardown } from "../contract/Teardown.ts";
 import type { OfflineMode } from "../connection/OfflineMode.ts";
 
 export type UnsavedLeases = Pick<AssetLeases, "unsaved" | "subscribe">;
@@ -260,7 +260,6 @@ export class Placement {
     }
 
     const preferences = new Preferences({
-      overrides: Object.entries(shell.preferences),
       write: (change) => shell.updatePreferences(change.scope, change.patch)
     });
     shell.onPreferences(

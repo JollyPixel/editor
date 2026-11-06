@@ -2,17 +2,17 @@
 import type { RegistrationHandle } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
-import { BootTrace } from "./BootTrace.ts";
+import { BootTrace } from "../mount/BootTrace.ts";
 import type {
   EditorContext,
   EditorDefinition,
   EditorHandle
-} from "./EditorDefinition.ts";
-import { EditorMount } from "./EditorMount.ts";
+} from "../contract/EditorDefinition.ts";
+import { EditorMount } from "../mount/EditorMount.ts";
 import type {
   MountedEditor,
   MountRequest
-} from "./MountedEditor.ts";
+} from "../mount/MountedEditor.ts";
 import type {
   MountStandaloneOptions,
   StandaloneMount
@@ -32,7 +32,7 @@ import {
 import type { EditorRuntime } from "../runtime/EditorRuntime.ts";
 import { EditorArchives } from "../session/EditorArchives.ts";
 import { rememberQueryUsername } from "../session/rememberQueryUsername.ts";
-import { PageState } from "./PageState.ts";
+import { PageState } from "../mount/PageState.ts";
 
 // CONSTANTS
 export const DEBUG_HANDLE = "jollyEditor";

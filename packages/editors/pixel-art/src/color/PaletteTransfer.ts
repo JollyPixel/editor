@@ -4,9 +4,7 @@ import {
   PaletteFormat
 } from "@jolly-pixel/color";
 import type { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
-
-// Import Internal Dependencies
-import { downloadBlob } from "../shared/dom.ts";
+import { saveFile } from "@jolly-pixel/ui";
 
 // CONSTANTS
 const kAccept = ".gpl,.hex,text/plain";
@@ -18,7 +16,7 @@ export class PaletteTransfer {
     name: string
   ): void {
     const text = format.serialize(new PaletteFile(palette.toJSON(), name));
-    downloadBlob(
+    saveFile(
       new Blob([text], { type: "text/plain" }),
       `${name}.${format.extension}`
     );

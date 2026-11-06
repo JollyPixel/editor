@@ -313,7 +313,7 @@ import {
 
 - [Search queries](./docs/api/search.md): `SearchQuery` and the `Searchable` hook.
 - [Geometry](./docs/api/geometry.md): `Rect` and anchored placement.
-- [DOM](./docs/api/dom.md): DOM guards and field event helpers.
+- [DOM](./docs/api/dom.md): DOM guards, field event helpers and `saveFile`.
 
 ## 🖼️ Examples Gallery
 

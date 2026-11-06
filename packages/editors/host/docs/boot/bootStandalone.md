@@ -1,7 +1,7 @@
 # bootStandalone
 
 Entry point of an editor page. It reads the launch, opens the session, mounts
-the [editor definition](./EditorDefinition.md), and falls back to offline mode
+the [editor definition](../contract/EditorDefinition.md), and falls back to offline mode
 when the asset server cannot be reached.
 
 ```ts

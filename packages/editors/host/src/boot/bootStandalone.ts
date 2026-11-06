@@ -2,17 +2,17 @@
 import type {
   EditorDefinition,
   EditorHandle
-} from "./EditorDefinition.ts";
+} from "../contract/EditorDefinition.ts";
 import type {
   MountStandaloneOptions,
   StandaloneMount
 } from "./mountStandalone.ts";
-import { withOfflineFallback } from "./offerOffline.ts";
+import { withOfflineFallback } from "../connection/offerOffline.ts";
 import { StandaloneEditor } from "./StandaloneEditor.ts";
 import { readDebugLogger } from "../debug/readDebugLogger.ts";
 import { InjectedLaunchSource } from "../launch/index.ts";
 import { HOST_PARAMS } from "../params/HostParams.ts";
-import { PeerInvite } from "../offline/peer/PeerInvite.ts";
+import { PeerInvite } from "../connection/PeerInvite.ts";
 import { shareLinkConnection } from "../connection/shareLink.ts";
 import type {
   OfflineProject,

@@ -5,9 +5,9 @@ import {
   html,
   type TemplateResult
 } from "lit";
-import { saveFile } from "@jolly-pixel/editor.host";
 import {
   SubscriptionController,
+  saveFile,
   type Notifier
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";

@@ -1,12 +1,11 @@
 // Import Internal Dependencies
 import type { HostLogger } from "../../debug/readDebugLogger.ts";
-import { ShellCatalog } from "../../shell/catalog/ShellCatalog.ts";
 import { EditorLaunch } from "../EditorLaunch.ts";
+import { ShellChannel } from "../../shell/ShellChannel.ts";
 import {
   parseLaunchMessage,
-  READY_MESSAGE_TYPE,
-  ShellChannel
-} from "../../shell/ShellChannel.ts";
+  type FrameMessage
+} from "../../shell/protocol.ts";
 import type { LaunchSource } from "./LaunchSource.ts";
 
 // CONSTANTS
@@ -71,11 +70,11 @@ export class HostMessageLaunchSource implements LaunchSource {
     );
 
     window.addEventListener("message", (event) => {
+      if (event.source !== parent) {
+        return;
+      }
       const message = parseLaunchMessage(event.data);
-      if (
-        event.source !== parent ||
-        message === undefined
-      ) {
+      if (message === undefined) {
         return;
       }
       if (!this.allows(event.origin)) {
@@ -86,17 +85,12 @@ export class HostMessageLaunchSource implements LaunchSource {
         return;
       }
 
-      const { catalog, console: consolePort } = message.ports;
       const launch = EditorLaunch.fromTarget(
         message.target,
         new ShellChannel({
           port: parent,
           origin: event.origin,
-          appearance: message.appearance ?? null,
-          catalog: catalog === undefined ? null : new ShellCatalog(catalog),
-          console: consolePort ?? null,
-          identity: message.identity,
-          preferences: message.preferences
+          launch: message
         })
       );
       if (launch !== undefined) {
@@ -109,7 +103,7 @@ export class HostMessageLaunchSource implements LaunchSource {
     }, { signal: listening.signal });
     for (const origin of this.origins) {
       parent.postMessage(
-        { type: READY_MESSAGE_TYPE },
+        { type: "jolly-ready" } satisfies FrameMessage,
         origin
       );
     }

@@ -1,15 +1,8 @@
 // Import Third-party Dependencies
 import {
-  appearanceMessage,
-  isReadyMessage,
-  isShellCommand,
-  launchMessage,
   PageAppearance,
-  parseNotificationMessage,
-  preferencesMessage,
+  parseFrameMessage,
   readDebugLogger,
-  revealMessage,
-  sessionRenewedMessage,
   type Appearance,
   type CatalogShare,
   type FrameConsoles,
@@ -24,12 +17,8 @@ import type { Notifier } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import type { EditorTab } from "./EditorTabs.ts";
 import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
+import { EditorFrame } from "./EditorFrame.ts";
 import { FrameNotifications } from "./FrameNotifications.ts";
-
-interface EditorFrame {
-  element: HTMLIFrameElement;
-  reads: ReadonlySet<string>;
-}
 
 export interface EditorFramesOptions {
   container: HTMLElement;
@@ -85,7 +74,6 @@ export class EditorFrames {
   #notifications: FrameNotifications;
   #logger: HostLogger;
   #frames = new Map<string, EditorFrame>();
-  #launched = new Map<string, () => void>();
   #unsentReveals = new Map<string, string>();
   #listening = new AbortController();
 
@@ -144,18 +132,19 @@ export class EditorFrames {
     key: string
   ): void {
     const frame = this.#frames.get(id);
-    if (frame !== undefined && this.#launched.has(id)) {
-      this.#post(frame.element, revealMessage(key));
+    if (frame === undefined) {
+      this.#unsentReveals.set(id, key);
     }
     else {
-      this.#unsentReveals.set(id, key);
+      frame.reveal(key);
     }
   }
 
   notifySessionRenewed(): void {
-    const message = sessionRenewedMessage();
-    for (const { element } of this.#frames.values()) {
-      this.#post(element, message);
+    for (const frame of this.#frames.values()) {
+      frame.post({
+        type: "jolly-session-renewed"
+      });
     }
   }
 
@@ -168,10 +157,9 @@ export class EditorFrames {
   remove(
     id: string
   ): void {
-    this.#stopPorts(id);
     this.#unsentReveals.delete(id);
     this.#notifications.release(id);
-    this.#frames.get(id)?.element.remove();
+    this.#frames.get(id)?.dispose();
     this.#frames.delete(id);
   }
 
@@ -179,11 +167,8 @@ export class EditorFrames {
     this.#listening.abort();
     this.#stopPreferences();
     this.#notifications.dispose();
-    for (const id of [...this.#launched.keys()]) {
-      this.#stopPorts(id);
-    }
-    for (const { element } of this.#frames.values()) {
-      element.remove();
+    for (const frame of this.#frames.values()) {
+      frame.dispose();
     }
     this.#frames.clear();
   }
@@ -197,50 +182,26 @@ export class EditorFrames {
     element.src = tab.url;
     this.#container.append(element);
 
-    return {
+    const frame = new EditorFrame({
+      id: tab.id,
       element,
-      reads: this.#scopes.readBy(tab.editor)
-    };
-  }
-
-  #accepts(
-    frame: EditorFrame,
-    command: ShellCommand
-  ): boolean {
-    return command.command !== "update-preferences" ||
-      frame.reads.has(command.scope);
-  }
-
-  #findFrame(
-    source: MessageEventSource | null
-  ): [string, EditorFrame] | undefined {
-    if (source === null) {
-      return undefined;
+      reads: this.#scopes.readBy(tab.editor),
+      origin: this.#launchOrigin
+    });
+    const reveal = this.#unsentReveals.get(tab.id);
+    if (reveal !== undefined) {
+      this.#unsentReveals.delete(tab.id);
+      frame.reveal(reveal);
     }
 
-    return [...this.#frames].find(
-      ([, frame]) => frame.element.contentWindow === source
-    );
-  }
-
-  #post(
-    frame: HTMLIFrameElement,
-    message: unknown,
-    transfer: Transferable[] = []
-  ): void {
-    frame.contentWindow?.postMessage(
-      message,
-      this.#launchOrigin,
-      transfer
-    );
+    return frame;
   }
 
   #launch(
-    id: string,
     frame: EditorFrame
   ): void {
-    this.#stopPorts(id);
-    this.#notifications.release(id);
+    frame.closePorts();
+    this.#notifications.release(frame.id);
     const catalog = new MessageChannel();
     const ports: LaunchPorts = {
       catalog: catalog.port2
@@ -249,70 +210,65 @@ export class EditorFrames {
     if (this.#consoles !== undefined) {
       const consoleChannel = new MessageChannel();
       ports.console = consoleChannel.port2;
-      stops.push(this.#consoles.connect(id, consoleChannel.port1));
+      stops.push(this.#consoles.connect(frame.id, consoleChannel.port1));
     }
-    this.#launched.set(id, () => {
-      for (const stop of stops) {
-        stop();
-      }
-    });
-    this.#post(
-      frame.element,
-      launchMessage({
-        target: id,
-        appearance: this.#appearance.toJSON(),
-        identity: this.#identity(),
-        preferences: Object.fromEntries(
-          [...this.#preferences].filter(([scope]) => frame.reads.has(scope))
-        ),
-        ports
-      }),
-      Object.values(ports).filter((port) => port !== undefined)
-    );
-    const reveal = this.#unsentReveals.get(id);
-    if (reveal !== undefined) {
-      this.#unsentReveals.delete(id);
-      this.#post(frame.element, revealMessage(reveal));
-    }
+    frame.launch({
+      type: "jolly-launch",
+      target: frame.id,
+      appearance: this.#appearance.toJSON(),
+      identity: this.#identity(),
+      preferences: Object.fromEntries(
+        [...this.#preferences].filter(([scope]) => frame.reads.has(scope))
+      ),
+      ports
+    }, stops);
   }
 
-  #stopPorts(
-    id: string
+  #command(
+    frame: EditorFrame,
+    command: ShellCommand
   ): void {
-    this.#launched.get(id)?.();
-    this.#launched.delete(id);
+    this.#logger.debug("shell command", {
+      from: frame.id,
+      ...command
+    });
+    this.#onShellCommand?.(command, frame.id);
   }
 
   readonly #onMessage = (
     event: MessageEvent
   ): void => {
-    const sender = this.#findFrame(event.source);
-    if (sender === undefined) {
+    const frame = [...this.#frames.values()].find(
+      (candidate) => candidate.owns(event.source)
+    );
+    if (frame === undefined) {
+      return;
+    }
+    const message = parseFrameMessage(event.data);
+    if (message === undefined) {
       return;
     }
 
-    const [id, frame] = sender;
-    if (isReadyMessage(event.data)) {
-      this.#logger.debug("launch posted", {
-        target: id,
-        origin: this.#launchOrigin
-      });
-      this.#launch(id, frame);
-    }
-    else if (isShellCommand(event.data)) {
-      this.#logger.debug("shell command", {
-        from: id,
-        ...event.data
-      });
-      if (this.#accepts(frame, event.data)) {
-        this.#onShellCommand?.(event.data, id);
-      }
-    }
-    else {
-      const notification = parseNotificationMessage(event.data);
-      if (notification !== undefined) {
-        this.#notifications.receive(id, frame.element.title, notification);
-      }
+    switch (message.type) {
+      case "jolly-ready":
+        this.#logger.debug("launch posted", {
+          target: frame.id,
+          origin: this.#launchOrigin
+        });
+        this.#launch(frame);
+        break;
+      case "jolly-notification":
+      case "jolly-notification-update":
+      case "jolly-notification-dismiss":
+        this.#notifications.receive(frame.id, frame.element.title, message);
+        break;
+      case "jolly-update-preferences":
+        if (frame.reads.has(message.scope)) {
+          this.#command(frame, message);
+        }
+        break;
+      default:
+        this.#command(frame, message);
     }
   };
 
@@ -320,10 +276,13 @@ export class EditorFrames {
     scope: string,
     overrides: PreferenceOverrides
   ): void => {
-    const message = preferencesMessage(scope, overrides);
-    for (const { element, reads } of this.#frames.values()) {
-      if (reads.has(scope)) {
-        this.#post(element, message);
+    for (const frame of this.#frames.values()) {
+      if (frame.reads.has(scope)) {
+        frame.post({
+          type: "jolly-preferences",
+          scope,
+          overrides
+        });
       }
     }
   };
@@ -331,9 +290,11 @@ export class EditorFrames {
   readonly #shareAppearance = (
     appearance: Appearance
   ): void => {
-    const message = appearanceMessage(appearance);
-    for (const { element } of this.#frames.values()) {
-      this.#post(element, message);
+    for (const frame of this.#frames.values()) {
+      frame.post({
+        type: "jolly-appearance",
+        appearance
+      });
     }
   };
 }

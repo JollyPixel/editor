@@ -5,7 +5,7 @@ import { CatalogClient } from "@jolly-pixel/asset-server/client";
 import type {
   EditorDefinition,
   EditorHandle
-} from "./EditorDefinition.ts";
+} from "../contract/EditorDefinition.ts";
 import type { HostLogger } from "../debug/readDebugLogger.ts";
 import type { EditorLaunch } from "../launch/index.ts";
 import type { EditorSession } from "../session/EditorSession.ts";

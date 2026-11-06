@@ -18,7 +18,7 @@ import {
   mountStandalone,
   type MountStandaloneOptions
 } from "#src/boot/mountStandalone.ts";
-import type { EditorContext } from "#src/boot/EditorDefinition.ts";
+import type { EditorContext } from "#src/contract/EditorDefinition.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import {
   OfflineServer,

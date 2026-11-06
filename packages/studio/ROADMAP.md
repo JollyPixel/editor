@@ -121,9 +121,9 @@ The `EditorDefinition` contract assumes one editor per document:
   page's `index.html`.
 - Embedded panels (voxel-map's `TextureEditor`, voxel-model's texture panel)
   take a lease opened from the session's `AssetLeases`, not a context.
-- `ShellChannel` posts through a `ShellPort`, but `onAppearance`,
-  `onPreferences` and `renewWhenRefused` listen to `window` `message` events
-  and check `event.source`. An in-process port needs an inbound side too.
+- `ShellChannel` posts through a `ShellPort`, but it listens to `window`
+  `message` events and checks `event.source`. An in-process port needs an
+  inbound side too.
 
 A starting shape: a base context every mounted piece gets,
 `{ container, assets, shell, logger }`, that a full editor extends with

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { PeerInvite } from "../offline/peer/PeerInvite.ts";
+import type { PeerInvite } from "./PeerInvite.ts";
 
 export interface PeerSharing {
   readonly guests: number;

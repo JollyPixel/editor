@@ -7,12 +7,6 @@ import {
 import assert from "node:assert/strict";
 import { setImmediate } from "node:timers/promises";
 
-// Import Third-party Dependencies
-import {
-  APPEARANCE_MESSAGE_TYPE,
-  SESSION_RENEWED_MESSAGE_TYPE
-} from "@jolly-pixel/editor.host";
-
 // Import Internal Dependencies
 import {
   disposeFrames,
@@ -41,7 +35,7 @@ describe("EditorFrames broadcast", () => {
     assert.deepEqual(posted, [
       [
         {
-          type: APPEARANCE_MESSAGE_TYPE,
+          type: "jolly-appearance",
           appearance: { theme: "light", density: "comfortable" }
         },
         FRAME_ORIGIN
@@ -57,7 +51,7 @@ describe("EditorFrames broadcast", () => {
 
     frames.notifySessionRenewed();
 
-    const renewed = [{ type: SESSION_RENEWED_MESSAGE_TYPE }, FRAME_ORIGIN];
+    const renewed = [{ type: "jolly-session-renewed" }, FRAME_ORIGIN];
     assert.deepEqual(posted, [[renewed], [renewed]]);
   });
 });

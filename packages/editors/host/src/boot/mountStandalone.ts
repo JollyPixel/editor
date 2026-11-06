@@ -2,7 +2,7 @@
 import type {
   EditorDefinition,
   EditorHandle
-} from "./EditorDefinition.ts";
+} from "../contract/EditorDefinition.ts";
 import { StandaloneEditor } from "./StandaloneEditor.ts";
 import {
   readDebugLogger,

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { saveFile } from "@jolly-pixel/editor.host";
+import { saveFile } from "@jolly-pixel/ui";
 
 export class FileDownload {
   readonly blob: Blob;

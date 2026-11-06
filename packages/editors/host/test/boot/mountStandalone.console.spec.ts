@@ -8,10 +8,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { mountStandalone } from "#src/boot/mountStandalone.ts";
-import type { EditorContext } from "#src/boot/EditorDefinition.ts";
+import type { EditorContext } from "#src/contract/EditorDefinition.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import { ShellChannel } from "#src/shell/ShellChannel.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
+import { shellChannel } from "../helpers/shell.ts";
 import {
   ASSET_ID,
   definition,
@@ -57,10 +57,7 @@ describe("mountStandalone console", () => {
 
   test("leaves the console to the shell that framed the page", async() => {
     const server = await openServer();
-    const shell = new ShellChannel({
-      port: { postMessage: () => undefined },
-      origin: "http://studio.test"
-    });
+    const shell = shellChannel();
 
     const received: EditorContext["commands"][] = [];
     const editor = await mountStandalone(definition((context) => {

@@ -10,11 +10,9 @@ import assert from "node:assert/strict";
 import { StandaloneEditor } from "#src/boot/StandaloneEditor.ts";
 import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import {
-  ShellChannel,
-  isShellCommand
-} from "#src/shell/ShellChannel.ts";
+import { parseFrameMessage } from "#src/shell/protocol.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
+import { shellChannel } from "../helpers/shell.ts";
 import {
   ASSET_ID,
   definition,
@@ -28,9 +26,8 @@ describe("StandaloneEditor", () => {
   test("a retried mount reports each editor state to the shell once", async() => {
     const server = await openServer();
     const posted: unknown[] = [];
-    const shell = new ShellChannel({
-      port: { postMessage: (message) => posted.push(message) },
-      origin: "http://studio.test"
+    const shell = shellChannel({
+      port: { postMessage: (message) => posted.push(message) }
     });
     const sources = [
       {
@@ -55,7 +52,9 @@ describe("StandaloneEditor", () => {
     });
 
     assert.deepEqual(
-      posted.filter(isShellCommand).map((command) => command.command === "editor-state" && command.state),
+      posted
+        .map(parseFrameMessage)
+        .map((message) => message?.type === "jolly-editor-state" && message.state),
       ["booting", "ready"]
     );
 

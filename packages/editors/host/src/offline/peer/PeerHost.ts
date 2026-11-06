@@ -6,7 +6,7 @@ import {
 
 // Import Internal Dependencies
 import type { PeerSharing } from "../../connection/OfflineMode.ts";
-import { PeerInvite } from "./PeerInvite.ts";
+import { PeerInvite } from "../../connection/PeerInvite.ts";
 import type { PeerInvites } from "./PeerInvites.ts";
 import { PeerLink } from "./PeerLink.ts";
 import { PEER_CHANNEL_HOST } from "./protocol.ts";

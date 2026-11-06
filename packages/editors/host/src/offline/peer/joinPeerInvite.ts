@@ -4,7 +4,7 @@ import { showChoice } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
 import { OfflineGuest } from "../OfflineGuest.ts";
-import type { PeerInvite } from "./PeerInvite.ts";
+import type { PeerInvite } from "../../connection/PeerInvite.ts";
 import { PeerLink } from "./PeerLink.ts";
 import { PEER_CHANNEL_HOST } from "./protocol.ts";
 import { BroadcastSignaling } from "./signaling/BroadcastSignaling.ts";

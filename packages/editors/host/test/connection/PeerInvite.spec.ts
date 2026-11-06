@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PeerInvite } from "#src/offline/peer/PeerInvite.ts";
+import { PeerInvite } from "#src/connection/PeerInvite.ts";
 
 describe("PeerInvite", () => {
   it("survives a round trip through the page fragment", () => {

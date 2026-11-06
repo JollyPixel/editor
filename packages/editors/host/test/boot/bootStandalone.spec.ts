@@ -17,13 +17,12 @@ import type {
   EditorContext,
   EditorHandle,
   RuntimeEditorContext
-} from "#src/boot/EditorDefinition.ts";
+} from "#src/contract/EditorDefinition.ts";
 import { HOST_PARAMS } from "#src/params/HostParams.ts";
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
 import type { RuntimeWidgetHost } from "#src/runtime/RuntimeWidgets.ts";
-import { EDITOR_STATE_ATTRIBUTE } from "#src/shell/EditorState.ts";
+import { EDITOR_STATE_ATTRIBUTE } from "#src/mount/EditorState.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
-import { LAUNCH_MESSAGE_TYPE } from "#src/shell/ShellChannel.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 import { withoutWebNavigator } from "../helpers/navigator.ts";
@@ -125,7 +124,7 @@ function frameInShell(): () => void {
         source: parent,
         origin: location.origin,
         data: {
-          type: LAUNCH_MESSAGE_TYPE,
+          type: "jolly-launch",
           target: kAssetId
         }
       })));

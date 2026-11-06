@@ -15,14 +15,12 @@ import {
 // Import Internal Dependencies
 import type { Appearance } from "#src/preferences/appearance/PageAppearance.ts";
 import { forwardConsole } from "#src/console/forwardConsole.ts";
+import type { ShellMessage } from "#src/shell/protocol.ts";
+import type { ShellChannel } from "#src/shell/ShellChannel.ts";
 import {
-  appearanceMessage,
-  SHELL_MESSAGE_TYPE,
-  ShellChannel
-} from "#src/shell/ShellChannel.ts";
-
-// CONSTANTS
-const kShellOrigin = "http://studio.test";
+  SHELL_ORIGIN,
+  shellChannel
+} from "../helpers/shell.ts";
 
 interface FakeShell {
   shell: ShellChannel;
@@ -42,18 +40,20 @@ function fakeShell(
   });
 
   return {
-    shell: new ShellChannel({
+    shell: shellChannel({
       port,
-      origin: kShellOrigin,
-      appearance,
-      console: consolePort
+      appearance: appearance ?? undefined,
+      ports: consolePort === null ? {} : { console: consolePort }
     }),
     posted,
     push: (pushed) => {
       window.dispatchEvent(new MessageEvent("message", {
         source: port,
-        origin: kShellOrigin,
-        data: appearanceMessage(pushed)
+        origin: SHELL_ORIGIN,
+        data: {
+          type: "jolly-appearance",
+          appearance: pushed
+        } satisfies ShellMessage
       }));
     }
   };
@@ -98,8 +98,7 @@ describe("forwardConsole", () => {
     assert.equal(event.defaultPrevented, true);
     assert.deepEqual(posted, [
       {
-        type: SHELL_MESSAGE_TYPE,
-        command: "toggle-console"
+        type: "jolly-toggle-console"
       }
     ]);
     page.dispose();

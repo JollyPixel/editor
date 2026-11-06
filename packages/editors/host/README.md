@@ -92,7 +92,7 @@ void bootStandalone(MyEditor, {
 
 - [`bootStandalone`](./docs/boot/bootStandalone.md): the page entry point,
   offline fallback, page state, switching and debug logging.
-- [`EditorDefinition`](./docs/boot/EditorDefinition.md): what an editor
+- [`EditorDefinition`](./docs/contract/EditorDefinition.md): what an editor
   declares, the context `mount` receives, its handle, console and tours.
 - [`QueryParams`](./docs/params/QueryParams.md): typed query-string parameters
   and the host's own.
@@ -113,8 +113,6 @@ void bootStandalone(MyEditor, {
 - [`EditorToolbar`](./docs/ui/EditorToolbar.md): the bar above the viewport.
 - [`bindPresenceStack`](./docs/ui/bindPresenceStack.md): a presence stack
   bound to a room's peers.
-- [`saveFile`](./docs/browser/saveFile.md): downloads a blob under a file
-  name.
 
 ### Preferences
 

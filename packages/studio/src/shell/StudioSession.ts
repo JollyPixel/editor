@@ -281,26 +281,26 @@ export class StudioSession {
     command: ShellCommand,
     from: string
   ): void => {
-    switch (command.command) {
-      case "open-asset":
+    switch (command.type) {
+      case "jolly-open-asset":
         void this.openAsset(
           command.target,
           command.reveal === undefined ? {} : { reveal: command.reveal }
         );
         break;
-      case "toggle-console":
+      case "jolly-toggle-console":
         this.toggleConsole();
         break;
-      case "session-refused":
+      case "jolly-session-refused":
         void this.#user.renewal?.renew();
         break;
-      case "unsaved":
+      case "jolly-unsaved":
         this.tabs.markUnsaved(from, command.unsaved);
         break;
-      case "editor-state":
+      case "jolly-editor-state":
         this.tabs.markState(from, command.state);
         break;
-      case "update-preferences":
+      case "jolly-update-preferences":
         this.#updatePreferences(command.scope, command.patch);
         break;
       default: {

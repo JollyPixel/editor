@@ -14,13 +14,13 @@ import {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { BootTrace } from "#src/boot/BootTrace.ts";
-import type { EditorHandle } from "#src/boot/EditorDefinition.ts";
-import { EditorMount } from "#src/boot/EditorMount.ts";
+import { BootTrace } from "#src/mount/BootTrace.ts";
+import type { EditorHandle } from "#src/contract/EditorDefinition.ts";
+import { EditorMount } from "#src/mount/EditorMount.ts";
 import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { LaunchHistory } from "#src/launch/LaunchHistory.ts";
-import { PageState } from "#src/boot/PageState.ts";
+import { PageState } from "#src/mount/PageState.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 import { fakeConnection } from "../helpers/session/connection.ts";
 import {
