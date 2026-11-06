@@ -41,3 +41,39 @@ describe("SelectionStore", () => {
     assert.deepEqual(selection.ids, ["a"]);
   });
 });
+
+describe("SelectionStore component focus", () => {
+  test("selects the owner of a focused component and drops the focus on any other selection", () => {
+    const document = new SceneDocument();
+    const selection = new SelectionStore(document, NO_EXPANDED_ACTORS);
+    const ownerId = document.addActor({
+      name: "Owner",
+      components: [{ id: "light", type: "Light", data: {}, assets: {} }]
+    })!;
+
+    selection.focus({ ownerId, componentId: "light" });
+    assert.deepEqual(
+      [selection.ids, selection.focused],
+      [[ownerId], { ownerId, componentId: "light" }]
+    );
+
+    selection.select([ownerId]);
+    assert.strictEqual(selection.focused, null);
+  });
+
+  test("keeps the focus through unrelated edits and drops it once the component is removed", () => {
+    const document = new SceneDocument();
+    const selection = new SelectionStore(document, NO_EXPANDED_ACTORS);
+    const ownerId = document.addActor({
+      name: "Owner",
+      components: [{ id: "light", type: "Light", data: {}, assets: {} }]
+    })!;
+    selection.focus({ ownerId, componentId: "light" });
+
+    document.addActor({ name: "Other" });
+    assert.strictEqual(selection.focused?.componentId, "light");
+
+    document.removeComponent("light");
+    assert.deepEqual([selection.ids, selection.focused], [[ownerId], null]);
+  });
+});

@@ -1,10 +1,10 @@
-export interface SceneActorCategoryInfo {
+export interface SceneComponentCategoryInfo {
   readonly id: string;
   readonly label: string;
 }
 
 // CONSTANTS
-export const SCENE_ACTOR_CATEGORIES = [
+export const SCENE_COMPONENT_CATEGORIES = [
   {
     id: "camera",
     label: "Camera"
@@ -37,6 +37,6 @@ export const SCENE_ACTOR_CATEGORIES = [
     id: "ui",
     label: "UI"
   }
-] as const satisfies readonly SceneActorCategoryInfo[];
+] as const satisfies readonly SceneComponentCategoryInfo[];
 
-export type SceneActorCategory = typeof SCENE_ACTOR_CATEGORIES[number]["id"];
+export type SceneComponentCategory = typeof SCENE_COMPONENT_CATEGORIES[number]["id"];

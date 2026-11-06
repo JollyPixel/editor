@@ -10,13 +10,14 @@ import {
 } from "../features/history/sceneHistory.ts";
 import type { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import { SCENE_PREFERENCES } from "../preferences.ts";
-import type { SelectionStore } from "../state/SelectionStore.ts";
 import type { SceneAction } from "./sceneActions.ts";
 
 export interface SceneShortcutsOptions {
   history: Pick<SceneHistory, "undo" | "redo">;
-  actions: Pick<SceneActions, "duplicateSelection" | "removeSelection">;
-  selection: Pick<SelectionStore, "primary">;
+  actions: Pick<
+    SceneActions,
+    "canEditSelection" | "duplicateSelection" | "removeSelection"
+  >;
   gizmo: GizmoSettings;
   preferences: Pick<Preferences, "values" | "update">;
   frameSelection(): void;
@@ -28,7 +29,6 @@ export function sceneShortcuts(
   const {
     history,
     actions,
-    selection,
     gizmo,
     preferences
   } = options;
@@ -41,7 +41,7 @@ export function sceneShortcuts(
       history.redo(SCENE_HISTORY_SCOPE);
     },
     "edit.duplicate": () => {
-      if (selection.primary === null) {
+      if (!actions.canEditSelection()) {
         return false;
       }
       actions.duplicateSelection();
@@ -49,7 +49,7 @@ export function sceneShortcuts(
       return true;
     },
     "edit.delete": () => {
-      if (selection.primary === null) {
+      if (!actions.canEditSelection()) {
         return false;
       }
       actions.removeSelection();

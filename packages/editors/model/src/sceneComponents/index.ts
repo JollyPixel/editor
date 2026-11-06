@@ -21,28 +21,12 @@ import {
 const kModel: SceneComponentKind<ModelSettings, ModelAssets> = {
   definition: new ModelDefinition(),
   label: "3D model",
+  category: "3d",
   form: (data, assets) => modelForm(data, assets.resolve("model"))
 };
 
 export const SCENE_COMPONENTS: SceneComponentPackage = {
   components: [kModel],
-  presets: [
-    {
-      category: "3d",
-      presets: [
-        {
-          id: "model",
-          label: "3D model",
-          components: [
-            {
-              type: "Model",
-              data: {}
-            }
-          ]
-        }
-      ]
-    }
-  ],
   assets: [
     {
       descriptor: MODEL_ASSET,

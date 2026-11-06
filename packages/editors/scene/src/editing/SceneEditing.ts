@@ -17,7 +17,6 @@ import type { SceneComponents } from "../components/SceneComponents.ts";
 import type { ActorWrites } from "./ActorWrites.ts";
 import type { InstanceOverrides } from "./InstanceOverrides.ts";
 import type { SceneActions } from "./SceneActions.ts";
-import type { ActorPresetMenu } from "../features/hierarchy/model/ActorPresetMenu.ts";
 import type { SceneHistory } from "../features/history/sceneHistory.ts";
 import type { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import type { SceneAction } from "../keybindings/sceneActions.ts";
@@ -68,7 +67,6 @@ export interface SceneEditing {
   writes: ActorWrites;
   overrides: InstanceOverrides;
   components: SceneComponents;
-  presets: ActorPresetMenu;
   history: SceneHistory;
   actions: SceneActions;
   selection: SelectionStore;

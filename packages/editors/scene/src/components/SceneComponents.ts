@@ -4,9 +4,6 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import type { AssetDocumentKind } from "@jolly-pixel/editor.host";
 import {
   registerKindIcon,
-  type SceneActorCategory,
-  type SceneActorPreset,
-  type SceneActorPresetSection,
   type SceneAssetSource,
   type SceneComponentKind,
   type SceneComponentOrigin,
@@ -16,12 +13,6 @@ import { Systems } from "@jolly-pixel/engine";
 
 // CONSTANTS
 export const EMPTY_ACTOR_ICON = "actor-empty";
-export const EMPTY_PRESET: SceneActorPreset = {
-  id: "empty",
-  label: "Empty",
-  components: []
-};
-const kEmptyPresetOwner = "@jolly-pixel/editor.scene";
 
 export type NamedSceneComponentPackage = readonly [
   name: string,
@@ -62,7 +53,6 @@ export class SceneComponents {
 
   #kinds = new Map<string, SceneComponentKind>();
   #assetSources = new Map<string, SceneAssetSource>();
-  #sections: ReadonlyMap<SceneActorCategory, SceneActorPresetSection[]>;
   #icons: ReadonlyMap<string, string>;
 
   constructor(
@@ -70,9 +60,7 @@ export class SceneComponents {
   ) {
     const typeOwners = new Map<string, string>();
     const assetOwners = new Map<string, string>();
-    const presetOwners = new Map([[EMPTY_PRESET.id, kEmptyPresetOwner]]);
-    const sections: SceneActorPresetSection[] = [];
-    for (const [name, { components, presets = [], assets = [] }] of packages) {
+    for (const [name, { components, assets = [] }] of packages) {
       for (const kind of components) {
         SceneComponents.#claim(typeOwners, kind.definition.type, name, "Component type");
         this.#kinds.set(kind.definition.type, kind);
@@ -81,12 +69,6 @@ export class SceneComponents {
         SceneComponents.#claim(assetOwners, source.descriptor.kind, name, "Asset kind");
         this.#assetSources.set(source.descriptor.kind, source);
       }
-      for (const section of presets) {
-        for (const { id } of section.presets) {
-          SceneComponents.#claim(presetOwners, id, name, "Actor preset");
-        }
-        sections.push(section);
-      }
     }
 
     const assetIcons = new Map(Array.from(
@@ -94,7 +76,6 @@ export class SceneComponents {
       ([kind, { descriptor }]) => [kind, registerKindIcon(descriptor)]
     ));
     this.kinds = [...this.#kinds.values()];
-    this.#sections = Map.groupBy(sections, ({ category }) => category);
     this.#icons = new Map(this.kinds.map(
       (kind) => [kind.definition.type, SceneComponents.#icon(kind, assetIcons)]
     ));
@@ -125,29 +106,16 @@ export class SceneComponents {
     return this.#assetSources.get(kind);
   }
 
-  presetSections(
-    category: SceneActorCategory
-  ): readonly SceneActorPresetSection[] {
-    return this.#sections.get(category) ?? [];
-  }
-
   icon(
     type: string
   ): string {
     return this.#icons.get(type) ?? EMPTY_ACTOR_ICON;
   }
 
-  actorIcon(
-    types: Iterable<string>
+  label(
+    type: string
   ): string {
-    for (const type of types) {
-      const icon = this.icon(type);
-      if (icon !== EMPTY_ACTOR_ICON) {
-        return icon;
-      }
-    }
-
-    return EMPTY_ACTOR_ICON;
+    return this.find(type)?.label ?? type;
   }
 
   actorOrigin(

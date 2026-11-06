@@ -47,6 +47,10 @@ export class HierarchyPanel extends LitElement {
       padding: var(--jolly-space-1, 4px);
     }
 
+    .expand-all {
+      margin-inline-start: auto;
+    }
+
     jolly-tree {
       flex: 1 1 auto;
       overflow: auto;
@@ -92,11 +96,27 @@ export class HierarchyPanel extends LitElement {
           ?disabled=${!hasSelection}
           @click=${this.#tree.deleteSelected}
         ></jolly-button>
+        <jolly-button
+          class="expand-all"
+          icon="tree-expand-all"
+          icon-only
+          label="Expand all"
+          title="Expand all"
+          @click=${this.#tree.expandAll}
+        ></jolly-button>
+        <jolly-button
+          icon="tree-collapse-all"
+          icon-only
+          label="Collapse all"
+          title="Collapse all"
+          @click=${this.#tree.collapseAll}
+        ></jolly-button>
       </div>
       <jolly-tree
         multiple
         reorderable
         row-drag
+        indent-guides
         renamable
         .nodes=${this.#tree.nodes}
         .selected=${this.#tree.selected}

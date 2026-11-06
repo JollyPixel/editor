@@ -7,7 +7,7 @@ import type { Systems } from "@jolly-pixel/engine";
 import type { AssetDocumentKind } from "../lease/AssetLease.ts";
 import type { EditorSession } from "../session/EditorSession.ts";
 import type { ComponentForm } from "./FormRows.ts";
-import type { SceneActorCategory } from "./SceneActorCategory.ts";
+import type { SceneComponentCategory } from "./SceneComponentCategory.ts";
 
 export interface SceneComponentKind<
   TData extends object = any,
@@ -15,6 +15,14 @@ export interface SceneComponentKind<
 > {
   definition: Systems.ComponentDefinition<TData, any, TAssets>;
   label: string;
+  /**
+   * The Add component folder this kind shows in.
+   */
+  category: SceneComponentCategory;
+  /**
+   * Data a component of this kind starts with when the scene editor adds it.
+   */
+  initialData?: Systems.JSONObject;
   /**
    * Name of a registered `@jolly-pixel/ui` icon, used when no asset slot
    * names an asset kind with an icon.
@@ -34,25 +42,6 @@ export interface SceneComponentKind<
 }
 
 export type SceneComponentOrigin = "center" | "corner";
-
-export interface SceneComponentSeed {
-  type: string;
-  data: Systems.JSONObject;
-}
-
-export interface SceneActorPreset {
-  /**
-   * Unique across every package of the scene editor.
-   */
-  id: string;
-  label: string;
-  components: readonly SceneComponentSeed[];
-}
-
-export interface SceneActorPresetSection {
-  category: SceneActorCategory;
-  presets: readonly SceneActorPreset[];
-}
 
 export interface SceneAssetResolver<TValue = unknown> {
   resolve(
@@ -84,6 +73,5 @@ export interface SceneAssetSource<TValue = unknown> {
 
 export interface SceneComponentPackage {
   components: readonly SceneComponentKind[];
-  presets?: readonly SceneActorPresetSection[];
   assets?: readonly SceneAssetSource[];
 }

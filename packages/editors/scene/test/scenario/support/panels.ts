@@ -88,12 +88,12 @@ export async function addActor(
 
 export async function addComponent(
   page: Page,
-  label: string
+  path: readonly string[]
 ): Promise<void> {
   await chooseMenuPath(
     page,
     inspector(page).getByRole("button", { name: "Add component" }),
     "Add component",
-    [label]
+    path
   );
 }

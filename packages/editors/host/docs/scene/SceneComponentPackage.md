@@ -2,7 +2,7 @@
 
 The contract a package implements to add component types to the scene editor.
 The `scene` entry holds types, the `FormRows` builder, the
-`SharedSceneViewers` resolver, `SCENE_ACTOR_CATEGORIES` and
+`SharedSceneViewers` resolver, `SCENE_COMPONENT_CATEGORIES` and
 [`registerKindIcon`](../shell/Shell.md#other-helpers).
 
 ```ts
@@ -38,20 +38,9 @@ export const SCENE_COMPONENTS: SceneComponentPackage = {
     {
       definition: new VoxelMapDefinition(),
       label: "Voxel map",
+      category: "3d",
       form: () => [
         kRows.boolean(["castShadow"], "Cast shadow")
-      ]
-    }
-  ],
-  presets: [
-    {
-      category: "3d",
-      presets: [
-        {
-          id: "voxel-map",
-          label: "Voxel map",
-          components: [{ type: "VoxelMap", data: {} }]
-        }
       ]
     }
   ],
@@ -80,14 +69,12 @@ export const SCENE_COMPONENTS: SceneComponentPackage = {
 ```ts
 interface SceneComponentPackage {
   components: readonly SceneComponentKind[];
-  presets?: readonly SceneActorPresetSection[];
   assets?: readonly SceneAssetSource[];
 }
 ```
 
-The editor refuses to boot when two packages declare the same component type,
-the same asset kind or the same preset `id`. The preset id `"empty"` belongs
-to the scene editor.
+The editor refuses to boot when two packages declare the same component type
+or the same asset kind.
 
 ## SceneComponentKind
 
@@ -95,6 +82,8 @@ to the scene editor.
 interface SceneComponentKind<TData extends object = any, TAssets = any> {
   definition: Systems.ComponentDefinition<TData, any, TAssets>;
   label: string;
+  category: SceneComponentCategory;
+  initialData?: Systems.JSONObject;
   icon?: string;
   form: ComponentForm<TData, TAssets>;
   anchorAsset?: string;
@@ -105,16 +94,28 @@ type ComponentForm<TData, TAssets> = (
   data: TData,
   assets: Systems.ComponentAssets<TAssets>
 ) => FormRow<TData>[];
+
+type SceneComponentCategory =
+  "camera" | "light" | "3d" | "2d" | "physics" | "audio" | "logic" | "ui";
 ```
 
 `definition` is the engine definition a game registers too. Its `assets`
 slots decide which asset pickers open when the component is added.
 
 The component shows the asset kind icon of its first `definition.assets` slot
-whose kind an `assets` source declares with an icon, so a voxel map actor
+whose kind an `assets` source declares with an icon, so a voxel map component
 looks like a voxel map asset. Otherwise it shows `icon`, the name of an icon
 the package registers with `registerIcon` from `@jolly-pixel/ui` when its
 module loads.
+
+`category` picks the folder of the Add component menu, which lists the
+categories in the order of `SCENE_COMPONENT_CATEGORIES` (`{ id, label }`).
+A category without kinds is hidden, and a category holding one kind shows that
+kind in place of the folder. A kind whose `definition.assets` slots pick an
+asset ends with an ellipsis.
+
+`initialData` is the data a component starts with when the scene editor adds
+it, for example `{ castShadow: true }`. It defaults to `{}`.
 
 `form` receives the data parsed by `definition.parse()` and the component
 assets, and returns the inspector rows. `assets.resolve(slot)` returns the
@@ -172,39 +173,6 @@ interface ListItems<TItem> {
   `declared` list (`key`, `type`, `label`, `description`, `default`) shows
   those properties first with a fixed key and type; a declared property
   without a stored value shows its default.
-
-## Presets
-
-```ts
-interface SceneActorPreset {
-  id: string;
-  label: string;
-  components: readonly SceneComponentSeed[];
-}
-
-interface SceneActorPresetSection {
-  category: SceneActorCategory;
-  presets: readonly SceneActorPreset[];
-}
-
-type SceneActorCategory =
-  "camera" | "light" | "3d" | "2d" | "physics" | "audio" | "logic" | "ui";
-
-interface SceneComponentSeed {
-  type: string;
-  data: Systems.JSONObject;
-}
-```
-
-- The hierarchy's Add menu starts with Empty, then shows one folder per
-  category, in the order of `SCENE_ACTOR_CATEGORIES` (`{ id, label }`).
-  A category without presets is hidden, and a category holding one preset
-  shows that preset in place of the folder.
-- Inside a folder, each section with several presets is a block, in package
-  order, and the one-preset sections share a last block. Separators split the
-  blocks. The folder shows the icon of its first preset.
-- A preset whose components pick an asset ends with an ellipsis, and the new
-  actor is named after the first asset picked.
 
 ## SceneAssetSource
 

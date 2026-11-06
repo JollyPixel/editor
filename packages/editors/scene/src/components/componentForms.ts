@@ -54,8 +54,8 @@ const kAlignLabels: Readonly<Record<TextAlign, string>> = {
 const kProjectionModes = choiceOptions(kProjectionLabels);
 const kTextAligns = choiceOptions(kAlignLabels);
 
-export const LIGHT_KINDS = choiceOptions(kLightLabels);
-export const GEOMETRY_KINDS = choiceOptions(kGeometryLabels);
+const kLightKinds = choiceOptions(kLightLabels);
+const kGeometryKinds = choiceOptions(kGeometryLabels);
 
 const kCamera = new FormRows<CameraData>();
 const kLight = new FormRows<LightSettings>();
@@ -145,7 +145,7 @@ export function meshForm(
 ): FormRow<MeshRendererOptions>[] {
   return [
     {
-      ...kMesh.choice(["geometry", "kind"], "Geometry", GEOMETRY_KINDS),
+      ...kMesh.choice(["geometry", "kind"], "Geometry", kGeometryKinds),
       resets: true
     },
     kMesh.color(["material", "color"], "Color"),
@@ -184,7 +184,7 @@ export function lightForm(
 ): FormRow<LightSettings>[] {
   const { kind } = data;
   const rows: FormRow<LightSettings>[] = [
-    kLight.choice(["kind"], "Kind", LIGHT_KINDS),
+    kLight.choice(["kind"], "Kind", kLightKinds),
     kLight.color(["color"], kind === "hemisphere" ? "Sky color" : "Color")
   ];
   if (kind === "hemisphere") {

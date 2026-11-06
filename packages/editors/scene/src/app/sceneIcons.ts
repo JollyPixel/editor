@@ -201,6 +201,28 @@ registerIcon("action-duplicate", svg`
   />
 `, { tone: "sky" });
 
+registerIcon("tree-expand-all", svg`
+  <path
+    d="M7 9l5-5 5 5M7 15l5 5 5-5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`);
+
+registerIcon("tree-collapse-all", svg`
+  <path
+    d="M7 4l5 5 5-5M7 20l5-5 5 5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`);
+
 registerIcon("action-rename", svg`
   <path
     class="tone-fill"

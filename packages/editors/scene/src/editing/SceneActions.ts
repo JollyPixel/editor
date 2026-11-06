@@ -1,25 +1,32 @@
 // Import Third-party Dependencies
-import type {
-  AddActorOptions,
-  SceneActorPlacement,
-  SceneAnchorJSON,
-  SceneDocument
+import type { AssetReferenceData } from "@jolly-pixel/asset";
+import {
+  ownedCopy,
+  type AddActorOptions,
+  type SceneActorPlacement,
+  type SceneAnchorJSON,
+  type SceneComponentJSON,
+  type SceneDocument
 } from "@jolly-pixel/asset.scene/client";
 import type { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import type { SceneComponents } from "../components/SceneComponents.ts";
-import type {
-  ActorPreset,
-  PickedAssets
-} from "../features/hierarchy/model/ActorPreset.ts";
 import {
   SCENE_HISTORY_SCOPE,
   type SceneHistory
 } from "../features/history/sceneHistory.ts";
 import { rebaseTransform } from "../scene/sceneTransform.ts";
-import type { SelectionStore } from "../state/SelectionStore.ts";
+import type {
+  ComponentFocus,
+  SelectionStore
+} from "../state/SelectionStore.ts";
 import type { SceneAssetSlots } from "./SceneEditing.ts";
+
+// CONSTANTS
+const kActorName = "Actor";
+
+type PickedAssets = Record<string, AssetReferenceData>;
 
 export interface ActorMove extends SceneActorPlacement {
   id: string;
@@ -30,7 +37,7 @@ export interface SceneActionsOptions {
   document: SceneDocument;
   history: Pick<SceneHistory, "record">;
   selection: SelectionStore;
-  components: Pick<SceneComponents, "assetSlots">;
+  components: Pick<SceneComponents, "assetSlots" | "find">;
   assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
   anchors: Pick<Systems.SceneAnchorsReader, "findAnchor">;
 }
@@ -39,7 +46,7 @@ export class SceneActions {
   #document: SceneDocument;
   #history: Pick<SceneHistory, "record">;
   #selection: SelectionStore;
-  #components: Pick<SceneComponents, "assetSlots">;
+  #components: Pick<SceneComponents, "assetSlots" | "find">;
   #assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
   #anchors: Pick<Systems.SceneAnchorsReader, "findAnchor">;
 
@@ -54,29 +61,14 @@ export class SceneActions {
     this.#anchors = options.anchors;
   }
 
-  async addActor(
-    preset: ActorPreset,
+  addActor(
     parentId: string | null,
     anchor?: SceneAnchorJSON
-  ): Promise<string | null> {
-    const components = await preset.createComponents(
-      (type) => this.#pickAssets(type)
-    );
-    if (components === null) {
-      return null;
-    }
-
-    const [firstAsset] = components.flatMap(
-      ({ assets }) => Object.values(assets).filter((asset) => asset !== null)
-    );
-
+  ): string | null {
     return this.#add({
-      name: firstAsset === undefined ?
-        preset.label :
-        this.#assetSlots.name(firstAsset),
+      name: kActorName,
       parentId,
-      anchor,
-      components
+      anchor
     });
   }
 
@@ -106,13 +98,36 @@ export class SceneActions {
       return null;
     }
 
-    return this.#document.addComponent(actorId, {
+    const id = this.#document.addComponent(actorId, {
       type,
+      data: structuredClone(this.#components.find(type)?.initialData ?? {}),
       assets
     });
+    if (id !== null) {
+      this.#selection.focus({
+        ownerId: actorId,
+        componentId: id
+      });
+    }
+
+    return id;
+  }
+
+  canEditSelection(): boolean {
+    const { primary, focused } = this.#selection;
+
+    return primary !== null && (
+      focused === null ||
+      this.#document.tree.component(focused.componentId) !== undefined
+    );
   }
 
   duplicateSelection(): string[] {
+    const { focused } = this.#selection;
+    if (focused !== null) {
+      return this.#duplicateComponent(focused);
+    }
+
     const { tree } = this.#document;
     const roots = tree.topmostIds(this.#selection.ids);
     const copies = this.#history.record(
@@ -136,6 +151,13 @@ export class SceneActions {
   }
 
   removeSelection(): void {
+    const { focused } = this.#selection;
+    if (focused !== null) {
+      this.#document.removeComponent(focused.componentId);
+
+      return;
+    }
+
     const roots = this.#document.tree.topmostIds(this.#selection.ids);
     if (roots.length === 0) {
       return;
@@ -176,6 +198,34 @@ export class SceneActions {
     }
 
     return id;
+  }
+
+  #duplicateComponent(
+    { ownerId, componentId }: ComponentFocus
+  ): string[] {
+    const components = this.#document.tree.actor(ownerId)?.components ?? [];
+    const index = components.findIndex(({ id }) => id === componentId);
+    const source = components[index];
+    if (source === undefined) {
+      return [];
+    }
+
+    const { type, data, assets } = ownedCopy<SceneComponentJSON>(source);
+    const copyId = this.#document.addComponent(ownerId, {
+      type,
+      data,
+      assets,
+      beforeId: components[index + 1]?.id
+    });
+    if (copyId === null) {
+      return [];
+    }
+    this.#selection.focus({
+      ownerId,
+      componentId: copyId
+    });
+
+    return [copyId];
   }
 
   async #pickAssets(

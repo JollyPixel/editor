@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import { FONT_ASSET } from "@jolly-pixel/asset.font/client";
 import type {
-  SceneActorPreset,
   SceneComponentKind,
   SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
@@ -23,8 +22,6 @@ import {
 // Import Internal Dependencies
 import {
   cameraForm,
-  GEOMETRY_KINDS,
-  LIGHT_KINDS,
   lightForm,
   meshForm,
   textForm
@@ -37,153 +34,53 @@ import {
 
 // CONSTANTS
 export const BUILT_IN_PACKAGE = "@jolly-pixel/editor.scene";
-const kShadowCasters: ReadonlySet<string> = new Set(["directional", "spot"]);
 
 const kCamera: SceneComponentKind<CameraData> = {
   definition: new CameraDefinition(),
   label: "Camera",
+  category: "camera",
   icon: "actor-camera",
   form: cameraForm
 };
 const kLight: SceneComponentKind<LightSettings> = {
   definition: new LightDefinition(),
   label: "Light",
+  category: "light",
+  initialData: {
+    castShadow: true
+  },
   icon: "actor-light",
   form: lightForm
 };
 const kMesh: SceneComponentKind<MeshRendererOptions> = {
   definition: new MeshDefinition(),
   label: "Mesh",
+  category: "3d",
+  initialData: {
+    castShadow: true,
+    receiveShadow: true
+  },
   icon: "actor-mesh",
   form: meshForm
 };
 const kText: SceneComponentKind<TextSettings> = {
   definition: new TextDefinition(),
   label: "Text",
+  category: "3d",
+  initialData: {
+    text: "Text"
+  },
   form: textForm
 };
 const kRigidBody: SceneComponentKind<SceneRigidBodySettings> = {
   definition: new RigidBodyDefinition(),
   label: "Rigid body",
+  category: "physics",
   icon: "actor-rigid-body",
   form: rigidBodyForm
 };
 export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
   components: [kCamera, kLight, kMesh, kText, kRigidBody],
-  presets: [
-    {
-      category: "camera",
-      presets: [
-        {
-          id: "camera",
-          label: "Camera",
-          components: [
-            {
-              type: "Camera",
-              data: {}
-            }
-          ]
-        }
-      ]
-    },
-    {
-      category: "light",
-      presets: LIGHT_KINDS.map(({ value: kind, label }): SceneActorPreset => {
-        return {
-          id: `light:${kind}`,
-          label: `${label} Light`,
-          components: [
-            {
-              type: "Light",
-              data: kShadowCasters.has(kind) ?
-                { kind, castShadow: true } :
-                { kind }
-            }
-          ]
-        };
-      })
-    },
-    {
-      category: "3d",
-      presets: GEOMETRY_KINDS.map(({ value: kind, label }) => {
-        return {
-          id: `mesh:${kind}`,
-          label,
-          components: [
-            {
-              type: "Mesh",
-              data: {
-                geometry: { kind },
-                castShadow: true,
-                receiveShadow: true
-              }
-            }
-          ]
-        };
-      })
-    },
-    {
-      category: "3d",
-      presets: [
-        {
-          id: "text",
-          label: "Text",
-          components: [
-            {
-              type: "Text",
-              data: {
-                text: "Text"
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      category: "physics",
-      presets: [
-        {
-          id: "rigid-body",
-          label: "Rigid body",
-          components: [
-            {
-              type: "RigidBody",
-              data: {}
-            }
-          ]
-        },
-        {
-          id: "static-collider",
-          label: "Static collider",
-          components: [
-            {
-              type: "RigidBody",
-              data: {
-                kind: "fixed"
-              }
-            }
-          ]
-        },
-        {
-          id: "trigger",
-          label: "Trigger",
-          components: [
-            {
-              type: "RigidBody",
-              data: {
-                kind: "fixed",
-                colliders: [
-                  {
-                    sensor: true
-                  }
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    }
-  ],
   assets: [
     {
       descriptor: FONT_ASSET,

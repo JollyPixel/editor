@@ -21,6 +21,7 @@ const kRows = new FormRows<VoxelModelSettings>();
 const kVoxelModel: SceneComponentKind<VoxelModelSettings> = {
   definition: new VoxelModelDefinition(),
   label: "Voxel model",
+  category: "3d",
   form: () => [
     kRows.boolean(["castShadow"], "Cast shadow"),
     kRows.boolean(["receiveShadow"], "Receive shadow")
@@ -29,23 +30,6 @@ const kVoxelModel: SceneComponentKind<VoxelModelSettings> = {
 
 export const SCENE_COMPONENTS: SceneComponentPackage = {
   components: [kVoxelModel],
-  presets: [
-    {
-      category: "3d",
-      presets: [
-        {
-          id: "voxel-model",
-          label: "Voxel model",
-          components: [
-            {
-              type: "VoxelModel",
-              data: {}
-            }
-          ]
-        }
-      ]
-    }
-  ],
   assets: [
     {
       descriptor: VOXEL_MODEL_ASSET,

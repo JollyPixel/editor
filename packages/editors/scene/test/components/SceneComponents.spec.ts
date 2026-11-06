@@ -6,8 +6,6 @@ import assert from "node:assert/strict";
 import { AssetType } from "@jolly-pixel/asset";
 import { FONT_ASSET } from "@jolly-pixel/asset.font/client";
 import type {
-  SceneActorPreset,
-  SceneActorPresetSection,
   SceneAssetSource,
   SceneComponentKind,
   SceneComponentPackage
@@ -15,7 +13,7 @@ import type {
 import type { MenuEntry } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import { ActorPresetMenu } from "../../src/features/hierarchy/model/ActorPresetMenu.ts";
+import { addComponentEntries } from "../../src/components/addComponentEntries.ts";
 import { createSceneComponents } from "../helpers/sceneComponents.ts";
 
 // CONSTANTS
@@ -33,6 +31,7 @@ const kMapKind: SceneComponentKind = {
     }
   },
   label: "Map",
+  category: "3d",
   icon: "actor-map",
   form: () => []
 };
@@ -50,37 +49,25 @@ const kMapSource: SceneAssetSource = {
     throw new Error("not opened");
   }
 };
-const kMapPreset: SceneActorPreset = {
-  id: "map",
-  label: "Map",
-  components: [
-    {
-      type: "Map",
-      data: {}
-    }
-  ]
-};
-const kMapSection: SceneActorPresetSection = {
-  category: "3d",
-  presets: [kMapPreset]
-};
 const kMaps: SceneComponentPackage = {
   components: [kMapKind],
-  presets: [kMapSection],
   assets: [kMapSource]
 };
 const kNotes: SceneComponentPackage = {
-  components: [],
-  presets: [
+  components: [
     {
-      category: "logic",
-      presets: [
-        {
-          id: "note",
-          label: "Note",
-          components: []
+      definition: {
+        type: "Note",
+        parse() {
+          return {};
+        },
+        create() {
+          return null;
         }
-      ]
+      },
+      label: "Note",
+      category: "logic",
+      form: () => []
     }
   ]
 };
@@ -102,18 +89,18 @@ function menuLabels(
 }
 
 describe("SceneComponents", () => {
-  test("files package presets into category folders and inlines a lone preset", () => {
+  test("files the Add component entries into category folders and inlines a lone kind", () => {
     const components = createSceneComponents(["maps", kMaps], ["notes", kNotes]);
-    const labels = menuLabels(new ActorPresetMenu(components).entries);
+    const labels = menuLabels(addComponentEntries(components));
     const folders = new Map(
       labels.filter((label) => typeof label !== "string")
     );
 
     assert.deepEqual(
       labels.map((label) => (typeof label === "string" ? label : label[0])),
-      ["Empty", "-", "Camera", "Light", "3D", "Physics", "Note"]
+      ["Camera", "Light", "3D", "Rigid body", "Note"]
     );
-    assert.deepEqual(folders.get("3D")?.slice(-3), ["-", "Text…", "Map…"]);
+    assert.deepEqual(folders.get("3D"), ["Mesh", "Text…", "Map…"]);
     assert.deepEqual(components.descriptors, [FONT_ASSET, kMapSource.descriptor]);
   });
 
@@ -130,7 +117,7 @@ describe("SceneComponents", () => {
     );
   });
 
-  test("refuses a component type, asset kind or preset declared by two packages", () => {
+  test("refuses a component type or asset kind declared by two packages", () => {
     const cases: [SceneComponentPackage, RegExp][] = [
       [
         { components: [{ ...kMapKind }] },
@@ -139,17 +126,6 @@ describe("SceneComponents", () => {
       [
         { components: [], assets: [kMapSource] },
         /Asset kind "map" is declared by both "maps" and "copy"/
-      ],
-      [
-        { components: [], presets: [{ ...kMapSection, category: "logic" }] },
-        /Actor preset "map" is declared by both "maps" and "copy"/
-      ],
-      [
-        {
-          components: [],
-          presets: [{ category: "3d", presets: [{ id: "empty", label: "Blank", components: [] }] }]
-        },
-        /Actor preset "empty" is declared by both "@jolly-pixel\/editor.scene" and "copy"/
       ]
     ];
 

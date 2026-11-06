@@ -48,7 +48,10 @@ describe("AnimatePanelController", () => {
     assert.equal(controller.state.notice, "Bob deleted the clip you had open.");
 
     controller.handleSelect(new CustomEvent("jolly-select", {
-      detail: { selected: [animationKey("shared")] }
+      detail: {
+        selected: [animationKey("shared")],
+        id: animationKey("shared")
+      }
     }));
     assert.equal(controller.state.notice, null, "picking the set it fell back to clears the notice");
 
