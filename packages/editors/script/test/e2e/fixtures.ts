@@ -35,12 +35,10 @@ export function scriptText(
   });
 }
 
-export async function typeAtEnd(
-  page: Page,
-  text: string
+export async function placeCaretAtEnd(
+  page: Page
 ): Promise<void> {
   const source = page.getByRole("textbox", { name: "Script source" });
   await source.focus();
   await page.keyboard.press("Control+End");
-  await page.keyboard.type(text);
 }

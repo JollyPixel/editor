@@ -2,22 +2,30 @@
 import {
   SCRIPT_SOURCE,
   expect,
+  placeCaretAtEnd,
   scriptText,
-  test,
-  typeAtEnd
+  test
 } from "./fixtures.ts";
 
 test("two peers typing at the same time end with the same script", async({ page, peer }) => {
+  const first = "// first\n";
+  const second = "// second\n";
   await Promise.all([
-    typeAtEnd(page, "// first\n"),
-    typeAtEnd(peer, "// second\n")
+    placeCaretAtEnd(page),
+    placeCaretAtEnd(peer)
+  ]);
+  await Promise.all([
+    page.keyboard.type(first),
+    peer.keyboard.type(second)
   ]);
 
-  await expect.poll(() => scriptText(page)).toContain("// first");
-  await expect.poll(() => scriptText(page)).toContain("// second");
+  await expect.poll(() => scriptText(page))
+    .toHaveLength(SCRIPT_SOURCE.length + first.length + second.length);
   const text = await scriptText(page);
   await expect.poll(() => scriptText(peer)).toBe(text);
   expect(text.startsWith(SCRIPT_SOURCE)).toBe(true);
+  expect(text).toContain(first);
+  expect(text).toContain(second);
   await expect(peer.locator("jolly-script-code .line").filter({ hasText: "// first" })).toBeVisible();
 });
 

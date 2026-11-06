@@ -287,7 +287,7 @@ function transformPair(
 ): ChangePair {
   if ("insert" in later) {
     if ("insert" in earlier) {
-      return earlier.at <= later.at ?
+      return earlier.at < later.at ?
         [[shift(later, earlier.insert.length)], [earlier]] :
         [[later], [shift(earlier, later.insert.length)]];
     }
