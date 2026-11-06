@@ -67,6 +67,7 @@ export interface TreeNode<
 
 export interface JollySelectDetail {
   selected: string[];
+  id: string | null;
 }
 
 export interface JollyActivateDetail {

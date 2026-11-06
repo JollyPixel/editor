@@ -22,7 +22,7 @@ export function sceneTool(
   tool: string
 ): Locator {
   return page.locator(
-    `jolly-scene-toolbar jolly-tool-button[data-tool="${tool}"]`
+    `#scene-viewport jolly-tool-button[data-tool="${tool}"]`
   );
 }
 
@@ -37,10 +37,11 @@ export type TransformAxis = "X" | "Y" | "Z";
 
 export function transformAxis(
   page: Page,
+  field: TransformField,
   axis: TransformAxis
 ): Locator {
   return inspector(page)
-    .locator("jolly-folder[key=\"transform\"] jolly-vector3")
+    .locator(`jolly-folder[key="transform"] jolly-vector3[label="${field}"]`)
     .getByRole("textbox", { name: axis });
 }
 
@@ -50,23 +51,16 @@ export async function editTransform(
   axis: TransformAxis,
   value: string
 ): Promise<void> {
-  await inspector(page)
-    .locator("jolly-folder[key=\"transform\"]")
-    .getByRole("radio", { name: field })
-    .click();
-
-  const input = transformAxis(page, axis);
+  const input = transformAxis(page, field, axis);
   await input.fill(value);
   await input.press("Enter");
 }
 
-export async function chooseMenuPath(
+async function chooseMenuPath(
   page: Page,
-  opener: Locator,
   menuName: string,
   path: readonly string[]
 ): Promise<void> {
-  await opener.click();
   const menu = page.getByRole("menu", { name: menuName });
   await expect(menu).toBeVisible();
   for (const item of path) {
@@ -78,22 +72,18 @@ export async function addActor(
   page: Page,
   path: readonly string[]
 ): Promise<void> {
-  await chooseMenuPath(
-    page,
-    hierarchy(page).getByRole("button", { name: "Add", exact: true }),
-    "Hierarchy actions",
-    path
-  );
+  await hierarchy(page)
+    .getByRole("button", { name: "Add", exact: true })
+    .click();
+  await chooseMenuPath(page, "Hierarchy actions", path);
 }
 
 export async function addComponent(
   page: Page,
-  label: string
+  path: readonly string[]
 ): Promise<void> {
-  await chooseMenuPath(
-    page,
-    inspector(page).getByRole("button", { name: "Add component" }),
-    "Add component",
-    [label]
-  );
+  await hierarchy(page)
+    .getByRole("treeitem", { selected: true })
+    .click({ button: "right" });
+  await chooseMenuPath(page, "Hierarchy actions", ["Add component", ...path]);
 }

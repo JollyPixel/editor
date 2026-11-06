@@ -69,7 +69,10 @@ describe("MaterialLibraryController block rows", () => {
     const leg = harness.addBlock({ name: "Leg", materialId: metal });
 
     harness.controller.handleSelect(new CustomEvent("jolly-select", {
-      detail: { selected: [usageRowId(arm.uuid)] }
+      detail: {
+        selected: [usageRowId(arm.uuid)],
+        id: usageRowId(arm.uuid)
+      }
     }));
 
     assert.equal(harness.selection.selected, arm.uuid);

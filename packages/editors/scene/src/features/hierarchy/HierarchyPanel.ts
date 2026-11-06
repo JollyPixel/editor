@@ -47,7 +47,14 @@ export class HierarchyPanel extends LitElement {
       padding: var(--jolly-space-1, 4px);
     }
 
+    .tree-options {
+      margin-inline-start: auto;
+    }
+
     jolly-tree {
+      --jolly-tree-icon-size: 16px;
+      --jolly-icon-ink-strength: 100%;
+
       flex: 1 1 auto;
       overflow: auto;
       padding-inline: var(--jolly-space-1, 4px);
@@ -64,6 +71,12 @@ export class HierarchyPanel extends LitElement {
     event: MouseEvent
   ): void => {
     this.#menu.open(this.#tree.addMenu(), menuPointBelow(event));
+  };
+
+  readonly #openTreeMenu = (
+    event: MouseEvent
+  ): void => {
+    this.#menu.open(this.#tree.treeMenu(), menuPointBelow(event));
   };
 
   override render(): TemplateResult {
@@ -92,11 +105,21 @@ export class HierarchyPanel extends LitElement {
           ?disabled=${!hasSelection}
           @click=${this.#tree.deleteSelected}
         ></jolly-button>
+        <jolly-button
+          class="tree-options"
+          icon="tree-options"
+          icon-only
+          label="Tree options"
+          title="Tree options"
+          aria-haspopup="menu"
+          @click=${this.#openTreeMenu}
+        ></jolly-button>
       </div>
       <jolly-tree
         multiple
         reorderable
         row-drag
+        indent-guides
         renamable
         .nodes=${this.#tree.nodes}
         .selected=${this.#tree.selected}

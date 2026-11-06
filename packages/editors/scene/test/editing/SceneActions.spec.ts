@@ -2,104 +2,13 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import {
-  AssetType,
-  type AssetReferenceData
-} from "@jolly-pixel/asset";
-import { SceneDocument } from "@jolly-pixel/asset.scene/client";
-import type { Systems } from "@jolly-pixel/engine";
-
 // Import Internal Dependencies
-import { SceneActions } from "../../src/editing/SceneActions.ts";
-import { ActorPreset } from "../../src/features/hierarchy/model/ActorPreset.ts";
+import { SCENE_HISTORY_SCOPE } from "../../src/features/history/sceneHistory.ts";
 import {
-  createSceneHistory,
-  SCENE_HISTORY_SCOPE
-} from "../../src/features/history/sceneHistory.ts";
-import { SelectionStore } from "../../src/state/SelectionStore.ts";
-import { NO_EXPANDED_ACTORS } from "../helpers/expandedActors.ts";
-import { createSceneComponents } from "../helpers/sceneComponents.ts";
-
-// CONSTANTS
-const kComponents = createSceneComponents([
-  "maps",
-  {
-    components: [
-      {
-        definition: {
-          type: "VoxelMap",
-          assets: {
-            map: new AssetType<unknown>("voxelmap")
-          },
-          parse() {
-            return {};
-          },
-          create() {
-            return null;
-          }
-        },
-        label: "Voxel map",
-        icon: "actor-voxel-map",
-        form: () => []
-      }
-    ]
-  }
-]);
-
-function createActions(
-  picked: AssetReferenceData | null = null,
-  anchors: Pick<Systems.SceneAnchorsReader, "findAnchor"> = { findAnchor: () => null }
-) {
-  const document = new SceneDocument();
-  const history = createSceneHistory(document);
-  const selection = new SelectionStore(document, NO_EXPANDED_ACTORS);
-  const picks: string[] = [];
-  const actions = new SceneActions({
-    document,
-    history,
-    selection,
-    components: kComponents,
-    assetSlots: {
-      name: () => "Ground",
-      pick: (type) => {
-        picks.push(type.kind.value);
-
-        return Promise.resolve(picked);
-      },
-      pickScene: () => {
-        picks.push("scene");
-
-        return Promise.resolve(picked);
-      }
-    },
-    anchors
-  });
-
-  return { document, history, selection, actions, picks };
-}
-
-function preset(
-  label: string,
-  type: string
-): ActorPreset {
-  return new ActorPreset({
-    id: label,
-    label,
-    components: [
-      {
-        type,
-        data: {}
-      }
-    ]
-  }, kComponents);
-}
-
-function names(
-  document: SceneDocument
-): string[] {
-  return [...document.tree.actors()].map((actor) => actor.name);
-}
+  actorNames,
+  componentTypes,
+  createActions
+} from "../helpers/editing/sceneActions.ts";
 
 function close(
   actual: number,
@@ -118,11 +27,11 @@ describe("SceneActions", () => {
 
     const [copyId] = actions.duplicateSelection();
 
-    assert.deepEqual(names(document), ["Parent", "Child", "Parent (1)", "Child", "Last"]);
+    assert.deepEqual(actorNames(document), ["Parent", "Child", "Parent (1)", "Child", "Last"]);
     assert.deepEqual(selection.ids, [copyId]);
 
     history.undo(SCENE_HISTORY_SCOPE);
-    assert.deepEqual(names(document), ["Parent", "Child", "Last"]);
+    assert.deepEqual(actorNames(document), ["Parent", "Child", "Last"]);
   });
 
   test("deletes the selected roots as one step and drops them from the selection", () => {
@@ -133,10 +42,10 @@ describe("SceneActions", () => {
 
     actions.removeSelection();
 
-    assert.deepEqual(names(document), []);
+    assert.deepEqual(actorNames(document), []);
     assert.deepEqual(selection.ids, []);
     history.undo(SCENE_HISTORY_SCOPE);
-    assert.deepEqual(names(document), ["First", "Second"]);
+    assert.deepEqual(actorNames(document), ["First", "Second"]);
   });
 
   test("moves an actor to a new parent keeping its world pose", () => {
@@ -197,28 +106,30 @@ describe("SceneActions", () => {
     close(transform.rotation.y, -90);
   });
 
-  test("adds a voxel map actor named after the picked asset", async() => {
-    const map = { id: "map-1", kind: "voxelmap" };
-    const { document, selection, actions } = createActions(map);
+  test("adds and selects an empty actor", () => {
+    const { document, selection, actions } = createActions();
 
-    const id = await actions.addActor(preset("Voxel map", "VoxelMap"), null);
+    const id = actions.addActor(null);
 
     const actor = document.tree.actor(id!)!;
-    assert.strictEqual(actor.name, "Ground");
-    assert.strictEqual(actor.components[0].type, "VoxelMap");
-    assert.deepEqual(actor.components[0].assets, { map });
+    assert.deepEqual([actor.name, actor.components], ["Actor", []]);
     assert.deepEqual(selection.ids, [id]);
   });
 
-  test("adds nothing when the asset pick is cancelled, and never asks for a slot-free preset", async() => {
-    const { document, actions, picks } = createActions(null);
+  test("adds a component with its picked asset and none when the pick is cancelled", async() => {
+    const map = { id: "map-1", kind: "voxelmap" };
+    const picked = createActions(map);
+    const cancelled = createActions(null);
+    const pickedId = picked.document.addActor({ name: "Ground" })!;
+    const cancelledId = cancelled.document.addActor({ name: "Ground" })!;
 
-    assert.strictEqual(await actions.addActor(preset("Voxel map", "VoxelMap"), null), null);
-    assert.strictEqual(document.tree.size, 0);
+    await picked.actions.addComponent(pickedId, "VoxelMap");
+    assert.strictEqual(await cancelled.actions.addComponent(cancelledId, "VoxelMap"), null);
+    await cancelled.actions.addComponent(cancelledId, "Mesh");
 
-    const boxId = await actions.addActor(preset("Box", "Mesh"), null);
-    assert.strictEqual(document.tree.actor(boxId!)?.name, "Box");
-    assert.deepEqual(picks, ["voxelmap"]);
+    assert.deepEqual(picked.document.tree.actor(pickedId)!.components[0].assets, { map });
+    assert.deepEqual(componentTypes(cancelled.document, cancelledId), ["Mesh"]);
+    assert.deepEqual(cancelled.picks, ["voxelmap"]);
   });
 
   test("adds and selects an instance of the picked scene", async() => {

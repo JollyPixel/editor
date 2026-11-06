@@ -5,7 +5,7 @@ import type {
   LightKind,
   LightSettings,
   MeshGeometryKind,
-  MeshRendererOptions,
+  MeshSettings,
   MeshSurfaceSettings,
   TextAlign,
   TextSettings
@@ -54,12 +54,12 @@ const kAlignLabels: Readonly<Record<TextAlign, string>> = {
 const kProjectionModes = choiceOptions(kProjectionLabels);
 const kTextAligns = choiceOptions(kAlignLabels);
 
-export const LIGHT_KINDS = choiceOptions(kLightLabels);
-export const GEOMETRY_KINDS = choiceOptions(kGeometryLabels);
+const kLightKinds = choiceOptions(kLightLabels);
+const kGeometryKinds = choiceOptions(kGeometryLabels);
 
 const kCamera = new FormRows<CameraData>();
 const kLight = new FormRows<LightSettings>();
-const kMesh = new FormRows<MeshRendererOptions>();
+const kMesh = new FormRows<MeshSettings>();
 const kText = new FormRows<TextSettings>();
 const kSurface = new FormRows<MeshSurfaceSettings>();
 
@@ -75,7 +75,7 @@ const kSurfaceRows: readonly FormRow<MeshSurfaceSettings>[] = [
 ];
 
 const kGeometryRows: Readonly<
-  Record<MeshGeometryKind, readonly FormRow<MeshRendererOptions>[]>
+  Record<MeshGeometryKind, readonly FormRow<MeshSettings>[]>
 > = {
   box: [
     kMesh.number(["geometry", "width"], "Width", kSize),
@@ -141,15 +141,15 @@ export function cameraForm(
 }
 
 export function meshForm(
-  data: MeshRendererOptions
-): FormRow<MeshRendererOptions>[] {
+  data: MeshSettings
+): FormRow<MeshSettings>[] {
   return [
     {
-      ...kMesh.choice(["geometry", "kind"], "Geometry", GEOMETRY_KINDS),
+      ...kMesh.choice(["geometry", "kind"], "Geometry", kGeometryKinds),
       resets: true
     },
     kMesh.color(["material", "color"], "Color"),
-    ...data.geometry === undefined ? [] : kGeometryRows[data.geometry.kind],
+    ...kGeometryRows[data.geometry.kind],
     ...kSurfaceRows
   ];
 }
@@ -184,7 +184,7 @@ export function lightForm(
 ): FormRow<LightSettings>[] {
   const { kind } = data;
   const rows: FormRow<LightSettings>[] = [
-    kLight.choice(["kind"], "Kind", LIGHT_KINDS),
+    kLight.choice(["kind"], "Kind", kLightKinds),
     kLight.color(["color"], kind === "hemisphere" ? "Sky color" : "Color")
   ];
   if (kind === "hemisphere") {

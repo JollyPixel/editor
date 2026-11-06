@@ -19,6 +19,7 @@ interface ToolButton {
   active: boolean; // accent fill, aria-pressed without a flyout
   disabled: boolean;
   flyoutSide: "above" | "below" | "left" | "right"; // attribute flyout-side, default "right"
+  tooltipAlign: "start" | "center" | "end"; // attribute tooltip-align, default "center"
   open: boolean;
   count: number; // corner badge, hidden at 0
 }
@@ -28,7 +29,9 @@ interface ToolButton {
 - `count` shows a number in the bottom-right corner, such as the undo depth.
   The badge is hidden from assistive technology: put anything it must hear in
   `label`.
-- The tooltip opens on `flyout-side`.
+- The tooltip opens on `flyout-side`. `tooltip-align` lines it up with the
+  button's start or end edge along that side, so a button at the end of a
+  bar keeps its tooltip inside the bar.
 
 ## Methods
 

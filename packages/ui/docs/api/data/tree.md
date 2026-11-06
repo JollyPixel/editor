@@ -72,7 +72,7 @@ interface TreeNode<TData = unknown> {
 
 ```ts
 interface DataEventMap {
-  "jolly-select": { selected: string[]; };
+  "jolly-select": { selected: string[]; id: string | null; };
   "jolly-activate": { id: string; };
   "jolly-activate-swatch": { id: string; };
   "jolly-context-request": { id: string | null; x: number; y: number; };
@@ -111,7 +111,9 @@ number of matching rows right away. It makes the tree
 ## Selection and keyboard
 
 - Arrow keys move between visible rows and select them. Enter activates.
-- Clicking the empty area below the rows emits `jolly-select` with `[]`.
+- `jolly-select` carries the new `selected` set and the `id` of the row the
+  click or key acted on. Clicking the empty area below the rows emits `[]`
+  with a `null` id.
 - `requireSelection` stops that, and Ctrl+click no longer removes the last
   selected row. An empty `selected` set by the consumer still renders.
 

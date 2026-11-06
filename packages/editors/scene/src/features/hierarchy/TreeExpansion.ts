@@ -1,33 +1,33 @@
 export class TreeExpansion {
-  readonly #collapsed = new Set<string>();
+  readonly #expanded = new Set<string>();
 
   expand(
     id: string
   ): void {
-    this.#collapsed.delete(id);
+    this.#expanded.add(id);
   }
 
   collapse(
     id: string
   ): void {
-    this.#collapsed.add(id);
+    this.#expanded.delete(id);
   }
 
   reveal(
     ids: Iterable<string>
   ): void {
     for (const id of ids) {
-      this.#collapsed.delete(id);
+      this.#expanded.add(id);
     }
   }
 
   expanded(
     ids: Iterable<string>
   ): string[] {
-    return [...ids].filter((id) => !this.#collapsed.has(id));
+    return [...ids].filter((id) => this.#expanded.has(id));
   }
 
   clear(): void {
-    this.#collapsed.clear();
+    this.#expanded.clear();
   }
 }

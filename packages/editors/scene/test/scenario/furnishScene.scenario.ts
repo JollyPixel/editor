@@ -34,14 +34,9 @@ const kHemisphere: SceneComponentRow = {
   type: "Light",
   data: { kind: "hemisphere" }
 };
-const kDefaultMesh: SceneComponentRow = {
-  type: "Mesh",
-  data: {}
-};
-const kBox: SceneComponentRow = {
+const kMesh: SceneComponentRow = {
   type: "Mesh",
   data: {
-    geometry: { kind: "box" },
     castShadow: true,
     receiveShadow: true
   }
@@ -77,11 +72,11 @@ const kSky: SceneActorRow = {
 };
 const kMeshedSky: SceneActorRow = {
   ...kSky,
-  components: [kDefaultMesh, kHemisphere]
+  components: [kMesh, kHemisphere]
 };
 const kCrate: SceneActorRow = {
   path: "Crate",
-  components: [kBox],
+  components: [kMesh],
   position: kOrigin,
   scale: { x: 1, y: 2, z: 1 },
   visible: true
@@ -220,21 +215,23 @@ new Scenario<ScenePage, SceneExpectation>({
     },
     {
       id: "crate",
-      title: "add a box, undo and redo it, then shape it into a crate",
+      title: "add an actor, undo and redo it, then shape it into a crate with a mesh",
       play: async(scene) => {
         const undo = scene.tool("undo");
         await expect(undo).toHaveAttribute("disabled");
-        await scene.addActor(["3D", "Box"]);
-        await expect(scene.row("Box")).toHaveAttribute("aria-selected", "true");
+        await scene.addActor(["Actor"]);
+        await expect(scene.row("Actor")).toHaveAttribute("aria-selected", "true");
         await undo.click();
-        await expect(scene.row("Box")).toHaveCount(0);
+        await expect(scene.row("Actor")).toHaveCount(0);
         await scene.tool("redo").click();
-        await expect(scene.row("Box")).toBeVisible();
+        await expect(scene.row("Actor")).toBeVisible();
 
-        await scene.row("Box").click();
+        await scene.row("Actor").click();
         await scene.rename("Crate");
         await expect(scene.row("Crate")).toHaveAttribute("aria-selected", "true");
         await scene.editTransform("Scale", "Y", "2");
+        await scene.addComponent(["3D", "Mesh"]);
+        await expect(scene.component("Box mesh")).toBeVisible();
       },
       expected: kCrated
     },
@@ -273,11 +270,13 @@ new Scenario<ScenePage, SceneExpectation>({
       id: "components",
       title: "give the sky a mesh and move it above the light",
       play: async(scene) => {
+        await scene.collapseAll();
         await scene.row("Sky").click();
-        await scene.addComponent("Mesh");
-        await expect(scene.component("Mesh")).toBeVisible();
+        await scene.addComponent(["3D", "Mesh"]);
+        await expect(scene.component("Box mesh")).toBeVisible();
+        await expect(scene.row("Box mesh")).toHaveAttribute("aria-selected", "true");
 
-        await scene.moveComponentUp("Mesh");
+        await scene.dragRow("Box mesh", "Hemisphere light", "above");
       },
       expected: kMeshed
     },
@@ -305,6 +304,7 @@ new Scenario<ScenePage, SceneExpectation>({
         }
         await scene.row("Crate").click();
         await scene.rename("Shade");
+        await scene.expand("Shade");
         await scene.row("Lid").click();
         await scene.rename("Bulb");
 
@@ -369,12 +369,12 @@ new Scenario<ScenePage, SceneExpectation>({
       id: "light",
       title: "turn the sun into a spot light and narrow its cone",
       play: async(scene) => {
-        await scene.row("Sun").click();
-        const light = scene.component("Light");
-        await selectField(light, "Kind").selectOption({ label: "Spot" });
-        await scene.showMore("Light");
+        await scene.inspectComponent("Sun", "Directional light");
+        await selectField(scene.component("Directional light"), "Kind").selectOption({ label: "Spot" });
+        const light = scene.component("Spot light");
+        await scene.showMore("Spot light");
         await expect(light.locator("jolly-number[label=\"Angle\"]")).toBeVisible();
-        await scene.editNumber("Light", "Angle", "30");
+        await scene.editNumber("Spot light", "Angle", "30");
       },
       expected: kLit
     },

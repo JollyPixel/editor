@@ -146,7 +146,8 @@ export type {
   Quaternion
 } from "./math/Quaternion.ts";
 export type {
-  Transform
+  Transform,
+  TransformChangeDetail
 } from "./math/Transform.ts";
 export type {
   Point2d

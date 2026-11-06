@@ -47,13 +47,13 @@ describe("TextEdit", () => {
     assert.equal(TextEdit.insertion(0, "a").then(TextEdit.deletion(0, "a")).empty, true);
   });
 
-  test("an earlier insertion at the same offset goes first", () => {
+  test("an insertion still pending goes before a committed one at the same offset", () => {
     const later = TextEdit.insertion(2, "L");
     const earlier = TextEdit.insertion(2, "E");
     const { edit, earlier: rebased } = later.rebaseOnto(earlier);
 
-    assert.equal(edit.applyTo(earlier.applyTo("abcd")), "abELcd");
-    assert.equal(rebased.applyTo(later.applyTo("abcd")), "abELcd");
+    assert.equal(edit.applyTo(earlier.applyTo("abcd")), "abLEcd");
+    assert.equal(rebased.applyTo(later.applyTo("abcd")), "abLEcd");
   });
 
   test("an insertion inside a concurrent deletion survives it", () => {

@@ -41,28 +41,15 @@ class ScriptAssetDefinition extends ScriptDefinition {
 const kScript: SceneComponentKind<ScriptData, ScriptAssets> = {
   definition: new ScriptAssetDefinition(),
   label: "Script",
-  form: (data, assets) => scriptForm(data, assets.resolve("script"))
+  category: "logic",
+  form: (data, assets) => scriptForm(data, assets.resolve("script")),
+  describe: (_data, assets) => {
+    return { label: assets.script ?? "Script" };
+  }
 };
 
 export const SCENE_COMPONENTS: SceneComponentPackage = {
   components: [kScript],
-  presets: [
-    {
-      category: "logic",
-      presets: [
-        {
-          id: "script",
-          label: "Script",
-          components: [
-            {
-              type: "Script",
-              data: {}
-            }
-          ]
-        }
-      ]
-    }
-  ],
   assets: [
     {
       descriptor: SCRIPT_ASSET,

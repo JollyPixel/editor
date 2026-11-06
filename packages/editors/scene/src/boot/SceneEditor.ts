@@ -57,6 +57,9 @@ export class SceneEditor {
     void Systems.BakedRoomEnvironment.load();
 
     return EditorRuntime.create(kCanvas, {
+      overlay: {
+        container: "#scene-viewport .runtime-overlay"
+      },
       includePerformanceStats: {
         position: "top-right"
       },

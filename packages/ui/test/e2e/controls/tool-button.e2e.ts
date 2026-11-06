@@ -85,6 +85,21 @@ test.describe("Tool button", () => {
     await expect(disabled).not.toHaveAttribute("open");
   });
 
+  test("tooltip-align start lines the tooltip up with the button's left edge", async({ page }) => {
+    const aligned = page.getByTestId("aligned");
+    const button = aligned.locator(".button").first();
+    const tooltip = aligned.locator(".tooltip").first();
+
+    await button.hover();
+    await expect(tooltip).toBeVisible();
+    const [tooltipBox, buttonBox] = await Promise.all([
+      measureBox(tooltip),
+      measureBox(button)
+    ]);
+    expect(Math.abs(tooltipBox.x - buttonBox.x)).toBeLessThan(1);
+    expect(tooltipBox.y + tooltipBox.height).toBeLessThan(buttonBox.y);
+  });
+
   test("a vertical slider drag keeps the flyout open past its edge", async({ page }) => {
     const size = page.getByTestId("size");
 

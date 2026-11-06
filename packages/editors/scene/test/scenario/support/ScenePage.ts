@@ -101,9 +101,9 @@ export class ScenePage {
   }
 
   addComponent(
-    label: string
+    path: readonly string[]
   ): Promise<void> {
-    return addComponent(this.page, label);
+    return addComponent(this.page, path);
   }
 
   editTransform(
@@ -134,13 +134,31 @@ export class ScenePage {
     await mouse.up();
   }
 
+  async collapseAll(): Promise<void> {
+    await this.hierarchy
+      .getByRole("button", { name: "Tree options", exact: true })
+      .click();
+    await this.page.getByRole("menuitem", { name: "Collapse all" }).click();
+  }
+
+  async inspectComponent(
+    actor: string,
+    component: string
+  ): Promise<void> {
+    await this.collapseAll();
+    await this.expand(actor);
+    await this.row(component).click();
+    await expect(this.component(component)).toBeVisible();
+  }
+
   async dragRow(
     name: string,
-    onto: string
+    onto: string,
+    where: "inside" | "above" = "inside"
   ): Promise<void> {
     const { mouse } = this.page;
-    const from = await center(this.row(name));
-    const to = await center(this.row(onto));
+    const from = await pointIn(this.row(name));
+    const to = await pointIn(this.row(onto), where === "inside" ? 0.5 : 0.1);
     await mouse.move(from.x, from.y);
     await mouse.down();
     await mouse.move(to.x, to.y, { steps: 8 });
@@ -186,20 +204,20 @@ export class ScenePage {
   }
 
   visible(): Locator {
-    return this.inspectedActor.getByRole("checkbox", { name: "Visible" });
+    return this.inspectedActor.locator("jolly-checkbox")
+      .filter({ hasText: "Visible" })
+      .getByRole("checkbox");
   }
 
   async hide(): Promise<void> {
-    await this.inspectedActor.locator("jolly-toggle")
-      .filter({ hasText: "Visible" })
-      .click();
+    await this.visible().click();
     await expect(this.visible()).not.toBeChecked();
   }
 
   component(
     type: string
   ): Locator {
-    return this.inspector.locator(`jolly-folder[label="${type}"]`);
+    return this.inspector.locator(`jolly-folder[key="component"][label="${type}"]`);
   }
 
   async showMore(
@@ -256,17 +274,6 @@ export class ScenePage {
     await expect(picker).toBeHidden();
   }
 
-  async moveComponentUp(
-    component: string
-  ): Promise<void> {
-    const grip = this.component(component).locator(".grip");
-    await grip.focus();
-    await grip.press("Space");
-    await grip.press("ArrowUp");
-    await grip.press("Space");
-    await expect(grip).toHaveAttribute("aria-pressed", "false");
-  }
-
   environmentSelect(
     label: string
   ): Locator {
@@ -310,8 +317,9 @@ export class ScenePage {
   }
 }
 
-async function center(
-  locator: Locator
+async function pointIn(
+  locator: Locator,
+  height = 0.5
 ): Promise<{ x: number; y: number; }> {
   const box = await locator.boundingBox();
   if (box === null) {
@@ -320,6 +328,6 @@ async function center(
 
   return {
     x: box.x + (box.width / 2),
-    y: box.y + (box.height / 2)
+    y: box.y + (box.height * height)
   };
 }

@@ -49,11 +49,18 @@ export class Icon extends LitElement {
       display: block;
       width: 100%;
       height: 100%;
+      color: color-mix(
+        in oklab,
+        var(--jolly-icon-tone-color, currentcolor)
+          var(--jolly-icon-ink-strength, 0%),
+        currentcolor
+      );
     }
 
     @media (forced-colors: active) {
       svg {
         --jolly-icon-tone-mix: 0%;
+        --jolly-icon-ink-strength: 0%;
 
         forced-color-adjust: none;
       }

@@ -230,6 +230,33 @@ export const toolButtonStyles = css`
     transform: translateY(-50%);
   }
 
+  :host([tooltip-align="start"]) .tooltip,
+  :host([tooltip-align="end"]) .tooltip {
+    transform: none;
+  }
+
+  :host([flyout-side="above"][tooltip-align="start"]) .tooltip,
+  :host([flyout-side="below"][tooltip-align="start"]) .tooltip {
+    left: 0;
+  }
+
+  :host([flyout-side="above"][tooltip-align="end"]) .tooltip,
+  :host([flyout-side="below"][tooltip-align="end"]) .tooltip {
+    right: 0;
+    left: auto;
+  }
+
+  :host([flyout-side="left"][tooltip-align="start"]) .tooltip,
+  :host([flyout-side="right"][tooltip-align="start"]) .tooltip {
+    top: 0;
+  }
+
+  :host([flyout-side="left"][tooltip-align="end"]) .tooltip,
+  :host([flyout-side="right"][tooltip-align="end"]) .tooltip {
+    bottom: 0;
+    top: auto;
+  }
+
   :host([flyout-side="above"]) .flyout::before {
     inset: 100% 0 auto;
     height: var(--jolly-tool-button-gap);

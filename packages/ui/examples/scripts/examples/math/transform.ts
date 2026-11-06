@@ -14,6 +14,7 @@ import {
 type TransformOptionKey =
   | "stacked"
   | "lockedRotation"
+  | "eulerRotation"
   | AxisStyleOptionKey;
 
 export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
@@ -27,6 +28,10 @@ export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
       label: "Locked rotation",
       initial: true
     },
+    {
+      key: "eulerRotation",
+      label: "Euler rotation"
+    },
     ...AXIS_STYLE_OPTIONS
   ],
   render(host, options) {
@@ -35,9 +40,14 @@ export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
     if (options.stacked) {
       transform.labelPosition = "top";
     }
+    if (options.eulerRotation) {
+      transform.rotationFormat = "euler";
+    }
     transform.value = {
       position: { x: 0, y: 1, z: 0 },
-      rotation: { x: 0, y: 0, z: 0, w: 1 },
+      rotation: options.eulerRotation ?
+        { x: 0, y: 0, z: 0 } :
+        { x: 0, y: 0, z: 0, w: 1 },
       scale: { x: 1, y: 1, z: 1 }
     };
     if (options.lockedRotation) {

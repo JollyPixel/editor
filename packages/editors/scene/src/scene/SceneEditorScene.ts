@@ -33,7 +33,6 @@ import { SceneCollaboration } from "../collaboration/SceneCollaboration.ts";
 import { ActorWrites } from "../editing/ActorWrites.ts";
 import { InstanceOverrides } from "../editing/InstanceOverrides.ts";
 import { SceneActions } from "../editing/SceneActions.ts";
-import { ActorPresetMenu } from "../features/hierarchy/model/ActorPresetMenu.ts";
 import type {
   SceneAssetSlots,
   SceneEditing
@@ -243,7 +242,6 @@ export class SceneEditorScene extends Systems.Scene {
       sceneShortcuts({
         history,
         actions,
-        selection,
         gizmo,
         preferences: this.#options.preferences,
         frameSelection
@@ -261,7 +259,6 @@ export class SceneEditorScene extends Systems.Scene {
         prefabs
       }),
       components,
-      presets: new ActorPresetMenu(components),
       history,
       actions,
       selection,

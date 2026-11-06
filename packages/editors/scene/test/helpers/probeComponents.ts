@@ -73,6 +73,7 @@ export const ANCHORED_COMPONENTS: NamedSceneComponentPackage = [
       {
         definition: kAnchored,
         label: "Anchored",
+        category: "3d",
         icon: "actor",
         form: () => [],
         anchorAsset: "map"

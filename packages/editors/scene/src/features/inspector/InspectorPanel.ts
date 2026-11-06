@@ -6,89 +6,38 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import { repeat } from "lit/directives/repeat.js";
+import type { DirectiveResult } from "lit/directive.js";
+import { keyed } from "lit/directives/keyed.js";
 import type {
   AssetReferenceJSON,
   SceneActorView,
-  SceneComponentJSON,
-  SceneTransformField,
-  SceneTransformPatch
+  SceneComponentView
 } from "@jolly-pixel/asset.scene/client";
 import {
-  ContextMenuController,
-  FolderReorder,
-  MenuSession,
   SubscriptionController,
-  menuPointBelow,
-  type ContextMenu,
-  type Folder,
   type JollyChangeDetail,
-  type JollyOption,
-  type MenuEntry
+  type TransformChangeDetail
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
-import "@jolly-pixel/ui/elements/button-group";
-import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/reference";
-import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/show-more";
 import "@jolly-pixel/ui/elements/text";
-import "@jolly-pixel/ui/elements/toggle";
-import "@jolly-pixel/ui/elements/vector3";
+import "@jolly-pixel/ui/elements/transform";
 
 // Import Internal Dependencies
 import "../../app/sceneIcons.ts";
-import type { SceneComponents } from "../../components/SceneComponents.ts";
 import type { ActorRole } from "../../editing/InstanceOverrides.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
 import type { SceneDraft } from "../../state/SceneDraft.ts";
-import { axisValues } from "./axisValues.ts";
 import { renderComponentBody } from "./componentBody.ts";
+import { transformPatch } from "./transformPatch.ts";
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
-
-// CONSTANTS
-const kAxes = ["x", "y", "z"] as const;
-const kTransformOptions: JollyOption<SceneTransformField>[] = [
-  {
-    value: "position",
-    label: "Position"
-  },
-  {
-    value: "rotation",
-    label: "Rotation"
-  },
-  {
-    value: "scale",
-    label: "Scale"
-  }
-];
-const kTransformSteps: Record<SceneTransformField, number> = {
-  position: 0.1,
-  rotation: 1,
-  scale: 0.1
-};
+type TransformEvent = CustomEvent<TransformChangeDetail>;
 
 export class InspectorPanel extends LitElement {
-  #transformField: SceneTransformField = "position";
-  #announcement = "";
-
-  #reorder = new FolderReorder(this, {
-    folders: () => [
-      ...this.renderRoot.querySelectorAll<Folder>(".components > jolly-folder")
-    ],
-    zone: () => this.#components(),
-    commit: (order, folder) => this.#editing.current?.document.moveComponent(
-      folder.key,
-      order[order.indexOf(folder) + 1]?.key
-    ),
-    announce: (message) => {
-      this.#announcement = message;
-      this.requestUpdate();
-    }
-  });
-
   #editing = new SubscriptionController<SceneEditing>(this, (editing) => {
     const repaint = (): void => this.requestUpdate();
 
@@ -102,11 +51,6 @@ export class InspectorPanel extends LitElement {
     ];
   });
 
-  #menu = new ContextMenuController(
-    () => this.#contextMenu(),
-    () => MenuSession.EMPTY
-  );
-
   static override styles = css`
     :host {
       display: flex;
@@ -119,24 +63,13 @@ export class InspectorPanel extends LitElement {
       --jolly-field-inset-start: 0px;
     }
 
+    jolly-transform {
+      --jolly-gutter-width: 0px;
+    }
+
     .empty {
       color: var(--jolly-text-muted, #9aa3ad);
       padding: var(--jolly-space-2, 8px);
-    }
-
-    .components {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
-    }
-
-    .live-region {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
     }
 
     .missing {
@@ -159,14 +92,22 @@ export class InspectorPanel extends LitElement {
     this.#editing.attach(editing);
   }
 
-  override render(): TemplateResult {
+  override render(): TemplateResult | DirectiveResult {
     const editing = this.#editing.current;
     const id = editing?.selection.primary ?? null;
     const actor = id === null || editing === null ?
       null :
       editing.live.actorEntry(id);
     if (editing === null || actor === null) {
-      return html`<p class="empty">Select an actor to inspect it.</p>`;
+      return html`<p class="empty">Select an actor or a component to inspect it.</p>`;
+    }
+
+    const { focused } = editing.selection;
+    const entry = focused === null ?
+      null :
+      editing.live.componentEntry(focused.componentId);
+    if (entry !== null) {
+      return keyed(entry.id, this.#renderComponent(editing, entry));
     }
 
     const role = editing.overrides.role(actor.id);
@@ -174,78 +115,6 @@ export class InspectorPanel extends LitElement {
     return html`
       ${this.#renderActor(editing, actor, role)}
       ${this.#renderTransform(editing.draft, actor)}
-      ${this.#renderComponentSection(editing, actor, role)}
-    `;
-  }
-
-  #renderComponentSection(
-    editing: SceneEditing,
-    actor: SceneActorView,
-    role: ActorRole
-  ): TemplateResult | typeof nothing {
-    if (role === "inner") {
-      return this.#renderInnerComponents(editing, actor);
-    }
-
-    return editing.document.tree.canHoldComponents(actor.id) ?
-      this.#renderComponents(editing, actor) :
-      nothing;
-  }
-
-  #renderInnerComponents(
-    editing: SceneEditing,
-    actor: SceneActorView
-  ): TemplateResult {
-    return html`
-      <jolly-separator label="Components"></jolly-separator>
-      <div class="components">
-        ${repeat(
-          actor.components,
-          (component) => component.id,
-          (component) => this.#renderComponent(editing, component, false)
-        )}
-      </div>
-    `;
-  }
-
-  #renderComponents(
-    editing: SceneEditing,
-    actor: SceneActorView
-  ): TemplateResult {
-    return html`
-      <jolly-separator label="Components">
-        <jolly-button
-          slot="actions"
-          icon="plus"
-          icon-only
-          label="Add component"
-          title="Add component"
-          aria-haspopup="menu"
-          @click=${(event: MouseEvent) => this.#openAddComponent(event, editing, actor.id)}
-        ></jolly-button>
-      </jolly-separator>
-      ${actor.components.length === 0 ? nothing : html`
-        <div
-          class="components"
-          @jolly-folder-drag=${this.#reorder.onDrag}
-          @jolly-folder-reorder=${this.#reorder.onReorder}
-        >
-          ${repeat(
-            actor.components,
-            (component) => component.id,
-            (component) => this.#renderComponent(
-              editing,
-              component,
-              actor.components.length > 1
-            )
-          )}
-        </div>
-      `}
-      <jolly-context-menu
-        label="Add component"
-        @jolly-context-action=${this.#menu.onContextAction}
-      ></jolly-context-menu>
-      <span class="live-region" aria-live="polite">${this.#announcement}</span>
     `;
   }
 
@@ -304,14 +173,14 @@ export class InspectorPanel extends LitElement {
             event.detail.value
           )}
         ></jolly-text>
-        <jolly-toggle
+        <jolly-checkbox
           label="Visible"
           .value=${actor.visible}
           @jolly-change=${(event: ChangeEvent<boolean>) => writes.changeVisibility(
             actor.id,
             event.detail.value
           )}
-        ></jolly-toggle>
+        ></jolly-checkbox>
         ${actor.prefab === undefined ? nothing : this.#renderPrefab(editing, actor.prefab)}
       </jolly-folder>
     `;
@@ -338,19 +207,7 @@ export class InspectorPanel extends LitElement {
     draft: SceneDraft,
     actor: SceneActorView
   ): TemplateResult {
-    const field = this.#transformField;
-    const current = draft.transform(actor)[field];
-    function patch(
-      event: ChangeEvent<Record<string, unknown>>
-    ): SceneTransformPatch {
-      const [x, y, z] = axisValues(
-        event.detail.value,
-        kAxes,
-        kAxes.map((axis) => current[axis])
-      );
-
-      return { [field]: { x, y, z } };
-    }
+    const transform = draft.transform(actor);
 
     return html`
       <jolly-folder
@@ -359,42 +216,32 @@ export class InspectorPanel extends LitElement {
         storage-key="scene-inspector:transform"
         flush
       >
-        <jolly-button-group
-          aria-label="Transform"
-          .options=${kTransformOptions}
-          .value=${field}
-          @jolly-change=${(event: ChangeEvent<SceneTransformField>) => {
-            this.#transformField = event.detail.value;
-            this.requestUpdate();
-          }}
-        ></jolly-button-group>
-        <jolly-vector3
-          .step=${kTransformSteps[field]}
-          .value=${{ ...current }}
-          @jolly-input=${(event: ChangeEvent<Record<string, unknown>>) => draft.editTransform(
+        <jolly-transform
+          rotation-format="euler"
+          label-position="top"
+          .value=${transform}
+          @jolly-input=${(event: TransformEvent) => draft.editTransform(
             actor.id,
-            patch(event)
+            transformPatch(event.detail, transform)
           )}
-          @jolly-change=${(event: ChangeEvent<Record<string, unknown>>) => draft.commitTransform(
+          @jolly-change=${(event: TransformEvent) => draft.commitTransform(
             actor.id,
-            patch(event)
+            transformPatch(event.detail, transform)
           )}
-        ></jolly-vector3>
+        ></jolly-transform>
       </jolly-folder>
     `;
   }
 
   #renderComponent(
     editing: SceneEditing,
-    component: SceneComponentJSON,
-    reorderable: boolean
+    component: SceneComponentView
   ): TemplateResult {
     return html`
       <jolly-folder
-        key=${component.id}
-        label=${component.type}
-        storage-key=${`scene-inspector:${component.id}`}
-        ?reorderable=${reorderable}
+        key="component"
+        label=${editing.components.summary(component, editing.assetSlots).label}
+        storage-key="scene-inspector:component"
         flush
       >
         ${this.#renderComponentAction(editing, component.id)}
@@ -434,57 +281,6 @@ export class InspectorPanel extends LitElement {
       ></jolly-button>
     ` : nothing;
   }
-
-  #components(): HTMLElement {
-    const components = this.renderRoot.querySelector<HTMLElement>(".components");
-    if (components === null) {
-      throw new Error("InspectorPanel: the component list is not rendered.");
-    }
-
-    return components;
-  }
-
-  #contextMenu(): ContextMenu {
-    const menu = this.renderRoot.querySelector("jolly-context-menu");
-    if (menu === null) {
-      throw new Error("InspectorPanel: the context menu is not rendered.");
-    }
-
-    return menu;
-  }
-
-  #openAddComponent(
-    event: MouseEvent,
-    editing: SceneEditing,
-    actorId: string
-  ): void {
-    this.#menu.open(
-      MenuSession.from(
-        addComponentEntries(editing.components),
-        async(type) => {
-          await editing.actions.addComponent(actorId, type);
-        }
-      ),
-      menuPointBelow(event)
-    );
-  }
-}
-
-function addComponentEntries(
-  components: SceneComponents
-): MenuEntry<string>[] {
-  const direct: MenuEntry<string>[] = [];
-  const picking: MenuEntry<string>[] = [];
-  for (const { definition: { type }, label, icon } of components.kinds) {
-    const picks = components.picksAssets(type);
-    (picks ? picking : direct).push({
-      id: type,
-      label: picks ? `${label}…` : label,
-      icon
-    });
-  }
-
-  return picking.length === 0 ? direct : [...direct, "separator", ...picking];
 }
 
 customElements.define("jolly-scene-inspector", InspectorPanel);

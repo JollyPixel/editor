@@ -69,7 +69,14 @@ export const TOOL_BUTTON_EXAMPLE = createSimpleExample(
     hiddenOption.label = "Hidden";
     disabled.append(hiddenOption);
 
-    rail.append(add, mode, size, disabled);
+    const aligned = document.createElement("jolly-tool-button");
+    aligned.icon = "check";
+    aligned.label = "Tooltip aligned to the start";
+    aligned.flyoutSide = "above";
+    aligned.tooltipAlign = "start";
+    aligned.dataset.testid = "aligned";
+
+    rail.append(add, mode, size, disabled, aligned);
     root.append(rail);
 
     return root;

@@ -21,6 +21,7 @@ const kRows = new FormRows<VoxelMapSettings>();
 const kVoxelMap: SceneComponentKind<VoxelMapSettings> = {
   definition: new VoxelMapDefinition(),
   label: "Voxel map",
+  category: "3d",
   form: () => [
     kRows.boolean(["castShadow"], "Cast shadow"),
     kRows.boolean(["receiveShadow"], "Receive shadow")
@@ -31,23 +32,6 @@ const kVoxelMap: SceneComponentKind<VoxelMapSettings> = {
 
 export const SCENE_COMPONENTS: SceneComponentPackage = {
   components: [kVoxelMap],
-  presets: [
-    {
-      category: "3d",
-      presets: [
-        {
-          id: "voxel-map",
-          label: "Voxel map",
-          components: [
-            {
-              type: "VoxelMap",
-              data: {}
-            }
-          ]
-        }
-      ]
-    }
-  ],
   assets: [
     {
       descriptor: VOXEL_MAP_ASSET,

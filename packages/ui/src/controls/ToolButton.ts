@@ -33,6 +33,11 @@ export type ToolButtonFlyoutSide =
   | "left"
   | "right";
 
+export type ToolButtonTooltipAlign =
+  | "start"
+  | "center"
+  | "end";
+
 export interface ToolButtonDefaults {
   flyoutSide: ToolButtonFlyoutSide;
 }
@@ -67,6 +72,13 @@ export class ToolButton extends LitElement {
   })
   declare flyoutSide: ToolButtonFlyoutSide;
 
+  @property({
+    type: String,
+    attribute: "tooltip-align",
+    reflect: true
+  })
+  declare tooltipAlign: ToolButtonTooltipAlign;
+
   @property({ type: Boolean, reflect: true })
   declare open: boolean;
 
@@ -94,6 +106,7 @@ export class ToolButton extends LitElement {
     this.active = false;
     this.disabled = false;
     this.flyoutSide = ToolButton.Defaults.flyoutSide;
+    this.tooltipAlign = "center";
     this.open = false;
     this.count = 0;
     this._hasFlyout = false;

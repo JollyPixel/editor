@@ -55,7 +55,10 @@ export class TreeSelectionController<TData> {
       requireSelection: this.#options.requireSelection()
     });
     this.#anchorId = result.anchorId;
-    emitDataEvent(this.#host, "jolly-select", { selected: result.selected });
+    emitDataEvent(this.#host, "jolly-select", {
+      selected: result.selected,
+      id
+    });
   }
 
   onRowsClick(
@@ -71,14 +74,20 @@ export class TreeSelectionController<TData> {
     }
 
     this.#anchorId = null;
-    emitDataEvent(this.#host, "jolly-select", { selected: [] });
+    emitDataEvent(this.#host, "jolly-select", {
+      selected: [],
+      id: null
+    });
   }
 
   selectSingle(
     id: string
   ): void {
     this.#anchorId = id;
-    emitDataEvent(this.#host, "jolly-select", { selected: [id] });
+    emitDataEvent(this.#host, "jolly-select", {
+      selected: [id],
+      id
+    });
   }
 
   #consumeSuppressedClick(): boolean {

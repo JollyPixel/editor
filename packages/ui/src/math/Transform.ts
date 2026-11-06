@@ -12,7 +12,8 @@ import {
 
 // Import Internal Dependencies
 import type { FieldValue } from "../field/mixed.ts";
-import { emitFieldEvent } from "../field/events.ts";
+import type { JollyChangeDetail } from "../field/events.ts";
+import { emitComposedEvent } from "../events.ts";
 import { readDetail } from "../dom.ts";
 import type { CollaboratorPresence } from "../peer/types.ts";
 import type {
@@ -32,15 +33,21 @@ import { Quaternion } from "./Quaternion.ts";
 type TransformAxis3 = "x" | "y" | "z";
 type TransformSubKey = "position" | "rotation" | "scale";
 
+export type TransformRotationFormat = "quaternion" | "euler";
+
 export interface TransformValue {
   position: VectorValue<TransformAxis3>;
-  rotation: FieldValue<QuatLike>;
+  rotation: FieldValue<QuatLike> | VectorValue<TransformAxis3>;
   scale: VectorValue<TransformAxis3>;
+}
+
+export interface TransformChangeDetail extends JollyChangeDetail<TransformValue> {
+  field: TransformSubKey;
 }
 
 export interface TransformDefault {
   position?: Record<TransformAxis3, number>;
-  rotation?: QuatLike;
+  rotation?: QuatLike | Record<TransformAxis3, number>;
   scale?: Record<TransformAxis3, number>;
 }
 
@@ -61,6 +68,7 @@ export interface TransformFieldState {
 // CONSTANTS
 const kEmptySubState: TransformSubFieldState = {};
 const kNoPeers: CollaboratorPresence[] = [];
+const kEulerStep = 1;
 
 @customElement("jolly-transform")
 export class Transform extends LitElement {
@@ -94,6 +102,12 @@ export class Transform extends LitElement {
     attribute: "scale-label"
   })
   declare scaleLabel: string;
+
+  @property({
+    type: String,
+    attribute: "rotation-format"
+  })
+  declare rotationFormat: TransformRotationFormat;
 
   @property({
     type: String,
@@ -142,6 +156,7 @@ export class Transform extends LitElement {
     this.positionLabel = "Position";
     this.rotationLabel = "Rotation";
     this.scaleLabel = "Scale";
+    this.rotationFormat = "quaternion";
     this.labelPosition = "inline";
     this.stackBelow = DEFAULT_STACK_BELOW;
     this.axisStyle = undefined;
@@ -173,78 +188,92 @@ export class Transform extends LitElement {
 
   override render(): TemplateResult {
     const labelPosition = this.#stack.stacked ? "top" : "inline";
-    const position = this.state.position ?? kEmptySubState;
-    const rotation = this.state.rotation ?? kEmptySubState;
-    const scale = this.state.scale ?? kEmptySubState;
-    const vectorAxisStyle = this.axisStyle ?? Vector3.Defaults.axisStyle;
-    const rotationAxisStyle = this.axisStyle ??
-      Quaternion.Defaults.axisStyle;
+
+    return html`
+      ${this.#vectorRow("position", this.positionLabel, labelPosition)}
+      ${this.rotationFormat === "euler" ?
+        this.#vectorRow(
+          "rotation",
+          this.rotationLabel,
+          labelPosition,
+          kEulerStep
+        ) :
+        this.#quaternionRow(labelPosition)}
+      ${this.#vectorRow("scale", this.scaleLabel, labelPosition)}
+    `;
+  }
+
+  #vectorRow(
+    field: TransformSubKey,
+    label: string,
+    labelPosition: FieldLabelPosition,
+    step = Vector3.Defaults.step
+  ): TemplateResult {
+    const state = this.state[field] ?? kEmptySubState;
 
     return html`
       <jolly-vector3
-        label=${this.positionLabel}
+        label=${label}
         label-position=${labelPosition}
-        axis-style=${vectorAxisStyle}
-        .value=${this.value.position}
-        .default=${this.default?.position}
-        .lockedBy=${position.lockedBy ?? null}
-        .peers=${position.peers ?? kNoPeers}
-        .error=${position.error ?? null}
-        ?disabled=${position.disabled ?? false}
-        ?readonly=${position.readonly ?? false}
-        @jolly-input=${(event: Event) => this.#relay("position", event, true)}
-        @jolly-change=${(event: Event) => this.#relay("position", event, false)}
-      ></jolly-vector3>
-      <jolly-quaternion
-        label=${this.rotationLabel}
-        label-position=${labelPosition}
-        axis-style=${rotationAxisStyle}
-        .value=${this.value.rotation}
-        .default=${this.default?.rotation}
-        .lockedBy=${rotation.lockedBy ?? null}
-        .peers=${rotation.peers ?? kNoPeers}
-        .error=${rotation.error ?? null}
-        ?disabled=${rotation.disabled ?? false}
-        ?readonly=${rotation.readonly ?? false}
-        @jolly-input=${(event: Event) => this.#relay("rotation", event, true)}
-        @jolly-change=${(event: Event) => this.#relay("rotation", event, false)}
-      ></jolly-quaternion>
-      <jolly-vector3
-        label=${this.scaleLabel}
-        label-position=${labelPosition}
-        axis-style=${vectorAxisStyle}
-        .value=${this.value.scale}
-        .default=${this.default?.scale}
-        .lockedBy=${scale.lockedBy ?? null}
-        .peers=${scale.peers ?? kNoPeers}
-        .error=${scale.error ?? null}
-        ?disabled=${scale.disabled ?? false}
-        ?readonly=${scale.readonly ?? false}
-        @jolly-input=${(event: Event) => this.#relay("scale", event, true)}
-        @jolly-change=${(event: Event) => this.#relay("scale", event, false)}
+        axis-style=${this.axisStyle ?? Vector3.Defaults.axisStyle}
+        .step=${step}
+        .value=${this.value[field]}
+        .default=${this.default?.[field]}
+        .lockedBy=${state.lockedBy ?? null}
+        .peers=${state.peers ?? kNoPeers}
+        .error=${state.error ?? null}
+        ?disabled=${state.disabled ?? false}
+        ?readonly=${state.readonly ?? false}
+        @jolly-input=${(event: Event) => this.#relay(field, event, true)}
+        @jolly-change=${(event: Event) => this.#relay(field, event, false)}
       ></jolly-vector3>
     `;
   }
 
+  #quaternionRow(
+    labelPosition: FieldLabelPosition
+  ): TemplateResult {
+    const state = this.state.rotation ?? kEmptySubState;
+
+    return html`
+      <jolly-quaternion
+        label=${this.rotationLabel}
+        label-position=${labelPosition}
+        axis-style=${this.axisStyle ?? Quaternion.Defaults.axisStyle}
+        .value=${this.value.rotation}
+        .default=${this.default?.rotation}
+        .lockedBy=${state.lockedBy ?? null}
+        .peers=${state.peers ?? kNoPeers}
+        .error=${state.error ?? null}
+        ?disabled=${state.disabled ?? false}
+        ?readonly=${state.readonly ?? false}
+        @jolly-input=${(event: Event) => this.#relay("rotation", event, true)}
+        @jolly-change=${(event: Event) => this.#relay("rotation", event, false)}
+      ></jolly-quaternion>
+    `;
+  }
+
   #relay(
-    key: TransformSubKey,
+    field: TransformSubKey,
     event: Event,
     live: boolean
   ): void {
+    event.stopPropagation();
     const detail = readDetail<{ value: unknown; }>(event);
     if (detail === null) {
       return;
     }
 
-    const next: TransformValue = {
-      ...this.value,
-      [key]: detail.value
-    };
-
-    emitFieldEvent(
+    emitComposedEvent<TransformChangeDetail>(
       this,
       live ? "jolly-input" : "jolly-change",
-      next
+      {
+        value: {
+          ...this.value,
+          [field]: detail.value
+        },
+        field
+      }
     );
   }
 }

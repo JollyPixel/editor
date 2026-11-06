@@ -45,6 +45,8 @@ jolly-dock {
 }
 
 #scene-viewport {
+  --scene-top-bar-height: 34px;
+
   flex: 1;
   position: relative;
   overflow: hidden;
@@ -58,9 +60,23 @@ jolly-dock {
   outline: none;
 }
 
+#scene-viewport .runtime-overlay {
+  position: absolute;
+  inset: var(--scene-top-bar-height) 0 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#scene-viewport jolly-scene-top-bar {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: 6;
+}
+
 #scene-viewport jolly-log {
   position: absolute;
-  inset-block-start: 12px;
+  inset-block-start: calc(var(--scene-top-bar-height) + 12px);
   inset-inline-start: 16px;
   z-index: 5;
 }
