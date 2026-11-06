@@ -1,18 +1,34 @@
 // Import Third-party Dependencies
-import type { AssetType } from "@jolly-pixel/asset";
+import type {
+  AssetReferenceData,
+  AssetType
+} from "@jolly-pixel/asset";
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import type { SceneComponentView } from "@jolly-pixel/asset.scene/client";
 import type { AssetDocumentKind } from "@jolly-pixel/editor.host";
 import {
   registerKindIcon,
   type SceneAssetSource,
   type SceneComponentKind,
   type SceneComponentOrigin,
-  type SceneComponentPackage
+  type SceneComponentPackage,
+  type SceneComponentSummary
 } from "@jolly-pixel/editor.host/scene";
 import { Systems } from "@jolly-pixel/engine";
 
 // CONSTANTS
 export const EMPTY_ACTOR_ICON = "actor-empty";
+
+export interface AssetNaming {
+  name(
+    reference: AssetReferenceData
+  ): string;
+}
+
+export type DescribedComponent = Pick<
+  SceneComponentView,
+  "type" | "data" | "assets"
+>;
 
 export type NamedSceneComponentPackage = readonly [
   name: string,
@@ -112,10 +128,34 @@ export class SceneComponents {
     return this.#icons.get(type) ?? EMPTY_ACTOR_ICON;
   }
 
-  label(
-    type: string
-  ): string {
-    return this.find(type)?.label ?? type;
+  summary(
+    component: DescribedComponent,
+    naming: AssetNaming
+  ): SceneComponentSummary {
+    const kind = this.find(component.type);
+    if (kind === undefined) {
+      return { label: component.type };
+    }
+
+    const names: Record<string, string> = {};
+    for (const slot of Object.keys(kind.definition.assets ?? {})) {
+      const reference = component.assets[slot];
+      if (reference !== null && reference !== undefined) {
+        names[slot] = naming.name(reference);
+      }
+    }
+    if (kind.describe !== undefined) {
+      return kind.describe(kind.definition.parse(component.data), names);
+    }
+
+    const [detail] = Object.values(names);
+
+    return detail === undefined ?
+      { label: kind.label } :
+      {
+        label: kind.label,
+        detail
+      };
   }
 
   actorOrigin(

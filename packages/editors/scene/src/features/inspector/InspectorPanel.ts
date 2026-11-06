@@ -240,7 +240,7 @@ export class InspectorPanel extends LitElement {
     return html`
       <jolly-folder
         key="component"
-        label=${editing.components.label(component.type)}
+        label=${editing.components.summary(component, editing.assetSlots).label}
         storage-key="scene-inspector:component"
         flush
       >

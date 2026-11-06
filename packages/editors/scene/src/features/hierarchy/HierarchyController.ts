@@ -67,6 +67,16 @@ const kAddEntries: readonly MenuEntry<AddAction>[] = [
     icon: PREFAB_ICON
   }
 ];
+const kTreeEntries: readonly MenuEntry<TreeAction>[] = [
+  {
+    id: "expand-all",
+    label: "Expand all"
+  },
+  {
+    id: "collapse-all",
+    label: "Collapse all"
+  }
+];
 
 export interface HierarchyView {
   beginRename(id: string): void;
@@ -84,6 +94,7 @@ type RowAction =
   | AddComponentAction;
 type ComponentAction = "duplicate" | "delete" | "revert-overrides";
 type AnchorAction = AddAction | "show-in-asset";
+type TreeAction = "expand-all" | "collapse-all";
 
 export class HierarchyController {
   static #overrideEntries(
@@ -203,12 +214,12 @@ export class HierarchyController {
   #rebuild = (): void => {
     const editing = this.#connection.current;
     if (editing !== null) {
-      this.#rows = HierarchyRows.read(
-        editing.document.tree,
-        editing.presence.selections,
-        editing.components,
-        editing.live
-      );
+      this.#rows = HierarchyRows.read(editing.document.tree, {
+        marks: editing.presence.selections,
+        components: editing.components,
+        naming: editing.assetSlots,
+        live: editing.live
+      });
     }
     this.#host.requestUpdate();
   };
@@ -251,7 +262,8 @@ export class HierarchyController {
         selection,
         anchorPicks,
         presence,
-        live
+        live,
+        assetSlots
       } = editing;
       this.#rebuild();
 
@@ -262,7 +274,8 @@ export class HierarchyController {
         anchorPicks.subscribe("pick", this.#onAnchorPick),
         presence.subscribe("selectionsChange", this.#rebuild),
         live.subscribe("anchorsChange", this.#rebuild),
-        live.subscribe("actorsChange", this.#rebuild)
+        live.subscribe("actorsChange", this.#rebuild),
+        assetSlots.subscribe(this.#rebuild)
       ];
     });
   }
@@ -298,16 +311,6 @@ export class HierarchyController {
     this.#expansion.clear();
     this.#connection.attach(editing);
   }
-
-  readonly expandAll = (): void => {
-    this.#expansion.reveal(this.#rows.branchIds());
-    this.#host.requestUpdate();
-  };
-
-  readonly collapseAll = (): void => {
-    this.#expansion.clear();
-    this.#host.requestUpdate();
-  };
 
   readonly handleSelect = (
     event: CustomEvent<JollySelectDetail>
@@ -399,6 +402,20 @@ export class HierarchyController {
       kAddEntries,
       (action) => this.#add(action, null)
     );
+  }
+
+  treeMenu(): MenuSession {
+    return MenuSession.from(kTreeEntries, (action) => {
+      switch (action) {
+        case "expand-all":
+          this.#expansion.reveal(this.#rows.branchIds());
+          break;
+        case "collapse-all":
+          this.#expansion.clear();
+          break;
+      }
+      this.#host.requestUpdate();
+    });
   }
 
   openMenu(

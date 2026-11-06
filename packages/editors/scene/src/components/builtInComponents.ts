@@ -11,7 +11,7 @@ import {
   TextDefinition,
   type CameraData,
   type LightSettings,
-  type MeshRendererOptions,
+  type MeshSettings,
   type TextSettings
 } from "@jolly-pixel/engine";
 import {
@@ -26,6 +26,13 @@ import {
   meshForm,
   textForm
 } from "./componentForms.ts";
+import {
+  describeCamera,
+  describeLight,
+  describeMesh,
+  describeRigidBody,
+  describeText
+} from "./componentSummaries.ts";
 import { rigidBodyForm } from "./rigidBodyForm.ts";
 import {
   FONT_DOCUMENT_KIND,
@@ -40,7 +47,8 @@ const kCamera: SceneComponentKind<CameraData> = {
   label: "Camera",
   category: "camera",
   icon: "actor-camera",
-  form: cameraForm
+  form: cameraForm,
+  describe: describeCamera
 };
 const kLight: SceneComponentKind<LightSettings> = {
   definition: new LightDefinition(),
@@ -50,9 +58,10 @@ const kLight: SceneComponentKind<LightSettings> = {
     castShadow: true
   },
   icon: "actor-light",
-  form: lightForm
+  form: lightForm,
+  describe: describeLight
 };
-const kMesh: SceneComponentKind<MeshRendererOptions> = {
+const kMesh: SceneComponentKind<MeshSettings> = {
   definition: new MeshDefinition(),
   label: "Mesh",
   category: "3d",
@@ -61,7 +70,8 @@ const kMesh: SceneComponentKind<MeshRendererOptions> = {
     receiveShadow: true
   },
   icon: "actor-mesh",
-  form: meshForm
+  form: meshForm,
+  describe: describeMesh
 };
 const kText: SceneComponentKind<TextSettings> = {
   definition: new TextDefinition(),
@@ -70,14 +80,16 @@ const kText: SceneComponentKind<TextSettings> = {
   initialData: {
     text: "Text"
   },
-  form: textForm
+  form: textForm,
+  describe: describeText
 };
 const kRigidBody: SceneComponentKind<SceneRigidBodySettings> = {
   definition: new RigidBodyDefinition(),
   label: "Rigid body",
   category: "physics",
   icon: "actor-rigid-body",
-  form: rigidBodyForm
+  form: rigidBodyForm,
+  describe: describeRigidBody
 };
 export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
   components: [kCamera, kLight, kMesh, kText, kRigidBody],

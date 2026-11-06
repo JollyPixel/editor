@@ -136,8 +136,9 @@ export class ScenePage {
 
   async collapseAll(): Promise<void> {
     await this.hierarchy
-      .getByRole("button", { name: "Collapse all", exact: true })
+      .getByRole("button", { name: "Tree options", exact: true })
       .click();
+    await this.page.getByRole("menuitem", { name: "Collapse all" }).click();
   }
 
   async inspectComponent(

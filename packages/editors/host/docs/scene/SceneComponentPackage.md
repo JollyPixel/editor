@@ -86,6 +86,7 @@ interface SceneComponentKind<TData extends object = any, TAssets = any> {
   initialData?: Systems.JSONObject;
   icon?: string;
   form: ComponentForm<TData, TAssets>;
+  describe?: ComponentDescriber<TData, TAssets>;
   anchorAsset?: string;
   origin?: "center" | "corner";
 }
@@ -94,6 +95,20 @@ type ComponentForm<TData, TAssets> = (
   data: TData,
   assets: Systems.ComponentAssets<TAssets>
 ) => FormRow<TData>[];
+
+type ComponentDescriber<TData, TAssets> = (
+  data: TData,
+  assets: SceneComponentAssetNames<TAssets>
+) => SceneComponentSummary;
+
+type SceneComponentAssetNames<TAssets> = {
+  readonly [TSlot in keyof TAssets]?: string;
+};
+
+interface SceneComponentSummary {
+  label: string;
+  detail?: string;
+}
 
 type SceneComponentCategory =
   "camera" | "light" | "3d" | "2d" | "physics" | "audio" | "logic" | "ui";
@@ -126,6 +141,17 @@ inspector renders again once it has loaded.
   default unsets it.
 - An edit of a nested field rewrites the whole object.
 - An edit inside a `list` row rewrites the whole list.
+
+`describe` names one component in the hierarchy row and the inspector title.
+It receives the data parsed by `definition.parse()` and the catalog name of
+each `definition.assets` slot that holds an asset. `detail` shows muted after
+the label in the hierarchy. A camera returns `{ label: "Orthographic camera" }`;
+a script returns its asset name as the label. Without `describe`, the summary
+is `label`, with the name of the first slot that holds an asset as `detail`.
+
+When several components of one actor share a label and detail, the hierarchy
+appends `#1`, `#2`, and so on to their detail. Rows rebuild when the catalog
+changes, so a renamed asset renames its components.
 
 `anchorAsset` names the `definition.assets` slot whose asset the anchor keys
 from `definition.anchors()` belong to. An anchor row then offers to show the

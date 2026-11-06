@@ -18,6 +18,7 @@ import {
 // Import Internal Dependencies
 import {
   EMPTY_ACTOR_ICON,
+  type AssetNaming,
   type SceneComponents
 } from "../../components/SceneComponents.ts";
 import type { ActorMove } from "../../editing/SceneActions.ts";
@@ -37,7 +38,14 @@ const kMissingComponent = "No package of this project provides this component. I
 
 type ActorAnchors = Pick<Systems.SceneAnchorsReader, "anchors">;
 type LiveActors = ActorAnchors & Pick<SceneLiveView, "expandedActors">;
-type RowComponents = Pick<SceneComponents, "find" | "icon" | "label">;
+type RowComponents = Pick<SceneComponents, "find" | "icon" | "summary">;
+
+export interface RowSources {
+  marks: PeerMarkMap<string>;
+  components: RowComponents;
+  naming: AssetNaming;
+  live: LiveActors;
+}
 
 export interface ComponentMove {
   id: string;
@@ -72,9 +80,7 @@ export class HierarchyRows {
 
   static read(
     tree: Pick<SceneTreeReader, "actorIds" | "actor" | "canContain">,
-    marks: PeerMarkMap<string>,
-    components: RowComponents,
-    live: LiveActors
+    sources: RowSources
   ): HierarchyRows {
     const rows = new HierarchyRows();
     for (const id of tree.actorIds()) {
@@ -83,10 +89,10 @@ export class HierarchyRows {
         continue;
       }
 
-      rows.#add(actor, !tree.canContain(id), marks, components, live);
+      rows.#add(actor, !tree.canContain(id), sources);
       if (actor.prefab !== undefined) {
-        for (const inner of live.expandedActors(id)) {
-          rows.#add(inner, true, marks, components, live);
+        for (const inner of sources.live.expandedActors(id)) {
+          rows.#add(inner, true, sources);
         }
       }
     }
@@ -264,22 +270,22 @@ export class HierarchyRows {
   #add(
     actor: SceneActorView,
     closed: boolean,
-    marks: PeerMarkMap<string>,
-    components: RowComponents,
-    anchors: ActorAnchors
+    sources: RowSources
   ): void {
-    const node = actorNode(actor, marks);
+    const node = actorNode(actor, sources.marks);
+    const components = actor.components.map(
+      (component) => this.#componentNode(actor.id, component, sources)
+    );
+    numberTwins(components);
     const section: ActorSection = {
-      components: actor.components.map(
-        (component) => this.#componentNode(actor.id, component, components)
-      ),
+      components,
       loose: [],
       actors: [],
       closed
     };
     this.#nodes.set(actor.id, node);
     this.#sections.set(actor.id, section);
-    for (const { component, anchor } of anchors.anchors(actor.id)) {
+    for (const { component, anchor } of sources.live.anchors(actor.id)) {
       this.#anchorNode(actorAnchor(actor.id, { component, key: anchor.key }), anchor);
     }
 
@@ -309,14 +315,16 @@ export class HierarchyRows {
   #componentNode(
     ownerId: string,
     component: SceneComponentView,
-    components: RowComponents
+    { components, naming }: RowSources
   ): TreeNode {
     const id = HierarchyRows.componentRowId(component.id);
+    const { label, detail } = components.summary(component, naming);
     const node: TreeNode = {
       id,
-      label: components.label(component.type),
+      label,
       icon: components.icon(component.type),
       renamable: false,
+      ...detail === undefined ? {} : { detail },
       ...components.find(component.type) === undefined ?
         { warning: kMissingComponent } :
         {}
@@ -359,6 +367,25 @@ export class HierarchyRows {
       if (node !== undefined && children.length > 0) {
         node.children = children;
       }
+    }
+  }
+}
+
+function numberTwins(
+  nodes: readonly TreeNode[]
+): void {
+  const twins = Map.groupBy(
+    nodes,
+    ({ label, detail = "" }) => `${label}\u0000${detail}`
+  );
+  for (const group of twins.values()) {
+    if (group.length < 2) {
+      continue;
+    }
+
+    for (const [index, node] of group.entries()) {
+      const rank = `#${index + 1}`;
+      node.detail = node.detail === undefined ? rank : `${node.detail} ${rank}`;
     }
   }
 }

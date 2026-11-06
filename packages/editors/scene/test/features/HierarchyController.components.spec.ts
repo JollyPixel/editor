@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { AssetType } from "@jolly-pixel/asset";
 import type { JollyReparentDetail } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -12,6 +13,8 @@ import {
   itemIds,
   selectRows
 } from "../helpers/hierarchy/hierarchyController.ts";
+import { ANCHORED_COMPONENTS } from "../helpers/probeComponents.ts";
+import { createSceneComponents } from "../helpers/sceneComponents.ts";
 
 // CONSTANTS
 const kSpawn = { component: "map", key: "object:spawn" };
@@ -77,19 +80,46 @@ describe("HierarchyController components", () => {
     assert.deepEqual(document.tree.actor(mapId)!.components.map(({ id }) => id), ["camera", "map"]);
   });
 
-  test("expands every branch and collapses them all back", () => {
+  test("expands every branch and collapses them all back from the tree menu", async() => {
     const { mapId, document, hierarchy } = createHierarchy();
     document.addActor({ name: "Coin", parentId: mapId, anchor: kSpawn });
-    hierarchy.collapseAll();
+    await hierarchy.treeMenu().run("collapse-all", kPoint);
     assert.strictEqual(hierarchy.expanded.length, 0);
 
-    hierarchy.expandAll();
+    await hierarchy.treeMenu().run("expand-all", kPoint);
     assert.deepEqual(
       new Set(hierarchy.expanded),
       new Set([mapId, kMapRow, HierarchyRows.anchorRowId({ ownerId: mapId, anchor: kSpawn })])
     );
 
-    hierarchy.collapseAll();
+    await hierarchy.treeMenu().run("collapse-all", kPoint);
     assert.strictEqual(hierarchy.expanded.length, 0);
+  });
+
+  test("renames a component row when the catalog renames its asset", () => {
+    const [name, { components: [anchored] }] = ANCHORED_COMPONENTS;
+    const { mapId, hierarchy, renameAsset } = createHierarchy(
+      () => undefined,
+      createSceneComponents([name, {
+        components: [{
+          ...anchored,
+          definition: {
+            ...anchored.definition,
+            assets: { map: new AssetType<unknown>("voxelmap") }
+          }
+        }]
+      }])
+    );
+    function detail(): string | undefined {
+      return hierarchy.nodes
+        .find(({ id }) => id === mapId)
+        ?.children?.find(({ id }) => id === kMapRow)
+        ?.detail;
+    }
+    assert.strictEqual(detail(), "Overworld");
+
+    renameAsset("Dungeon");
+
+    assert.strictEqual(detail(), "Dungeon");
   });
 });

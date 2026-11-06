@@ -30,6 +30,11 @@ export interface SceneComponentKind<
   icon?: string;
   form: ComponentForm<TData, TAssets>;
   /**
+   * Names one component of this kind in the hierarchy and inspector.
+   * Without it, the summary is `label` with the first named asset as detail.
+   */
+  describe?: ComponentDescriber<TData, TAssets>;
+  /**
    * The `definition.assets` slot whose asset the anchor keys belong to.
    */
   anchorAsset?: string;
@@ -42,6 +47,28 @@ export interface SceneComponentKind<
 }
 
 export type SceneComponentOrigin = "center" | "corner";
+
+export interface SceneComponentSummary {
+  label: string;
+  /**
+   * Muted text after the label, such as an asset name.
+   */
+  detail?: string;
+}
+
+export type SceneComponentAssetNames<
+  TAssets extends Systems.ComponentAssetValues = any
+> = {
+  readonly [TSlot in keyof TAssets]?: string;
+};
+
+export type ComponentDescriber<
+  TData extends object = any,
+  TAssets extends Systems.ComponentAssetValues = any
+> = (
+  data: TData,
+  assets: SceneComponentAssetNames<TAssets>
+) => SceneComponentSummary;
 
 export interface SceneAssetResolver<TValue = unknown> {
   resolve(

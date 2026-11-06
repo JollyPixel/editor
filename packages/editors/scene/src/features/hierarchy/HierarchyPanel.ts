@@ -47,7 +47,7 @@ export class HierarchyPanel extends LitElement {
       padding: var(--jolly-space-1, 4px);
     }
 
-    .expand-all {
+    .tree-options {
       margin-inline-start: auto;
     }
 
@@ -71,6 +71,12 @@ export class HierarchyPanel extends LitElement {
     event: MouseEvent
   ): void => {
     this.#menu.open(this.#tree.addMenu(), menuPointBelow(event));
+  };
+
+  readonly #openTreeMenu = (
+    event: MouseEvent
+  ): void => {
+    this.#menu.open(this.#tree.treeMenu(), menuPointBelow(event));
   };
 
   override render(): TemplateResult {
@@ -100,19 +106,13 @@ export class HierarchyPanel extends LitElement {
           @click=${this.#tree.deleteSelected}
         ></jolly-button>
         <jolly-button
-          class="expand-all"
-          icon="tree-expand-all"
+          class="tree-options"
+          icon="tree-options"
           icon-only
-          label="Expand all"
-          title="Expand all"
-          @click=${this.#tree.expandAll}
-        ></jolly-button>
-        <jolly-button
-          icon="tree-collapse-all"
-          icon-only
-          label="Collapse all"
-          title="Collapse all"
-          @click=${this.#tree.collapseAll}
+          label="Tree options"
+          title="Tree options"
+          aria-haspopup="menu"
+          @click=${this.#openTreeMenu}
         ></jolly-button>
       </div>
       <jolly-tree

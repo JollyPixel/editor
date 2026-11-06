@@ -42,7 +42,10 @@ const kScript: SceneComponentKind<ScriptData, ScriptAssets> = {
   definition: new ScriptAssetDefinition(),
   label: "Script",
   category: "logic",
-  form: (data, assets) => scriptForm(data, assets.resolve("script"))
+  form: (data, assets) => scriptForm(data, assets.resolve("script")),
+  describe: (_data, assets) => {
+    return { label: assets.script ?? "Script" };
+  }
 };
 
 export const SCENE_COMPONENTS: SceneComponentPackage = {

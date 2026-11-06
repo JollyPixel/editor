@@ -13,7 +13,10 @@ import type { Systems } from "@jolly-pixel/engine";
 import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
-import type { SceneComponents } from "../components/SceneComponents.ts";
+import type {
+  AssetNaming,
+  SceneComponents
+} from "../components/SceneComponents.ts";
 import type { ActorWrites } from "./ActorWrites.ts";
 import type { InstanceOverrides } from "./InstanceOverrides.ts";
 import type { SceneActions } from "./SceneActions.ts";
@@ -25,10 +28,7 @@ import type { PresenceStore } from "../state/PresenceStore.ts";
 import type { SceneDraft } from "../state/SceneDraft.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
 
-export interface SceneAssetSlots {
-  name(
-    reference: AssetReferenceData
-  ): string;
+export interface SceneAssetSlots extends AssetNaming {
   pick(
     type: AssetType<unknown>,
     current: AssetReferenceData | null

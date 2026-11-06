@@ -9,7 +9,7 @@ import type { Systems } from "@jolly-pixel/engine";
 // Import Internal Dependencies
 import { HierarchyRows } from "../../src/features/hierarchy/HierarchyRows.ts";
 import type { SceneLiveView } from "../../src/editing/SceneEditing.ts";
-import { createSceneComponents } from "../helpers/sceneComponents.ts";
+import { readRows } from "../helpers/hierarchy/hierarchyRows.ts";
 
 type LiveRows = Pick<SceneLiveView, "anchors" | "expandedActors">;
 
@@ -60,12 +60,7 @@ describe("HierarchyRows anchors", () => {
   test("lists a component's anchors under its row and nests anchored actors under them", () => {
     const { document, mapId } = anchoredScene();
 
-    const [map] = HierarchyRows.read(
-      document.tree,
-      new Map(),
-      createSceneComponents(),
-      mapAnchors(mapId, ["layer:ground", "object:spawn"])
-    ).roots;
+    const [map] = readRows(document.tree, mapAnchors(mapId, ["layer:ground", "object:spawn"])).roots;
 
     assert.deepEqual(map.children?.map(({ id, label }) => [id, label]), [
       [kMapRowId, "VoxelMap"],
@@ -85,12 +80,7 @@ describe("HierarchyRows anchors", () => {
   test("keeps the actors of an anchor the asset no longer has under a warning row", () => {
     const { document, mapId } = anchoredScene();
 
-    const [map] = HierarchyRows.read(
-      document.tree,
-      new Map(),
-      createSceneComponents(),
-      mapAnchors(mapId, [])
-    ).roots;
+    const [map] = readRows(document.tree, mapAnchors(mapId, [])).roots;
 
     const [missing] = map.children![0].children!;
     assert.strictEqual(missing.label, "Missing anchor");
@@ -103,12 +93,7 @@ describe("HierarchyRows anchors", () => {
     const mapId = document.addActor({ name: "Map" })!;
     document.addActor({ name: "Hero", parentId: mapId, anchor: kSpawn });
 
-    const [map] = HierarchyRows.read(
-      document.tree,
-      new Map(),
-      createSceneComponents(),
-      kNoAnchors
-    ).roots;
+    const [map] = readRows(document.tree, kNoAnchors).roots;
 
     const [missing] = map.children!;
     assert.strictEqual(missing.label, "Missing anchor");
@@ -117,12 +102,7 @@ describe("HierarchyRows anchors", () => {
 
   test("turns a drop on an anchor row into a move onto that anchor", () => {
     const { document, mapId, crateId, heroId } = anchoredScene();
-    const rows = HierarchyRows.read(
-      document.tree,
-      new Map(),
-      createSceneComponents(),
-      mapAnchors(mapId, ["object:spawn"])
-    );
+    const rows = readRows(document.tree, mapAnchors(mapId, ["object:spawn"]));
     const spawnRowId = HierarchyRows.anchorRowId({ ownerId: mapId, anchor: kSpawn });
 
     assert.deepEqual(rows.anchorRow(spawnRowId), { ownerId: mapId, anchor: kSpawn });
@@ -135,12 +115,7 @@ describe("HierarchyRows anchors", () => {
 
   test("refuses to drag an anchor row or to drop beside one", () => {
     const { document, mapId, crateId } = anchoredScene();
-    const rows = HierarchyRows.read(
-      document.tree,
-      new Map(),
-      createSceneComponents(),
-      mapAnchors(mapId, ["object:spawn"])
-    );
+    const rows = readRows(document.tree, mapAnchors(mapId, ["object:spawn"]));
     const spawnRowId = HierarchyRows.anchorRowId({ ownerId: mapId, anchor: kSpawn });
 
     assert.strictEqual(rows.accepts({ movedIds: [spawnRowId], targetId: crateId, where: "inside" }), false);

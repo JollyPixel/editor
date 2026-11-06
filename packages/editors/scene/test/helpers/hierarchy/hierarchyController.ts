@@ -59,13 +59,27 @@ export function createHierarchy(
   const anchorPicks = new Emitter<AnchorPicksEvents>();
   const history = createSceneHistory(document);
   const selection = new SelectionStore(document, binding);
+  let assetName = "Overworld";
+  const catalog = new Set<() => void>();
   const assetSlots: SceneAssetSlots = {
-    name: () => "Overworld",
+    name: () => assetName,
     pick: () => Promise.resolve(null),
     pickScene: () => Promise.resolve(null),
     open,
-    subscribe: () => () => undefined
+    subscribe: (listener) => {
+      catalog.add(listener);
+
+      return () => catalog.delete(listener);
+    }
   };
+  function renameAsset(
+    name: string
+  ): void {
+    assetName = name;
+    for (const listener of catalog) {
+      listener();
+    }
+  }
   const editing: HierarchyEditing = {
     document,
     live: binding,
@@ -112,7 +126,8 @@ export function createHierarchy(
     selection,
     anchorPicks,
     hierarchy,
-    revealed
+    revealed,
+    renameAsset
   };
 }
 

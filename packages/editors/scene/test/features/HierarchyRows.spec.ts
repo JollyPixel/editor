@@ -13,7 +13,7 @@ import {
   PREFAB_ICON
 } from "../../src/features/hierarchy/HierarchyRows.ts";
 import type { SceneLiveView } from "../../src/editing/SceneEditing.ts";
-import { createSceneComponents } from "../helpers/sceneComponents.ts";
+import { readRows } from "../helpers/hierarchy/hierarchyRows.ts";
 
 type LiveRows = Pick<SceneLiveView, "anchors" | "expandedActors">;
 
@@ -40,7 +40,7 @@ function litScene() {
     parentId: lampId,
     components: [{ id: "mesh", type: "Mesh", data: {}, assets: {} }]
   })!;
-  const rows = HierarchyRows.read(document.tree, new Map(), createSceneComponents(), kNoAnchors);
+  const rows = readRows(document.tree, kNoAnchors);
 
   return { rows, lampId, bulbId };
 }
@@ -60,12 +60,9 @@ describe("HierarchyRows", () => {
     document.addActor({ name: "Bulb", parentId: childId });
     const peer = { clientId: "p", displayName: "Peer", color: "#ff0000" } as PresencePeer;
 
-    const rows = HierarchyRows.read(
-      document.tree,
-      new Map([[childId, [peer]]]),
-      createSceneComponents(),
-      kNoAnchors
-    );
+    const rows = readRows(document.tree, kNoAnchors, {
+      marks: new Map([[childId, [peer]]])
+    });
 
     const [root] = rows.roots;
     assert.strictEqual(root.icon, "actor-empty");
@@ -76,7 +73,7 @@ describe("HierarchyRows", () => {
     assert.deepEqual(
       child.children?.map(({ id, label, icon, renamable }) => [id, label, icon, renamable]),
       [
-        [HierarchyRows.componentRowId("light"), "Light", "actor-light", false],
+        [HierarchyRows.componentRowId("light"), "Directional light", "actor-light", false],
         [HierarchyRows.componentRowId("gone"), "Unknown", "actor-empty", false],
         [child.children![2].id, "Bulb", "actor-empty", true]
       ]
@@ -88,16 +85,47 @@ describe("HierarchyRows", () => {
     );
   });
 
+  test("numbers the components of one actor that share a summary", () => {
+    const document = new SceneDocument();
+    const box = { shape: { type: "box" } };
+    document.addActor({
+      name: "Crate",
+      components: [
+        { id: "body-a", type: "RigidBody", data: { colliders: [box] }, assets: {} },
+        { id: "light-a", type: "Light", data: { kind: "point" }, assets: {} },
+        { id: "body-b", type: "RigidBody", data: { colliders: [box] }, assets: {} },
+        { id: "light-b", type: "Light", data: { kind: "point" }, assets: {} },
+        { id: "spot", type: "Light", data: { kind: "spot" }, assets: {} }
+      ]
+    });
+    document.addActor({
+      name: "Lamp",
+      components: [{ id: "light-c", type: "Light", data: { kind: "point" }, assets: {} }]
+    });
+
+    const [crate, lamp] = readRows(document.tree, kNoAnchors).roots;
+
+    assert.deepEqual(
+      crate.children?.map(({ label, detail }) => [label, detail]),
+      [
+        ["Dynamic body", "Box #1"],
+        ["Point light", "#1"],
+        ["Dynamic body", "Box #2"],
+        ["Point light", "#2"],
+        ["Spot light", undefined]
+      ]
+    );
+    assert.deepEqual(
+      lamp.children?.map(({ label, detail }) => [label, detail]),
+      [["Point light", undefined]]
+    );
+  });
+
   test("marks a prefab instance with the prefab icon", () => {
     const document = new SceneDocument();
     document.addActor({ name: "House", prefab: { id: "house", kind: "scene" } });
 
-    const [row] = HierarchyRows.read(
-      document.tree,
-      new Map(),
-      createSceneComponents(),
-      kNoAnchors
-    ).roots;
+    const [row] = readRows(document.tree, kNoAnchors).roots;
 
     assert.strictEqual(row.icon, PREFAB_ICON);
   });
@@ -107,12 +135,7 @@ describe("HierarchyRows", () => {
     const houseId = document.addActor({ name: "House", prefab: { id: "house", kind: "scene" } })!;
     const crateId = document.addActor({ name: "Crate" })!;
 
-    const rows = HierarchyRows.read(
-      document.tree,
-      new Map(),
-      createSceneComponents(),
-      kNoAnchors
-    );
+    const rows = readRows(document.tree, kNoAnchors);
 
     assert.strictEqual(rows.accepts({ movedIds: [crateId], targetId: houseId, where: "inside" }), false);
     assert.strictEqual(rows.accepts({ movedIds: [crateId], targetId: houseId, where: "above" }), true);
@@ -129,7 +152,7 @@ describe("HierarchyRows", () => {
       actorFile(knobId, doorId, "Knob")
     ]]]);
 
-    const rows = HierarchyRows.read(document.tree, new Map(), createSceneComponents(), {
+    const rows = readRows(document.tree, {
       ...kNoAnchors,
       expandedActors: (instanceId) => (expanded.get(instanceId) ?? []).values()
     });

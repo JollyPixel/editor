@@ -189,42 +189,10 @@ registerIcon("action-duplicate", svg`
   />
 `, { tone: "sky" });
 
-registerIcon("tree-expand-all", svg`
-  <path
-    d="M4 12h16"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.75"
-    stroke-linecap="round"
-    stroke-dasharray="2 2.5"
-  />
-  <path
-    d="M12 3v6M9 6l3-3 3 3M12 21v-6M9 18l3 3 3-3"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.75"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-`);
-
-registerIcon("tree-collapse-all", svg`
-  <path
-    d="M4 12h16"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.75"
-    stroke-linecap="round"
-    stroke-dasharray="2 2.5"
-  />
-  <path
-    d="M12 3v6M9 6l3 3 3-3M12 21v-6M9 18l3-3 3 3"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.75"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
+registerIcon("tree-options", svg`
+  <circle cx="5" cy="12" r="2" fill="currentColor" />
+  <circle cx="12" cy="12" r="2" fill="currentColor" />
+  <circle cx="19" cy="12" r="2" fill="currentColor" />
 `);
 
 registerIcon("action-rename", svg`

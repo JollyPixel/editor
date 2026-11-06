@@ -17,18 +17,18 @@ import {
 import {
   MeshRenderer,
   MESH_RENDERER_DEFAULTS,
-  type MeshRendererOptions
+  type MeshSettings
 } from "./MeshRenderer.ts";
 
 export class MeshDefinition implements ComponentDefinition<
-  MeshRendererOptions,
+  MeshSettings,
   MeshRenderer<any>
 > {
   readonly type = "Mesh";
 
   parse(
     data: Readonly<JSONObject>
-  ): MeshRendererOptions {
+  ): MeshSettings {
     const fields = new ComponentData(data);
 
     return {
@@ -39,14 +39,14 @@ export class MeshDefinition implements ComponentDefinition<
 
   create(
     actor: Actor<any>,
-    data: MeshRendererOptions
+    data: MeshSettings
   ): MeshRenderer<any> {
     return actor.addComponentAndGet(MeshRenderer, data);
   }
 
   apply(
     component: MeshRenderer<any>,
-    data: MeshRendererOptions
+    data: MeshSettings
   ): void {
     component.configure(data);
   }

@@ -231,7 +231,7 @@ new Scenario<ScenePage, SceneExpectation>({
         await expect(scene.row("Crate")).toHaveAttribute("aria-selected", "true");
         await scene.editTransform("Scale", "Y", "2");
         await scene.addComponent(["3D", "Mesh"]);
-        await expect(scene.component("Mesh")).toBeVisible();
+        await expect(scene.component("Box mesh")).toBeVisible();
       },
       expected: kCrated
     },
@@ -273,10 +273,10 @@ new Scenario<ScenePage, SceneExpectation>({
         await scene.collapseAll();
         await scene.row("Sky").click();
         await scene.addComponent(["3D", "Mesh"]);
-        await expect(scene.component("Mesh")).toBeVisible();
-        await expect(scene.row("Mesh")).toHaveAttribute("aria-selected", "true");
+        await expect(scene.component("Box mesh")).toBeVisible();
+        await expect(scene.row("Box mesh")).toHaveAttribute("aria-selected", "true");
 
-        await scene.dragRow("Mesh", "Light", "above");
+        await scene.dragRow("Box mesh", "Hemisphere light", "above");
       },
       expected: kMeshed
     },
@@ -369,12 +369,12 @@ new Scenario<ScenePage, SceneExpectation>({
       id: "light",
       title: "turn the sun into a spot light and narrow its cone",
       play: async(scene) => {
-        await scene.inspectComponent("Sun", "Light");
-        const light = scene.component("Light");
-        await selectField(light, "Kind").selectOption({ label: "Spot" });
-        await scene.showMore("Light");
+        await scene.inspectComponent("Sun", "Directional light");
+        await selectField(scene.component("Directional light"), "Kind").selectOption({ label: "Spot" });
+        const light = scene.component("Spot light");
+        await scene.showMore("Spot light");
         await expect(light.locator("jolly-number[label=\"Angle\"]")).toBeVisible();
-        await scene.editNumber("Light", "Angle", "30");
+        await scene.editNumber("Spot light", "Angle", "30");
       },
       expected: kLit
     },

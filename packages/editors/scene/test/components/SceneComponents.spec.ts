@@ -8,12 +8,14 @@ import { FONT_ASSET } from "@jolly-pixel/asset.font/client";
 import type {
   SceneAssetSource,
   SceneComponentKind,
-  SceneComponentPackage
+  SceneComponentPackage,
+  SceneComponentSummary
 } from "@jolly-pixel/editor.host/scene";
 import type { MenuEntry } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { addComponentEntries } from "../../src/components/addComponentEntries.ts";
+import type { DescribedComponent } from "../../src/components/SceneComponents.ts";
 import { createSceneComponents } from "../helpers/sceneComponents.ts";
 
 // CONSTANTS
@@ -145,4 +147,57 @@ describe("SceneComponents", () => {
     assert.strictEqual(components.actorOrigin(["Mesh", "Map"]), "corner");
     assert.strictEqual(components.actorOrigin(["Mesh", "Unknown"]), "center");
   });
+
+  test("summarizes a component from its kind's describe, else its first named asset, else its type", () => {
+    const components = createSceneComponents(["maps", {
+      components: [
+        kMapKind,
+        {
+          ...kMapKind,
+          definition: { ...kMapKind.definition, type: "NamedMap" },
+          describe: (_data, assets) => {
+            return { label: assets.map ?? "Unnamed map" };
+          }
+        }
+      ]
+    }]);
+    const naming = { name: () => "Overworld" };
+    const overworld = { map: { id: "overworld", kind: "map" } };
+    const box = { shape: { type: "box" } };
+    const cases: [DescribedComponent, SceneComponentSummary][] = [
+      [described("Camera"), { label: "Perspective camera" }],
+      [described("Camera", { projectionMode: "orthographic" }), { label: "Orthographic camera" }],
+      [described("Light", { kind: "spot" }), { label: "Spot light" }],
+      [described("Mesh", { geometry: { kind: "torus" } }), { label: "Torus mesh" }],
+      [described("Text", { text: "  Press start to play the game\nagain" }), {
+        label: "Text",
+        detail: "\"Press start to play the…\""
+      }],
+      [described("Text", { text: "" }), { label: "Text" }],
+      [described("RigidBody", { kind: "fixed", colliders: [box] }), { label: "Fixed body", detail: "Box" }],
+      [described("RigidBody", { colliders: [box, box] }), { label: "Dynamic body", detail: "2 colliders" }],
+      [described("Map", {}, overworld), { label: "Map", detail: "Overworld" }],
+      [described("Map", {}, { map: null }), { label: "Map" }],
+      [described("NamedMap", {}, overworld), { label: "Overworld" }],
+      [described("NamedMap"), { label: "Unnamed map" }],
+      [described("Unknown"), { label: "Unknown" }]
+    ];
+
+    assert.deepEqual(
+      cases.map(([component]) => components.summary(component, naming)),
+      cases.map(([, summary]) => summary)
+    );
+  });
 });
+
+function described(
+  type: string,
+  data: DescribedComponent["data"] = {},
+  assets: DescribedComponent["assets"] = {}
+): DescribedComponent {
+  return {
+    type,
+    data,
+    assets
+  };
+}
