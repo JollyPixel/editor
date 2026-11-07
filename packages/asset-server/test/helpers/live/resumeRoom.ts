@@ -5,6 +5,7 @@ import { Ok } from "@openally/result";
 // Import Internal Dependencies
 import {
   AssetRoomExtension,
+  type AssetCommands,
   type AssetRoomExtensionOptions
 } from "#src/index.ts";
 import { counterSnapshotSchema } from "../protocols.ts";
@@ -24,7 +25,8 @@ export interface ResumeCommand {
 }
 
 export function resumeRoom(
-  options: AssetRoomExtensionOptions<ResumeCommand> = {}
+  options: AssetRoomExtensionOptions<ResumeCommand> = {},
+  upcast?: AssetCommands["upcast"]
 ) {
   let log: EventStore.Event[] = [];
   let head = 0;
@@ -56,7 +58,7 @@ export function resumeRoom(
 
   const extension = new AssetRoomExtension<ResumeCommand>(
     counterRoomBinding({ version: () => head }),
-    counterRoomCommands<ResumeCommand>(),
+    counterRoomCommands<ResumeCommand>(upcast),
     {
       snapshotSchema: counterSnapshotSchema,
       snapshot: () => {

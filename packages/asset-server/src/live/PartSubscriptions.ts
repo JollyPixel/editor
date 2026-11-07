@@ -22,6 +22,7 @@ export interface PartSubscriptionsOptions<
   readonly members: ReadonlySet<string>;
   readonly version: () => number | undefined;
   readonly partsOnJoin: readonly string[];
+  readonly commandSendOptions: network.SendOptions;
 }
 
 export class PartSubscriptions<
@@ -33,6 +34,7 @@ export class PartSubscriptions<
   #members: ReadonlySet<string>;
   #version: () => number | undefined;
   #partsOnJoin: readonly string[];
+  #commandSendOptions: network.SendOptions;
   #subscribed = new Map<string, Set<string>>();
 
   constructor(
@@ -46,6 +48,7 @@ export class PartSubscriptions<
     this.#members = options.members;
     this.#version = options.version;
     this.#partsOnJoin = options.partsOnJoin;
+    this.#commandSendOptions = options.commandSendOptions;
   }
 
   join(
@@ -120,14 +123,14 @@ export class PartSubscriptions<
         clientId === authorId ||
         touched.some((partId) => subscribed?.has(partId) === true)
       ) {
-        room.sendTo(clientId, message);
+        room.sendTo(clientId, message, this.#commandSendOptions);
       }
       else if (outside !== null) {
         room.sendTo(clientId, {
           type: "command",
           data: outside,
           version
-        });
+        }, this.#commandSendOptions);
       }
     }
   }

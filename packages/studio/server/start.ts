@@ -21,6 +21,7 @@ const server = await StudioServer.open({
   project,
   shell: kShellDir,
   allowedHosts: settings.allowedHosts,
+  socketCompression: settings.socketCompression,
   backend: {
     trustProxy: settings.trustProxy,
     accounts: {

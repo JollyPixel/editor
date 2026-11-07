@@ -15,7 +15,6 @@ import {
 import {
   DEFAULT_MATERIAL_PROPERTIES,
   encodeHeightBytes,
-  encodeHeights,
   encodeHoleTilePatch,
   encodeSplatTilePatch,
   type TerrainCommand,
@@ -26,12 +25,6 @@ import {
 let seq = 0;
 
 export function heights(
-  height: number
-): string {
-  return encodeHeights(new Float32Array(CHUNK_SAMPLE_COUNT).fill(height));
-}
-
-export function heightBytes(
   height: number
 ): Uint8Array {
   return encodeHeightBytes(new Float32Array(CHUNK_SAMPLE_COUNT).fill(height));

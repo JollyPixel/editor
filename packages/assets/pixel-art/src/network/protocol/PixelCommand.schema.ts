@@ -81,7 +81,7 @@ const kPixelCommandMetadata: Record<
   }],
   "texture-replaced": [{
     size: sizeSchema,
-    pixels: z.string()
+    pixels: bytesSchema
   }],
   "global-fill": [{
     fromColor: kRgba8Schema,

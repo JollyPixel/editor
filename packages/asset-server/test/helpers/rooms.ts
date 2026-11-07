@@ -108,10 +108,13 @@ export function counterRoomBinding(
 
 export function counterRoomCommands<
   TCommand extends AssetCommandHeader
->(): AssetCommands<unknown, TCommand> {
+>(
+  upcast?: AssetCommands["upcast"]
+): AssetCommands<unknown, TCommand> {
   return {
     eventType: COUNTER_COMMAND,
     protocol: counterCommandProtocol,
+    upcast,
     apply: () => void 0
   };
 }

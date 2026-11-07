@@ -44,6 +44,13 @@ export interface AssetCommands<
    * the event log.
    */
   readonly relay?: AssetRelaySchemas<TRelay>;
+  /**
+   * Rewrites a stored command written by an older version of the kind into
+   * the form `protocol` accepts, before the command is folded or resent.
+   */
+  readonly upcast?: (
+    stored: unknown
+  ) => unknown;
 
   apply(
     state: TState,

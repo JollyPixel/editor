@@ -1,9 +1,11 @@
 # Binary frames
 
-Status on 2026-11-07: binary frames are on `main` (`9a805e5fa`). The compress
-hint and the snapshot and part migrations are built (uncommitted). The model
-deflate is measured: it costs about 300 ms on localhost and saves about 500 ms
-on a fast-4g link ([Model deflate](#model-deflate)).
+Status on 2026-11-07: binary frames (`9a805e5fa`) and the compress hint with
+the snapshot and part migrations (`033a975db`) are committed. Socket
+compression by deployment, bytes in stored events and commands, the terrain
+manifest split and selection presence are built (uncommitted). HTTP `ref`
+content is left. The throttled model deflate rows were rerun with the fixed
+proxy ([Model deflate](#model-deflate)).
 
 An envelope that holds a `Uint8Array` travels as one binary frame instead of
 base64 inside JSON text. The format, `bytesSchema` and the frame functions are
@@ -32,54 +34,51 @@ in [InProcess](./docs/transport/InProcess.md) and
   compressed, the PNG form is not. The file keeps base64.
 - `studio/perf/throttleProxy.ts`: a TCP proxy that throttles a link without
   the CDP bias against uncompressed frames.
+- Socket compression by deployment: `StudioBackend.attach({ compression })`
+  defaults to off; `start.ts` turns it on unless `JOLLY_SOCKET_COMPRESSION=false`;
+  `perf/serveBuild.ts --compression` serves the hosted variant.
+- Event store: `eventData` keeps `Uint8Array` values as `{ "$bytes": base64 }`
+  in SQLite and the memory log, raw in IndexedDB. `$bytes` is reserved.
+- Asset-server: `AssetCommands.upcast` rewrites stored commands of an older
+  shape before fold and resume; `AssetLiveProtocol.compressCommands` hints
+  broadcast commands and catch-ups.
+- Pixel `texture-replaced` (pixel-art and blockset) and terrain
+  `chunk-added`, `tier-changed`, the three tile patches and `live-patched`
+  carry bytes; their upcasts decode the base64 already stored. Pixel-art,
+  blockset and terrain hint `compressCommands`.
+- Terrain manifest: the wire `chunkEntrySchema` holds bytes, the
+  `.terrain.json` file keeps base64 through `terrainFile` /
+  `terrainFileManifest`, and `TerrainPartsRoom` no longer re-encodes heights.
+  The manifest snapshot is compressed.
+- Selection presence: masks and moving pixels are bytes
+  ([Selection presence](#selection-presence)).
 
 ## Left to do
 
 In order.
 
-### 1. Socket compression by deployment
-
-Deflate pays below about 20 Mbit/s and costs about 300 ms per model open above
-it ([Model deflate](#model-deflate)). `StudioBackend` compresses every socket
-(`threshold: 1024`), the local studio included. Turn compression off when the
-studio serves loopback (`vite dev`, `dev:e2e`, a local `serveBuild`) and keep
-it for the hosted `StudioServer`. Text frames lose little: the large ones were
-base64 pixels, now hinted binary frames.
-
-### 2. Bytes in stored events, then commands
-
-Commands are stored as JSON (`event-store/src/persistence/EventRecord.ts`), so
-a `Uint8Array` in a command would be saved as `{"0":…}`, and stored events hold
-base64: every upload pays one encode and every fold one decode. Once the event
-store keeps bytes (for example a tagged `{ "$bytes": base64 }` decoded on
-read), move these commands to `bytesSchema`:
-
-- pixel `texture-replaced` (`pixels`);
-- terrain `chunk-added`, `tier-changed`, `heights-patched`, `splat-patched`,
-  `holes-patched` and the `live-patched` relay.
-
-Their schemas must still accept the base64 already stored. Check whether the
-Node validator (`src/protocol/runtime/node.ts`) supports a string-to-bytes
-transform before choosing how.
-
-### 3. Terrain manifest
-
-`overview`, `materials` and inline `heights` stay base64 because
-`terrainFileSchema` extends `terrainManifestSchema`. Split the wire schema from
-the file schema; that also removes the heights re-encode in
-`TerrainPartsRoom`.
-
-### 4. Selection presence
-
-`SelectionPresenceCodec` (pixel-art) sends base64 masks and pixels. As bytes
-they would ride on `peer-presence` broadcasts, so small frequent updates become
-binary frames; measure before and after.
-
-### 5. HTTP `ref` content
+### 1. HTTP `ref` content
 
 `{ type: "ref", hash, size }`, already in `assetContentSchema`: the client
-fetches bytes from a content-addressed, cacheable route. It needs a route that
-applies room rights and share links, and an in-page path offline.
+fetches bytes from a content-addressed, cacheable route. Start with a spike:
+
+- Route `GET …/assets/<assetId>/content/<hash>` next to `catalogHandler.ts`,
+  `Cache-Control: private, max-age=31536000, immutable`, 404 for a hash that
+  is no longer current, after which the client falls back to the socket.
+- Rights through a hook the studio supplies: `accounts.signedIn(headers)` and
+  room rights for accounts, `StudioShares.admits` for guests. Check first how a
+  share-link guest identifies over plain HTTP.
+- A kind opts in (`binaryCommands(type, { ref: true })` above a size); the
+  sync client resolves `ref` through an injected resolver, which the in-page
+  `AssetServer` implements offline.
+- Measure model reopen and reload: a cache hit should drop the 5.3 MB, a cold
+  open pays one more round trip.
+
+### Later
+
+- Stored `AssetInlineContent` as bytes: the event store tag and an upcast in
+  `parseAssetEvent` would do it, but SQLite would still base64 inside the
+  event store. Measure first; a BLOB column or `ref` storage removes it.
 
 ## Rules for the migrations
 
@@ -101,6 +100,22 @@ applies room rights and share links, and an in-page path offline.
 
 ## Measurements
 
+### Selection presence
+
+Microbenchmark on 2026-11-07, Node 24.18: one moving selection encoded by
+`encodeSelectionPresence`, framed in a `presence` envelope by `encodeFrame`,
+then decoded by `decodeFrame` and `decodeSelectionPresence`. Mean of 200
+rounds (20 at 512²):
+
+| Selection | base64 frame | bytes frame | base64 time | bytes time |
+| --- | --- | --- | --- | --- |
+| 32×32 | 5.8 KiB | 4.4 KiB | 0.31 ms | 0.17 ms |
+| 128×128 | 88.3 KiB | 66.3 KiB | 5.1 ms | 4.9 ms |
+| 512×512 | 1408 KiB | 1056 KiB | 82 ms | 62 ms |
+
+Most of the remaining time builds and reads the `RGBA8` objects, not the
+bytes.
+
 ### Model deflate
 
 Interleaved A/B on 2026-11-07, 4 rounds, model online, one built studio served
@@ -120,11 +135,28 @@ ms:
 level 3), which is about 720 ms at 8.1 Mbit/s; the measured saving of about
 500 ms leaves the 300 ms that deflate costs on localhost. Two of the four
 `deflate-4g` reloads took the time of one more full transfer (11653 and
-11652 ms), and the reload median uses the two other rounds. The proxy then kept
-a closed socket's queued bytes on the link, which delays the next open by the
-rest of that transfer; it now drops them, so rerun the `-4g` reloads before
-relying on that row. The harness counts decoded socket bytes
-(5296 KB in every variant), not wire bytes.
+11652 ms): the proxy then kept a closed socket's queued bytes on the link. The
+harness counts decoded socket bytes (5296 KB in every variant), not wire bytes.
+
+Rerun of the `-4g` variants on 2026-11-07 with the fixed proxy, which drops a
+closed socket's queued bytes: 5 interleaved rounds, built from this branch,
+`serveBuild --compression` on 3004 and plain `serveBuild` on 3014. Results are
+in `packages/studio/perf-results/ab-deflate-4g-2-2026-11-07.json`. Median
+`ready`, in ms:
+
+| Phase | raw-4g (n=5) | deflate-4g (n=4) |
+| --- | --- | --- |
+| first | 7698 | 6922 (−776) |
+| reopen | 6387 | 5763 (−624) |
+| reload | 6341 | 5731 (−610) |
+
+`settled` moves by −612 to −738 ms. No reload repeated a transfer: every
+`deflate-4g` reload took 5686 to 5769 ms, and the 3 of an earlier run
+(`ab-deflate-4g-2026-11-07.json`) 5735 to 5765 ms. One `deflate-4g` round
+was lost to a harness timeout: the shell's asset tree took over 30 s to show
+through the proxy. The earlier run lost more rounds the same way, plus the
+first open on each server, which uploads the 5.4 MB GLB through the proxy;
+seed both servers before a throttled run.
 
 ### Binary frames
 

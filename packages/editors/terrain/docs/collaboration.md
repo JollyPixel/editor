@@ -32,10 +32,10 @@ commit holds at most 1024 tiles. The author's document captures the values
 the stroke replaced when it commits, and builds the inverse for undo from
 them.
 
-Height values travel as the raw bytes of a `Float32Array`, base64-encoded in
-the JSON envelope, so they arrive exactly as written. Compression comes from
-the WebSocket's permessage-deflate, enabled for terrain rooms; patches are not
-compressed one by one.
+Height values travel as the raw bytes of a `Float32Array` in a binary frame,
+so they arrive exactly as written. The terrain kind hints compression for its
+commands, so a socket that negotiated permessage-deflate deflates each patch
+frame.
 
 ### Collision keys
 

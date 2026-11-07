@@ -183,12 +183,13 @@ describe("terrain history", () => {
     "merging a long stroke's inverses keeps the first heights per tile and fits the commit size",
     async() => {
       const { compact } = terrainHistoryRegistration((await edgePeerSetup()).document, { scope: "terrain" });
+      const firstHeights = new Uint8Array([3]);
       const tiles = Array.from({ length: MAX_PATCH_TILES + 10 }, (_, index) => {
-        return { x: index, z: 0, tile: 0, heights: `late-${index}` };
+        return { x: index, z: 0, tile: 0, heights: new Uint8Array([1]) };
       });
       const merged = compact!([
         { action: "heights-patched", tiles },
-        { action: "heights-patched", tiles: [{ x: 3, z: 0, tile: 0, heights: "first-3" }] }
+        { action: "heights-patched", tiles: [{ x: 3, z: 0, tile: 0, heights: firstHeights }] }
       ]);
 
       assert.ok(merged.every((command) => command.action === "heights-patched" &&
@@ -197,7 +198,7 @@ describe("terrain history", () => {
         (command: TerrainCommand) => (command.action === "heights-patched" ? command.tiles : [])
       );
       assert.equal(written.length, MAX_PATCH_TILES + 10);
-      assert.equal(written.find(({ x }) => x === 3)!.heights, "first-3");
+      assert.equal(written.find(({ x }) => x === 3)!.heights, firstHeights);
     }
   );
 

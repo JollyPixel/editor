@@ -6,8 +6,8 @@ import {
 
 // Import Internal Dependencies
 import {
-  decodeHeights,
-  encodeHeights
+  decodeHeightBytes,
+  encodeHeightBytes
 } from "./heights.ts";
 import {
   encodeTileCoord,
@@ -20,7 +20,7 @@ export function encodeTilePatch(
 ): EncodedTilePatch {
   return {
     ...encodeTileCoord(tile),
-    heights: encodeHeights(heights)
+    heights: encodeHeightBytes(heights)
   };
 }
 
@@ -28,7 +28,7 @@ export function decodeTilePatch(
   encoded: EncodedTilePatch
 ): TilePatch | null {
   const tile = patchTileCoord(encoded);
-  const heights = decodeHeights(encoded.heights, TILE_SAMPLE_COUNT);
+  const heights = decodeHeightBytes(encoded.heights, TILE_SAMPLE_COUNT);
 
   return tile === null || heights === null ? null : { tile, heights };
 }

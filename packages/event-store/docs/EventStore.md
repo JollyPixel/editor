@@ -76,7 +76,9 @@ writer.append(input: AppendInput): Promise<Result<Event, Error>>
   `eventVersion` equals it (`0` for an empty stream). Otherwise it resolves
   with an `EventVersionConflictError`.
 - `eventData` and `actor` are stored as JSON: a `Date` comes back as a string
-  and a `BigInt` fails the append.
+  and a `BigInt` fails the append. A `Uint8Array` is stored as
+  `{ "$bytes": base64 }` and comes back as a `Uint8Array`, so `$bytes` is a
+  reserved key: an object holding it fails the append.
 
 ## reader
 

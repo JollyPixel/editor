@@ -1,9 +1,19 @@
+// Import Third-party Dependencies
+import {
+  decodeBase64,
+  encodeBase64
+} from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type {
   Actor,
   AppendInput,
   Event
 } from "../EventStore.ts";
+
+// CONSTANTS
+const kBytesKey = "$bytes";
+const kBytesMarker = `"${kBytesKey}"`;
 
 export interface EventPosition {
   eventId: number;
@@ -59,7 +69,7 @@ export class EventRecord implements EventRecordFields {
       assetType: this.assetType,
       assetId: this.assetId,
       eventType: this.eventType,
-      eventData: JSON.parse(this.eventDataJson),
+      eventData: decodeJson(this.eventDataJson),
       eventVersion: position.eventVersion,
       actor: JSON.parse(this.actorJson) as Actor,
       createdAt: this.createdAt
@@ -71,7 +81,21 @@ export function encodeJson(
   value: unknown,
   field: string
 ): string {
-  const json = JSON.stringify(value);
+  const json = JSON.stringify(value, function replaceBytes(key, replaced) {
+    const original: unknown = (this as Record<string, unknown>)[key];
+    if (original instanceof Uint8Array) {
+      return {
+        [kBytesKey]: encodeBase64(original)
+      };
+    }
+    if (isObject(replaced) && Object.hasOwn(replaced, kBytesKey)) {
+      throw new TypeError(
+        `${field} must not hold the reserved key "${kBytesKey}"`
+      );
+    }
+
+    return replaced;
+  });
   if (json === undefined) {
     throw new TypeError(
       `${field} must be JSON-serializable`
@@ -79,4 +103,30 @@ export function encodeJson(
   }
 
   return json;
+}
+
+export function decodeJson(
+  json: string
+): unknown {
+  if (!json.includes(kBytesMarker)) {
+    return JSON.parse(json);
+  }
+
+  return JSON.parse(json, (_key, value: unknown) => {
+    if (!isObject(value) || typeof value[kBytesKey] !== "string") {
+      return value;
+    }
+
+    return Object.keys(value).length === 1 ?
+      decodeBase64(value[kBytesKey]) ?? value :
+      value;
+  });
+}
+
+function isObject(
+  value: unknown
+): value is Record<string, unknown> {
+  return typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value);
 }

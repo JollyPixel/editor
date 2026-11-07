@@ -8,7 +8,7 @@ import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
 import {
-  encodeSplat,
+  encodeSplatBytes,
   terrainAssetKind
 } from "#src/index.ts";
 import {
@@ -25,7 +25,7 @@ describe("terrain splat", () => {
     const unbalanced = splatTile(4);
     unbalanced.weights[0] = 200;
     const valid = paint(0, 0, { 2: 4 });
-    const invalid = { x: 0, z: 0, tile: 1, splat: encodeSplat(unbalanced) };
+    const invalid = { x: 0, z: 0, tile: 1, splat: encodeSplatBytes(unbalanced) };
     assert.ok(valid.action === "splat-patched");
 
     await room.receive("A", networkCommand({ action: "splat-patched", tiles: [...valid.tiles, invalid] }));

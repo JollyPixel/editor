@@ -20,9 +20,11 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-function tilesRoom(): Promise<RoomHarness> {
+function tilesRoom(
+  compressCommands = false
+): Promise<RoomHarness> {
   return roomHarness({
-    extraHandlers: [liveTileHandler()],
+    extraHandlers: [liveTileHandler(compressCommands)],
     asset: {
       kind: "tiles",
       path: "w.tiles"
@@ -82,6 +84,23 @@ describe("AssetRoomExtension — parts", () => {
       ["parts", true],
       ["command", false]
     ]);
+  });
+
+  test("commands follow the kind's compressCommands option", async() => {
+    await using harness = await tilesRoom(true);
+    await joined(harness, "A", "B");
+    const client = harness.clients.get("B");
+    assert.ok(client);
+
+    await harness.send("A", { action: "erase", tile: "a" });
+
+    assert.deepEqual(
+      [
+        ((client.received.at(-1) as { payload?: { type?: string; }; }).payload)?.type,
+        client.sendOptions.at(-1)?.compress
+      ],
+      ["command", true]
+    );
   });
 
   test("a subscription answers with its parts at the room version", async() => {

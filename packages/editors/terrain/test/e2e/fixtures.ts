@@ -7,8 +7,7 @@ import {
 } from "@jolly-pixel/e2e/editor";
 import {
   DEFAULT_MATERIAL_PROPERTIES,
-  encodeHeights,
-  encodeHoles,
+  encodeHeightBytes,
   TERRAIN_FILE,
   GROUND_MATERIAL,
   TERRAIN_FILE_VERSION,
@@ -19,6 +18,7 @@ import {
   CHUNK_SAMPLES,
   type ChunkTier
 } from "@jolly-pixel/terrain.renderer";
+import { encodeBase64 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { TerrainPage } from "./support/terrainPage.ts";
@@ -77,7 +77,7 @@ function chunkHeights(
     }
   }
 
-  return encodeHeights(heights);
+  return encodeBase64(encodeHeightBytes(heights));
 }
 
 function refinedHoles(
@@ -98,7 +98,7 @@ function refinedHoles(
     }
   }
 
-  return encodeHoles(holes);
+  return encodeBase64(holes);
 }
 
 function encodeRollingTerrain(

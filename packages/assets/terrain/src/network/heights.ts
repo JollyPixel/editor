@@ -5,10 +5,6 @@ import {
   isValidHeight,
   tierOfSampleCount
 } from "@jolly-pixel/terrain.renderer";
-import {
-  decodeBase64,
-  encodeBase64
-} from "@jolly-pixel/utils";
 
 // CONSTANTS
 const kBytesPerHeight = Float32Array.BYTES_PER_ELEMENT;
@@ -48,27 +44,4 @@ export function decodeChunkHeightBytes(
   const tier = tierOfSampleCount(bytes.byteLength / kBytesPerHeight);
 
   return tier === null ? null : decodeHeightBytes(bytes, chunkSampleCount(tier));
-}
-
-export function decodeChunkHeights(
-  encoded: string
-): Float32Array | null {
-  const bytes = decodeBase64(encoded);
-
-  return bytes === null ? null : decodeChunkHeightBytes(bytes);
-}
-
-export function encodeHeights(
-  heights: Float32Array
-): string {
-  return encodeBase64(encodeHeightBytes(heights));
-}
-
-export function decodeHeights(
-  encoded: string,
-  count: number = CHUNK_SAMPLE_COUNT
-): Float32Array | null {
-  const bytes = decodeBase64(encoded);
-
-  return bytes === null ? null : decodeHeightBytes(bytes, count);
 }

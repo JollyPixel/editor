@@ -8,10 +8,6 @@ import {
   type SplatTexels,
   type TileCoord
 } from "@jolly-pixel/terrain.renderer";
-import {
-  decodeBase64,
-  encodeBase64
-} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -52,33 +48,10 @@ export function decodeSplatBytes(
   return isValidSplat(splat, texels) ? splat : null;
 }
 
-export function encodeSplat(
-  splat: SplatTexels
-): string {
-  return encodeBase64(encodeSplatBytes(splat));
-}
-
-export function decodeSplat(
-  encoded: string,
-  texels: number = SPLAT_TEXEL_COUNT
-): SplatTexels | null {
-  const bytes = decodeBase64(encoded);
-
-  return bytes === null ? null : decodeSplatBytes(bytes, texels);
-}
-
-export function encodeMaterials(
-  materials: Uint8Array
-): string {
-  return encodeBase64(materials);
-}
-
 export function decodeMaterials(
-  encoded: string
+  materials: Uint8Array
 ): Uint8Array | null {
-  const bytes = decodeBase64(encoded);
-
-  return bytes?.length === OVERVIEW_SAMPLE_COUNT ? bytes : null;
+  return materials.length === OVERVIEW_SAMPLE_COUNT ? materials.slice() : null;
 }
 
 export function encodeSplatTilePatch(
@@ -86,7 +59,7 @@ export function encodeSplatTilePatch(
 ): EncodedSplatTilePatch {
   return {
     ...encodeTileCoord(tile),
-    splat: encodeSplat(splat)
+    splat: encodeSplatBytes(splat)
   };
 }
 
@@ -94,7 +67,7 @@ export function decodeSplatTilePatch(
   encoded: EncodedSplatTilePatch
 ): SplatTilePatch | null {
   const tile = patchTileCoord(encoded);
-  const splat = decodeSplat(encoded.splat, SPLAT_TILE_TEXEL_COUNT);
+  const splat = decodeSplatBytes(encoded.splat, SPLAT_TILE_TEXEL_COUNT);
 
   return tile === null || splat === null ? null : { tile, splat };
 }

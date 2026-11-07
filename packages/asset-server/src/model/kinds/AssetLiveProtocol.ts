@@ -138,6 +138,12 @@ export interface AssetLiveProtocol<
    * @default false
    */
   readonly compressSnapshot?: boolean;
+  /**
+   * Deflates broadcast commands and catch-ups on sockets that negotiated
+   * compression, for kinds whose commands carry raw bytes such as heights.
+   * @default false
+   */
+  readonly compressCommands?: boolean;
 
   snapshot(): unknown;
 

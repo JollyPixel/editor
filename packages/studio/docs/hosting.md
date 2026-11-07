@@ -27,6 +27,7 @@ To run it outside the workspace, `pnpm --filter @jolly-pixel/studio deploy --pro
 - `JOLLY_MASTER_PASSWORD`: see [Accounts](./accounts.md#master-password).
 - `JOLLY_ALLOWED_HOSTS`: the public hostnames, comma-separated. A WebSocket upgrade for any other `Host` is refused, except localhost and IP addresses.
 - `JOLLY_TRUST_PROXY`: `true`, or the proxy's addresses and CIDR ranges, comma-separated. The API then takes the client address from `X-Forwarded-For` and `https` from `X-Forwarded-Proto`. Without it, every user shares the proxy's rate limit and the session cookie is never `Secure`.
+- `JOLLY_SOCKET_COMPRESSION`: `false` to send socket messages uncompressed. Deflate is on by default: it saves time below about 20 Mbit/s and costs about 300 ms per model open above it.
 
 The builds write a `.br` and a `.gz` copy next to every JavaScript, CSS, HTML, SVG, JSON and WebAssembly file of 1 KB or more, and the server sends the one the client accepts. The proxy does not need to compress these files again.
 

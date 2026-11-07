@@ -45,6 +45,7 @@ export interface ServeBackendOptions extends Pick<
    */
   accessRequests?: boolean;
   throttle?: NonNullable<StudioBackendOptions["accounts"]>["throttle"];
+  compression?: boolean;
 }
 
 export async function serveBackend(
@@ -80,7 +81,9 @@ export async function serveBackend(
       response.end();
     });
   });
-  backend.attach(server);
+  backend.attach(server, {
+    compression: options.compression
+  });
   await new Promise<void>((resolve) => {
     server.listen(0, "127.0.0.1", resolve);
   });

@@ -7,7 +7,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ASSET_UPDATED } from "#src/index.ts";
+import { upcastLegacyIncrement } from "../helpers/kinds.ts";
 import { resumeRoom } from "../helpers/live/resumeRoom.ts";
+import { COUNTER_COMMAND } from "../helpers/rooms.ts";
 
 describe("AssetRoomExtension — resume", () => {
   test("answers with the commands after the resumed version and the previous ack", async() => {
@@ -56,6 +58,26 @@ describe("AssetRoomExtension — resume", () => {
         type: "catch-up",
         data: [{ action: "increment", seq: 1, clientId: "peer" }],
         version: 3
+      }
+    ]);
+  });
+
+  test("resends stored commands in their upcast form", async() => {
+    const { connect, record } = resumeRoom({}, upcastLegacyIncrement);
+    record({
+      eventType: COUNTER_COMMAND,
+      eventData: { action: "inc", seq: 1, clientId: "peer" },
+      actor: { type: "user", id: "a" }
+    });
+
+    const { received, connected } = connect("new", { clientId: "old", version: 0 });
+    await connected;
+
+    assert.deepEqual(received, [
+      {
+        type: "catch-up",
+        data: [{ action: "increment", seq: 1, clientId: "peer" }],
+        version: 1
       }
     ]);
   });

@@ -6,7 +6,7 @@ One change to a [pixel document](./PixelDocument.md): its pixels, UV regions, sa
 type PixelCommand = (
   | { action: "stroke"; metadata: { color: RGBA8; positions: Vec2[] } }
   | { action: "resized"; metadata: { size: Vec2 } }
-  | { action: "texture-replaced"; metadata: { size: Vec2; pixels: string } }
+  | { action: "texture-replaced"; metadata: { size: Vec2; pixels: Uint8Array } }
   | { action: "global-fill"; metadata: { fromColor: RGBA8; toColor: RGBA8 } }
   | { action: "select-edit"; metadata: { positions: Vec2[]; colors: RGBA8[] } }
   | { action: "palette-color-changed"; metadata: { index: number; color: RGBA8 } }
@@ -32,7 +32,7 @@ function uvNetId(command: UVNetCommand): string | null;
 
 `uvNetId` returns the id of the saved net a UV net command writes, or `null` for `uv-net-default-changed`, which writes the default.
 
-`texture-replaced` carries base64 RGBA8 bytes. Normal map commands are listed in [`NormalMapConfig`](./normal/NormalMapConfig.md#commands).
+`texture-replaced` carries RGBA8 bytes, so a socket sends it as a binary frame. Normal map commands are listed in [`NormalMapConfig`](./normal/NormalMapConfig.md#commands).
 
 ## PixelDocumentCommand
 
@@ -43,7 +43,7 @@ function toPixelCommand(command: PixelDocumentCommand): PixelCommand;
 function toPixelDocumentCommand(command: PixelCommand): PixelDocumentCommand;
 ```
 
-`PixelDocumentCommand` is the in-memory form: `texture-replaced` holds its bytes as a `Uint8ClampedArray`. Document changes, history steps and `PixelDocumentState.apply()` use it. The two functions convert between the forms; every other variant is returned as is.
+`PixelDocumentCommand` is the in-memory form: `texture-replaced` holds its bytes as a `Uint8ClampedArray`. Document changes, history steps and `PixelDocumentState.apply()` use it. The two functions convert between the forms and copy the bytes, so neither side aliases the other; every other variant is returned as is.
 
 ## Applying
 

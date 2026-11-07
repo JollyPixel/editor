@@ -30,6 +30,11 @@ export interface StudioServerOptions {
    * @default []
    */
   allowedHosts?: readonly string[];
+  /**
+   * Deflates socket messages over 1 KiB.
+   * @default false
+   */
+  socketCompression?: boolean;
 }
 
 export class StudioServer implements AsyncDisposable {
@@ -73,7 +78,8 @@ export class StudioServer implements AsyncDisposable {
       });
     });
     backend.attach(this.#http, {
-      allowedHosts: options.allowedHosts ?? []
+      allowedHosts: options.allowedHosts ?? [],
+      compression: options.socketCompression
     });
   }
 

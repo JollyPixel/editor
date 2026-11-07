@@ -10,8 +10,8 @@ import {
 
 // Import Internal Dependencies
 import {
-  decodeHeights,
-  encodeHeights
+  decodeHeightBytes,
+  encodeHeightBytes
 } from "#src/index.ts";
 
 describe("height codec", () => {
@@ -22,23 +22,22 @@ describe("height codec", () => {
     heights[2] = -0.1;
     heights[CHUNK_SAMPLE_COUNT - 1] = 1234.5678;
 
-    assert.deepEqual(decodeHeights(encodeHeights(heights)), heights);
+    assert.deepEqual(decodeHeightBytes(encodeHeightBytes(heights)), heights);
   });
 
   test("stores heights little-endian", () => {
     const heights = new Float32Array(CHUNK_SAMPLE_COUNT);
     heights[0] = 1;
-    const bytes = Uint8Array.from(atob(encodeHeights(heights)), (char) => char.charCodeAt(0));
+    const bytes = encodeHeightBytes(heights);
 
     assert.deepEqual([...bytes.subarray(0, 4)], [0x00, 0x00, 0x80, 0x3f]);
   });
 
-  test("refuses a payload of the wrong size, out of range or not base64", () => {
+  test("refuses a payload of the wrong size or out of range", () => {
     const outOfRange = new Float32Array(CHUNK_SAMPLE_COUNT);
     outOfRange[7] = HEIGHT_RANGE.max * 2;
 
-    assert.equal(decodeHeights(encodeHeights(new Float32Array(16))), null);
-    assert.equal(decodeHeights(encodeHeights(outOfRange)), null);
-    assert.equal(decodeHeights("%%%"), null);
+    assert.equal(decodeHeightBytes(encodeHeightBytes(new Float32Array(16))), null);
+    assert.equal(decodeHeightBytes(encodeHeightBytes(outOfRange)), null);
   });
 });

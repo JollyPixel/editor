@@ -11,7 +11,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  encodeHeights,
+  encodeHeightBytes,
   encodeTilePatch,
   terrainAssetKind,
   terrainSnapshot
@@ -39,7 +39,7 @@ function refineCommand(
     x: kChunk.x,
     z: kChunk.z,
     tier: 2 as const,
-    heights: encodeHeights(resampleHeights(terrain, kChunk, 2))
+    heights: encodeHeightBytes(resampleHeights(terrain, kChunk, 2))
   };
 }
 

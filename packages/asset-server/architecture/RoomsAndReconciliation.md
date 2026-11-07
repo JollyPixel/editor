@@ -51,6 +51,8 @@ room version, and `snapshot()` otherwise. With `compressSnapshot`, the room
 asks the socket to compress the `snapshot()` form, for kinds whose raw bytes
 shrink such as glTF or RGBA pixels; the encoded form is sent as it is.
 `binaryCommands(eventType, { compress: true })` sets it for a binary kind.
+`compressCommands` does the same for broadcast commands and catch-ups, for
+kinds whose commands carry raw bytes such as heights or RGBA pixels.
 
 The room handles one command at a time. The next command is arbitrated only
 after the previous append settled, so arbitration always runs against a state

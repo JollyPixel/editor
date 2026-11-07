@@ -16,7 +16,8 @@ import { E2E_BACKEND_OPTIONS } from "../vite/e2eBackend.ts";
 const { values: args } = parseArgs({
   options: {
     port: { type: "string", default: String(PORTS.studio) },
-    shell: { type: "string", default: path.join(STUDIO_ROOT, "dist") }
+    shell: { type: "string", default: path.join(STUDIO_ROOT, "dist") },
+    compression: { type: "boolean", default: false }
   }
 });
 
@@ -27,6 +28,7 @@ const project = await StudioProject.open(
 const server = await StudioServer.open({
   project,
   shell: path.resolve(args.shell),
+  socketCompression: args.compression,
   backend: {
     inMemory: true,
     ...E2E_BACKEND_OPTIONS

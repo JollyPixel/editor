@@ -13,7 +13,7 @@ import {
 } from "../../server/StudioServerSettings.ts";
 
 describe("StudioServerSettings", () => {
-  test("defaults to a loopback server that trusts no proxy", () => {
+  test("defaults to a loopback server that trusts no proxy and compresses its sockets", () => {
     const settings = StudioServerSettings.parse({
       PORT: "",
       JOLLY_TRUST_PROXY: " "
@@ -23,6 +23,15 @@ describe("StudioServerSettings", () => {
     assert.equal(settings.host, DEFAULT_HOST);
     assert.deepEqual(settings.allowedHosts, []);
     assert.equal(settings.trustProxy, false);
+    assert.equal(settings.socketCompression, true);
+  });
+
+  test("turns socket compression off with JOLLY_SOCKET_COMPRESSION=false", () => {
+    const settings = StudioServerSettings.parse({
+      JOLLY_SOCKET_COMPRESSION: "false"
+    });
+
+    assert.equal(settings.socketCompression, false);
   });
 
   test("reads the port, the host and the allowed hosts", () => {

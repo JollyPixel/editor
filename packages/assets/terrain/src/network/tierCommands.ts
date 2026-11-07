@@ -9,8 +9,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import { encodeHeights } from "./heights.ts";
-import { encodeHoles } from "./holes.ts";
+import { encodeHeightBytes } from "./heights.ts";
 import type { TerrainCommand } from "./types.ts";
 
 export type TierChangedCommand = Extract<TerrainCommand, { action: "tier-changed"; }>;
@@ -23,8 +22,8 @@ export function currentTier(
     x: chunk.coord.x,
     z: chunk.coord.z,
     tier: chunk.tier,
-    heights: encodeHeights(chunk.copyHeights()),
-    ...(chunk.holes.empty ? {} : { holes: encodeHoles(chunk.holes.copy()) })
+    heights: encodeHeightBytes(chunk.copyHeights()),
+    ...(chunk.holes.empty ? {} : { holes: chunk.holes.copy() })
   };
 }
 
@@ -45,7 +44,7 @@ export function resampledTier(
     x: coord.x,
     z: coord.z,
     tier,
-    heights: encodeHeights(resampleHeights(terrain, coord, tier)),
-    ...(holes.some((byte) => byte !== 0) ? { holes: encodeHoles(holes) } : {})
+    heights: encodeHeightBytes(resampleHeights(terrain, coord, tier)),
+    ...(holes.some((byte) => byte !== 0) ? { holes } : {})
   };
 }

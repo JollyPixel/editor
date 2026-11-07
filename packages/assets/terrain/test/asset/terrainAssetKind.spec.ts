@@ -12,13 +12,16 @@ import {
   holeBytes,
   OVERVIEW_SAMPLE_COUNT
 } from "@jolly-pixel/terrain.renderer";
+import {
+  decodeBase64,
+  encodeBase64
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
-  encodeHeights,
-  encodeHoles,
+  encodeHeightBytes,
   TERRAIN_FILE,
-  decodeHeights,
+  decodeHeightBytes,
   decodeMaterials,
   GROUND_MATERIAL,
   MAX_TERRAIN_CHUNKS,
@@ -109,8 +112,8 @@ describe("terrain asset kind", () => {
       chunks.map(({ x, z, overview, materials }) => [
         x,
         z,
-        [...decodeHeights(overview!, OVERVIEW_SAMPLE_COUNT)!],
-        [...decodeMaterials(materials!)!]
+        [...decodeHeightBytes(decodeBase64(overview!)!, OVERVIEW_SAMPLE_COUNT)!],
+        [...decodeMaterials(decodeBase64(materials!)!)!]
       ]),
       [[0, 0, [0, 0, 0, 0], [0, 0, 0, 0]], [1, 0, [12.5, 12.5, 12.5, 12.5], [0, 7, 0, 0]]]
     );
@@ -123,13 +126,13 @@ describe("terrain asset kind", () => {
     const content = TERRAIN_FILE.encode({
       version: TERRAIN_FILE_VERSION,
       chunks: [
-        { x: 0, z: 0, heights: heights(3) },
+        { x: 0, z: 0, heights: encodeBase64(heights(3)) },
         {
           x: 1,
           z: 0,
           tier: 2,
-          heights: encodeHeights(new Float32Array(chunkSampleCount(2)).fill(5)),
-          holes: encodeHoles(holes)
+          heights: encodeBase64(encodeHeightBytes(new Float32Array(chunkSampleCount(2)).fill(5))),
+          holes: encodeBase64(holes)
         }
       ]
     });
@@ -156,15 +159,17 @@ describe("terrain asset kind", () => {
     );
   });
 
-  test("load rejects a document with invalid heights", () => {
-    const handler = terrainAssetKind();
-    const content = TERRAIN_FILE.encode({
-      version: TERRAIN_FILE_VERSION,
-      chunks: [{ x: 0, z: 0, heights: "AAAA" }]
-    });
+  for (const [invalid, heights] of [["heights", "AAAA"], ["base64", "%%%%"]]) {
+    test(`load rejects a document with invalid ${invalid}`, () => {
+      const handler = terrainAssetKind();
+      const content = TERRAIN_FILE.encode({
+        version: TERRAIN_FILE_VERSION,
+        chunks: [{ x: 0, z: 0, heights }]
+      });
 
-    assert.throws(() => handler.load(handler.create("asset"), content), InvalidAssetFileError);
-  });
+      assert.throws(() => handler.load(handler.create("asset"), content), InvalidAssetFileError);
+    });
+  }
 
   test("load rejects a document listing a chunk twice and keeps the terrain", () => {
     const handler = terrainAssetKind();
@@ -233,11 +238,11 @@ describe("terrain asset kind", () => {
       await room.connect("A");
       room.take("A");
       function flat(tile: number) {
-        return { x: 0, z: 0, tile, heights: encodeHeights(tileHeights(4)) };
+        return { x: 0, z: 0, tile, heights: encodeHeightBytes(tileHeights(4)) };
       }
       const invalid = [
         { ...flat(1), x: 5 },
-        { ...flat(1), heights: encodeHeights(tileHeights(5000)) },
+        { ...flat(1), heights: encodeHeightBytes(tileHeights(5000)) },
         { ...flat(1), heights: heights(4) }
       ];
       for (const [index, tile] of invalid.entries()) {
@@ -262,7 +267,7 @@ describe("terrain asset kind", () => {
 
   test("a height patch naming a tile twice is refused whole", async() => {
     const room = liveRoom();
-    const tile = { x: 0, z: 0, tile: 0, heights: encodeHeights(tileHeights(4)) };
+    const tile = { x: 0, z: 0, tile: 0, heights: encodeHeightBytes(tileHeights(4)) };
     await room.receive("A", networkCommand({ action: "heights-patched", tiles: [tile, tile] }));
 
     assert.deepEqual(room.state.terrain.chunk(new ChunkCoord(0, 0))!.tileHeights(0, 0), tileHeights(0));

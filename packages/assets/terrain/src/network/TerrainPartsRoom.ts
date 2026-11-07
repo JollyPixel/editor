@@ -16,7 +16,6 @@ import {
   type AssetRoomPartsMessage
 } from "@jolly-pixel/asset-server/client";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
-import { encodeBase64 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -43,7 +42,7 @@ type SnapshotMessage = Extract<TerrainServerMessage, { type: "snapshot"; }>;
 interface PendingSnapshot {
   readonly message: SnapshotMessage;
   readonly manifest: TerrainManifest;
-  readonly heights: Map<string, string>;
+  readonly heights: Map<string, Uint8Array>;
   readonly waiting: Set<string>;
   readonly held: (TerrainServerMessage | AssetRoomPartsMessage)[];
 }
@@ -255,7 +254,7 @@ export class TerrainPartsRoom implements Room<
     message: SnapshotMessage
   ): void {
     const manifest = message.data as TerrainManifest;
-    const heights = new Map<string, string>();
+    const heights = new Map<string, Uint8Array>();
     const waiting = new Set<string>();
     for (const chunk of manifest.chunks) {
       const coord = new ChunkCoord(chunk.x, chunk.z);
@@ -293,7 +292,7 @@ export class TerrainPartsRoom implements Room<
         late[partId] = heights;
       }
       else if (heights instanceof Uint8Array) {
-        pending.heights.set(partId, encodeBase64(heights));
+        pending.heights.set(partId, heights);
       }
     }
     if (Object.keys(late).length > 0) {

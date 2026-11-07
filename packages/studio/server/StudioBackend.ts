@@ -98,6 +98,12 @@ export interface StudioBackendAttachOptions {
    * @default []
    */
   allowedHosts?: readonly string[] | true;
+  /**
+   * Deflates socket messages over 1 KiB. It pays on slow links and costs
+   * time on loopback.
+   * @default false
+   */
+  compression?: boolean;
 }
 
 export class StudioBackend implements AsyncDisposable {
@@ -223,7 +229,9 @@ export class StudioBackend implements AsyncDisposable {
       path: DEFAULT_WEBSOCKET_PATH,
       httpServer,
       server: this.#assetServer.network,
-      compression: kSocketCompression,
+      compression: options.compression === true ?
+        kSocketCompression :
+        undefined,
       maxPayload: MAX_CATALOG_MESSAGE_BYTES,
       maxBufferedBytes: kMaxBufferedBytes,
       allowedHosts: options.allowedHosts

@@ -89,6 +89,36 @@ for (const backend of backends) {
       });
     });
 
+    test("serves Uint8Array eventData back as bytes", async() => {
+      await using store = await backend.create();
+      const pixels = new Uint8Array([0, 1, 254, 255]);
+
+      await append(store, "a1", {
+        pixels,
+        tiles: [{ heights: pixels.subarray(1, 3) }]
+      });
+      const [read] = await store.reader.list("a1");
+
+      assert.deepEqual(read.eventData, {
+        pixels,
+        tiles: [{ heights: new Uint8Array([1, 254]) }]
+      });
+    });
+
+    test("rejects eventData holding the reserved $bytes key", async() => {
+      await using store = await backend.create();
+
+      const result = await store.writer.append({
+        assetType: "texture",
+        assetId: "a1",
+        eventType: "pixel-set",
+        eventData: { nested: { $bytes: "AAEC" } },
+        actor: USER_ACTOR
+      });
+
+      assert.strictEqual(result.ok, false);
+    });
+
     test("rejects eventData JSON cannot represent", async() => {
       await using store = await backend.create();
 

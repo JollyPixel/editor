@@ -17,6 +17,7 @@ export * from "./arbiter/PixelCommandRules.ts";
 export * from "./protocol/PixelCommandKeys.ts";
 export * from "./arbiter/PixelCorrection.ts";
 export * from "./protocol/PixelWireCodec.ts";
+export * from "./protocol/upcastPixelCommand.ts";
 export {
   encodePixelSnapshot,
   pixelWireSnapshot

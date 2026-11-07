@@ -7,7 +7,6 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
-import { decodePixelBytes } from "#src/serialization/pixelBytes.ts";
 import {
   createDocument,
   pixelAt
@@ -138,7 +137,7 @@ describe("PixelDocument history", () => {
     const last = events.at(-1);
     assert.equal(last?.action, "texture-replaced");
     if (last?.action === "texture-replaced") {
-      assert.deepEqual(decodePixelBytes(last.metadata.pixels), grown);
+      assert.deepEqual(new Uint8ClampedArray(last.metadata.pixels), grown);
     }
   });
 

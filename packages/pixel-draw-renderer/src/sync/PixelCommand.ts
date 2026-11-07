@@ -3,10 +3,6 @@ import { equalRGBA8 } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import { groupPositionsByColor } from "../buffer/colorGroups.ts";
-import {
-  decodePixelBytes,
-  encodePixelBytes
-} from "../serialization/pixelBytes.ts";
 import type {
   RGBA8,
   SelectionRect,
@@ -164,7 +160,7 @@ export type UVNetCommand =
 
 export type PixelDocumentCommand = CommandOf<Uint8ClampedArray>;
 
-export type PixelCommand = CommandOf<string>;
+export type PixelCommand = CommandOf<Uint8Array>;
 
 export type PixelCommandAction = PixelDocumentCommand["action"];
 
@@ -176,7 +172,7 @@ export function toPixelCommand(
       action: "texture-replaced",
       metadata: {
         size: command.metadata.size,
-        pixels: encodePixelBytes(command.metadata.pixels)
+        pixels: new Uint8Array(command.metadata.pixels)
       }
     } :
     command;
@@ -193,7 +189,7 @@ export function toPixelDocumentCommand(
     action: "texture-replaced",
     metadata: {
       size: command.metadata.size,
-      pixels: decodePixelBytes(command.metadata.pixels)
+      pixels: new Uint8ClampedArray(command.metadata.pixels)
     }
   };
 }

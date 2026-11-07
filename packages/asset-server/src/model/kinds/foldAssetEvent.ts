@@ -5,6 +5,7 @@ import { MessageParser } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import type {
   AnyAssetKindHandler,
+  AssetCommands,
   AssetKindHandler
 } from "./AssetKindHandler.ts";
 import type { AssetCommandHeader } from "./AssetLiveProtocol.ts";
@@ -50,7 +51,7 @@ export function foldAssetEvent<
   }
 
   const command = MessageParser.fromProtocol<TCommand>(commands.protocol)
-    .parse(event.eventData);
+    .parse(storedCommand(commands, event));
   if (!command.ok) {
     return null;
   }
@@ -58,6 +59,15 @@ export function foldAssetEvent<
   commands.apply(state, command.val.message);
 
   return command.val.message;
+}
+
+export function storedCommand(
+  commands: Pick<AssetCommands, "upcast">,
+  event: EventStore.Event
+): unknown {
+  return commands.upcast === undefined ?
+    event.eventData :
+    commands.upcast(event.eventData);
 }
 
 export function heldPartRefs(

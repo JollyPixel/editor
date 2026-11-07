@@ -7,7 +7,6 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  encodePixelBytes,
   PixelBuffer,
   PixelDocument,
   PixelDocumentState,
@@ -71,7 +70,7 @@ describe("applyPixelCommand", () => {
 
     applyPixelCommand(state, command("texture-replaced", {
       size: { x: 2, y: 2 },
-      pixels: encodePixelBytes(pixels)
+      pixels
     }));
 
     assert.deepStrictEqual(state.buffer.size(), { x: 2, y: 2 });

@@ -21,6 +21,7 @@ import {
   toActor,
   isStateNeutral
 } from "../model/events/AssetEvents.ts";
+import { storedCommand } from "../model/kinds/foldAssetEvent.ts";
 import type { RecordedCommand } from "./AssetStateStore.ts";
 import { assetRoomResumeSchema } from "./AssetRoomExtension.schema.ts";
 import { AssetRoomProtocols } from "./AssetRoomProtocols.ts";
@@ -136,7 +137,8 @@ export class AssetRoomExtension<
         live: protocol.parts,
         members: this.#members,
         version: this.#version,
-        partsOnJoin: options.partsOnJoin ?? []
+        partsOnJoin: options.partsOnJoin ?? [],
+        commandSendOptions: commandSendOptions(protocol)
       });
     this.#commands = commands;
     this.#protocol = protocol;
@@ -386,7 +388,7 @@ export class AssetRoomExtension<
       data: caughtUp.commands,
       version: caughtUp.version,
       ...acks
-    } satisfies AssetSyncMessage);
+    } satisfies AssetSyncMessage, this.#commandSendOptions);
   }
 
   async #catchUp(
@@ -412,7 +414,7 @@ export class AssetRoomExtension<
       }
 
       if (event.eventType === this.#commands.eventType) {
-        commands.push(event.eventData);
+        commands.push(storedCommand(this.#commands, event));
       }
       else if (!isStateNeutral(event)) {
         return null;
@@ -482,7 +484,7 @@ export class AssetRoomExtension<
   ): void {
     const message = this.#toBroadcast(command, version);
     if (this.#parts === null || message.type !== "command") {
-      room.broadcast(message);
+      room.broadcast(message, this.#commandSendOptions);
 
       return;
     }
@@ -494,6 +496,10 @@ export class AssetRoomExtension<
       message,
       version
     );
+  }
+
+  get #commandSendOptions(): network.SendOptions {
+    return commandSendOptions(this.#protocol);
   }
 
   #toBroadcast(
@@ -516,4 +522,12 @@ export class AssetRoomExtension<
         ...this.#acks.ofEveryone()
       };
   }
+}
+
+function commandSendOptions(
+  protocol: Pick<AssetLiveProtocol, "compressCommands">
+): network.SendOptions {
+  return {
+    compress: protocol.compressCommands === true
+  };
 }

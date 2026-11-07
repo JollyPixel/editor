@@ -13,10 +13,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import {
-  encodeHeights,
-  encodeHoles
-} from "#src/index.ts";
+import { encodeHeightBytes } from "#src/index.ts";
 import {
   chunksInRect,
   readHeightGrid
@@ -78,7 +75,7 @@ describe("terrain heightmap import", () => {
         z: 0,
         tier: 1,
         heights: heights(kFar.x),
-        holes: encodeHoles(holes)
+        holes
       },
       { clientId: "X" }
     ));
@@ -108,7 +105,7 @@ describe("terrain heightmap import", () => {
   test("undoing a tier change on a loaded chunk restores the chunks imported beside it", async(t) => {
     const { server, route, document, history, read } = await stripPeers(t);
     const beside = new ChunkCoord(2, 0);
-    const refined = encodeHeights(new Float32Array(chunkSampleCount(2)).fill(2));
+    const refined = encodeHeightBytes(new Float32Array(chunkSampleCount(2)).fill(2));
     await server.receive("X", networkCommand(
       { action: "tier-changed", x: beside.x, z: 0, tier: 2, heights: refined },
       { clientId: "X" }

@@ -32,6 +32,11 @@ The backend starts from the newest checkpoint for each asset. A rename is
 folded after its preceding checkpoint. A tag keeps its
 checkpoint through compaction, so a stream can have gaps below its head.
 
+A stored command is read back in the form it was written. When a kind changes
+the shape of a command, its `commands.upcast` rewrites older stored commands
+before replay folds them and before a resume resends them, so `protocol` only
+accepts the current form.
+
 ## From edit to file
 
 ```mermaid

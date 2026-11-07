@@ -45,7 +45,7 @@ $ pnpm exec vite build --sourcemap
 $ node perf/serveBuild.ts
 ```
 
-Do not measure against `dev:e2e`: it serves every editor page from source through Vite, so a scene open makes about 250 requests for unbundled modules (24 MB decoded) instead of 75 to 82. `serveBuild.ts` takes `--port` and `--shell` (another built `dist`), to serve a second variant next to the first.
+Do not measure against `dev:e2e`: it serves every editor page from source through Vite, so a scene open makes about 250 requests for unbundled modules (24 MB decoded) instead of 75 to 82. `serveBuild.ts` takes `--port` and `--shell` (another built `dist`), to serve a second variant next to the first. It leaves socket compression off, as the dev server does; `--compression` turns it on, as the hosted studio has it.
 
 In a second terminal:
 
@@ -107,10 +107,10 @@ $ pnpm exec vite build --sourcemap
 $ node perf/serveBuild.ts
 ```
 
-A server-side change can read an environment variable instead, with a second server on another port and a variant whose `base` points at it:
+A server-side change can read a flag or an environment variable instead, with a second server on another port and a variant whose `base` points at it. Socket compression already has one:
 
 ```bash
-$ BENCH_NO_SOCKET_COMPRESSION=1 node perf/serveBuild.ts --port 3014
+$ node perf/serveBuild.ts --port 3014 --compression
 ```
 
 To compare two commits, build the other commit's shell in a worktree and serve it with `--shell`. On Windows keep the worktree path short, as deep scratch paths exceed `MAX_PATH` during the build.
@@ -128,6 +128,8 @@ $ node perf/throttleProxy.ts --listen 3024 --target 3004
 ```
 
 Unlike `--network`, it treats compressed and uncompressed frames alike. It throttles from the first request, so `first` and `cold` include the shell and editor downloads; read `reopen` and `reload` for room timings.
+
+Seed each server before a throttled run, by one round of an unthrottled variant against it: the first model or sound open on a server uploads its asset, and through the proxy that upload alone can exceed the harness's 30 s timeout.
 
 ## Finding where the time goes
 

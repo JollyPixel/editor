@@ -5,10 +5,6 @@ import {
   tierOfHoleBytes,
   type TileCoord
 } from "@jolly-pixel/terrain.renderer";
-import {
-  decodeBase64,
-  encodeBase64
-} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -25,19 +21,11 @@ export interface HoleTilePatch {
   readonly holes: Uint8Array;
 }
 
-export function encodeHoles(
-  holes: Uint8Array
-): string {
-  return encodeBase64(holes);
-}
-
 export function decodeHoles(
-  encoded: string,
+  holes: Uint8Array,
   bytes: number = HOLE_BYTES
 ): Uint8Array | null {
-  const holes = decodeBase64(encoded);
-
-  return holes?.length === bytes ? holes : null;
+  return holes.length === bytes ? holes.slice() : null;
 }
 
 export function decodeChunkHoleBytes(
@@ -51,7 +39,7 @@ export function encodeHoleTilePatch(
 ): EncodedHoleTilePatch {
   return {
     ...encodeTileCoord(tile),
-    holes: encodeHoles(holes)
+    holes: holes.slice()
   };
 }
 

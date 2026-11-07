@@ -58,7 +58,7 @@ export function packed(
 export function wholeCanvasCommands(): PixelNetworkCommand[] {
   return [
     command("resized", { size: { x: 1, y: 1 } }),
-    command("texture-replaced", { size: { x: 1, y: 1 }, pixels: "" }),
+    command("texture-replaced", { size: { x: 1, y: 1 }, pixels: new Uint8Array() }),
     command("global-fill", { fromColor: gray(0), toColor: gray(1) })
   ];
 }

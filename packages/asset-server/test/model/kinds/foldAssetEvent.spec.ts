@@ -9,7 +9,8 @@ import assert from "node:assert/strict";
 import { foldAssetEvent } from "#src/index.ts";
 import {
   COUNTER_INCREMENTED,
-  counterHandler
+  counterHandler,
+  upcastLegacyIncrement
 } from "../../helpers/kinds.ts";
 import { assetEvent } from "../../helpers/events.ts";
 
@@ -44,5 +45,26 @@ describe("foldAssetEvent", () => {
     foldAssetEvent(handler, state, assetEvent(COUNTER_INCREMENTED, null));
 
     assert.strictEqual(state.value, 0);
+  });
+
+  test("upcasts a stored command before the protocol parses it", () => {
+    const counter = counterHandler();
+    const handler = {
+      ...counter,
+      commands: {
+        ...counter.commands!,
+        upcast: upcastLegacyIncrement
+      }
+    };
+    const state = handler.create("a1");
+
+    const folded = foldAssetEvent(
+      handler,
+      state,
+      assetEvent(COUNTER_INCREMENTED, { action: "inc" })
+    );
+
+    assert.deepEqual(folded, { action: "increment" });
+    assert.strictEqual(state.value, 1);
   });
 });

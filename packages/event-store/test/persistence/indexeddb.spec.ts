@@ -33,6 +33,20 @@ describe("IndexedDbEventStore — durability", () => {
     );
   });
 
+  test("a reopened store serves Uint8Array eventData back as bytes", async() => {
+    const name = crypto.randomUUID();
+    const first = await open(name);
+    await append(first, "a1", { pixels: new Uint8Array([0, 1, 255]) });
+    await first.close();
+
+    await using second = await open(name);
+
+    assert.deepEqual(
+      (await second.reader.list("a1")).map((event) => event.eventData),
+      [{ pixels: new Uint8Array([0, 1, 255]) }]
+    );
+  });
+
   test("a reopened store keeps tags and continues ids and versions", async() => {
     const name = crypto.randomUUID();
     const first = await open(name);

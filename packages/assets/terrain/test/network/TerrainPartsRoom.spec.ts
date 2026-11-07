@@ -15,7 +15,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  encodeHeights,
+  encodeHeightBytes,
   encodeSplatBytes,
   encodeTilePatch,
   type TerrainNetworkCommand,
@@ -23,7 +23,7 @@ import {
 } from "#src/index.ts";
 import { terrainDocumentKind } from "#src/network/client.ts";
 import {
-  heightBytes,
+  heights,
   networkCommand,
   tileHeights
 } from "../helpers/terrain.ts";
@@ -48,7 +48,7 @@ function joinedPeer() {
 function manifest(
   version: number
 ): unknown {
-  const overview = encodeHeights(new Float32Array(OVERVIEW_SAMPLE_COUNT).fill(2));
+  const overview = encodeHeightBytes(new Float32Array(OVERVIEW_SAMPLE_COUNT).fill(2));
 
   return {
     type: "snapshot",
@@ -64,7 +64,7 @@ function parts(
   return {
     type: "parts",
     version,
-    parts: { "0_0": heightBytes(height) }
+    parts: { "0_0": heights(height) }
   };
 }
 
@@ -119,7 +119,7 @@ describe("TerrainPartsRoom", () => {
 
     deliver(manifest(3));
     document.stream.follow(kFar);
-    deliver({ type: "parts", version: 3, parts: { "20_0": heightBytes(6) } });
+    deliver({ type: "parts", version: 3, parts: { "20_0": heights(6) } });
     deliver(parts(3, 7));
 
     assert.equal(document.terrain.chunk(kFar)?.height(0, 0), 6);

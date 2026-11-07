@@ -61,7 +61,7 @@ export function parseChunkPart(
 }
 
 export function listedChunkPartIds(
-  { x, z, hasHoles }: ChunkEntry
+  { x, z, hasHoles }: Pick<ChunkEntry, "x" | "z" | "hasHoles">
 ): string[] {
   const coord = new ChunkCoord(x, z);
 

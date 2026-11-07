@@ -17,10 +17,13 @@ import {
   terrainFileSchema,
   TERRAIN_ASSET,
   TERRAIN_COMMAND,
-  TERRAIN_FILE_VERSION,
   TERRAIN_EXTENSION,
   TERRAIN_KIND
 } from "./terrain.ts";
+import {
+  terrainFile,
+  terrainFileManifest
+} from "./terrainFile.ts";
 import {
   encodeChunkPart,
   loadChunkPart
@@ -57,6 +60,7 @@ import {
   type TerrainLiveMessage
 } from "../network/TerrainLive.schema.ts";
 import { TerrainLiveRelay } from "../network/TerrainLiveRelay.ts";
+import { upcastTerrainCommand } from "../network/upcastTerrainCommand.ts";
 import type { TerrainNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
@@ -99,7 +103,10 @@ export function terrainAssetKind(
       state: TerrainModel,
       content: Uint8Array
     ): void {
-      TERRAIN_FILE.load(content, (file) => loadTerrainManifest(state, file));
+      TERRAIN_FILE.load(
+        content,
+        (file) => loadTerrainManifest(state, terrainFileManifest(file))
+      );
     },
 
     clear(
@@ -125,10 +132,7 @@ export function terrainAssetKind(
       state: TerrainModel
     ): Promise<Uint8Array> {
       return Promise.resolve(
-        TERRAIN_FILE.encode({
-          version: TERRAIN_FILE_VERSION,
-          ...terrainManifest(state)
-        })
+        TERRAIN_FILE.encode(terrainFile(terrainManifest(state)))
       );
     },
 
@@ -159,6 +163,7 @@ export function terrainAssetKind(
       eventType: TERRAIN_COMMAND,
       protocol: terrainCommandProtocol,
       relay: TERRAIN_RELAY_SCHEMAS,
+      upcast: upcastTerrainCommand,
 
       apply(state, command) {
         applyTerrainCommand(state, command);
@@ -174,6 +179,8 @@ export function terrainAssetKind(
 
         return {
           snapshotSchema: terrainManifestSchema,
+          compressSnapshot: true,
+          compressCommands: true,
           snapshot: () => terrainManifest(state),
           arbitrate: (command) => {
             const admissible = admissibleTiles(state.terrain, command);
