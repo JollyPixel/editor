@@ -669,6 +669,15 @@ importers:
         specifier: 6.2.2
         version: 6.2.2
 
+  packages/cdp:
+    dependencies:
+      '@jridgewell/trace-mapping':
+        specifier: 0.3.31
+        version: 0.3.31
+      '@playwright/test':
+        specifier: ^1.63.0
+        version: 1.64.1
+
   packages/color:
     devDependencies:
       '@jolly-pixel/bench':
@@ -1590,12 +1599,12 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      '@jolly-pixel/cdp':
+        specifier: workspace:*
+        version: link:../cdp
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../e2e
-      '@jridgewell/trace-mapping':
-        specifier: 0.3.31
-        version: 0.3.31
       cookie:
         specifier: 2.0.1
         version: 2.0.1

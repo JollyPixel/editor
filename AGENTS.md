@@ -44,10 +44,10 @@
   when present. Use the glossary's terms and update it when adding a domain
   concept.
 - These workspaces have an `AGENTS.md`; read it before changing them:
-  `packages/e2e`, `packages/pixel-draw-renderer`, `packages/studio`,
-  `packages/three`, `packages/ui`, `packages/voxel-renderer`,
-  `packages/editors/host`, `packages/editors/scene`,
-  `packages/editors/voxel-map`.
+  `packages/cdp`, `packages/e2e`, `packages/pixel-draw-renderer`,
+  `packages/studio`, `packages/three`, `packages/ui`,
+  `packages/voxel-renderer`, `packages/editors/host`,
+  `packages/editors/scene`, `packages/editors/voxel-map`.
 
 ## Windows
 

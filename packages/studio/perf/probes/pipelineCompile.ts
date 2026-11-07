@@ -2,8 +2,8 @@
 import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
-import { BenchBrowser } from "../harness/BenchBrowser.ts";
-import { STUDIO_URL } from "../harness/StudioPage.ts";
+import { BenchBrowser } from "../studio/BenchBrowser.ts";
+import { STUDIO_URL } from "../studio/StudioPage.ts";
 
 // CONSTANTS
 const kBlankUrl = new URL("main.css", STUDIO_URL).href;

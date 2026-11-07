@@ -1,0 +1,33 @@
+{
+  "name": "@jolly-pixel/cdp",
+  "description": "Chrome DevTools Protocol recording, page probes and profile analysis for JollyPixel perf harnesses",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/cdp"
+  },
+  "keywords": [],
+  "directories": {
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jridgewell/trace-mapping": "0.3.31"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}
