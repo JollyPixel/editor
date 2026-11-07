@@ -6,7 +6,6 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
 import { SoundDocument } from "@jolly-pixel/asset.sound/client";
 
 // Import Internal Dependencies
@@ -95,7 +94,7 @@ describe("SoundPlayer", () => {
       const player = new SoundPlayer(context.asAudioContext());
       const document = new SoundDocument();
       if (content !== null) {
-        document.load(encodeContent(content));
+        document.load(content);
       }
       await player.follow(document);
       player.play();
@@ -127,7 +126,7 @@ describe("SoundPlayer", () => {
       48_000
     );
     const reloaded = nextSound(player);
-    document.load(encodeContent(kOtherOggBytes));
+    document.load(kOtherOggBytes);
     await reloaded;
 
     assert.equal(player.playing, false);
@@ -144,7 +143,7 @@ describe("SoundPlayer", () => {
       decodes.push(resolve);
     });
     const reloaded = nextSound(player);
-    document.load(encodeContent(kOtherOggBytes));
+    document.load(kOtherOggBytes);
     player.play();
 
     assert.equal(player.status, "decoding");
@@ -165,11 +164,11 @@ describe("SoundPlayer", () => {
     });
     const player = new SoundPlayer(context.asAudioContext());
     const document = new SoundDocument();
-    document.load(encodeContent(kOggBytes));
+    document.load(kOggBytes);
 
     const followed = player.follow(document);
     const newest = nextSound(player);
-    document.load(encodeContent(kOtherOggBytes));
+    document.load(kOtherOggBytes);
     decodes[1](fakeBuffer([new Float32Array(4), new Float32Array(4)]));
     await newest;
     decodes[0](fakeBuffer([new Float32Array(4)]));

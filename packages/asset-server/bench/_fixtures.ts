@@ -13,6 +13,7 @@ import {
   commandVariant,
   withCommandHeader,
   type ClientConnection,
+  type Frame,
   type PeerIdentity,
   type ServerConnection
 } from "@jolly-pixel/network";
@@ -300,10 +301,10 @@ export class SinkHandle implements ClientConnection {
     this.id = id;
   }
 
-  sendSerialized(
-    json: string
+  sendFrame(
+    frame: Frame
   ): void {
-    this.bytes += json.length;
+    this.bytes += typeof frame === "string" ? frame.length : frame.byteLength;
     this.messages++;
   }
 

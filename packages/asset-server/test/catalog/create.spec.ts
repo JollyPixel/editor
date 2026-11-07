@@ -6,7 +6,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Server } from "@jolly-pixel/network";
+import {
+  decodeFrame,
+  encodeFrame,
+  Server
+} from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
@@ -17,7 +21,6 @@ import {
   CATALOG_ROOM,
   CatalogExtension,
   CatalogProjection,
-  encodeContent,
   TEXTURE_KIND,
   textureAssetKind,
   type AssetKindHandler
@@ -81,16 +84,14 @@ async function catalogServer(
       await connectionA.receive({
         room: CATALOG_ROOM,
         kind: "message",
-        payload: JSON.parse(JSON.stringify({
+        payload: decodeFrame(encodeFrame({
           type: CATALOG_CREATE,
           requestId: `r${++requests}`,
           path,
           kind: request.kind,
           from: request.from,
-          content: request.content === undefined ?
-            undefined :
-            encodeContent(request.content)
-        }))
+          content: request.content
+        })).unwrap()
       });
       const reply = author.received.at(-1) as {
         payload?: CreateReply;

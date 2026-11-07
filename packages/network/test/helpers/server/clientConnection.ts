@@ -6,6 +6,7 @@ import {
   Envelope,
   type ServerEnvelope
 } from "#src/protocol/envelope/Envelope.ts";
+import { decodeFrame } from "#src/protocol/frame/Frame.ts";
 
 export interface RecordingClient {
   client: ConnectedClient;
@@ -18,7 +19,7 @@ export function createConnection(
 ): ClientConnection {
   return {
     id,
-    sendSerialized: (json) => receive(JSON.parse(json)),
+    sendFrame: (frame) => receive(decodeFrame(frame).unwrap()),
     close: () => void 0
   };
 }

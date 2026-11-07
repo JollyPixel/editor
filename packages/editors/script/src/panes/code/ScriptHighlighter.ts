@@ -6,7 +6,7 @@ import {
   type HighlighterCore,
   type ThemedToken
 } from "@shikijs/core";
-import { createJavaScriptRegexEngine } from "@shikijs/engine-javascript";
+import { createJavaScriptRawEngine } from "@shikijs/engine-javascript/raw";
 
 // Import Internal Dependencies
 import {
@@ -22,16 +22,16 @@ const kTheme = createCssVariablesTheme({
 });
 
 const kGrammars = {
-  typescript: () => import("@shikijs/langs/typescript"),
-  javascript: () => import("@shikijs/langs/javascript"),
-  json: () => import("@shikijs/langs/json"),
-  jsonc: () => import("@shikijs/langs/jsonc"),
-  yaml: () => import("@shikijs/langs/yaml"),
-  toml: () => import("@shikijs/langs/toml"),
-  xml: () => import("@shikijs/langs/xml"),
-  html: () => import("@shikijs/langs/html"),
-  css: () => import("@shikijs/langs/css"),
-  markdown: () => import("@shikijs/langs/markdown")
+  typescript: () => import("@shikijs/langs-precompiled/typescript"),
+  javascript: () => import("@shikijs/langs-precompiled/javascript"),
+  json: () => import("@shikijs/langs-precompiled/json"),
+  jsonc: () => import("@shikijs/langs-precompiled/jsonc"),
+  yaml: () => import("@shikijs/langs-precompiled/yaml"),
+  toml: () => import("@shikijs/langs-precompiled/toml"),
+  xml: () => import("@shikijs/langs-precompiled/xml"),
+  html: () => import("@shikijs/langs-precompiled/html"),
+  css: () => import("@shikijs/langs-precompiled/css"),
+  markdown: () => import("@shikijs/langs-precompiled/markdown")
 };
 
 const kLanguages = new Map<string, ScriptLanguage>([
@@ -69,7 +69,7 @@ export class ScriptHighlighter {
     highlighter ??= createHighlighterCore({
       themes: [kTheme],
       langs: [],
-      engine: createJavaScriptRegexEngine()
+      engine: createJavaScriptRawEngine()
     });
     const core = await highlighter;
     if (!core.getLoadedLanguages().includes(language)) {

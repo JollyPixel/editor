@@ -189,11 +189,7 @@ describe("CatalogClient", () => {
       path: "textures/c.pixelart",
       kind: "pixelart",
       onConflict: "suffix",
-      content: {
-        type: "inline",
-        encoding: "base64",
-        data: btoa(String.fromCharCode(1, 2))
-      },
+      content: Uint8Array.of(1, 2),
       from: ".png"
     });
   });

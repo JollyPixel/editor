@@ -13,6 +13,7 @@ import {
   Envelope,
   type Envelope as AnyEnvelope
 } from "#src/protocol/envelope/Envelope.ts";
+import type { Frame } from "#src/protocol/frame/Frame.ts";
 import {
   clientEnvelope,
   serverEnvelope
@@ -42,8 +43,8 @@ const kEnvelopeKeys = [
 
 function serialize(
   envelope: AnyEnvelope
-): string {
-  const result = Envelope.stringify(envelope);
+): Frame {
+  const result = Envelope.encode(envelope);
   assert.ok(result.ok);
 
   return result.val;

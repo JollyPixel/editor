@@ -2,9 +2,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
-
 // Import Internal Dependencies
 import { TextureDocument } from "#src/features/materials/model/TextureDocument.ts";
 import { TextureLeases } from "#src/features/materials/model/TextureLeases.ts";
@@ -27,10 +24,10 @@ describe("TextureLeases", () => {
     const gpu = leases.hold("rock", () => heard.push("gpu"));
     const thumbnail = leases.hold("rock", () => heard.push("thumbnail"));
 
-    texture.load(encodeContent(new TextEncoder().encode("rock-v2")));
+    texture.load(new TextEncoder().encode("rock-v2"));
     thumbnail.release();
     thumbnail.release();
-    texture.load(encodeContent(new TextEncoder().encode("rock-v3")));
+    texture.load(new TextEncoder().encode("rock-v3"));
 
     assert.deepEqual(opened, ["rock"]);
     assert.deepEqual(heard, ["gpu", "thumbnail", "gpu"]);

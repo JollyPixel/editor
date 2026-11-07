@@ -6,7 +6,6 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
 import type {
   CatalogReplaceOptions,
   ReplaceReport
@@ -69,7 +68,7 @@ function soundFile(
 ): SoundFile {
   const document = new SoundDocument();
   if (bytes !== null) {
-    document.load(encodeContent(bytes));
+    document.load(bytes);
   }
 
   return new SoundFile({

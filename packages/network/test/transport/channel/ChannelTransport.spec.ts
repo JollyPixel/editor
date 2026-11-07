@@ -23,6 +23,7 @@ import {
   recordingPort
 } from "../../helpers/transport/channelRelay.ts";
 import { waitFor } from "../../helpers/waitFor.ts";
+import { assertBytesRoundTrip } from "../../helpers/transport/bytesRoundTrip.ts";
 
 describe("ChannelTransport + ChannelTransportHost", () => {
   test("relays a client session across a message port", async() => {
@@ -52,6 +53,16 @@ describe("ChannelTransport + ChannelTransportHost", () => {
 
     client.destroy();
     await waitFor(() => relay.extension.disconnected.length === 1);
+  });
+
+  test("relays bytes in both directions", async() => {
+    using relay = createRelay();
+    const client = new Client({
+      socket: () => relay.transport.connect()
+    });
+
+    await assertBytesRoundTrip(client, relay.extension);
+    client.destroy();
   });
 
   test("relays an unauthorized close to the client", async() => {

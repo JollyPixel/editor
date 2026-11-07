@@ -16,6 +16,7 @@ import {
   createRoom
 } from "../../helpers/server/serverRoom.ts";
 import { ConnectedClient } from "#src/server/connection/ConnectedClient.ts";
+import type { Frame } from "#src/protocol/frame/Frame.ts";
 import {
   RightsTable,
   Server
@@ -124,7 +125,7 @@ describe("ServerRoom — outbound protocol", () => {
 
   test("delivers a frozen payload sent again, gated per recipient", async() => {
     const extension = createExtension(syncProtocols);
-    const serialized: string[] = [];
+    const serialized: Frame[] = [];
     const blocked = createClient("B");
     const room = createRoom(extension, new RightsTable({
       allowed: {
@@ -139,7 +140,7 @@ describe("ServerRoom — outbound protocol", () => {
     await room.join({
       handle: new ConnectedClient({
         id: "A",
-        sendSerialized: (json) => serialized.push(json),
+        sendFrame: (frame) => serialized.push(frame),
         close: () => void 0
       }),
       identity: createIdentity("A", "allowed")

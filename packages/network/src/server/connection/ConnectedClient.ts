@@ -1,4 +1,8 @@
 // Import Internal Dependencies
+import {
+  encodeFrame,
+  type Frame
+} from "../../protocol/frame/Frame.ts";
 import type { ClientHandle } from "../extension/ClientHandle.ts";
 import type { ClientConnection } from "./ClientConnection.ts";
 
@@ -17,13 +21,13 @@ export class ConnectedClient implements ClientHandle {
   send(
     data: unknown
   ): void {
-    this.#connection.sendSerialized(JSON.stringify(data));
+    this.#connection.sendFrame(encodeFrame(data));
   }
 
-  sendSerialized(
-    json: string
+  sendFrame(
+    frame: Frame
   ): void {
-    this.#connection.sendSerialized(json);
+    this.#connection.sendFrame(frame);
   }
 
   close(

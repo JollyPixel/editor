@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  bytesSchema,
   dependentRequired,
   MessageProtocol,
   type MessageProtocols
@@ -30,10 +31,7 @@ import {
   CATALOG_TAGS_CHANGED,
   CATALOG_UNTAG
 } from "./client/protocol.ts";
-import {
-  assetInlineContentSchema,
-  assetReferenceSchema
-} from "../model/events/AssetEvents.schema.ts";
+import { assetReferenceSchema } from "../model/events/AssetEvents.schema.ts";
 import {
   ASSET_CREATED,
   ASSET_DELETED,
@@ -137,7 +135,7 @@ export const catalogCommandProtocol = new MessageProtocol(
         path: kString,
         kind: z.optional(kString),
         onConflict: z.optional(z.enum(PATH_CONFLICT_POLICIES)),
-        content: z.optional(assetInlineContentSchema),
+        content: z.optional(bytesSchema),
         from: z.optional(kString)
       }),
       { from: ["content"] }
@@ -163,10 +161,10 @@ export const catalogCommandProtocol = new MessageProtocol(
       root: z.optional(kString)
     }),
     requestVariant(CATALOG_PLAN, {
-      content: assetInlineContentSchema
+      content: bytesSchema
     }),
     requestVariant(CATALOG_IMPORT, {
-      content: assetInlineContentSchema,
+      content: bytesSchema,
       onConflict: z.enum(IMPORT_CONFLICT_POLICIES)
     }),
     requestVariant(CATALOG_TAGS, {
@@ -187,7 +185,7 @@ export const catalogCommandProtocol = new MessageProtocol(
     }),
     requestVariant(CATALOG_REPLACE, {
       assetId: kString,
-      content: assetInlineContentSchema,
+      content: bytesSchema,
       from: z.optional(kString)
     }),
     requestVariant(CATALOG_READ, {
@@ -239,7 +237,7 @@ export const catalogMessageProtocol = new MessageProtocol(
         path: kString
       }),
       appliedVariant(z.literal(CATALOG_EXPORT), {
-        content: assetInlineContentSchema
+        content: bytesSchema
       }),
       appliedVariant(z.literal(CATALOG_PLAN), {
         plan: importPlanSchema
@@ -267,7 +265,7 @@ export const catalogMessageProtocol = new MessageProtocol(
       }),
       appliedVariant(z.literal(CATALOG_READ), {
         assetId: kString,
-        content: assetInlineContentSchema
+        content: bytesSchema
       })
     ]),
     requestVariant(CATALOG_REJECTED, {

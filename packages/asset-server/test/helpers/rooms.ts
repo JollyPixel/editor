@@ -1,9 +1,10 @@
 // Import Third-party Dependencies
-import type {
-  ClientConnection,
-  ClientHandle,
-  RoomContext,
-  RoomPeer
+import {
+  decodeFrame,
+  type ClientConnection,
+  type ClientHandle,
+  type RoomContext,
+  type RoomPeer
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -42,7 +43,7 @@ export function recordingClient(
     id,
     received,
     send: (payload) => received.push(payload),
-    sendSerialized: (json) => received.push(JSON.parse(json)),
+    sendFrame: (frame) => received.push(decodeFrame(frame).unwrap()),
     close: () => void 0
   };
 }

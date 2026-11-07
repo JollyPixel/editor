@@ -4,9 +4,6 @@ export * from "./DependencyIndex.ts";
 export * from "./errors/CatalogRejectedError.ts";
 export * from "./errors/CatalogUnavailableError.ts";
 export type {
-  AssetInlineContent
-} from "../../model/events/AssetEvents.schema.ts";
-export type {
   PathConflictPolicy
 } from "../../model/PathConflictPolicy.ts";
 export type {

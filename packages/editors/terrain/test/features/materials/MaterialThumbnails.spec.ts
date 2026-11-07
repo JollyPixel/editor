@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import { setImmediate as settle } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
 import {
   GROUND_MATERIAL,
   TerrainDocument
@@ -18,7 +17,7 @@ import { TextureLeases } from "#src/features/materials/model/TextureLeases.ts";
 function content(
   text: string
 ) {
-  return encodeContent(new TextEncoder().encode(text));
+  return new TextEncoder().encode(text);
 }
 
 function thumbnailsSetup() {

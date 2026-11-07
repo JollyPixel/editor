@@ -7,6 +7,10 @@ import {
   Envelope,
   type ClientEnvelope
 } from "../protocol/envelope/Envelope.ts";
+import {
+  isBinaryFrame,
+  type Frame
+} from "../protocol/frame/Frame.ts";
 import { UNAUTHORIZED_CLOSE_CODE } from "../protocol/constants.ts";
 import { connectWebSocket } from "../transport/websocket/connectWebSocket.ts";
 import type {
@@ -70,7 +74,7 @@ export class Client extends Emitter<ClientEventMap> {
   #connect: () => ClientSocket;
   #socket!: ClientSocket;
   #state: ConnectionState = "connecting";
-  #queue: string[] = [];
+  #queue: Frame[] = [];
   #rooms = new Map<string, ClientRoom>();
   #delays: readonly number[] | null;
   #attempt = 0;
@@ -183,8 +187,8 @@ export class Client extends Emitter<ClientEventMap> {
         room.rejoin();
       }
     }
-    for (const raw of this.#queue) {
-      this.#socket.send(raw);
+    for (const frame of this.#queue) {
+      this.#socket.send(frame);
     }
     this.#queue = [];
     this.emit("ready");
@@ -271,29 +275,29 @@ export class Client extends Emitter<ClientEventMap> {
   #send(
     envelope: ClientEnvelope
   ): void {
-    Envelope.stringify(envelope)
+    Envelope.encode(envelope)
       .orTee((error) => this.#logger
-        .withMetadata({ envelope, error })
+        .withMetadata({ room: envelope.room, kind: envelope.kind, error })
         .error("failed to serialize outgoing envelope"))
-      .andTee((raw) => this.#dispatch(raw, envelope));
+      .andTee((frame) => this.#dispatch(frame, envelope));
   }
 
   #dispatch(
-    raw: string,
+    frame: Frame,
     envelope: ClientEnvelope
   ): void {
     if (this.#state === "open") {
-      this.#socket.send(raw);
+      this.#socket.send(frame);
     }
     else if (
       this.#state === "connecting" ||
       this.#state === "reconnecting"
     ) {
-      this.#queue.push(raw);
+      this.#queue.push(frame);
     }
     else if (this.#state !== "refused") {
       this.#logger
-        .withMetadata({ envelope })
+        .withMetadata({ room: envelope.room, kind: envelope.kind })
         .warn("dropped message on a closed socket");
     }
   }
@@ -304,7 +308,10 @@ export class Client extends Emitter<ClientEventMap> {
     const parsed = this.#parse(raw);
     if (!parsed.ok) {
       this.#logger
-        .withMetadata({ raw, error: describeEnvelopeParseError(parsed.val) })
+        .withMetadata({
+          raw: loggableFrame(raw),
+          error: describeEnvelopeParseError(parsed.val)
+        })
         .warn("dropped malformed envelope");
 
       return;
@@ -336,4 +343,12 @@ function reconnectDelays(
     option.delays ?? kReconnectDelays;
 
   return delays.length === 0 ? null : delays;
+}
+
+function loggableFrame(
+  raw: unknown
+): unknown {
+  return isBinaryFrame(raw) ?
+    `binary frame of ${raw.byteLength} bytes` :
+    raw;
 }

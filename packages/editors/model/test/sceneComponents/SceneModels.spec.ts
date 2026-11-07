@@ -3,7 +3,6 @@ import { describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
 import { ModelFileDocument } from "@jolly-pixel/asset.model/client";
 import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
 import type { Model } from "@jolly-pixel/engine";
@@ -21,7 +20,7 @@ const kReference = {
 
 function sceneModels() {
   const document = new ModelFileDocument();
-  document.load(encodeContent(cubeModelGlb()));
+  document.load(cubeModelGlb());
   const release = mock.fn();
   const session = {
     assets: {
@@ -95,7 +94,7 @@ describe("SceneModels", () => {
     assert.ok(first !== null);
     const firstDisposed = disposed(first);
 
-    document.load(encodeContent(cubeModelGlb()));
+    document.load(cubeModelGlb());
     const second = await nextLoad();
 
     assert.ok(second !== null);

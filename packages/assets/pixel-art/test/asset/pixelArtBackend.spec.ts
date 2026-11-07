@@ -12,6 +12,7 @@ import path from "node:path";
 import * as EventStore from "@jolly-pixel/event-store";
 import { FilesystemAssetSource } from "@jolly-pixel/asset-source/node";
 import {
+  decodeFrame,
   Server,
   type ClientConnection
 } from "@jolly-pixel/network";
@@ -64,7 +65,7 @@ function client(
   return {
     id,
     received,
-    sendSerialized: (json) => received.push(JSON.parse(json)),
+    sendFrame: (frame) => received.push(decodeFrame(frame).unwrap()),
     close: () => void 0
   };
 }

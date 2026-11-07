@@ -22,7 +22,9 @@ httpServer.listen(3000);
 
 `new WebsocketTransport({ httpServer, server, path, ...options })`.
 Options control hosts, origins, payload limits, heartbeat, and compression.
-It decodes the credential offered by
+Compression applies to text frames above its `threshold`; binary frames go out
+uncompressed unless `compression.binary` is `true`, since media such as PNG
+or Opus barely shrinks. It decodes the credential offered by
 [`connectWebSocket`](../client/connectWebSocket.md) into `request.credential`.
 
 Messages sent to one socket during an event loop turn leave in a single write

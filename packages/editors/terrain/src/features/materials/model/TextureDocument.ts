@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
 import {
-  decodeContent,
   TEXTURE_KIND,
-  type AssetInlineContent,
   type AssetRoomNotice
 } from "@jolly-pixel/asset-server";
 import { SnapshotDocument } from "@jolly-pixel/history";
@@ -12,11 +10,11 @@ import {
 } from "@jolly-pixel/network/client";
 
 export class TextureDocument extends SnapshotDocument<
-  AssetInlineContent,
+  Uint8Array,
   Uint8Array | null
 > {
   constructor() {
-    super(null, decodeContent);
+    super(null, (bytes) => bytes);
   }
 
   get bytes(): Uint8Array | null {

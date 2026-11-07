@@ -14,6 +14,7 @@ import * as z from "zod/mini";
 import * as browser from "#src/protocol/runtime/browser.ts";
 import * as node from "#src/protocol/runtime/node.ts";
 import {
+  bytesSchema,
   dependentRequired,
   describeErrors,
   minProperties,
@@ -56,7 +57,11 @@ const kSchemas = {
     }),
     [["src", "size"], ["asset"]]
   ),
-  notMultiple: notMultiple(z.int(), 2)
+  notMultiple: notMultiple(z.int(), 2),
+  bytes: z.object({
+    data: bytesSchema,
+    mask: z.optional(bytesSchema)
+  })
 };
 const kValues: unknown[] = [
   null,
@@ -91,7 +96,12 @@ const kValues: unknown[] = [
   { src: "a" },
   { src: "a", size: 1 },
   { asset: "a" },
-  { src: "a", asset: "b" }
+  { src: "a", asset: "b" },
+  { data: Uint8Array.of(1) },
+  { data: Uint8Array.of(), mask: Uint8Array.of(2) },
+  { data: "AQ==" },
+  { data: [1] },
+  { data: Uint8Array.of(1), mask: "Ag==" }
 ];
 
 describe("schema runtimes", () => {

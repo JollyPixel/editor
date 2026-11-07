@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
-
 // Import Internal Dependencies
 import { followingPlayer } from "../helpers/followingPlayer.ts";
 
@@ -85,7 +82,7 @@ describe("SoundPlayer cursor", () => {
         resolve();
       });
     });
-    document.load(encodeContent(kOtherOggBytes));
+    document.load(kOtherOggBytes);
     await reloaded;
 
     assert.equal(player.position, 0);

@@ -4,10 +4,23 @@ import { WebSocket } from "ws";
 // Import Internal Dependencies
 import type { Logger } from "../../server/logger.ts";
 import type { ClientConnection } from "../../server/connection/ClientConnection.ts";
+import type {
+  Frame,
+  ReceivedFrame
+} from "../../protocol/frame/Frame.ts";
 
 // CONSTANTS
 const kPauseAtPendingMessages = 64;
 const kResumeAtPendingMessages = 16;
+const kTextSendOptions: WebsocketSendOptions = {
+  binary: false,
+  compress: true
+};
+
+export interface WebsocketSendOptions {
+  binary: boolean;
+  compress: boolean;
+}
 
 export interface WebsocketConnectionSocket {
   readonly readyState: number;
@@ -15,7 +28,8 @@ export interface WebsocketConnectionSocket {
   readonly isPaused: boolean;
 
   send(
-    data: string
+    data: Frame,
+    options: WebsocketSendOptions
   ): void;
   ping(): void;
   pause(): void;
@@ -32,7 +46,8 @@ export interface WebsocketConnectionOptions {
   socket: WebsocketConnectionSocket;
   logger: Logger;
   maxBufferedBytes: number;
-  onMessage: (json: string) => Promise<void>;
+  compressBinary: boolean;
+  onMessage: (frame: ReceivedFrame) => Promise<void>;
   holdWrites: () => void;
 }
 
@@ -42,7 +57,8 @@ export class WebsocketConnection implements ClientConnection {
   #socket: WebsocketConnectionSocket;
   #logger: Logger;
   #maxBufferedBytes: number;
-  #onMessage: (json: string) => Promise<void>;
+  #binarySendOptions: WebsocketSendOptions;
+  #onMessage: (frame: ReceivedFrame) => Promise<void>;
   #holdWrites: () => void;
   #pending = 0;
   #awaitingPong = false;
@@ -54,12 +70,16 @@ export class WebsocketConnection implements ClientConnection {
     this.#socket = options.socket;
     this.#logger = options.logger;
     this.#maxBufferedBytes = options.maxBufferedBytes;
+    this.#binarySendOptions = {
+      binary: true,
+      compress: options.compressBinary
+    };
     this.#onMessage = options.onMessage;
     this.#holdWrites = options.holdWrites;
   }
 
-  sendSerialized(
-    json: string
+  sendFrame(
+    frame: Frame
   ): void {
     if (this.#socket.readyState !== WebSocket.OPEN) {
       return;
@@ -77,18 +97,21 @@ export class WebsocketConnection implements ClientConnection {
     }
 
     this.#holdWrites();
-    this.#socket.send(json);
+    this.#socket.send(
+      frame,
+      typeof frame === "string" ? kTextSendOptions : this.#binarySendOptions
+    );
   }
 
   receive(
-    json: string
+    frame: ReceivedFrame
   ): void {
     this.#pending++;
     if (this.#pending >= kPauseAtPendingMessages) {
       this.#socket.pause();
     }
 
-    void this.#onMessage(json).then(this.#settle, this.#settle);
+    void this.#onMessage(frame).then(this.#settle, this.#settle);
   }
 
   #settle = (): void => {

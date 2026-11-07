@@ -50,14 +50,15 @@ Resolves a trusted identity or `null`.
 ```ts
 interface ClientConnection {
   readonly id: string;
-  sendSerialized(json: string): void;
+  sendFrame(frame: Frame): void;
   close(code: number, reason: string): void;
 }
 ```
 
-The server serializes every message it sends, once per broadcast.
-Extension hooks receive the client as a `ClientHandle`, `{ id, send }`,
-whose `send` serializes its argument.
+The server encodes every message it sends once per broadcast, with
+[`encodeFrame`](../protocol/Messages.md#frames): a string, or a `Uint8Array`
+when the message holds bytes. Extension hooks receive the client as a
+`ClientHandle`, `{ id, send }`, whose `send` encodes its argument.
 
 Returns a session with `receive(raw)` and `close()`.
 Activity is ordered per connection and room.

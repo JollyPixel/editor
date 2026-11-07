@@ -1,8 +1,11 @@
+// Import Internal Dependencies
+import type { Frame } from "../../protocol/frame/Frame.ts";
+
 export interface ClientConnection {
   readonly id: string;
 
-  sendSerialized(
-    json: string
+  sendFrame(
+    frame: Frame
   ): void;
 
   close(

@@ -1,9 +1,17 @@
 // CONSTANTS
 const kBinaryChunkLength = 0x8000;
 const kBase64 = /^[A-Za-z0-9+/]*={0,2}$/;
+const kMaxPadding = 2;
+
+interface NativeBase64Options {
+  lastChunkHandling: "strict";
+}
 
 interface NativeBase64Decoder {
-  fromBase64?: (text: string) => Uint8Array<ArrayBuffer>;
+  fromBase64?: (
+    text: string,
+    options: NativeBase64Options
+  ) => Uint8Array<ArrayBuffer>;
 }
 
 interface NativeBase64Encoder {
@@ -46,13 +54,17 @@ export function encodeBase64Url(
 export function decodeBase64(
   text: string
 ): Uint8Array<ArrayBuffer> | null {
-  if (text.length % 4 !== 0 || !kBase64.test(text)) {
+  if (text.length % 4 !== 0) {
     return null;
   }
 
   const { fromBase64 } = Uint8Array as NativeBase64Decoder;
   if (typeof fromBase64 === "function") {
-    return fromBase64(text);
+    return decodeNative(text, fromBase64);
+  }
+
+  if (!kBase64.test(text)) {
+    return null;
   }
 
   if (typeof globalThis.Buffer === "function") {
@@ -68,4 +80,33 @@ export function decodeBase64(
     atob(text),
     (character) => character.charCodeAt(0)
   );
+}
+
+function decodeNative(
+  text: string,
+  fromBase64: NonNullable<NativeBase64Decoder["fromBase64"]>
+): Uint8Array<ArrayBuffer> | null {
+  let bytes: Uint8Array<ArrayBuffer>;
+  try {
+    bytes = fromBase64(text, { lastChunkHandling: "strict" });
+  }
+  catch {
+    return null;
+  }
+
+  return bytes.length === unpaddedLength(text) ? bytes : null;
+}
+
+function unpaddedLength(
+  text: string
+): number {
+  let padding = 0;
+  while (
+    padding < kMaxPadding &&
+    text[text.length - 1 - padding] === "="
+  ) {
+    padding++;
+  }
+
+  return (text.length / 4 * 3) - padding;
 }

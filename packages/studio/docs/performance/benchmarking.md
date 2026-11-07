@@ -32,7 +32,7 @@ Each phase changes which caches are warm:
 
 Server rooms stay open for `roomGraceMs` (5 min) after the last peer leaves, so only the first open after a server start replays a room. Restart the server to measure a cold room.
 
-The seed project has no scene and no sound. Before the first scene open, the harness creates `New scene.scene.json` from the New asset menu; before the first sound open, it drops `packages/editors/sound/assets/sounds/chime.ogg` on the Asset Browser. That path is gitignored: the sound dev server seeds a generated chime of about 1.6 s there, and a longer file put at the same path measures a longer decode. Online, the asset stays on the server for the next accounts; offline, every new context creates it again.
+The seed project has no scene, sound, model or script. Before the first scene or script open, the harness creates `New scene.scene.json` or `New script.ts` from the New asset menu; before the first model open, it drops `packages/runtime/examples/public/models/ToyCar.glb` (5.4 MB) on the Asset Browser; before the first sound open, it drops `packages/editors/sound/assets/sounds/chime.ogg` on the Asset Browser. That path is gitignored: the sound dev server seeds a generated chime of about 1.6 s there, and a longer file put at the same path measures a longer decode. Online, the asset stays on the server for the next accounts; offline, every new context creates it again.
 
 ## Running the matrix
 
@@ -58,7 +58,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 
 `perf:open` options:
 
-- `--editors voxel-map,voxel-model,pixel-art,scene,sound` and `--modes online,offline`: what to open. Online registers a new account per context; offline opens `/?offline`.
+- `--editors voxel-map,voxel-model,pixel-art,scene,sound,model,script` and `--modes online,offline`: what to open. Online registers a new account per context; offline opens `/?offline`.
 - `--phases reopen,reload,cold,restart`: the phases measured after `first`, which always runs.
 - `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor. A measurement's `run` is its repetition, and profile files end with it.
 - `--label`: tags every measurement, for summaries that mix files.
