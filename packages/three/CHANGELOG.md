@@ -1,5 +1,31 @@
 # @jolly-pixel/three
 
+## 6.0.0
+
+### Major Changes
+
+- [#1175](https://github.com/JollyPixel/editor/pull/1175) [`174d961`](https://github.com/JollyPixel/editor/commit/174d9612d9543c5c966a9e4e22783094f017bb83) Thanks [@fraxken](https://github.com/fraxken)! - Move `BakedRoomEnvironment` from `three` to the engine as `Systems.BakedRoomEnvironment`; the engine drops `picomatch`, `reflect-metadata` and `@jolly-pixel/three`, and a decorated `Behavior` subclass no longer adds its properties to its parent class.
+  Breaking: `getActors` and `Logger` patterns only support `*`, `?` and `**` (no braces, classes or extglobs, and `*` matches a leading dot).
+  Breaking: `three` no longer exports `BakedRoomEnvironment`, and `three` and `voxel.renderer` take `three` as a `^0.186.0` peer dependency.
+
+### Minor Changes
+
+- [#1140](https://github.com/JollyPixel/editor/pull/1140) [`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `bindOrbitFocus` to the engine (Escape leaves an `OrbitFlyCamera` pivot), and `COMPACT_GIZMO_APPEARANCE` and `createListedColorAllocator` to three. All three move out of the private editor host.
+
+- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files (`SceneFile`, `FileScene`, `SceneInstance`, scene transform helpers, `ComponentDefinitions`), `LightComponent`, `MeshRenderer`, `OrbitFlyCamera.frame()`, `Transform.visibleInHierarchy`, `inferScenePropertyType` and the `render` camera and `properties` behavior options to `engine`; `Actor.name` now follows `object3D.name`. Frames only visit actors with updating components and no longer allocate per actor or component; `sceneManager.actors.updating` lets a host sleep once nothing updates, and a component can start asleep with the `needUpdate` option.
+  Breaking: `Camera.configure()` replaces the camera setters, `sceneManager.actors` (`ActorRegistry`) replaces its actor and component scheduling methods, and `renderStrategy`, `markRenderOrderDirty()` and the `Behavior` property mirror (`getProperty`, `setProperty`, `mergeProperties`, `BehaviorProperties`) are removed.
+  Add `CameraGizmo` and `LightGizmo` to `three`, refusal messages to `history` and `reconcilePeerMarks` to `ui/network`.
+
+- [#1163](https://github.com/JollyPixel/editor/pull/1163) [`5f7d6ec`](https://github.com/JollyPixel/editor/commit/5f7d6ece37213086613de6e79259efff5a7a0718) Thanks [@fraxken](https://github.com/fraxken)! - Add the `doubleSided` option to `Grid`, so the grid stays visible from below.
+
+- [#1135](https://github.com/JollyPixel/editor/pull/1135) [`e6572be`](https://github.com/JollyPixel/editor/commit/e6572beab0d4d5ab208f9f900ccdb0acdee355dc) Thanks [@fraxken](https://github.com/fraxken)! - Add `snap.grid` to `TransformControls`: the grid line offset that makes the translate step round the world position along the gizmo axes, instead of the travelled distance.
+
+### Patch Changes
+
+- [#1184](https://github.com/JollyPixel/editor/pull/1184) [`83370eb`](https://github.com/JollyPixel/editor/commit/83370ebf0f4c9b62195dc895c0759ba469406ace) Thanks [@fraxken](https://github.com/fraxken)! - Silhouette highlights keep one `position` + `color` vertex layout, so a mesh that switches between a box and any other geometry no longer breaks WebGPU rendering.
+- Updated dependencies [[`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64), [`a89aeb7`](https://github.com/JollyPixel/editor/commit/a89aeb73fa118659494d3d9410dd9135fc39b551)]:
+  - @jolly-pixel/network@7.0.0
+
 ## 5.0.0
 
 ### Major Changes

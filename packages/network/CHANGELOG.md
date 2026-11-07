@@ -1,5 +1,24 @@
 # @jolly-pixel/network
 
+## 7.0.0
+
+### Major Changes
+
+- [#1101](https://github.com/JollyPixel/editor/pull/1101) [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64) Thanks [@fraxken](https://github.com/fraxken)! - Rename `KeyedSnapshot` to `KeyedCapture`, stop exporting `KeyedReads`, and rename `CommandDocument.apply` (and `SyncableDocument.apply`) to `applyRemote`.
+  `CommandDocument`, `CommandHistory` and `ChangeReceipts` no longer extend `Emitter`: listen with `on`/`off`/`subscribe` (`subscribe` only on receipts); `emit` is private. `CommandChangeInit` is a union keyed by `origin`.
+
+### Minor Changes
+
+- [#1178](https://github.com/JollyPixel/editor/pull/1178) [`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35) Thanks [@fraxken](https://github.com/fraxken)! - Extensions can declare `queries`, events a member with `read` rights may still send. The catalog adds `CatalogClient.read(assetId)` as such a query.
+  Kind resolution picks the longest matching extension (`AssetPath.matchExtension`), and reconciliation re-creates a `binary` asset once a registered kind claims its path.
+
+- [#1156](https://github.com/JollyPixel/editor/pull/1156) [`a89aeb7`](https://github.com/JollyPixel/editor/commit/a89aeb73fa118659494d3d9410dd9135fc39b551) Thanks [@fraxken](https://github.com/fraxken)! - Add `AssetLiveProtocol.authorRebases`, which skips the author's correction for kinds whose clients transform edits themselves, and a `reloaded()` hook called before a reload snapshot. `CommandSync` exposes its guarded `resync()` to subclasses.
+
+### Patch Changes
+
+- Updated dependencies [[`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64), [`8a3c591`](https://github.com/JollyPixel/editor/commit/8a3c591b84dff46454fbad1717421400cad301c5)]:
+  - @jolly-pixel/history@3.0.0
+
 ## 6.0.0
 
 ### Major Changes

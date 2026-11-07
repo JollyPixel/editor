@@ -1,5 +1,28 @@
 # @jolly-pixel/pixel-draw.renderer
 
+## 9.0.0
+
+### Major Changes
+
+- [#1164](https://github.com/JollyPixel/editor/pull/1164) [`505d6e0`](https://github.com/JollyPixel/editor/commit/505d6e0444dc3bc5bcb365486f085c169eb2caa8) Thanks [@fraxken](https://github.com/fraxken)! - `color` adds `shadeRamp`, `sortColors`, `isRGBA8` and `PaletteFile` (GPL and Lospec hex). `pixel-draw.renderer` palettes hold 1 to 256 colors (`COLOR_PALETTE_MAX_SIZE` replaces `COLOR_PALETTE_SIZE`) and sync whole edits as `palette-replaced`; `visibleColors` lists a texture's colors.
+  Brushes get an `ink` (`blend` by default, `replace`, `lock-alpha`); `recordStroke` takes one color per pixel and `PixelDocument.paint(pixels, painter)` inks pixels. `jolly-color-picker` adds the `okhsl` space, an `eyedropper` button and hue wrap, paints the wheel at full value, and its wide layout gets a tool column and compact CSS hooks.
+
+- [#1092](https://github.com/JollyPixel/editor/pull/1092) [`78ea67b`](https://github.com/JollyPixel/editor/commit/78ea67bc7a2636cdea144fe2c64efa0b5e228346) Thanks [@fraxken](https://github.com/fraxken)! - Save UV nets in the pixel document (`SavedUVNet`, `UVNetSet`, `saveUvNet`, `deleteUvNet`, `changeDefaultUvNet`, the `uv-net-*` commands and the `.pixelart` `uvNets` field) so they are saved with the texture and synced with peers.
+  `PixelDocument.loadSnapshot()` now takes one `PixelDocumentSnapshot` object instead of positional arguments.
+
+### Minor Changes
+
+- [#1091](https://github.com/JollyPixel/editor/pull/1091) [`383ef85`](https://github.com/JollyPixel/editor/commit/383ef85a2435ce0c6bd819c43402ba0d4374e5d2) Thanks [@fraxken](https://github.com/fraxken)! - Edge-pan the view while a selection or UV drag reaches the canvas edge, and keep a drag under the cursor when the view pans or zooms.
+
+- [#1160](https://github.com/JollyPixel/editor/pull/1160) [`7ddc912`](https://github.com/JollyPixel/editor/commit/7ddc91235d9fd536e43c317f092620fb15bd63c7) Thanks [@fraxken](https://github.com/fraxken)! - A `UVRect` can set `mirrored` to flip its face left to right before `rotation`; `geometryMirrored()` reads it, and moves, resizes and turns keep it.
+
+### Patch Changes
+
+- [#1166](https://github.com/JollyPixel/editor/pull/1166) [`1172e00`](https://github.com/JollyPixel/editor/commit/1172e00ffa43d52a158fdf48ec47550cb856da6b) Thanks [@fraxken](https://github.com/fraxken)! - Add the immutable `Color` object (with `parseDraft` for typed text), `Gradient`, `PaletteFormat`, the picker `HueSpace`, `equalRGBA8`, `ByteColorInput` and `ColorSpace.channels`. They replace `parseColor`, `assertColor*`, `format*`, the byte `8` variants, `toRGBA8`/`fromRGBA8`, `contrastingColor`, `mixColor`, `colorRamp`, `shadeRamp`, `hsvToHsl`/`hslToHsv`, `ColorSpace.mix()`, `PaletteFile.parse()`/`serialize()`, `isOklchInGamut` and the sRGB transfer functions.
+  Near-gray colors now convert to HSL, HSV and HWB as grays, `Color.oklch()` round-trips 8-bit colors, and `sortColors` returns the objects it was given.
+- Updated dependencies [[`1172e00`](https://github.com/JollyPixel/editor/commit/1172e00ffa43d52a158fdf48ec47550cb856da6b), [`505d6e0`](https://github.com/JollyPixel/editor/commit/505d6e0444dc3bc5bcb365486f085c169eb2caa8)]:
+  - @jolly-pixel/color@3.0.0
+
 ## 8.0.0
 
 ### Major Changes

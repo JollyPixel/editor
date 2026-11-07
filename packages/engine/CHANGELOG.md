@@ -1,5 +1,56 @@
 # @jolly-pixel/engine
 
+## 8.0.0
+
+### Major Changes
+
+- [#1175](https://github.com/JollyPixel/editor/pull/1175) [`174d961`](https://github.com/JollyPixel/editor/commit/174d9612d9543c5c966a9e4e22783094f017bb83) Thanks [@fraxken](https://github.com/fraxken)! - Move `BakedRoomEnvironment` from `three` to the engine as `Systems.BakedRoomEnvironment`; the engine drops `picomatch`, `reflect-metadata` and `@jolly-pixel/three`, and a decorated `Behavior` subclass no longer adds its properties to its parent class.
+  Breaking: `getActors` and `Logger` patterns only support `*`, `?` and `**` (no braces, classes or extglobs, and `*` matches a leading dot).
+  Breaking: `three` no longer exports `BakedRoomEnvironment`, and `three` and `voxel.renderer` take `three` as a `^0.186.0` peer dependency.
+
+- [#1123](https://github.com/JollyPixel/editor/pull/1123) [`3a63812`](https://github.com/JollyPixel/editor/commit/3a63812c0e04954a670735acf79d157ea3ddfd10) Thanks [@fraxken](https://github.com/fraxken)! - Add `FileScene.capture()`, `captureSceneActors()`, `ComponentDefinition.owns`/`capture` and `ComponentDefinitions.create`/`apply`/`capture` to save a running scene as a `SceneFile`, the `Actor` scene property type, persistent actors, `Actor.active`, `ActorComponent.schedule()` on `world.timers`, `sceneManager.actors.find(persistentId)` and the `persistentId` actor option.
+  Add `hasComponent`, `ensureComponent`, `removeComponent`, `findComponentInChildren`, `findComponentInParent`, `root` and `hasDescendant` to `Actor`. Breaking: `IntegerIncrement.incr()` is renamed `next()`, `Actor.persistentId` is read-only, and a scene file actor takes its file id as `persistentId`.
+  Fix `Transform.moveForward`/`moveRight`/`moveUp` doubling the position, and add `Viewport`, `CanvasDimensions`, `CameraProjection`, `ActorComponents`, `SpriteSheet`, `UILayout` and `AudioPlaylists`. Breaking: `prepareRender(canvas)`, `camera.settings` replaces the camera getters, `actor.components` is an `ActorComponents`, `status`/`pendingForDestruction` replace `isDestroyed()`, ids are counted per world, and `actor.behaviors`, `componentsRequiringUpdate`, `PersistentIdIncrement` and the `Transform` static scratch objects are removed.
+
+- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files (`SceneFile`, `FileScene`, `SceneInstance`, scene transform helpers, `ComponentDefinitions`), `LightComponent`, `MeshRenderer`, `OrbitFlyCamera.frame()`, `Transform.visibleInHierarchy`, `inferScenePropertyType` and the `render` camera and `properties` behavior options to `engine`; `Actor.name` now follows `object3D.name`. Frames only visit actors with updating components and no longer allocate per actor or component; `sceneManager.actors.updating` lets a host sleep once nothing updates, and a component can start asleep with the `needUpdate` option.
+  Breaking: `Camera.configure()` replaces the camera setters, `sceneManager.actors` (`ActorRegistry`) replaces its actor and component scheduling methods, and `renderStrategy`, `markRenderOrderDirty()` and the `Behavior` property mirror (`getProperty`, `setProperty`, `mergeProperties`, `BehaviorProperties`) are removed.
+  Add `CameraGizmo` and `LightGizmo` to `three`, refusal messages to `history` and `reconcilePeerMarks` to `ui/network`.
+
+- [#1142](https://github.com/JollyPixel/editor/pull/1142) [`8a3c591`](https://github.com/JollyPixel/editor/commit/8a3c591b84dff46454fbad1717421400cad301c5) Thanks [@fraxken](https://github.com/fraxken)! - Add `TextDefinition`; `TextRenderer` takes `MeshRenderer`-style settings, either `asset` or `font`, and `configure()`. `ComponentAssetResolver.resolve` may return `null` while an asset loads.
+  Add `AssetKindDescriptor.creatable` and `readOnlyCommands()` for import-only kinds, and `SnapshotDocument` for documents a client only reads.
+
+### Minor Changes
+
+- [#1140](https://github.com/JollyPixel/editor/pull/1140) [`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `bindOrbitFocus` to the engine (Escape leaves an `OrbitFlyCamera` pivot), and `COMPACT_GIZMO_APPEARANCE` and `createListedColorAllocator` to three. All three move out of the private editor host.
+
+- [#1163](https://github.com/JollyPixel/editor/pull/1163) [`5f7d6ec`](https://github.com/JollyPixel/editor/commit/5f7d6ece37213086613de6e79259efff5a7a0718) Thanks [@fraxken](https://github.com/fraxken)! - Add `parseModel(content, fileName, options?)` to read a `.glb`, `.gltf`, `.fbx` or `.obj` model from bytes. `ModelAssetLoader` now fetches the file and parses it with `parseModel`.
+  Add `ModelDefinition` (`"Model"` scene component); `ModelRenderer` accepts a loaded `model` and `castShadow` / `receiveShadow`.
+
+- [#1135](https://github.com/JollyPixel/editor/pull/1135) [`f731773`](https://github.com/JollyPixel/editor/commit/f731773de4c47100fbcfc53590a4b8d0f7198e1a) Thanks [@fraxken](https://github.com/fraxken)! - Add `OrbitFlyCamera.subscribe("orbit", listener)`, called with the new `isOrbiting` value each time it changes.
+
+- [#1130](https://github.com/JollyPixel/editor/pull/1130) [`2c08218`](https://github.com/JollyPixel/editor/commit/2c0821822900c461d6d517fd17c768867a411e53) Thanks [@fraxken](https://github.com/fraxken)! - Add prefab overrides: a `SceneActorFile` with `prefab` can carry `overrides` for the names, visibility, transforms, component data and asset slots of the actors it expands.
+  `SceneInstance` gains `override()`, `expandedActors()`, `expandedActor()`, `expandedComponent()` and `prefabSceneIds()`; `InstancePath` reads and builds path ids.
+
+- [#1125](https://github.com/JollyPixel/editor/pull/1125) [`a61b2a3`](https://github.com/JollyPixel/editor/commit/a61b2a318638f4f644b0ad2870f2c69071e50bfc) Thanks [@fraxken](https://github.com/fraxken)! - Add scene anchors: a `ComponentDefinition` can publish `anchors(component)`, and a `SceneActorFile` with `anchor` hangs from one of its parent's.
+  `SceneInstance` follows anchor moves and is a `SceneAnchorsReader` (`anchors()`, `findAnchor()`), with an `anchorsChange` event and an `anchor` argument to `reparent()`; captures keep `anchor`.
+
+- [#1124](https://github.com/JollyPixel/editor/pull/1124) [`125db2d`](https://github.com/JollyPixel/editor/commit/125db2d088c0baaf205c5468490dda2b64e8352c) Thanks [@fraxken](https://github.com/fraxken)! - Expand scene file prefab instances: `SceneInstance` builds the referenced scene under each actor with `prefab`, using path ids, skips cycles and re-expands on `refresh(sceneId)`.
+  Add `ScenePrefabs`, `NO_SCENE_PREFABS`, `expandedSceneActors()` and the `prefabs` and `sceneId` options of `FileScene` and `SceneInstance`; a capture saves instances as their expanded actors.
+
+- [#1170](https://github.com/JollyPixel/editor/pull/1170) [`ce92bb3`](https://github.com/JollyPixel/editor/commit/ce92bb38d1bd338be4ba0006e2d3a4a58a16cd3d) Thanks [@fraxken](https://github.com/fraxken)! - Add `OrbitFlyCamera.worldScale`, which multiplies the camera's world-unit settings (move speed and its bounds, pivot distance bounds, nudge and scroll steps, pivot marker) so the camera works on very small or very large scenes.
+  Add the `pivotMarkerSize` option (default `0.2`).
+
+- [#1181](https://github.com/JollyPixel/editor/pull/1181) [`fb5cc80`](https://github.com/JollyPixel/editor/commit/fb5cc80858789b6c6e9d4fb345bc8266e6f77dc2) Thanks [@fraxken](https://github.com/fraxken)! - Add `@jolly-pixel/physics`, an engine-neutral physics contract with `PhysicsSystem` and `RigidBody` engine components and backend contract cases, and `@jolly-pixel/physics.rapier`, its Rapier backend.
+  `RapierVoxelCollider` is replaced by `PhysicsVoxelCollider`, which takes any `@jolly-pixel/physics` world (now an optional peer dependency).
+  `ComponentDefinition.apply` may return `false` to ask for a rebuild; the scene `RigidBody` draws a `ColliderOutline` in edit mode.
+
+### Patch Changes
+
+- [#1183](https://github.com/JollyPixel/editor/pull/1183) [`ee68c3d`](https://github.com/JollyPixel/editor/commit/ee68c3d0cdd26b05b5bb0b740b7202e2c7943a10) Thanks [@fraxken](https://github.com/fraxken)! - `MeshDefinition.parse()` now returns `MeshSettings`, whose `geometry` is always set, instead of `MeshRendererOptions`.
+- Updated dependencies [[`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35)]:
+  - @jolly-pixel/asset@4.1.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 7.1.0
 
 ### Minor Changes

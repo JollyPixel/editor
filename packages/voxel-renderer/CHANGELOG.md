@@ -1,5 +1,34 @@
 # @jolly-pixel/voxel.renderer
 
+## 9.0.0
+
+### Major Changes
+
+- [#1175](https://github.com/JollyPixel/editor/pull/1175) [`174d961`](https://github.com/JollyPixel/editor/commit/174d9612d9543c5c966a9e4e22783094f017bb83) Thanks [@fraxken](https://github.com/fraxken)! - Move `BakedRoomEnvironment` from `three` to the engine as `Systems.BakedRoomEnvironment`; the engine drops `picomatch`, `reflect-metadata` and `@jolly-pixel/three`, and a decorated `Behavior` subclass no longer adds its properties to its parent class.
+  Breaking: `getActors` and `Logger` patterns only support `*`, `?` and `**` (no braces, classes or extglobs, and `*` matches a leading dot).
+  Breaking: `three` no longer exports `BakedRoomEnvironment`, and `three` and `voxel.renderer` take `three` as a `^0.186.0` peer dependency.
+
+- [#1181](https://github.com/JollyPixel/editor/pull/1181) [`fb5cc80`](https://github.com/JollyPixel/editor/commit/fb5cc80858789b6c6e9d4fb345bc8266e6f77dc2) Thanks [@fraxken](https://github.com/fraxken)! - Add `@jolly-pixel/physics`, an engine-neutral physics contract with `PhysicsSystem` and `RigidBody` engine components and backend contract cases, and `@jolly-pixel/physics.rapier`, its Rapier backend.
+  `RapierVoxelCollider` is replaced by `PhysicsVoxelCollider`, which takes any `@jolly-pixel/physics` world (now an optional peer dependency).
+  `ComponentDefinition.apply` may return `false` to ask for a rebuild; the scene `RigidBody` draws a `ColliderOutline` in edit mode.
+
+### Minor Changes
+
+- [#1132](https://github.com/JollyPixel/editor/pull/1132) [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` gains `reveal(id)`, which scrolls a row into view and flashes it without moving focus.
+  Add `VoxelMapAnchorKey` to `@jolly-pixel/voxel.renderer/engine`, which builds and parses the `layer:<id>` and `object:<id>` keys `VoxelMapAnchors` lists.
+
+- [#1125](https://github.com/JollyPixel/editor/pull/1125) [`a61b2a3`](https://github.com/JollyPixel/editor/commit/a61b2a318638f4f644b0ad2870f2c69071e50bfc) Thanks [@fraxken](https://github.com/fraxken)! - Add an `anchor` flag to layers and voxel objects, saved with the world. `VoxelMapDefinition.anchors()` publishes the flagged ones as scene anchors through `VoxelMapAnchors`.
+
+- [#1096](https://github.com/JollyPixel/editor/pull/1096) [`0ac751d`](https://github.com/JollyPixel/editor/commit/0ac751d6b077948c497ba62b9851eb222a516b7e) Thanks [@fraxken](https://github.com/fraxken)! - Add `VoxelMapDefinition`, the `VoxelMap` scene-file component type, with its `VOXEL_MAP_ASSET` slot type and `VoxelMapSource` interface.
+
+### Patch Changes
+
+- [#1125](https://github.com/JollyPixel/editor/pull/1125) [`8e19cb6`](https://github.com/JollyPixel/editor/commit/8e19cb64ff52d4fc1ea5ef969bb65ef74b918e06) Thanks [@fraxken](https://github.com/fraxken)! - `PulledChunkGeometry.computeBoundingBox()` and `computeBoundingSphere()` keep the chunk's cell bounds instead of measuring the template quad, so bounding-box highlights and raycasts stay correct after a recompute.
+- Updated dependencies [[`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35), [`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7), [`174d961`](https://github.com/JollyPixel/editor/commit/174d9612d9543c5c966a9e4e22783094f017bb83), [`5f7d6ec`](https://github.com/JollyPixel/editor/commit/5f7d6ece37213086613de6e79259efff5a7a0718), [`f731773`](https://github.com/JollyPixel/editor/commit/f731773de4c47100fbcfc53590a4b8d0f7198e1a), [`2c08218`](https://github.com/JollyPixel/editor/commit/2c0821822900c461d6d517fd17c768867a411e53), [`3a63812`](https://github.com/JollyPixel/editor/commit/3a63812c0e04954a670735acf79d157ea3ddfd10), [`a61b2a3`](https://github.com/JollyPixel/editor/commit/a61b2a318638f4f644b0ad2870f2c69071e50bfc), [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`125db2d`](https://github.com/JollyPixel/editor/commit/125db2d088c0baaf205c5468490dda2b64e8352c), [`ee68c3d`](https://github.com/JollyPixel/editor/commit/ee68c3d0cdd26b05b5bb0b740b7202e2c7943a10), [`ce92bb3`](https://github.com/JollyPixel/editor/commit/ce92bb38d1bd338be4ba0006e2d3a4a58a16cd3d), [`fb5cc80`](https://github.com/JollyPixel/editor/commit/fb5cc80858789b6c6e9d4fb345bc8266e6f77dc2), [`8a3c591`](https://github.com/JollyPixel/editor/commit/8a3c591b84dff46454fbad1717421400cad301c5)]:
+  - @jolly-pixel/asset@4.1.0
+  - @jolly-pixel/engine@8.0.0
+  - @jolly-pixel/physics@1.0.1
+
 ## 8.0.0
 
 ### Major Changes
