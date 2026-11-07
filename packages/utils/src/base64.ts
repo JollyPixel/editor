@@ -1,5 +1,6 @@
 // CONSTANTS
 const kBinaryChunkLength = 0x8000;
+const kBase64 = /^[A-Za-z0-9+/]*={0,2}$/;
 
 interface NativeBase64Decoder {
   fromBase64?: (text: string) => Uint8Array<ArrayBuffer>;
@@ -33,9 +34,22 @@ export function encodeBase64(
   return btoa(binary);
 }
 
+export function encodeBase64Url(
+  bytes: Uint8Array
+): string {
+  return encodeBase64(bytes)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(/[=]+$/, "");
+}
+
 export function decodeBase64(
   text: string
-): Uint8Array<ArrayBuffer> {
+): Uint8Array<ArrayBuffer> | null {
+  if (text.length % 4 !== 0 || !kBase64.test(text)) {
+    return null;
+  }
+
   const { fromBase64 } = Uint8Array as NativeBase64Decoder;
   if (typeof fromBase64 === "function") {
     return fromBase64(text);
@@ -50,11 +64,8 @@ export function decodeBase64(
     return owned ? new Uint8Array(buffer) : new Uint8Array(decoded);
   }
 
-  const binary = atob(text);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index++) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return bytes;
+  return Uint8Array.from(
+    atob(text),
+    (character) => character.charCodeAt(0)
+  );
 }

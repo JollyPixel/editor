@@ -18,6 +18,7 @@ import {
 } from "@jolly-pixel/network";
 import { mulberry32 } from "@jolly-pixel/bench";
 import * as z from "zod/mini";
+import { encodeBase64 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -32,7 +33,6 @@ import {
   type AssetKindHandler,
   type SnapshotPolicy
 } from "../src/index.ts";
-import { encodeBase64 } from "../src/common/base64.ts";
 
 // CONSTANTS
 export const GRID_KIND = "grid";

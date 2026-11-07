@@ -1,10 +1,5 @@
-export function clamp(
-  value: number,
-  min: number,
-  max: number
-): number {
-  return Math.min(Math.max(value, min), max);
-}
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
 
 export function unitRatio(
   value: number,

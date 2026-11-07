@@ -4,7 +4,7 @@ import {
   PaletteFormat
 } from "@jolly-pixel/color";
 import type { ColorPalette } from "@jolly-pixel/pixel-draw.renderer";
-import { saveFile } from "@jolly-pixel/ui";
+import { saveFile } from "@jolly-pixel/utils/dom";
 
 // CONSTANTS
 const kAccept = ".gpl,.hex,text/plain";

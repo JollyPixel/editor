@@ -7,12 +7,12 @@ import {
   type AssetSource
 } from "@jolly-pixel/asset-source";
 import { Emitter } from "@openally/emitt";
+import { TaskChain } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { CatalogChange } from "./client/protocol.ts";
 import type { CatalogProjection } from "./CatalogProjection.ts";
 import { FolderMovedIntoItselfError } from "./errors/FolderMovedIntoItselfError.ts";
-import { TaskChain } from "../common/TaskChain.ts";
 import { AssetPartFiles } from "../storage/AssetPartFiles.ts";
 import { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
 

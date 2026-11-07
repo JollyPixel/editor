@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   cloneGroups,
@@ -413,7 +416,7 @@ export function movePane(
   state.collapsed = false;
   const groups = columnGroups(state, column)!;
   groups.splice(
-    clamp(position, groups.length),
+    clamp(position, 0, groups.length),
     0,
     {
       panes: [pane],
@@ -463,7 +466,7 @@ export function stackPane(
     removesSlot ? slot - 1 : slot
   ];
   group.panes.splice(
-    clamp(position, group.panes.length),
+    clamp(position, 0, group.panes.length),
     0,
     pane
   );
@@ -727,13 +730,6 @@ function detachPane(
   delete snapshot.floating[pane];
 
   return snapshot;
-}
-
-function clamp(
-  index: number,
-  length: number
-): number {
-  return Math.min(Math.max(index, 0), length);
 }
 
 function definedGeometry(

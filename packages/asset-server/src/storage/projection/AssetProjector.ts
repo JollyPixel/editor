@@ -2,6 +2,10 @@
 import type * as EventStore from "@jolly-pixel/event-store";
 import type { AssetSource } from "@jolly-pixel/asset-source";
 import { Emitter } from "@openally/emitt";
+import {
+  asError,
+  TaskChain
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -24,8 +28,6 @@ import type { ProjectionState } from "./ProjectionState.ts";
 import type { AssetBackups } from "../AssetBackups.ts";
 import type { AssetPartFiles } from "../AssetPartFiles.ts";
 import { AssetPartContents } from "../../model/events/AssetPartContents.ts";
-import { TaskChain } from "../../common/TaskChain.ts";
-import { asError } from "../../common/asError.ts";
 import { contentHash } from "../../common/contentHash.ts";
 
 // CONSTANTS

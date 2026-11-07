@@ -9,6 +9,7 @@ import {
   type ImportPlan
 } from "@jolly-pixel/asset-server/client";
 import type { Notifier } from "@jolly-pixel/ui";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -84,7 +85,7 @@ export class AssetCommands {
       );
     }
     catch (error) {
-      this.#onError(`Could not create "${name}": ${formatReason(error)}`);
+      this.#onError(`Could not create "${name}": ${errorMessage(error)}`);
 
       return null;
     }
@@ -127,7 +128,7 @@ export class AssetCommands {
       ) {
         return false;
       }
-      this.#onError(`Could not import "${file.name}": ${formatReason(error)}`);
+      this.#onError(`Could not import "${file.name}": ${errorMessage(error)}`);
     }
 
     return true;
@@ -142,7 +143,7 @@ export class AssetCommands {
       return true;
     }
     catch (error) {
-      this.#onError(`Could not create "${path.name}": ${formatReason(error)}`);
+      this.#onError(`Could not create "${path.name}": ${errorMessage(error)}`);
 
       return false;
     }
@@ -203,7 +204,7 @@ export class AssetCommands {
         await this.#catalog.removeFolder(folder.toString());
       }
       catch (error) {
-        this.#onError(`Could not delete "${folder.name}": ${formatReason(error)}`);
+        this.#onError(`Could not delete "${folder.name}": ${errorMessage(error)}`);
       }
     }
   }
@@ -241,7 +242,7 @@ export class AssetCommands {
       replacing.update({
         tone: "error",
         title: `Could not replace "${name}"`,
-        message: formatReason(error)
+        message: errorMessage(error)
       });
 
       return false;
@@ -259,7 +260,7 @@ export class AssetCommands {
       ).save();
     }
     catch (error) {
-      this.#onError(`Could not export "${asset.path.name}": ${formatReason(error)}`);
+      this.#onError(`Could not export "${asset.path.name}": ${errorMessage(error)}`);
     }
   }
 
@@ -288,7 +289,7 @@ export class AssetCommands {
       importing.update({
         tone: "error",
         title: `Could not import "${name}"`,
-        message: formatReason(error)
+        message: errorMessage(error)
       });
     }
   }
@@ -306,7 +307,7 @@ export class AssetCommands {
     catch (error) {
       const doing = verb === "rename" ? "renaming" : "moving";
       this.#onError(
-        `Could not finish ${doing} "${relocation.from.name}": ${formatReason(error)}`
+        `Could not finish ${doing} "${relocation.from.name}": ${errorMessage(error)}`
       );
     }
   }
@@ -397,13 +398,7 @@ async function settle(
   catch (error) {
     return {
       applied: 0,
-      failure: formatReason(error)
+      failure: errorMessage(error)
     };
   }
-}
-
-function formatReason(
-  error: unknown
-): string {
-  return error instanceof Error ? error.message : String(error);
 }

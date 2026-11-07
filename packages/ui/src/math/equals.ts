@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { is } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   isMixed,
@@ -50,7 +53,7 @@ export function vectorValueHasChanged(
   value: unknown,
   oldValue: unknown
 ): boolean {
-  if (isPlainRecord(value) && isPlainRecord(oldValue)) {
+  if (is.object(value) && is.object(oldValue)) {
     return !vectorValueEquals(
       value as VectorValue<string>,
       oldValue as VectorValue<string>
@@ -69,10 +72,4 @@ export function quatHasChanged(
   }
 
   return value !== oldValue;
-}
-
-function isPlainRecord(
-  value: unknown
-): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }

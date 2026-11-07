@@ -76,6 +76,7 @@
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
+    "@jolly-pixel/utils": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
     "@openally/emitt": "1.1.0",
     "lit": "3.3.3",

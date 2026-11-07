@@ -14,6 +14,7 @@ import {
 } from "lit/decorators.js";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/toolbar";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
@@ -99,7 +100,7 @@ export class PreferencesTransfer extends LitElement {
     }
     catch (error) {
       this._status = html`<p class="error" role="alert">
-        Preferences not imported: ${error instanceof Error ? error.message : String(error)}
+        Preferences not imported: ${errorMessage(error)}
       </p>`;
     }
   };

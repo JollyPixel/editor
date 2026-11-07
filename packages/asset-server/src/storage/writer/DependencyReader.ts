@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
+import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import type { Logger } from "../../common/logger.ts";
 import type { AssetPayload } from "./AssetWriteInput.ts";
-import { asError } from "../../common/asError.ts";
 
 export interface DependencyReaderOptions {
   kinds: AssetKindRegistry;

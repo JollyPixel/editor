@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { saveFile } from "@jolly-pixel/ui";
+import { saveFile } from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import type { ExchangeFile } from "../model/TerrainExchange.ts";

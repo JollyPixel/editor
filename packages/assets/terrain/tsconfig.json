@@ -21,6 +21,9 @@
     },
     {
       "path": "../../terrain-renderer"
+    },
+    {
+      "path": "../../utils"
     }
   ]
 }

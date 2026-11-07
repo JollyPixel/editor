@@ -19,13 +19,13 @@ import "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/text";
 import { BlockTextures } from "@jolly-pixel/voxel.renderer";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../../editing/EditingElement.ts";
 import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { tileSizeSegments } from "../tileSizes.ts";
-import { describeError } from "../../../shared/describeError.ts";
 import "../blocksetIcons.ts";
 
 // CONSTANTS
@@ -233,7 +233,7 @@ export class BlocksetEditDialog extends EditingElement {
       await this.editing?.blocksets.rename(entry.definition.id, name);
     }
     catch (error) {
-      this.editing?.state.log.push(`Could not rename "${entry.label}": ${describeError(error)}`);
+      this.editing?.state.log.push(`Could not rename "${entry.label}": ${errorMessage(error)}`);
     }
     this.requestUpdate();
   }
@@ -314,7 +314,7 @@ export class BlocksetEditDialog extends EditingElement {
       await editing.archives.downloadAsset(assetId);
     }
     catch (error) {
-      editing.state.log.push(`Could not export "${entry.label}": ${describeError(error)}`);
+      editing.state.log.push(`Could not export "${entry.label}": ${errorMessage(error)}`);
     }
   }
 

@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { errorMessage } from "@jolly-pixel/utils";
+
 // CONSTANTS
 export const REMOTE_STATE_CHANGE = "change";
 
@@ -49,7 +52,7 @@ export class RemoteState extends EventTarget {
     }
     catch (error) {
       if (current()) {
-        this.#error = error instanceof Error ? error.message : String(error);
+        this.#error = errorMessage(error);
       }
 
       return null;

@@ -8,7 +8,7 @@ import {
 import {
   decodeBase64,
   encodeBase64
-} from "@jolly-pixel/asset.common";
+} from "@jolly-pixel/utils";
 
 // CONSTANTS
 const kBytesPerHeight = Float32Array.BYTES_PER_ELEMENT;

@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as network from "@jolly-pixel/network";
 import type * as EventStore from "@jolly-pixel/event-store";
+import { TaskChain } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -30,7 +31,6 @@ import {
 } from "./PeerAcks.ts";
 import { SnapshotCache } from "./SnapshotCache.ts";
 import { PartSubscriptions } from "./PartSubscriptions.ts";
-import { TaskChain } from "../common/TaskChain.ts";
 
 // CONSTANTS
 const kDefaultResumeLimit = 1_000;

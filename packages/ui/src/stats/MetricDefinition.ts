@@ -1,6 +1,8 @@
+// Import Third-party Dependencies
+import { formatBytes } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
-  formatBytes,
   formatCount,
   formatDecimal,
   formatInteger,

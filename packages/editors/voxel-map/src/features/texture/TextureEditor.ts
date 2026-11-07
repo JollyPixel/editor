@@ -24,6 +24,7 @@ import {
 } from "@jolly-pixel/editor.pixel-art";
 import { LazyTemplate } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { BlockRegistryChange } from "../../map/EditorMap.ts";
@@ -34,7 +35,6 @@ import {
   blocksetTabLabels,
   type BlocksetTabLabels
 } from "./blocksetTabLabels.ts";
-import { describeError } from "../../shared/describeError.ts";
 
 // CONSTANTS
 const kCanvasOptions: PixelArtCanvasOptions = {
@@ -407,7 +407,7 @@ export class TextureEditor extends EditingElement {
       await run();
     }
     catch (error) {
-      editing.state.log.push(`Could not add the blockset: ${describeError(error)}`);
+      editing.state.log.push(`Could not add the blockset: ${errorMessage(error)}`);
     }
     finally {
       this.#adding = false;

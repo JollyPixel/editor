@@ -4,6 +4,7 @@ import {
   type PreferenceChange,
   type PreferenceOverrides
 } from "@jolly-pixel/preferences";
+import { is } from "@jolly-pixel/utils";
 
 // CONSTANTS
 export const LOCAL_PREFERENCES_KEY_PREFIX = "jolly-pixel:preferences:";
@@ -112,9 +113,7 @@ function parseOverrides(
   try {
     const value: unknown = JSON.parse(text);
 
-    return typeof value === "object" && value !== null && !Array.isArray(value) ?
-      { ...value } :
-      {};
+    return is.plainObject(value) ? { ...value } : {};
   }
   catch {
     return {};

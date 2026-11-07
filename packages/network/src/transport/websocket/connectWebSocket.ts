@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { encodeBase64Url } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   DEFAULT_WEBSOCKET_PATH,
@@ -5,6 +8,9 @@ import {
   WEBSOCKET_PROTOCOL
 } from "./constants.ts";
 import type { ClientSocket } from "../ClientSocket.ts";
+
+// CONSTANTS
+const kUtf8 = new TextEncoder();
 
 export interface WebSocketConnectOptions {
   /**
@@ -17,27 +23,15 @@ export interface WebSocketConnectOptions {
   credential?: string;
 }
 
-function base64url(
-  value: string
-): string {
-  const bytes = new TextEncoder().encode(value);
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-
-  return btoa(binary)
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
-}
-
 function buildProtocols(
   credential: string | undefined
 ): string[] {
-  return credential === undefined ?
-    [WEBSOCKET_PROTOCOL] :
-    [WEBSOCKET_PROTOCOL, WEBSOCKET_AUTH_PROTOCOL_PREFIX + base64url(credential)];
+  if (credential === undefined) {
+    return [WEBSOCKET_PROTOCOL];
+  }
+  const encoded = encodeBase64Url(kUtf8.encode(credential));
+
+  return [WEBSOCKET_PROTOCOL, WEBSOCKET_AUTH_PROTOCOL_PREFIX + encoded];
 }
 
 function defaultUrl(): string {

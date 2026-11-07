@@ -1,9 +1,11 @@
-// Import Internal Dependencies
-import type { AssetInlineContent } from "./AssetEvents.schema.ts";
+// Import Third-party Dependencies
 import {
   decodeBase64,
   encodeBase64
-} from "../../common/base64.ts";
+} from "@jolly-pixel/utils";
+
+// Import Internal Dependencies
+import type { AssetInlineContent } from "./AssetEvents.schema.ts";
 
 export function encodeContent(
   data: Uint8Array
@@ -18,5 +20,10 @@ export function encodeContent(
 export function decodeContent(
   content: AssetInlineContent
 ): Uint8Array {
-  return decodeBase64(content.data);
+  const data = decodeBase64(content.data);
+  if (data === null) {
+    throw new TypeError("Inline content data is not valid base64.");
+  }
+
+  return data;
 }

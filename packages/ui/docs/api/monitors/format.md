@@ -24,10 +24,6 @@ One decimal and ` ms`.
 
 One decimal and ` %`.
 
-### `formatBytes(value: number): string`
-
-Binary steps: `B`, `KiB`, `MiB`, and so on.
-
 ### `formatVector(value: Vec2Like | Vec3Like | Vec4Like, precision?: number): string`
 
 Comma-joined axes, two decimals by default.

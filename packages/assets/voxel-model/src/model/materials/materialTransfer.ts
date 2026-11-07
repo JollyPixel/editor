@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { is } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type { ModelMaterialJSON } from "../../network/types.ts";
 import { MaterialSurface } from "./MaterialSurface.ts";
@@ -33,7 +36,7 @@ export function decodeMaterialTransfer(
   }
 
   if (
-    !isRecord(parsed) ||
+    !is.plainObject(parsed) ||
     parsed.kind !== MATERIAL_TRANSFER_KIND ||
     !Array.isArray(parsed.materials)
   ) {
@@ -43,7 +46,7 @@ export function decodeMaterialTransfer(
   const materials: MaterialTransferJSON[] = [];
   for (const material of parsed.materials) {
     if (
-      !isRecord(material) ||
+      !is.plainObject(material) ||
       typeof material.name !== "string" ||
       !MaterialSurface.isValid(material.surface)
     ) {
@@ -56,10 +59,4 @@ export function decodeMaterialTransfer(
   }
 
   return materials;
-}
-
-function isRecord(
-  value: unknown
-): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }

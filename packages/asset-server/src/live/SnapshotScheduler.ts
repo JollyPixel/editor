@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
+import { TaskChain } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -22,7 +23,6 @@ import type {
 import type { AssetProjector } from "../storage/projection/AssetProjector.ts";
 import type { AssetProjection } from "../storage/projection/applyProjection.ts";
 import type { AssetWriter } from "../storage/writer/AssetWriter.ts";
-import { TaskChain } from "../common/TaskChain.ts";
 
 // CONSTANTS
 const kDefaultDelay = 2_000;

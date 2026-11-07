@@ -3,13 +3,13 @@ import type {
   AssetEntryType,
   AssetSource
 } from "@jolly-pixel/asset-source";
+import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
   silentLogger,
   type Logger
 } from "../../common/logger.ts";
-import { asError } from "../../common/asError.ts";
 
 // CONSTANTS
 const kDefaultDebounce = 200;

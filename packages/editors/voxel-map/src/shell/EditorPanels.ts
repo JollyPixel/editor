@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { DockLayout } from "@jolly-pixel/ui";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../editing/VoxelMapEditing.ts";
@@ -131,7 +132,7 @@ export class EditorPanels {
 
     void load().catch((error: unknown) => {
       this.#editing?.state.log.push(
-        `The ${pane} panel failed to load: ${error instanceof Error ? error.message : String(error)}`
+        `The ${pane} panel failed to load: ${errorMessage(error)}`
       );
     });
   }

@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
-import { clamp } from "../numeric/bounds.ts";
 import type { QuatLike } from "./types.ts";
 
 // CONSTANTS

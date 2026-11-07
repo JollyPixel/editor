@@ -5,6 +5,10 @@ import type {
   JollyReparentDetail,
   Notifier
 } from "@jolly-pixel/ui";
+import {
+  errorMessage,
+  formatBytes
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
@@ -43,10 +47,7 @@ import {
   type ConflictQuestion,
   type RelocationVerb
 } from "./AssetCommands.ts";
-import {
-  LARGE_FILE_BYTES,
-  formatMegabytes
-} from "./fileSize.ts";
+import { LARGE_FILE_BYTES } from "./fileSize.ts";
 
 // CONSTANTS
 const kNewFolderName = "New folder";
@@ -410,7 +411,7 @@ export class AssetTreeView {
     const [upload] = await this.#admitted(
       [replacement],
       ({ file, limit }) => `Could not replace "${asset.path.name}": ` +
-        `"${file.name}" is larger than ${formatMegabytes(limit)}`
+        `"${file.name}" is larger than ${formatBytes(limit)}`
     );
     if (upload !== undefined) {
       await this.#commands.replace(asset, upload.file, entry);
@@ -491,7 +492,7 @@ export class AssetTreeView {
     const admitted = await this.#admitted(
       [...uploads, ...drop.archives.map((file) => this.#upload(file, null))],
       ({ file, limit }) => `Could not add "${file.name}": ` +
-        `it is larger than ${formatMegabytes(limit)}`
+        `it is larger than ${formatBytes(limit)}`
     );
     this.#expandFolder(folder);
     let revealed = false;
@@ -563,7 +564,7 @@ export class AssetTreeView {
         await this.#add(folder, file, convertTo, onShown);
       }
       catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
+        const reason = errorMessage(error);
         failures.push(total === 1 ? reason : `"${file.name}": ${reason}`);
       }
       settled++;
@@ -694,7 +695,7 @@ export class AssetTreeView {
       return plan();
     }
     catch (error) {
-      this.#onError(error instanceof Error ? error.message : String(error));
+      this.#onError(errorMessage(error));
 
       return null;
     }

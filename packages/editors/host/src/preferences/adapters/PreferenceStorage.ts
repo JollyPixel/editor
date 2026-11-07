@@ -4,6 +4,7 @@ import type {
   PreferenceScope
 } from "@jolly-pixel/preferences";
 import type { StorageAdapter } from "@jolly-pixel/ui";
+import { is } from "@jolly-pixel/utils";
 
 export class PreferenceStorage implements StorageAdapter {
   #preferences: Preferences;
@@ -45,7 +46,7 @@ export class PreferenceStorage implements StorageAdapter {
   #entries(): Readonly<Record<string, string>> {
     const entries: unknown = this.#preferences.values(this.#scope)[this.#field];
     const strings: Record<string, string> = {};
-    if (typeof entries === "object" && entries !== null) {
+    if (is.object(entries)) {
       for (const [key, value] of Object.entries(entries)) {
         if (typeof value === "string") {
           strings[key] = value;

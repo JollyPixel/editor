@@ -16,6 +16,7 @@ import {
   type FieldPath,
   type FormRow
 } from "@jolly-pixel/editor.host/scene";
+import { is } from "@jolly-pixel/utils";
 
 export type ParsedData = object;
 
@@ -224,9 +225,7 @@ export function readField(
     return value;
   }
 
-  return typeof value === "object" && value !== null ?
-    ownField(value, nested) :
-    undefined;
+  return is.object(value) ? ownField(value, nested) : undefined;
 }
 
 function ownField(

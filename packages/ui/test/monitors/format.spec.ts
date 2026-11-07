@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  formatBytes,
   formatCount,
   formatDecimal,
   formatInteger,
@@ -92,26 +91,6 @@ describe("monitors.formatPercent", () => {
     assert.equal(
       formatPercent(33.333),
       "33.3 %"
-    );
-  });
-});
-
-describe("monitors.formatBytes", () => {
-  test("keeps whole bytes below one kibibyte", () => {
-    assert.equal(
-      formatBytes(1023.4),
-      "1023 B"
-    );
-  });
-
-  test("steps by 1024 with one decimal", () => {
-    assert.equal(
-      formatBytes(1536),
-      "1.5 KiB"
-    );
-    assert.equal(
-      formatBytes(48.2 * 1024 * 1024),
-      "48.2 MiB"
     );
   });
 });

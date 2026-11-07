@@ -42,6 +42,9 @@
     },
     {
       "path": "../../preferences"
+    },
+    {
+      "path": "../../utils"
     }
   ]
 }

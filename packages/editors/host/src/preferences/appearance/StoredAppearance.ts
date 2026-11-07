@@ -6,6 +6,7 @@ import {
   type StorageAdapter,
   type ThemeMode
 } from "@jolly-pixel/ui";
+import { is } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -58,25 +59,15 @@ export class StoredAppearance implements Appearance {
   restore(): void {
     const theme = this.#storage.get(kThemeStorageKey);
     const density = this.#storage.get(kDensityStorageKey);
-    if (!isThemeMode(theme) && !isDensity(density)) {
+    const storedTheme = is.member(theme, THEME_MODES);
+    const storedDensity = is.member(density, DENSITIES);
+    if (!storedTheme && !storedDensity) {
       return;
     }
 
     this.#page.apply({
-      theme: isThemeMode(theme) ? theme : this.#page.theme,
-      density: isDensity(density) ? density : this.#page.density
+      theme: storedTheme ? theme : this.#page.theme,
+      density: storedDensity ? density : this.#page.density
     });
   }
-}
-
-function isThemeMode(
-  value: string | null
-): value is ThemeMode {
-  return THEME_MODES.some((mode) => mode === value);
-}
-
-function isDensity(
-  value: string | null
-): value is Density {
-  return DENSITIES.some((density) => density === value);
 }

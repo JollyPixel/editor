@@ -9,11 +9,9 @@ import {
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
-import {
-  encodeBase64,
-  InvalidEntryError
-} from "@jolly-pixel/asset.common";
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
+import { encodeBase64 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {

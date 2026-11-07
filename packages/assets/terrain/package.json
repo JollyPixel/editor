@@ -46,6 +46,7 @@
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/terrain.renderer": "workspace:*",
+    "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0",
     "zod": "4.6.7"
   },

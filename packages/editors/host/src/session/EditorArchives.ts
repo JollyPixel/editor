@@ -11,8 +11,8 @@ import type {
   ImportPlan,
   ImportReport
 } from "@jolly-pixel/asset-server/client";
-import { saveFile } from "@jolly-pixel/ui";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
+import { saveFile } from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import { EditorLaunch } from "../launch/EditorLaunch.ts";

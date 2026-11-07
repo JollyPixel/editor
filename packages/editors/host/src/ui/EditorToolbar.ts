@@ -25,6 +25,7 @@ import "@jolly-pixel/ui/elements/select";
 import { AssetPath } from "@jolly-pixel/asset";
 import type { AssetTag } from "@jolly-pixel/asset-server/client";
 import type { Lantern } from "@jolly-pixel/lantern";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { ConnectionStatus } from "../connection/ConnectionStatus.ts";
@@ -251,7 +252,7 @@ export class EditorToolbar extends LitElement {
     (sources) => {
       this.#assetsStale = true;
       void sources?.tags?.load().catch((error: unknown) => {
-        this.error = describeError(error);
+        this.error = errorMessage(error);
       });
 
       return [
@@ -545,7 +546,7 @@ export class EditorToolbar extends LitElement {
       await task();
     }
     catch (error) {
-      this.error = describeError(error);
+      this.error = errorMessage(error);
     }
     finally {
       this.busy = false;
@@ -625,12 +626,6 @@ function formatCreatedAt(
   tag: AssetTag
 ): string {
   return kDateFormat.format(new Date(tag.createdAt));
-}
-
-function describeError(
-  error: unknown
-): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 customElements.define("jolly-editor-toolbar", EditorToolbar);

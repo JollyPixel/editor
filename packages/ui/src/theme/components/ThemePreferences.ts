@@ -9,6 +9,7 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
+import { is } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { readDetail } from "../../dom.ts";
@@ -16,15 +17,13 @@ import { defaultStorageAdapter } from "../../storage/defaultStorage.ts";
 import { NamespacedStore } from "../../storage/NamespacedStore.ts";
 import type { StorageAdapter } from "../../storage/StorageAdapter.ts";
 import type { JollyChangeDetail } from "../../field/events.ts";
-import type {
-  Density,
-  ThemeMode
-} from "../types.ts";
 import {
-  applyAppearance,
-  resolveDensityPreference,
-  resolveThemePreference
-} from "../preferences.ts";
+  DENSITIES,
+  THEME_MODES,
+  type Density,
+  type ThemeMode
+} from "../types.ts";
+import { applyAppearance } from "../preferences.ts";
 
 import "./DensityControl.ts";
 import "./ThemeControl.ts";
@@ -130,19 +129,13 @@ export class ThemePreferences extends LitElement {
   #theme(): ThemeMode {
     const value = this.#store.read("theme");
 
-    return resolveThemePreference(
-      value,
-      this.defaultTheme
-    );
+    return is.member(value, THEME_MODES) ? value : this.defaultTheme;
   }
 
   #density(): Density {
     const value = this.#store.read("density");
 
-    return resolveDensityPreference(
-      value,
-      this.defaultDensity
-    );
+    return is.member(value, DENSITIES) ? value : this.defaultDensity;
   }
 
   #onThemeChange = (

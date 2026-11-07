@@ -11,17 +11,6 @@ The root entry point exports small DOM type guards used by event handlers:
 `readDetail<T>(event)` returns a typed custom-event detail or `null` when the
 event is not a `CustomEvent`.
 
-## Downloads
-
-`saveFile(blob, fileName)` downloads a blob under a file name. The object URL
-is revoked on the next task, after the download started.
-
-```ts
-import { saveFile } from "@jolly-pixel/ui";
-
-saveFile(new Blob([bytes], { type: "audio/ogg" }), "door-slam.ogg");
-```
-
 ## Field events
 
 `onFieldChange(field, handler, name?)` subscribes to a field's committed value

@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { is } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   kindOptionVector2Schema,
@@ -36,7 +39,7 @@ export class KindOptionsDraft {
   ): KindOptionValue | undefined {
     let current: unknown = this.#kinds[packageName];
     for (const segment of field.path) {
-      current = isRecord(current) ? current[segment] : undefined;
+      current = is.plainObject(current) ? current[segment] : undefined;
     }
 
     if (field.type === "vector2") {
@@ -74,12 +77,6 @@ function assign(
     ...record,
     [head]: rest.length === 0 ?
       structuredClone(value) :
-      assign(isRecord(child) ? child : {}, rest, value)
+      assign(is.plainObject(child) ? child : {}, rest, value)
   };
-}
-
-function isRecord(
-  value: unknown
-): value is OptionRecord {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

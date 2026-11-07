@@ -6,6 +6,7 @@ import {
   type Schema
 } from "@jolly-pixel/network";
 import * as z from "zod/mini";
+import { is } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -57,8 +58,9 @@ export class KindPackage {
       );
     }
 
-    const kinds = typeof exports === "object" && exports !== null &&
-      KINDS_EXPORT in exports ? exports[KINDS_EXPORT] : undefined;
+    const kinds = is.object(exports) && KINDS_EXPORT in exports ?
+      exports[KINDS_EXPORT] :
+      undefined;
     if (!isAssetKindPackage(kinds)) {
       throw new TypeError(`"${name}" does not export "${KINDS_EXPORT}".`);
     }

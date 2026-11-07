@@ -11,7 +11,7 @@ import {
 import {
   decodeBase64,
   encodeBase64
-} from "@jolly-pixel/asset.common";
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {

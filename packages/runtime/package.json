@@ -51,6 +51,7 @@
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/loop": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
+    "@jolly-pixel/utils": "workspace:*",
     "@pmndrs/detect-gpu": "6.0.28"
   },
   "peerDependencies": {

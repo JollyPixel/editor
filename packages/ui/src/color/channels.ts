@@ -4,9 +4,9 @@ import type {
   HueSpace,
   RGBA
 } from "@jolly-pixel/color";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { clamp } from "../numeric/bounds.ts";
 import type { NumericBounds } from "../numeric/entry.ts";
 import { ChannelModel } from "./ChannelModel.ts";
 

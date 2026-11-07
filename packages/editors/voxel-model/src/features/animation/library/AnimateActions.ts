@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import { MenuSession, type MenuPoint } from "@jolly-pixel/ui";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -389,7 +390,7 @@ export class AnimateActions {
       return result;
     }
     catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = errorMessage(error);
       this.#report(`${failure}: ${reason}`);
 
       return null;

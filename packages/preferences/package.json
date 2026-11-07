@@ -39,6 +39,7 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/controls": "workspace:*",
+    "@jolly-pixel/utils": "workspace:*",
     "zod": "4.6.7"
   }
 }

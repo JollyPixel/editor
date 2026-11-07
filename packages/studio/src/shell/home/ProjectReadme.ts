@@ -16,6 +16,7 @@ import type { AssetRecordData } from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { recordAt } from "../../catalog/recordAt.ts";
@@ -207,7 +208,7 @@ export class ProjectReadme extends LitElement {
       view = {
         state: "failed",
         record,
-        reason: error instanceof Error ? error.message : String(error)
+        reason: errorMessage(error)
       };
     }
 

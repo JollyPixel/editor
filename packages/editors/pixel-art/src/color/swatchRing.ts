@@ -4,6 +4,7 @@ import {
   ColorSpace,
   type RGBA
 } from "@jolly-pixel/color";
+import { clamp } from "@jolly-pixel/utils";
 
 // CONSTANTS
 const kChecker = new Color({
@@ -34,13 +35,13 @@ export function swatchRing(
   const base = Color.from(color).over(kChecker);
   const { l, c, h } = ColorSpace.oklch.fromRgb(base);
   const lighter = new Color(ColorSpace.oklch.toRgb({
-    l: clamp(l + kLightnessShift, kLighterRange),
+    l: clamp(l + kLightnessShift, kLighterRange.min, kLighterRange.max),
     c,
     h,
     a: 1
   }));
   const darker = new Color(ColorSpace.oklch.toRgb({
-    l: clamp(l - kLightnessShift, kDarkerRange),
+    l: clamp(l - kLightnessShift, kDarkerRange.min, kDarkerRange.max),
     c,
     h,
     a: 1
@@ -70,11 +71,4 @@ function legibleRing(
   return preferredContrast >= kMinContrast || preferredContrast >= fallback.contrastWith(base) ?
     preferred :
     fallback;
-}
-
-function clamp(
-  value: number,
-  range: { min: number; max: number; }
-): number {
-  return Math.min(range.max, Math.max(range.min, value));
 }

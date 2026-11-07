@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { is } from "@jolly-pixel/utils";
+
 export class StoredFields {
   static parse(
     raw: string | null
@@ -15,7 +18,7 @@ export class StoredFields {
   constructor(
     value: unknown
   ) {
-    this.#fields = typeof value === "object" && value !== null ?
+    this.#fields = is.plainObject(value) ?
       new Map(Object.entries(value)) :
       new Map();
   }

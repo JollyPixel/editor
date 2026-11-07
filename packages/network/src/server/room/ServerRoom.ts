@@ -4,6 +4,7 @@ import {
   Err,
   type Result
 } from "@openally/result";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -31,7 +32,6 @@ import {
   PRESENCE_EVENT
 } from "../../protocol/constants.ts";
 import { describeErrors } from "../../protocol/schema.ts";
-import { errorMessage } from "../../errorMessage.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 import type {
   PeerMetadata,
