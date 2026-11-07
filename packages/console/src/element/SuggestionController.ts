@@ -7,6 +7,7 @@ import {
   type TemplateResult
 } from "lit";
 import "@jolly-pixel/ui/elements/icon";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
@@ -208,7 +209,7 @@ export class SuggestionController implements ReactiveController {
       this.#highlight = (from + delta + count) % count;
     }
     else {
-      this.#highlight = Math.min(Math.max(this.#highlight + delta, -1), count - 1);
+      this.#highlight = clamp(this.#highlight + delta, -1, count - 1);
     }
     this.#scroll = this.#highlight === 0 ? "top" : "reveal";
     this.#host.requestUpdate();

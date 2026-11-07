@@ -1,9 +1,7 @@
 // Import Third-party Dependencies
 import { html } from "lit";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
-
-// Import Internal Dependencies
-import { isInputElement } from "../shared/dom.ts";
+import { isInputElement } from "@jolly-pixel/ui";
 
 // CONSTANTS
 const kBrushMin = 1;

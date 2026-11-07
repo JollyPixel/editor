@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   clampToViewport,
@@ -127,7 +130,7 @@ export function anchorOrigin({
   const centerY = (anchor.top + anchor.bottom) / 2;
 
   return {
-    x: Math.min(Math.max(centerX - position.x, 0), panel.width),
-    y: Math.min(Math.max(centerY - position.y, 0), panel.height)
+    x: clamp(centerX - position.x, 0, panel.width),
+    y: clamp(centerY - position.y, 0, panel.height)
   };
 }

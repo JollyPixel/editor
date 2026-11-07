@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { errorMessage } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type { CommandConsole } from "../CommandConsole.ts";
 import { RevertStack } from "../execution/RevertStack.ts";
@@ -116,7 +119,7 @@ export class ConsoleServer {
     catch (error) {
       this.#post(this.#failed(
         requestId,
-        error instanceof Error ? error.message : String(error)
+        errorMessage(error)
       ));
     }
   }

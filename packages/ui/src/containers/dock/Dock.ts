@@ -10,6 +10,7 @@ import {
   property,
   query
 } from "lit/decorators.js";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { dockStyles } from "./Dock.styles.ts";
@@ -404,7 +405,7 @@ export class Dock extends LitElement {
   #previewZone(
     column: DockColumn
   ): Rect | undefined {
-    const size = Math.min(Math.max(this.size, this.minSize), this.maxSize);
+    const size = clamp(this.size, this.minSize, this.maxSize);
     if (column === "secondary") {
       if (this.split) {
         return undefined;

@@ -8,6 +8,7 @@ import {
 } from "@jolly-pixel/ui";
 import { ColorPicker } from "@jolly-pixel/ui/elements/color-picker";
 import "@jolly-pixel/ui/elements/notifications";
+import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { forwardConsole } from "../console/forwardConsole.ts";
@@ -50,7 +51,6 @@ import { provideTourKeys } from "../ui/lantern/provideTourKeys.ts";
 import type { EditorContext } from "../contract/EditorDefinition.ts";
 import type { MountRequest } from "../mount/MountedEditor.ts";
 import type { PageState } from "../mount/PageState.ts";
-import { Teardown } from "../contract/Teardown.ts";
 import type { OfflineMode } from "../connection/OfflineMode.ts";
 
 // CONSTANTS

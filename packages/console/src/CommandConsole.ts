@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -288,7 +289,7 @@ export class CommandConsole extends Emitter<
       }
     }
     catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessage(error);
       this.#append("error", message);
     }
   }
@@ -429,7 +430,7 @@ export class CommandConsole extends Emitter<
       }
     }
 
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = errorMessage(error);
 
     return failed.length === 0 ?
       `Script not applied: ${reason}` :

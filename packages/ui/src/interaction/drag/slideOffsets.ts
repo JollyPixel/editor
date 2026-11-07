@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type { DropCandidate } from "./dropIndex.ts";
 
@@ -7,7 +10,7 @@ export function slideOffsets(
   insertion: number
 ): number[] {
   const count = layout.length;
-  const clamped = Math.min(Math.max(insertion, 0), count);
+  const clamped = clamp(insertion, 0, count);
   const to = clamped > from ? clamped - 1 : clamped;
   const gap = count < 2 ?
     0 :

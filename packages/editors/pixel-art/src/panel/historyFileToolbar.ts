@@ -6,11 +6,11 @@ import {
 } from "lit";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import "@jolly-pixel/ui/elements/spinner";
+import { isInputElement } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { renderRailButton } from "../shared/railButton.ts";
 import { renderIcon } from "../shared/icons.ts";
-import { isInputElement } from "../shared/dom.ts";
 import type { TextureImporter } from "../textures/import/TextureImporter.ts";
 import type { TextureExporter } from "../textures/export/TextureExporter.ts";
 import type { ClearTextureDialog } from "../textures/dialogs/ClearTextureDialog.ts";

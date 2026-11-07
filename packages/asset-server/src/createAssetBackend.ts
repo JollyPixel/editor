@@ -3,6 +3,7 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import type { Server } from "@jolly-pixel/network";
 import type { AssetSource } from "@jolly-pixel/asset-source";
 import type { Result } from "@openally/result";
+import { AsyncTeardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { ensureStateGitignore } from "./storage/stateDirectory.ts";
@@ -40,7 +41,6 @@ import { registerAssetRooms } from "./live/registerAssetRooms.ts";
 import type { ContentRefs } from "./live/ContentRefs.ts";
 import { AssetTags } from "./catalog/tags/AssetTags.ts";
 import { AssetBackups } from "./storage/AssetBackups.ts";
-import { Teardown } from "./common/Teardown.ts";
 import { AssetPartFiles } from "./storage/AssetPartFiles.ts";
 import {
   silentLogger,
@@ -116,7 +116,7 @@ export interface AssetBackendAttachOptions {
 export async function createAssetBackend(
   options: AssetBackendOptions
 ): Promise<AssetBackend> {
-  const teardown = new Teardown();
+  const teardown = new AsyncTeardown();
   try {
     return await assembleAssetBackend(options, teardown);
   }
@@ -127,7 +127,7 @@ export async function createAssetBackend(
 
 async function assembleAssetBackend(
   options: AssetBackendOptions,
-  teardown: Teardown
+  teardown: AsyncTeardown
 ): Promise<AssetBackend> {
   const {
     source,

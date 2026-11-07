@@ -3,13 +3,13 @@ import {
   SOUND_KIND,
   soundDocumentKind
 } from "@jolly-pixel/asset.sound/client";
-import {
-  Teardown,
-  type EditorContext,
-  type EditorSession
+import type {
+  EditorContext,
+  EditorSession
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
 import { bindPresenceStack } from "@jolly-pixel/ui";
+import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { SoundCollaboration } from "./collaboration/SoundCollaboration.ts";
@@ -106,9 +106,7 @@ export class SoundEditor {
       });
     }
     catch (error) {
-      teardown.run();
-
-      throw error;
+      throw teardown.unwind(error);
     }
   }
 

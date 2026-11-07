@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 export interface ViewportRect {
   width: number;
   height: number;
@@ -41,5 +44,5 @@ function clampAxis(
     return 0;
   }
 
-  return Math.min(Math.max(position, 0), viewportSize - size);
+  return clamp(position, 0, viewportSize - size);
 }

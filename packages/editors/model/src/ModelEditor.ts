@@ -5,7 +5,6 @@ import {
 } from "@jolly-pixel/asset.model/client";
 import {
   EditorRuntime,
-  Teardown,
   type EditorSession,
   type HostLogger,
   type RuntimeEditorContext
@@ -13,6 +12,7 @@ import {
 import "@jolly-pixel/editor.host/ui";
 import type { Runtime } from "@jolly-pixel/runtime";
 import { Systems } from "@jolly-pixel/engine";
+import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { ModelFile } from "./file/ModelFile.ts";
@@ -130,9 +130,7 @@ export class ModelEditor {
       });
     }
     catch (error) {
-      teardown.run();
-
-      throw error;
+      throw teardown.unwind(error);
     }
   }
 

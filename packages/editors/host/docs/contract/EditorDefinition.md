@@ -120,9 +120,9 @@ interface EditorHandle {
 
 ### Teardown
 
-`new Teardown()` collects release steps. `defer(step)` adds one; `run()`
-aborts `signal`, then runs the steps once, last added first. A `mount` that
-throws halfway calls `run()` to release what it built so far.
+`mount` collects its release steps in a `Teardown` from `@jolly-pixel/utils`
+and calls `run()` from `dispose()`. A `mount` that throws halfway calls
+`unwind(error)` to release what it built so far and rethrow the error.
 
 ## Console
 

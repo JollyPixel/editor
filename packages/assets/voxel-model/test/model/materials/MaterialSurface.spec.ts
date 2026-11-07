@@ -5,64 +5,47 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { SchemaParser } from "@jolly-pixel/network";
-
 // Import Internal Dependencies
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import type { MaterialSurfaceJSON } from "#src/network/types.ts";
-import {
-  materialSurfacePatchSchema,
-  materialSurfaceSchema
-} from "#src/network/VoxelModelCommand.schema.ts";
-
-// CONSTANTS
-const kSchema = new SchemaParser(materialSurfaceSchema);
-const kPatchSchema = new SchemaParser(materialSurfacePatchSchema);
-const kCases: readonly unknown[] = [
-  MaterialSurface.create(),
-  MaterialSurface.create({ opacity: 0, emissiveIntensity: 7 }),
-  MaterialSurface.create({ opacity: 1.5 }),
-  MaterialSurface.create({ roughness: -0.1 }),
-  MaterialSurface.create({ metalness: 2 }),
-  MaterialSurface.create({ emissiveIntensity: -1 }),
-  MaterialSurface.create({ color: "red" }),
-  MaterialSurface.create({ color: "#ABCDEF" }),
-  MaterialSurface.create({ emissive: "#fff" }),
-  { ...MaterialSurface.create(), opacity: "1" },
-  { color: "#ffffff" },
-  null,
-  "#ffffff"
-];
 
 describe("MaterialSurface", () => {
-  test("isValid agrees with the surface schema", () => {
-    for (const value of kCases) {
-      assert.equal(
-        MaterialSurface.isValid(value),
-        kSchema.parse(value).ok,
-        JSON.stringify(value)
-      );
+  test("isValid accepts only a complete surface within its bounds", () => {
+    const cases: ReadonlyArray<readonly [unknown, boolean]> = [
+      [MaterialSurface.create(), true],
+      [MaterialSurface.create({ opacity: 0, emissiveIntensity: 7 }), true],
+      [MaterialSurface.create({ opacity: 1.5 }), false],
+      [MaterialSurface.create({ roughness: -0.1 }), false],
+      [MaterialSurface.create({ metalness: 2 }), false],
+      [MaterialSurface.create({ emissiveIntensity: -1 }), false],
+      [MaterialSurface.create({ color: "red" }), false],
+      [MaterialSurface.create({ color: "#ABCDEF" }), false],
+      [MaterialSurface.create({ emissive: "#fff" }), false],
+      [{ ...MaterialSurface.create(), opacity: "1" }, false],
+      [{ color: "#ffffff" }, false],
+      [null, false],
+      ["#ffffff", false]
+    ];
+
+    for (const [value, expected] of cases) {
+      assert.equal(MaterialSurface.isValid(value), expected, JSON.stringify(value));
     }
   });
 
-  test("isPatch agrees with the surface patch schema", () => {
-    const cases: readonly unknown[] = [
-      ...kCases,
-      { roughness: 0.2 },
-      { emissive: "#ff0000", emissiveIntensity: 3 },
-      { opacity: 2 },
-      { shine: 1 },
-      { color: "#ffffff", shine: 1 },
-      {}
+  test("isPatch accepts one or more known fields within their bounds", () => {
+    const cases: ReadonlyArray<readonly [unknown, boolean]> = [
+      [{ roughness: 0.2 }, true],
+      [{ emissive: "#ff0000", emissiveIntensity: 3 }, true],
+      [MaterialSurface.create(), true],
+      [{ opacity: 2 }, false],
+      [{ shine: 1 }, false],
+      [{ color: "#ffffff", shine: 1 }, false],
+      [{}, false],
+      [null, false]
     ];
 
-    for (const value of cases) {
-      assert.equal(
-        MaterialSurface.isPatch(value),
-        kPatchSchema.parse(value).ok,
-        JSON.stringify(value)
-      );
+    for (const [value, expected] of cases) {
+      assert.equal(MaterialSurface.isPatch(value), expected, JSON.stringify(value));
     }
   });
 

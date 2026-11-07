@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type { BrushTool } from "../../../state/SculptSettings.ts";
 
@@ -12,7 +15,7 @@ export function stampStrength(
   elapsed: number,
   stamps: number
 ): number {
-  const share = Math.min(Math.max(elapsed, 0), MAX_FRAME_TIME) / Math.max(stamps, 1);
+  const share = clamp(elapsed, 0, MAX_FRAME_TIME) / Math.max(stamps, 1);
 
   return tool === "raise" ?
     strength * RAISE_RATE * share :

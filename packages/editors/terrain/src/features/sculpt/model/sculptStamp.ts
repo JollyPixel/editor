@@ -5,6 +5,7 @@ import {
   type TerrainReader,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -133,8 +134,8 @@ export function terraceHeight(
 ): number {
   const base = Math.floor(height / step) * step;
   const within = (height - base) / step;
-  const flat = Math.min(Math.max(sharpness, 0), kMaxTerraceFlat);
-  const rise = Math.min(Math.max((within - flat / 2) / (1 - flat), 0), 1);
+  const flat = clamp(sharpness, 0, kMaxTerraceFlat);
+  const rise = clamp((within - flat / 2) / (1 - flat), 0, 1);
 
   return base + step * rise * rise * (3 - 2 * rise);
 }

@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   PREVIEW_REST_ANGLE,
@@ -35,7 +38,7 @@ export class TurntablePose implements PreviewAngle {
   advance(
     elapsedMs: number
   ): void {
-    const elapsed = Math.min(Math.max(elapsedMs, 0), kMaxElapsedMs);
+    const elapsed = clamp(elapsedMs, 0, kMaxElapsedMs);
     if (this.#spinning) {
       this.#yaw += kSpinRadiansPerMs * elapsed;
       this.#targetYaw = this.#yaw;
@@ -123,5 +126,5 @@ function nextQuarter(
 function clampPitch(
   pitch: number
 ): number {
-  return Math.min(Math.max(pitch, -kQuarterTurn), kQuarterTurn);
+  return clamp(pitch, -kQuarterTurn, kQuarterTurn);
 }

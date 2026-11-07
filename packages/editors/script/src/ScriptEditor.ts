@@ -5,13 +5,13 @@ import {
   textDocumentKind,
   type ScriptDocument
 } from "@jolly-pixel/asset.script/client";
-import {
-  Teardown,
-  type EditorContext,
-  type EditorSession
+import type {
+  EditorContext,
+  EditorSession
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
 import { bindPresenceStack } from "@jolly-pixel/ui";
+import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
@@ -98,9 +98,7 @@ export class ScriptEditor {
       });
     }
     catch (error) {
-      teardown.run();
-
-      throw error;
+      throw teardown.unwind(error);
     }
   }
 

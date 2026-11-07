@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
-import { is } from "@jolly-pixel/utils";
+import { minProperties } from "@jolly-pixel/network";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type {
@@ -49,8 +50,29 @@ const kDefaultSurface: MaterialSurfaceJSON = {
   emissive: "#000000",
   emissiveIntensity: 1
 };
-const kFieldRules = new Map<string, (value: unknown) => boolean>(
-  kSurfaceKeys.map((key) => [key, fieldRule(kSurfaceProperties[key])])
+const kHexColorField = z.string().check(
+  z.regex(new RegExp(kHexColorSchema.pattern))
+);
+const kUnitField = z.number().check(
+  z.minimum(kUnitSchema.minimum),
+  z.maximum(kUnitSchema.maximum)
+);
+const kSurfaceShape = {
+  color: kHexColorField,
+  opacity: kUnitField,
+  roughness: kUnitField,
+  metalness: kUnitField,
+  emissive: kHexColorField,
+  emissiveIntensity: z.number().check(
+    z.minimum(kSurfaceProperties.emissiveIntensity.minimum)
+  )
+} satisfies Record<(typeof kSurfaceKeys)[number], z.ZodMiniType>;
+
+export const materialSurfaceSchema = z.object(kSurfaceShape);
+
+export const materialSurfacePatchSchema = minProperties(
+  z.partial(z.strictObject(kSurfaceShape)),
+  1
 );
 
 export class MaterialSurface {
@@ -69,21 +91,13 @@ export class MaterialSurface {
   static isValid(
     value: unknown
   ): value is MaterialSurfaceJSON {
-    return is.object(value) &&
-      kSurfaceKeys.every((key) => satisfiesField(key, Reflect.get(value, key)));
+    return materialSurfaceSchema.safeParse(value).success;
   }
 
   static isPatch(
     value: unknown
   ): value is MaterialSurfacePatchJSON {
-    if (typeof value !== "object" || value === null) {
-      return false;
-    }
-
-    const keys = Object.keys(value);
-
-    return keys.length > 0 &&
-      keys.every((key) => satisfiesField(key, Reflect.get(value, key)));
+    return materialSurfacePatchSchema.safeParse(value).success;
   }
 
   static glows(
@@ -128,27 +142,4 @@ export class MaterialSurface {
   toJSON(): MaterialSurfaceJSON {
     return { ...this.#surface };
   }
-}
-
-function satisfiesField(
-  key: string,
-  value: unknown
-): boolean {
-  return kFieldRules.get(key)?.(value) ?? false;
-}
-
-function fieldRule(
-  schema: SurfaceFieldSchema
-): (value: unknown) => boolean {
-  if (schema.type === "string") {
-    const pattern = new RegExp(schema.pattern);
-
-    return (value) => typeof value === "string" && pattern.test(value);
-  }
-
-  const { minimum, maximum = Infinity } = schema;
-
-  return (value) => typeof value === "number" &&
-    value >= minimum &&
-    value <= maximum;
 }

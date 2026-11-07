@@ -4,6 +4,7 @@ import {
   type TerrainReader,
   type TilePatch
 } from "@jolly-pixel/terrain.renderer";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -55,7 +56,7 @@ export function rampStamp(
         const z = corner.z + row * spacing;
         const along = lengthSquared === 0 ?
           0 :
-          Math.min(Math.max(((x - from.x) * dx + (z - from.z) * dz) / lengthSquared, 0), 1);
+          clamp(((x - from.x) * dx + (z - from.z) * dz) / lengthSquared, 0, 1);
         const distance = Math.hypot(x - from.x - dx * along, z - from.z - dz * along);
         const weight = strength * falloffWeight(falloff, distance / radius);
         if (weight <= 0) {

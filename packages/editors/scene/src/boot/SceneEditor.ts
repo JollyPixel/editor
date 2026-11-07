@@ -7,7 +7,6 @@ import {
 import {
   EditorRuntime,
   followKeyBindings,
-  Teardown,
   type AssetLease,
   type EditorSession,
   type HostLogger,
@@ -15,6 +14,7 @@ import {
 } from "@jolly-pixel/editor.host";
 import type { Runtime } from "@jolly-pixel/runtime";
 import { Systems } from "@jolly-pixel/engine";
+import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { SceneEditing } from "../editing/SceneEditing.ts";
@@ -140,9 +140,7 @@ export class SceneEditor {
       });
     }
     catch (error) {
-      teardown.run();
-
-      throw error;
+      throw teardown.unwind(error);
     }
   }
 
