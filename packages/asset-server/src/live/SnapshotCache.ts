@@ -60,6 +60,13 @@ export class SnapshotCache {
     if (this.#encoded?.version === version) {
       return this.#encoded;
     }
+
+    return this.#plainAt(version);
+  }
+
+  #plainAt(
+    version: number
+  ): CachedSnapshot {
     if (this.#plain?.version !== version) {
       this.#plain = {
         version,
@@ -75,19 +82,28 @@ export class SnapshotCache {
     version: number,
     encoding: Promise<unknown>
   ): Promise<void> {
+    let data: unknown;
     try {
-      const data = await encoding;
-      if (this.#version() === version) {
-        this.#encoded = {
-          version,
-          message: snapshotMessage(data, version),
-          compress: false
-        };
-      }
+      data = await encoding;
     }
     catch {
-      this.#encoded = null;
+      if (this.#version() === version) {
+        this.#encoded = null;
+      }
+
+      return;
     }
+    if (this.#version() !== version) {
+      return;
+    }
+
+    this.#encoded = data === null ?
+      this.#plainAt(version) :
+      {
+        version,
+        message: snapshotMessage(data, version),
+        compress: false
+      };
   }
 }
 

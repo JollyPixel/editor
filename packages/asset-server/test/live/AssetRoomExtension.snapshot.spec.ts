@@ -159,6 +159,19 @@ describe("AssetRoomExtension — encoded snapshots", () => {
     ]);
   });
 
+  test("an encode resolving null sends the compressed plain snapshot and is not retried", async() => {
+    const room = snapshotRoom({
+      encodeSnapshot: () => Promise.resolve(null),
+      compressSnapshot: true
+    });
+
+    assert.deepEqual(await compressedOnJoin(room), [true]);
+    assert.deepEqual(await room.join("b"), [
+      { type: "snapshot", data: { value: "plain@1" }, version: 1 }
+    ]);
+    assert.strictEqual(room.encodes, 1);
+  });
+
   test("a resync at the encoded version reuses the encoded snapshot", async() => {
     const room = snapshotRoom({ encodeSnapshot: encodedAtVersion });
     await room.join("a");

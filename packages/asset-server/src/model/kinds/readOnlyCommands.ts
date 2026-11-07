@@ -5,7 +5,10 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { AssetCommands } from "./AssetKindHandler.ts";
+import type {
+  AssetCommands,
+  AssetRoomBinding
+} from "./AssetKindHandler.ts";
 
 export interface ReadOnlyCommandsOptions<TState> {
   readonly eventType: string;
@@ -15,6 +18,10 @@ export interface ReadOnlyCommandsOptions<TState> {
   snapshot(
     state: TState
   ): unknown;
+
+  encodeSnapshot?(
+    binding: AssetRoomBinding<TState>
+  ): Promise<unknown>;
 }
 
 export function readOnlyCommands<TState>(
@@ -24,18 +31,22 @@ export function readOnlyCommands<TState>(
     eventType,
     snapshotSchema,
     compressSnapshot,
-    snapshot
+    snapshot,
+    encodeSnapshot
   } = options;
 
   return {
     eventType,
     protocol: MessageProtocol.EMPTY,
     apply: () => undefined,
-    live: ({ state }) => {
+    live: (binding) => {
       return {
         snapshotSchema,
         compressSnapshot,
-        snapshot: () => snapshot(state),
+        snapshot: () => snapshot(binding.state),
+        encodeSnapshot: encodeSnapshot === undefined ?
+          undefined :
+          () => encodeSnapshot(binding),
         arbitrate: () => null
       };
     }

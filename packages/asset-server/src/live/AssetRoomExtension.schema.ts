@@ -12,6 +12,7 @@ import * as z from "zod/mini";
 // Import Internal Dependencies
 import {
   ASSET_ROOM_DELETED,
+  ASSET_ROOM_INLINE_SNAPSHOT,
   ASSET_ROOM_MAX_PARTS_PER_MESSAGE,
   ASSET_ROOM_PARTS,
   ASSET_ROOM_REJECTED,
@@ -86,6 +87,11 @@ export function assetRoomOutboundProtocol(
         ({ event, schema }) => syncVariant(event, "correction", schema)
       ),
       catchUpVariant(command),
+      withEvent(z.object({
+        type: z.literal(ASSET_ROOM_INLINE_SNAPSHOT),
+        data: snapshot,
+        version: z.optional(kNonNegativeInt)
+      }), SNAPSHOT_EVENT),
       kAssetRoomDeletedSchema,
       kAssetRoomRejectedSchema,
       ...part === undefined ? [] : [partsVariant(part)],
@@ -110,7 +116,10 @@ export function assetRoomInboundProtocol(
     z.union([
       ...command.variants.map(({ schema }) => schema),
       ...relay,
-      ...requests
+      ...requests,
+      z.object({
+        [command.discriminator]: z.literal(ASSET_ROOM_INLINE_SNAPSHOT)
+      })
     ]),
     {
       discriminator: command.discriminator

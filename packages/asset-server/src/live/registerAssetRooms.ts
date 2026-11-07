@@ -18,6 +18,8 @@ import type { AssetCommandHeader } from "../model/kinds/AssetLiveProtocol.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
 import type { CatalogChange } from "../catalog/client/protocol.ts";
 import type { AssetStateStore } from "./AssetStateStore.ts";
+import type { ContentRefs } from "./ContentRefs.ts";
+import type { ContentRefOptions } from "../model/kinds/ContentRef.ts";
 import type {
   AssetTags,
   TaggedVersion
@@ -37,6 +39,7 @@ export interface AssetRoomsOptions {
   flush: (assetId: string) => Promise<void>;
   tags: Pick<AssetTags, "read">;
   graceMs?: number;
+  contentRefs?: ContentRefs;
   logger?: Logger;
 }
 
@@ -65,6 +68,7 @@ export function registerAssetRooms(
     flush,
     tags,
     graceMs,
+    contentRefs,
     logger = silentLogger()
   } = options;
   for (const kind of kinds.kinds()) {
@@ -101,7 +105,14 @@ export function registerAssetRooms(
       kind: room.handler.kind,
       roomId: room.roomId,
       state,
-      version
+      version,
+      contentRef: contentRefs === undefined ?
+        undefined :
+        (bytes: Uint8Array, refOptions?: ContentRefOptions) => contentRefs.issue(
+          room.roomId,
+          bytes,
+          refOptions
+        )
     };
 
     return new AssetRoomExtension(
@@ -132,7 +143,8 @@ export function registerAssetRooms(
         partsOnJoin: [...tagged.parts?.keys() ?? []]
       }),
       graceMs,
-      readOnly: true
+      readOnly: true,
+      onEvict: () => contentRefs?.release(room.roomId)
     };
   }
 
@@ -166,6 +178,7 @@ export function registerAssetRooms(
         if (liveRooms.get(assetId) === extension) {
           liveRooms.delete(assetId);
         }
+        contentRefs?.release(room.roomId);
         await flush(assetId);
         states.release(assetId);
       }

@@ -47,12 +47,50 @@ from outside, the room calls the protocol's `reloaded()` before it broadcasts
 the new snapshot.
 
 A snapshot is the protocol's `encodeSnapshot()` form once it is ready for the
-room version, and `snapshot()` otherwise. With `compressSnapshot`, the room
-asks the socket to compress the `snapshot()` form, for kinds whose raw bytes
-shrink such as glTF or RGBA pixels; the encoded form is sent as it is.
+room version, and `snapshot()` otherwise. An `encodeSnapshot()` that resolves
+`null` keeps the `snapshot()` form for that version. With `compressSnapshot`,
+the room asks the socket to compress the `snapshot()` form, for kinds whose raw
+bytes shrink such as glTF or RGBA pixels; the encoded form is sent as it is.
 `binaryCommands(eventType, { compress: true })` sets it for a binary kind.
 `compressCommands` does the same for broadcast commands and catch-ups, for
 kinds whose commands carry raw bytes such as heights or RGBA pixels.
+
+A binary kind declared with `binaryCommands(eventType, { refAbove })` sends
+content larger than `refAbove` bytes as a content ref,
+`{ type: "ref", hash, size, ticket }`, when the backend was attached with a
+`ContentRefs`, as `AssetServer.open({ content })` does. The ref is its encoded
+form: it waits for the room version like any `encodeSnapshot()`. Content at or
+below `refAbove` encodes to `null`, so it goes out as the `snapshot()` form,
+compressed with `compress`. `ContentRefs` holds the bytes behind the last ref
+each room issued until the room is evicted or issues another.
+`assetServer.contentHandler` serves them at `/__jollypixel/content/<hash>` to a
+request that carries the ticket in `x-jolly-content-ticket`.
+
+The ticket reaches only room members, so the route checks no account or share
+link. A revoked member can still fetch the bytes it was sent while the room
+stays open on the same content. Responses are
+`private, max-age=31536000, immutable`, and the ticket travels in a header, so
+reopening the same content is a browser cache hit even though each open gets a
+new ticket. When the state is replaced, members get the new bytes inline
+through `snapshot()`, and the next join issues the new ref.
+
+With `content: { compression: true }`, the route sends the content of a kind
+that declares `compress` as brotli (quality 5), or gzip when the request does
+not accept brotli. It encodes each content once and keeps the result as long
+as `ContentRefs` holds the bytes. Without `compression`, or for a kind such as
+sound whose Ogg bytes do not shrink, it sends the bytes as they are. The
+studio turns both socket and route compression on with
+`StudioBackend.open(project, { compression })`.
+
+On the client, `resolveBinarySnapshot` from `./client` returns bytes as they
+are and fetches a ref; a kind's document passes it as `resolveSnapshot`. When
+the fetch fails, it sends `{ action: "inline-snapshot" }` to the room, which
+answers that member with `{ type: "inline-snapshot", data, version }` holding
+the `snapshot()` form, compressed like a snapshot. The room declares the
+request as a query, so a member with only read rights, such as a share-link
+guest or a tag room member, may send it. A denied request, leaving the room,
+or no answer within 30 seconds rejects the resolution. Without `ContentRefs`, as in the in-page offline
+server, every snapshot stays inline.
 
 The room handles one command at a time. The next command is arbitrated only
 after the previous append settled, so arbitration always runs against a state

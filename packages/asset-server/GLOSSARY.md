@@ -80,6 +80,12 @@ snapshot to each joining client. After domain events, the backend can also
 record the serialized state as an update so later replay can use that event as
 a checkpoint and physical storage can be brought up to date.
 
+### Content Ref
+
+A snapshot that names a binary asset's bytes by hash instead of carrying them.
+The client fetches the bytes over HTTP with the ticket the ref holds, and the
+browser cache keeps them for the next open of the same content.
+
 ### Reconciliation
 
 The comparison between physical asset storage and the state last projected

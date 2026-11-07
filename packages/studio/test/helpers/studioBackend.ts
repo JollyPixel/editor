@@ -33,7 +33,7 @@ export interface ServedBackend extends AsyncDisposable {
 }
 
 export interface ServeBackendOptions extends Pick<
-  StudioBackendOptions, "requestsPerMinute" | "trustProxy"
+  StudioBackendOptions, "requestsPerMinute" | "trustProxy" | "compression"
 > {
   /**
    * @default "member"
@@ -45,7 +45,6 @@ export interface ServeBackendOptions extends Pick<
    */
   accessRequests?: boolean;
   throttle?: NonNullable<StudioBackendOptions["accounts"]>["throttle"];
-  compression?: boolean;
 }
 
 export async function serveBackend(
@@ -67,6 +66,7 @@ export async function serveBackend(
     inMemory: true,
     requestsPerMinute: options.requestsPerMinute,
     trustProxy: options.trustProxy,
+    compression: options.compression,
     accounts: {
       defaultRole: options.defaultRole ?? "member",
       throttle: options.throttle,
@@ -81,9 +81,7 @@ export async function serveBackend(
       response.end();
     });
   });
-  backend.attach(server, {
-    compression: options.compression
-  });
+  backend.attach(server);
   await new Promise<void>((resolve) => {
     server.listen(0, "127.0.0.1", resolve);
   });

@@ -14,8 +14,18 @@ import {
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { STATE_GITIGNORE_PATH } from "#src/index.ts";
+import {
+  CONTENT_TICKET_HEADER,
+  STATE_GITIGNORE_PATH,
+  contentRefUrl,
+  type ContentRef
+} from "#src/index.ts";
 import { AssetServer } from "#src/node.ts";
+import {
+  LARGE_CONTENT,
+  blobHandler,
+  serveContent
+} from "../helpers/live/contentRefs.ts";
 import { tempDirectory } from "../helpers/tempDirectory.ts";
 import { counterHandler, liveCounterHandler } from "../helpers/kinds.ts";
 import { counterProtocols } from "../helpers/protocols.ts";
@@ -80,6 +90,44 @@ describe("AssetServer", () => {
       kind: "join"
     });
     assert.notStrictEqual(joined, null);
+  });
+
+  test("serves the content refs of its binary rooms through its content handler", async() => {
+    await using assetServer = await AssetServer.open({
+      root: "unused-when-a-source-is-given",
+      source: new MemoryAssetSource(),
+      inMemory: true,
+      handlers: [blobHandler()],
+      seed: {
+        "a.blob": () => LARGE_CONTENT
+      },
+      backend: {
+        reconcile: {
+          watch: false
+        }
+      },
+      content: {}
+    });
+    await using server = await serveContent(assetServer.contentHandler);
+    const record = assetServer.backend.catalog.snapshot().assets[0];
+    const client = recordingClient("A");
+
+    await assetServer.network
+      .connect(client, { subject: "A", role: "default" })
+      .receive({
+        room: new AssetRoom(record.kind, record.id).toString(),
+        kind: "join"
+      });
+    const ref = client.received
+      .map((envelope) => (envelope as { payload?: { type?: string; data?: unknown; }; }).payload)
+      .find((payload) => payload?.type === "snapshot")?.data as ContentRef;
+    const served = await fetch(new URL(contentRefUrl(ref.hash), server.origin), {
+      headers: {
+        [CONTENT_TICKET_HEADER]: ref.ticket
+      }
+    });
+
+    assert.deepEqual(new Uint8Array(await served.arrayBuffer()), LARGE_CONTENT);
   });
 
   test("seeds a root that does not exist yet", async() => {

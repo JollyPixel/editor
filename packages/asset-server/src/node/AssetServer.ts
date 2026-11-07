@@ -29,6 +29,12 @@ import {
   silentLogger,
   type Logger
 } from "../common/logger.ts";
+import { ContentRefs } from "../live/ContentRefs.ts";
+import {
+  createContentHandler,
+  type ContentHandler,
+  type ContentHandlerOptions
+} from "./contentHandler.ts";
 import {
   seedAssetSource,
   type AssetSeedMap
@@ -78,6 +84,11 @@ export interface AssetServerOptions {
    * `compaction.onOpen` defaults to `true` here.
    */
   backend?: AssetBackendTuning;
+  /**
+   * Lets binary kinds that opt in send their snapshot as a content ref,
+   * served over HTTP by `contentHandler`.
+   */
+  content?: ContentHandlerOptions;
 }
 
 interface AssetServerParts {
@@ -86,6 +97,7 @@ interface AssetServerParts {
   ownsEventStore: boolean;
   backend: AssetBackend;
   network: Server;
+  contentHandler: ContentHandler;
   detach: () => void;
 }
 
@@ -145,6 +157,9 @@ export class AssetServer implements AsyncDisposable {
     for (const extension of extensions) {
       network.register(extension);
     }
+    const contentRefs = options.content === undefined ?
+      undefined :
+      new ContentRefs();
 
     return new AssetServer({
       source,
@@ -152,7 +167,10 @@ export class AssetServer implements AsyncDisposable {
       ownsEventStore,
       backend,
       network,
-      detach: backend.attach(network)
+      contentHandler: contentRefs === undefined ?
+        (_request, _response, next) => next() :
+        createContentHandler(contentRefs, options.content),
+      detach: backend.attach(network, { contentRefs })
     });
   }
 
@@ -160,6 +178,7 @@ export class AssetServer implements AsyncDisposable {
   readonly eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   readonly backend: AssetBackend;
   readonly network: Server;
+  readonly contentHandler: ContentHandler;
 
   #ownsEventStore: boolean;
   #detach: () => void;
@@ -171,6 +190,7 @@ export class AssetServer implements AsyncDisposable {
     this.eventStore = parts.eventStore;
     this.backend = parts.backend;
     this.network = parts.network;
+    this.contentHandler = parts.contentHandler;
     this.#ownsEventStore = parts.ownsEventStore;
     this.#detach = parts.detach;
   }

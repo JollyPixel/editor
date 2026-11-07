@@ -83,8 +83,19 @@ calls it when its document no longer matches the room.
 
 ### DocumentSyncClient
 
-`new DocumentSyncClient(room, { document, keys })` sends local changes
-and handles rollback/replay through the document's change images.
+`new DocumentSyncClient(room, { document, keys, resolveSnapshot? })` sends
+local changes and handles rollback/replay through the document's change images.
+Every snapshot loads through `applySnapshot`, so the document holds it before
+the sync confirms the acknowledgements the snapshot carries.
+
+`resolveSnapshot(received, room)` turns a received snapshot into the value
+`document.load()` takes, for a room whose snapshot can arrive in another form,
+such as a reference fetched over HTTP. It is a `SnapshotResolver<TSnapshot>`.
+A returned promise holds later room messages until it settles, as
+`applySnapshot` does; a rejection emits `snapshot-failed`. A plain value loads
+in the same turn. To wait for a room message inside the resolver, listen on
+`room` directly: the sync holds its own copy of that message until the
+promise settles, then handles it as usual.
 
 ### SyncedDocument
 
@@ -121,8 +132,8 @@ Pairs an asset kind with the factory of its synced document. Each
 
 ### SyncedCommandDocument
 
-`new SyncedCommandDocument(room, { document, keys })` is a `SyncedDocument` over
-a `DocumentSyncClient`.
+`new SyncedCommandDocument(room, { document, keys, resolveSnapshot? })` is a
+`SyncedDocument` over a `DocumentSyncClient`.
 
 `SyncedCommandDocument<TDocument, TNotice>` reads the command, snapshot and
 image types from the document's `applyRemote`, `load` and `revert` signatures.
@@ -138,9 +149,10 @@ The command type is the type `applyRemote` takes, joined with
 
 ### commandDocumentKind
 
-`commandDocumentKind({ kind, createDocument, keys })` returns `{ kind, syncDocument(room) }`.
+`commandDocumentKind({ kind, createDocument, keys, resolveSnapshot? })` returns `{ kind, syncDocument(room) }`.
 Each `syncDocument(room)` call builds a new document with `createDocument()`
-and returns it wrapped in a `SyncedCommandDocument` bound to `room` and `keys`.
+and returns it wrapped in a `SyncedCommandDocument` bound to `room`, `keys`
+and `resolveSnapshot`.
 `CommandDocumentKind<TKind, TDocument, TNotice>` is the `DocumentKind` it
 returns, with the room and the synced document derived from the document. Annotate the return type to name the notices the room may send:
 

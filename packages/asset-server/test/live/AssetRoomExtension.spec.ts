@@ -119,7 +119,8 @@ describe("AssetRoomExtension", () => {
     assert.deepEqual(extension.protocols.inbound!.events, [
       "increment",
       "subscribe-parts",
-      "unsubscribe-parts"
+      "unsubscribe-parts",
+      "inline-snapshot"
     ]);
   });
 

@@ -13,6 +13,7 @@ export const ASSET_ROOM_PARTS = "parts";
 export const ASSET_ROOM_SUBSCRIBE_PARTS = "subscribe-parts";
 export const ASSET_ROOM_UNSUBSCRIBE_PARTS = "unsubscribe-parts";
 export const ASSET_ROOM_MAX_PARTS_PER_MESSAGE = 1_024;
+export const ASSET_ROOM_INLINE_SNAPSHOT = "inline-snapshot";
 
 export type AssetCommandHeader = Partial<NetworkCommandHeader>;
 
@@ -36,6 +37,12 @@ export interface AssetRoomPartsMessage<TPart = unknown> {
    * `null` for a part the manifest does not list.
    */
   readonly parts: Readonly<Record<string, TPart | null>>;
+}
+
+export interface AssetRoomInlineSnapshotMessage<TSnapshot = unknown> {
+  readonly type: typeof ASSET_ROOM_INLINE_SNAPSHOT;
+  readonly data: TSnapshot;
+  readonly version?: number;
 }
 
 export interface AssetPartsRequest {

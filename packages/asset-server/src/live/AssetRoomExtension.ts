@@ -11,10 +11,12 @@ import type {
 } from "../model/kinds/AssetKindHandler.ts";
 import {
   ASSET_ROOM_DELETED,
+  ASSET_ROOM_INLINE_SNAPSHOT,
   ASSET_ROOM_REJECTED,
   type AssetCommandHeader,
   type AssetLiveProtocol,
   type AssetRoomDeletedMessage,
+  type AssetRoomInlineSnapshotMessage,
   type AssetRoomRejectedMessage
 } from "../model/kinds/AssetLiveProtocol.ts";
 import {
@@ -79,6 +81,7 @@ export class AssetRoomExtension<
   readonly id: string;
   readonly name: string;
   readonly protocols: network.MessageProtocols;
+  override readonly queries = [ASSET_ROOM_INLINE_SNAPSHOT];
 
   #assetId: string;
   #version: () => number | undefined;
@@ -281,6 +284,11 @@ export class AssetRoomExtension<
 
       return;
     }
+    if (this.#roomProtocols.isInlineSnapshotRequest(message)) {
+      this.#sendInlineSnapshot(sender(context.room, clientId));
+
+      return;
+    }
 
     const command = attributeCommand(message, clientId);
     this.#acks.record(clientId, command.seq);
@@ -425,6 +433,20 @@ export class AssetRoomExtension<
       commands,
       version: events.at(-1)?.eventVersion ?? from
     };
+  }
+
+  #sendInlineSnapshot(
+    send: Send
+  ): void {
+    const version = this.#version();
+    send(
+      {
+        type: ASSET_ROOM_INLINE_SNAPSHOT,
+        data: this.#protocol.snapshot(),
+        ...(version === undefined ? {} : { version })
+      } satisfies AssetRoomInlineSnapshotMessage,
+      { compress: this.#protocol.compressSnapshot === true }
+    );
   }
 
   #sendSnapshot(

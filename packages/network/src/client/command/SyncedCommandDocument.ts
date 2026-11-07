@@ -2,6 +2,7 @@
 import type { Room } from "../Room.ts";
 import {
   DocumentSyncClient,
+  type SnapshotResolver,
   type SyncableDocument
 } from "./DocumentSyncClient.ts";
 import {
@@ -50,6 +51,7 @@ export interface SyncedCommandDocumentOptions<
 > {
   document: TDocument;
   keys(command: TCommand): readonly string[] | null;
+  resolveSnapshot?: SnapshotResolver<SyncableDocumentSnapshot<TDocument>>;
 }
 
 export class SyncedCommandDocument<
@@ -67,7 +69,8 @@ export class SyncedCommandDocument<
   ) {
     super(new DocumentSyncClient(room, {
       document: options.document,
-      keys: options.keys
+      keys: options.keys,
+      resolveSnapshot: options.resolveSnapshot
     }));
     this.document = options.document;
   }
@@ -81,6 +84,7 @@ export interface CommandDocumentKindOptions<
   kind: TKind;
   createDocument(): TDocument;
   keys(command: TCommand): readonly string[] | null;
+  resolveSnapshot?: SnapshotResolver<SyncableDocumentSnapshot<TDocument>>;
 }
 
 export type CommandDocumentKind<
@@ -104,13 +108,19 @@ export function commandDocumentKind<
     NoInfer<SyncableDocumentCommand<TDocument>>
   >
 ): CommandDocumentKind<TKind, TDocument, TNotice> {
-  const { kind, createDocument, keys } = options;
+  const {
+    kind,
+    createDocument,
+    keys,
+    resolveSnapshot
+  } = options;
 
   return {
     kind,
     syncDocument: (room) => new SyncedCommandDocument(room, {
       document: createDocument(),
-      keys
+      keys,
+      resolveSnapshot
     })
   };
 }

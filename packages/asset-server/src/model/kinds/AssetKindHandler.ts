@@ -8,6 +8,10 @@ import type {
   AssetLiveProtocol,
   AssetRelaySchemas
 } from "./AssetLiveProtocol.ts";
+import type {
+  ContentRef,
+  ContentRefOptions
+} from "./ContentRef.ts";
 
 export interface SnapshotPolicy {
   /**
@@ -30,6 +34,14 @@ export interface AssetRoomBinding<TState = unknown> {
   readonly roomId: string;
   readonly state: TState;
   readonly version?: () => number | undefined;
+  /**
+   * Holds `bytes` for HTTP fetches while the room is open. Absent when the
+   * backend serves no content refs.
+   */
+  readonly contentRef?: (
+    bytes: Uint8Array,
+    options?: ContentRefOptions
+  ) => Promise<ContentRef>;
 }
 
 export interface AssetCommands<

@@ -10,7 +10,8 @@ import {
   registerAssetRooms,
   type AnyAssetKindHandler,
   type AssetCommandHeader,
-  type AssetKindHandler
+  type AssetKindHandler,
+  type ContentRefs
 } from "#src/index.ts";
 import { syncHarness, type SyncHarness } from "../backend.ts";
 import {
@@ -52,6 +53,7 @@ export interface RoomHarnessOptions {
   kind?: CounterKind;
   handler?: AssetKindHandler<CounterState, AssetCommandHeader, object>;
   extraHandlers?: AnyAssetKindHandler[];
+  contentRefs?: ContentRefs;
   /**
    * The asset the rooms open, a counter at `a.counter` by default.
    */
@@ -120,6 +122,7 @@ export async function roomHarness(
       states: sync.states,
       flush,
       tags,
+      contentRefs: options.contentRefs,
       logger
     });
   }
