@@ -7,6 +7,7 @@ import {
 } from "./protocol.schema.ts";
 import type { RoomPeer } from "../Extension.ts";
 import type { PeerIdentity } from "../../auth/AuthenticationProvider.ts";
+import type { SendOptions } from "../ClientHandle.ts";
 
 // CONSTANTS
 const kHostWorkerData = new SchemaParser(hostWorkerDataSchema);
@@ -54,8 +55,8 @@ export interface WorkerDispatchResult {
 }
 
 export interface ContextCallArgsMap {
-  "room.broadcast": [payload: unknown];
-  "client.send": [clientId: string, data: unknown];
+  "room.broadcast": [payload: unknown, options: SendOptions];
+  "client.send": [clientId: string, data: unknown, options: SendOptions];
 }
 
 export type ContextCallMethod = keyof ContextCallArgsMap;

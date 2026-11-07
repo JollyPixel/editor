@@ -3,6 +3,7 @@ import type { PeerMetadata } from "../../protocol/types.ts";
 import { PRESENCE_EVENT } from "../../protocol/constants.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 import type { ConnectedClient } from "../connection/ConnectedClient.ts";
+import type { SendOptions } from "../extension/ClientHandle.ts";
 import type { RightsGate } from "../rights/RightsGate.ts";
 import type { RoomContext } from "../extension/Extension.ts";
 import type { PeerPresence } from "./PeerPresence.ts";
@@ -23,7 +24,7 @@ export interface RoomMemberSnapshot {
   presence: PeerMetadata;
 }
 
-export interface RoomSendOptions {
+export interface RoomSendOptions extends SendOptions {
   event?: string;
   unreadable?: SerializedEnvelope;
   excludeClientId?: string;
@@ -97,15 +98,17 @@ export class RoomMembers {
     const {
       event,
       unreadable,
-      excludeClientId
+      excludeClientId,
+      compress
     } = options;
+    const sendOptions: SendOptions = { compress };
     for (const record of this.#members.values()) {
       if (record.handle.id === excludeClientId) {
         continue;
       }
 
       if (this.#canRead(record.identity.role, event)) {
-        message.sendTo(record.handle);
+        message.sendTo(record.handle, sendOptions);
       }
       else {
         unreadable?.sendTo(record.handle);
@@ -116,14 +119,14 @@ export class RoomMembers {
   sendTo(
     clientId: string,
     message: SerializedEnvelope,
-    event?: string
+    options: Pick<RoomSendOptions, "event" | "compress"> = {}
   ): void {
     const record = this.#members.get(clientId);
     if (
       record !== undefined &&
-      this.#canRead(record.identity.role, event)
+      this.#canRead(record.identity.role, options.event)
     ) {
-      message.sendTo(record.handle);
+      message.sendTo(record.handle, { compress: options.compress });
     }
   }
 

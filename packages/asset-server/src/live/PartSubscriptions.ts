@@ -12,7 +12,7 @@ import {
   type AssetRoomPartsMessage
 } from "../model/kinds/AssetLiveProtocol.ts";
 
-type Send = (message: AssetRoomPartsMessage) => void;
+export type Send = network.ClientHandle["send"];
 
 export interface PartSubscriptionsOptions<
   TCommand extends AssetCommandHeader
@@ -29,6 +29,7 @@ export class PartSubscriptions<
 > {
   #parts: AssetParts<unknown, TCommand>;
   #live: AssetLiveParts<TCommand>;
+  #sendOptions: network.SendOptions;
   #members: ReadonlySet<string>;
   #version: () => number | undefined;
   #partsOnJoin: readonly string[];
@@ -39,6 +40,9 @@ export class PartSubscriptions<
   ) {
     this.#parts = options.parts;
     this.#live = options.live;
+    this.#sendOptions = {
+      compress: options.live.compress === true
+    };
     this.#members = options.members;
     this.#version = options.version;
     this.#partsOnJoin = options.partsOnJoin;
@@ -53,7 +57,7 @@ export class PartSubscriptions<
     }
 
     this.#subscribed.set(clientId, new Set(this.#partsOnJoin));
-    send(this.#message(this.#partsOnJoin));
+    send(this.#message(this.#partsOnJoin), this.#sendOptions);
   }
 
   leave(
@@ -80,7 +84,7 @@ export class PartSubscriptions<
       subscribed.add(partId);
     }
     this.#subscribed.set(clientId, subscribed);
-    send(this.#message(request.parts));
+    send(this.#message(request.parts), this.#sendOptions);
   }
 
   resend(
@@ -89,7 +93,7 @@ export class PartSubscriptions<
   ): void {
     const subscribed = this.#subscribed.get(clientId);
     if (subscribed !== undefined && subscribed.size > 0) {
-      send(this.#message(subscribed));
+      send(this.#message(subscribed), this.#sendOptions);
     }
   }
 
@@ -97,7 +101,7 @@ export class PartSubscriptions<
     room: network.RoomBroadcast
   ): void {
     for (const clientId of this.#subscribed.keys()) {
-      this.resend(clientId, (message) => room.sendTo(clientId, message));
+      this.resend(clientId, sender(room, clientId));
     }
   }
 
@@ -142,4 +146,11 @@ export class PartSubscriptions<
       parts
     };
   }
+}
+
+export function sender(
+  room: network.RoomBroadcast,
+  clientId: string
+): Send {
+  return (message, options) => room.sendTo(clientId, message, options);
 }

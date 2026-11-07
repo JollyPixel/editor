@@ -40,12 +40,10 @@ export function decodeHoles(
   return holes?.length === bytes ? holes : null;
 }
 
-export function decodeChunkHoles(
-  encoded: string
+export function decodeChunkHoleBytes(
+  bytes: Uint8Array
 ): Uint8Array | null {
-  const holes = decodeBase64(encoded);
-
-  return holes === null || tierOfHoleBytes(holes.length) === null ? null : holes;
+  return tierOfHoleBytes(bytes.length) === null ? null : bytes.slice();
 }
 
 export function encodeHoleTilePatch(

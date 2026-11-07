@@ -13,7 +13,6 @@ import {
   deserializePixelDocument,
   encodePixelArtFile,
   InvalidPixelArtFileError,
-  pixelArtSnapshot,
   PixelBuffer,
   PixelDocumentState,
   serializePixelDocument,
@@ -31,7 +30,10 @@ import {
   pixelArtContentFromPng
 } from "./pixelArt.ts";
 import { applyPixelCommand } from "../network/arbiter/PixelCommandApplier.ts";
-import { encodePixelSnapshot } from "../network/protocol/PixelSnapshotCodec.ts";
+import {
+  encodePixelSnapshot,
+  pixelWireSnapshot
+} from "../network/protocol/PixelSnapshotCodec.ts";
 import {
   pixelCommandProtocol,
   pixelSnapshotSchema,
@@ -170,7 +172,8 @@ export function pixelArtAssetKind(
       live({ state }) {
         return {
           snapshotSchema: pixelSnapshotSchema,
-          snapshot: () => pixelArtSnapshot(state.document),
+          compressSnapshot: true,
+          snapshot: () => pixelWireSnapshot(state.document),
           encodeSnapshot: () => encodePixelSnapshot(state.document),
           ...arbitrated(state.document, PIXEL_COMMAND_RULES),
           correct: (command, admitted) => correctPixelCommand(

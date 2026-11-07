@@ -291,6 +291,7 @@ export function liveTileHandler(): AssetKindHandler<TileState, TileCommand> {
           },
           parts: {
             schema: z.string(),
+            compress: true,
             part: (partId) => state.tiles.get(partId) ?? null,
             outside: (command) => (command.action === "erase" ? command : null)
           }

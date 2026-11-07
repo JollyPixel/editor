@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  bytesSchema,
   commandVariant,
   MessageProtocol,
   withCommandHeader
@@ -143,7 +144,7 @@ export const terrainManifestSchema = z.object({
   )
 });
 
-export const terrainPartSchema = z.string();
+export const terrainPartSchema = bytesSchema;
 
 export const terrainCommandSchema = z.discriminatedUnion("action", [
   commandVariant("chunk-added", {

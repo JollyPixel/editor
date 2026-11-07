@@ -14,6 +14,7 @@ import {
 // Import Internal Dependencies
 import {
   DEFAULT_MATERIAL_PROPERTIES,
+  encodeHeightBytes,
   encodeHeights,
   encodeHoleTilePatch,
   encodeSplatTilePatch,
@@ -28,6 +29,12 @@ export function heights(
   height: number
 ): string {
   return encodeHeights(new Float32Array(CHUNK_SAMPLE_COUNT).fill(height));
+}
+
+export function heightBytes(
+  height: number
+): Uint8Array {
+  return encodeHeightBytes(new Float32Array(CHUNK_SAMPLE_COUNT).fill(height));
 }
 
 export function tileHeights(

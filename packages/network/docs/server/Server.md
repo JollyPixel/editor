@@ -50,8 +50,12 @@ Resolves a trusted identity or `null`.
 ```ts
 interface ClientConnection {
   readonly id: string;
-  sendFrame(frame: Frame): void;
+  sendFrame(frame: Frame, options?: SendOptions): void;
   close(code: number, reason: string): void;
+}
+
+interface SendOptions {
+  compress?: boolean;
 }
 ```
 
@@ -59,6 +63,9 @@ The server encodes every message it sends once per broadcast, with
 [`encodeFrame`](../protocol/Messages.md#frames): a string, or a `Uint8Array`
 when the message holds bytes. Extension hooks receive the client as a
 `ClientHandle`, `{ id, send }`, whose `send` encodes its argument.
+`SendOptions` come from the extension's send and reach `sendFrame` unchanged.
+`compress: true` asks the transport to compress a binary frame; text frames
+follow the transport's own rule.
 
 Returns a session with `receive(raw)` and `close()`.
 Activity is ordered per connection and room.

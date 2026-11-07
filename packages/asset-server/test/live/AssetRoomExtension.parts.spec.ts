@@ -65,6 +65,25 @@ function actions(
 }
 
 describe("AssetRoomExtension — parts", () => {
+  test("parts messages follow the kind's compress option, commands do not", async() => {
+    await using harness = await tilesRoom();
+    await joined(harness, "A");
+    const client = harness.clients.get("A");
+    assert.ok(client);
+
+    await harness.send("A", { action: "subscribe-parts", parts: ["a"] });
+    await harness.send("A", { action: "paint", tile: "a", value: "sand" });
+
+    const compressed = client.received.map((envelope, index) => [
+      ((envelope as { payload?: { type?: string; }; }).payload)?.type,
+      client.sendOptions[index]?.compress === true
+    ]);
+    assert.deepEqual(compressed.slice(-2), [
+      ["parts", true],
+      ["command", false]
+    ]);
+  });
+
   test("a subscription answers with its parts at the room version", async() => {
     await using harness = await tilesRoom();
     await joined(harness, "A");

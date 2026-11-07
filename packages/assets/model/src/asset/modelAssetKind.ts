@@ -43,7 +43,7 @@ export function modelAssetKind(
     kind: MODEL_KIND,
     extensions: MODEL_EXTENSIONS,
     maxContentBytes: maxFileMb * kBytesPerMb,
-    commands: binaryCommands(MODEL_COMMAND)
+    commands: binaryCommands(MODEL_COMMAND, { compress: true })
   };
 }
 

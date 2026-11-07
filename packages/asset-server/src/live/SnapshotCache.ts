@@ -8,22 +8,28 @@ type SnapshotMessage = Readonly<
   Extract<NetworkSyncMessage<unknown, unknown>, { type: "snapshot"; }>
 >;
 
-interface VersionedMessage {
-  readonly version: number;
+export interface CachedSnapshot {
+  readonly version?: number;
   readonly message: SnapshotMessage;
+  readonly compress: boolean;
 }
 
 export class SnapshotCache {
   #protocol: Pick<AssetLiveProtocol, "snapshot" | "encodeSnapshot">;
+  #compressPlain: boolean;
   #version: () => number | undefined;
-  #plain: VersionedMessage | null = null;
-  #encoded: VersionedMessage | null = null;
+  #plain: CachedSnapshot | null = null;
+  #encoded: CachedSnapshot | null = null;
 
   constructor(
-    protocol: Pick<AssetLiveProtocol, "snapshot" | "encodeSnapshot">,
+    protocol: Pick<
+      AssetLiveProtocol,
+      "snapshot" | "encodeSnapshot" | "compressSnapshot"
+    >,
     version: () => number | undefined
   ) {
     this.#protocol = protocol;
+    this.#compressPlain = protocol.compressSnapshot === true;
     this.#version = version;
   }
 
@@ -43,22 +49,26 @@ export class SnapshotCache {
     );
   }
 
-  current(): SnapshotMessage {
+  current(): CachedSnapshot {
     const version = this.#version();
     if (version === undefined) {
-      return snapshotMessage(this.#protocol.snapshot());
+      return {
+        message: snapshotMessage(this.#protocol.snapshot()),
+        compress: this.#compressPlain
+      };
     }
     if (this.#encoded?.version === version) {
-      return this.#encoded.message;
+      return this.#encoded;
     }
     if (this.#plain?.version !== version) {
       this.#plain = {
         version,
-        message: snapshotMessage(this.#protocol.snapshot(), version)
+        message: snapshotMessage(this.#protocol.snapshot(), version),
+        compress: this.#compressPlain
       };
     }
 
-    return this.#plain.message;
+    return this.#plain;
   }
 
   async #store(
@@ -70,7 +80,8 @@ export class SnapshotCache {
       if (this.#version() === version) {
         this.#encoded = {
           version,
-          message: snapshotMessage(data, version)
+          message: snapshotMessage(data, version),
+          compress: false
         };
       }
     }

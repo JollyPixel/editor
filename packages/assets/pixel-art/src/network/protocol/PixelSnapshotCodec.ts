@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  decodePixelBytes,
   decodePngPixels,
   encodePngPixels,
   pixelArtSnapshotFields,
@@ -10,6 +9,16 @@ import {
 
 // Import Internal Dependencies
 import type { PixelWireSnapshot } from "./types.ts";
+
+export function pixelWireSnapshot(
+  state: PixelDocumentState
+): PixelWireSnapshot {
+  return {
+    size: state.buffer.size(),
+    pixels: new Uint8Array(state.buffer.pixels()),
+    ...pixelArtSnapshotFields(state)
+  };
+}
 
 export async function encodePixelSnapshot(
   state: PixelDocumentState
@@ -28,10 +37,10 @@ export function loadPixelSnapshot(
   snapshot: PixelWireSnapshot
 ): void | Promise<void> {
   const { size, pixels } = snapshot;
-  if (typeof pixels === "string") {
+  if (pixels instanceof Uint8Array) {
     target.loadSnapshot({
       ...snapshot,
-      pixels: decodePixelBytes(pixels)
+      pixels: new Uint8ClampedArray(pixels)
     });
 
     return undefined;

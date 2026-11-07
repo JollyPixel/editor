@@ -55,12 +55,6 @@ export interface WebsocketCompressionOptions {
    * @default 64
    */
   threshold?: number;
-  /**
-   * Compresses binary frames too. Media such as PNG or Opus barely shrinks,
-   * so binary frames are sent uncompressed by default.
-   * @default false
-   */
-  binary?: boolean;
 }
 
 export interface WebsocketTransportOptions {
@@ -128,7 +122,6 @@ export class WebsocketTransport implements Disposable {
   #wss: WebSocketServer;
   #policy: HandshakePolicy;
   #maxBufferedBytes: number;
-  #compressBinary: boolean;
   #heartbeat: ReturnType<typeof setInterval> | null = null;
   #connections = new Set<WebsocketConnection>();
   #writes = new WriteBatch();
@@ -156,8 +149,6 @@ export class WebsocketTransport implements Disposable {
       allowedOrigins
     });
     this.#maxBufferedBytes = maxBufferedBytes;
-    this.#compressBinary = typeof compression === "object" &&
-      compression.binary === true;
 
     this.#wss = new WebSocketServer({
       noServer: true,
@@ -327,7 +318,6 @@ export class WebsocketTransport implements Disposable {
       socket,
       logger: this.#logger,
       maxBufferedBytes: this.#maxBufferedBytes,
-      compressBinary: this.#compressBinary,
       onMessage: (frame) => serverConnection.receive(frame),
       holdWrites: () => this.#writes.hold(stream)
     });

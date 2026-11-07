@@ -10,6 +10,9 @@ const kIdentity = z.object({
   subject: kIdentifier,
   role: kIdentifier
 });
+const kSendOptions = z.object({
+  compress: z.optional(z.boolean())
+});
 const kRoomPeer = z.object({
   clientId: kIdentifier,
   identity: kIdentity,
@@ -78,6 +81,9 @@ export const workerToMainSchema = z.union([
     ok: z.boolean(),
     error: z.optional(kIdentifier)
   }),
-  contextCallVariant("room.broadcast", z.tuple([z.unknown()])),
-  contextCallVariant("client.send", z.tuple([kIdentifier, z.unknown()]))
+  contextCallVariant("room.broadcast", z.tuple([z.unknown(), kSendOptions])),
+  contextCallVariant(
+    "client.send",
+    z.tuple([kIdentifier, z.unknown(), kSendOptions])
+  )
 ]);

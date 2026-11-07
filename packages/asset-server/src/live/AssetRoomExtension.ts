@@ -30,7 +30,11 @@ import {
   type AcksField
 } from "./PeerAcks.ts";
 import { SnapshotCache } from "./SnapshotCache.ts";
-import { PartSubscriptions } from "./PartSubscriptions.ts";
+import {
+  PartSubscriptions,
+  sender,
+  type Send
+} from "./PartSubscriptions.ts";
 
 // CONSTANTS
 const kDefaultResumeLimit = 1_000;
@@ -57,6 +61,10 @@ export interface AssetRoomExtensionOptions<
 }
 
 type AssetSyncMessage = network.NetworkSyncMessage<unknown, unknown>;
+
+interface SnapshotFields extends AcksField {
+  refused?: number;
+}
 
 interface CatchUp {
   readonly commands: unknown[];
@@ -167,8 +175,9 @@ export class AssetRoomExtension<
       return;
     }
 
-    room.broadcast(
-      this.#snapshot(this.#acks.ofEveryone())
+    this.#sendSnapshot(
+      (message, options) => room.broadcast(message, options),
+      this.#acks.ofEveryone()
     );
     this.#parts?.resendAll(room);
   }
@@ -202,10 +211,14 @@ export class AssetRoomExtension<
         return;
       }
 
-      client.send(
-        resume === null ? this.#snapshot({}) : await this.#resumeMessage(resume)
-      );
-      this.#parts?.join(peer.clientId, (message) => client.send(message));
+      const send: Send = client.send.bind(client);
+      if (resume === null) {
+        this.#sendSnapshot(send, {});
+      }
+      else {
+        await this.#sendResume(send, resume);
+      }
+      this.#parts?.join(peer.clientId, send);
     });
   }
 
@@ -218,11 +231,9 @@ export class AssetRoomExtension<
         return;
       }
 
-      context.room.sendTo(
-        clientId,
-        this.#snapshot(this.#acks.collectAcks([clientId]))
-      );
-      this.#parts?.resend(clientId, sender(context.room, clientId));
+      const send = sender(context.room, clientId);
+      this.#sendSnapshot(send, this.#acks.collectAcks([clientId]));
+      this.#parts?.resend(clientId, send);
     });
   }
 
@@ -358,21 +369,24 @@ export class AssetRoomExtension<
     return promise;
   }
 
-  async #resumeMessage(
+  async #sendResume(
+    send: Send,
     resume: network.NetworkResume
-  ): Promise<AssetSyncMessage> {
+  ): Promise<void> {
     const acks = this.#acks.resumedBy(resume.clientId);
     const caughtUp = await this.#catchUp(resume.version);
     if (caughtUp === null) {
-      return this.#snapshot(acks);
+      this.#sendSnapshot(send, acks);
+
+      return;
     }
 
-    return {
+    send({
       type: "catch-up",
       data: caughtUp.commands,
       version: caughtUp.version,
       ...acks
-    };
+    } satisfies AssetSyncMessage);
   }
 
   async #catchUp(
@@ -411,17 +425,20 @@ export class AssetRoomExtension<
     };
   }
 
-  #snapshot(
-    acks: AcksField
-  ): AssetSyncMessage {
-    const message = this.#snapshots.current();
-
-    return acks.acks === undefined ?
-      message :
-      {
-        ...message,
-        ...acks
-      };
+  #sendSnapshot(
+    send: Send,
+    fields: SnapshotFields
+  ): void {
+    const { message, compress } = this.#snapshots.current();
+    send(
+      Object.keys(fields).length === 0 ?
+        message :
+        {
+          ...message,
+          ...fields
+        },
+      { compress }
+    );
   }
 
   #resync(
@@ -449,11 +466,12 @@ export class AssetRoomExtension<
       return;
     }
 
-    room.sendTo(clientId, {
-      ...this.#snapshot(acks),
+    const send = sender(room, clientId);
+    this.#sendSnapshot(send, {
+      ...acks,
       ...refused
     });
-    this.#parts?.resend(clientId, sender(room, clientId));
+    this.#parts?.resend(clientId, send);
   }
 
   #broadcast(
@@ -498,11 +516,4 @@ export class AssetRoomExtension<
         ...this.#acks.ofEveryone()
       };
   }
-}
-
-function sender(
-  room: network.RoomBroadcast,
-  clientId: string
-): (message: unknown) => void {
-  return (message) => room.sendTo(clientId, message);
 }

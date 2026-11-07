@@ -153,7 +153,7 @@ describe("PixelSyncClient — remote messages", () => {
 
     room.deliverSnapshot({
       size: { x: 1, y: 1 },
-      pixels: Buffer.from([1, 2, 3, 255]).toString("base64"),
+      pixels: new Uint8Array([1, 2, 3, 255]),
       uvRegions: []
     });
 

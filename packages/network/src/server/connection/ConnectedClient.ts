@@ -3,7 +3,10 @@ import {
   encodeFrame,
   type Frame
 } from "../../protocol/frame/Frame.ts";
-import type { ClientHandle } from "../extension/ClientHandle.ts";
+import type {
+  ClientHandle,
+  SendOptions
+} from "../extension/ClientHandle.ts";
 import type { ClientConnection } from "./ClientConnection.ts";
 
 export class ConnectedClient implements ClientHandle {
@@ -19,15 +22,17 @@ export class ConnectedClient implements ClientHandle {
   }
 
   send(
-    data: unknown
+    data: unknown,
+    options?: SendOptions
   ): void {
-    this.#connection.sendFrame(encodeFrame(data));
+    this.#connection.sendFrame(encodeFrame(data), options);
   }
 
   sendFrame(
-    frame: Frame
+    frame: Frame,
+    options?: SendOptions
   ): void {
-    this.#connection.sendFrame(frame);
+    this.#connection.sendFrame(frame, options);
   }
 
   close(

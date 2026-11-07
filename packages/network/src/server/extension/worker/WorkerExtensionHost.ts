@@ -52,8 +52,14 @@ function createContext(
 ): RoomContext {
   return {
     room: {
-      broadcast: (payload) => postContextCall("room.broadcast", [payload]),
-      sendTo: (clientId, payload) => postContextCall("client.send", [clientId, payload])
+      broadcast: (payload, options = {}) => postContextCall(
+        "room.broadcast",
+        [payload, options]
+      ),
+      sendTo: (clientId, payload, options = {}) => postContextCall(
+        "client.send",
+        [clientId, payload, options]
+      )
     },
     identity
   };
@@ -64,7 +70,10 @@ function createClientHandle(
 ): ClientHandle {
   return {
     id: clientId,
-    send: (data) => postContextCall("client.send", [clientId, data])
+    send: (data, options = {}) => postContextCall(
+      "client.send",
+      [clientId, data, options]
+    )
   };
 }
 

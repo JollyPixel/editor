@@ -66,7 +66,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 - `--prefetch`: lets the shell download the editors' files ahead of the open. Without it, the harness turns the studio's "Prefetch editors" preference off: on the new account online, in `localStorage` offline.
 - `--prewarm`: the shell requests a WebGPU adapter as soon as it loads.
 - `--cpu 4`: CDP CPU throttling.
-- `--network fast-4g`: CDP network throttling with the DevTools presets, `fast-4g` (9 Mbit/s, 165 ms) or `slow-4g` (1.6 Mbit/s, 563 ms), both at 90% of the nominal throughput. It starts after the shell's first load, so the shell's own load does not dominate the run; a `reload` reloads the shell throttled. On localhost, transfer size barely shows in `ready`; use it to measure what bytes cost. It delivers a large uncompressed WebSocket frame about ten times slower than the preset's throughput, so keep socket compression on when reading room timings.
+- `--network fast-4g`: CDP network throttling with the DevTools presets, `fast-4g` (9 Mbit/s, 165 ms) or `slow-4g` (1.6 Mbit/s, 563 ms), both at 90% of the nominal throughput. It starts after the shell's first load, so the shell's own load does not dominate the run; a `reload` reloads the shell throttled. On localhost, transfer size barely shows in `ready`; use it to measure what bytes cost. It delivers a large uncompressed WebSocket frame about ten times slower than the preset's throughput, so it cannot compare compressed and uncompressed frames; use the throttling proxy below for that.
 - `--profile <dir>`: records a V8 CPU profile of each open.
 - `--memory <dir>`: samples every allocation of each open, collected objects included, into a `.heapprofile`, and records a light trace for garbage collection on the renderer main thread. Each measurement gets `memory.allocatedMB`, `memory.minorGc` and `memory.majorGc` (count and ms; major includes incremental marking steps), and `perf:summary` adds their columns. The recording slows the open, so compare memory runs with memory runs only.
 - `--headless`: avoid it. Headless Chromium renders with SwiftShader, which makes WebGPU and WebGL costs meaningless.
@@ -118,6 +118,16 @@ To compare two commits, build the other commit's shell in a worktree and serve i
 [`editor-open-2026-11-03.patch`](./editor-open-2026-11-03.patch) holds the experiments of the [3 November report](./editor-open-2026-11-03.md). It is measurement scaffolding, not a fix to merge, and applies to `f025a676`.
 
 Do not build or run tests while a measurement runs.
+
+### Throttled links
+
+[`perf/throttleProxy.ts`](../../perf/throttleProxy.ts) is a TCP proxy that delays every byte, HTTP and WebSocket alike, as one link of `--mbps` (default 8.1) and `--rtt` milliseconds (default 165, the `fast-4g` figures). Put one in front of each server and point the variant's `base` at the proxy:
+
+```bash
+$ node perf/throttleProxy.ts --listen 3024 --target 3004
+```
+
+Unlike `--network`, it treats compressed and uncompressed frames alike. It throttles from the first request, so `first` and `cold` include the shell and editor downloads; read `reopen` and `reload` for room timings.
 
 ## Finding where the time goes
 

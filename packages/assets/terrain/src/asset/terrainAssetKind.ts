@@ -11,7 +11,6 @@ import {
 } from "@jolly-pixel/asset-server";
 import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
-import { encodeBase64 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -186,11 +185,8 @@ export function terrainAssetKind(
           relay: new TerrainLiveRelay(),
           parts: {
             schema: terrainPartSchema,
-            part: (partId) => {
-              const content = encodeChunkPart(state.terrain, partId);
-
-              return content === null ? null : encodeBase64(content);
-            },
+            compress: true,
+            part: (partId) => encodeChunkPart(state.terrain, partId),
             outside: outsideCommand
           }
         };

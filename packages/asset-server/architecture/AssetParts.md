@@ -89,6 +89,7 @@ of the two:
 | `schema` | Wire form of one part. |
 | `part(partId)` | Wire form of one part, or `null` when the manifest does not list it. |
 | `outside(command)` | Form of a command for members subscribed to none of its parts, or `null` to send them nothing. Optional. |
+| `compress` | `true` to have the socket compress `parts` messages, for parts whose bytes shrink. Optional. |
 
 For a parted kind, the handler's `serialize` and `load` handle the manifest
 only, and `live().snapshot()` is the manifest's wire form. A client applies

@@ -16,15 +16,14 @@ import {
 // Import Internal Dependencies
 import {
   encodeHeights,
-  encodeHoles,
-  encodeSplat,
+  encodeSplatBytes,
   encodeTilePatch,
   type TerrainNetworkCommand,
   type TerrainSnapshot
 } from "#src/index.ts";
 import { terrainDocumentKind } from "#src/network/client.ts";
 import {
-  heights,
+  heightBytes,
   networkCommand,
   tileHeights
 } from "../helpers/terrain.ts";
@@ -65,7 +64,7 @@ function parts(
   return {
     type: "parts",
     version,
-    parts: { "0_0": heights(height) }
+    parts: { "0_0": heightBytes(height) }
   };
 }
 
@@ -120,7 +119,7 @@ describe("TerrainPartsRoom", () => {
 
     deliver(manifest(3));
     document.stream.follow(kFar);
-    deliver({ type: "parts", version: 3, parts: { "20_0": heights(6) } });
+    deliver({ type: "parts", version: 3, parts: { "20_0": heightBytes(6) } });
     deliver(parts(3, 7));
 
     assert.equal(document.terrain.chunk(kFar)?.height(0, 0), 6);
@@ -131,8 +130,8 @@ describe("TerrainPartsRoom", () => {
     const { document, deliver } = joinedPeer();
     deliver(manifest(1));
 
-    const splat = encodeSplat(uniformSplat(SPLAT_TEXEL_COUNT, 5));
-    const holes = encodeHoles(new Uint8Array(HOLE_BYTES).fill(0xff));
+    const splat = encodeSplatBytes(uniformSplat(SPLAT_TEXEL_COUNT, 5));
+    const holes = new Uint8Array(HOLE_BYTES).fill(0xff);
     deliver({ type: "parts", version: 1, parts: { "0_0_splat": splat, "0_0_holes": holes } });
     assert.equal(document.terrain.has(kNear), false);
     deliver(parts(1, 4));

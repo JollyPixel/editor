@@ -1,7 +1,10 @@
 // Import Internal Dependencies
 import type { MessageProtocols } from "../../protocol/message/MessageProtocol.ts";
 import type { PeerMetadata } from "../../protocol/types.ts";
-import type { ClientHandle } from "./ClientHandle.ts";
+import type {
+  ClientHandle,
+  SendOptions
+} from "./ClientHandle.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 
 export interface RoomPeer {
@@ -14,11 +17,13 @@ export interface RoomPeer {
 
 export interface RoomBroadcast {
   broadcast(
-    payload: unknown
+    payload: unknown,
+    options?: SendOptions
   ): void;
   sendTo(
     clientId: string,
-    payload: unknown
+    payload: unknown,
+    options?: SendOptions
   ): void;
 }
 

@@ -106,6 +106,11 @@ export interface AssetLiveParts<
    * Wire form of one part in a `parts` message.
    */
   readonly schema: Schema;
+  /**
+   * Deflates `parts` messages on sockets that negotiated compression.
+   * @default false
+   */
+  readonly compress?: boolean;
 
   part(
     partId: string
@@ -127,6 +132,12 @@ export interface AssetLiveProtocol<
    * @default false
    */
   readonly authorRebases?: boolean;
+  /**
+   * Deflates the bytes of `snapshot()` on sockets that negotiated
+   * compression. `encodeSnapshot()` output goes out as it is.
+   * @default false
+   */
+  readonly compressSnapshot?: boolean;
 
   snapshot(): unknown;
 

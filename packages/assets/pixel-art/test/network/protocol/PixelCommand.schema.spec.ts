@@ -180,21 +180,27 @@ describe("pixelCommandProtocol: uv regions", () => {
 });
 
 describe("pixelSnapshotSchema", () => {
-  test("accepts base64 or PNG pixels", () => {
+  test("accepts raw or PNG pixel bytes, not base64", () => {
     const parser = new SchemaParser(pixelSnapshotSchema);
     const snapshot = {
       size: { x: 4, y: 4 },
       uvRegions: []
     };
+    const bytes = new Uint8Array(4);
 
-    assert.strictEqual(parser.parse({ ...snapshot, pixels: "AAAA" }).ok, true);
+    assert.strictEqual(parser.parse({ ...snapshot, pixels: bytes }).ok, true);
+    assert.strictEqual(parser.parse({
+      ...snapshot,
+      pixels: { format: "png", data: bytes }
+    }).ok, true);
+    assert.strictEqual(parser.parse({ ...snapshot, pixels: "AAAA" }).ok, false);
     assert.strictEqual(parser.parse({
       ...snapshot,
       pixels: { format: "png", data: "AAAA" }
-    }).ok, true);
+    }).ok, false);
     assert.strictEqual(parser.parse({
       ...snapshot,
-      pixels: { format: "webp", data: "AAAA" }
+      pixels: { format: "webp", data: bytes }
     }).ok, false);
   });
 
@@ -202,7 +208,7 @@ describe("pixelSnapshotSchema", () => {
     const parser = new SchemaParser(pixelSnapshotSchema);
     const snapshot = {
       size: { x: 4, y: 4 },
-      pixels: ""
+      pixels: new Uint8Array()
     };
 
     assert.strictEqual(parser.parse(snapshot).ok, true);

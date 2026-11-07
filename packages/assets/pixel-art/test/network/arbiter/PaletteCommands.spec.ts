@@ -12,8 +12,7 @@ import {
   ColorPalette,
   PixelBuffer,
   PixelDocumentState,
-  PixelDocument,
-  pixelArtSnapshot
+  PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -25,7 +24,8 @@ import {
 } from "#src/network/protocol/PixelCommand.schema.ts";
 import {
   encodePixelSnapshot,
-  loadPixelSnapshot
+  loadPixelSnapshot,
+  pixelWireSnapshot
 } from "#src/network/protocol/PixelSnapshotCodec.ts";
 import { unpackPixelCommand } from "#src/network/protocol/PixelWireCodec.ts";
 import { PixelSyncClient } from "#src/network/sync/PixelSyncClient.ts";
@@ -65,7 +65,7 @@ describe("palette network commands", () => {
       assert.equal(parser.parse(command("palette-replaced", { colors })).ok, false);
     }
     const snapshots = new SchemaParser(pixelSnapshotSchema);
-    const snapshot = pixelArtSnapshot(createState());
+    const snapshot = pixelWireSnapshot(createState());
     assert.equal(snapshots.parse(snapshot).ok, true);
     assert.equal(snapshots.parse({ ...snapshot, palette: [] }).ok, false);
     delete snapshot.palette;
@@ -125,7 +125,7 @@ describe("palette network commands", () => {
     const peer = new PixelDocument({ size: { x: 1, y: 1 } });
     const room = new MockRoom({ clientId: "A" });
     const sync = new PixelSyncClient({ room, document: local });
-    room.deliverSnapshot(pixelArtSnapshot(createState()));
+    room.deliverSnapshot(pixelWireSnapshot(createState()));
     local.changePaletteColor(2, kColor);
     const pending = room.sent[0];
     peer.applyRemoteCommand(unpackPixelCommand(pending));
@@ -151,7 +151,7 @@ describe("palette network commands", () => {
       index: 9, color: kColor
     }));
     const doc = new PixelDocument({ size: { x: 1, y: 1 } });
-    for (const snapshot of [pixelArtSnapshot(state), await encodePixelSnapshot(state)]) {
+    for (const snapshot of [pixelWireSnapshot(state), await encodePixelSnapshot(state)]) {
       await loadPixelSnapshot(doc, snapshot);
       assert.deepEqual(doc.palette.colorAt(9), kColor);
       delete snapshot.palette;

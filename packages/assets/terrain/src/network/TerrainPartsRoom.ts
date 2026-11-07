@@ -16,6 +16,7 @@ import {
   type AssetRoomPartsMessage
 } from "@jolly-pixel/asset-server/client";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
+import { encodeBase64 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -27,9 +28,9 @@ import {
   chunkPartIds,
   parseChunkPart
 } from "./chunkParts.ts";
-import { decodeChunkHeights } from "./heights.ts";
-import { decodeChunkHoles } from "./holes.ts";
-import { decodeSplat } from "./splat.ts";
+import { decodeChunkHeightBytes } from "./heights.ts";
+import { decodeChunkHoleBytes } from "./holes.ts";
+import { decodeSplatBytes } from "./splat.ts";
 import type {
   ChunkEntry,
   TerrainManifest,
@@ -291,8 +292,8 @@ export class TerrainPartsRoom implements Room<
       if (!pending.waiting.delete(partId)) {
         late[partId] = heights;
       }
-      else if (typeof heights === "string") {
-        pending.heights.set(partId, heights);
+      else if (heights instanceof Uint8Array) {
+        pending.heights.set(partId, encodeBase64(heights));
       }
     }
     if (Object.keys(late).length > 0) {
@@ -306,26 +307,26 @@ export class TerrainPartsRoom implements Room<
   ): void {
     for (const [partId, encoded] of Object.entries(message.parts)) {
       const part = parseChunkPart(partId);
-      if (part === null || typeof encoded !== "string") {
+      if (part === null || !(encoded instanceof Uint8Array)) {
         continue;
       }
       switch (part.channel) {
         case "heights": {
-          const heights = decodeChunkHeights(encoded);
+          const heights = decodeChunkHeightBytes(encoded);
           if (heights !== null) {
             this.#stream.received(part.coord, heights);
           }
           break;
         }
         case "splat": {
-          const splat = decodeSplat(encoded);
+          const splat = decodeSplatBytes(encoded);
           if (splat !== null) {
             this.#stream.receivedSplat(part.coord, splat);
           }
           break;
         }
         case "holes": {
-          const holes = decodeChunkHoles(encoded);
+          const holes = decodeChunkHoleBytes(encoded);
           if (holes !== null) {
             this.#stream.receivedHoles(part.coord, holes);
           }
@@ -386,8 +387,8 @@ function chunkContents(
   coord: ChunkCoord,
   parts: ReadonlyMap<string, unknown>
 ): ChunkContents[] {
-  const heights = decodedPart(parts.get(chunkPartId(coord, "heights")), decodeChunkHeights);
-  const splat = decodedPart(parts.get(chunkPartId(coord, "splat")), decodeSplat);
+  const heights = decodedPart(parts.get(chunkPartId(coord, "heights")), decodeChunkHeightBytes);
+  const splat = decodedPart(parts.get(chunkPartId(coord, "splat")), decodeSplatBytes);
 
   return heights === null || splat === null ?
     [] :
@@ -395,15 +396,15 @@ function chunkContents(
       coord,
       heights,
       splat,
-      holes: decodedPart(parts.get(chunkPartId(coord, "holes")), decodeChunkHoles) ?? undefined
+      holes: decodedPart(parts.get(chunkPartId(coord, "holes")), decodeChunkHoleBytes) ?? undefined
     }];
 }
 
 function decodedPart<TPart>(
-  encoded: unknown,
-  decode: (encoded: string) => TPart | null
+  bytes: unknown,
+  decode: (bytes: Uint8Array) => TPart | null
 ): TPart | null {
-  return typeof encoded === "string" ? decode(encoded) : null;
+  return bytes instanceof Uint8Array ? decode(bytes) : null;
 }
 
 function isPartsMessage(

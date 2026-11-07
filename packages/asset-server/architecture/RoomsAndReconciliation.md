@@ -46,6 +46,12 @@ way, as text kinds do when they transform an edit. When the state is replaced
 from outside, the room calls the protocol's `reloaded()` before it broadcasts
 the new snapshot.
 
+A snapshot is the protocol's `encodeSnapshot()` form once it is ready for the
+room version, and `snapshot()` otherwise. With `compressSnapshot`, the room
+asks the socket to compress the `snapshot()` form, for kinds whose raw bytes
+shrink such as glTF or RGBA pixels; the encoded form is sent as it is.
+`binaryCommands(eventType, { compress: true })` sets it for a binary kind.
+
 The room handles one command at a time. The next command is arbitrated only
 after the previous append settled, so arbitration always runs against a state
 holding every earlier command. A join or a resync waits its turn behind the

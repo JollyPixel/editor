@@ -46,12 +46,23 @@ export const binaryAssetKind: AssetKindHandler<BinaryAssetState> = {
   }
 };
 
+export interface BinaryCommandsOptions {
+  /**
+   * Deflates the snapshot bytes on sockets that negotiated compression.
+   * Worth it for content that shrinks, such as glTF; PNG or Ogg does not.
+   * @default false
+   */
+  readonly compress?: boolean;
+}
+
 export function binaryCommands(
-  eventType: string
+  eventType: string,
+  options: BinaryCommandsOptions = {}
 ): AssetCommands<BinaryAssetState, never> {
   return readOnlyCommands({
     eventType,
     snapshotSchema: bytesSchema,
+    compressSnapshot: options.compress,
     snapshot: (state) => state.bytes
   });
 }

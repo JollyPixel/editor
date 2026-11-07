@@ -5,9 +5,6 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import { encodePixelBytes } from "@jolly-pixel/pixel-draw.renderer";
-
 // Import Internal Dependencies
 import { pixelEdits } from "#src/history/PixelEdits.ts";
 import {
@@ -30,7 +27,7 @@ function createSnapshot(
 ) {
   return {
     size,
-    pixels: encodePixelBytes(new Uint8ClampedArray(size.x * size.y * 4)),
+    pixels: new Uint8Array(size.x * size.y * 4),
     uvRegions: []
   };
 }

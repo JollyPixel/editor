@@ -260,12 +260,12 @@ export class WorkerExtensionProxy extends Extension {
   ): void {
     match(call)
       .with({ method: "room.broadcast" }, (call) => {
-        const [payload] = call.args;
-        this.#roomBroadcast?.broadcast(payload);
+        const [payload, options] = call.args;
+        this.#roomBroadcast?.broadcast(payload, options);
       })
       .with({ method: "client.send" }, (call) => {
-        const [clientId, data] = call.args;
-        this.#roomBroadcast?.sendTo(clientId, data);
+        const [clientId, data, options] = call.args;
+        this.#roomBroadcast?.sendTo(clientId, data, options);
       })
       .exhaustive();
   }

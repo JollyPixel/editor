@@ -4,6 +4,7 @@ import { WebSocket } from "ws";
 // Import Internal Dependencies
 import type { Logger } from "../../server/logger.ts";
 import type { ClientConnection } from "../../server/connection/ClientConnection.ts";
+import type { SendOptions } from "../../server/extension/ClientHandle.ts";
 import type {
   Frame,
   ReceivedFrame
@@ -14,6 +15,14 @@ const kPauseAtPendingMessages = 64;
 const kResumeAtPendingMessages = 16;
 const kTextSendOptions: WebsocketSendOptions = {
   binary: false,
+  compress: true
+};
+const kBinarySendOptions: WebsocketSendOptions = {
+  binary: true,
+  compress: false
+};
+const kCompressedBinarySendOptions: WebsocketSendOptions = {
+  binary: true,
   compress: true
 };
 
@@ -46,7 +55,6 @@ export interface WebsocketConnectionOptions {
   socket: WebsocketConnectionSocket;
   logger: Logger;
   maxBufferedBytes: number;
-  compressBinary: boolean;
   onMessage: (frame: ReceivedFrame) => Promise<void>;
   holdWrites: () => void;
 }
@@ -57,7 +65,6 @@ export class WebsocketConnection implements ClientConnection {
   #socket: WebsocketConnectionSocket;
   #logger: Logger;
   #maxBufferedBytes: number;
-  #binarySendOptions: WebsocketSendOptions;
   #onMessage: (frame: ReceivedFrame) => Promise<void>;
   #holdWrites: () => void;
   #pending = 0;
@@ -70,16 +77,13 @@ export class WebsocketConnection implements ClientConnection {
     this.#socket = options.socket;
     this.#logger = options.logger;
     this.#maxBufferedBytes = options.maxBufferedBytes;
-    this.#binarySendOptions = {
-      binary: true,
-      compress: options.compressBinary
-    };
     this.#onMessage = options.onMessage;
     this.#holdWrites = options.holdWrites;
   }
 
   sendFrame(
-    frame: Frame
+    frame: Frame,
+    options: SendOptions = {}
   ): void {
     if (this.#socket.readyState !== WebSocket.OPEN) {
       return;
@@ -99,7 +103,7 @@ export class WebsocketConnection implements ClientConnection {
     this.#holdWrites();
     this.#socket.send(
       frame,
-      typeof frame === "string" ? kTextSendOptions : this.#binarySendOptions
+      socketOptions(frame, options)
     );
   }
 
@@ -151,4 +155,17 @@ export class WebsocketConnection implements ClientConnection {
   ): void {
     this.#socket.close(code, reason);
   }
+}
+
+function socketOptions(
+  frame: Frame,
+  options: SendOptions
+): WebsocketSendOptions {
+  if (typeof frame === "string") {
+    return kTextSendOptions;
+  }
+
+  return options.compress === true ?
+    kCompressedBinarySendOptions :
+    kBinarySendOptions;
 }

@@ -13,11 +13,11 @@ import {
   applyPixelCommand,
   correctPixelCommand,
   encodePixelSnapshot,
-  isPixelCommand
+  isPixelCommand,
+  pixelWireSnapshot
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
   parsePixelArtFile,
-  pixelArtSnapshot,
   type PixelArtFile,
   type PixelDocumentState,
   type Vec2
@@ -133,7 +133,7 @@ export class BlocksetState {
 
   snapshot(): BlocksetSnapshot {
     return {
-      pixels: pixelArtSnapshot(this.pixels),
+      pixels: pixelWireSnapshot(this.pixels),
       ...this.document.toJSON()
     };
   }
@@ -240,6 +240,7 @@ export function blocksetAssetKind(
       live({ state }) {
         return {
           snapshotSchema: blocksetSnapshotSchema,
+          compressSnapshot: true,
           snapshot: () => state.snapshot(),
           encodeSnapshot: () => state.encodeSnapshot(),
           ...arbitrated(state, BLOCKSET_COMMAND_RULES),

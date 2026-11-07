@@ -17,7 +17,8 @@ import {
   counterRoomCommands,
   recordingClient,
   recordingRoom,
-  roomPeer
+  roomPeer,
+  type RecordingClient
 } from "../helpers/rooms.ts";
 
 interface Command extends AssetCommandHeader {
@@ -29,16 +30,38 @@ interface SnapshotRoom {
   readonly encodes: number;
   readonly snapshots: number;
   version: number;
+  connect(clientId: string): Promise<RecordingClient>;
   join(clientId: string): Promise<unknown[]>;
 }
 
+interface SnapshotRoomOptions {
+  encodeSnapshot?: (room: SnapshotRoom) => Promise<unknown>;
+  compressSnapshot?: boolean;
+}
+
+async function encodedAtVersion(
+  room: SnapshotRoom
+): Promise<unknown> {
+  return { value: `encoded@${room.version}` };
+}
+
+async function compressedOnJoin(
+  room: SnapshotRoom
+): Promise<boolean[]> {
+  const client = await room.connect("a");
+
+  return client.sendOptions.map((options) => options?.compress === true);
+}
+
 function snapshotRoom(
-  encodeSnapshot?: (room: SnapshotRoom) => Promise<unknown>
+  options: SnapshotRoomOptions = {}
 ): SnapshotRoom {
+  const { encodeSnapshot, compressSnapshot } = options;
   let encodes = 0;
   let snapshots = 0;
   const protocol: AssetLiveProtocol<Command> = {
     snapshotSchema: counterSnapshotSchema,
+    compressSnapshot,
     snapshot: () => {
       snapshots++;
 
@@ -74,11 +97,14 @@ function snapshotRoom(
     get snapshots() {
       return snapshots;
     },
-    async join(clientId) {
+    async connect(clientId) {
       const handle = recordingClient(clientId);
       await extension.onClientConnect(handle, roomPeer(clientId), context);
 
-      return handle.received;
+      return handle;
+    },
+    async join(clientId) {
+      return (await room.connect(clientId)).received;
     }
   };
 
@@ -87,9 +113,7 @@ function snapshotRoom(
 
 describe("AssetRoomExtension — encoded snapshots", () => {
   test("a join receives the encoded snapshot of the current version", async() => {
-    const room = snapshotRoom(async(current) => {
-      return { value: `encoded@${current.version}` };
-    });
+    const room = snapshotRoom({ encodeSnapshot: encodedAtVersion });
 
     assert.deepEqual(await room.join("a"), [
       { type: "snapshot", data: { value: "encoded@1" }, version: 1 }
@@ -97,9 +121,7 @@ describe("AssetRoomExtension — encoded snapshots", () => {
   });
 
   test("joins at the same version share one encode", async() => {
-    const room = snapshotRoom(async(current) => {
-      return { value: `encoded@${current.version}` };
-    });
+    const room = snapshotRoom({ encodeSnapshot: encodedAtVersion });
 
     await room.join("a");
     await room.join("b");
@@ -113,11 +135,13 @@ describe("AssetRoomExtension — encoded snapshots", () => {
   });
 
   test("a version change during the encode sends the plain snapshot", async() => {
-    const room = snapshotRoom(async(current) => {
-      const encoded = { value: `encoded@${current.version}` };
-      current.version++;
+    const room = snapshotRoom({
+      encodeSnapshot: async(current) => {
+        const encoded = { value: `encoded@${current.version}` };
+        current.version++;
 
-      return encoded;
+        return encoded;
+      }
     });
 
     assert.deepEqual(await room.join("a"), [
@@ -126,7 +150,9 @@ describe("AssetRoomExtension — encoded snapshots", () => {
   });
 
   test("a failed encode falls back to the plain snapshot", async() => {
-    const room = snapshotRoom(() => Promise.reject(new Error("encode failed")));
+    const room = snapshotRoom({
+      encodeSnapshot: () => Promise.reject(new Error("encode failed"))
+    });
 
     assert.deepEqual(await room.join("a"), [
       { type: "snapshot", data: { value: "plain@1" }, version: 1 }
@@ -134,9 +160,7 @@ describe("AssetRoomExtension — encoded snapshots", () => {
   });
 
   test("a resync at the encoded version reuses the encoded snapshot", async() => {
-    const room = snapshotRoom(async(current) => {
-      return { value: `encoded@${current.version}` };
-    });
+    const room = snapshotRoom({ encodeSnapshot: encodedAtVersion });
     await room.join("a");
     const resync = recordingRoom();
 
@@ -145,6 +169,29 @@ describe("AssetRoomExtension — encoded snapshots", () => {
     assert.deepEqual(resync.direct.map(({ payload }) => payload), [
       { type: "snapshot", data: { value: "encoded@1" }, version: 1 }
     ]);
+  });
+});
+
+describe("AssetRoomExtension — snapshot compression", () => {
+  test("a compressing kind's plain snapshot asks for deflate", async() => {
+    const room = snapshotRoom({ compressSnapshot: true });
+
+    assert.deepEqual(await compressedOnJoin(room), [true]);
+  });
+
+  test("an encoded snapshot goes out as it is even when the kind compresses", async() => {
+    const room = snapshotRoom({
+      encodeSnapshot: encodedAtVersion,
+      compressSnapshot: true
+    });
+
+    assert.deepEqual(await compressedOnJoin(room), [false]);
+  });
+
+  test("a kind that does not compress sends its snapshot as it is", async() => {
+    const room = snapshotRoom();
+
+    assert.deepEqual(await compressedOnJoin(room), [false]);
   });
 });
 
@@ -173,9 +220,7 @@ describe("AssetRoomExtension — plain snapshots", () => {
   });
 
   test("an encoded snapshot replaces the plain one of its version", async() => {
-    const room = snapshotRoom(async(current) => {
-      return { value: `encoded@${current.version}` };
-    });
+    const room = snapshotRoom({ encodeSnapshot: encodedAtVersion });
     const resync = recordingRoom();
     await room.extension.onResync("a", resync.context);
 
