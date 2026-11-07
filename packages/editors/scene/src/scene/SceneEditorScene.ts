@@ -14,7 +14,7 @@ import type {
   SceneDocument,
   SceneRoom
 } from "@jolly-pixel/asset.scene/client";
-import { Teardown } from "@jolly-pixel/editor.host";
+import { Teardown } from "@jolly-pixel/utils";
 import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
 import type { Preferences } from "@jolly-pixel/preferences";
 import { Grid } from "@jolly-pixel/three";

@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  Teardown,
-  type EditorToolbarSources
-} from "@jolly-pixel/editor.host";
+import type { EditorToolbarSources } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
 import {
   describeSkippedStep,
@@ -12,6 +9,7 @@ import {
   bindPresenceStack,
   LogQueue
 } from "@jolly-pixel/ui";
+import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { SceneEditing } from "../editing/SceneEditing.ts";

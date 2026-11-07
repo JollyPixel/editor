@@ -8,6 +8,7 @@ import type {
   AnimationSetLinkJSON,
   ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -135,7 +136,7 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
       const rate = new FrameRate(clip.fps);
       const last = rate.frameAt(clip.length);
       const frame = rate.frameAt(this.playback.tick) + frames;
-      this.#pauseAt(rate.toTick(Math.min(Math.max(frame, 0), last)));
+      this.#pauseAt(rate.toTick(clamp(frame, 0, last)));
     }
   }
 

@@ -1,7 +1,9 @@
+// Import Third-party Dependencies
+import { Teardown } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type { BootTrace } from "./BootTrace.ts";
 import type { EditorHandle } from "../contract/EditorDefinition.ts";
-import { Teardown } from "../contract/Teardown.ts";
 import type { EditorLaunch } from "../launch/EditorLaunch.ts";
 import type { LaunchNavigator } from "../launch/LaunchNavigator.ts";
 import type { EditorSession } from "../session/EditorSession.ts";
@@ -55,10 +57,12 @@ export class MountedEditor<THandle extends EditorHandle> {
       }
     }
     catch (error) {
-      teardown.run();
-      session.dispose();
-
-      throw error;
+      try {
+        throw teardown.unwind(error);
+      }
+      finally {
+        session.dispose();
+      }
     }
 
     return new MountedEditor({
@@ -89,7 +93,11 @@ export class MountedEditor<THandle extends EditorHandle> {
   }
 
   dispose(): void {
-    this.unmount();
-    this.session.dispose();
+    try {
+      this.unmount();
+    }
+    finally {
+      this.session.dispose();
+    }
   }
 }

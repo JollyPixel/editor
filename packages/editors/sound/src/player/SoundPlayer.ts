@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type { SoundDocument } from "@jolly-pixel/asset.sound/client";
 import { Emitter } from "@openally/emitt";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { Playback } from "./Playback.ts";
@@ -144,7 +145,7 @@ export class SoundPlayer {
       return;
     }
 
-    const offset = Math.min(Math.max(position, 0), 1) * duration;
+    const offset = clamp(position, 0, 1) * duration;
     if (this.playing) {
       this.play(offset);
     }

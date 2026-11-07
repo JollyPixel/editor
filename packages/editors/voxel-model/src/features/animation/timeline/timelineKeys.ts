@@ -7,6 +7,7 @@ import {
   type AnimationInterpolation,
   type AnimationKeyJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { KeyRef } from "../../../state/index.ts";
@@ -79,7 +80,7 @@ export function moveKeys(
 ): KeyRef[] {
   const keys = channelKeys(clip, refs);
   const ticks = keys.map(({ key }) => key.tick);
-  const shift = Math.min(Math.max(delta, -Math.min(...ticks)), clip.length - Math.max(...ticks));
+  const shift = clamp(delta, -Math.min(...ticks), clip.length - Math.max(...ticks));
   if (keys.length === 0 || shift === 0) {
     return [...refs];
   }

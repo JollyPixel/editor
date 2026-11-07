@@ -6,6 +6,7 @@ import {
   type AnimationClipJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
 import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
+import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -106,7 +107,7 @@ export class TimelineController {
   ): void {
     const view = this.#view;
     if (view !== null) {
-      const frame = Math.round(Math.min(Math.max(fraction, 0), 1) * view.frames);
+      const frame = Math.round(clamp(fraction, 0, 1) * view.frames);
       this.session?.seek(new FrameRate(view.clip.fps).toTick(frame));
     }
   }

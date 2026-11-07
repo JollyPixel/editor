@@ -5,7 +5,7 @@ import {
   OrbitFlyCamera,
   Systems
 } from "@jolly-pixel/engine";
-import { Teardown } from "@jolly-pixel/editor.host";
+import { Teardown } from "@jolly-pixel/utils";
 import type { Preferences } from "@jolly-pixel/preferences";
 import * as THREE from "three/webgpu";
 

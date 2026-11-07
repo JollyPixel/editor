@@ -8,6 +8,7 @@ import {
   type TerrainChunk,
   type TerrainReader
 } from "@jolly-pixel/terrain.renderer";
+import { clamp } from "@jolly-pixel/utils";
 
 export interface GroundRect {
   readonly minX: number;
@@ -53,7 +54,7 @@ export function tileCorner(
 export function clampHeight(
   height: number
 ): number {
-  return Math.min(Math.max(height, HEIGHT_RANGE.min), HEIGHT_RANGE.max);
+  return clamp(height, HEIGHT_RANGE.min, HEIGHT_RANGE.max);
 }
 
 function* chunkTilesInRect(

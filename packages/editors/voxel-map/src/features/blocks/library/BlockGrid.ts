@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // CONSTANTS
 const kCellSize = 64;
 
@@ -109,7 +112,7 @@ export class BlockGrid {
     count: number
   ): number {
     const { cols, cellSize } = this;
-    const col = Math.min(Math.max(Math.floor(px / cellSize), 0), cols - 1);
+    const col = clamp(Math.floor(px / cellSize), 0, cols - 1);
     const row = Math.max(Math.floor(py / cellSize), 0);
 
     return Math.min((row * cols) + col, Math.max(count - 1, 0));

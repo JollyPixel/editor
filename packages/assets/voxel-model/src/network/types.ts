@@ -12,8 +12,6 @@ import type {
   blockTransformSchema,
   folderNodeSchema,
   materialFolderSchema,
-  materialSurfacePatchSchema,
-  materialSurfaceSchema,
   mirrorAxesSchema,
   modelMaterialSchema,
   nodeTransformSchema,
@@ -21,6 +19,10 @@ import type {
   voxelModelCommandSchema,
   voxelModelSnapshotSchema
 } from "./VoxelModelCommand.schema.ts";
+import type {
+  materialSurfacePatchSchema,
+  materialSurfaceSchema
+} from "../model/materials/MaterialSurface.ts";
 
 export type Vector3JSON = network.Infer<typeof vector3Schema>;
 export type MirrorAxes = network.Infer<typeof mirrorAxesSchema>;

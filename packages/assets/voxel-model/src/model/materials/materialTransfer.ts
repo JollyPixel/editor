@@ -1,12 +1,20 @@
 // Import Third-party Dependencies
-import { is } from "@jolly-pixel/utils";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { ModelMaterialJSON } from "../../network/types.ts";
-import { MaterialSurface } from "./MaterialSurface.ts";
+import { materialSurfaceSchema } from "./MaterialSurface.ts";
 
 // CONSTANTS
 export const MATERIAL_TRANSFER_KIND = "jolly-pixel/voxel-model-materials";
+
+const kMaterialTransferSchema = z.object({
+  kind: z.literal(MATERIAL_TRANSFER_KIND),
+  materials: z.array(z.object({
+    name: z.string(),
+    surface: materialSurfaceSchema
+  }))
+});
 
 export type MaterialTransferJSON = Pick<ModelMaterialJSON, "name" | "surface">;
 
@@ -34,29 +42,7 @@ export function decodeMaterialTransfer(
   catch {
     return null;
   }
+  const result = kMaterialTransferSchema.safeParse(parsed);
 
-  if (
-    !is.plainObject(parsed) ||
-    parsed.kind !== MATERIAL_TRANSFER_KIND ||
-    !Array.isArray(parsed.materials)
-  ) {
-    return null;
-  }
-
-  const materials: MaterialTransferJSON[] = [];
-  for (const material of parsed.materials) {
-    if (
-      !is.plainObject(material) ||
-      typeof material.name !== "string" ||
-      !MaterialSurface.isValid(material.surface)
-    ) {
-      return null;
-    }
-    materials.push({
-      name: material.name,
-      surface: material.surface
-    });
-  }
-
-  return materials;
+  return result.success ? result.data.materials : null;
 }

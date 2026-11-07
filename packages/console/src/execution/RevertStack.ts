@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { errorMessage } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type {
   CommandContext,
@@ -78,7 +81,7 @@ export class RevertStack {
         await entry.revert();
       }
       catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = errorMessage(error);
         ctx.error(`Could not revert ${entry.line}: ${message}`);
 
         return;

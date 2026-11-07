@@ -63,6 +63,7 @@
     }
   },
   "dependencies": {
+    "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0"
   },
   "devDependencies": {

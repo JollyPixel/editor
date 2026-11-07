@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { errorMessage } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type { LanternElement } from "./element/LanternElement.ts";
 import type { TourRun } from "./tour/TourRun.ts";
@@ -30,7 +33,7 @@ export class LazyLanternElement {
       void this.#mount().catch((error: unknown) => {
         this.#loading = false;
         this.#warn(
-          `The tour overlay failed to load: ${error instanceof Error ? error.message : String(error)}`
+          `The tour overlay failed to load: ${errorMessage(error)}`
         );
       });
     }

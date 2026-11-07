@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { errorMessage } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import { peekValue } from "../execution/variables.ts";
 import {
@@ -223,7 +226,7 @@ export class VariableScript {
       parsed = coerce(literal, def);
     }
     catch (error) {
-      report(state, number, valueSpan, error instanceof Error ? error.message : String(error));
+      report(state, number, valueSpan, errorMessage(error));
 
       return;
     }

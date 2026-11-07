@@ -2,14 +2,16 @@
 import {
   commandVariant,
   MessageProtocol,
-  minProperties,
   withCommandHeader
 } from "@jolly-pixel/network";
 import { uvLayoutSchema } from "@jolly-pixel/asset.pixel-art/server";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import { MaterialSurface } from "../model/materials/MaterialSurface.ts";
+import {
+  materialSurfacePatchSchema,
+  materialSurfaceSchema
+} from "../model/materials/MaterialSurface.ts";
 import { BLOCK_SHAPE_PARAMETERS } from "../model/nodes/BlockShape.ts";
 
 // CONSTANTS
@@ -24,23 +26,6 @@ const kThicknessSchema = z.number().check(
   z.minimum(thickness.min),
   z.maximum(thickness.max)
 );
-const kHexColorSchema = z.string().check(
-  z.regex(new RegExp(MaterialSurface.PROPERTIES.color.pattern))
-);
-const kUnitSchema = z.number().check(
-  z.minimum(MaterialSurface.PROPERTIES.opacity.minimum),
-  z.maximum(MaterialSurface.PROPERTIES.opacity.maximum)
-);
-const kSurfaceShape = {
-  color: kHexColorSchema,
-  opacity: kUnitSchema,
-  roughness: kUnitSchema,
-  metalness: kUnitSchema,
-  emissive: kHexColorSchema,
-  emissiveIntensity: z.number().check(
-    z.minimum(MaterialSurface.PROPERTIES.emissiveIntensity.minimum)
-  )
-} satisfies Record<(typeof MaterialSurface.KEYS)[number], z.ZodMiniType>;
 
 export const vector3Schema = z.object({
   x: z.number(),
@@ -77,13 +62,6 @@ export const blockShapeSchema = z.union([
     thickness: kThicknessSchema
   })
 ]);
-
-export const materialSurfaceSchema = z.object(kSurfaceShape);
-
-export const materialSurfacePatchSchema = minProperties(
-  z.partial(z.strictObject(kSurfaceShape)),
-  1
-);
 
 export const modelMaterialSchema = z.object({
   kind: z.literal("material"),

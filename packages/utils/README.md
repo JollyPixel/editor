@@ -43,6 +43,7 @@ catch (error) {
 - [Numbers](./docs/number.md): `clamp`, `formatBytes`
 - [Base64](./docs/base64.md): `encodeBase64`, `encodeBase64Url`, `decodeBase64`
 - [TaskChain](./docs/TaskChain.md): runs async tasks one at a time
+- [Teardown](./docs/Teardown.md): `Teardown`, `AsyncTeardown`, release steps run in reverse
 - [DOM](./docs/dom.md): `saveFile`
 
 ## ✨ Contributors guide

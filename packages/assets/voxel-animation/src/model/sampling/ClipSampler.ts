@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type {
   AnimationChannel,
@@ -51,7 +54,7 @@ export class ClipSampler {
   ): number {
     return this.loop ?
       ((elapsed % this.length) + this.length) % this.length :
-      Math.min(Math.max(elapsed, 0), this.length);
+      clamp(elapsed, 0, this.length);
   }
 
   sample(

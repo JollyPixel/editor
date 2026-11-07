@@ -57,7 +57,6 @@ export * from "./runtime/RuntimeWidgets.ts";
 export * from "./contract/EditorDefinition.ts";
 export * from "./boot/mountStandalone.ts";
 export { DEBUG_HANDLE } from "./boot/StandaloneEditor.ts";
-export * from "./contract/Teardown.ts";
 export * from "./boot/bootStandalone.ts";
 export * from "./connection/offerOffline.ts";
 export * from "./preferences/hostPreferences.ts";

@@ -10,7 +10,7 @@ import {
   type StorageAdapter
 } from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
-import { is } from "@jolly-pixel/utils";
+import { clamp, is } from "@jolly-pixel/utils";
 
 // CONSTANTS
 const kStorageKey = "terrain:view";
@@ -39,7 +39,7 @@ export class OverlaySettings extends Emitter<OverlaySettingsEvents> {
     return Object.freeze({
       overlay: TERRAIN_OVERLAYS.find((known) => known === stored.overlay) ?? kDefaultOptions.overlay,
       walkableSlope: typeof slope === "number" && Number.isFinite(slope) ?
-        Math.min(Math.max(slope, 0), MAX_WALKABLE_SLOPE) :
+        clamp(slope, 0, MAX_WALKABLE_SLOPE) :
         kDefaultOptions.walkableSlope
     });
   }
