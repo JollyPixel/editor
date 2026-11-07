@@ -4,6 +4,7 @@ import type {
   AssetReference
 } from "@jolly-pixel/asset";
 import type { GameLoop } from "@jolly-pixel/loop";
+import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -124,7 +125,7 @@ export async function bootstrapRuntime<TScene>(
     traceFirstFrame(runtime, logger);
   }
   catch (value: unknown) {
-    const error = toError(value);
+    const error = asError(value);
     loadingScreen?.error(error);
 
     throw error;
@@ -192,10 +193,4 @@ function waitForLoadingDelay(
   window.setTimeout(resolve, delay);
 
   return promise;
-}
-
-function toError(
-  value: unknown
-): Error {
-  return value instanceof Error ? value : new Error(String(value));
 }

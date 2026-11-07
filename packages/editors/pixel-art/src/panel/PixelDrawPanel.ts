@@ -20,10 +20,12 @@ import {
   resolveAmbientTheme,
   resolveThemeColor,
   themeStyles,
+  THEME_MODES,
   type ResolvedThemeMode
 } from "@jolly-pixel/ui";
 import { StandalonePixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 import type { KeyBindingSettings } from "@jolly-pixel/controls";
+import { is } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "../color/ColorSwatch.ts";
@@ -113,12 +115,6 @@ export interface PixelDrawTexture {
   readonly canvas: PixelArtCanvas;
 }
 
-function isThemeMode(
-  value: string
-): value is ThemeMode {
-  return value === "light" || value === "dark" || value === "auto";
-}
-
 function isBrushMode(
   mode: Mode
 ): boolean {
@@ -166,7 +162,7 @@ export class PixelDrawPanel extends LitElement {
     reflect: true,
     converter: {
       fromAttribute(value) {
-        return (value !== null && isThemeMode(value)) ? value : "auto";
+        return is.member(value, THEME_MODES) ? value : "auto";
       }
     }
   })

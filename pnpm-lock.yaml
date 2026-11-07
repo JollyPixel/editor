@@ -247,6 +247,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -286,6 +289,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -408,6 +414,9 @@ importers:
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -532,6 +541,9 @@ importers:
       '@jolly-pixel/terrain.renderer':
         specifier: workspace:*
         version: link:../../terrain-renderer
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -637,6 +649,9 @@ importers:
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -745,6 +760,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -797,6 +815,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -843,6 +864,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -919,6 +943,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -999,6 +1026,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -1048,6 +1078,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -1121,6 +1154,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../../voxel-renderer
@@ -1194,6 +1230,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
@@ -1298,6 +1337,9 @@ importers:
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../history
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@loglayer/transport-pino':
         specifier: 3.3.0
         version: 3.3.0(pino@10.4.0)
@@ -1400,6 +1442,9 @@ importers:
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../controls
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -1420,6 +1465,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@pmndrs/detect-gpu':
         specifier: 6.0.28
         version: 6.0.28
@@ -1520,6 +1568,9 @@ importers:
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../voxel-renderer
@@ -1580,6 +1631,9 @@ importers:
       '@jolly-pixel/resize-handle':
         specifier: workspace:*
         version: link:../resize-handle
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@lit-labs/virtualizer':
         specifier: 2.1.1
         version: 2.1.1
@@ -1596,6 +1650,8 @@ importers:
       lit:
         specifier: 3.3.3
         version: 3.3.3
+
+  packages/utils: {}
 
   packages/voxel-renderer:
     dependencies:

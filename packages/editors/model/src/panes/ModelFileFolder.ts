@@ -7,11 +7,12 @@ import {
 } from "lit";
 import {
   SubscriptionController,
-  saveFile,
   type Notifier
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/folder";
+import { errorMessage } from "@jolly-pixel/utils";
+import { saveFile } from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import "../icons.ts";
@@ -127,7 +128,7 @@ export class ModelFileFolder extends LitElement {
       replacing.update({
         tone: "error",
         title: `Could not replace with "${selected.name}"`,
-        message: error instanceof Error ? error.message : String(error)
+        message: errorMessage(error)
       });
     }
     finally {

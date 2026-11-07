@@ -9,6 +9,7 @@ import {
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/property-row";
+import { formatBytes } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { ModelPreview } from "../preview/ModelPreview.ts";
@@ -104,14 +105,8 @@ function fileSize(
   if (bytes === 0) {
     return kUnknown;
   }
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
 
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return formatBytes(bytes);
 }
 
 customElements.define("jolly-model-details", ModelDetails);

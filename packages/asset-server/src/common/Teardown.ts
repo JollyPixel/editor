@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import { asError } from "./asError.ts";
+// Import Third-party Dependencies
+import { asError } from "@jolly-pixel/utils";
 
 export type TeardownStep = () => unknown;
 

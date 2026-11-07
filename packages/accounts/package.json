@@ -47,6 +47,7 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0",
     "@openally/mutex": "4.0.0",
     "cookie": "2.0.1",

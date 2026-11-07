@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as z from "zod/mini";
+import { is } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -144,7 +145,7 @@ export class PreferenceScope<
     input: unknown
   ): PreferenceOverrides {
     const overrides: Record<string, unknown> = {};
-    if (!isRecord(input)) {
+    if (!is.plainObject(input)) {
       return overrides;
     }
 
@@ -165,7 +166,7 @@ export class PreferenceScope<
   parse(
     input: unknown
   ): PreferenceOverrides {
-    if (!isRecord(input)) {
+    if (!is.plainObject(input)) {
       throw new InvalidPreferencesError(this.name, "overrides must be an object");
     }
 
@@ -279,12 +280,4 @@ function groupFields<TField extends PreferenceField>(
   }
 
   return [...groups.values()];
-}
-
-function isRecord(
-  value: unknown
-): value is Record<string, unknown> {
-  return typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value);
 }

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
+import { is } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -212,7 +213,7 @@ export class BrushFootprint implements BrushShape {
 function isVoxelCoord(
   value: unknown
 ): value is VoxelCoord {
-  return typeof value === "object" && value !== null &&
+  return is.object(value) &&
     typeof Reflect.get(value, "x") === "number" &&
     typeof Reflect.get(value, "y") === "number" &&
     typeof Reflect.get(value, "z") === "number";

@@ -1,10 +1,12 @@
+// Import Third-party Dependencies
+import { errorMessage } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   describeEnvelopeParseError,
   Envelope,
   type ClientEnvelope
 } from "../protocol/envelope/Envelope.ts";
-import { errorMessage } from "../errorMessage.ts";
 import {
   createLogger,
   type Logger

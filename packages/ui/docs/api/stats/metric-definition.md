@@ -58,7 +58,7 @@ How `1234.5` reads:
 - `decimal` (`formatDecimal`): `1234.5`.
 - `ms` (`formatMilliseconds`): `1234.5 ms`.
 - `percent` (`formatPercent`): `1234.5 %`.
-- `bytes` (`formatBytes`): `1.2 KiB`.
+- `bytes` (`formatBytes` from `@jolly-pixel/utils`): `1.2 KiB`.
 
 ### `resolveMetricFormat(definition): (value: number) => string`
 

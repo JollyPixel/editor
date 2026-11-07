@@ -12,6 +12,7 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -26,7 +27,6 @@ import type {
   AssetPayload,
   CreateAssetInput
 } from "./AssetWriteInput.ts";
-import { asError } from "../../common/asError.ts";
 
 export interface PlannedAsset extends AssetPayload {
   assetId: string;

@@ -18,6 +18,7 @@ import {
 import "@jolly-pixel/ui/elements/notifications";
 import "@jolly-pixel/ui/elements/tabs";
 import "@jolly-pixel/ui/elements/toolbar";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
@@ -416,7 +417,7 @@ export class Studio extends LitElement {
     }
     catch (error) {
       this.#fail(
-        `Avatar not changed: ${error instanceof Error ? error.message : String(error)}`
+        `Avatar not changed: ${errorMessage(error)}`
       );
     }
   };
@@ -425,7 +426,7 @@ export class Studio extends LitElement {
     if (this.#session?.tabs.active === SETTINGS_TAB_ID) {
       void this.#settingsPage.ready().catch((error: unknown) => {
         this.#fail(
-          `Settings failed to load: ${error instanceof Error ? error.message : String(error)}`
+          `Settings failed to load: ${errorMessage(error)}`
         );
       });
     }

@@ -6,6 +6,7 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -24,7 +25,6 @@ import type { AssetWriter } from "../../storage/writer/AssetWriter.ts";
 import type { AssetBackups } from "../../storage/AssetBackups.ts";
 import { AssetPartFiles } from "../../storage/AssetPartFiles.ts";
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
-import { asError } from "../../common/asError.ts";
 import { contentHash } from "../../common/contentHash.ts";
 import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError.ts";
 import {

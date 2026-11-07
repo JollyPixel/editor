@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as z from "zod/mini";
+import { is } from "@jolly-pixel/utils";
 
 // CONSTANTS
 export const MAX_CHORDS = 4;
@@ -201,7 +202,7 @@ export function samePreferenceValue(
     return left.length === right.length &&
       left.every((value, index) => value === right[index]);
   }
-  if (isEntries(left) && isEntries(right)) {
+  if (is.plainObject(left) && is.plainObject(right)) {
     const keys = Object.keys(left);
 
     return keys.length === Object.keys(right).length &&
@@ -209,10 +210,4 @@ export function samePreferenceValue(
   }
 
   return Object.is(left, right);
-}
-
-function isEntries(
-  value: unknown
-): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

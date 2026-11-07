@@ -10,8 +10,6 @@ import { roundToPrecision } from "../numeric/precision.ts";
 const kAxes: readonly string[] = ["x", "y", "z", "w"];
 const kDefaultPrecision = 2;
 const kDefaultDecimals = 1;
-const kByteStep = 1024;
-const kByteUnits: readonly string[] = ["B", "KiB", "MiB", "GiB", "TiB"];
 const kCountFormat = new Intl.NumberFormat("en-US");
 
 export function formatCount(
@@ -51,21 +49,6 @@ export function formatPercent(
   value: number
 ): string {
   return `${formatDecimal(value)} %`;
-}
-
-export function formatBytes(
-  value: number
-): string {
-  let scaled = value;
-  let unit = 0;
-  while (Math.abs(scaled) >= kByteStep && unit < kByteUnits.length - 1) {
-    scaled /= kByteStep;
-    unit++;
-  }
-
-  return unit === 0 ?
-    `${Math.round(scaled)} B` :
-    `${formatDecimal(scaled)} ${kByteUnits[unit]}`;
 }
 
 export function formatVector(

@@ -5,6 +5,7 @@ import {
   type Result
 } from "@openally/result";
 import secureJson from "secure-json-parse";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -17,7 +18,6 @@ import {
   type Infer,
   type ValidationError
 } from "../schema.ts";
-import { errorMessage } from "../../errorMessage.ts";
 
 // CONSTANTS
 const kJsonParseOptions: secureJson.ParseOptions = {

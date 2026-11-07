@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { is } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   LAYOUT_VERSION,
@@ -30,7 +33,7 @@ export function parseLayout(
     return null;
   }
 
-  if (!isRecord(parsed) || parsed.v !== LAYOUT_VERSION) {
+  if (!is.plainObject(parsed) || parsed.v !== LAYOUT_VERSION) {
     return null;
   }
 
@@ -48,12 +51,12 @@ function readDocks(
   value: unknown
 ): Record<string, DockState> {
   const docks: Record<string, DockState> = {};
-  if (!isRecord(value)) {
+  if (!is.plainObject(value)) {
     return docks;
   }
 
   for (const [key, state] of Object.entries(value)) {
-    if (!isRecord(state)) {
+    if (!is.plainObject(state)) {
       continue;
     }
 
@@ -81,7 +84,7 @@ function readGroups(
   }
 
   for (const entry of value) {
-    if (!isRecord(entry)) {
+    if (!is.plainObject(entry)) {
       continue;
     }
 
@@ -105,12 +108,12 @@ function readFloating(
   value: unknown
 ): Record<string, FloatingState> {
   const floating: Record<string, FloatingState> = {};
-  if (!isRecord(value)) {
+  if (!is.plainObject(value)) {
     return floating;
   }
 
   for (const [key, state] of Object.entries(value)) {
-    if (!isRecord(state)) {
+    if (!is.plainObject(state)) {
       continue;
     }
 
@@ -134,13 +137,13 @@ function readPanes(
   value: unknown
 ): Record<string, PaneState> {
   const panes: Record<string, PaneState> = {};
-  if (!isRecord(value)) {
+  if (!is.plainObject(value)) {
     return panes;
   }
 
   for (const [key, state] of Object.entries(value)) {
     if (
-      isRecord(state) &&
+      is.plainObject(state) &&
       typeof state.collapsed === "boolean"
     ) {
       panes[key] = {
@@ -156,19 +159,19 @@ function readFolders(
   value: unknown
 ): Record<string, Record<string, FolderState>> {
   const folders: Record<string, Record<string, FolderState>> = {};
-  if (!isRecord(value)) {
+  if (!is.plainObject(value)) {
     return folders;
   }
 
   for (const [paneKey, states] of Object.entries(value)) {
-    if (!isRecord(states)) {
+    if (!is.plainObject(states)) {
       continue;
     }
 
     const paneFolders: Record<string, FolderState> = {};
     for (const [folderKey, state] of Object.entries(states)) {
       if (
-        isRecord(state) &&
+        is.plainObject(state) &&
         typeof state.open === "boolean"
       ) {
         paneFolders[folderKey] = {
@@ -188,12 +191,4 @@ function readStringArray(
   return Array.isArray(value) ?
     value.filter((entry): entry is string => typeof entry === "string") :
     [];
-}
-
-function isRecord(
-  value: unknown
-): value is Record<string, unknown> {
-  return typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value);
 }

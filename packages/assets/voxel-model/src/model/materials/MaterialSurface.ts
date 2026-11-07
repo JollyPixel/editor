@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { is } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type {
   MaterialSurfaceJSON,
@@ -66,7 +69,7 @@ export class MaterialSurface {
   static isValid(
     value: unknown
   ): value is MaterialSurfaceJSON {
-    return typeof value === "object" && value !== null &&
+    return is.object(value) &&
       kSurfaceKeys.every((key) => satisfiesField(key, Reflect.get(value, key)));
   }
 

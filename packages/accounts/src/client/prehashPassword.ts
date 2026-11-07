@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import { encodeBase64Url } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
-import { base64url } from "./base64url.ts";
 import { Username } from "../account/Username.ts";
 
 // CONSTANTS
@@ -33,5 +35,5 @@ export async function prehashPassword(
     kDigestBits
   );
 
-  return base64url(new Uint8Array(bits));
+  return encodeBase64Url(new Uint8Array(bits));
 }

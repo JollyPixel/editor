@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { setTimeout } from "node:timers/promises";
 
 // Import Internal Dependencies
-import { TaskChain } from "#src/common/TaskChain.ts";
+import { TaskChain } from "#src/index.ts";
 
 describe("TaskChain", () => {
   test("runs queued tasks one after another", async() => {

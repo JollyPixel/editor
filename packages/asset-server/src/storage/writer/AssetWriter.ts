@@ -9,6 +9,10 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import {
+  asError,
+  TaskChain
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
@@ -31,8 +35,6 @@ import {
   silentLogger,
   type Logger
 } from "../../common/logger.ts";
-import { asError } from "../../common/asError.ts";
-import { TaskChain } from "../../common/TaskChain.ts";
 import { AssetPathAllocator } from "./AssetPathAllocator.ts";
 import {
   AssetCreationPlanner,

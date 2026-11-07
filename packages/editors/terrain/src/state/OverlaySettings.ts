@@ -10,6 +10,7 @@ import {
   type StorageAdapter
 } from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
+import { is } from "@jolly-pixel/utils";
 
 // CONSTANTS
 const kStorageKey = "terrain:view";
@@ -79,7 +80,7 @@ function parseObject(
   try {
     const value: unknown = raw === null ? null : JSON.parse(raw);
 
-    return typeof value === "object" && value !== null ? value : {};
+    return is.plainObject(value) ? value : {};
   }
   catch {
     return {};

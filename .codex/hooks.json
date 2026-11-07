@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/scripts/agents/stopTypecheck.ts\"",
+            "timeout": 180,
+            "statusMessage": "Typechecking changed TypeScript"
+          }
+        ]
+      }
+    ]
+  }
+}

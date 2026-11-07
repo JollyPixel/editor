@@ -4,6 +4,7 @@ import {
   type CommandConsole,
   type VariableScript
 } from "@jolly-pixel/console";
+import { errorMessage } from "@jolly-pixel/utils";
 
 type ConsoleElement = HTMLElementTagNameMap["jolly-console"];
 
@@ -80,7 +81,7 @@ export class LazyConsoleElement {
     this.#loading ??= this.#create().catch((error: unknown) => {
       this.#loading = null;
       this.#warn(
-        `The console failed to load: ${error instanceof Error ? error.message : String(error)}`
+        `The console failed to load: ${errorMessage(error)}`
       );
 
       return null;

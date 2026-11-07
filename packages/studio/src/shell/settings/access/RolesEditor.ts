@@ -20,6 +20,7 @@ import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/toolbar";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { AccessDraft } from "../../../project/AccessDraft.ts";
@@ -371,7 +372,7 @@ export class RolesEditor extends LitElement {
       this._newRole = "";
     }
     catch (error) {
-      this._error = error instanceof Error ? error.message : String(error);
+      this._error = errorMessage(error);
     }
   };
 
@@ -388,7 +389,7 @@ export class RolesEditor extends LitElement {
       }
     }
     catch (error) {
-      this._error = error instanceof Error ? error.message : String(error);
+      this._error = errorMessage(error);
     }
   }
 
@@ -401,7 +402,7 @@ export class RolesEditor extends LitElement {
       this._role = draft.defaultRole;
     }
     catch (error) {
-      this._error = error instanceof Error ? error.message : String(error);
+      this._error = errorMessage(error);
     }
   }
 

@@ -7,6 +7,7 @@ import {
   writeJsonFile,
   type AssetSource
 } from "@jolly-pixel/asset-source";
+import { TaskChain } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -22,7 +23,6 @@ import {
   BACKUP_OBJECTS_PATH
 } from "./stateDirectory.ts";
 import { contentHash } from "../common/contentHash.ts";
-import { TaskChain } from "../common/TaskChain.ts";
 import type { Without } from "../common/types.ts";
 import {
   keepValid,

@@ -5,6 +5,7 @@ import {
   Preferences
 } from "@jolly-pixel/preferences";
 import * as z from "zod";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { PreferencesClient } from "./PreferencesClient.ts";
@@ -121,7 +122,7 @@ export class AccountPreferences implements Disposable {
       await this.#client.replace(scope, overrides);
     }
     catch (error) {
-      const message = `Preferences not saved: ${error instanceof Error ? error.message : String(error)}`;
+      const message = `Preferences not saved: ${errorMessage(error)}`;
       for (const listener of this.#errorListeners) {
         listener(message);
       }

@@ -6,6 +6,10 @@ import {
   type Result
 } from "@openally/result";
 import type { AssetSource } from "@jolly-pixel/asset-source";
+import {
+  asError,
+  TaskChain
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { contentHash } from "../../common/contentHash.ts";
@@ -25,8 +29,6 @@ import type { AssetPartFiles } from "../AssetPartFiles.ts";
 import type { AssetPartRef } from "../../model/events/AssetEvents.ts";
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
 import { BINARY_KIND } from "../../model/kinds/handlers/binary.ts";
-import { asError } from "../../common/asError.ts";
-import { TaskChain } from "../../common/TaskChain.ts";
 
 // CONSTANTS
 const kWatcherActor: EventStore.Actor = {

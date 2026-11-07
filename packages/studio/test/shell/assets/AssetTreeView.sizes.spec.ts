@@ -42,8 +42,8 @@ describe("AssetTreeView file sizes", () => {
       catalog.change();
 
       assert.deepEqual(errors, [
-        "Could not add \"hero.voxelmodel.json\": it is larger than 12 MB",
-        "Could not add \"ship.vox\": it is larger than 12 MB"
+        "Could not add \"hero.voxelmodel.json\": it is larger than 12 MiB",
+        "Could not add \"ship.vox\": it is larger than 12 MiB"
       ]);
       assert.deepEqual(prompted, ["confirm large scan.txt"]);
       added[String(acceptLargeFiles)] = [...catalog.records()].map((record) => record.path).sort();
@@ -73,7 +73,7 @@ describe("AssetTreeView file sizes", () => {
       }
 
       assert.deepEqual(errors, [
-        "Could not replace \"hero.voxelmodel.json\": \"hero.voxelmodel.json\" is larger than 12 MB"
+        "Could not replace \"hero.voxelmodel.json\": \"hero.voxelmodel.json\" is larger than 12 MiB"
       ]);
       assert.strictEqual(prompted.at(-1), "confirm large hero.voxelmodel.json");
       replaced[String(acceptLargeFiles)] = catalog.replaced.map(({ assetId }) => assetId);

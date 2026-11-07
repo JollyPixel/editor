@@ -47,6 +47,12 @@ export const packageGroups: PackageGroup[] = [
     ]
   },
   {
+    text: "Shared",
+    packages: [
+      { dir: "utils", text: "Utils" }
+    ]
+  },
+  {
     text: "Interface",
     packages: [
       { dir: "ui", text: "UI" },

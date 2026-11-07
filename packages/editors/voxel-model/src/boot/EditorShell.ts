@@ -18,6 +18,7 @@ import {
   type PaneGroup,
   type PresenceStack
 } from "@jolly-pixel/ui";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -220,7 +221,7 @@ export class EditorShell {
     }
     void Promise.all(loads).catch((error: unknown) => {
       this.#logger.warn(
-        `An editor panel failed to load: ${error instanceof Error ? error.message : String(error)}`
+        `An editor panel failed to load: ${errorMessage(error)}`
       );
     });
   }

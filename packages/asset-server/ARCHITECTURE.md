@@ -72,7 +72,7 @@ The three views answer different questions:
 
 Each folder under `src/` imports only from the folders listed above it:
 
-- `common/`: helpers with no asset vocabulary (`TaskChain`, `contentHash`,
+- `common/`: helpers with no asset vocabulary (`contentHash`, `Teardown`,
   `Logger`).
 - `model/`: asset kinds, their handlers, and the asset event types.
 - `storage/`: the physical projection. `AssetWriter`, `AssetProjector`,

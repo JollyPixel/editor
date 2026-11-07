@@ -6,6 +6,7 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -19,7 +20,6 @@ import {
 import { UnknownAssetKindError } from "./errors/UnknownAssetKindError.ts";
 import { UnsupportedAssetConversionError } from "./errors/UnsupportedAssetConversionError.ts";
 import { MAX_KIND_CONTENT_BYTES } from "./KindLimits.ts";
-import { asError } from "../../common/asError.ts";
 
 interface RegisteredKind {
   handler: AnyAssetKindHandler;

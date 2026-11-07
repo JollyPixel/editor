@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
+import { is } from "@jolly-pixel/utils";
 
 export interface CellRegionJSON {
   min: VoxelCoord;
@@ -102,7 +103,7 @@ export class CellRegion {
 export function isCellCoord(
   value: unknown
 ): value is VoxelCoord {
-  return typeof value === "object" && value !== null &&
+  return is.object(value) &&
     Number.isInteger(Reflect.get(value, "x")) &&
     Number.isInteger(Reflect.get(value, "y")) &&
     Number.isInteger(Reflect.get(value, "z"));

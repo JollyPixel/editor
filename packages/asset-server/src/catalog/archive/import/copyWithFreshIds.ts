@@ -4,6 +4,7 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -12,7 +13,6 @@ import type {
 } from "../AssetArchive.ts";
 import { AssetArchiveError } from "../errors/AssetArchiveError.ts";
 import type { AssetKindRegistry } from "../../../model/kinds/AssetKindRegistry.ts";
-import { asError } from "../../../common/asError.ts";
 import { serializeAsset } from "../../../model/kinds/serializeAsset.ts";
 
 export async function copyWithFreshIds(

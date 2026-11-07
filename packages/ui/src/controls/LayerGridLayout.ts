@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import { clamp } from "../numeric/bounds.ts";
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
 
 // CONSTANTS
 const kRowsPerBlock = 2;

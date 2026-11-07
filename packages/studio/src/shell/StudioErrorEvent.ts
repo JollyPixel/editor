@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { errorMessage } from "@jolly-pixel/utils";
+
 export interface StudioErrorDetail {
   message: string;
 }
@@ -7,7 +10,7 @@ export class StudioErrorEvent extends CustomEvent<StudioErrorDetail> {
     error: unknown,
     context?: string
   ): StudioErrorEvent {
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = errorMessage(error);
 
     return new StudioErrorEvent(
       context === undefined ? reason : `${context}: ${reason}`

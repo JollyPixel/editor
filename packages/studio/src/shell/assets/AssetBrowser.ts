@@ -27,6 +27,7 @@ import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/toolbar";
 import "@jolly-pixel/ui/elements/tree";
+import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
@@ -441,7 +442,7 @@ export class AssetBrowser extends LitElement {
     error: unknown
   ): void => {
     this.#error(
-      `The dialog failed to load: ${error instanceof Error ? error.message : String(error)}`
+      `The dialog failed to load: ${errorMessage(error)}`
     );
   };
 

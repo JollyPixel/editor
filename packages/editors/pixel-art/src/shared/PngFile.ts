@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { saveFile } from "@jolly-pixel/ui";
+import { saveFile } from "@jolly-pixel/utils/dom";
 
 export class PngFile {
   readonly name: string;

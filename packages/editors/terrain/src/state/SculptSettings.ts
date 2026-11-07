@@ -9,6 +9,10 @@ import {
   type StorageAdapter
 } from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
+import {
+  clamp,
+  is
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -151,17 +155,9 @@ function parseObject(
   try {
     const value: unknown = raw === null ? null : JSON.parse(raw);
 
-    return typeof value === "object" && value !== null ? value : {};
+    return is.plainObject(value) ? value : {};
   }
   catch {
     return {};
   }
-}
-
-function clamp(
-  value: number,
-  min: number,
-  max: number
-): number {
-  return Math.min(Math.max(value, min), max);
 }
