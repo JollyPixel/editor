@@ -234,6 +234,7 @@ export class EditorToolbar extends LitElement {
   declare protected error: string | null;
 
   #assets: AssetGroup | null = null;
+  #assetsStale = true;
   #tours: Lantern | null = null;
   #toursMenu = new ContextMenuController(
     () => this.renderRoot.querySelector<ContextMenu>("#tours-menu")!,
@@ -248,12 +249,15 @@ export class EditorToolbar extends LitElement {
   #sources = new SubscriptionController<EditorToolbarSources | null>(
     this,
     (sources) => {
+      this.#assetsStale = true;
       void sources?.tags?.load().catch((error: unknown) => {
         this.error = describeError(error);
       });
 
       return [
-        ...this.#repaintOn(sources?.targets ?? null),
+        ...this.#repaintOn(sources?.targets ?? null, () => {
+          this.#assetsStale = true;
+        }),
         ...this.#repaintOn(sources?.tags ?? null),
         ...this.#repaintOn(sources?.connectionStatus ?? null),
         ...this.#repaintOn(sources?.lantern ?? null)
@@ -274,6 +278,7 @@ export class EditorToolbar extends LitElement {
   set sources(
     sources: EditorToolbarSources | null
   ) {
+    this.#assetsStale = true;
     this.#sources.attach(sources);
   }
 
@@ -283,7 +288,10 @@ export class EditorToolbar extends LitElement {
       connectionStatus = null,
       lantern = null
     } = this.sources ?? {};
-    this.#assets = this.sources === null ? null : assetGroup(this.sources);
+    if (this.#assetsStale) {
+      this.#assetsStale = false;
+      this.#assets = this.sources === null ? null : assetGroup(this.sources);
+    }
     this.#tours = lantern !== null && lantern.size > 0 ? lantern : null;
     this.#offline = connectionStatus?.online === false ?
       connectionStatus :
@@ -545,13 +553,15 @@ export class EditorToolbar extends LitElement {
   }
 
   #repaintOn(
-    source: ChangeSource | null
+    source: ChangeSource | null,
+    beforeRepaint?: () => void
   ): Iterable<() => void> {
     if (source === null) {
       return [];
     }
 
     const repaint = (): void => {
+      beforeRepaint?.();
       this.requestUpdate();
     };
     source.on("change", repaint);

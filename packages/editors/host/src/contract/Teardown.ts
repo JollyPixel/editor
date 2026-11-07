@@ -1,8 +1,16 @@
 export class Teardown {
-  readonly #closing = new AbortController();
   readonly #steps: Array<() => void> = [];
+  #closing: AbortController | null = null;
+  #closed = false;
 
   get signal(): AbortSignal {
+    if (this.#closing === null) {
+      this.#closing = new AbortController();
+      if (this.#closed) {
+        this.#closing.abort();
+      }
+    }
+
     return this.#closing.signal;
   }
 
@@ -13,7 +21,8 @@ export class Teardown {
   }
 
   run(): void {
-    this.#closing.abort();
+    this.#closed = true;
+    this.#closing?.abort();
     for (const step of this.#steps.splice(0).reverse()) {
       step();
     }

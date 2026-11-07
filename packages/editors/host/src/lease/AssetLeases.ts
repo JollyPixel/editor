@@ -67,6 +67,8 @@ interface LeaseEntry<TDocument> {
   readonly room: Room;
   readonly kind: AssetDocumentKind<TDocument> | undefined;
   readonly synced: SyncedDocument<TDocument> | undefined;
+  readonly followPending: () => void;
+  unsettled: boolean;
   holders: number;
 }
 
@@ -96,18 +98,9 @@ export class AssetLeases extends Emitter<AssetLeasesEvents> {
   readonly #records: AssetRecords;
   readonly #outboxes: OutboxSource | null;
   readonly #entries = new Map<string, LeaseEntry<unknown>>();
+  #unsettled = 0;
   #unsaved = false;
   #disposed = false;
-
-  readonly #onPendingChange = (): void => {
-    const unsaved = [...this.#entries.values()].some(
-      (entry) => (entry.synced?.pendingChanges.pending ?? 0) > 0
-    );
-    if (unsaved !== this.#unsaved) {
-      this.#unsaved = unsaved;
-      this.emit("unsaved", unsaved);
-    }
-  };
 
   constructor(
     options: AssetLeasesOptions
@@ -202,7 +195,7 @@ export class AssetLeases extends Emitter<AssetLeasesEvents> {
       this.#close(entry);
     }
     this.#entries.clear();
-    this.#onPendingChange();
+    this.#reportUnsaved();
   }
 
   #acquire(
@@ -265,15 +258,17 @@ export class AssetLeases extends Emitter<AssetLeasesEvents> {
       room,
       kind,
       synced,
+      followPending: () => this.#followPending(entry),
+      unsettled: false,
       holders: 0
     };
     this.#entries.set(
       leaseKey(record.id, tag),
       entry
     );
-    synced?.pendingChanges.on("settled", this.#onPendingChange);
-    synced?.pendingChanges.on("unsettled", this.#onPendingChange);
-    this.#onPendingChange();
+    synced?.pendingChanges.on("settled", entry.followPending);
+    synced?.pendingChanges.on("unsettled", entry.followPending);
+    entry.followPending();
 
     return entry;
   }
@@ -312,15 +307,41 @@ export class AssetLeases extends Emitter<AssetLeasesEvents> {
 
     this.#entries.delete(key);
     this.#close(entry);
-    this.#onPendingChange();
+    this.#reportUnsaved();
   }
 
   #close(
     entry: LeaseEntry<unknown>
   ): void {
-    entry.synced?.pendingChanges.off("settled", this.#onPendingChange);
-    entry.synced?.pendingChanges.off("unsettled", this.#onPendingChange);
+    entry.synced?.pendingChanges.off("settled", entry.followPending);
+    entry.synced?.pendingChanges.off("unsettled", entry.followPending);
+    this.#markPending(entry, false);
     entry.synced?.dispose();
     entry.room.leave();
+  }
+
+  #followPending(
+    entry: LeaseEntry<unknown>
+  ): void {
+    this.#markPending(entry, (entry.synced?.pendingChanges.pending ?? 0) > 0);
+    this.#reportUnsaved();
+  }
+
+  #markPending(
+    entry: LeaseEntry<unknown>,
+    pending: boolean
+  ): void {
+    if (entry.unsettled !== pending) {
+      entry.unsettled = pending;
+      this.#unsettled += pending ? 1 : -1;
+    }
+  }
+
+  #reportUnsaved(): void {
+    const unsaved = this.#unsettled > 0;
+    if (unsaved !== this.#unsaved) {
+      this.#unsaved = unsaved;
+      this.emit("unsaved", unsaved);
+    }
   }
 }

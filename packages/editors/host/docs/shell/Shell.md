@@ -71,8 +71,9 @@ notifications.
   latest overrides, then with each `jolly-preferences`. The latest values start
   from the launch, so a listener added late misses nothing.
 - `jolly-editor-state` reports the
-  [page state](../boot/bootStandalone.md#page-state) and `jolly-unsaved` each
-  flip of the frame's unsaved changes.
+  [page state](../boot/bootStandalone.md#page-state). `jolly-unsaved` reports
+  `true` as soon as the frame has unsaved changes, and `false` once they have
+  stayed saved for 400 ms, so steady editing does not flicker the tab.
 - `jolly-update-preferences` carries one change. The shell validates it, stores it,
   and pushes the scope's overrides to every frame as `jolly-preferences`,
   sender included. On a refused patch it pushes its own overrides, so the

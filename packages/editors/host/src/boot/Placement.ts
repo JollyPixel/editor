@@ -53,6 +53,9 @@ import type { PageState } from "../mount/PageState.ts";
 import { Teardown } from "../contract/Teardown.ts";
 import type { OfflineMode } from "../connection/OfflineMode.ts";
 
+// CONSTANTS
+const kSavedReportDelayMs = 400;
+
 export type UnsavedLeases = Pick<AssetLeases, "unsaved" | "subscribe">;
 
 export interface PlacedSession {
@@ -170,10 +173,7 @@ export class Placement {
   ): void {
     const shell = this.#shell;
     if (shell !== null) {
-      this.#teardown.defer(assets.subscribe(
-        "unsaved",
-        (unsaved) => shell.reportUnsaved(unsaved)
-      ));
+      this.#teardown.defer(reportUnsaved(shell, assets));
 
       return;
     }
@@ -278,4 +278,31 @@ export class Placement {
 
     return preferences;
   }
+}
+
+function reportUnsaved(
+  shell: ShellChannel,
+  assets: UnsavedLeases
+): () => void {
+  let reported = false;
+  let saving: ReturnType<typeof setTimeout> | undefined;
+  const unsubscribe = assets.subscribe("unsaved", (unsaved) => {
+    clearTimeout(saving);
+    saving = undefined;
+    if (unsaved && !reported) {
+      reported = true;
+      shell.reportUnsaved(true);
+    }
+    else if (!unsaved && reported) {
+      saving = setTimeout(() => {
+        reported = false;
+        shell.reportUnsaved(false);
+      }, kSavedReportDelayMs);
+    }
+  });
+
+  return () => {
+    clearTimeout(saving);
+    unsubscribe();
+  };
 }
