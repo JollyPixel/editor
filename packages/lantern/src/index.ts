@@ -1,5 +1,6 @@
 export * from "./Lantern.ts";
 export type { LanternSeen } from "./LanternSeen.ts";
+export * from "./LazyLanternElement.ts";
 export type {
   TourRun,
   TourRunEvents,

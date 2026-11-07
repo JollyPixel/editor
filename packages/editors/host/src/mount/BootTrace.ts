@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { HostLogger } from "../debug/readDebugLogger.ts";
-import type { EditorState } from "../shell/EditorState.ts";
+import type { EditorState } from "./EditorState.ts";
 import type { PageState } from "./PageState.ts";
 
 export class BootTrace {

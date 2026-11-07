@@ -7,10 +7,6 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  SHELL_MESSAGE_TYPE,
-  preferencesMessage
-} from "@jolly-pixel/editor.host";
 import { RUNTIME_PREFERENCES } from "@jolly-pixel/editor.host/preferences";
 import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
@@ -57,14 +53,16 @@ describe("StudioSession preferences", () => {
       ["missing", { stats: true }]
     ] as const) {
       postFrom(frame().contentWindow, {
-        type: SHELL_MESSAGE_TYPE,
-        command: "update-preferences",
+        type: "jolly-update-preferences",
         scope,
         patch
       });
     }
 
-    const shared = [preferencesMessage("runtime", { stats: false }), FRAME_ORIGIN];
+    const shared = [
+      { type: "jolly-preferences", scope: "runtime", overrides: { stats: false } },
+      FRAME_ORIGIN
+    ];
     assert.deepEqual(preferences.overrides("runtime"), { stats: false });
     assert.deepEqual(posted, [shared, shared]);
   });

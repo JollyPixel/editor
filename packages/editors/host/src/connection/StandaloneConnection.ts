@@ -2,15 +2,11 @@
 import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
-import type { RoomSource } from "../lease/AssetLeases.ts";
+import type { EditorSessionClient } from "../lease/AssetLeases.ts";
 import type { PendingOutboxes } from "../lease/outbox/PendingOutboxes.ts";
 import type { ServerConnection } from "./ConnectionStatus.ts";
 import type { OfflineMode } from "./OfflineMode.ts";
 import type { CatalogOpener } from "./openCatalog.ts";
-
-export interface EditorSessionClient extends RoomSource {
-  destroy(): void;
-}
 
 export interface StandaloneConnection {
   identity: PeerIdentity;

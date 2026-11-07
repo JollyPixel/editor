@@ -6,7 +6,8 @@ Two entries:
 - `@jolly-pixel/lantern/element`: the Lit `jolly-lantern` overlay.
 
 The element imports the root, never the reverse, so tour declarations and the step machine run
-under `node --test`.
+under `node --test`. The one exception is `LazyLanternElement`, which loads the element with a
+dynamic `import()` on its first run, so importing the root still loads no Lit.
 
 ```mermaid
 flowchart TB

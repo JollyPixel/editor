@@ -2,224 +2,29 @@
 import { AssetId } from "@jolly-pixel/asset";
 import type { PreferenceOverrides } from "@jolly-pixel/preferences";
 import {
-  DENSITIES,
-  THEME_MODES,
   peerIdentity,
   type NotificationHandle,
   type NotificationInit,
   type Notifier,
   type PeerIdentity
 } from "@jolly-pixel/ui";
-import * as z from "zod/mini";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import type { EditorState } from "../mount/EditorState.ts";
 import type { Appearance } from "../preferences/appearance/PageAppearance.ts";
+import { ShellCatalog } from "./catalog/ShellCatalog.ts";
 import {
-  EDITOR_STATES,
-  type EditorState
-} from "./EditorState.ts";
-import type { ShellCatalog } from "./catalog/ShellCatalog.ts";
-import {
-  NOTIFICATION_MESSAGE_TYPE,
-  type NotificationMessage
-} from "./NotificationMessage.ts";
+  parseShellMessage,
+  type FrameMessage,
+  type LaunchMessage,
+  type ShellMessage
+} from "./protocol.ts";
 
-// CONSTANTS
-export const READY_MESSAGE_TYPE = "jolly-ready";
-export const LAUNCH_MESSAGE_TYPE = "jolly-launch";
-export const SHELL_MESSAGE_TYPE = "jolly-shell";
-export const APPEARANCE_MESSAGE_TYPE = "jolly-appearance";
-export const SESSION_RENEWED_MESSAGE_TYPE = "jolly-session-renewed";
-export const PREFERENCES_MESSAGE_TYPE = "jolly-preferences";
-export const REVEAL_MESSAGE_TYPE = "jolly-reveal";
-const kOverridesSchema = z.record(z.string(), z.unknown());
-const kLaunchPreferencesSchema = z.record(z.string(), kOverridesSchema);
-const kAppearanceSchema = z.object({
-  theme: z.enum(THEME_MODES),
-  density: z.enum(DENSITIES)
-});
-const kLaunchPortsSchema = z.object({
-  catalog: z.optional(z.instanceof(MessagePort)),
-  console: z.optional(z.instanceof(MessagePort))
-});
-const kLaunchIdentitySchema = z.object({
-  username: z.string().check(z.trim(), z.minLength(1)),
-  peerId: z.string().check(z.minLength(1)),
-  avatar: z.catch(z.optional(z.string()), undefined)
-});
-const kReadyMessageSchema = z.object({
-  type: z.literal(READY_MESSAGE_TYPE)
-});
-const kLaunchMessageSchema = z.object({
-  type: z.literal(LAUNCH_MESSAGE_TYPE),
-  target: z.string(),
-  appearance: z.catch(z.optional(kAppearanceSchema), undefined),
-  identity: z.catch(z.nullable(kLaunchIdentitySchema), null),
-  preferences: z.catch(kLaunchPreferencesSchema, {}),
-  ports: z.catch(kLaunchPortsSchema, {})
-});
-const kShellCommandSchema = z.discriminatedUnion("command", [
-  z.object({
-    type: z.literal(SHELL_MESSAGE_TYPE),
-    command: z.literal("open-asset"),
-    target: z.string(),
-    reveal: z.optional(z.string())
-  }),
-  z.object({
-    type: z.literal(SHELL_MESSAGE_TYPE),
-    command: z.literal("toggle-console")
-  }),
-  z.object({
-    type: z.literal(SHELL_MESSAGE_TYPE),
-    command: z.literal("session-refused")
-  }),
-  z.object({
-    type: z.literal(SHELL_MESSAGE_TYPE),
-    command: z.literal("unsaved"),
-    unsaved: z.boolean()
-  }),
-  z.object({
-    type: z.literal(SHELL_MESSAGE_TYPE),
-    command: z.literal("editor-state"),
-    state: z.enum(EDITOR_STATES)
-  }),
-  z.object({
-    type: z.literal(SHELL_MESSAGE_TYPE),
-    command: z.literal("update-preferences"),
-    scope: z.string(),
-    patch: kOverridesSchema
-  })
-]);
-const kAppearanceMessageSchema = z.object({
-  type: z.literal(APPEARANCE_MESSAGE_TYPE),
-  appearance: kAppearanceSchema
-});
-const kSessionRenewedMessageSchema = z.object({
-  type: z.literal(SESSION_RENEWED_MESSAGE_TYPE)
-});
-const kPreferencesMessageSchema = z.object({
-  type: z.literal(PREFERENCES_MESSAGE_TYPE),
-  scope: z.string(),
-  overrides: kOverridesSchema
-});
-const kRevealMessageSchema = z.object({
-  type: z.literal(REVEAL_MESSAGE_TYPE),
-  key: z.string()
-});
-
-export interface ShellReadyMessage {
-  type: typeof READY_MESSAGE_TYPE;
-}
-
-export interface LaunchMessage {
-  type: typeof LAUNCH_MESSAGE_TYPE;
-  target: string;
-  appearance?: Appearance;
-  identity: LaunchIdentity | null;
-  /**
-   * Preference overrides by scope name: the editor's scopes and the host's.
-   */
-  preferences: Readonly<Record<string, PreferenceOverrides>>;
-  ports: LaunchPorts;
-}
-
-export interface LaunchMessageOptions {
-  target: string;
-  appearance: Appearance;
-  /**
-   * @default {}
-   */
-  ports?: LaunchPorts;
-  /**
-   * @default null
-   */
-  identity?: LaunchIdentity | null;
-  /**
-   * @default {}
-   */
-  preferences?: Readonly<Record<string, PreferenceOverrides>>;
-}
-
-export interface LaunchIdentity {
-  username: string;
-  peerId: string;
-  /**
-   * Same-origin path of the peer's uploaded avatar.
-   */
-  avatar?: string;
-}
-
-export interface LaunchPorts {
-  catalog?: MessagePort;
-  console?: MessagePort;
-}
-
-export interface ShellOpenAssetCommand {
-  type: typeof SHELL_MESSAGE_TYPE;
-  command: "open-asset";
-  target: string;
-  /**
-   * Handed to the opened editor, which shows what it names.
-   */
-  reveal?: string;
-}
-
-export interface ShellToggleConsoleCommand {
-  type: typeof SHELL_MESSAGE_TYPE;
-  command: "toggle-console";
-}
-
-export interface ShellSessionRefusedCommand {
-  type: typeof SHELL_MESSAGE_TYPE;
-  command: "session-refused";
-}
-
-export interface ShellUnsavedCommand {
-  type: typeof SHELL_MESSAGE_TYPE;
-  command: "unsaved";
-  unsaved: boolean;
-}
-
-export interface ShellEditorStateCommand {
-  type: typeof SHELL_MESSAGE_TYPE;
-  command: "editor-state";
-  state: EditorState;
-}
-
-export interface ShellUpdatePreferencesCommand {
-  type: typeof SHELL_MESSAGE_TYPE;
-  command: "update-preferences";
-  scope: string;
-  patch: PreferenceOverrides;
-}
-
-export type ShellCommand =
-  | ShellOpenAssetCommand
-  | ShellToggleConsoleCommand
-  | ShellSessionRefusedCommand
-  | ShellUnsavedCommand
-  | ShellEditorStateCommand
-  | ShellUpdatePreferencesCommand;
-
-export interface AppearanceMessage {
-  type: typeof APPEARANCE_MESSAGE_TYPE;
-  appearance: Appearance;
-}
-
-export interface SessionRenewedMessage {
-  type: typeof SESSION_RENEWED_MESSAGE_TYPE;
-}
-
-export interface PreferencesMessage {
-  type: typeof PREFERENCES_MESSAGE_TYPE;
-  scope: string;
-  overrides: PreferenceOverrides;
-}
-
-export interface RevealMessage {
-  type: typeof REVEAL_MESSAGE_TYPE;
-  key: string;
-}
+type ShellEvents = {
+  appearance: (appearance: Appearance) => void;
+  preferences: (scope: string, overrides: PreferenceOverrides) => void;
+};
 
 export interface RenewableClient {
   on(
@@ -239,65 +44,51 @@ export interface ShellPort {
 export interface ShellChannelOptions {
   port: ShellPort;
   origin: string;
-  /**
-   * @default null
-   */
-  appearance?: Appearance | null;
-  /**
-   * @default null
-   */
-  catalog?: ShellCatalog | null;
-  /**
-   * @default null
-   */
-  console?: MessagePort | null;
-  /**
-   * @default null
-   */
-  identity?: LaunchIdentity | null;
-  /**
-   * @default {}
-   */
-  preferences?: Readonly<Record<string, PreferenceOverrides>>;
+  launch: LaunchMessage;
 }
 
 export class ShellChannel implements Notifier {
   readonly origin: string;
-  readonly appearance: Appearance | null;
   readonly catalog: ShellCatalog | null;
   readonly console: MessagePort | null;
   readonly identity: PeerIdentity | null;
-  readonly preferences: Readonly<Record<string, PreferenceOverrides>>;
 
   #port: ShellPort;
-  #unreadReveal: string | null = null;
+  #appearance: Appearance | null;
+  #preferences: Readonly<Record<string, PreferenceOverrides>>;
+  #events = new Emitter<ShellEvents>();
+  #refused = new Set<RenewableClient>();
+  #unreadReveal: string | null;
   #revealListener: ((key: string) => void) | null = null;
   #notifications = 0;
 
   constructor(
     options: ShellChannelOptions
   ) {
-    this.#port = options.port;
+    const { port, origin, launch } = options;
+    const { catalog, console: consolePort } = launch.ports;
+    this.#port = port;
+    this.origin = origin;
+    this.catalog = catalog === undefined ? null : new ShellCatalog(catalog);
+    this.console = consolePort ?? null;
+    this.identity = launch.identity === null ?
+      null :
+      peerIdentity(
+        launch.identity.username,
+        launch.identity.peerId,
+        launch.identity.avatar
+      );
+    this.#appearance = launch.appearance ?? null;
+    this.#preferences = launch.preferences;
+    this.#unreadReveal = launch.reveal ?? null;
     window.addEventListener("message", (event) => {
-      if (this.#isFromShell(event)) {
-        const message = kRevealMessageSchema.safeParse(event.data);
-        if (message.success) {
-          this.#reveal(message.data.key);
+      if (event.source === port && event.origin === origin) {
+        const message = parseShellMessage(event.data);
+        if (message !== undefined) {
+          this.#receive(message);
         }
       }
     });
-    this.origin = options.origin;
-    this.appearance = options.appearance ?? null;
-    this.catalog = options.catalog ?? null;
-    this.console = options.console ?? null;
-    this.preferences = options.preferences ?? {};
-    this.identity = options.identity ?
-      peerIdentity(
-        options.identity.username,
-        options.identity.peerId,
-        options.identity.avatar
-      ) :
-      null;
   }
 
   openAsset(
@@ -305,8 +96,7 @@ export class ShellChannel implements Notifier {
     reveal?: string
   ): void {
     this.#post({
-      type: SHELL_MESSAGE_TYPE,
-      command: "open-asset",
+      type: "jolly-open-asset",
       target: AssetId.from(id).value,
       ...reveal === undefined ? {} : { reveal }
     });
@@ -314,8 +104,7 @@ export class ShellChannel implements Notifier {
 
   toggleConsole(): void {
     this.#post({
-      type: SHELL_MESSAGE_TYPE,
-      command: "toggle-console"
+      type: "jolly-toggle-console"
     });
   }
 
@@ -323,8 +112,7 @@ export class ShellChannel implements Notifier {
     unsaved: boolean
   ): void {
     this.#post({
-      type: SHELL_MESSAGE_TYPE,
-      command: "unsaved",
+      type: "jolly-unsaved",
       unsaved
     });
   }
@@ -333,8 +121,7 @@ export class ShellChannel implements Notifier {
     state: EditorState
   ): void {
     this.#post({
-      type: SHELL_MESSAGE_TYPE,
-      command: "editor-state",
+      type: "jolly-editor-state",
       state
     });
   }
@@ -344,8 +131,7 @@ export class ShellChannel implements Notifier {
     patch: PreferenceOverrides
   ): void {
     this.#post({
-      type: SHELL_MESSAGE_TYPE,
-      command: "update-preferences",
+      type: "jolly-update-preferences",
       scope,
       patch
     });
@@ -357,8 +143,7 @@ export class ShellChannel implements Notifier {
     this.#notifications += 1;
     const id = `notification-${this.#notifications}`;
     this.#post({
-      type: NOTIFICATION_MESSAGE_TYPE,
-      action: "notify",
+      type: "jolly-notification",
       id,
       notification: init
     });
@@ -366,14 +151,12 @@ export class ShellChannel implements Notifier {
     return {
       id,
       update: (patch) => this.#post({
-        type: NOTIFICATION_MESSAGE_TYPE,
-        action: "update",
+        type: "jolly-notification-update",
         id,
         patch
       }),
       dismiss: () => this.#post({
-        type: NOTIFICATION_MESSAGE_TYPE,
-        action: "dismiss",
+        type: "jolly-notification-dismiss",
         id
       })
     };
@@ -383,19 +166,9 @@ export class ShellChannel implements Notifier {
     client: RenewableClient
   ): void {
     client.on("unauthorized", () => {
-      const renewal = new AbortController();
-      window.addEventListener("message", (event) => {
-        if (
-          this.#isFromShell(event) &&
-          isSessionRenewedMessage(event.data)
-        ) {
-          renewal.abort();
-          client.reconnect();
-        }
-      }, { signal: renewal.signal });
+      this.#refused.add(client);
       this.#post({
-        type: SHELL_MESSAGE_TYPE,
-        command: "session-refused"
+        type: "jolly-session-refused"
       });
     });
   }
@@ -404,28 +177,28 @@ export class ShellChannel implements Notifier {
     listener: (appearance: Appearance) => void,
     signal: AbortSignal
   ): void {
-    window.addEventListener("message", (event) => {
-      if (
-        this.#isFromShell(event) &&
-        isAppearanceMessage(event.data)
-      ) {
-        listener(event.data.appearance);
-      }
-    }, { signal });
+    if (signal.aborted) {
+      return;
+    }
+
+    if (this.#appearance !== null) {
+      listener(this.#appearance);
+    }
+    this.#listen("appearance", listener, signal);
   }
 
   onPreferences(
     listener: (scope: string, overrides: PreferenceOverrides) => void,
     signal: AbortSignal
   ): void {
-    window.addEventListener("message", (event) => {
-      if (this.#isFromShell(event)) {
-        const message = kPreferencesMessageSchema.safeParse(event.data);
-        if (message.success) {
-          listener(message.data.scope, message.data.overrides);
-        }
-      }
-    }, { signal });
+    if (signal.aborted) {
+      return;
+    }
+
+    for (const [scope, overrides] of Object.entries(this.#preferences)) {
+      listener(scope, overrides);
+    }
+    this.#listen("preferences", listener, signal);
   }
 
   onReveal(
@@ -450,6 +223,44 @@ export class ShellChannel implements Notifier {
     }
   }
 
+  #receive(
+    message: ShellMessage
+  ): void {
+    switch (message.type) {
+      case "jolly-appearance":
+        this.#appearance = message.appearance;
+        this.#events.emit("appearance", message.appearance);
+        break;
+      case "jolly-preferences":
+        this.#preferences = {
+          ...this.#preferences,
+          [message.scope]: message.overrides
+        };
+        this.#events.emit("preferences", message.scope, message.overrides);
+        break;
+      case "jolly-session-renewed":
+        this.#renew();
+        break;
+      case "jolly-reveal":
+        this.#reveal(message.key);
+        break;
+      default: {
+        const unhandled: never = message;
+        throw new Error(
+          `Unhandled shell message: ${JSON.stringify(unhandled)}`
+        );
+      }
+    }
+  }
+
+  #renew(): void {
+    const refused = [...this.#refused];
+    this.#refused.clear();
+    for (const client of refused) {
+      client.reconnect();
+    }
+  }
+
   #reveal(
     key: string
   ): void {
@@ -461,95 +272,21 @@ export class ShellChannel implements Notifier {
     }
   }
 
-  #isFromShell(
-    event: MessageEvent
-  ): boolean {
-    return event.source === this.#port && event.origin === this.origin;
+  #listen<E extends keyof ShellEvents>(
+    event: E,
+    listener: ShellEvents[E],
+    signal: AbortSignal
+  ): void {
+    signal.addEventListener(
+      "abort",
+      this.#events.subscribe(event, listener),
+      { once: true }
+    );
   }
 
   #post(
-    message: ShellCommand | NotificationMessage
+    message: FrameMessage
   ): void {
     this.#port.postMessage(message, this.origin);
   }
-}
-
-export function launchMessage(
-  options: LaunchMessageOptions
-): LaunchMessage {
-  return {
-    type: LAUNCH_MESSAGE_TYPE,
-    target: options.target,
-    appearance: options.appearance,
-    identity: options.identity ?? null,
-    preferences: options.preferences ?? {},
-    ports: options.ports ?? {}
-  };
-}
-
-export function revealMessage(
-  key: string
-): RevealMessage {
-  return {
-    type: REVEAL_MESSAGE_TYPE,
-    key
-  };
-}
-
-export function appearanceMessage(
-  appearance: Appearance
-): AppearanceMessage {
-  return {
-    type: APPEARANCE_MESSAGE_TYPE,
-    appearance
-  };
-}
-
-export function preferencesMessage(
-  scope: string,
-  overrides: PreferenceOverrides
-): PreferencesMessage {
-  return {
-    type: PREFERENCES_MESSAGE_TYPE,
-    scope,
-    overrides
-  };
-}
-
-export function sessionRenewedMessage(): SessionRenewedMessage {
-  return {
-    type: SESSION_RENEWED_MESSAGE_TYPE
-  };
-}
-
-export function isReadyMessage(
-  data: unknown
-): data is ShellReadyMessage {
-  return kReadyMessageSchema.safeParse(data).success;
-}
-
-export function parseLaunchMessage(
-  data: unknown
-): LaunchMessage | undefined {
-  const parsed = kLaunchMessageSchema.safeParse(data);
-
-  return parsed.success ? parsed.data : undefined;
-}
-
-export function isShellCommand(
-  data: unknown
-): data is ShellCommand {
-  return kShellCommandSchema.safeParse(data).success;
-}
-
-function isAppearanceMessage(
-  data: unknown
-): data is AppearanceMessage {
-  return kAppearanceMessageSchema.safeParse(data).success;
-}
-
-function isSessionRenewedMessage(
-  data: unknown
-): data is SessionRenewedMessage {
-  return kSessionRenewedMessageSchema.safeParse(data).success;
 }

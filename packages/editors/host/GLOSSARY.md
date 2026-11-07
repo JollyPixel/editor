@@ -35,7 +35,7 @@ it edits, the other kinds it can load, and how to build itself. The host only
 loads what the editor declared, so the textures of a voxel map stay closed
 when the editor never said it can read textures.
 
-*In code:* the [editor definition](./docs/boot/EditorDefinition.md#definition):
+*In code:* the [editor definition](./docs/contract/EditorDefinition.md#definition):
 `accepts`, `kinds`, `mount` and the optional `createRuntime`.
 
 ### Mount

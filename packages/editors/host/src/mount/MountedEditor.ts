@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { BootTrace } from "./BootTrace.ts";
-import type { EditorHandle } from "./EditorDefinition.ts";
-import { Teardown } from "./Teardown.ts";
+import type { EditorHandle } from "../contract/EditorDefinition.ts";
+import { Teardown } from "../contract/Teardown.ts";
 import type { EditorLaunch } from "../launch/EditorLaunch.ts";
 import type { LaunchNavigator } from "../launch/LaunchNavigator.ts";
 import type { EditorSession } from "../session/EditorSession.ts";

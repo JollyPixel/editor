@@ -27,8 +27,8 @@ export class FrameNotifications {
     message: NotificationMessage
   ): void {
     const known = this.#frames.get(frameId);
-    switch (message.action) {
-      case "notify": {
+    switch (message.type) {
+      case "jolly-notification": {
         const notifications = known ?? new Map<string, FrameNotification>();
         this.#frames.set(frameId, notifications);
         notifications.set(message.id, {
@@ -40,7 +40,7 @@ export class FrameNotifications {
         });
         break;
       }
-      case "update": {
+      case "jolly-notification-update": {
         const current = known?.get(message.id);
         if (current !== undefined) {
           current.handle.update({
@@ -51,7 +51,7 @@ export class FrameNotifications {
         }
         break;
       }
-      case "dismiss":
+      case "jolly-notification-dismiss":
         known?.get(message.id)?.handle.dismiss();
         known?.delete(message.id);
         break;

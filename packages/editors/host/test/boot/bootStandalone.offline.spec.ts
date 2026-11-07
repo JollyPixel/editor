@@ -15,7 +15,7 @@ import { bootStandalone } from "#src/boot/bootStandalone.ts";
 import type {
   EditorContext,
   EditorHandle
-} from "#src/boot/EditorDefinition.ts";
+} from "#src/contract/EditorDefinition.ts";
 import type { OfflineMode } from "#src/connection/OfflineMode.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 

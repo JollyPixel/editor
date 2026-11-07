@@ -2,8 +2,12 @@
 import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import type { Lantern } from "@jolly-pixel/lantern";
 import { Preferences } from "@jolly-pixel/preferences";
-import type { Notifier } from "@jolly-pixel/ui";
+import {
+  NotificationQueue,
+  type Notifier
+} from "@jolly-pixel/ui";
 import { ColorPicker } from "@jolly-pixel/ui/elements/color-picker";
+import "@jolly-pixel/ui/elements/notifications";
 
 // Import Internal Dependencies
 import { forwardConsole } from "../console/forwardConsole.ts";
@@ -42,12 +46,11 @@ import {
   type EditorToolbarArchives
 } from "../session/EditorToolbarSources.ts";
 import { mountLantern } from "../ui/lantern/mountLantern.ts";
-import { mountNotifications } from "../ui/mountNotifications.ts";
 import { provideTourKeys } from "../ui/lantern/provideTourKeys.ts";
-import type { EditorContext } from "./EditorDefinition.ts";
-import type { MountRequest } from "./MountedEditor.ts";
-import type { PageState } from "./PageState.ts";
-import { Teardown } from "./Teardown.ts";
+import type { EditorContext } from "../contract/EditorDefinition.ts";
+import type { MountRequest } from "../mount/MountedEditor.ts";
+import type { PageState } from "../mount/PageState.ts";
+import { Teardown } from "../contract/Teardown.ts";
 import type { OfflineMode } from "../connection/OfflineMode.ts";
 
 export type UnsavedLeases = Pick<AssetLeases, "unsaved" | "subscribe">;
@@ -244,10 +247,16 @@ export class Placement {
       return this.#shell;
     }
 
-    const page = mountNotifications();
-    this.#teardown.defer(() => page.dispose());
+    const queue = new NotificationQueue();
+    const stack = document.createElement("jolly-notifications");
+    (document.querySelector("jolly-scope") ?? document.body).append(stack);
+    stack.attach(queue);
+    this.#teardown.defer(() => {
+      queue.dispose();
+      stack.remove();
+    });
 
-    return page.queue;
+    return queue;
   }
 
   #openPreferences(): Preferences {
@@ -260,7 +269,6 @@ export class Placement {
     }
 
     const preferences = new Preferences({
-      overrides: Object.entries(shell.preferences),
       write: (change) => shell.updatePreferences(change.scope, change.patch)
     });
     shell.onPreferences(

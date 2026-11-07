@@ -11,6 +11,7 @@ import type {
   ImportPlan,
   ImportReport
 } from "@jolly-pixel/asset-server/client";
+import { saveFile } from "@jolly-pixel/ui";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
@@ -21,7 +22,6 @@ import type { OfflineMode } from "../connection/OfflineMode.ts";
 import { ArchiveRootError } from "./errors/ArchiveRootError.ts";
 import { ArchiveImportDisabledError } from "./errors/ArchiveImportDisabledError.ts";
 import { askImportConflictPolicy } from "./dialogs/askImportConflictPolicy.ts";
-import { saveFile } from "../browser/saveFile.ts";
 
 // CONSTANTS
 const kArchiveExtension = ".zip";

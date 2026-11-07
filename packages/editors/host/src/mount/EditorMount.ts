@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { BootTrace } from "./BootTrace.ts";
-import type { EditorHandle } from "./EditorDefinition.ts";
+import type { EditorHandle } from "../contract/EditorDefinition.ts";
 import {
   MountedEditor,
   type MountRequest

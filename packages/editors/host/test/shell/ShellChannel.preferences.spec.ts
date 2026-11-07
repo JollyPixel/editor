@@ -4,43 +4,43 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  isShellCommand,
-  preferencesMessage,
-  SHELL_MESSAGE_TYPE,
-  ShellChannel
-} from "#src/shell/ShellChannel.ts";
-
-// CONSTANTS
-const kShellOrigin = "http://studio.test";
+  parseFrameMessage,
+  type ShellMessage
+} from "#src/shell/protocol.ts";
+import {
+  SHELL_ORIGIN,
+  shellChannel
+} from "../helpers/shell.ts";
 
 describe("ShellChannel preferences", () => {
-  test("posts a preference change as a shell command", () => {
+  test("posts a preference change as a frame message", () => {
     const posted: unknown[] = [];
-    const shell = new ShellChannel({
+    const shell = shellChannel({
       port: {
         postMessage: (message) => posted.push(message)
-      },
-      origin: kShellOrigin
+      }
     });
 
     shell.updatePreferences("runtime", { stats: false });
 
     assert.deepEqual(posted, [{
-      type: SHELL_MESSAGE_TYPE,
-      command: "update-preferences",
+      type: "jolly-update-preferences",
       scope: "runtime",
       patch: { stats: false }
     }]);
-    assert.equal(isShellCommand(posted[0]), true);
+    assert.deepEqual(parseFrameMessage(posted[0]), posted[0]);
   });
 
-  test("follows the preferences the shell pushes, and only the shell", () => {
+  test("starts from the latest preferences, then follows those the shell pushes, and only the shell", () => {
     const parent = Object.assign(new MessageChannel().port1, {
       postMessage: () => undefined
     });
-    const shell = new ShellChannel({
+    const shell = shellChannel({
       port: parent,
-      origin: kShellOrigin
+      preferences: {
+        runtime: { stats: false },
+        lantern: { seen: [] }
+      }
     });
     const received: unknown[] = [];
     const listening = new AbortController();
@@ -54,17 +54,40 @@ describe("ShellChannel preferences", () => {
     ): void {
       window.dispatchEvent(new MessageEvent("message", {
         source,
-        origin: kShellOrigin,
+        origin: SHELL_ORIGIN,
         data
       }));
     }
 
-    post(window, preferencesMessage("runtime", { stats: false }));
-    post(parent, preferencesMessage("runtime", { stats: true }));
+    function preferences(
+      overrides: Record<string, unknown>
+    ): ShellMessage {
+      return {
+        type: "jolly-preferences",
+        scope: "runtime",
+        overrides
+      };
+    }
+
+    post(window, preferences({ stats: "forged" }));
+    post(parent, preferences({ stats: true }));
     post(parent, { type: "jolly-preferences", scope: "runtime" });
     listening.abort();
-    post(parent, preferencesMessage("runtime", {}));
+    post(parent, preferences({}));
 
-    assert.deepEqual(received, [["runtime", { stats: true }]]);
+    const late: unknown[] = [];
+    shell.onPreferences((scope, overrides) => {
+      late.push([scope, overrides]);
+    }, new AbortController().signal);
+
+    assert.deepEqual(received, [
+      ["runtime", { stats: false }],
+      ["lantern", { seen: [] }],
+      ["runtime", { stats: true }]
+    ]);
+    assert.deepEqual(late, [
+      ["runtime", {}],
+      ["lantern", { seen: [] }]
+    ]);
   });
 });

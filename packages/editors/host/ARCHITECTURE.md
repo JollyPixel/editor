@@ -15,7 +15,8 @@ flowchart TB
 ```
 
 - The editor only implements `mount(context)` and `dispose()`. Everything above it belongs to the host.
-- Code: `launch/`, `session/`, `boot/`.
+- Code: `launch/`, `session/`, `contract/` (what an editor implements), `mount/`
+  (one mount per target), `boot/` (the page and its entry points).
 
 ## Two lifetimes
 
@@ -79,7 +80,7 @@ flowchart TB
 - Code: `shell/`, `launch/`, `preferences/`.
 
 API: [bootStandalone](./docs/boot/bootStandalone.md),
-[EditorDefinition](./docs/boot/EditorDefinition.md),
+[EditorDefinition](./docs/contract/EditorDefinition.md),
 [Shell](./docs/shell/Shell.md),
 [EditorSession](./docs/session/EditorSession.md),
 [AssetLeases](./docs/lease/AssetLeases.md),

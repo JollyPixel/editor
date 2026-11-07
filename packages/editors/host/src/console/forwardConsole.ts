@@ -18,10 +18,6 @@ export function forwardConsole(
     null :
     new ConsoleServer(commands, shell.console);
   const page = new PageAppearance();
-  if (shell.appearance !== null) {
-    page.apply(shell.appearance);
-  }
-
   const listening = new AbortController();
   const { signal } = listening;
   window.addEventListener("keydown", (event) => {

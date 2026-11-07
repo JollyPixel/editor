@@ -65,6 +65,7 @@ export type * from "./peer/PresenceStack.ts";
 export type * from "./peer/Avatar.ts";
 export * from "./peer/PresenceSource.ts";
 export * from "./peer/toPresencePeers.ts";
+export * from "./peer/bindPresenceStack.ts";
 export type {
   JollyPeerSelectDetail,
   PeerEventMap

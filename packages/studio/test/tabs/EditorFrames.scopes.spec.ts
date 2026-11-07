@@ -9,9 +9,6 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   parseLaunchMessage,
-  preferencesMessage,
-  READY_MESSAGE_TYPE,
-  SHELL_MESSAGE_TYPE,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
 import { definePreferences, Preferences } from "@jolly-pixel/preferences";
@@ -111,8 +108,8 @@ describe("EditorFrames preference scopes", () => {
     });
     const { map, model, mapPosts, modelPosts } = openMapAndModel({ preferences });
 
-    postFrom(map.contentWindow, { type: READY_MESSAGE_TYPE });
-    postFrom(model.contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(map.contentWindow, { type: "jolly-ready" });
+    postFrom(model.contentWindow, { type: "jolly-ready" });
 
     assert.deepEqual(parseLaunchMessage(mapPosts[0]?.[0])?.preferences, {
       runtime: { stats: false },
@@ -133,9 +130,12 @@ describe("EditorFrames preference scopes", () => {
     preferences.assign(kMapScope, "grid", false);
     preferences.assign(kPixelArtScope, "palette", true);
 
-    const palette = [preferencesMessage("pixel-art", { palette: true }), FRAME_ORIGIN];
+    const palette = [
+      { type: "jolly-preferences", scope: "pixel-art", overrides: { palette: true } },
+      FRAME_ORIGIN
+    ];
     assert.deepEqual(mapPosts, [
-      [preferencesMessage("voxel-map", { grid: false }), FRAME_ORIGIN],
+      [{ type: "jolly-preferences", scope: "voxel-map", overrides: { grid: false } }, FRAME_ORIGIN],
       palette
     ]);
     assert.deepEqual(modelPosts, [palette]);
@@ -151,15 +151,14 @@ describe("EditorFrames preference scopes", () => {
 
     for (const scope of ["voxel-model", "studio", "voxel-map"]) {
       postFrom(map.contentWindow, {
-        type: SHELL_MESSAGE_TYPE,
-        command: "update-preferences",
+        type: "jolly-update-preferences",
         scope,
         patch: {}
       });
     }
 
     assert.deepEqual(
-      received.map((command) => command.command === "update-preferences" && command.scope),
+      received.map((command) => command.type === "jolly-update-preferences" && command.scope),
       ["voxel-map"]
     );
   });

@@ -8,12 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
-  LAUNCH_MESSAGE_TYPE,
   parseLaunchMessage,
-  READY_MESSAGE_TYPE,
-  SHELL_MESSAGE_TYPE,
-  preferencesMessage,
-  revealMessage,
   type LaunchIdentity,
   type ShellCommand
 } from "@jolly-pixel/editor.host";
@@ -40,8 +35,8 @@ describe("EditorFrames", () => {
     editorFrames().show(MAP_TAB);
     const posted = recordPosts(frame());
 
-    postFrom(window, { type: READY_MESSAGE_TYPE });
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(window, { type: "jolly-ready" });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
 
     assert.deepEqual(
       posted.map(([message, origin]) => {
@@ -52,7 +47,7 @@ describe("EditorFrames", () => {
       [
         [
           {
-            type: LAUNCH_MESSAGE_TYPE,
+            type: "jolly-launch",
             target: "map-1",
             appearance: { theme: "dark", density: "comfortable" },
             identity: null,
@@ -72,7 +67,7 @@ describe("EditorFrames", () => {
     editorFrames({ preferences }).show(MAP_TAB);
     const posted = recordPosts(frame());
 
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
     preferences.assign(RUNTIME_PREFERENCES, "metrics", true);
 
     assert.deepEqual(
@@ -80,7 +75,7 @@ describe("EditorFrames", () => {
       { runtime: { stats: false } }
     );
     assert.deepEqual(posted[1], [
-      preferencesMessage("runtime", { stats: false, metrics: true }),
+      { type: "jolly-preferences", scope: "runtime", overrides: { stats: false, metrics: true } },
       FRAME_ORIGIN
     ]);
   });
@@ -94,12 +89,12 @@ describe("EditorFrames", () => {
     editorFrames({ identity: () => identity }).show(MAP_TAB);
     const posted = recordPosts(frame());
 
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
     identity = {
       ...alice,
       avatar: "/api/accounts/peer-alice/avatar?v=2"
     };
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
 
     assert.deepEqual(
       posted.map(([message]) => parseLaunchMessage(message)?.identity),
@@ -133,8 +128,8 @@ describe("EditorFrames", () => {
       }
     });
 
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
     assert.strictEqual(served.length, 2);
     assert.strictEqual(transferred.length, 2);
     assert.deepEqual(stopped, [served[0]]);
@@ -163,8 +158,8 @@ describe("EditorFrames", () => {
       }
     });
 
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
     frames.show(null);
     frames.remove(MAP_TAB.id);
 
@@ -200,20 +195,17 @@ describe("EditorFrames", () => {
     }).show(MAP_TAB);
 
     postFrom(frame().contentWindow, {
-      type: SHELL_MESSAGE_TYPE,
-      command: "open-asset",
+      type: "jolly-open-asset",
       target: "blockset-1"
     });
     postFrom(frame().contentWindow, {
-      type: SHELL_MESSAGE_TYPE,
-      command: "unknown"
+      type: "jolly-unknown"
     });
 
     assert.deepEqual(received, [
       [
         {
-          type: SHELL_MESSAGE_TYPE,
-          command: "open-asset",
+          type: "jolly-open-asset",
           target: "blockset-1"
         },
         "map-1"
@@ -221,7 +213,7 @@ describe("EditorFrames", () => {
     ]);
   });
 
-  test("posts a reveal right after the frame's launch, then later reveals right away", () => {
+  test("launches with the reveal asked before the launch, then posts later reveals right away", () => {
     scope();
     const frames = editorFrames();
     frames.show(MAP_TAB);
@@ -229,17 +221,30 @@ describe("EditorFrames", () => {
 
     frames.reveal("map-1", "object:early");
     assert.equal(posted.length, 0);
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
     frames.reveal("map-1", "object:later");
-    postFrom(frame().contentWindow, { type: READY_MESSAGE_TYPE });
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
 
     const messages = posted.map(([message]) => message);
-    assert.equal(messages.length, 4);
-    const [launch, early, later, relaunch] = messages;
-    assert.notEqual(parseLaunchMessage(launch), undefined);
-    assert.deepEqual(early, revealMessage("object:early"));
-    assert.deepEqual(later, revealMessage("object:later"));
+    assert.equal(messages.length, 3);
+    const [launch, later, relaunch] = messages;
+    assert.equal(parseLaunchMessage(launch)?.reveal, "object:early");
+    assert.deepEqual(later, { type: "jolly-reveal", key: "object:later" });
     assert.notEqual(parseLaunchMessage(relaunch), undefined);
+    assert.equal(parseLaunchMessage(relaunch)?.reveal, undefined);
+  });
+
+  test("launches with the reveal asked before its frame was shown", () => {
+    scope();
+    const frames = editorFrames();
+    frames.reveal("map-1", "object:early");
+    frames.show(MAP_TAB);
+    const posted = recordPosts(frame());
+
+    postFrom(frame().contentWindow, { type: "jolly-ready" });
+
+    assert.equal(posted.length, 1);
+    assert.equal(parseLaunchMessage(posted[0]?.[0])?.reveal, "object:early");
   });
 
   test("dispose removes the frames", () => {

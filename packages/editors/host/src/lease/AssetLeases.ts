@@ -31,6 +31,10 @@ export interface RoomSource {
   ): Room;
 }
 
+export interface EditorSessionClient extends RoomSource {
+  destroy(): void;
+}
+
 export interface AssetRecords {
   record(
     assetId: string

@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import { downloadBlob } from "./dom.ts";
+// Import Third-party Dependencies
+import { saveFile } from "@jolly-pixel/ui";
 
 export class PngFile {
   readonly name: string;
@@ -14,7 +14,7 @@ export class PngFile {
   }
 
   download(): void {
-    downloadBlob(
+    saveFile(
       new Blob([this.bytes], { type: "image/png" }),
       this.name
     );

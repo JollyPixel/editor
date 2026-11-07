@@ -2,11 +2,11 @@
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { EDITOR_STATE_ATTRIBUTE } from "#src/shell/EditorState.ts";
+import { EDITOR_STATE_ATTRIBUTE } from "#src/mount/EditorState.ts";
 import type {
   EditorContext,
   EditorHandle
-} from "#src/boot/EditorDefinition.ts";
+} from "#src/contract/EditorDefinition.ts";
 import type { MountStandaloneOptions } from "#src/boot/mountStandalone.ts";
 import { DEBUG_HANDLE } from "#src/boot/StandaloneEditor.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";

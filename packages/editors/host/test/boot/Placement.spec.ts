@@ -16,12 +16,8 @@ import {
 } from "#src/boot/Placement.ts";
 import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import {
-  SHELL_MESSAGE_TYPE,
-  ShellChannel,
-  isShellCommand
-} from "#src/shell/ShellChannel.ts";
-import { PageState } from "#src/boot/PageState.ts";
+import { parseFrameMessage } from "#src/shell/protocol.ts";
+import { PageState } from "#src/mount/PageState.ts";
 import type { OfflineMode } from "#src/connection/OfflineMode.ts";
 import { LAST_OPENED_STORAGE_PREFIX } from "#src/launch/sources/LastOpenedLaunchSource.ts";
 import { fakeDocumentKind, record } from "../helpers/rooms.ts";
@@ -31,13 +27,11 @@ import {
   FakeSessionCatalog
 } from "../helpers/session/catalog.ts";
 import { fakeConnection } from "../helpers/session/connection.ts";
+import { shellChannel } from "../helpers/shell.ts";
 import { resetStandalonePage } from "../helpers/standalone.ts";
 
 // CONSTANTS
-const kShell = new ShellChannel({
-  port: { postMessage: () => undefined },
-  origin: "http://studio.test"
-});
+const kShell = shellChannel();
 const kOffline: OfflineMode = {
   persistent: true,
   reset: () => Promise.resolve()
@@ -147,9 +141,8 @@ describe("Placement unsaved guard", () => {
 
   test("reports the unsaved state of the leased documents to the shell", async() => {
     const posted: unknown[] = [];
-    const shell = new ShellChannel({
-      port: { postMessage: (message) => posted.push(message) },
-      origin: "http://studio.test"
+    const shell = shellChannel({
+      port: { postMessage: (message) => posted.push(message) }
     });
     const { connection } = await fakeConnection();
     const placement = place(new EditorLaunch(new AssetId("map"), shell));
@@ -165,12 +158,10 @@ describe("Placement unsaved guard", () => {
     connection.dispose();
 
     assert.deepEqual(
-      posted.filter((message) => isShellCommand(message) &&
-        message.command === "unsaved"),
+      posted.filter((message) => parseFrameMessage(message)?.type === "jolly-unsaved"),
       [true, false, true].map((unsaved) => {
         return {
-          type: SHELL_MESSAGE_TYPE,
-          command: "unsaved",
+          type: "jolly-unsaved",
           unsaved
         };
       })
@@ -218,9 +209,8 @@ describe("Placement state report", () => {
 
   test("reports the current editor state then every change to the shell until left", () => {
     const posted: unknown[] = [];
-    const shell = new ShellChannel({
-      port: { postMessage: (message) => posted.push(message) },
-      origin: "http://studio.test"
+    const shell = shellChannel({
+      port: { postMessage: (message) => posted.push(message) }
     });
     const page = new PageState();
     page.show("booting");
@@ -233,11 +223,10 @@ describe("Placement state report", () => {
     page.show("ready");
 
     assert.deepEqual(
-      posted.filter((message) => isShellCommand(message)),
+      posted.filter((message) => parseFrameMessage(message)?.type === "jolly-editor-state"),
       (["booting", "ready", "switching", "failed"] as const).map((state) => {
         return {
-          type: SHELL_MESSAGE_TYPE,
-          command: "editor-state",
+          type: "jolly-editor-state",
           state
         };
       })

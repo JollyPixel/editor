@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { setImmediate } from "node:timers/promises";
 
 // Import Internal Dependencies
-import type { EditorContext } from "#src/boot/EditorDefinition.ts";
+import type { EditorContext } from "#src/contract/EditorDefinition.ts";
 import { mountStandalone } from "#src/boot/mountStandalone.ts";
 import type { OfflineServer } from "#src/offline/server/OfflineServer.ts";
 import { CAMERA_PREFERENCES } from "#src/preferences/hostPreferences.ts";

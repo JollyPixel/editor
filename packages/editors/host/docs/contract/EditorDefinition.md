@@ -1,6 +1,6 @@
 # EditorDefinition
 
-The class an editor passes to [`bootStandalone`](./bootStandalone.md). Its
+The class an editor passes to [`bootStandalone`](../boot/bootStandalone.md). Its
 statics describe the editor, and `mount` builds it from a connected session.
 
 ```ts
@@ -86,7 +86,7 @@ interface RuntimeEditorContext extends EditorContext {
 - `shell` is `null` unless a [shell](../shell/Shell.md) framed the page.
   Hide what only a shell can do when it is `null`.
 - `logger` is the `editor` namespace of the
-  [debug logger](./bootStandalone.md#debug-logging).
+  [debug logger](../boot/bootStandalone.md#debug-logging).
 - `commands` is the page [console](#console).
 - `lantern` holds the page [tours](#tours).
 - `preferences` holds the user's [preferences](../preferences/Preferences.md).

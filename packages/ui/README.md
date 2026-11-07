@@ -291,6 +291,8 @@ import {
 
 - [Presence and locking](./docs/api/peer/presence-source.md): the `PresenceSource` port, and its
   `RoomPresenceSource` network adapter.
+- [`bindPresenceStack`](./docs/api/peer/bind-presence-stack.md): a
+  `jolly-presence-stack` kept in step with a `PeerListSource`.
 - [Peer identity](./docs/api/peer/identity.md): `promptPeerIdentity`, `peerIdentity` and the
   profile helpers.
 - [Room roster and peer marks](./docs/api/peer/roster.md): the `PeerRoster`, `PeerMarkTracker` and
@@ -313,7 +315,7 @@ import {
 
 - [Search queries](./docs/api/search.md): `SearchQuery` and the `Searchable` hook.
 - [Geometry](./docs/api/geometry.md): `Rect` and anchored placement.
-- [DOM](./docs/api/dom.md): DOM guards and field event helpers.
+- [DOM](./docs/api/dom.md): DOM guards, field event helpers and `saveFile`.
 
 ## 🖼️ Examples Gallery
 

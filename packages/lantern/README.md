@@ -84,6 +84,7 @@ optional `lit` and `@jolly-pixel/ui` peers.
 - [jolly-lantern](./docs/element.md): the overlay, keys, focus and interactive steps
 
 The `present` option of `Lantern` connects the two: it hands every new run to the element.
+[`LazyLanternElement`](./docs/element.md#loading-on-demand) imports the element on the first run.
 
 See [GLOSSARY.md](./GLOSSARY.md) for the terms used by the package.
 

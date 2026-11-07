@@ -10,13 +10,10 @@ import { setImmediate } from "node:timers/promises";
 // Import Internal Dependencies
 import { mountStandalone } from "#src/boot/mountStandalone.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import {
-  SHELL_MESSAGE_TYPE,
-  ShellChannel,
-  isShellCommand
-} from "#src/shell/ShellChannel.ts";
+import { parseFrameMessage } from "#src/shell/protocol.ts";
 import { IDENTITY_STORAGE_KEY } from "#src/connection/server.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
+import { shellChannel } from "../helpers/shell.ts";
 import {
   ASSET_ID,
   OTHER_ASSET_ID,
@@ -78,9 +75,8 @@ describe("mountStandalone page query", () => {
     const server = await openServer();
     window.history.replaceState(null, "", `/?target=${ASSET_ID}`);
     const posted: unknown[] = [];
-    const shell = new ShellChannel({
-      port: { postMessage: (message) => posted.push(message) },
-      origin: "http://studio.test"
+    const shell = shellChannel({
+      port: { postMessage: (message) => posted.push(message) }
     });
 
     const editor = await mountStandalone(definition(
@@ -95,20 +91,17 @@ describe("mountStandalone page query", () => {
     });
     editor.handle.session.assets.emit("unsaved", true);
 
-    assert.deepEqual(posted.filter(isShellCommand), [
+    assert.deepEqual(posted.map(parseFrameMessage), [
       {
-        type: SHELL_MESSAGE_TYPE,
-        command: "editor-state",
+        type: "jolly-editor-state",
         state: "booting"
       },
       {
-        type: SHELL_MESSAGE_TYPE,
-        command: "editor-state",
+        type: "jolly-editor-state",
         state: "ready"
       },
       {
-        type: SHELL_MESSAGE_TYPE,
-        command: "unsaved",
+        type: "jolly-unsaved",
         unsaved: true
       }
     ]);

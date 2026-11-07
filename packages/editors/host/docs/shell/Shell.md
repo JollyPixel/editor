@@ -15,7 +15,7 @@ anchor key. `shell.openAsset(id, reveal)` passes it on. The editor reads it
 with `shell.onReveal(listener, signal)` once it is ready.
 
 - The shell posts it as `jolly-reveal`. For a frame it has not launched yet,
-  it posts the reveal right after `jolly-launch`.
+  it sends the reveal in `jolly-launch`.
 - The channel keeps the last reveal that arrives while no listener is set and
   hands it to the next `onReveal()` call.
 - A channel has one reveal listener: a later `onReveal()` replaces the
@@ -26,20 +26,21 @@ with `shell.onReveal(listener, signal)` once it is ready.
 ```ts
 // frame → shell
 { type: "jolly-ready" }
-{ type: "jolly-shell", command: "open-asset", target: string, reveal?: string }
-{ type: "jolly-shell", command: "toggle-console" }
-{ type: "jolly-shell", command: "session-refused" }
-{ type: "jolly-shell", command: "unsaved", unsaved: boolean }
-{ type: "jolly-shell", command: "editor-state", state: EditorState }
-{ type: "jolly-shell", command: "update-preferences", scope: string, patch: PreferenceOverrides }
-{ type: "jolly-notification", action: "notify", id: string, notification: NotificationInit }
-{ type: "jolly-notification", action: "update", id: string, patch: NotificationPatch }
-{ type: "jolly-notification", action: "dismiss", id: string }
+{ type: "jolly-open-asset", target: string, reveal?: string }
+{ type: "jolly-toggle-console" }
+{ type: "jolly-session-refused" }
+{ type: "jolly-unsaved", unsaved: boolean }
+{ type: "jolly-editor-state", state: EditorState }
+{ type: "jolly-update-preferences", scope: string, patch: PreferenceOverrides }
+{ type: "jolly-notification", id: string, notification: NotificationInit }
+{ type: "jolly-notification-update", id: string, patch: NotificationPatch }
+{ type: "jolly-notification-dismiss", id: string }
 
 // shell → frame
 {
   type: "jolly-launch",
   target: string,
+  reveal?: string,
   appearance?: Appearance,
   identity: { username: string; peerId: string; avatar?: string; } | null,
   preferences: Record<string, PreferenceOverrides>,
@@ -51,34 +52,44 @@ with `shell.onReveal(listener, signal)` once it is ready.
 { type: "jolly-reveal", key: string }
 ```
 
-The shell builds its messages with `launchMessage`, `appearanceMessage`,
-`preferencesMessage`, `sessionRenewedMessage` and `revealMessage`, and narrows
-what a frame posts with `isReadyMessage`, `isShellCommand` and
-`parseNotificationMessage`.
+The frame's list is the `FrameMessage` union. The shell's list is
+`LaunchMessage`, then the `ShellMessage` union of what follows the launch.
+`parseFrameMessage(data)`, `parseLaunchMessage(data)` and
+`parseShellMessage(data)` return the message, or `undefined` when it is not
+one. `ShellCommand` is a `FrameMessage` other than `jolly-ready` and the
+notifications.
 
 - The frame posts `jolly-ready` and waits one second for `jolly-launch` from
-  an allowed origin.
+  an allowed origin. An invalid `reveal`, `appearance`, `identity`,
+  `preferences` or `ports` field is dropped, not the whole launch.
 - With `identity`, the frame joins as that peer instead of prompting, so every
-  frame shares the shell's name and presence color.
-- `editor-state` reports the [page state](../boot/bootStandalone.md#page-state)
-  and `unsaved` each flip of the frame's unsaved changes.
-- `update-preferences` carries one change. The shell validates it, stores it,
+  frame shares the shell's name and presence color. `avatar` is the
+  same-origin path of the peer's uploaded avatar.
+- `shell.onAppearance(listener, signal)` calls the listener with the latest
+  appearance at once, then with each `jolly-appearance`.
+  `shell.onPreferences(listener, signal)` calls it once per scope with the
+  latest overrides, then with each `jolly-preferences`. The latest values start
+  from the launch, so a listener added late misses nothing.
+- `jolly-editor-state` reports the
+  [page state](../boot/bootStandalone.md#page-state) and `jolly-unsaved` each
+  flip of the frame's unsaved changes.
+- `jolly-update-preferences` carries one change. The shell validates it, stores it,
   and pushes the scope's overrides to every frame as `jolly-preferences`,
   sender included. On a refused patch it pushes its own overrides, so the
   frames drop the refused values.
-- `session-refused` is posted when the server refuses the frame's session.
+- `jolly-session-refused` is posted when the server refuses the frame's session.
   The frame reconnects on `jolly-session-renewed` and keeps its rooms and
   pending changes.
 
 ## Notifications
 
 `ShellChannel` is a `Notifier` from `@jolly-pixel/ui`:
-`shell.notify(init)` posts `notify`, and the returned handle posts `update`
-and `dismiss` under the same id.
+`shell.notify(init)` posts `jolly-notification`, and the returned handle posts
+`jolly-notification-update` and `jolly-notification-dismiss` under the same id.
 
 - Ids are unique per frame, so the shell keys them by frame.
 - The shell sets `source` to the frame's name, replacing any the frame sent.
-- Under no shell, [`context.notifications`](../boot/EditorDefinition.md#context)
+- Under no shell, [`context.notifications`](../contract/EditorDefinition.md#context)
   is a `NotificationQueue` shown by a `jolly-notifications` stack in the page.
 
 ## Catalog port
@@ -91,11 +102,15 @@ const share = await CatalogShare.open(client, { timeoutMs: 5_000 });
 const channel = new MessageChannel();
 const stop = share.serve(channel.port1);
 
-frame.contentWindow.postMessage(
-  launchMessage({ target, appearance, ports: { catalog: channel.port2 } }),
-  origin,
-  [channel.port2]
-);
+const launch: LaunchMessage = {
+  type: "jolly-launch",
+  target,
+  appearance,
+  identity: null,
+  preferences: {},
+  ports: { catalog: channel.port2 }
+};
+frame.contentWindow.postMessage(launch, origin, [channel.port2]);
 ```
 
 Each port gets a snapshot, then every catalog message. `stop()` closes one

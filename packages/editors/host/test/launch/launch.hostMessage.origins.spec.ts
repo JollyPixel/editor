@@ -8,7 +8,6 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ANY_SHELL_ORIGIN, HostMessageLaunchSource } from "#src/launch/sources/HostMessageLaunchSource.ts";
-import { LAUNCH_MESSAGE_TYPE } from "#src/shell/ShellChannel.ts";
 import { captureLogs } from "../helpers/logs.ts";
 
 // CONSTANTS
@@ -75,12 +74,12 @@ describe("HostMessageLaunchSource", () => {
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,
       origin: "http://evil.test",
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "hijacked" }
+      data: { type: "jolly-launch", target: "hijacked" }
     }));
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,
       origin: kStudioOrigin,
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
+      data: { type: "jolly-launch", target: "from-host" }
     }));
 
     const launch = await pending;
@@ -102,7 +101,7 @@ describe("HostMessageLaunchSource", () => {
     window.dispatchEvent(new MessageEvent("message", {
       source: parent,
       origin: "http://anywhere.test",
-      data: { type: LAUNCH_MESSAGE_TYPE, target: "from-host" }
+      data: { type: "jolly-launch", target: "from-host" }
     }));
 
     const launch = await pending;

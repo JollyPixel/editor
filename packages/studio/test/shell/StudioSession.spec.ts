@@ -7,12 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  READY_MESSAGE_TYPE,
-  revealMessage,
-  SESSION_RENEWED_MESSAGE_TYPE,
-  SHELL_MESSAGE_TYPE
-} from "@jolly-pixel/editor.host";
+import { parseLaunchMessage } from "@jolly-pixel/editor.host";
 import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
 
@@ -126,8 +121,7 @@ describe("StudioSession", () => {
     studio.tabs.focus(HOME_TAB_ID);
 
     postFromFrame({
-      type: SHELL_MESSAGE_TYPE,
-      command: "open-asset",
+      type: "jolly-open-asset",
       target: "map-1"
     });
     await Promise.resolve();
@@ -141,15 +135,14 @@ describe("StudioSession", () => {
     const posted = recordPosts(frame());
 
     postFromFrame({
-      type: SHELL_MESSAGE_TYPE,
-      command: "open-asset",
+      type: "jolly-open-asset",
       target: "map-1",
       reveal: "object:spawn"
     });
     await Promise.resolve();
-    postFromFrame({ type: READY_MESSAGE_TYPE });
+    postFromFrame({ type: "jolly-ready" });
 
-    assert.deepEqual(posted[1]?.[0], revealMessage("object:spawn"));
+    assert.equal(parseLaunchMessage(posted[0]?.[0])?.reveal, "object:spawn");
   });
 
   test("reloads the tabs of a rebuilt editor only", async() => {
@@ -182,8 +175,7 @@ describe("StudioSession", () => {
     await studio.openAsset("map-1");
 
     postFromFrame({
-      type: SHELL_MESSAGE_TYPE,
-      command: "toggle-console"
+      type: "jolly-toggle-console"
     });
 
     assert.equal(toggles, 1);
@@ -221,13 +213,12 @@ describe("StudioSession", () => {
     const posted = recordPosts(frame());
 
     postFromFrame({
-      type: SHELL_MESSAGE_TYPE,
-      command: "session-refused"
+      type: "jolly-session-refused"
     });
 
     assert.equal(renewals, 1);
     assert.deepEqual(posted, [
-      [{ type: SESSION_RENEWED_MESSAGE_TYPE }, FRAME_ORIGIN]
+      [{ type: "jolly-session-renewed" }, FRAME_ORIGIN]
     ]);
   });
 
@@ -238,24 +229,21 @@ describe("StudioSession", () => {
       (tab) => tab.value === "map-1"
     );
     postFromFrame({
-      type: SHELL_MESSAGE_TYPE,
-      command: "unsaved",
+      type: "jolly-unsaved",
       unsaved: true
     });
     assert.equal(item?.modified, true);
     assert.equal(unload(), true);
 
     postFromFrame({
-      type: SHELL_MESSAGE_TYPE,
-      command: "unsaved",
+      type: "jolly-unsaved",
       unsaved: false
     });
     assert.equal(item?.modified, false);
     assert.equal(unload(), false);
 
     postFromFrame({
-      type: SHELL_MESSAGE_TYPE,
-      command: "unsaved",
+      type: "jolly-unsaved",
       unsaved: true
     });
     studio.tabs.close("map-1");
@@ -270,8 +258,7 @@ describe("StudioSession", () => {
     );
     const statuses = (["ready", "switching", "failed"] as const).map((state) => {
       postFromFrame({
-        type: SHELL_MESSAGE_TYPE,
-        command: "editor-state",
+        type: "jolly-editor-state",
         state
       });
 

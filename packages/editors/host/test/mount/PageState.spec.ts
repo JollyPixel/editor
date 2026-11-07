@@ -7,7 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PageState } from "#src/boot/PageState.ts";
+import { PageState } from "#src/mount/PageState.ts";
 import {
   editorState,
   resetStandalonePage

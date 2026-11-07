@@ -7,10 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  NOTIFICATION_MESSAGE_TYPE,
-  type ShellCommand
-} from "@jolly-pixel/editor.host";
+import type { ShellCommand } from "@jolly-pixel/editor.host";
 import { NotificationQueue } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -44,14 +41,12 @@ describe("EditorFrames notifications", () => {
     const source = frame().contentWindow;
 
     postFrom(source, {
-      type: NOTIFICATION_MESSAGE_TYPE,
-      action: "notify",
+      type: "jolly-notification",
       id: "notification-1",
       notification: { tone: "loading", title: "Replacing", source: "spoof" }
     });
     postFrom(source, {
-      type: NOTIFICATION_MESSAGE_TYPE,
-      action: "update",
+      type: "jolly-notification-update",
       id: "notification-1",
       patch: { tone: "success", title: "Replaced", source: "spoof" }
     });
@@ -69,8 +64,7 @@ describe("EditorFrames notifications", () => {
     const source = frame().contentWindow;
     for (const [id, tone] of [["notification-1", "loading"], ["notification-2", "error"]]) {
       postFrom(source, {
-        type: NOTIFICATION_MESSAGE_TYPE,
-        action: "notify",
+        type: "jolly-notification",
         id,
         notification: { tone, title: tone }
       });

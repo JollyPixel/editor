@@ -13,21 +13,18 @@ import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { SessionOpener } from "#src/boot/SessionOpener.ts";
-import type { EditorDefinition, EditorHandle } from "#src/boot/EditorDefinition.ts";
+import type { EditorDefinition, EditorHandle } from "#src/contract/EditorDefinition.ts";
 import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
 import { CatalogShare } from "#src/shell/catalog/CatalogShare.ts";
-import { ShellCatalog } from "#src/shell/catalog/ShellCatalog.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
-import {
-  ShellChannel,
-  type LaunchIdentity
-} from "#src/shell/ShellChannel.ts";
+import type { LaunchIdentity } from "#src/shell/protocol.ts";
 import { IDENTITY_STORAGE_KEY } from "#src/connection/server.ts";
 import {
   FakeClient,
   record,
   snapshotMessage
 } from "../helpers/rooms.ts";
+import { shellChannel } from "../helpers/shell.ts";
 
 // CONSTANTS
 const kIdentity = {
@@ -56,10 +53,9 @@ async function shellLaunch(
   const stop = share.serve(connector.port1);
   const launch = new EditorLaunch(
     new AssetId("map"),
-    new ShellChannel({
-      port: { postMessage: () => undefined },
+    shellChannel({
       origin: location.origin,
-      catalog: new ShellCatalog(connector.port2),
+      ports: { catalog: connector.port2 },
       identity
     })
   );

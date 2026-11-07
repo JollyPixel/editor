@@ -10,7 +10,7 @@ import { CommandConsole } from "@jolly-pixel/console";
 
 // Import Internal Dependencies
 import { peerConsole } from "#src/console/namespaces/peer.ts";
-import { PeerInvite } from "#src/offline/peer/PeerInvite.ts";
+import { PeerInvite } from "#src/connection/PeerInvite.ts";
 import type { PeerSharing } from "#src/connection/OfflineMode.ts";
 
 describe("peer console", () => {

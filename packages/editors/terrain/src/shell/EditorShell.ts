@@ -1,9 +1,7 @@
 // Import Third-party Dependencies
-import {
-  bindPresenceStack,
-  type RuntimeEditorContext
-} from "@jolly-pixel/editor.host";
+import type { RuntimeEditorContext } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
+import { bindPresenceStack } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
