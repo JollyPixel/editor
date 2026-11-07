@@ -173,7 +173,7 @@ describe("Server — revocations", () => {
   ): ClientConnection {
     return {
       id,
-      sendSerialized: () => void 0,
+      sendFrame: () => void 0,
       close: (code) => closed.push(`${id}:${code}`)
     };
   }

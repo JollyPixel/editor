@@ -7,7 +7,6 @@ import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import {
-  encodeContent,
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
@@ -39,7 +38,7 @@ describe("CatalogExtension — commands", () => {
       type: CATALOG_CREATE,
       requestId: "r1",
       path: "textures/grass.png",
-      content: encodeContent(bytes("grass"))
+      content: bytes("grass")
     });
     await commands.sync.projector.flush();
 
@@ -75,7 +74,7 @@ describe("CatalogExtension — commands", () => {
       type: CATALOG_CREATE,
       requestId: "r101",
       path: "a.png",
-      content: encodeContent(bytes("one"))
+      content: bytes("one")
     });
 
     const [event] = await commands.sync.eventStore.reader.listAll({
@@ -100,7 +99,7 @@ describe("CatalogExtension — commands", () => {
       type: CATALOG_CREATE,
       requestId: "r3",
       path: "a.png",
-      content: encodeContent(bytes("two"))
+      content: bytes("two")
     });
 
     assert.strictEqual(commands.room.broadcasts.length, broadcasts);
@@ -129,7 +128,7 @@ describe("CatalogExtension — commands", () => {
       requestId: "r4",
       path: "a.png",
       onConflict: "suffix",
-      content: encodeContent(bytes("two"))
+      content: bytes("two")
     });
 
     const record = commands.sync.assetIndex.byPath("a-2.png");
@@ -149,7 +148,7 @@ describe("CatalogExtension — commands", () => {
       type: CATALOG_CREATE,
       requestId: "r103",
       path: "../escape.png",
-      content: encodeContent(bytes("x"))
+      content: bytes("x")
     });
 
     assert.strictEqual(lastPayloadType(commands), CATALOG_REJECTED);
@@ -163,7 +162,7 @@ describe("CatalogExtension — commands", () => {
       type: CATALOG_CREATE,
       requestId: "r104",
       path: "a.png",
-      content: encodeContent(bytes("12345"))
+      content: bytes("12345")
     });
 
     assert.strictEqual(lastPayloadType(commands), CATALOG_REJECTED);

@@ -15,6 +15,7 @@ import {
 import { LoopbackTransport } from "#src/transport/loopback/LoopbackTransport.ts";
 import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../../helpers/waitFor.ts";
+import { assertBytesRoundTrip } from "../../helpers/transport/bytesRoundTrip.ts";
 
 function createLoopback(): {
   transport: LoopbackTransport;
@@ -61,6 +62,16 @@ describe("LoopbackTransport + Client (integration)", () => {
     room.leave();
     await waitFor(() => extension.disconnected.length === 1);
 
+    client.destroy();
+  });
+
+  test("carries bytes in both directions", async() => {
+    const { transport, extension } = createLoopback();
+    const client = new Client({
+      socket: () => transport.connect()
+    });
+
+    await assertBytesRoundTrip(client, extension);
     client.destroy();
   });
 

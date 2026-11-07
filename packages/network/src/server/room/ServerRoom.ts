@@ -32,6 +32,7 @@ import {
   PRESENCE_EVENT
 } from "../../protocol/constants.ts";
 import { describeErrors } from "../../protocol/schema.ts";
+import { encodedLength } from "../../protocol/frame/Frame.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
 import type {
   PeerMetadata,
@@ -264,7 +265,7 @@ export class ServerRoom {
       client,
       JOIN_EVENT,
       "profile",
-      JSON.stringify(profile).length
+      encodedLength(profile)
     )) {
       return false;
     }
@@ -428,7 +429,7 @@ export class ServerRoom {
       ...record.profile,
       ...patch
     };
-    if (JSON.stringify(profile).length > this.#peerMetadataLength) {
+    if (encodedLength(profile) > this.#peerMetadataLength) {
       this.#logger
         .withMetadata({
           clientId,

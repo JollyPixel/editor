@@ -1,10 +1,14 @@
 // Import Internal Dependencies
 import type { Envelope } from "../../protocol/envelope/Envelope.ts";
+import {
+  encodeFrame,
+  type Frame
+} from "../../protocol/frame/Frame.ts";
 import type { ConnectedClient } from "../connection/ConnectedClient.ts";
 
 export class SerializedEnvelope {
   #envelope: Envelope;
-  #json: string | undefined;
+  #frame: Frame | undefined;
 
   constructor(
     envelope: Envelope
@@ -15,7 +19,7 @@ export class SerializedEnvelope {
   sendTo(
     handle: ConnectedClient
   ): void {
-    this.#json ??= JSON.stringify(this.#envelope);
-    handle.sendSerialized(this.#json);
+    this.#frame ??= encodeFrame(this.#envelope);
+    handle.sendFrame(this.#frame);
   }
 }

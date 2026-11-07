@@ -31,7 +31,7 @@ function client(
 ): ClientConnection {
   return {
     id,
-    sendSerialized: () => void 0,
+    sendFrame: () => void 0,
     close: () => void 0
   };
 }

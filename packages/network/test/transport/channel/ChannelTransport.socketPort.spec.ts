@@ -14,6 +14,7 @@ import {
 import { ChannelTransportHost } from "#src/transport/channel/ChannelTransportHost.ts";
 import { CHANNEL_TRANSPORT_TAG } from "#src/transport/channel/ChannelMessage.ts";
 import { LoopbackTransport } from "#src/transport/loopback/LoopbackTransport.ts";
+import type { Frame } from "#src/protocol/frame/Frame.ts";
 import {
   createSocketRelay,
   recordingPort
@@ -78,7 +79,7 @@ describe("ChannelTransport + ChannelTransportHost with a port per socket", () =>
   test("the host ignores sends on the shared port", () => {
     const port = recordingPort();
     const socketPort = recordingPort();
-    const sent: string[] = [];
+    const sent: Frame[] = [];
     const host = new ChannelTransportHost({
       port,
       id: "host-a",

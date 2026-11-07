@@ -10,7 +10,6 @@ import { Server } from "@jolly-pixel/network";
 import {
   CatalogExtension,
   CatalogProjection,
-  encodeContent,
   CATALOG_CREATE,
   CATALOG_DELETE,
   CATALOG_RENAME,
@@ -72,7 +71,7 @@ describe("CatalogExtension — server", () => {
         type: CATALOG_CREATE,
         requestId: "r107",
         path: "b.png",
-        content: encodeContent(bytes("two"))
+        content: bytes("two")
       }
     });
 

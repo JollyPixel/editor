@@ -22,6 +22,7 @@ import { WebsocketTransport } from "#src/transport/websocket/WebsocketTransport.
 import { WEBSOCKET_PROTOCOL } from "#src/transport/websocket/constants.ts";
 import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../../helpers/waitFor.ts";
+import { assertBytesRoundTrip } from "../../helpers/transport/bytesRoundTrip.ts";
 
 describe("WebsocketTransport + Client (integration)", () => {
   let httpServer: HttpServer;
@@ -156,6 +157,26 @@ describe("WebsocketTransport + Client (integration)", () => {
     for (const client of clients) {
       client.destroy();
     }
+  });
+
+  test("carries bytes as binary frames in both directions", async() => {
+    const server = new Server();
+    const extension = new RecordingExtension("test-ns");
+    server.register(extension);
+    new WebsocketTransport({
+      httpServer,
+      server,
+      path: "/ws-bytes",
+      compression: { threshold: 0 }
+    });
+    const client = new Client({
+      socket: () => connectWebSocket({
+        url: `ws://127.0.0.1:${port}/ws-bytes`
+      })
+    });
+
+    await assertBytesRoundTrip(client, extension, 100_000);
+    client.destroy();
   });
 
   test("terminates its open sockets once disposed", async() => {

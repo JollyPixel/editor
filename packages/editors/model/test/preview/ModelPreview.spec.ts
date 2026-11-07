@@ -3,7 +3,6 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
 import { ModelFileDocument } from "@jolly-pixel/asset.model/client";
 
 // Import Internal Dependencies
@@ -68,7 +67,7 @@ function modelPreview(
 ) {
   const document = new ModelFileDocument();
   if (bytes !== null) {
-    document.load(encodeContent(bytes));
+    document.load(bytes);
   }
   const session = {
     targetRecord: {
@@ -162,7 +161,7 @@ describe("ModelPreview", () => {
 
     preview.follow();
     const loaded = settled(preview);
-    document.load(encodeContent(cubeModelGlb()));
+    document.load(cubeModelGlb());
     await loaded;
 
     assert.equal(preview.view.status, "ready");

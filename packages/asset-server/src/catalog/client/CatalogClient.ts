@@ -48,11 +48,6 @@ import type {
   ReplaceReport,
   RestoreReport
 } from "../tags/AssetTags.schema.ts";
-import {
-  decodeContent,
-  encodeContent
-} from "../../model/events/inlineContent.ts";
-import type { AssetInlineContent } from "../../model/events/AssetEvents.schema.ts";
 import { MAX_KIND_CONTENT_BYTES } from "../../model/kinds/KindLimits.ts";
 import { CatalogContentTooLargeError } from "../errors/CatalogContentTooLargeError.ts";
 import { CatalogRejectedError } from "./errors/CatalogRejectedError.ts";
@@ -248,7 +243,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       path,
       kind: options.kind,
       onConflict: options.onConflict,
-      content: content === null ? undefined : encodeKindContent(content),
+      content: content === null ? undefined : checkedKindContent(content),
       from: options.from
     });
 
@@ -357,7 +352,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       root
     });
 
-    return decodeContent(reply.content);
+    return reply.content;
   }
 
   async planImport(
@@ -365,7 +360,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   ): Promise<ImportPlan> {
     const reply = await this.#request({
       type: CATALOG_PLAN,
-      content: encodeContent(archive)
+      content: archive
     });
 
     return reply.plan;
@@ -377,7 +372,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   ): Promise<ImportReport> {
     const reply = await this.#request({
       type: CATALOG_IMPORT,
-      content: encodeContent(archive),
+      content: archive,
       onConflict: options.onConflict
     });
 
@@ -442,7 +437,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     const reply = await this.#request({
       type: CATALOG_REPLACE,
       assetId,
-      content: encodeKindContent(content),
+      content: checkedKindContent(content),
       from: options.from
     });
 
@@ -457,7 +452,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       assetId
     });
 
-    return decodeContent(reply.content);
+    return reply.content;
   }
 
   dispose(): void {
@@ -658,9 +653,9 @@ function throwOnFailure(
   }
 }
 
-function encodeKindContent(
+function checkedKindContent(
   content: Uint8Array
-): AssetInlineContent {
+): Uint8Array {
   if (content.byteLength > MAX_KIND_CONTENT_BYTES) {
     throw new CatalogContentTooLargeError(
       content.byteLength,
@@ -668,5 +663,5 @@ function encodeKindContent(
     );
   }
 
-  return encodeContent(content);
+  return content;
 }

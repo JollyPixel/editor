@@ -4,6 +4,7 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type { Server } from "../../server/Server.ts";
 import type { ServerConnection } from "../../server/connection/ServerConnection.ts";
+import type { Frame } from "../../protocol/frame/Frame.ts";
 import {
   UNAUTHORIZED_CLOSE_CODE,
   UNAUTHORIZED_CLOSE_REASON
@@ -41,7 +42,7 @@ export class LoopbackSocket implements ClientSocket {
   }
 
   send(
-    data: string
+    data: Frame
   ): void {
     if (!this.#closed) {
       void this.#connection?.receive(data);
@@ -84,7 +85,7 @@ export class LoopbackSocket implements ClientSocket {
     this.#connection = this.#server.connect(
       {
         id: this.id,
-        sendSerialized: (json) => this.#deliver(json),
+        sendFrame: (frame) => this.#deliver(frame),
         close: (code, reason) => this.#terminate({
           code,
           reason
@@ -96,11 +97,12 @@ export class LoopbackSocket implements ClientSocket {
   }
 
   #deliver(
-    json: string
+    frame: Frame
   ): void {
+    const data = typeof frame === "string" ? frame : frame.slice();
     queueMicrotask(() => {
       if (!this.#closed) {
-        this.#events.emit("message", { data: json });
+        this.#events.emit("message", { data });
       }
     });
   }

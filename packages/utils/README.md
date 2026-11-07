@@ -1,10 +1,6 @@
 # @jolly-pixel/utils
 
-Small standalone helpers shared by the JollyPixel workspaces: type guards,
-error normalization, number helpers, base64 and a serial task queue. The root
-entry point runs in browsers and Node.js; `@jolly-pixel/utils/dom` holds the
-helpers that need a `document`. The [ROADMAP](./ROADMAP.md) lists the helpers
-still waiting to move here.
+Small standalone helpers shared by the JollyPixel workspaces
 
 ## 💃 Getting Started
 

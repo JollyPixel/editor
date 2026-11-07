@@ -2,6 +2,7 @@ export * from "./types.ts";
 export * from "./constants.ts";
 export * from "./profile/PeerProfile.ts";
 export {
+  bytesSchema,
   dependentRequired,
   describeErrors,
   isSchema,
@@ -20,6 +21,16 @@ export {
   type EnvelopeParseError,
   type ServerEnvelope
 } from "./envelope/Envelope.ts";
+export {
+  decodeFrame,
+  encodeFrame,
+  encodedLength,
+  type Frame,
+  type FrameDecodeError,
+  type JsonParser,
+  type ReceivedFrame
+} from "./frame/Frame.ts";
+export * from "./frame/errors/PlaceholderCollisionError.ts";
 export * from "./message/MessageProtocol.ts";
 export * from "./message/errors/InvalidMessageProtocolError.ts";
 export type {

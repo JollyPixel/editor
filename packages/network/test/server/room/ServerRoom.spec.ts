@@ -17,6 +17,7 @@ import {
   createRoom
 } from "../../helpers/server/serverRoom.ts";
 import { ConnectedClient } from "#src/server/connection/ConnectedClient.ts";
+import type { Frame } from "#src/protocol/frame/Frame.ts";
 
 describe("ServerRoom", () => {
   test("join notifies existing members but not the joiner itself", async() => {
@@ -176,13 +177,13 @@ describe("ServerRoom", () => {
   test("room.broadcast serializes once for every member", async() => {
     const extension = createExtension();
     const a = createClient("A");
-    const serialized: string[] = [];
+    const serialized: Frame[] = [];
     function serializingClient(
       id: string
     ) {
       return new ConnectedClient({
         id,
-        sendSerialized: (json) => serialized.push(json),
+        sendFrame: (frame) => serialized.push(frame),
         close: () => void 0
       });
     }

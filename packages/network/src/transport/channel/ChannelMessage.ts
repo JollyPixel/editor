@@ -2,6 +2,7 @@
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
+import type { Frame } from "../../protocol/frame/Frame.ts";
 import type {
   ClientSocketEvent,
   ClientSocketEventType
@@ -22,6 +23,10 @@ const kAddressShape = {
   socket: z.string()
 };
 
+const kFrameSchema = z.custom<Frame>(
+  (value) => typeof value === "string" || value instanceof Uint8Array
+);
+
 const kSocketEventSchema = z.object({
   data: z.optional(z.unknown()),
   code: z.optional(z.number()),
@@ -38,7 +43,7 @@ const kChannelMessageSchema = z.discriminatedUnion("type", [
   z.object({
     ...kAddressShape,
     type: z.literal("send"),
-    data: z.string()
+    data: kFrameSchema
   }),
   z.object({
     ...kAddressShape,

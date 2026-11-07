@@ -13,7 +13,6 @@ import { AssetRoom } from "@jolly-pixel/asset";
 // Import Internal Dependencies
 import {
   createAssetBackend,
-  encodeContent,
   CATALOG_APPLIED,
   CATALOG_CHANGED,
   CATALOG_CREATE,
@@ -21,7 +20,9 @@ import {
   CATALOG_ROOM,
   ASSET_INDEX_PATH,
   PROJECTION_STATE_PATH,
-  STATE_GITIGNORE_PATH
+  STATE_GITIGNORE_PATH,
+  TEXTURE_KIND,
+  textureAssetKind
 } from "#src/index.ts";
 import { tempDirectory } from "./helpers/tempDirectory.ts";
 import { liveCounterHandler } from "./helpers/kinds.ts";
@@ -203,7 +204,7 @@ describe("asset-server — end to end", () => {
     await using backend = await createAssetBackend({
       source: new FilesystemAssetSource(directory.root),
       eventStore,
-      handlers: [liveCounterHandler()],
+      handlers: [liveCounterHandler(), textureAssetKind()],
       reconcile: {
         watch: false
       }
@@ -227,7 +228,7 @@ describe("asset-server — end to end", () => {
         type: CATALOG_CREATE,
         requestId: "r1",
         path: "textures/grass.png",
-        content: encodeContent(bytes("grass"))
+        content: bytes("grass")
       }
     });
     await backend.flush();
@@ -245,6 +246,16 @@ describe("asset-server — end to end", () => {
       (author.received.at(-1) as { payload: { type: string; }; }).payload.type,
       CATALOG_APPLIED
     );
+
+    const grass = backend.catalog.snapshot().assets
+      .find((record) => record.path === "textures/grass.png")!;
+    const textureRoom = new AssetRoom(TEXTURE_KIND, grass.id).toString();
+    await connectionB.receive({ room: textureRoom, kind: "join" });
+    const snapshot = peer.received
+      .filter((envelope) => (envelope as { room: string; }).room === textureRoom)
+      .at(-1) as { payload: { type: string; data: unknown; }; };
+    assert.strictEqual(snapshot.payload.type, "snapshot");
+    assert.deepEqual(snapshot.payload.data, bytes("grass"));
 
     const counter = backend.catalog.snapshot().assets
       .find((record) => record.path === "a.counter")!;

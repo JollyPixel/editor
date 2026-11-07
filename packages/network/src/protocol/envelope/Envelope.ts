@@ -14,6 +14,15 @@ import {
 } from "./Envelope.schema.ts";
 import { SchemaParser } from "../SchemaParser.ts";
 import {
+  decodeFrame,
+  encodeFrame,
+  isBinaryFrame,
+  type Frame,
+  type FrameDecodeError,
+  type JsonParser,
+  type ReceivedFrame
+} from "../frame/Frame.ts";
+import {
   describeErrors,
   type Infer,
   type ValidationError
@@ -44,7 +53,7 @@ export type Envelope = ClientEnvelope | ServerEnvelope;
 export type EnvelopeKind = Envelope["kind"];
 
 export type EnvelopeParseError =
-  | { reason: "invalid-json"; message: string; }
+  | FrameDecodeError
   | { reason: "malformed"; errors: readonly ValidationError[]; };
 
 type EnvelopeCheck<TEnvelope extends Envelope> = (
@@ -52,21 +61,17 @@ type EnvelopeCheck<TEnvelope extends Envelope> = (
 ) => Result<TEnvelope, readonly ValidationError[]>;
 
 function envelopeParser<TEnvelope extends Envelope>(
-  parseJson: (text: string) => unknown,
+  parseJson: JsonParser,
   check: EnvelopeCheck<TEnvelope>
 ): (raw: unknown) => Result<TEnvelope, EnvelopeParseError> {
   return (raw) => {
     let value = raw;
-    if (typeof raw === "string") {
-      try {
-        value = parseJson(raw);
+    if (isFrame(raw)) {
+      const decoded = decodeFrame(raw, parseJson);
+      if (!decoded.ok) {
+        return decoded;
       }
-      catch (error) {
-        return Err<EnvelopeParseError>({
-          reason: "invalid-json",
-          message: errorMessage(error)
-        });
-      }
+      value = decoded.val;
     }
 
     const checked = check(value);
@@ -78,6 +83,12 @@ function envelopeParser<TEnvelope extends Envelope>(
         errors: checked.val
       });
   };
+}
+
+function isFrame(
+  raw: unknown
+): raw is ReceivedFrame {
+  return typeof raw === "string" || isBinaryFrame(raw);
 }
 
 function parseSecureJson(
@@ -104,9 +115,14 @@ export function unknownEnvelopeKind(
 export function describeEnvelopeParseError(
   error: EnvelopeParseError
 ): string {
-  return error.reason === "invalid-json" ?
-    `invalid JSON: ${error.message}` :
-    describeErrors(error.errors);
+  switch (error.reason) {
+    case "invalid-json":
+      return `invalid JSON: ${error.message}`;
+    case "invalid-frame":
+      return `invalid frame: ${error.message}`;
+    default:
+      return describeErrors(error.errors);
+  }
 }
 
 export const Envelope = {
@@ -125,11 +141,11 @@ export const Envelope = {
       kServerParser.parse(value))
   ),
 
-  stringify(
+  encode(
     envelope: Envelope
-  ): Result<string, string> {
+  ): Result<Frame, string> {
     try {
-      return Ok(JSON.stringify(envelope));
+      return Ok(encodeFrame(envelope));
     }
     catch (error) {
       return Err(errorMessage(error));

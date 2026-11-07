@@ -16,6 +16,7 @@ import {
   withEvent,
   type ClientConnection,
   type ClientHandle,
+  type Frame,
   type Logger,
   type MessageProtocols,
   type NetworkCommandHeader,
@@ -183,10 +184,10 @@ export class SinkHandle implements ClientConnection {
     this.id = id;
   }
 
-  sendSerialized(
-    json: string
+  sendFrame(
+    frame: Frame
   ): void {
-    this.bytes += json.length;
+    this.bytes += typeof frame === "string" ? frame.length : frame.byteLength;
     this.messages++;
   }
 

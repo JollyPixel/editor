@@ -10,7 +10,6 @@ import { Server } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import {
   createAssetBackend,
-  encodeContent,
   CATALOG_APPLIED,
   CATALOG_CREATE,
   CATALOG_REJECTED,
@@ -50,7 +49,7 @@ describe("asset-server — end to end", () => {
           type: CATALOG_CREATE,
           requestId: path,
           path,
-          content: encodeContent(bytes(content))
+          content: bytes(content)
         }
       });
     }

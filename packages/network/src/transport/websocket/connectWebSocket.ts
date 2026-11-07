@@ -43,8 +43,11 @@ function defaultUrl(): string {
 export function connectWebSocket(
   options: WebSocketConnectOptions = {}
 ): ClientSocket {
-  return new WebSocket(
+  const socket = new WebSocket(
     options.url ?? defaultUrl(),
     buildProtocols(options.credential)
   );
+  socket.binaryType = "arraybuffer";
+
+  return socket;
 }

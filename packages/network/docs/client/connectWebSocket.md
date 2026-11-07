@@ -21,5 +21,6 @@ interface WebSocketConnectOptions {
 ```
 
 Default URL uses the page host and `/ws-sync`; supply it explicitly in Node.
+The socket receives binary frames as `ArrayBuffer`.
 The `credential` travels in the WebSocket handshake, where the transport
 decodes it for the [authentication provider](../server/Access.md#authentication).

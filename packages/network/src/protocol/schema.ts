@@ -3,13 +3,15 @@ import * as z from "zod/mini";
 
 export type Schema = z.core.$ZodType;
 
-type ReadonlyFields<TValue> = TValue extends readonly unknown[] ?
-  { -readonly [TKey in keyof TValue]: ReadonlyFields<TValue[TKey]> } :
-  TValue extends object ?
-    string extends keyof TValue ?
-      { [TKey in keyof TValue]: ReadonlyFields<TValue[TKey]> } :
-      { readonly [TKey in keyof TValue]: ReadonlyFields<TValue[TKey]> } :
-    TValue;
+type ReadonlyFields<TValue> = TValue extends Uint8Array ?
+  TValue :
+  TValue extends readonly unknown[] ?
+    { -readonly [TKey in keyof TValue]: ReadonlyFields<TValue[TKey]> } :
+    TValue extends object ?
+      string extends keyof TValue ?
+        { [TKey in keyof TValue]: ReadonlyFields<TValue[TKey]> } :
+        { readonly [TKey in keyof TValue]: ReadonlyFields<TValue[TKey]> } :
+      TValue;
 
 export type Infer<
   TSchema extends Schema
@@ -19,6 +21,10 @@ export interface ValidationError {
   readonly instancePath: string;
   readonly message: string;
 }
+
+export const bytesSchema = z.custom<Uint8Array>(
+  (value) => value instanceof Uint8Array
+);
 
 export function isSchema(
   value: unknown

@@ -1,3 +1,6 @@
+// Import Internal Dependencies
+import type { Frame } from "../protocol/frame/Frame.ts";
+
 export type ClientSocketEventType = "open" | "message" | "error" | "close";
 
 export interface ClientSocketEvent {
@@ -17,7 +20,7 @@ export interface SocketConnectOptions {
 
 export interface ClientSocket {
   send(
-    data: string
+    data: Frame
   ): void;
 
   close(): void;

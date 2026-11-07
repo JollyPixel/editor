@@ -14,6 +14,10 @@ import {
   WebsocketConnection,
   type WebsocketConnectionSocket
 } from "#src/transport/websocket/WebsocketConnection.ts";
+import type {
+  Frame,
+  ReceivedFrame
+} from "#src/protocol/frame/Frame.ts";
 import { captureLogger } from "../../helpers/captureLogger.ts";
 
 class FakeSocket implements WebsocketConnectionSocket {
@@ -21,10 +25,10 @@ class FakeSocket implements WebsocketConnectionSocket {
   bufferedAmount = 0;
   isPaused = false;
   terminated = false;
-  sent: string[] = [];
+  sent: Frame[] = [];
 
   send(
-    data: string
+    data: Frame
   ): void {
     this.sent.push(data);
   }
@@ -48,13 +52,14 @@ class FakeSocket implements WebsocketConnectionSocket {
 
 function connectionOver(
   socket: FakeSocket,
-  onMessage: (json: string) => Promise<void> = () => Promise.resolve()
+  onMessage: (frame: ReceivedFrame) => Promise<void> = () => Promise.resolve()
 ): WebsocketConnection {
   return new WebsocketConnection({
     id: "client-1",
     socket,
     logger: captureLogger().logger,
     maxBufferedBytes: 1024,
+    compressBinary: false,
     onMessage,
     holdWrites: () => void 0
   });
@@ -66,9 +71,9 @@ describe("WebsocketConnection", () => {
     const connection = connectionOver(socket);
 
     socket.bufferedAmount = 1024;
-    connection.sendSerialized("\"kept\"");
+    connection.sendFrame("\"kept\"");
     socket.bufferedAmount = 1025;
-    connection.sendSerialized("\"dropped\"");
+    connection.sendFrame("\"dropped\"");
 
     assert.deepEqual(socket.sent, ["\"kept\""]);
     assert.strictEqual(socket.terminated, true);

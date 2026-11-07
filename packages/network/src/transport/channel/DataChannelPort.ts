@@ -3,14 +3,21 @@ import type {
   ChannelPort,
   ChannelPortListener
 } from "./ChannelPort.ts";
+import {
+  decodeFrame,
+  encodeFrame,
+  type ReceivedFrame
+} from "../../protocol/frame/Frame.ts";
 
 // CONSTANTS
-const kMoreFrame = "+";
-const kLastFrame = ".";
-const kDefaultFrameLength = 8_192;
+const kLastChunk = 1;
+const kTextChunk = 2;
+const kChunkFlags = kLastChunk | kTextChunk;
+const kDefaultChunkLength = 16_384;
 const kDefaultHighWaterMark = 1024 * 1024;
 const kDefaultMaxMessageLength = 16 * 1024 * 1024;
-const kMinFrameLength = 2;
+const kUtf8Encoder = new TextEncoder();
+const kUtf8Decoder = new TextDecoder("utf-8", { fatal: true });
 
 export type DataChannelState =
   | "connecting"
@@ -22,9 +29,10 @@ export interface DataChannelLike {
   readonly readyState: DataChannelState;
   readonly bufferedAmount: number;
   bufferedAmountLowThreshold: number;
+  binaryType: BinaryType;
 
   send(
-    data: string
+    data: Uint8Array<ArrayBuffer>
   ): void;
 
   close(): void;
@@ -41,20 +49,19 @@ export interface DataChannelLike {
 
 export interface DataChannelPortOptions {
   /**
-   * Most UTF-16 code units one frame carries, at least 2. A frame of 8,192
-   * units weighs at most 24 KiB once encoded as UTF-8.
-   * @default 8192
+   * Most message bytes one chunk carries after its flag byte, at least 1.
+   * @default 16384
    */
-  frameLength?: number;
+  chunkLength?: number;
   /**
-   * `bufferedAmount`, in bytes, above which frames wait in the port until the
+   * `bufferedAmount`, in bytes, above which chunks wait in the port until the
    * channel drains to half of it.
    * @default 1048576
    */
   highWaterMark?: number;
   /**
-   * Longest message accepted, in UTF-16 code units of its JSON. A longer or
-   * malformed message closes the channel.
+   * Longest message accepted, in bytes. A longer or malformed message closes
+   * the channel.
    * @default 16777216
    */
   maxMessageLength?: number;
@@ -62,13 +69,13 @@ export interface DataChannelPortOptions {
 
 export class DataChannelPort implements ChannelPort {
   readonly #channel: DataChannelLike;
-  readonly #frameLength: number;
+  readonly #chunkLength: number;
   readonly #highWaterMark: number;
   readonly #maxMessageLength: number;
   readonly #listeners = new Set<ChannelPortListener>();
   readonly #pending: unknown[] = [];
-  #outgoing: string[] = [];
-  #incoming: string[] = [];
+  #outgoing: Uint8Array<ArrayBuffer>[] = [];
+  #incoming: Uint8Array[] = [];
   #incomingLength = 0;
   #started = false;
   #closed = false;
@@ -78,24 +85,23 @@ export class DataChannelPort implements ChannelPort {
     options: DataChannelPortOptions = {}
   ) {
     const {
-      frameLength = kDefaultFrameLength,
+      chunkLength = kDefaultChunkLength,
       highWaterMark = kDefaultHighWaterMark,
       maxMessageLength = kDefaultMaxMessageLength
     } = options;
-    if (!Number.isInteger(frameLength) || frameLength < kMinFrameLength) {
-      throw new RangeError(
-        `frameLength must be an integer of at least ${kMinFrameLength}`
-      );
+    if (!Number.isInteger(chunkLength) || chunkLength < 1) {
+      throw new RangeError("chunkLength must be a positive integer");
     }
 
     this.#channel = channel;
-    this.#frameLength = frameLength;
+    this.#chunkLength = chunkLength;
     this.#highWaterMark = highWaterMark;
     this.#maxMessageLength = maxMessageLength;
     this.#closed = channel.readyState === "closing" ||
       channel.readyState === "closed";
 
     channel.bufferedAmountLowThreshold = Math.floor(highWaterMark / 2);
+    channel.binaryType = "arraybuffer";
     channel.addEventListener("message", (event) => this.#receive(event.data));
     channel.addEventListener("open", () => this.#flush());
     channel.addEventListener("bufferedamountlow", () => this.#flush());
@@ -113,17 +119,19 @@ export class DataChannelPort implements ChannelPort {
       return;
     }
 
-    const json = JSON.stringify(message);
+    const frame = encodeFrame(message);
+    const text = typeof frame === "string";
+    const bytes = text ? kUtf8Encoder.encode(frame) : frame;
+    const kind = text ? kTextChunk : 0;
     let start = 0;
     do {
-      let end = Math.min(start + this.#frameLength, json.length);
-      if (end < json.length && isHighSurrogate(json.charCodeAt(end - 1))) {
-        end--;
-      }
-      const flag = end === json.length ? kLastFrame : kMoreFrame;
-      this.#outgoing.push(flag + json.slice(start, end));
+      const end = Math.min(start + this.#chunkLength, bytes.byteLength);
+      const chunk = new Uint8Array(1 + end - start);
+      chunk[0] = kind | (end === bytes.byteLength ? kLastChunk : 0);
+      chunk.set(bytes.subarray(start, end), 1);
+      this.#outgoing.push(chunk);
       start = end;
-    } while (start < json.length);
+    } while (start < bytes.byteLength);
 
     this.#flush();
   }
@@ -181,41 +189,45 @@ export class DataChannelPort implements ChannelPort {
     if (this.#closed) {
       return;
     }
-
-    const flag = typeof data === "string" ? data[0] : undefined;
+    const chunk = asBytes(data);
+    const flags = chunk?.at(0);
     if (
-      typeof data !== "string" ||
-      (flag !== kMoreFrame && flag !== kLastFrame)
+      chunk === null ||
+      flags === undefined ||
+      (flags & ~kChunkFlags) !== 0
     ) {
       this.close();
 
       return;
     }
 
-    this.#incomingLength += data.length - 1;
+    const payload = chunk.subarray(1);
+    this.#incomingLength += payload.byteLength;
     if (this.#incomingLength > this.#maxMessageLength) {
       this.close();
 
       return;
     }
-    this.#incoming.push(data.slice(1));
-    if (flag === kMoreFrame) {
+    this.#incoming.push(payload);
+    if ((flags & kLastChunk) === 0) {
       return;
     }
 
-    const json = this.#incoming.join("");
+    const frame = joinChunks(
+      this.#incoming,
+      this.#incomingLength,
+      (flags & kTextChunk) !== 0
+    );
     this.#incoming = [];
     this.#incomingLength = 0;
-    let message: unknown;
-    try {
-      message = JSON.parse(json);
-    }
-    catch {
+    const decoded = frame === null ? null : decodeFrame(frame);
+    if (decoded === null || !decoded.ok) {
       this.close();
 
       return;
     }
 
+    const message = decoded.val;
     if (this.#started) {
       this.#dispatch(message);
     }
@@ -241,8 +253,35 @@ export class DataChannelPort implements ChannelPort {
   }
 }
 
-function isHighSurrogate(
-  code: number
-): boolean {
-  return code >= 0xD800 && code <= 0xDBFF;
+function asBytes(
+  data: unknown
+): Uint8Array | null {
+  if (data instanceof ArrayBuffer) {
+    return new Uint8Array(data);
+  }
+
+  return data instanceof Uint8Array ? data : null;
+}
+
+function joinChunks(
+  chunks: readonly Uint8Array[],
+  length: number,
+  text: boolean
+): ReceivedFrame | null {
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  if (!text) {
+    return bytes;
+  }
+
+  try {
+    return kUtf8Decoder.decode(bytes);
+  }
+  catch {
+    return null;
+  }
 }

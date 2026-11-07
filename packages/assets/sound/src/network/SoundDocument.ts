@@ -1,9 +1,5 @@
 // Import Third-party Dependencies
-import {
-  decodeContent,
-  type AssetInlineContent,
-  type AssetRoomNotice
-} from "@jolly-pixel/asset-server";
+import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import { SnapshotDocument } from "@jolly-pixel/history";
 import {
   commandDocumentKind,
@@ -14,11 +10,11 @@ import {
 import { SOUND_KIND } from "../asset/sound.ts";
 
 export class SoundDocument extends SnapshotDocument<
-  AssetInlineContent,
+  Uint8Array,
   Uint8Array | null
 > {
   constructor() {
-    super(null, decodeContent);
+    super(null, (bytes) => bytes);
   }
 
   get bytes(): Uint8Array | null {

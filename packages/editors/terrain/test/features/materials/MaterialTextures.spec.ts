@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import { setImmediate as settle } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
 import {
   GROUND_MATERIAL,
   TerrainDocument
@@ -97,7 +96,7 @@ function materialsSetup(
   ): TextureLease {
     opened.push(assetId);
     const textureDocument = new TextureDocument();
-    textureDocument.load(encodeContent(new TextEncoder().encode(contents[assetId] ?? assetId)));
+    textureDocument.load(new TextEncoder().encode(contents[assetId] ?? assetId));
     textures.set(assetId, textureDocument);
 
     return {
@@ -195,7 +194,7 @@ describe("MaterialTextures", () => {
     await settle();
     view.events.length = 0;
 
-    textures.get("grass")!.load(encodeContent(new TextEncoder().encode("grass-v2")));
+    textures.get("grass")!.load(new TextEncoder().encode("grass-v2"));
     await settle();
 
     assert.deepEqual(view.writes().sort(), ["albedo 0 grass-v2@1024", "normal 0 grass-v2@1024"]);

@@ -9,12 +9,10 @@ import assert from "node:assert/strict";
 import {
   ASSET_CREATED,
   AssetKindRegistry,
-  decodeContent,
   encodeContent,
   foldAssetEvent,
   textureAssetKind,
-  TEXTURE_KIND,
-  type AssetInlineContent
+  TEXTURE_KIND
 } from "#src/index.ts";
 import { LiveAssetRoom } from "#src/testing/index.ts";
 import {
@@ -90,10 +88,10 @@ describe("textureAssetKind", () => {
     handler.load(room.state, bytes("second"));
     room.extension.reload();
 
-    const snapshots = room.take<AssetInlineContent>("A").map((message) => {
+    const snapshots = room.take<Uint8Array>("A").map((message) => {
       assert.strictEqual(message.type, "snapshot");
 
-      return text(decodeContent(message.data));
+      return text(message.data);
     });
     assert.deepStrictEqual(snapshots, ["first", "second"]);
   });

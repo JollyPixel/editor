@@ -7,12 +7,21 @@ import fc from "fast-check";
 
 // Import Internal Dependencies
 import { PeerPresence } from "#src/server/room/PeerPresence.ts";
-import { metadata } from "../../helpers/arbitraries/json.ts";
+import { encodedLength } from "#src/protocol/frame/Frame.ts";
+import {
+  arbitraryRecord,
+  jsonPayload
+} from "../../helpers/arbitraries/json.ts";
 
-test("PeerPresence length is the JSON length of the merged presence after any patches", () => {
+// CONSTANTS
+const kPresencePatch = arbitraryRecord(
+  fc.oneof(jsonPayload, fc.uint8Array({ maxLength: 16 }))
+);
+
+test("PeerPresence length is the encoded length of the merged presence after any patches", () => {
   fc.assert(
     fc.property(
-      fc.array(metadata, { maxLength: 6 }),
+      fc.array(kPresencePatch, { maxLength: 6 }),
       (patches) => {
         const presence = patches.reduce(
           (merged, patch) => merged.patched(patch),
@@ -21,7 +30,7 @@ test("PeerPresence length is the JSON length of the merged presence after any pa
 
         assert.strictEqual(
           presence.length,
-          JSON.stringify(presence.values).length
+          encodedLength(presence.values)
         );
       }
     )

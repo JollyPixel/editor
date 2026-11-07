@@ -9,6 +9,7 @@ import type {
   ClientSocketListener
 } from "../ClientSocket.ts";
 import { NORMAL_CLOSE_CODE } from "../constants.ts";
+import type { Frame } from "../../protocol/frame/Frame.ts";
 import type { ChannelPort } from "./ChannelPort.ts";
 import {
   CHANNEL_TRANSPORT_TAG,
@@ -54,7 +55,7 @@ export class ChannelSocket implements ClientSocket {
   }
 
   send(
-    data: string
+    data: Frame
   ): void {
     if (!this.#closed) {
       this.#post({
@@ -112,7 +113,7 @@ export class ChannelSocket implements ClientSocket {
 
   #post(
     message:
-      | { type: "send"; data: string; }
+      | { type: "send"; data: Frame; }
       | { type: "close"; }
   ): void {
     this.#port.postMessage({

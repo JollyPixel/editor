@@ -59,14 +59,7 @@ import { CatalogOutbox } from "./CatalogOutbox.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
 import { CompanionReplacementError } from "./errors/CompanionReplacementError.ts";
 import { AssetHasDependentsError } from "./errors/AssetHasDependentsError.ts";
-import {
-  toActor,
-  type AssetInlineContent
-} from "../model/events/AssetEvents.ts";
-import {
-  decodeContent,
-  encodeContent
-} from "../model/events/inlineContent.ts";
+import { toActor } from "../model/events/AssetEvents.ts";
 import type { AssetArchive } from "./archive/AssetArchive.ts";
 import type { ArchiveBackend } from "./archive/ArchiveBackend.ts";
 import { exportAssetArchive } from "./archive/exportAssetArchive.ts";
@@ -365,13 +358,13 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       return Err(error);
     }
 
-    const decoded = this.#decode(
+    const checked = this.#withinLimit(
       command.content,
       this.#kindContentLimit(record.kind.value)
     );
-    const data = !decoded.ok || from === undefined ?
-      decoded :
-      await this.#convertedReplacement(record.kind.value, from, decoded.val);
+    const data = !checked.ok || from === undefined ?
+      checked :
+      await this.#convertedReplacement(record.kind.value, from, checked.val);
     if (!data.ok) {
       return data;
     }
@@ -414,7 +407,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     return Ok({
       command: command.type,
       assetId,
-      content: encodeContent(data)
+      content: data
     });
   }
 
@@ -471,18 +464,18 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
     const { kinds } = this.#backend;
     const kind = command.kind ?? kinds.resolve(command.path).kind;
-    const decoded = this.#decode(content, this.#kindContentLimit(kind));
-    if (!decoded.ok) {
-      return decoded;
+    const checked = this.#withinLimit(content, this.#kindContentLimit(kind));
+    if (!checked.ok) {
+      return checked;
     }
 
     if (from === undefined) {
-      return this.#loadable(kind, decoded.val).map(() => {
-        return { data: decoded.val };
+      return this.#loadable(kind, checked.val).map(() => {
+        return { data: checked.val };
       });
     }
 
-    const converted = await kinds.convert(kind, from, decoded.val);
+    const converted = await kinds.convert(kind, from, checked.val);
 
     return converted.andThen((asset) => this.#loadable(kind, asset.content).map(() => {
       return { converted: asset };
@@ -520,7 +513,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
     return Ok({
       command: command.type,
-      content: encodeContent(archive.val)
+      content: archive.val
     });
   }
 
@@ -629,9 +622,9 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   }
 
   #readArchive(
-    content: AssetInlineContent
+    content: Uint8Array
   ): Result<AssetArchive, Error> {
-    return this.#decode(content, this.#maxContentBytes).andThen(
+    return this.#withinLimit(content, this.#maxContentBytes).andThen(
       (bytes) => readAssetArchive(bytes, this.#archiveLimits)
     );
   }
@@ -647,17 +640,16 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     return limit ?? this.#maxContentBytes;
   }
 
-  #decode(
-    content: AssetInlineContent,
+  #withinLimit(
+    content: Uint8Array,
     limit: number
   ): Result<Uint8Array, Error> {
-    const data = decodeContent(content);
-    if (data.byteLength <= limit) {
-      return Ok(data);
+    if (content.byteLength <= limit) {
+      return Ok(content);
     }
 
     const error = new CatalogContentTooLargeError(
-      data.byteLength,
+      content.byteLength,
       limit
     );
 

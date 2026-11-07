@@ -6,23 +6,41 @@ import {
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import type {
-  Schema,
-  ValidationError
+import {
+  bytesSchema,
+  type Schema,
+  type ValidationError
 } from "../schema.ts";
 
 // CONSTANTS
+const kBytesKeyword = "bytes";
 const kValidatorOptions = {
-  useDefaults: false
-} as const;
+  useDefaults: false,
+  keywords: {
+    [kBytesKeyword]: {
+      validate: (_schema: unknown, data: unknown) => data instanceof Uint8Array
+    }
+  }
+};
 const kValidators = new WeakMap<Schema, Validator>();
+
+function representBytes(
+  context: { zodSchema: unknown; }
+): Record<string, unknown> | "throw" {
+  return context.zodSchema === bytesSchema ?
+    { [kBytesKeyword]: true } :
+    "throw";
+}
 
 function compileValidator(
   schema: Schema
 ): Validator {
   let validator = kValidators.get(schema);
   if (validator === undefined) {
-    const jsonSchema = z.toJSONSchema(schema, { io: "input" }) as JSONSchema;
+    const jsonSchema = z.toJSONSchema(schema, {
+      io: "input",
+      unrepresentable: representBytes
+    }) as JSONSchema;
     validator = new Validator(jsonSchema, kValidatorOptions);
     kValidators.set(schema, validator);
   }

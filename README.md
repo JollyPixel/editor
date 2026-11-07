@@ -4,15 +4,18 @@
 
 ## ⚙️ Requirements
 - [Node.js](https://nodejs.org/en/) version 24 or higher
-- [pnpm](https://pnpm.io/) v12+ for workspaces (the repository pins it through the `packageManager` field)
+- [pnpm](https://pnpm.io/) v12+ for workspaces
 
 ## 🧭 Workspaces
 
-Every workspace name below drops the `@jolly-pixel/` scope: `network` is `@jolly-pixel/network`. Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provides to another.
+Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provides to another.
 
 <p align="center">
   <img src="./docs/context_map.png" alt="JollyPixel">
 </p>
+
+> [!NOTE]
+> Every workspace name below drops the `@jolly-pixel/` scope: `network` is `@jolly-pixel/network`.
 
 ### 🤝 Collaboration
 

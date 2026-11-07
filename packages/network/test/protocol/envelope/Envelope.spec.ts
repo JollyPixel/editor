@@ -68,6 +68,24 @@ describe("Envelope.parseClient", () => {
     assert.match(describeEnvelopeParseError(unwrapError(result)), /invalid JSON/);
   });
 
+  test("reads bytes from a binary frame and reports a broken one apart from invalid JSON", () => {
+    const frame = Envelope.encode({
+      room: "model",
+      kind: "message",
+      payload: { content: Uint8Array.of(1, 2) }
+    }).unwrap();
+    assert.ok(frame instanceof Uint8Array);
+
+    assert.deepEqual(Envelope.parseClient(frame.buffer).unwrap(), {
+      room: "model",
+      kind: "message",
+      payload: { content: Uint8Array.of(1, 2) }
+    });
+    const broken = unwrapError(Envelope.parseClient(frame.subarray(0, frame.byteLength - 1)));
+    assert.equal(broken.reason, "invalid-frame");
+    assert.match(describeEnvelopeParseError(broken), /invalid frame/);
+  });
+
   test("rejects a value that is not an envelope shape", () => {
     for (const value of [null, 42, { hello: "world" }, { kind: "leave" }, { room: 42, kind: "leave" }]) {
       const result = Envelope.parseClient(value);
@@ -181,12 +199,12 @@ describe("Envelope.parseTrustedServer", () => {
   });
 });
 
-describe("Envelope.stringify", () => {
+describe("Envelope.encode", () => {
   test("fails with a descriptive error for a value JSON.stringify can't serialize", () => {
     const circular: Record<string, unknown> = { hello: "world" };
     circular.self = circular;
 
-    const result = Envelope.stringify({
+    const result = Envelope.encode({
       room: "pixel-draw",
       kind: "message",
       payload: circular

@@ -20,23 +20,25 @@ import {
 } from "../../helpers/transport/FakeDataChannel.ts";
 import { RecordingExtension } from "../../helpers/server/RecordingExtension.ts";
 import { waitFor } from "../../helpers/waitFor.ts";
+import { assertBytesRoundTrip } from "../../helpers/transport/bytesRoundTrip.ts";
 
 // CONSTANTS
-const kFrameLength = 4_097;
+const kChunkLength = 4_097;
+const kUtf8 = new TextEncoder();
 
 describe("DataChannelPort", () => {
-  test("relays a session and a payload over 1 MB through bounded frames", async() => {
+  test("relays a session and a payload over 1 MB through bounded chunks", async() => {
     const server = new Server();
     const extension = new RecordingExtension("test-ns");
     server.register(extension);
     const loopback = new LoopbackTransport({ server });
     const [guestChannel, hostChannel] = fakeDataChannelPair();
     const host = new ChannelTransportHost({
-      port: new DataChannelPort(hostChannel, { frameLength: kFrameLength }),
+      port: new DataChannelPort(hostChannel, { chunkLength: kChunkLength }),
       open: (request) => loopback.connect(request)
     });
     const transport = new ChannelTransport({
-      port: new DataChannelPort(guestChannel, { frameLength: kFrameLength }),
+      port: new DataChannelPort(guestChannel, { chunkLength: kChunkLength }),
       host: host.id
     });
     const client = new Client({
@@ -62,9 +64,37 @@ describe("DataChannelPort", () => {
     );
     assert.deepEqual(received, { snapshot });
     const longest = Math.max(
-      ...[...guestChannel.sent, ...hostChannel.sent].map((frame) => frame.length)
+      ...[...guestChannel.sent, ...hostChannel.sent].map((chunk) => chunk.byteLength)
     );
-    assert.ok(longest <= kFrameLength + 1);
+    assert.ok(longest <= kChunkLength + 1);
+    client.destroy();
+    transport.close();
+    host.close();
+  });
+
+  test("relays bytes in chunks of at most 16 KiB by default", async() => {
+    const server = new Server();
+    const extension = new RecordingExtension("test-ns");
+    server.register(extension);
+    const loopback = new LoopbackTransport({ server });
+    const [guestChannel, hostChannel] = fakeDataChannelPair();
+    const host = new ChannelTransportHost({
+      port: new DataChannelPort(hostChannel),
+      open: (request) => loopback.connect(request)
+    });
+    const transport = new ChannelTransport({
+      port: new DataChannelPort(guestChannel),
+      host: host.id
+    });
+    const client = new Client({
+      socket: () => transport.connect()
+    });
+
+    await assertBytesRoundTrip(client, extension, 100_000);
+
+    const chunks = [...guestChannel.sent, ...hostChannel.sent];
+    assert.ok(chunks.length > 12);
+    assert.ok(chunks.every((chunk) => chunk.byteLength <= 16_384 + 1));
     client.destroy();
     transport.close();
     host.close();
@@ -73,7 +103,7 @@ describe("DataChannelPort", () => {
   test("frames wait above the high-water mark until the channel drains", () => {
     const [local, remote] = fakeDataChannelPair({ autoDeliver: false });
     const sender = new DataChannelPort(local, {
-      frameLength: 50,
+      chunkLength: 50,
       highWaterMark: 100
     });
     const receiver = new DataChannelPort(remote);
@@ -121,14 +151,19 @@ describe("DataChannelPort", () => {
     channel.open();
 
     assert.equal(sentWhileConnecting, 0);
-    assert.deepEqual(channel.sent, [`.${JSON.stringify({ type: "connect" })}`]);
+    assert.deepEqual(channel.sent, [
+      Uint8Array.of(3, ...kUtf8.encode(JSON.stringify({ type: "connect" })))
+    ]);
   });
 
   const kViolations: [string, unknown][] = [
-    ["a frame without a flag", "{}"],
-    ["a binary frame", new ArrayBuffer(4)],
-    ["a frame that is not JSON", ".{oops"],
-    ["a message over maxMessageLength", `+${"a".repeat(11)}`]
+    ["a string message", ".{}"],
+    ["an empty chunk", new ArrayBuffer(0)],
+    ["a chunk with unknown flags", Uint8Array.of(4, 0x7b, 0x7d).buffer],
+    ["a message over maxMessageLength", new Uint8Array(12).buffer],
+    ["a text chunk that is not UTF-8", Uint8Array.of(3, 0xff).buffer],
+    ["a text chunk that is not JSON", Uint8Array.of(3, ...kUtf8.encode("{oops")).buffer],
+    ["a binary chunk that is not a frame", Uint8Array.of(1, 1, 0).buffer]
   ];
   for (const [name, frame] of kViolations) {
     test(`closes the channel on ${name}`, () => {

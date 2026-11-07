@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { PeerMetadata } from "../../protocol/types.ts";
+import { encodedLength } from "../../protocol/frame/Frame.ts";
 
 // CONSTANTS
 const kBracesLength = 2;
@@ -60,5 +61,5 @@ function entryLength(
   key: string,
   value: unknown
 ): number {
-  return JSON.stringify(key).length + 1 + JSON.stringify(value).length;
+  return JSON.stringify(key).length + 1 + encodedLength(value);
 }

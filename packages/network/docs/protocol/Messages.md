@@ -71,6 +71,22 @@ interface ValidationError {
 
 `isSchema(value)` tells a zod schema from any other value.
 
+### Bytes
+
+`bytesSchema` accepts a `Uint8Array`. A message that holds one travels as a
+[binary frame](#frames), and the receiver gets each array back as a view of the
+frame it received.
+
+```ts
+import { bytesSchema } from "@jolly-pixel/network/client";
+
+const snapshot = z.object({ content: bytesSchema });
+```
+
+Use this schema instance rather than `z.instanceof(Uint8Array)`: Node turns it
+into a validator keyword, and building the JSON Schema of any other
+`z.instanceof` schema throws.
+
 ### Rules
 
 zod cannot emit these rules as JSON Schema keywords. Each helper adds the zod
@@ -88,6 +104,38 @@ import { minProperties } from "@jolly-pixel/network";
 
 const faces = minProperties(z.record(z.string(), z.number()), 1);
 ```
+
+## Frames
+
+`encodeFrame(value)` returns the JSON text of `value`, or a binary `Frame`
+when `value` holds a `Uint8Array`. It throws what `JSON.stringify` throws, and
+`PlaceholderCollisionError` for an object whose only key is `"$bytes"`.
+`Envelope.encode(envelope)` returns those failures as `Err` with the message.
+
+`decodeFrame(frame, parseJson?)` reads a string, a `Uint8Array` or an
+`ArrayBuffer`. `parseJson` defaults to `JSON.parse`. It returns `Err` with
+`{ reason: "invalid-json" | "invalid-frame", message }`. It accepts only what
+`encodeFrame` can produce, so a decoded value always encodes again.
+
+`encodedLength(value)` is the JSON length of `value`, counting each
+`Uint8Array` by its byte length. The server measures profiles and presence with
+it.
+
+A binary frame, with integers in little endian:
+
+```
+u8   version, 1
+u32  header length
+u32  attachment count n
+n ×  u32 attachment length
+header: UTF-8 JSON of the value, each Uint8Array replaced by {"$bytes": index}
+each attachment, starting on a multiple of 8 bytes from the frame start
+```
+
+A placeholder is an object whose only key is `"$bytes"`. Its value must be the
+index of an attachment, and each attachment needs exactly one placeholder; an
+object with other keys besides `"$bytes"` stays an object. A text frame has no
+attachments, so any placeholder in it is an `invalid-frame`.
 
 ## Parsing
 

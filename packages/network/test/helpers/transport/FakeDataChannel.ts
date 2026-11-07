@@ -7,10 +7,6 @@ import type {
   DataChannelState
 } from "#src/transport/channel/DataChannelPort.ts";
 
-// CONSTANTS
-const kEncoder = new TextEncoder();
-const kDecoder = new TextDecoder();
-
 type DataChannelEventType = "message" | "open" | "close" | "bufferedamountlow";
 type DataChannelListener = (event: { data: unknown; }) => void;
 
@@ -18,8 +14,9 @@ export class FakeDataChannel implements DataChannelLike {
   readyState: DataChannelState;
   bufferedAmount = 0;
   bufferedAmountLowThreshold = 0;
-  readonly inFlight: string[] = [];
-  readonly sent: string[] = [];
+  binaryType: BinaryType = "blob";
+  readonly inFlight: Uint8Array<ArrayBuffer>[] = [];
+  readonly sent: Uint8Array<ArrayBuffer>[] = [];
   peer: FakeDataChannel | null = null;
   autoDeliver: boolean;
 
@@ -33,16 +30,15 @@ export class FakeDataChannel implements DataChannelLike {
   }
 
   send(
-    data: string
+    data: Uint8Array<ArrayBuffer>
   ): void {
     if (this.readyState !== "open") {
       throw new Error("InvalidStateError: the data channel is not open");
     }
 
-    const bytes = kEncoder.encode(data);
     this.sent.push(data);
-    this.inFlight.push(kDecoder.decode(bytes));
-    this.bufferedAmount += bytes.byteLength;
+    this.inFlight.push(data.slice());
+    this.bufferedAmount += data.byteLength;
     if (this.autoDeliver) {
       setImmediate(() => this.deliver());
     }
@@ -54,8 +50,8 @@ export class FakeDataChannel implements DataChannelLike {
     for (let index = 0; index < count && this.inFlight.length > 0; index++) {
       const data = this.inFlight.shift()!;
       const before = this.bufferedAmount;
-      this.bufferedAmount -= kEncoder.encode(data).byteLength;
-      this.peer?.receive(data);
+      this.bufferedAmount -= data.byteLength;
+      this.peer?.receive(this.peer.binaryType === "arraybuffer" ? data.buffer : data);
       if (
         before > this.bufferedAmountLowThreshold &&
         this.bufferedAmount <= this.bufferedAmountLowThreshold

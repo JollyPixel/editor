@@ -6,7 +6,6 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { AssetInlineContent } from "@jolly-pixel/asset-server";
 import {
   LiveAssetRoom,
   mockAssetRoom
@@ -25,11 +24,11 @@ describe("model room", () => {
     const server = new LiveAssetRoom(handler);
     handler.load(server.state, kGlbContent);
 
-    const room = mockAssetRoom<never, AssetInlineContent>("A");
+    const room = mockAssetRoom<never, Uint8Array>("A");
     const { document } = modelFileDocumentKind().syncDocument(room);
     assert.equal(document.bytes, null);
     await server.connect("A");
-    for (const message of server.take<AssetInlineContent>("A")) {
+    for (const message of server.take<Uint8Array>("A")) {
       room.deliver(message);
     }
 

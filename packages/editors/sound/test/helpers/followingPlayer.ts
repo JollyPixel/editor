@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import { encodeContent } from "@jolly-pixel/asset-server";
 import { SoundDocument } from "@jolly-pixel/asset.sound/client";
 
 // Import Internal Dependencies
@@ -18,7 +17,7 @@ export async function followingPlayer(
 }> {
   const player = new SoundPlayer(context.asAudioContext());
   const document = new SoundDocument();
-  document.load(encodeContent(kOggBytes));
+  document.load(kOggBytes);
   await player.follow(document);
 
   return {
