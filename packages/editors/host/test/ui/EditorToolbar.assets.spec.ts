@@ -105,6 +105,28 @@ describe("EditorToolbar assets", () => {
     ]);
   });
 
+  test("a renamed asset is relabelled in the Asset select", async() => {
+    const catalog = new FakeSessionCatalog([
+      record("forest", "voxelmap"),
+      record("cave", "voxelmap")
+    ]);
+    const element = await mount(new EditorTargets({
+      catalog,
+      accepts: "voxelmap",
+      current: "forest",
+      navigator: new FakeNavigator()
+    }), null);
+
+    await catalog.rename("cave", "maps/grotto.voxelmap");
+    await element.updateComplete;
+
+    const assets = query<Select<string>>(element, ".asset jolly-select")!;
+    assert.deepEqual(
+      assets.options.map((option) => option.label),
+      ["forest", "maps/grotto"]
+    );
+  });
+
   test("the asset menu offers the archive actions the session allows and runs the picked one", async() => {
     const archives = createToolbarArchives({
       canImport: true,

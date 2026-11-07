@@ -15,8 +15,13 @@ export interface GuestConnection {
   client: Client;
 }
 
+export interface GuestConnectionOptions {
+  trustServer?: boolean;
+}
+
 export function guestConnection(
-  socket: () => ClientSocket
+  socket: () => ClientSocket,
+  options: GuestConnectionOptions = {}
 ): GuestConnection {
   const identity = peerIdentity(GUEST_USERNAME);
 
@@ -24,7 +29,8 @@ export function guestConnection(
     identity,
     client: new Client({
       profile: toPeerProfileMetadata(identity),
-      socket
+      socket,
+      trustServer: options.trustServer ?? false
     })
   };
 }

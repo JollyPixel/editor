@@ -139,22 +139,27 @@ describe("Placement toolbar", () => {
 describe("Placement unsaved guard", () => {
   afterEach(leaveAll);
 
-  test("reports the unsaved state of the leased documents to the shell", async() => {
+  test("reports unsaved to the shell at once, and saved once the documents stay settled", async(t) => {
     const posted: unknown[] = [];
     const shell = shellChannel({
       port: { postMessage: (message) => posted.push(message) }
     });
     const { connection } = await fakeConnection();
+    t.mock.timers.enable({ apis: ["setTimeout"] });
     const placement = place(new EditorLaunch(new AssetId("map"), shell));
     placement.guardUnsaved(connection.assets);
     const map = connection.assets.open(fakeDocumentKind("voxelmap"), "map");
 
     map.document.changes.edit();
+    map.document.changes.acknowledge();
+    t.mock.timers.tick(100);
     map.document.changes.edit();
     map.document.changes.acknowledge();
+    t.mock.timers.tick(1_000);
     map.document.changes.edit();
+    map.document.changes.acknowledge();
     placement.dispose();
-    map.document.changes.acknowledge();
+    t.mock.timers.tick(1_000);
     connection.dispose();
 
     assert.deepEqual(

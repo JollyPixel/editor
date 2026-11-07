@@ -24,6 +24,7 @@ const kDomTargetsBrowser: EditorTargetsBrowser = {
   prompt: showPrompt,
   confirm: showConfirm
 };
+const kPathOrder = new Intl.Collator();
 
 export type EditorTargetsEvents = {
   change: () => void;
@@ -67,6 +68,8 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
   readonly #navigator: LaunchNavigator;
   readonly #browser: EditorTargetsBrowser;
   readonly #unsubscribe: () => void;
+  #accepted: AssetRecordData[] = [];
+  #sorted: AssetRecordData[] = [];
 
   constructor(
     options: EditorTargetsOptions
@@ -78,19 +81,24 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
     this.#catalog = options.catalog;
     this.#navigator = options.navigator;
     this.#browser = options.browser ?? kDomTargetsBrowser;
-    this.#unsubscribe = this.#catalog.subscribe(
-      "change",
-      () => this.emit("change")
-    );
+    this.#refresh();
+    this.#unsubscribe = this.#catalog.subscribe("change", () => {
+      if (this.#refresh()) {
+        this.emit("change");
+      }
+    });
   }
 
-  * [Symbol.iterator](): IterableIterator<AssetRecordData> {
-    yield* [...this.#accepted()]
-      .sort((left, right) => left.path.localeCompare(right.path));
+  [Symbol.iterator](): IterableIterator<AssetRecordData> {
+    this.#refresh();
+
+    return this.#sorted.values();
   }
 
   get canRemoveCurrent(): boolean {
-    return [...this.#accepted()].length > 1;
+    this.#refresh();
+
+    return this.#sorted.length > 1;
   }
 
   async open(
@@ -153,12 +161,25 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
     this.#unsubscribe();
   }
 
-  * #accepted(): IterableIterator<AssetRecordData> {
+  #refresh(): boolean {
+    let count = 0;
+    let unchanged = true;
     for (const record of this.#catalog.records()) {
       if (record.kind === this.accepts) {
-        yield record;
+        unchanged &&= this.#accepted[count] === record;
+        count++;
       }
     }
+    if (unchanged && count === this.#accepted.length) {
+      return false;
+    }
+
+    this.#accepted = Array.from(this.#catalog.records())
+      .filter((record) => record.kind === this.accepts);
+    this.#sorted = this.#accepted
+      .toSorted((left, right) => kPathOrder.compare(left.path, right.path));
+
+    return true;
   }
 }
 

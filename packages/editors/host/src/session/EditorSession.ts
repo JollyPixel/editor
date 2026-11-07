@@ -60,7 +60,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
 
   readonly #kinds = new Map<string, AssetDocumentKind<unknown>>();
   readonly #held: AssetRoomLease[] = [];
-  readonly #pickers = new AbortController();
+  #pickers: AbortController | null = null;
   #dependencies = new Map<string, SessionDependency>();
   #disposed = false;
 
@@ -160,9 +160,11 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     options: AssetPickOptions
   ): Promise<AssetReferenceData | null> {
     this.#assertOpen();
+    this.#pickers ??= new AbortController();
+    const { signal } = this.#pickers;
     const { pickAsset } = await import("./picker/pickAsset.ts");
 
-    return pickAsset(options, this.catalog, this.#pickers.signal);
+    return pickAsset(options, this.catalog, signal);
   }
 
   dispose(): void {
@@ -171,7 +173,7 @@ export class EditorSession extends Emitter<EditorSessionEvents> {
     }
     this.#disposed = true;
 
-    this.#pickers.abort();
+    this.#pickers?.abort();
     this.catalog.off("change", this.#onCatalogChange);
     for (const { lease } of this.#dependencies.values()) {
       lease.release();

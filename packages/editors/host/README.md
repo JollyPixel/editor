@@ -128,6 +128,25 @@ void bootStandalone(MyEditor, {
   contract a package implements to add component types to the scene editor,
   from `@jolly-pixel/editor.host/scene`.
 
+## 🧪 Benchmarks
+
+The suites cover the host work that every editor pays for:
+
+- Lease toggles when an edit goes unsaved and then saved.
+- The IndexedDB work of the pending-changes outbox for each edit.
+- Session and toolbar work when any asset in the project changes.
+- Switching target and booting on the in-page offline server.
+
+They run in Node on happy-dom and fake-indexeddb. Compare their numbers with
+each other, not with a browser. The outbox suite also prints transactions and
+requests per edit, and the boot suite prints the time of each host step.
+
+```bash
+pnpm --filter @jolly-pixel/editor.host bench -- --allocations
+```
+
+Filtering and measurement rules are documented by `@jolly-pixel/bench`.
+
 ## ✨ Contributors guide
 
 If you are a developer **looking to contribute** to the project, you must first read the [CONTRIBUTING][contributing] guide.

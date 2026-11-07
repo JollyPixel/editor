@@ -287,7 +287,8 @@ export class OfflineServer implements OfflineBackend {
       throw new Error("Offline server is closing.");
     }
     const { identity, client } = guestConnection(
-      () => this.#transport.connect()
+      () => this.#transport.connect(),
+      { trustServer: true }
     );
     this.#connections++;
     let destroyed = false;

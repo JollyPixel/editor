@@ -67,6 +67,8 @@ export class OutboxStore {
   readonly #owner: string;
   #closed = false;
   #written: Promise<void> = Promise.resolve();
+  readonly #queued = new Map<string, OutboxRecord | null>();
+  #flushScheduled = false;
 
   constructor(
     database: IDBPDatabase<OutboxSchema>,
@@ -109,30 +111,18 @@ export class OutboxStore {
     room: string,
     kept: KeptCommand
   ): void {
-    const record: OutboxRecord = {
+    this.#queue(kept.ref, {
       ref: kept.ref,
       room,
       owner: this.#owner,
       command: kept.command
-    };
-    this.#write(async(store) => {
-      const id = await store.index("ref").getKey(kept.ref);
-      await store.put(id === undefined ? record : {
-        ...record,
-        id
-      });
     });
   }
 
   drop(
     ref: string
   ): void {
-    this.#write(async(store) => {
-      const id = await store.index("ref").getKey(ref);
-      if (id !== undefined) {
-        await store.delete(id);
-      }
-    });
+    this.#queue(ref, null);
   }
 
   async close(): Promise<void> {
@@ -140,13 +130,48 @@ export class OutboxStore {
     await this.#written;
   }
 
-  #write(
-    operation: (store: CommandStore) => Promise<void>
+  #queue(
+    ref: string,
+    record: OutboxRecord | null
   ): void {
     if (this.#closed) {
       return;
     }
 
+    this.#queued.set(ref, record);
+    if (!this.#flushScheduled) {
+      this.#flushScheduled = true;
+      queueMicrotask(() => this.#flush());
+    }
+  }
+
+  #flush(): void {
+    this.#flushScheduled = false;
+    if (this.#closed || this.#queued.size === 0) {
+      return;
+    }
+
+    const queued = [...this.#queued];
+    this.#queued.clear();
+    this.#write(async(store) => {
+      for (const [ref, record] of queued) {
+        const id = await store.index("ref").getKey(ref);
+        if (record !== null) {
+          await store.put(id === undefined ? record : {
+            ...record,
+            id
+          });
+        }
+        else if (id !== undefined) {
+          await store.delete(id);
+        }
+      }
+    });
+  }
+
+  #write(
+    operation: (store: CommandStore) => Promise<void>
+  ): void {
     const transaction = this.#database.transaction("commands", "readwrite");
     this.#written = Promise.all([
       operation(transaction.store),
@@ -158,6 +183,7 @@ export class OutboxStore {
   }
 
   #close(): void {
+    this.#flush();
     this.#closed = true;
     this.#database.close();
   }

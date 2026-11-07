@@ -101,17 +101,17 @@ describe("EditorTargets", () => {
     ]);
   });
 
-  test("announces every catalog change until disposed", () => {
+  test("announces catalog changes to the accepted records until disposed", async() => {
     const { catalog, targets } = setup();
     let changes = 0;
     targets.on("change", () => changes++);
 
-    catalog.emit("change");
-    catalog.emit("change");
+    await catalog.rename("tex", "textures/bark.pixelart");
+    await catalog.rename("cave", "maps/grotto.voxelmap.json");
     targets.dispose();
-    catalog.emit("change");
+    await catalog.rename("forest", "maps/woods.voxelmap.json");
 
-    assert.equal(changes, 2);
+    assert.equal(changes, 1);
   });
 
   test("renaming asks for a name and keeps the folder and extension", async() => {

@@ -43,8 +43,9 @@
     "test-only": "node --import ./test/setup.ts --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
-    "lint": "oxlint src test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "lint": "oxlint src test bench",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json",
+    "bench": "jolly-bench"
   },
   "repository": {
     "type": "git",
@@ -82,6 +83,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
+    "@jolly-pixel/bench": "workspace:*",
     "fake-indexeddb": "6.2.7"
   }
 }

@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import { lastSegment } from "./address.ts";
+import { CommandLifetime } from "./CommandLifetime.ts";
 import type {
   ArgDef,
   CommandDef,
@@ -18,7 +19,7 @@ import {
 
 interface CommandSlot {
   command: RegisteredCommand;
-  lifetime: AbortController;
+  lifetime: CommandLifetime;
 }
 
 export interface NamespaceEntryOptions {
@@ -97,7 +98,7 @@ export class NamespaceEntry implements RegisteredNamespace {
     assertArgs(address, def.args);
 
     const key = name.toLowerCase();
-    const lifetime = new AbortController();
+    const lifetime = new CommandLifetime();
     const slot: CommandSlot = {
       command: {
         kind: "command",
@@ -106,11 +107,13 @@ export class NamespaceEntry implements RegisteredNamespace {
         description: def.description,
         namespace: this,
         def,
-        signal: lifetime.signal
+        get signal(): AbortSignal {
+          return lifetime.signal;
+        }
       },
       lifetime
     };
-    this.#commands.get(key)?.lifetime.abort();
+    this.#commands.get(key)?.lifetime.end();
     this.#commands.set(key, slot);
     this.#changed();
 
@@ -120,7 +123,7 @@ export class NamespaceEntry implements RegisteredNamespace {
           return;
         }
         this.#commands.delete(key);
-        lifetime.abort();
+        lifetime.end();
         this.#changed();
       }
     };
@@ -159,7 +162,7 @@ export class NamespaceEntry implements RegisteredNamespace {
 
   clear(): void {
     for (const slot of this.#commands.values()) {
-      slot.lifetime.abort();
+      slot.lifetime.end();
     }
     this.#commands.clear();
     this.#variables.clear();
