@@ -94,6 +94,7 @@ Generic packages used by more than one sub-domain.
 ## 🛠️ Tooling
 
 - [bench](./packages/bench) - Benchmarking harness and CLI
+- [cdp](./packages/cdp) - Chrome DevTools Protocol recording, page probes and profile readers for perf harnesses
 - [e2e](./packages/e2e) - Playwright config, locators and editor fixtures for e2e suites
 
 ## 💃 Getting started

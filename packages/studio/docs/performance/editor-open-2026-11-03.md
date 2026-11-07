@@ -1,6 +1,6 @@
 # Scene and sound editors, 3 November 2026
 
-What it costs to open the two newest editors from the studio, what they cost once open, and three experiments to make the open shorter. Measured at `f025a676` on a built studio served by [`perf/serveBuild.ts`](../../perf/serveBuild.ts). The method and the tools are in [Benchmarking editor opens](./benchmarking.md).
+What it costs to open the two newest editors from the studio, what they cost once open, and three experiments to make the open shorter. Measured at `f025a676` on a built studio served by [`perf/serve/build.ts`](../../perf/serve/build.ts). The method and the tools are in [Benchmarking editor opens](./benchmarking.md).
 
 The machine ran in its slow state: a fresh browser's first `requestAdapter` took 698 ms before the main run and 617 ms after it (322 ms in October). Do not compare these times with the October reports. The main run is four interleaved rounds of three variants, online and offline ([plan](./editor-open-2026-11-03.json)); tables give `ready` medians in milliseconds.
 
@@ -15,7 +15,7 @@ The machine ran in its slow state: a fresh browser's first `requestAdapter` took
 
 ## Measurement setup
 
-Since the multi-page studio build of 17 October, `dev:e2e` compiles the editor pages from source through Vite. A scene open under `dev:e2e` makes about 250 requests, mostly `node_modules/.vite/deps` and `/@fs/` modules, and transfers 5 MB cold. On the built studio it makes 75 to 82 requests and transfers 417 KB offline and 577 KB online. Every number below comes from `pnpm exec vite build` served by `serveBuild.ts` with the in-memory back-end and accounts of `dev:e2e`.
+Since the multi-page studio build of 17 October, `dev:e2e` compiles the editor pages from source through Vite. A scene open under `dev:e2e` makes about 250 requests, mostly `node_modules/.vite/deps` and `/@fs/` modules, and transfers 5 MB cold. On the built studio it makes 75 to 82 requests and transfers 417 KB offline and 577 KB online. Every number below comes from `pnpm exec vite build` served by `serve/build.ts` with the in-memory back-end and accounts of `dev:e2e`.
 
 The seed project has neither kind, so the harness creates `New scene.scene.json` from the New asset menu and drops `packages/editors/sound/assets/sounds/chime.ogg` on the Asset Browser before the first open. That path is gitignored: the sound dev server seeds a generated chime of about 1.6 s there, but this run used a local 190 s track of 48 kHz stereo Opus, 1.6 MB, put at the same path. A new scene holds a camera, a shadow-casting directional light and a hemisphere light.
 
@@ -70,7 +70,7 @@ Boot steps, start → end in milliseconds from the double-click:
 
 ## An open editor
 
-`steadyState.ts`, online, two rounds of 5 s per scenario, medians:
+`steady/measure.ts`, online, two rounds of 5 s per scenario, medians:
 
 | Editor | Scenario | main thread ms/s | MB/s | renders/s | idle % |
 |---|---|---|---|---|---|

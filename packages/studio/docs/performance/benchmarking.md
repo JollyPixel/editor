@@ -1,6 +1,6 @@
 # Benchmarking editor opens
 
-How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, starting with [`openEditors.ts`](../../perf/openEditors.ts); the latest results, for the scene and sound editors, are in [Scene and sound editors, 3 November 2026](./editor-open-2026-11-03.md).
+How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, on top of the CDP recorder, page scripts and profile readers of `@jolly-pixel/cdp`, starting with [`perf/open/measure.ts`](../../perf/open/measure.ts); the latest results, for the scene and sound editors, are in [Scene and sound editors, 3 November 2026](./editor-open-2026-11-03.md).
 
 ## What is measured
 
@@ -12,7 +12,7 @@ One measurement is one double-click on an asset row, timed until the editor fram
 - Boot steps: every `logger.step()` of `host.boot`, `host.session`, `editor.runtime` and the editor, read from the `<namespace>:<step>` User Timing measures the step records in the frame. No debug flag is needed. Steps run concurrently, so their durations overlap; read the `start` and `end` columns, not the sum.
 - Transfer: the frame's Resource Timing entries (requests, transfer and decoded bytes) and the WebSocket bytes received after the click.
 
-The page probe ([`perf/harness/openProbe.ts`](../../perf/harness/openProbe.ts)) is an init script, so it runs in the shell and in every editor frame before their own code. An open whose shell recorded no `dblclick`, or whose frame never reported `ready`, fails and is left out of the results instead of counting as 0 ms.
+The page probe ([`perf/studio/pageProbe.ts`](../../perf/studio/pageProbe.ts)) is an init script, so it runs in the shell and in every editor frame before their own code. An open whose shell recorded no `dblclick`, or whose frame never reported `ready`, fails and is left out of the results instead of counting as 0 ms.
 
 ## Phases
 
@@ -42,10 +42,10 @@ Build every workspace and the studio shell, then serve the build with the in-mem
 $ pnpm run build
 $ cd packages/studio
 $ pnpm exec vite build --sourcemap
-$ node perf/serveBuild.ts
+$ node perf/serve/build.ts
 ```
 
-Do not measure against `dev:e2e`: it serves every editor page from source through Vite, so a scene open makes about 250 requests for unbundled modules (24 MB decoded) instead of 75 to 82. `serveBuild.ts` takes `--port` and `--shell` (another built `dist`), to serve a second variant next to the first. It leaves socket compression off, as the dev server does; `--compression` turns it on, as the hosted studio has it.
+Do not measure against `dev:e2e`: it serves every editor page from source through Vite, so a scene open makes about 250 requests for unbundled modules (24 MB decoded) instead of 75 to 82. `serve/build.ts` takes `--port` and `--shell` (another built `dist`), to serve a second variant next to the first. It leaves socket compression off, as the dev server does; `--compression` turns it on, as the hosted studio has it.
 
 In a second terminal:
 
@@ -73,7 +73,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 
 The browser window must stay visible: a hidden or minimized window stops `requestAnimationFrame`, and the editors never reach their first frame.
 
-Results files carry a `kind`: `open` for `perf:open` and `perf:ab`, `steady` for `steadyState.ts`. `perf:summary` reads `open` files only. Given a folder, it skips the files of another kind; given a file of another kind, or a file written before `kind` existed, it stops with an error. Add `"kind": "open"` to an older `perf:open` file to summarize it again.
+Results files carry a `kind`: `open` for `perf:open` and `perf:ab`, `steady` for `steady/measure.ts`. `perf:summary` reads `open` files only. Given a folder, it skips the files of another kind; given a file of another kind, or a file written before `kind` existed, it stops with an error. Add `"kind": "open"` to an older `perf:open` file to summarize it again.
 
 ## A/B protocol
 
@@ -84,7 +84,7 @@ $ pnpm run perf:ab --plan docs/performance/editor-open-2026-11-03.json --rounds 
 $ pnpm run perf:summary perf-results/ab.json --control control
 ```
 
-[`perf/abRun.ts`](../../perf/abRun.ts) runs one round of every variant, then the next round in reverse order, so a slow period hits every variant alike. A measurement's `run` is its round, and profile files end with it. Every measurement of the run goes to the one `--out` file, written after each open. `--headless`, `--cpu`, `--network`, `--settle`, `--profile` and `--memory` mean the same as for `perf:open`. `--control` prints each median with its difference to the control. With five rounds, treat differences under about 50 ms on `ready` as noise, and read the p90 column too: a stall that hits only some opens moves the p90 and not the median.
+[`perf/open/ab.ts`](../../perf/open/ab.ts) runs one round of every variant, then the next round in reverse order, so a slow period hits every variant alike. A measurement's `run` is its round, and profile files end with it. Every measurement of the run goes to the one `--out` file, written after each open. `--headless`, `--cpu`, `--network`, `--settle`, `--profile` and `--memory` mean the same as for `perf:open`. `--control` prints each median with its difference to the control. With five rounds, treat differences under about 50 ms on `ready` as noise, and read the p90 column too: a stall that hits only some opens moves the p90 and not the median.
 
 Drift between runs can be large: in October 2026 the same warm open went from about 870 to 350 ms over one evening. Run `perf/probes/firstUse.ts` before and after a session; if its numbers moved, report each A/B with the state it ran in and do not compare absolute times across runs.
 
@@ -104,13 +104,13 @@ $ git apply packages/studio/docs/performance/editor-open-2026-11-03.patch
 $ pnpm run build
 $ cd packages/studio
 $ pnpm exec vite build --sourcemap
-$ node perf/serveBuild.ts
+$ node perf/serve/build.ts
 ```
 
 A server-side change can read a flag or an environment variable instead, with a second server on another port and a variant whose `base` points at it. Socket compression already has one:
 
 ```bash
-$ node perf/serveBuild.ts --port 3014 --compression
+$ node perf/serve/build.ts --port 3014 --compression
 ```
 
 To compare two commits, build the other commit's shell in a worktree and serve it with `--shell`. On Windows keep the worktree path short, as deep scratch paths exceed `MAX_PATH` during the build.
@@ -121,10 +121,10 @@ Do not build or run tests while a measurement runs.
 
 ### Throttled links
 
-[`perf/throttleProxy.ts`](../../perf/throttleProxy.ts) is a TCP proxy that delays every byte, HTTP and WebSocket alike, as one link of `--mbps` (default 8.1) and `--rtt` milliseconds (default 165, the `fast-4g` figures). Put one in front of each server and point the variant's `base` at the proxy:
+[`perf/serve/throttle.ts`](../../perf/serve/throttle.ts) is a TCP proxy that delays every byte, HTTP and WebSocket alike, as one link of `--mbps` (default 8.1) and `--rtt` milliseconds (default 165, the `fast-4g` figures). Put one in front of each server and point the variant's `base` at the proxy:
 
 ```bash
-$ node perf/throttleProxy.ts --listen 3024 --target 3004
+$ node perf/serve/throttle.ts --listen 3024 --target 3004
 ```
 
 Unlike `--network`, it treats compressed and uncompressed frames alike. It throttles from the first request, so `first` and `cold` include the shell and editor downloads; read `reopen` and `reload` for room timings.
@@ -135,7 +135,7 @@ Seed each server before a throttled run, by one round of an unthrottled variant 
 
 ### CPU profiles
 
-The studio build of [Running the matrix](#running-the-matrix) has source maps, so profiles resolve to source files and packages. [`bundleComposition.ts`](#bundles) reads each editor's own build instead:
+The studio build of [Running the matrix](#running-the-matrix) has source maps, so profiles resolve to source files and packages. [`analyze/bundle.ts`](#bundles) reads each editor's own build instead:
 
 ```bash
 $ cd packages/editors/voxel-map && pnpm exec vite build --sourcemap
@@ -149,21 +149,21 @@ Record and read a profile:
 
 ```bash
 $ pnpm run perf:open --runs 1 --modes online --phases reload --profile perf-results/profiles
-$ node perf/analyzeProfile.ts perf-results/profiles/<file>.cpuprofile --top 30
-$ node perf/analyzeProfile.ts <file> --stacks "getContext|setSize" --depth 12
-$ node perf/analyzeProfile.ts <file> --from 100 --until 700
-$ node perf/analyzeProfile.ts <file> --inclusive "createControls|createRoomEnvironment"
+$ node perf/analyze/profile.ts perf-results/profiles/<file>.cpuprofile --top 30
+$ node perf/analyze/profile.ts <file> --stacks "getContext|setSize" --depth 12
+$ node perf/analyze/profile.ts <file> --from 100 --until 700
+$ node perf/analyze/profile.ts <file> --inclusive "createControls|createRoomEnvironment"
 ```
 
 It prints self time by package, file and function. `--stacks` prints the callers of matching functions; `--inclusive` prints the total time spent under each matching function, its callees included; `--from`/`--until` keep the samples of one window, in milliseconds from the start of the profile (just before the click). A native call that waits on the GPU process, such as `getContext`, `setSize` or a WebGL `getParameter`, shows as self time of the JavaScript function that made it.
 
-The same script reads the `.heapprofile` files of `--memory`, `steadyState.ts` and `profileServer.ts --heap`, and then prints allocated bytes instead of time. `--from`/`--until` do not apply to them.
+The same script reads the `.heapprofile` files of `--memory`, `steady/measure.ts` and `serve/profile.ts --heap`, and then prints allocated bytes instead of time. `--from`/`--until` do not apply to them.
 
 ### An open editor
 
 ```bash
-$ node perf/steadyState.ts --mode online --rounds 3 --seconds 5
-$ node perf/steadyState.ts --editors voxel-model --storage '{"bench:no-environment":"1"}'
+$ node perf/steady/measure.ts --mode online --rounds 3 --seconds 5
+$ node perf/steady/measure.ts --editors voxel-model --storage '{"bench:no-environment":"1"}'
 ```
 
 Opens each editor in a new browser, waits as long as `perf:open` settles, then measures four scenarios of `--seconds` each: `away` (pointer off the canvas), `hover` (pointer resting at the center of the largest canvas of the frame), `orbit` (middle-button drag in circles) and `panels` (pointer nudged every 400 ms over a corner of the frame that has no canvas). Each scenario records main-thread and script time from the CDP `Performance` metrics, allocations with collected objects, garbage collection, and `requestAnimationFrame` pacing in the frame. It also counts the frame's WebGPU renders (`getCurrentTexture` calls): `wakes` is the number of renders that came more than 100 ms after the previous one, and `idle %` is the share of the scenario spent in those gaps. Without WebGPU in the browser there is nothing to count, so the scenario fails instead of reporting zero renders. It prints a table of medians and writes `--out` (default `perf-results/steady.json`) and one `.heapprofile` per scenario into `--profiles`. `--scenarios`, `--editors`, `--mode`, `--storage` and `--base` select what runs.
@@ -171,7 +171,7 @@ Opens each editor in a new browser, waits as long as `perf:open` settles, then m
 ### The server
 
 ```bash
-$ node perf/profileServer.ts --seconds 240 --heap
+$ node perf/serve/profile.ts --seconds 240 --heap
 ```
 
 Starts the hosted `StudioServer` in-process on port 3004 with the in-memory back-end and accounts of `dev:e2e` (`vite/e2eBackend.ts`), and CPU-profiles it for `--seconds` through the Node inspector; `--heap` also samples its allocations. Build the studio shell first (`pnpm exec vite build`), stop `dev:e2e`, and run `perf:open --modes online` against it in a second terminal. The profile lands in `--out` (default `perf-results/server.cpuprofile`); node frames resolve to their workspace package without source maps.
@@ -181,8 +181,8 @@ Starts the hosted `StudioServer` in-process on port 3004 with the in-memory back
 A CPU profile cannot see the GPU process. When the main thread is idle while a step waits, take a trace:
 
 ```bash
-$ node perf/traceOpen.ts --editor voxel-model --warm
-$ node perf/analyzeTrace.ts perf-results/traces/voxel-model-warm.json
+$ node perf/open/trace.ts --editor voxel-model --warm
+$ node perf/analyze/trace.ts perf-results/traces/voxel-model-warm.json
 ```
 
 `--warm` opens the editor once and reloads the shell before tracing. `--mode` (`offline` by default), `--base`, `--storage` and `--settle` mean the same as for `perf:open`, and the browser launches with the same flags. Boot steps show as User Timing measures in the trace. The analysis prints self time per event on the renderer and GPU main threads, the pipeline and shader compiles (`APICreateRenderPipeline`, `CompileShaderDXC`, `Program::MainLinkLoadEvent::wait`), the synchronous waits of the page on the GPU process (`CommandBufferProxyImpl::WaitForGetOffset`), the main-thread tasks over 15 ms after the click, and the garbage collection pauses on the renderer main thread. Open the same file in the DevTools Performance panel for the full picture.
@@ -202,7 +202,7 @@ $ node perf/probes/pipelineCompile.ts --pipelines 24 --rounds 6
 ### Bundles
 
 ```bash
-$ node perf/bundleComposition.ts
+$ node perf/analyze/bundle.ts
 ```
 
 Needs the source-map build. Prints, per editor, the eager chunks (the entry plus its `modulepreload` links) raw, gzip and brotli, and their bytes by package, then the lazy chunks. Bytes the minifier emits without a mapping show as `(unmapped)`.
@@ -211,4 +211,4 @@ Needs the source-map build. Prints, per editor, the eager chunks (the entry plus
 
 - Windows 11 Pro 26200, Intel Core Ultra 9 285HX laptop with 32 GB, integrated Intel Graphics (Xe-LPG) only.
 - Playwright 1.64.1 with Chromium 156.0.8078.4, headed. WebGL runs through ANGLE on Direct3D 11, WebGPU through Dawn on Direct3D 12.
-- Node.js 24.18, studio built from `f025a676` and served by `perf/serveBuild.ts`.
+- Node.js 24.18, studio built from `f025a676` and served by `perf/serve/build.ts`.
