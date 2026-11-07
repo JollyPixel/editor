@@ -2,7 +2,7 @@
 
 Private editor workspace for `@jolly-pixel/asset.script` scripts and text files, booted through `@jolly-pixel/editor.host`.
 
-- The code view is a transparent `<textarea>` over the highlighted lines. Highlighting uses Shiki's JavaScript regex engine with the grammar of the file extension (TypeScript, JavaScript, JSON, YAML, TOML, XML, HTML, CSS or Markdown), loaded on demand. A `.txt` file is not highlighted. Each line keeps its tokenizer state, so an edit retokenizes from its line until the state matches again. Only the visible lines render.
+- The code view is a transparent `<textarea>` over the highlighted lines. Highlighting uses Shiki's raw JavaScript engine with the precompiled grammar of the file extension (TypeScript, JavaScript, JSON, YAML, TOML, XML, HTML, CSS or Markdown), loaded on demand. A `.txt` file is not highlighted. Each line keeps its tokenizer state, so an edit retokenizes from its line until the state matches again. Only the visible lines render.
 - Peers see each other's carets and selections. Tab and Shift+Tab indent, Enter keeps the indentation, and Ctrl+Z / Ctrl+Y undo and redo local edits only.
 - A Markdown file opens next to a rendered preview, updated 150 ms after the last edit. A member who cannot edit sees the preview only.
 

@@ -26,6 +26,15 @@ const kSoundFile = path.join(
   "sounds",
   "chime.ogg"
 );
+const kModelFile = path.join(
+  STUDIO_ROOT,
+  "..",
+  "runtime",
+  "examples",
+  "public",
+  "models",
+  "ToyCar.glb"
+);
 const kOpenTargets = new Map<string, BenchTarget>([
   ["voxel-map", { row: MAP, tab: MAP_TAB }],
   ["voxel-model", { row: MODEL, tab: "model" }],
@@ -49,6 +58,28 @@ const kOpenTargets = new Map<string, BenchTarget>([
       seed: {
         kind: "drop",
         file: kSoundFile
+      }
+    }
+  ],
+  [
+    "model",
+    {
+      row: "ToyCar.glb",
+      tab: "ToyCar",
+      seed: {
+        kind: "drop",
+        file: kModelFile
+      }
+    }
+  ],
+  [
+    "script",
+    {
+      row: "New script.ts",
+      tab: "New script",
+      seed: {
+        kind: "new",
+        menuItem: "Script"
       }
     }
   ]
