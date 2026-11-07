@@ -14,17 +14,16 @@ Record the workspace's test and support line counts, its c8 coverage summary,
 and every test file's pass/fail state at a pinned commit, per tier:
 `test-only`, `test-types` when present, and `test:e2e` when present. Keep
 baseline failures in their own list; treat each as a possible product bug, not
-a stale test. For voxel-model e2e, run a failing spec alone
-before recording it: full runs time out at random under load.
+a stale test.
 
 Done when every in-scope test file has a recorded baseline result.
 
 ## 2. Lanes and inventory
 
 Split the surface into **lanes** along production owner boundaries, not file
-prefixes. Use the concern folders under `src/` (for voxel-renderer: blocks,
-world, mesh, materials, blockset, serialization, commands, history, render),
-plus the facade suites at the package root and the e2e suite as its own lane.
+prefixes. Use the concern folders under `src/` (for voxel-renderer, the
+folders under `src/document/` and `src/view/`), plus the facade suites at the
+package root and the e2e suite as its own lane.
 Include shared support (`test/setup.ts`, `test/helpers/`, `test/fixtures/`) as
 a lane with a single owner.
 
@@ -48,10 +47,9 @@ declaration unless its rows need different marks; then mark each row.
   suite, or the shared owner in another workspace;
 - `D`: delete, naming the proof that remains, or why no contract exists.
 
-Judge a test by its assertions, not its name. The voxel-renderer campaign
-found a shape test that passed because `makeBlockDef(id, "slab")` named a
-shape that does not exist: every mask was 0, and the loose `BlockShapeID` type
-accepted it.
+Judge a test by its assertions, not its name: a shape test passes vacuously
+when its fixture names a shape id that does not exist, because every mask is 0
+and the loose `BlockShapeID` type accepts any string.
 
 Done when every declaration in the lane has a mark and an evidence line.
 

@@ -155,11 +155,12 @@ workspaces for supporting evidence. For broad scope, run parallel discovery
 lanes when available:
 
 - core runtime: `engine`, `loop`, `runtime`, `controls`, `color`, `image`,
-  `three`, `resize-handle`;
-- renderers: `voxel-renderer`, `pixel-draw-renderer`;
-- data and sync: `network`, `event-store`, `asset`, `asset-source`,
-  `asset-server`, `assets/*`;
-- UI and editors: `ui`, `editors/*`, `studio`, including their e2e suites;
+  `three`, `resize-handle`, `physics`, `physics-rapier`;
+- renderers: `voxel-renderer`, `pixel-draw-renderer`, `terrain-renderer`;
+- data and sync: `network`, `event-store`, `history`, `asset`,
+  `asset-source`, `asset-server`, `assets/*`, `accounts`;
+- UI and editors: `ui`, `lantern`, `console`, `preferences`, `editors/*`,
+  `studio`, including their e2e suites;
 - tooling: `e2e`, `bench`, plus a cross-cutting pattern sweep.
 
 Useful sweeps: specs that construct `new Window()`, `stubRect` or
