@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/physics",
   "description": "Engine-neutral physics contract and JollyPixel engine components",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "sideEffects": false,
   "exports": {

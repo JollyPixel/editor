@@ -1,5 +1,19 @@
 # @jolly-pixel/lantern
 
+## 1.2.0
+
+### Minor Changes
+
+- [#1188](https://github.com/JollyPixel/editor/pull/1188) [`82061f5`](https://github.com/JollyPixel/editor/commit/82061f554182b7413961a8a92a14e10a088192ba) Thanks [@fraxken](https://github.com/fraxken)! - Add `LazyLanternElement`, which imports `jolly-lantern` on the first presented run. It moves out of the private editor host.
+
+- [#1088](https://github.com/JollyPixel/editor/pull/1088) [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1) Thanks [@fraxken](https://github.com/fraxken)! - `ui` elements now register from `@jolly-pixel/ui/elements/<name>` (class and dialog helpers included) and the facade, with its types, moved to `@jolly-pixel/ui/facade`; `./feedback` and `./icon` are removed, and the root entry registers nothing and exports element classes as types only.
+  Add `LazyTemplate` to `ui`, and let `jolly-console` (`editScript`) and `jolly-lantern` (`TourRun.shown`) be created late, so pages load these elements only when first needed.
+
+### Patch Changes
+
+- Updated dependencies [[`1172e00`](https://github.com/JollyPixel/editor/commit/1172e00ffa43d52a158fdf48ec47550cb856da6b), [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`5974b66`](https://github.com/JollyPixel/editor/commit/5974b66d6663c265b1baa904f90f39407aec2dd6), [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1), [`505d6e0`](https://github.com/JollyPixel/editor/commit/505d6e0444dc3bc5bcb365486f085c169eb2caa8), [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5), [`2716e31`](https://github.com/JollyPixel/editor/commit/2716e316cc176144c6cb2f13551f89556750648c), [`0aa07e6`](https://github.com/JollyPixel/editor/commit/0aa07e6c2d954691e463ebc1c2ed2def6fbf9916), [`3f99e1d`](https://github.com/JollyPixel/editor/commit/3f99e1d2343d203f0f0c366b784c16ae782e317a), [`58361ea`](https://github.com/JollyPixel/editor/commit/58361ea65885b094c8876ceeb058d508f126fbc2), [`0572352`](https://github.com/JollyPixel/editor/commit/0572352e155d80126f71a0b0ad2f765f3c4f45ae), [`82061f5`](https://github.com/JollyPixel/editor/commit/82061f554182b7413961a8a92a14e10a088192ba), [`e083d5c`](https://github.com/JollyPixel/editor/commit/e083d5c062837c944609484f833d462eb9f88a52), [`5f7d6ec`](https://github.com/JollyPixel/editor/commit/5f7d6ece37213086613de6e79259efff5a7a0718), [`063c4aa`](https://github.com/JollyPixel/editor/commit/063c4aac17e1c73d74ac2c2309a8c25174fb8d52), [`9d2fe7a`](https://github.com/JollyPixel/editor/commit/9d2fe7a12a1c99c72d87b73cb8fe11c072a82ae9), [`3bfec4a`](https://github.com/JollyPixel/editor/commit/3bfec4aa2597e4923db19237593bcd928ff5f93a), [`b13074b`](https://github.com/JollyPixel/editor/commit/b13074b8ae53a3a6b454cc0572d88aca747d17de), [`a287fa7`](https://github.com/JollyPixel/editor/commit/a287fa7d5d01b07d93f672b5147b6c9aebba0901), [`fee3858`](https://github.com/JollyPixel/editor/commit/fee3858c166edfccffe9c218020c1ffc38b5ca53), [`0ca160a`](https://github.com/JollyPixel/editor/commit/0ca160ad8fb9a86333f5c8766c20cb96fd1e1aea)]:
+  - @jolly-pixel/ui@5.0.0
+
 ## 1.1.0
 
 ### Minor Changes

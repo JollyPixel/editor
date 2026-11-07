@@ -1,5 +1,17 @@
 # @jolly-pixel/color
 
+## 3.0.0
+
+### Major Changes
+
+- [#1166](https://github.com/JollyPixel/editor/pull/1166) [`1172e00`](https://github.com/JollyPixel/editor/commit/1172e00ffa43d52a158fdf48ec47550cb856da6b) Thanks [@fraxken](https://github.com/fraxken)! - Add the immutable `Color` object (with `parseDraft` for typed text), `Gradient`, `PaletteFormat`, the picker `HueSpace`, `equalRGBA8`, `ByteColorInput` and `ColorSpace.channels`. They replace `parseColor`, `assertColor*`, `format*`, the byte `8` variants, `toRGBA8`/`fromRGBA8`, `contrastingColor`, `mixColor`, `colorRamp`, `shadeRamp`, `hsvToHsl`/`hslToHsv`, `ColorSpace.mix()`, `PaletteFile.parse()`/`serialize()`, `isOklchInGamut` and the sRGB transfer functions.
+  Near-gray colors now convert to HSL, HSV and HWB as grays, `Color.oklch()` round-trips 8-bit colors, and `sortColors` returns the objects it was given.
+
+### Minor Changes
+
+- [#1164](https://github.com/JollyPixel/editor/pull/1164) [`505d6e0`](https://github.com/JollyPixel/editor/commit/505d6e0444dc3bc5bcb365486f085c169eb2caa8) Thanks [@fraxken](https://github.com/fraxken)! - `color` adds `shadeRamp`, `sortColors`, `isRGBA8` and `PaletteFile` (GPL and Lospec hex). `pixel-draw.renderer` palettes hold 1 to 256 colors (`COLOR_PALETTE_MAX_SIZE` replaces `COLOR_PALETTE_SIZE`) and sync whole edits as `palette-replaced`; `visibleColors` lists a texture's colors.
+  Brushes get an `ink` (`blend` by default, `replace`, `lock-alpha`); `recordStroke` takes one color per pixel and `PixelDocument.paint(pixels, painter)` inks pixels. `jolly-color-picker` adds the `okhsl` space, an `eyedropper` button and hue wrap, paints the wheel at full value, and its wide layout gets a tool column and compact CSS hooks.
+
 ## 2.0.0
 
 ### Major Changes

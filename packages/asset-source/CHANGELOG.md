@@ -1,5 +1,12 @@
 # @jolly-pixel/asset-source
 
+## 4.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35)]:
+  - @jolly-pixel/asset@4.1.0
+
 ## 4.0.0
 
 ### Major Changes
