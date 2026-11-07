@@ -277,7 +277,9 @@ const kTileCommands: AssetCommands<TileState, TileCommand> = {
 
 export const tileSnapshotSchema: Schema = z.array(z.string());
 
-export function liveTileHandler(): AssetKindHandler<TileState, TileCommand> {
+export function liveTileHandler(
+  compressCommands = false
+): AssetKindHandler<TileState, TileCommand> {
   return {
     ...tileHandler({ delay: 0, maxDelay: 0 }),
     commands: {
@@ -285,12 +287,14 @@ export function liveTileHandler(): AssetKindHandler<TileState, TileCommand> {
       live: ({ state }) => {
         return {
           snapshotSchema: tileSnapshotSchema,
+          compressCommands,
           snapshot: () => [...state.tiles.keys()].sort(),
           arbitrate: (command) => {
             return { command };
           },
           parts: {
             schema: z.string(),
+            compress: true,
             part: (partId) => state.tiles.get(partId) ?? null,
             outside: (command) => (command.action === "erase" ? command : null)
           }
@@ -354,4 +358,15 @@ export function tileHandler(
       return Promise.resolve(bytes([...state.tiles.keys()].sort().join(",")));
     }
   };
+}
+
+export function upcastLegacyIncrement(
+  stored: unknown
+): unknown {
+  const legacy = typeof stored === "object" &&
+    stored !== null &&
+    "action" in stored &&
+    stored.action === "inc";
+
+  return legacy ? { ...stored, action: "increment" } : stored;
 }

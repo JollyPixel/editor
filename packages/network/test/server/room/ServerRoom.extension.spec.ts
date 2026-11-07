@@ -16,7 +16,36 @@ import {
   createRoom
 } from "../../helpers/server/serverRoom.ts";
 import { Extension } from "#src/index.ts";
+import { ConnectedClient } from "#src/server/connection/ConnectedClient.ts";
+import type { SendOptions } from "#src/server/extension/ClientHandle.ts";
 import { OPAQUE_PROTOCOLS } from "../../helpers/protocol/protocols.ts";
+
+describe("ServerRoom — extension sends", () => {
+  test("hand the extension's compress option to the connection", async() => {
+    const extension = createExtension();
+    const sends: (SendOptions | undefined)[] = [];
+    const room = createRoom(extension);
+    await room.join({
+      handle: new ConnectedClient({
+        id: "A",
+        sendFrame: (_frame, options) => sends.push(options),
+        close: () => void 0
+      }),
+      identity: createIdentity("A")
+    });
+    sends.length = 0;
+
+    const bytes = new Uint8Array(4);
+    extension.lastContext.room.sendTo("A", { bytes }, { compress: true });
+    extension.lastContext.room.broadcast({ bytes }, { compress: true });
+    extension.lastContext.room.broadcast({ bytes });
+
+    assert.deepEqual(
+      sends.map((options) => options?.compress === true),
+      [true, true, false]
+    );
+  });
+});
 
 describe("ServerRoom — RoomContext identity", () => {
   test("hands the member's authenticated identity to onClientConnect and onMessage", async() => {

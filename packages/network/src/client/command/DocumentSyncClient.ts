@@ -42,7 +42,13 @@ export interface DocumentSyncClientOptions<
 > {
   document: SyncableDocument<TCommand, TSnapshot, TImage>;
   keys(command: TCommand): readonly string[] | null;
+  resolveSnapshot?: SnapshotResolver<TSnapshot>;
 }
+
+export type SnapshotResolver<TSnapshot> = (
+  received: unknown,
+  room: Room
+) => TSnapshot | Promise<TSnapshot>;
 
 export class DocumentSyncClient<
   TCommand extends NetworkCommandHeader,
@@ -56,14 +62,23 @@ export class DocumentSyncClient<
     room: Room<TCommand, NetworkServerMessage<TCommand, TSnapshot, TNotice>>,
     options: DocumentSyncClientOptions<NoInfer<TCommand>, NoInfer<TSnapshot>, TImage>
   ) {
-    const { document, keys } = options;
+    const {
+      document,
+      keys,
+      resolveSnapshot
+    } = options;
     const reconciler = new DocumentReconciler(document, keys);
     super(room, {
       reconciler,
-      receipts: document.receipts
+      receipts: document.receipts,
+      applySnapshot: (snapshot) => loadResolved(
+        document,
+        resolveSnapshot === undefined ?
+          snapshot :
+          resolveSnapshot(snapshot, room)
+      )
     });
 
-    this.on("snapshot", (snapshot) => document.load(snapshot));
     this.on("command", (command) => document.applyRemote(command, command.clientId));
     this.#release = document.subscribe("change", (change) => {
       if (change.origin === "local") {
@@ -138,4 +153,15 @@ class DocumentReconciler<
 
     return replayed !== null;
   }
+}
+
+function loadResolved<TSnapshot>(
+  document: Pick<SyncableDocument<never, TSnapshot, unknown>, "load">,
+  resolved: TSnapshot | Promise<TSnapshot>
+): void | Promise<void> {
+  if (resolved instanceof Promise) {
+    return resolved.then((snapshot) => document.load(snapshot));
+  }
+
+  return document.load(resolved);
 }

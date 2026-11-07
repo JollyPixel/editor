@@ -30,14 +30,14 @@ export type SelectionGhostPayload =
   | {
     phase: "selected";
     rect: SelectionRect;
-    mask: string;
+    mask: Uint8Array | "full";
   }
   | {
     phase: "moving" | "floating";
     sourceRect: SelectionRect;
     liveRect: SelectionRect;
-    pixels: string;
-    mask: string;
+    pixels: Uint8Array;
+    mask: Uint8Array | "full";
     eraseColor: RGBA8;
     blankSource: boolean;
   };

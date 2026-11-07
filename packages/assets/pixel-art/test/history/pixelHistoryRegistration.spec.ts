@@ -208,7 +208,7 @@ describe("pixel history refusals", () => {
       action: "texture-replaced",
       metadata: {
         size: { x: 1, y: 1 },
-        pixels: Buffer.from([10, 20, 30, 255]).toString("base64")
+        pixels: new Uint8Array([10, 20, 30, 255])
       }
     });
 

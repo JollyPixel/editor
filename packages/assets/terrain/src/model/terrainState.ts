@@ -18,22 +18,20 @@ import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import {
-  decodeChunkHeights,
-  decodeHeights,
-  encodeHeights
+  decodeChunkHeightBytes,
+  decodeHeightBytes,
+  encodeHeightBytes
 } from "../network/heights.ts";
 import {
   decodeHoles,
   decodeHoleTilePatch,
-  encodeHoles,
   type HoleTilePatch
 } from "../network/holes.ts";
 import {
   decodeMaterials,
-  decodeSplat,
+  decodeSplatBytes,
   decodeSplatTilePatch,
-  encodeMaterials,
-  encodeSplat,
+  encodeSplatBytes,
   type SplatTilePatch
 } from "../network/splat.ts";
 import {
@@ -78,9 +76,9 @@ export { MAX_TERRAIN_CHUNKS };
 export interface LoadedChunkEntry {
   readonly x: number;
   readonly z: number;
-  readonly heights: string;
-  readonly splat: string;
-  readonly holes?: string;
+  readonly heights: Uint8Array;
+  readonly splat: Uint8Array;
+  readonly holes?: Uint8Array;
 }
 
 type TerrainEdit =
@@ -264,7 +262,7 @@ function terrainEdit(
     return { action: "chunk-removed", coord };
   }
 
-  const heights = decodeChunkHeights(command.heights);
+  const heights = decodeChunkHeightBytes(command.heights);
   const tier = heights === null ? null : tierOfSampleCount(heights.length);
   if (heights === null || tier === null) {
     return null;
@@ -278,7 +276,7 @@ function terrainEdit(
     return command.tier === tier ? { action: "tier-changed", coord, tier, heights, holes } : null;
   }
 
-  const splat = command.splat === undefined ? undefined : decodeSplat(command.splat);
+  const splat = command.splat === undefined ? undefined : decodeSplatBytes(command.splat);
 
   return splat === null ? null : { action: "chunk-added", coord, heights, splat, holes };
 }
@@ -434,9 +432,9 @@ export function loadedChunkEntry(
   return {
     x: chunk.coord.x,
     z: chunk.coord.z,
-    heights: encodeHeights(chunk.copyHeights()),
-    splat: encodeSplat(chunk.splat.copy()),
-    ...(chunk.holes.empty ? {} : { holes: encodeHoles(chunk.holes.copy()) })
+    heights: encodeHeightBytes(chunk.copyHeights()),
+    splat: encodeSplatBytes(chunk.splat.copy()),
+    ...(chunk.holes.empty ? {} : { holes: chunk.holes.copy() })
   };
 }
 
@@ -450,18 +448,18 @@ function overviewEntry(
   return {
     x: coord.x,
     z: coord.z,
-    overview: encodeHeights(terrain.overview.samples(coord)!),
-    materials: encodeMaterials(terrain.overview.materials(coord)!),
+    overview: encodeHeightBytes(terrain.overview.samples(coord)!),
+    materials: terrain.overview.materials(coord)!.slice(),
     ...(chunk === undefined || chunk.holes.empty ? {} : { hasHoles: true }),
     ...(tier === 1 ? {} : { tier })
   };
 }
 
 function chunkHeightsOrThrow(
-  encoded: string,
+  encoded: Uint8Array,
   coord: ChunkCoord
 ): Float32Array {
-  const heights = decodeChunkHeights(encoded);
+  const heights = decodeChunkHeightBytes(encoded);
   if (heights === null) {
     throw new InvalidEntryError("chunk", coord.key, "has invalid heights");
   }
@@ -470,7 +468,7 @@ function chunkHeightsOrThrow(
 }
 
 function holesOrThrow(
-  encoded: string,
+  encoded: Uint8Array,
   coord: ChunkCoord,
   heights: Float32Array
 ): Uint8Array {
@@ -483,10 +481,10 @@ function holesOrThrow(
 }
 
 function splatOrThrow(
-  encoded: string,
+  encoded: Uint8Array,
   coord: ChunkCoord
 ): SplatTexels {
-  const splat = decodeSplat(encoded);
+  const splat = decodeSplatBytes(encoded);
   if (splat === null) {
     throw new InvalidEntryError("chunk", coord.key, "has an invalid splat map");
   }
@@ -495,7 +493,7 @@ function splatOrThrow(
 }
 
 function materialsOrThrow(
-  encoded: string,
+  encoded: Uint8Array,
   coord: ChunkCoord
 ): Uint8Array {
   const materials = decodeMaterials(encoded);
@@ -516,11 +514,11 @@ function loadedMaterials(
 }
 
 function decodedOrThrow(
-  encoded: string,
+  encoded: Uint8Array,
   length: number,
   coord: ChunkCoord
 ): Float32Array {
-  const decoded = decodeHeights(encoded, length);
+  const decoded = decodeHeightBytes(encoded, length);
   if (decoded === null) {
     throw new InvalidEntryError("chunk", coord.key, "has invalid heights");
   }

@@ -174,6 +174,30 @@ describe("pixelArtAssetKind", () => {
     assert.deepEqual(state.document.buffer.pixels(), before);
   });
 
+  test("folds a texture-replaced command stored with base64 pixels", () => {
+    const handler = pixelArtAssetKind({
+      defaultSize: { x: 4, y: 4 }
+    });
+    const state = handler.create("asset-1");
+
+    foldAssetEvent(handler, state, event(PIXEL_ART_COMMAND, {
+      action: "texture-replaced",
+      metadata: {
+        size: { x: 1, y: 1 },
+        pixels: "ChQe/w=="
+      },
+      clientId: "client-A",
+      seq: 1,
+      timestamp: 1000
+    }));
+
+    assert.deepEqual(state.document.buffer.size(), { x: 1, y: 1 });
+    assert.deepEqual(
+      state.document.buffer.pixels(),
+      new Uint8ClampedArray([10, 20, 30, 255])
+    );
+  });
+
   test("live() gives each room its own conflict tracker", () => {
     const first = liveProtocol();
     const second = liveProtocol();

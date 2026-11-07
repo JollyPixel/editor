@@ -16,7 +16,7 @@ import type { Vec2 } from "../types.ts";
 
 export interface PngPixels {
   readonly format: "png";
-  readonly data: string;
+  readonly data: Uint8Array;
 }
 
 export function encodePixelBytes(
@@ -58,7 +58,7 @@ export async function encodePngPixels(
 
   return {
     format: "png",
-    data: encodeBase64(png)
+    data: png
   };
 }
 
@@ -66,9 +66,7 @@ export async function decodePngPixels(
   pixels: PngPixels,
   size: Vec2
 ): Promise<Uint8ClampedArray> {
-  const image = await decodePng(
-    decodeBase64(pixels.data)
-  );
+  const image = await decodePng(pixels.data);
   if (
     image.width !== size.x ||
     image.height !== size.y

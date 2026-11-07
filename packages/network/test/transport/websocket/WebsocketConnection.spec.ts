@@ -12,7 +12,8 @@ import { WebSocket } from "ws";
 // Import Internal Dependencies
 import {
   WebsocketConnection,
-  type WebsocketConnectionSocket
+  type WebsocketConnectionSocket,
+  type WebsocketSendOptions
 } from "#src/transport/websocket/WebsocketConnection.ts";
 import type {
   Frame,
@@ -26,11 +27,14 @@ class FakeSocket implements WebsocketConnectionSocket {
   isPaused = false;
   terminated = false;
   sent: Frame[] = [];
+  options: WebsocketSendOptions[] = [];
 
   send(
-    data: Frame
+    data: Frame,
+    options: WebsocketSendOptions
   ): void {
     this.sent.push(data);
+    this.options.push(options);
   }
 
   ping = () => void 0;
@@ -59,7 +63,6 @@ function connectionOver(
     socket,
     logger: captureLogger().logger,
     maxBufferedBytes: 1024,
-    compressBinary: false,
     onMessage,
     holdWrites: () => void 0
   });
@@ -77,6 +80,24 @@ describe("WebsocketConnection", () => {
 
     assert.deepEqual(socket.sent, ["\"kept\""]);
     assert.strictEqual(socket.terminated, true);
+  });
+
+  test("deflates every text frame but a binary frame only when the sender asks", () => {
+    const socket = new FakeSocket();
+    const connection = connectionOver(socket);
+    const bytes = new Uint8Array(8);
+
+    connection.sendFrame("\"text\"");
+    connection.sendFrame(bytes);
+    connection.sendFrame(bytes, { compress: true });
+    connection.sendFrame("\"text\"", { compress: false });
+
+    assert.deepEqual(socket.options, [
+      { binary: false, compress: true },
+      { binary: true, compress: false },
+      { binary: true, compress: true },
+      { binary: false, compress: true }
+    ]);
   });
 
   test("pauses reading at 64 messages in flight and resumes once 16 remain", async() => {

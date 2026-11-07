@@ -5,6 +5,7 @@ import {
   type Frame
 } from "../../protocol/frame/Frame.ts";
 import type { ConnectedClient } from "../connection/ConnectedClient.ts";
+import type { SendOptions } from "../extension/ClientHandle.ts";
 
 export class SerializedEnvelope {
   #envelope: Envelope;
@@ -17,9 +18,10 @@ export class SerializedEnvelope {
   }
 
   sendTo(
-    handle: ConnectedClient
+    handle: ConnectedClient,
+    options?: SendOptions
   ): void {
     this.#frame ??= encodeFrame(this.#envelope);
-    handle.sendFrame(this.#frame);
+    handle.sendFrame(this.#frame, options);
   }
 }

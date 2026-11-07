@@ -129,10 +129,10 @@ describe("WorkerExtensionProxy — context-call routing", () => {
       );
 
       const broadcasts: unknown[] = [];
-      const sends: [string, unknown][] = [];
+      const sends: unknown[] = [];
       const context = createContext();
-      context.room.broadcast = (payload) => broadcasts.push(payload);
-      context.room.sendTo = (clientId, payload) => sends.push([clientId, payload]);
+      context.room.broadcast = (...args) => broadcasts.push(args);
+      context.room.sendTo = (...args) => sends.push(args);
 
       const pending = proxy.onMessage("A", {}, context);
       transports[0].simulateMessage(readyMessage());
@@ -140,15 +140,17 @@ describe("WorkerExtensionProxy — context-call routing", () => {
       const dispatchMsg = transports[0].dispatched();
 
       transports[0].simulateMessage(
-        { type: "context-call", method: "room.broadcast", args: [{ hello: "world" }] }
+        { type: "context-call", method: "room.broadcast", args: [{ hello: "world" }, {}] }
       );
-      transports[0].simulateMessage(
-        { type: "context-call", method: "client.send", args: ["A", { type: "ack" }] }
-      );
+      transports[0].simulateMessage({
+        type: "context-call",
+        method: "client.send",
+        args: ["A", { type: "ack" }, { compress: true }]
+      });
       await flushMacrotask();
 
-      assert.deepEqual(broadcasts, [{ hello: "world" }]);
-      assert.deepEqual(sends, [["A", { type: "ack" }]]);
+      assert.deepEqual(broadcasts, [[{ hello: "world" }, {}]]);
+      assert.deepEqual(sends, [["A", { type: "ack" }, { compress: true }]]);
 
       transports[0].simulateMessage({ type: "dispatch-result", id: dispatchMsg.id, ok: true });
       await pending;

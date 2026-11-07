@@ -48,7 +48,8 @@ format cannot, and encoding one needs no image codec on the server, where
 `PixelBufferSnapshot` is the same shape without `version`, and it is declared
 here rather than in `network/`: the file format owns it, and the wire
 protocol re-exports it. That is what makes the file and the wire agree by
-construction instead of by convention.
+construction instead of by convention. The wire snapshot carries `pixels` as
+bytes; only the file holds base64.
 
 ## API
 
@@ -57,14 +58,14 @@ construction instead of by convention.
 | `createPixelArtFile(size, pixels?)` | size + RGBA8 bytes → `PixelArtFile`; `pixels` defaults to transparent |
 | `serializePixelDocument(state)` | [`PixelDocumentState`](../PixelDocumentState.md) → `PixelArtFile` |
 | `deserializePixelDocument(file, state)` | `PixelArtFile` → `PixelDocumentState` of a `PixelBuffer` |
-| `pixelArtSnapshot(state)` | `PixelDocumentState` → `PixelBufferSnapshot`, for the wire |
+| `pixelArtSnapshot(state)` | `PixelDocumentState` → `PixelBufferSnapshot`, the file without `version` |
 | `pixelArtSnapshotFields(state)` | the `PixelBufferSnapshot` fields other than `size` and `pixels`, for a snapshot that encodes its pixels another way |
 | `encodePixelArtFile(file)` | file → UTF-8 JSON bytes |
 | `decodePixelArtFile(bytes)` | JSON bytes → validated file |
 | `parsePixelArtFile(value)` | already-parsed JSON → validated file |
 | `encodePixelBytes(pixels)` | RGBA8 bytes → base64, encoding the view only |
 | `decodePixelBytes(pixels)` | base64 → `Uint8ClampedArray` |
-| `encodePngPixels(pixels, size)` | RGBA8 bytes → `PngPixels`, a base64 PNG |
+| `encodePngPixels(pixels, size)` | RGBA8 bytes → `PngPixels`, PNG bytes |
 | `decodePngPixels(pixels, size)` | `PngPixels` → `Uint8ClampedArray` |
 
 `decodePixelArtFile` validates rather than asserts, because a file
@@ -79,20 +80,20 @@ before the file's are applied.
 
 `encodePixelBytes` and `decodePixelBytes` are the base64 codec the other
 functions use for the `pixels` field. They are exported so a consumer that
-reads or writes that field on its own, such as a wire snapshot or a
-`texture-replaced` command, does not have to pick its own base64 library and
+reads or writes that field on its own, such as a `texture-replaced` command,
+does not have to pick its own base64 library and
 stay in step with this one.
 
 ```ts
 interface PngPixels {
   readonly format: "png";
-  readonly data: string;
+  readonly data: Uint8Array;
 }
 ```
 
 `encodePngPixels` and `decodePngPixels` are the compact alternative for a
-snapshot sent over the network: a 1024x512 tileset is about 2.7 MB as base64
-RGBA8 and about 95 KB as a base64 PNG. `encodePngPixels` skips PNG row
+snapshot sent over the network: a 1024x512 tileset is 2 MB of RGBA8 and about
+70 KB as a PNG. `encodePngPixels` skips PNG row
 filtering, which suits pixel art: it is faster and smaller than adaptive
 filtering. Both are asynchronous. `encodePngPixels` reads
 the first `size.x * size.y * 4` bytes before its first `await`, so the buffer

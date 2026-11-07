@@ -39,6 +39,7 @@ import type {
   RoomRights
 } from "../../protocol/types.ts";
 import type { ConnectedClient } from "../connection/ConnectedClient.ts";
+import type { SendOptions } from "../extension/ClientHandle.ts";
 
 // CONSTANTS
 const kDefaultPeerMetadataLength = 1_048_576;
@@ -53,6 +54,10 @@ interface AuthorizeRequest {
 interface OutboundDelivery {
   readonly message: SerializedEnvelope;
   readonly event: string | undefined;
+}
+
+interface DeliverOptions extends SendOptions {
+  to?: string;
 }
 
 interface Refusal {
@@ -155,8 +160,11 @@ export class ServerRoom {
       );
 
     this.#roomBroadcast = {
-      broadcast: (payload) => this.#deliver(payload),
-      sendTo: (clientId, payload) => this.#deliver(payload, clientId)
+      broadcast: (payload, options) => this.#deliver(payload, options),
+      sendTo: (clientId, payload, options) => this.#deliver(payload, {
+        ...options,
+        to: clientId
+      })
     };
   }
 
@@ -306,7 +314,10 @@ export class ServerRoom {
     await this.#extension.onClientConnect?.(
       {
         id: clientId,
-        send: (data) => this.#deliver(data, clientId)
+        send: (data, options) => this.#deliver(data, {
+          ...options,
+          to: clientId
+        })
       },
       {
         clientId,
@@ -648,7 +659,7 @@ export class ServerRoom {
 
   #deliver(
     payload: unknown,
-    to?: string
+    options: DeliverOptions = {}
   ): void {
     const delivery = this.#delivery(payload);
     if (delivery === null) {
@@ -656,11 +667,15 @@ export class ServerRoom {
     }
 
     const { message, event } = delivery;
-    if (to === undefined) {
-      this.#members.send(message, { event });
+    const sendOptions = {
+      event,
+      compress: options.compress
+    };
+    if (options.to === undefined) {
+      this.#members.send(message, sendOptions);
     }
     else {
-      this.#members.sendTo(to, message, event);
+      this.#members.sendTo(options.to, message, sendOptions);
     }
   }
 

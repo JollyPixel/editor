@@ -34,3 +34,9 @@ export {
   type AssetPartsRequest,
   type AssetRoomPartsMessage
 } from "../../model/kinds/AssetLiveProtocol.ts";
+export * from "./resolveBinarySnapshot.ts";
+export * from "./errors/ContentUnavailableError.ts";
+export {
+  ASSET_CONTENT_URL_PATH,
+  type ContentRef
+} from "../../model/kinds/ContentRef.ts";

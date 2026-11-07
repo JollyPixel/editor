@@ -11,7 +11,7 @@ import type {
 export type { PixelBufferSnapshot };
 
 export interface PixelWireSnapshot extends Omit<PixelBufferSnapshot, "pixels"> {
-  pixels: string | PngPixels;
+  pixels: Uint8Array | PngPixels;
 }
 
 export type PixelNetworkCommand = PixelCommand & network.NetworkCommandHeader;

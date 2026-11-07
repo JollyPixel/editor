@@ -53,6 +53,25 @@ describe("commandDocumentKind", () => {
     assert.deepEqual(second.messages, []);
   });
 
+  test("loads what resolveSnapshot resolves from the received snapshot and its room", async() => {
+    const harness = joinedRoom();
+    const kind: CommandDocumentKind<"value", ValueDocument> = commandDocumentKind({
+      kind: "value",
+      createDocument: () => new ValueDocument(),
+      keys: () => null,
+      resolveSnapshot: (received, room) => Promise.resolve({
+        value: (received as { ref: number; }).ref * (room === harness.room ? 10 : 0)
+      })
+    });
+    const synced = kind.syncDocument(harness.room);
+
+    harness.serverMessage({ type: "snapshot", data: { ref: 4 } as never });
+    assert.equal(synced.document.value, 0);
+    await synced.ready;
+
+    assert.equal(synced.document.value, 40);
+  });
+
   test("dispose stops the document from following its room", async() => {
     const harness = joinedRoom();
     const synced = valueKind().syncDocument(harness.room);

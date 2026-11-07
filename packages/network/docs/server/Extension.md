@@ -57,6 +57,9 @@ Releases resources on eviction or shutdown.
 
 `context.identity` is trusted; `peer.resume` requires feature validation.
 `context.room.broadcast` / `sendTo` validate payloads and filter by read rights.
+They and `client.send` take an optional last argument, `{ compress: true }`,
+for a payload whose bytes shrink, such as raw pixels or glTF: a transport that
+negotiated compression then deflates its binary frame.
 A frozen payload (`Object.freeze`) is validated and serialized once per room and
 reused when sent again, so freeze a large payload sent to many joiners and
 never mutate what it references.

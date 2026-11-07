@@ -5,10 +5,6 @@ import {
   type SelectionPresenceData,
   type SelectionRect
 } from "@jolly-pixel/pixel-draw.renderer";
-import {
-  decodeBase64,
-  encodeBase64
-} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { isSelectionRect } from "./presenceGuards.ts";
@@ -18,12 +14,9 @@ function decodeBytes(
   value: unknown,
   length: number
 ): Uint8Array | undefined {
-  if (typeof value !== "string" || value.length !== Math.ceil(length / 3) * 4) {
-    return undefined;
-  }
-  const bytes = decodeBase64(value);
-
-  return bytes?.length === length ? bytes : undefined;
+  return value instanceof Uint8Array && value.length === length ?
+    value :
+    undefined;
 }
 
 function validRect(
@@ -42,7 +35,7 @@ function validRect(
 
 function encodeMask(
   mask: readonly boolean[]
-): string {
+): Uint8Array | "full" {
   if (mask.every(Boolean)) {
     return "full";
   }
@@ -53,7 +46,7 @@ function encodeMask(
     }
   }
 
-  return encodeBase64(bytes);
+  return bytes;
 }
 
 function decodeMask(
@@ -91,7 +84,7 @@ export function encodeSelectionPresence(
     bytes.set([r, g, b, a], index * 4);
   }
 
-  return { ...state, mask, pixels: encodeBase64(bytes) };
+  return { ...state, mask, pixels: bytes };
 }
 
 export function decodeSelectionPresence(

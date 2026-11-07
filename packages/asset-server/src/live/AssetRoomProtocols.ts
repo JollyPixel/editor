@@ -3,10 +3,11 @@ import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { AssetCommands } from "../model/kinds/AssetKindHandler.ts";
-import type {
-  AssetCommandHeader,
-  AssetPartsRequest,
-  AssetRelaySchemas
+import {
+  ASSET_ROOM_INLINE_SNAPSHOT,
+  type AssetCommandHeader,
+  type AssetPartsRequest,
+  type AssetRelaySchemas
 } from "../model/kinds/AssetLiveProtocol.ts";
 import {
   ASSET_ROOM_PART_REQUESTS,
@@ -33,6 +34,10 @@ interface CompiledProtocols {
 // CONSTANTS
 const kByCommands = new WeakMap<object, CompiledProtocols>();
 const kPartRequestTags = new Set<string>(ASSET_ROOM_PART_REQUESTS);
+const kRoomRequestTags = new Set<string>([
+  ...ASSET_ROOM_PART_REQUESTS,
+  ASSET_ROOM_INLINE_SNAPSHOT
+]);
 
 export class AssetRoomProtocols<
   TCommand extends AssetCommandHeader = AssetCommandHeader,
@@ -103,6 +108,12 @@ export class AssetRoomProtocols<
     return tag !== null && kPartRequestTags.has(tag);
   }
 
+  isInlineSnapshotRequest(
+    message: object
+  ): boolean {
+    return this.#tag(message) === ASSET_ROOM_INLINE_SNAPSHOT;
+  }
+
   #tag(
     message: object
   ): string | null {
@@ -155,7 +166,7 @@ function compileProtocols(
     }
     relayTags.add(tag);
   }
-  for (const tag of kPartRequestTags) {
+  for (const tag of kRoomRequestTags) {
     relayTags.delete(tag);
   }
 

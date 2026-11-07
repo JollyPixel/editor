@@ -15,8 +15,7 @@ import {
 } from "@jolly-pixel/terrain.renderer";
 
 // Import Internal Dependencies
-import { encodeHeights } from "../network/heights.ts";
-import { encodeHoles } from "../network/holes.ts";
+import { encodeHeightBytes } from "../network/heights.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import { encodeSplatTilePatch } from "../network/splat.ts";
 import { currentTier } from "../network/tierCommands.ts";
@@ -60,7 +59,7 @@ export function heightImportPlan(
 
   const plan = added.map((coord): PairedCommands => {
     const { x, z } = coord;
-    const block = encodeHeights(chunkBlock(heights, rect, coord, tier));
+    const block = encodeHeightBytes(chunkBlock(heights, rect, coord, tier));
 
     return {
       forward: [{ action: "chunk-added", x, z, heights: block }],
@@ -160,8 +159,8 @@ function retieredChunk(
     x: block.coord.x,
     z: block.coord.z,
     tier: block.tier,
-    heights: encodeHeights(block.copyHeights()),
-    ...(holes.empty ? {} : { holes: encodeHoles(resampleHoles(holes, block.tier)) })
+    heights: encodeHeightBytes(block.copyHeights()),
+    ...(holes.empty ? {} : { holes: resampleHoles(holes, block.tier) })
   };
 }
 

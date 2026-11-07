@@ -14,7 +14,6 @@ import {
 } from "@jolly-pixel/asset.pixel-art/client";
 import {
   EditChange,
-  encodePixelBytes,
   encodePngPixels,
   toPixelDocumentCommand,
   toPixelCommand,
@@ -102,7 +101,7 @@ function snapshot(): BlocksetSnapshot {
     tileSize: 8,
     pixels: {
       size: { x: 1, y: 1 },
-      pixels: encodePixelBytes(new Uint8ClampedArray([9, 8, 7, 255])),
+      pixels: new Uint8Array([9, 8, 7, 255]),
       uvRegions: []
     },
     blocks: [makeResolvedBlockDef(2, "slope")],

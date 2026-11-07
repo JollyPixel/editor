@@ -2,6 +2,7 @@ export type * from "./AssetKindDescriptor.ts";
 export type * from "./AssetKindHandler.ts";
 export * from "./AssetKindPackage.ts";
 export * from "./AssetLiveProtocol.ts";
+export * from "./ContentRef.ts";
 export * from "./arbitrated.ts";
 export * from "./readOnlyCommands.ts";
 export * from "./JsonAssetFile.ts";

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  bytesSchema,
   commandVariant,
   MessageProtocol,
   withCommandHeader
@@ -34,7 +35,7 @@ export const tilePatchSchema = z.object({
   z: kChunkCoordinate,
   tile: kRefinedTileIndex,
   tier: kRefinedTier,
-  heights: z.string()
+  heights: bytesSchema
 });
 
 export const tilePatchesSchema = z.array(tilePatchSchema).check(
@@ -46,7 +47,7 @@ export const splatTilePatchSchema = z.object({
   x: kChunkCoordinate,
   z: kChunkCoordinate,
   tile: z.int().check(z.gte(0), z.lt(CHUNK_TILE_COUNT)),
-  splat: z.string()
+  splat: bytesSchema
 });
 
 export const splatTilePatchesSchema = z.array(splatTilePatchSchema).check(
@@ -59,7 +60,7 @@ export const holeTilePatchSchema = z.object({
   z: kChunkCoordinate,
   tile: kRefinedTileIndex,
   tier: kRefinedTier,
-  holes: z.string()
+  holes: bytesSchema
 });
 
 export const holeTilePatchesSchema = z.array(holeTilePatchSchema).check(
@@ -100,17 +101,25 @@ export const terrainMaterialSchema = z.extend(materialPropertiesSchema, {
   slot: z.int().check(z.gte(0), z.lt(MATERIAL_SLOT_COUNT))
 });
 
-export const chunkEntrySchema = z.object({
-  x: kChunkCoordinate,
-  z: kChunkCoordinate,
-  overview: z.optional(z.string()),
-  materials: z.optional(z.string()),
-  heights: z.optional(z.string()),
-  splat: z.optional(z.string()),
-  holes: z.optional(z.string()),
-  hasHoles: z.optional(z.literal(true)),
-  tier: kRefinedTier
-});
+export function buildChunkEntrySchema<
+  TData extends z.ZodMiniType
+>(
+  data: TData
+) {
+  return z.object({
+    x: kChunkCoordinate,
+    z: kChunkCoordinate,
+    overview: z.optional(data),
+    materials: z.optional(data),
+    heights: z.optional(data),
+    splat: z.optional(data),
+    holes: z.optional(data),
+    hasHoles: z.optional(z.literal(true)),
+    tier: kRefinedTier
+  });
+}
+
+export const chunkEntrySchema = buildChunkEntrySchema(bytesSchema);
 
 export const MAX_POINTS_OF_INTEREST = 64;
 export const POI_LOD_BIAS = { min: 1, max: 8 } as const;
@@ -143,15 +152,15 @@ export const terrainManifestSchema = z.object({
   )
 });
 
-export const terrainPartSchema = z.string();
+export const terrainPartSchema = bytesSchema;
 
 export const terrainCommandSchema = z.discriminatedUnion("action", [
   commandVariant("chunk-added", {
     x: kChunkCoordinate,
     z: kChunkCoordinate,
-    heights: z.string(),
-    splat: z.optional(z.string()),
-    holes: z.optional(z.string())
+    heights: bytesSchema,
+    splat: z.optional(bytesSchema),
+    holes: z.optional(bytesSchema)
   }),
   commandVariant("chunk-removed", {
     x: kChunkCoordinate,
@@ -161,8 +170,8 @@ export const terrainCommandSchema = z.discriminatedUnion("action", [
     x: kChunkCoordinate,
     z: kChunkCoordinate,
     tier: kChunkTier,
-    heights: z.string(),
-    holes: z.optional(z.string())
+    heights: bytesSchema,
+    holes: z.optional(bytesSchema)
   }),
   commandVariant("heights-patched", {
     tiles: tilePatchesSchema

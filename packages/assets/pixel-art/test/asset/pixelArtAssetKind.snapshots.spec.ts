@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { type AssetLiveProtocol, type AssetRoomBinding } from "@jolly-pixel/asset-server";
 import { SchemaParser } from "@jolly-pixel/network";
-import { decodePngPixels, pixelArtSnapshot } from "@jolly-pixel/pixel-draw.renderer";
+import { decodePngPixels } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
 import { pixelArtAssetKind, PIXEL_ART_KIND } from "#src/index.ts";
@@ -60,21 +60,25 @@ describe("pixelArtAssetKind", () => {
     const { pixels, size } = encoded;
 
     assert.strictEqual(parser.parse(encoded).ok, true);
-    assert.ok(typeof pixels !== "string");
+    assert.ok(!(pixels instanceof Uint8Array));
     assert.deepEqual(
       [...await decodePngPixels(pixels, size)],
       [...state.document.buffer.pixels()]
     );
   });
 
-  test("live() snapshots the current buffer", () => {
-    const handler = pixelArtAssetKind({ defaultSize: { x: 2, y: 2 } });
+  test("live() snapshots a copy of the current buffer as raw bytes", () => {
+    const handler = pixelArtAssetKind({ defaultSize: { x: 1, y: 1 } });
     const state = handler.create("asset-1");
     const protocol = handler.commands!.live!(binding(state));
+    const parser = new SchemaParser(pixelSnapshotSchema);
+    state.document.buffer.pixels().set(kRedTuple);
 
-    assert.deepEqual(
-      protocol.snapshot(),
-      pixelArtSnapshot(state.document)
-    );
+    const snapshot = protocol.snapshot() as PixelWireSnapshot;
+    state.document.buffer.pixels().fill(0);
+
+    assert.strictEqual(parser.parse(snapshot).ok, true);
+    assert.deepEqual(snapshot.pixels, new Uint8Array(kRedTuple));
+    assert.strictEqual(protocol.compressSnapshot, true);
   });
 });

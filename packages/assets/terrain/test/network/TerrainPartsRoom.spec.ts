@@ -15,9 +15,8 @@ import {
 
 // Import Internal Dependencies
 import {
-  encodeHeights,
-  encodeHoles,
-  encodeSplat,
+  encodeHeightBytes,
+  encodeSplatBytes,
   encodeTilePatch,
   type TerrainNetworkCommand,
   type TerrainSnapshot
@@ -49,7 +48,7 @@ function joinedPeer() {
 function manifest(
   version: number
 ): unknown {
-  const overview = encodeHeights(new Float32Array(OVERVIEW_SAMPLE_COUNT).fill(2));
+  const overview = encodeHeightBytes(new Float32Array(OVERVIEW_SAMPLE_COUNT).fill(2));
 
   return {
     type: "snapshot",
@@ -131,8 +130,8 @@ describe("TerrainPartsRoom", () => {
     const { document, deliver } = joinedPeer();
     deliver(manifest(1));
 
-    const splat = encodeSplat(uniformSplat(SPLAT_TEXEL_COUNT, 5));
-    const holes = encodeHoles(new Uint8Array(HOLE_BYTES).fill(0xff));
+    const splat = encodeSplatBytes(uniformSplat(SPLAT_TEXEL_COUNT, 5));
+    const holes = new Uint8Array(HOLE_BYTES).fill(0xff);
     deliver({ type: "parts", version: 1, parts: { "0_0_splat": splat, "0_0_holes": holes } });
     assert.equal(document.terrain.has(kNear), false);
     deliver(parts(1, 4));

@@ -184,7 +184,7 @@ describe("blocksetSnapshotSchema", () => {
     const parser = new SchemaParser(blocksetSnapshotSchema);
     const snapshot = {
       tileSize: 8,
-      pixels: { size: { x: 8, y: 8 }, pixels: "" },
+      pixels: { size: { x: 8, y: 8 }, pixels: new Uint8Array() },
       blocks: [],
       materialGroups: [{ id: "gold" }]
     };

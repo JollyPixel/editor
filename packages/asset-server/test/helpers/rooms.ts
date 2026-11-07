@@ -4,7 +4,8 @@ import {
   type ClientConnection,
   type ClientHandle,
   type RoomContext,
-  type RoomPeer
+  type RoomPeer,
+  type SendOptions
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
@@ -21,6 +22,7 @@ export const COUNTER_COMMAND = "counter.command";
 
 export interface RecordingClient extends ClientConnection, ClientHandle {
   readonly received: unknown[];
+  readonly sendOptions: (SendOptions | undefined)[];
 }
 
 export interface DirectMessage {
@@ -38,12 +40,20 @@ export function recordingClient(
   id: string
 ): RecordingClient {
   const received: unknown[] = [];
+  const sendOptions: (SendOptions | undefined)[] = [];
 
   return {
     id,
     received,
-    send: (payload) => received.push(payload),
-    sendFrame: (frame) => received.push(decodeFrame(frame).unwrap()),
+    sendOptions,
+    send: (payload, options) => {
+      received.push(payload);
+      sendOptions.push(options);
+    },
+    sendFrame: (frame, options) => {
+      received.push(decodeFrame(frame).unwrap());
+      sendOptions.push(options);
+    },
     close: () => void 0
   };
 }
@@ -98,10 +108,13 @@ export function counterRoomBinding(
 
 export function counterRoomCommands<
   TCommand extends AssetCommandHeader
->(): AssetCommands<unknown, TCommand> {
+>(
+  upcast?: AssetCommands["upcast"]
+): AssetCommands<unknown, TCommand> {
   return {
     eventType: COUNTER_COMMAND,
     protocol: counterCommandProtocol,
+    upcast,
     apply: () => void 0
   };
 }

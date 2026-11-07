@@ -175,7 +175,7 @@ describe("blocksetAssetKind", () => {
 
     assert.strictEqual(parser.parse(encoded).ok, true);
     assert.deepEqual(encodedFields, plainFields);
-    assert.ok(typeof pixels.pixels !== "string");
+    assert.ok(!(pixels.pixels instanceof Uint8Array));
     assert.deepEqual(
       [...await decodePngPixels(pixels.pixels, pixels.size)],
       [...state.pixels.buffer.pixels()]

@@ -3,7 +3,6 @@ import type * as network from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type {
-  PixelBufferSnapshot,
   PixelWireCommand,
   PixelWireSnapshot,
   PixelServerMessage
@@ -11,9 +10,9 @@ import type {
 import { MockEmitter } from "./emitter.ts";
 
 // CONSTANTS
-const kEmptySnapshot: PixelBufferSnapshot = {
+const kEmptySnapshot: PixelWireSnapshot = {
   size: { x: 1, y: 1 },
-  pixels: "",
+  pixels: new Uint8Array(),
   uvRegions: []
 };
 

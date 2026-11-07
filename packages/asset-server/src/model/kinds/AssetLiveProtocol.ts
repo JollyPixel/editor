@@ -13,6 +13,7 @@ export const ASSET_ROOM_PARTS = "parts";
 export const ASSET_ROOM_SUBSCRIBE_PARTS = "subscribe-parts";
 export const ASSET_ROOM_UNSUBSCRIBE_PARTS = "unsubscribe-parts";
 export const ASSET_ROOM_MAX_PARTS_PER_MESSAGE = 1_024;
+export const ASSET_ROOM_INLINE_SNAPSHOT = "inline-snapshot";
 
 export type AssetCommandHeader = Partial<NetworkCommandHeader>;
 
@@ -36,6 +37,12 @@ export interface AssetRoomPartsMessage<TPart = unknown> {
    * `null` for a part the manifest does not list.
    */
   readonly parts: Readonly<Record<string, TPart | null>>;
+}
+
+export interface AssetRoomInlineSnapshotMessage<TSnapshot = unknown> {
+  readonly type: typeof ASSET_ROOM_INLINE_SNAPSHOT;
+  readonly data: TSnapshot;
+  readonly version?: number;
 }
 
 export interface AssetPartsRequest {
@@ -106,6 +113,11 @@ export interface AssetLiveParts<
    * Wire form of one part in a `parts` message.
    */
   readonly schema: Schema;
+  /**
+   * Deflates `parts` messages on sockets that negotiated compression.
+   * @default false
+   */
+  readonly compress?: boolean;
 
   part(
     partId: string
@@ -127,6 +139,18 @@ export interface AssetLiveProtocol<
    * @default false
    */
   readonly authorRebases?: boolean;
+  /**
+   * Deflates the bytes of `snapshot()` on sockets that negotiated
+   * compression. `encodeSnapshot()` output goes out as it is.
+   * @default false
+   */
+  readonly compressSnapshot?: boolean;
+  /**
+   * Deflates broadcast commands and catch-ups on sockets that negotiated
+   * compression, for kinds whose commands carry raw bytes such as heights.
+   * @default false
+   */
+  readonly compressCommands?: boolean;
 
   snapshot(): unknown;
 

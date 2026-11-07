@@ -23,13 +23,19 @@ export interface StudioServerOptions {
    * of every project editor under `editors/<name>/`.
    */
   shell: string;
-  backend?: Omit<StudioBackendOptions, "editorPages">;
+  backend?: Omit<StudioBackendOptions, "editorPages" | "compression">;
   /**
    * Host header values accepted on the WebSocket upgrade, besides localhost
    * and IP addresses.
    * @default []
    */
   allowedHosts?: readonly string[];
+  /**
+   * Deflates socket messages over 1 KiB, and content fetched over HTTP whose
+   * kind compresses.
+   * @default false
+   */
+  socketCompression?: boolean;
 }
 
 export class StudioServer implements AsyncDisposable {
@@ -50,7 +56,8 @@ export class StudioServer implements AsyncDisposable {
       options,
       await StudioBackend.open(options.project, {
         ...options.backend,
-        editorPages
+        editorPages,
+        compression: options.socketCompression
       })
     );
   }

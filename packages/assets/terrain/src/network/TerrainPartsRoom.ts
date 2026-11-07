@@ -27,9 +27,9 @@ import {
   chunkPartIds,
   parseChunkPart
 } from "./chunkParts.ts";
-import { decodeChunkHeights } from "./heights.ts";
-import { decodeChunkHoles } from "./holes.ts";
-import { decodeSplat } from "./splat.ts";
+import { decodeChunkHeightBytes } from "./heights.ts";
+import { decodeChunkHoleBytes } from "./holes.ts";
+import { decodeSplatBytes } from "./splat.ts";
 import type {
   ChunkEntry,
   TerrainManifest,
@@ -42,7 +42,7 @@ type SnapshotMessage = Extract<TerrainServerMessage, { type: "snapshot"; }>;
 interface PendingSnapshot {
   readonly message: SnapshotMessage;
   readonly manifest: TerrainManifest;
-  readonly heights: Map<string, string>;
+  readonly heights: Map<string, Uint8Array>;
   readonly waiting: Set<string>;
   readonly held: (TerrainServerMessage | AssetRoomPartsMessage)[];
 }
@@ -254,7 +254,7 @@ export class TerrainPartsRoom implements Room<
     message: SnapshotMessage
   ): void {
     const manifest = message.data as TerrainManifest;
-    const heights = new Map<string, string>();
+    const heights = new Map<string, Uint8Array>();
     const waiting = new Set<string>();
     for (const chunk of manifest.chunks) {
       const coord = new ChunkCoord(chunk.x, chunk.z);
@@ -291,7 +291,7 @@ export class TerrainPartsRoom implements Room<
       if (!pending.waiting.delete(partId)) {
         late[partId] = heights;
       }
-      else if (typeof heights === "string") {
+      else if (heights instanceof Uint8Array) {
         pending.heights.set(partId, heights);
       }
     }
@@ -306,26 +306,26 @@ export class TerrainPartsRoom implements Room<
   ): void {
     for (const [partId, encoded] of Object.entries(message.parts)) {
       const part = parseChunkPart(partId);
-      if (part === null || typeof encoded !== "string") {
+      if (part === null || !(encoded instanceof Uint8Array)) {
         continue;
       }
       switch (part.channel) {
         case "heights": {
-          const heights = decodeChunkHeights(encoded);
+          const heights = decodeChunkHeightBytes(encoded);
           if (heights !== null) {
             this.#stream.received(part.coord, heights);
           }
           break;
         }
         case "splat": {
-          const splat = decodeSplat(encoded);
+          const splat = decodeSplatBytes(encoded);
           if (splat !== null) {
             this.#stream.receivedSplat(part.coord, splat);
           }
           break;
         }
         case "holes": {
-          const holes = decodeChunkHoles(encoded);
+          const holes = decodeChunkHoleBytes(encoded);
           if (holes !== null) {
             this.#stream.receivedHoles(part.coord, holes);
           }
@@ -386,8 +386,8 @@ function chunkContents(
   coord: ChunkCoord,
   parts: ReadonlyMap<string, unknown>
 ): ChunkContents[] {
-  const heights = decodedPart(parts.get(chunkPartId(coord, "heights")), decodeChunkHeights);
-  const splat = decodedPart(parts.get(chunkPartId(coord, "splat")), decodeSplat);
+  const heights = decodedPart(parts.get(chunkPartId(coord, "heights")), decodeChunkHeightBytes);
+  const splat = decodedPart(parts.get(chunkPartId(coord, "splat")), decodeSplatBytes);
 
   return heights === null || splat === null ?
     [] :
@@ -395,15 +395,15 @@ function chunkContents(
       coord,
       heights,
       splat,
-      holes: decodedPart(parts.get(chunkPartId(coord, "holes")), decodeChunkHoles) ?? undefined
+      holes: decodedPart(parts.get(chunkPartId(coord, "holes")), decodeChunkHoleBytes) ?? undefined
     }];
 }
 
 function decodedPart<TPart>(
-  encoded: unknown,
-  decode: (encoded: string) => TPart | null
+  bytes: unknown,
+  decode: (bytes: Uint8Array) => TPart | null
 ): TPart | null {
-  return typeof encoded === "string" ? decode(encoded) : null;
+  return bytes instanceof Uint8Array ? decode(bytes) : null;
 }
 
 function isPartsMessage(

@@ -90,6 +90,12 @@ export interface StudioBackendOptions {
    * @default EditorPageFolders.packages()
    */
   editorPages?: EditorPageSource;
+  /**
+   * Deflates socket messages over 1 KiB, and content fetched over HTTP whose
+   * kind compresses. It pays on slow links and costs time on loopback.
+   * @default false
+   */
+  compression?: boolean;
 }
 
 export interface StudioBackendAttachOptions {
@@ -121,6 +127,7 @@ export class StudioBackend implements AsyncDisposable {
       });
     }));
     const catalog = Promise.withResolvers<CatalogProjection>();
+    const compression = options.compression === true;
     const shares = new StudioShares({
       accounts,
       project,
@@ -145,7 +152,10 @@ export class StudioBackend implements AsyncDisposable {
           ...AUDIT_STATE_IGNORES
         ]
       },
-      admits: (identity, room) => shares.admits(identity, room)
+      admits: (identity, room) => shares.admits(identity, room),
+      content: {
+        compression
+      }
     });
     opening.defer(() => assetServer.close());
     catalog.resolve(assetServer.backend.catalog);
@@ -185,6 +195,7 @@ export class StudioBackend implements AsyncDisposable {
     return new StudioBackend(
       opening.move(),
       assetServer,
+      compression,
       api,
       new SharePage({
         shares,
@@ -198,19 +209,24 @@ export class StudioBackend implements AsyncDisposable {
 
   #resources: AsyncDisposableStack;
   #assetServer: AssetServer;
+  #compression: boolean;
   #transports = new DisposableStack();
 
   private constructor(
     resources: AsyncDisposableStack,
     assetServer: AssetServer,
+    compression: boolean,
     api: StudioApi,
     sharePage: SharePage
   ) {
     this.#resources = resources;
     this.#assetServer = assetServer;
+    this.#compression = compression;
     this.middleware = (request, response, next) => {
-      api.middleware(request, response, () => {
-        sharePage.middleware(request, response, next);
+      assetServer.contentHandler(request, response, () => {
+        api.middleware(request, response, () => {
+          sharePage.middleware(request, response, next);
+        });
       });
     };
   }
@@ -223,7 +239,9 @@ export class StudioBackend implements AsyncDisposable {
       path: DEFAULT_WEBSOCKET_PATH,
       httpServer,
       server: this.#assetServer.network,
-      compression: kSocketCompression,
+      compression: this.#compression ?
+        kSocketCompression :
+        undefined,
       maxPayload: MAX_CATALOG_MESSAGE_BYTES,
       maxBufferedBytes: kMaxBufferedBytes,
       allowedHosts: options.allowedHosts

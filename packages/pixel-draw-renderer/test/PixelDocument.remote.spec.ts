@@ -4,7 +4,6 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
-import { Buffer } from "node:buffer";
 
 // Import Internal Dependencies
 import type { PixelCommand } from "#src/sync/PixelCommand.ts";
@@ -148,7 +147,7 @@ describe("PixelDocument", () => {
       assert.equal(events.length, 0);
     });
 
-    test("remote texture-replaced decodes pixels without an echo", () => {
+    test("remote texture-replaced applies its pixels without an echo", () => {
       const events: PixelCommand[] = [];
       const doc = createDocument(events);
       doc.paintPixels([{ x: 0, y: 0 }], kRed);
@@ -167,7 +166,7 @@ describe("PixelDocument", () => {
         action: "texture-replaced",
         metadata: {
           size: { x: 2, y: 2 },
-          pixels: Buffer.from(pixels).toString("base64")
+          pixels
         }
       });
 

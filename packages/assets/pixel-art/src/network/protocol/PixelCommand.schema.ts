@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  bytesSchema,
   commandVariant,
   MessageProtocol,
   withCommandHeader
@@ -80,7 +81,7 @@ const kPixelCommandMetadata: Record<
   }],
   "texture-replaced": [{
     size: sizeSchema,
-    pixels: z.string()
+    pixels: bytesSchema
   }],
   "global-fill": [{
     fromColor: kRgba8Schema,
@@ -175,10 +176,10 @@ export const pixelCommandProtocol: MessageProtocol = new MessageProtocol(
 export const pixelSnapshotSchema = z.object({
   size: sizeSchema,
   pixels: z.union([
-    z.string(),
+    bytesSchema,
     z.strictObject({
       format: z.literal("png"),
-      data: z.string()
+      data: bytesSchema
     })
   ]),
   uvRegions: z.optional(z.array(uvRegionSchema)),

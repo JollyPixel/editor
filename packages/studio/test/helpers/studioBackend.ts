@@ -33,7 +33,7 @@ export interface ServedBackend extends AsyncDisposable {
 }
 
 export interface ServeBackendOptions extends Pick<
-  StudioBackendOptions, "requestsPerMinute" | "trustProxy"
+  StudioBackendOptions, "requestsPerMinute" | "trustProxy" | "compression"
 > {
   /**
    * @default "member"
@@ -66,6 +66,7 @@ export async function serveBackend(
     inMemory: true,
     requestsPerMinute: options.requestsPerMinute,
     trustProxy: options.trustProxy,
+    compression: options.compression,
     accounts: {
       defaultRole: options.defaultRole ?? "member",
       throttle: options.throttle,

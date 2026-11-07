@@ -13,6 +13,9 @@ const kCommaList = z.string().transform(
     .map((item) => item.trim())
     .filter((item) => item !== "")
 );
+const kBoolean = z.enum(["true", "false"]).transform(
+  (value) => value === "true"
+);
 const kEnvironmentSchema = z.object({
   PORT: z.coerce
     .number()
@@ -23,9 +26,10 @@ const kEnvironmentSchema = z.object({
   HOST: z.string().default(DEFAULT_HOST),
   JOLLY_ALLOWED_HOSTS: kCommaList.default([]),
   JOLLY_TRUST_PROXY: z.union([
-    z.enum(["true", "false"]).transform((value) => value === "true"),
+    kBoolean,
     kCommaList
-  ]).default(false)
+  ]).default(false),
+  JOLLY_SOCKET_COMPRESSION: kBoolean.default(true)
 });
 
 export class StudioServerSettings {
@@ -33,6 +37,7 @@ export class StudioServerSettings {
   readonly host: string;
   readonly allowedHosts: readonly string[];
   readonly trustProxy: TrustProxy;
+  readonly socketCompression: boolean;
 
   static parse(
     env: Record<string, string | undefined>
@@ -53,7 +58,8 @@ export class StudioServerSettings {
       data.PORT,
       data.HOST,
       data.JOLLY_ALLOWED_HOSTS,
-      data.JOLLY_TRUST_PROXY
+      data.JOLLY_TRUST_PROXY,
+      data.JOLLY_SOCKET_COMPRESSION
     );
   }
 
@@ -61,7 +67,8 @@ export class StudioServerSettings {
     port: number,
     host: string,
     allowedHosts: readonly string[],
-    trustProxy: TrustProxy
+    trustProxy: TrustProxy,
+    socketCompression: boolean
   ) {
     this.port = port;
     this.host = host;
@@ -69,5 +76,6 @@ export class StudioServerSettings {
     this.trustProxy = Array.isArray(trustProxy)
       ? [...trustProxy]
       : trustProxy;
+    this.socketCompression = socketCompression;
   }
 }

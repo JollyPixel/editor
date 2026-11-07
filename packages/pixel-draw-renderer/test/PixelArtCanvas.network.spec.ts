@@ -5,7 +5,6 @@ import {
   beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
-import { Buffer } from "node:buffer";
 
 // Import Internal Dependencies
 import { PixelArtCanvas } from "#src/PixelArtCanvas.ts";
@@ -144,7 +143,7 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
   });
 
   describe("texture-replaced", () => {
-    test("setTexture emits a 'texture-replaced' event with decodable base64 pixels", () => {
+    test("setTexture emits a 'texture-replaced' event with the texture's RGBA bytes", () => {
       const events: PixelCommand[] = [];
       const manager = new PixelArtCanvas(container, {
         texture: {
@@ -169,7 +168,7 @@ describe("PixelArtCanvas — onBufferUpdated", () => {
         { x: 4, y: 4 }
       );
       assert.strictEqual(
-        Buffer.from(events[0].metadata.pixels, "base64").length,
+        events[0].metadata.pixels.length,
         4 * 4 * 4
       );
       manager.destroy();

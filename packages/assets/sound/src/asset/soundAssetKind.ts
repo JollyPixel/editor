@@ -22,6 +22,7 @@ import { oggContentFromAudio } from "../conversion/oggFromAudio.ts";
 
 // CONSTANTS
 const kOggCapturePattern = new TextEncoder().encode("OggS");
+const kRefAboveBytes = 256 * 1024;
 
 export function soundAssetKind(): AssetKindHandler<BinaryAssetState, never> {
   return {
@@ -55,7 +56,9 @@ export function soundAssetKind(): AssetKindHandler<BinaryAssetState, never> {
       state.bytes = content;
     },
 
-    commands: binaryCommands(SOUND_COMMAND)
+    commands: binaryCommands(SOUND_COMMAND, {
+      refAbove: kRefAboveBytes
+    })
   };
 }
 

@@ -216,7 +216,7 @@ describe("PixelCommandRules — pixels", () => {
     }, { clientId: "A", timestamp: 100 }));
     accept(arbiter, state, command("texture-replaced", {
       size: { x: 4, y: 4 },
-      pixels: ""
+      pixels: new Uint8Array()
     }, { clientId: "B", timestamp: 500 }));
 
     const older = command("stroke", {

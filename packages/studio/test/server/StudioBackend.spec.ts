@@ -63,8 +63,16 @@ describe("StudioBackend", () => {
     }
   });
 
-  test("compresses its sockets with permessage-deflate", async() => {
+  test("leaves its sockets uncompressed by default", async() => {
     await using backend = await serveBackend();
+
+    assert.equal(await negotiatedExtensions(backend.socketUrl), "");
+  });
+
+  test("compresses its sockets with permessage-deflate when asked", async() => {
+    await using backend = await serveBackend({
+      compression: true
+    });
 
     assert.match(
       await negotiatedExtensions(backend.socketUrl),

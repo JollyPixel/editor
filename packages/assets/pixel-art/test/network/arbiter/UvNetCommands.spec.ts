@@ -12,7 +12,6 @@ import {
   PixelBuffer,
   PixelDocumentState,
   PixelDocument,
-  pixelArtSnapshot,
   type SavedUVNetData
 } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -25,7 +24,8 @@ import {
 } from "#src/network/protocol/PixelCommand.schema.ts";
 import {
   encodePixelSnapshot,
-  loadPixelSnapshot
+  loadPixelSnapshot,
+  pixelWireSnapshot
 } from "#src/network/protocol/PixelSnapshotCodec.ts";
 import { command } from "../../fixtures/commands.ts";
 
@@ -60,7 +60,7 @@ describe("UV net network commands", () => {
     assert.equal(parser.parse(command("uv-net-deleted", { id: "" })).ok, false);
 
     const snapshots = new SchemaParser(pixelSnapshotSchema);
-    const snapshot = pixelArtSnapshot(createState());
+    const snapshot = pixelWireSnapshot(createState());
     assert.equal(snapshots.parse({ ...snapshot, uvNets: { nets: [kCaps] } }).ok, true);
     assert.equal(snapshots.parse({ ...snapshot, uvNets: { nets: [{ id: "caps" }] } }).ok, false);
   });
@@ -95,7 +95,7 @@ describe("UV net network commands", () => {
     applyPixelCommand(state, command("uv-net-saved", { net: kCaps }));
     applyPixelCommand(state, command("uv-net-default-changed", { id: "caps" }));
     const doc = new PixelDocument({ size: { x: 1, y: 1 } });
-    for (const snapshot of [pixelArtSnapshot(state), await encodePixelSnapshot(state)]) {
+    for (const snapshot of [pixelWireSnapshot(state), await encodePixelSnapshot(state)]) {
       await loadPixelSnapshot(doc, snapshot);
       assert.deepEqual(doc.uvNets.toJSON(), state.uvNets.toJSON());
       delete snapshot.uvNets;

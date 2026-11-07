@@ -20,6 +20,7 @@ import {
 // CONSTANTS
 const kBytesPerMb = 1024 * 1024;
 const kDefaultMaxFileMb = 64;
+const kRefAboveBytes = 256 * 1024;
 const kOptionsSchema = z.strictObject({
   maxFileMb: z.optional(z.int().check(
     z.minimum(1),
@@ -43,7 +44,10 @@ export function modelAssetKind(
     kind: MODEL_KIND,
     extensions: MODEL_EXTENSIONS,
     maxContentBytes: maxFileMb * kBytesPerMb,
-    commands: binaryCommands(MODEL_COMMAND)
+    commands: binaryCommands(MODEL_COMMAND, {
+      compress: true,
+      refAbove: kRefAboveBytes
+    })
   };
 }
 

@@ -16,14 +16,13 @@ import {
 
 // Import Internal Dependencies
 import { touchedChunks } from "../network/chunkParts.ts";
-import { encodeHeights } from "../network/heights.ts";
+import { encodeHeightBytes } from "../network/heights.ts";
 import {
   encodeHoleTilePatch,
   type HoleTilePatch
 } from "../network/holes.ts";
 import { patchBatches } from "../network/patchBatches.ts";
 import {
-  encodeMaterials,
   encodeSplatTilePatch,
   type SplatTilePatch
 } from "../network/splat.ts";
@@ -97,23 +96,23 @@ export interface ChunkImage {
   /**
    * The chunk's encoded heights, or `null` when it is unloaded or absent.
    */
-  readonly heights: string | null;
+  readonly heights: Uint8Array | null;
   /**
    * The encoded splat map of a loaded chunk.
    */
-  readonly splat?: string;
+  readonly splat?: Uint8Array;
   /**
    * The encoded hole mask of a loaded chunk that has holes.
    */
-  readonly holes?: string;
+  readonly holes?: Uint8Array;
   /**
    * The encoded overview samples of an unloaded chunk.
    */
-  readonly overview?: string;
+  readonly overview?: Uint8Array;
   /**
    * The encoded overview materials of an unloaded chunk.
    */
-  readonly materials?: string;
+  readonly materials?: Uint8Array;
 }
 
 export interface MaterialImage {
@@ -267,7 +266,7 @@ export class TerrainDocument extends CommandDocument<
       action: "chunk-added",
       x,
       z,
-      heights: encodeHeights(this.terrain.seedHeights(coord))
+      heights: encodeHeightBytes(this.terrain.seedHeights(coord))
     });
   }
 
@@ -481,7 +480,7 @@ function chunkImage(
 
   return overview === undefined || materials === undefined ?
     { x, z, heights: null } :
-    { x, z, heights: null, overview: encodeHeights(overview), materials: encodeMaterials(materials) };
+    { x, z, heights: null, overview: encodeHeightBytes(overview), materials: materials.slice() };
 }
 
 function restoreImages(

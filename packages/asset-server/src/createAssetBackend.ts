@@ -37,6 +37,7 @@ import {
 } from "./catalog/CatalogExtension.ts";
 import { backfillDependencies } from "./catalog/backfillDependencies.ts";
 import { registerAssetRooms } from "./live/registerAssetRooms.ts";
+import type { ContentRefs } from "./live/ContentRefs.ts";
 import { AssetTags } from "./catalog/tags/AssetTags.ts";
 import { AssetBackups } from "./storage/AssetBackups.ts";
 import { Teardown } from "./common/Teardown.ts";
@@ -97,10 +98,19 @@ export interface AssetBackend extends CatalogBackend, AsyncDisposable {
 
   attach(
     server: Server,
-    options?: { graceMs?: number; }
+    options?: AssetBackendAttachOptions
   ): () => void;
 
   close(): Promise<void>;
+}
+
+export interface AssetBackendAttachOptions {
+  graceMs?: number;
+  /**
+   * Lets binary kinds that opt in send their snapshot as a content ref,
+   * served by a content handler reading the same instance.
+   */
+  contentRefs?: ContentRefs;
 }
 
 export async function createAssetBackend(
@@ -270,6 +280,7 @@ async function assembleAssetBackend(
         flush,
         tags,
         graceMs: attachOptions.graceMs,
+        contentRefs: attachOptions.contentRefs,
         logger
       });
     },

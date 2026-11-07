@@ -11,16 +11,19 @@ import type {
 } from "../model/kinds/AssetKindHandler.ts";
 import {
   ASSET_ROOM_DELETED,
+  ASSET_ROOM_INLINE_SNAPSHOT,
   ASSET_ROOM_REJECTED,
   type AssetCommandHeader,
   type AssetLiveProtocol,
   type AssetRoomDeletedMessage,
+  type AssetRoomInlineSnapshotMessage,
   type AssetRoomRejectedMessage
 } from "../model/kinds/AssetLiveProtocol.ts";
 import {
   toActor,
   isStateNeutral
 } from "../model/events/AssetEvents.ts";
+import { storedCommand } from "../model/kinds/foldAssetEvent.ts";
 import type { RecordedCommand } from "./AssetStateStore.ts";
 import { assetRoomResumeSchema } from "./AssetRoomExtension.schema.ts";
 import { AssetRoomProtocols } from "./AssetRoomProtocols.ts";
@@ -30,7 +33,11 @@ import {
   type AcksField
 } from "./PeerAcks.ts";
 import { SnapshotCache } from "./SnapshotCache.ts";
-import { PartSubscriptions } from "./PartSubscriptions.ts";
+import {
+  PartSubscriptions,
+  sender,
+  type Send
+} from "./PartSubscriptions.ts";
 
 // CONSTANTS
 const kDefaultResumeLimit = 1_000;
@@ -58,6 +65,10 @@ export interface AssetRoomExtensionOptions<
 
 type AssetSyncMessage = network.NetworkSyncMessage<unknown, unknown>;
 
+interface SnapshotFields extends AcksField {
+  refused?: number;
+}
+
 interface CatchUp {
   readonly commands: unknown[];
   readonly version: number;
@@ -70,6 +81,7 @@ export class AssetRoomExtension<
   readonly id: string;
   readonly name: string;
   readonly protocols: network.MessageProtocols;
+  override readonly queries = [ASSET_ROOM_INLINE_SNAPSHOT];
 
   #assetId: string;
   #version: () => number | undefined;
@@ -128,7 +140,8 @@ export class AssetRoomExtension<
         live: protocol.parts,
         members: this.#members,
         version: this.#version,
-        partsOnJoin: options.partsOnJoin ?? []
+        partsOnJoin: options.partsOnJoin ?? [],
+        commandSendOptions: commandSendOptions(protocol)
       });
     this.#commands = commands;
     this.#protocol = protocol;
@@ -167,8 +180,9 @@ export class AssetRoomExtension<
       return;
     }
 
-    room.broadcast(
-      this.#snapshot(this.#acks.ofEveryone())
+    this.#sendSnapshot(
+      (message, options) => room.broadcast(message, options),
+      this.#acks.ofEveryone()
     );
     this.#parts?.resendAll(room);
   }
@@ -202,10 +216,14 @@ export class AssetRoomExtension<
         return;
       }
 
-      client.send(
-        resume === null ? this.#snapshot({}) : await this.#resumeMessage(resume)
-      );
-      this.#parts?.join(peer.clientId, (message) => client.send(message));
+      const send: Send = client.send.bind(client);
+      if (resume === null) {
+        this.#sendSnapshot(send, {});
+      }
+      else {
+        await this.#sendResume(send, resume);
+      }
+      this.#parts?.join(peer.clientId, send);
     });
   }
 
@@ -218,11 +236,9 @@ export class AssetRoomExtension<
         return;
       }
 
-      context.room.sendTo(
-        clientId,
-        this.#snapshot(this.#acks.collectAcks([clientId]))
-      );
-      this.#parts?.resend(clientId, sender(context.room, clientId));
+      const send = sender(context.room, clientId);
+      this.#sendSnapshot(send, this.#acks.collectAcks([clientId]));
+      this.#parts?.resend(clientId, send);
     });
   }
 
@@ -265,6 +281,11 @@ export class AssetRoomExtension<
     }
     if (this.#roomProtocols.isPartRequest(message)) {
       this.#parts?.request(clientId, message, sender(context.room, clientId));
+
+      return;
+    }
+    if (this.#roomProtocols.isInlineSnapshotRequest(message)) {
+      this.#sendInlineSnapshot(sender(context.room, clientId));
 
       return;
     }
@@ -358,21 +379,24 @@ export class AssetRoomExtension<
     return promise;
   }
 
-  async #resumeMessage(
+  async #sendResume(
+    send: Send,
     resume: network.NetworkResume
-  ): Promise<AssetSyncMessage> {
+  ): Promise<void> {
     const acks = this.#acks.resumedBy(resume.clientId);
     const caughtUp = await this.#catchUp(resume.version);
     if (caughtUp === null) {
-      return this.#snapshot(acks);
+      this.#sendSnapshot(send, acks);
+
+      return;
     }
 
-    return {
+    send({
       type: "catch-up",
       data: caughtUp.commands,
       version: caughtUp.version,
       ...acks
-    };
+    } satisfies AssetSyncMessage, this.#commandSendOptions);
   }
 
   async #catchUp(
@@ -398,7 +422,7 @@ export class AssetRoomExtension<
       }
 
       if (event.eventType === this.#commands.eventType) {
-        commands.push(event.eventData);
+        commands.push(storedCommand(this.#commands, event));
       }
       else if (!isStateNeutral(event)) {
         return null;
@@ -411,17 +435,34 @@ export class AssetRoomExtension<
     };
   }
 
-  #snapshot(
-    acks: AcksField
-  ): AssetSyncMessage {
-    const message = this.#snapshots.current();
-
-    return acks.acks === undefined ?
-      message :
+  #sendInlineSnapshot(
+    send: Send
+  ): void {
+    const version = this.#version();
+    send(
       {
-        ...message,
-        ...acks
-      };
+        type: ASSET_ROOM_INLINE_SNAPSHOT,
+        data: this.#protocol.snapshot(),
+        ...(version === undefined ? {} : { version })
+      } satisfies AssetRoomInlineSnapshotMessage,
+      { compress: this.#protocol.compressSnapshot === true }
+    );
+  }
+
+  #sendSnapshot(
+    send: Send,
+    fields: SnapshotFields
+  ): void {
+    const { message, compress } = this.#snapshots.current();
+    send(
+      Object.keys(fields).length === 0 ?
+        message :
+        {
+          ...message,
+          ...fields
+        },
+      { compress }
+    );
   }
 
   #resync(
@@ -449,11 +490,12 @@ export class AssetRoomExtension<
       return;
     }
 
-    room.sendTo(clientId, {
-      ...this.#snapshot(acks),
+    const send = sender(room, clientId);
+    this.#sendSnapshot(send, {
+      ...acks,
       ...refused
     });
-    this.#parts?.resend(clientId, sender(room, clientId));
+    this.#parts?.resend(clientId, send);
   }
 
   #broadcast(
@@ -464,7 +506,7 @@ export class AssetRoomExtension<
   ): void {
     const message = this.#toBroadcast(command, version);
     if (this.#parts === null || message.type !== "command") {
-      room.broadcast(message);
+      room.broadcast(message, this.#commandSendOptions);
 
       return;
     }
@@ -476,6 +518,10 @@ export class AssetRoomExtension<
       message,
       version
     );
+  }
+
+  get #commandSendOptions(): network.SendOptions {
+    return commandSendOptions(this.#protocol);
   }
 
   #toBroadcast(
@@ -500,9 +546,10 @@ export class AssetRoomExtension<
   }
 }
 
-function sender(
-  room: network.RoomBroadcast,
-  clientId: string
-): (message: unknown) => void {
-  return (message) => room.sendTo(clientId, message);
+function commandSendOptions(
+  protocol: Pick<AssetLiveProtocol, "compressCommands">
+): network.SendOptions {
+  return {
+    compress: protocol.compressCommands === true
+  };
 }

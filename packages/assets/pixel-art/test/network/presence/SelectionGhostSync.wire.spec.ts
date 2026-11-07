@@ -155,7 +155,7 @@ describe("SelectionGhostSync wire validation", () => {
     });
     assert.ok(validPreview !== null && "sourceRect" in validPreview);
     const malformed = [
-      { ...validPreview, pixels: "AA==" },
+      { ...validPreview, pixels: new Uint8Array(4) },
       { ...validPreview, eraseColor: { r: 256, g: 0, b: 0, a: 255 } },
       { ...validPreview, liveRect: { x: 2, y: 2, width: 3, height: 1 } },
       { ...validPreview, phase: "floating" },
@@ -164,8 +164,9 @@ describe("SelectionGhostSync wire validation", () => {
       { phase: "selected", rect: { x: 0.5, y: 0, width: 2, height: 1 }, mask: "full" },
       { phase: "selected", rect: { x: 0, y: 0, width: -2, height: 1 }, mask: "full" },
       { phase: "selected", rect: { x: 0, y: 0, width: 33, height: 33 }, mask: "full" },
-      { phase: "selected", rect: { x: 0, y: 0, width: 2, height: 1 }, mask: "AA==" },
-      { phase: "selected", rect: { x: 0, y: 0, width: 2, height: 1 }, mask: "!!!=" }
+      { phase: "selected", rect: { x: 0, y: 0, width: 2, height: 1 }, mask: new Uint8Array(1) },
+      { phase: "selected", rect: { x: 0, y: 0, width: 2, height: 1 }, mask: new Uint8Array(2) },
+      { phase: "selected", rect: { x: 0, y: 0, width: 2, height: 1 }, mask: "Aw==" }
     ];
     for (const payload of malformed) {
       peerRoom.emit("peer-presence", {

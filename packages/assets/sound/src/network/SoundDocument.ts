@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
+import { resolveBinarySnapshot } from "@jolly-pixel/asset-server/client";
 import { SnapshotDocument } from "@jolly-pixel/history";
 import {
   commandDocumentKind,
@@ -34,6 +35,7 @@ export function soundDocumentKind(): SoundDocumentKind {
   return commandDocumentKind({
     kind: SOUND_KIND,
     createDocument: () => new SoundDocument(),
-    keys: () => []
+    keys: () => [],
+    resolveSnapshot: resolveBinarySnapshot
   });
 }

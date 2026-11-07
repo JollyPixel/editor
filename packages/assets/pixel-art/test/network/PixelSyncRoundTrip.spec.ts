@@ -14,9 +14,10 @@ import {
   foldAssetEvent,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
-import { pixelArtSnapshot, PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
+import { pixelWireSnapshot } from "#src/network/protocol/PixelSnapshotCodec.ts";
 import {
   pixelArtAssetKind,
   PIXEL_ART_KIND
@@ -118,7 +119,7 @@ function setup() {
     history: new SharedPixelHistory(history, "pixels")
   });
   new PixelSyncClient({ room, document: manager.document });
-  room.deliverSnapshot(pixelArtSnapshot(state.document));
+  room.deliverSnapshot(pixelWireSnapshot(state.document));
 
   async function paintPixelOneOne(): Promise<void> {
     canvas.dispatchEvent(mouseEvent("mousedown", 88, 88));
@@ -231,7 +232,7 @@ describe("PixelSyncClient and the pixel-art asset room, undo", () => {
       onSend: (sent) => void receive("B", sent)
     });
     const peerSync = new PixelSyncClient({ room: peerRoom, document: peer });
-    peerRoom.deliverSnapshot(pixelArtSnapshot(state.document));
+    peerRoom.deliverSnapshot(pixelWireSnapshot(state.document));
 
     t.mock.timers.tick(1000);
     manager.document.changePaletteColor(3, { r: 255, g: 0, b: 0, a: 128 });

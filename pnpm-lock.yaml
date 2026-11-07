@@ -1271,6 +1271,9 @@ importers:
 
   packages/event-store:
     dependencies:
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
