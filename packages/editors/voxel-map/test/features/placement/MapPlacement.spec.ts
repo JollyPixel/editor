@@ -49,7 +49,7 @@ function setup() {
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -219,7 +219,7 @@ describe("MapPlacement reconcile", () => {
     placement.placeTemplate(readTemplate(world), { x: 0, y: 0, z: 0 });
     changes.length = 0;
 
-    world.setVoxelBulk("Ground", [
+    world.placeVoxelBulk("Ground", [
       {
         position: { x: 5, y: 0, z: 5 },
         blockId: 1

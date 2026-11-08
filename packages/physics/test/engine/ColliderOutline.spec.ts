@@ -52,8 +52,8 @@ function outlineActor(
 ) {
   const world = createEngineWorld();
   const actor = world.createActor("collider");
-  actor.transform.setLocalPosition(new THREE.Vector3(3, 0, 0));
-  actor.transform.setLocalScale(new THREE.Vector3(...scale));
+  actor.transform.local.position = new THREE.Vector3(3, 0, 0);
+  actor.transform.local.scale = new THREE.Vector3(...scale);
   const outline = actor.addComponentAndGet(ColliderOutline, {
     ...RIGID_BODY_DEFAULTS,
     colliders: [
@@ -101,7 +101,7 @@ describe("ColliderOutline", () => {
   it("redraws when the actor scale changes", () => {
     const { actor, outline } = outlineActor(kShapeCases.sphere.shape, [1, 1, 1]);
 
-    actor.transform.setLocalScale(new THREE.Vector3(3, 1, 1));
+    actor.transform.local.scale = new THREE.Vector3(3, 1, 1);
     outline.update();
 
     assertBounds(worldBounds(actor.node.object3D), [3, 1, 0], [1.5, 1.5, 1.5]);

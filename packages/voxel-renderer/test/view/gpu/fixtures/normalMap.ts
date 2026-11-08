@@ -110,7 +110,7 @@ export async function renderNormalScene(
   }
   const layer = view.document.world.addLayer("ground");
   for (const index of NORMAL_TILES.keys()) {
-    layer.setVoxelAt({ x: index, y: 0, z: 0 }, {
+    layer.writeVoxelAt({ x: index, y: 0, z: 0 }, {
       blockId: index + 1,
       transform: 0
     });

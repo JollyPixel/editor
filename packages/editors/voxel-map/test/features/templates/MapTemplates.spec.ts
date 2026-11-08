@@ -40,7 +40,7 @@ function setup(
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -62,7 +62,7 @@ function setup(
 function takeSnapshot(
   world: VoxelWorld
 ): VoxelTemplate {
-  return VoxelTemplate.fromLayer(world.getLayer("Draft")!, {
+  return VoxelTemplate.fromLayer(world.findLayer("Draft")!, {
     id: "selection",
     name: "Selection"
   });
@@ -168,7 +168,7 @@ describe("MapTemplates.remove", () => {
 
     assert.equal(TemplateDraft.find(world, id), null);
     assert.deepEqual(
-      world.getLayers().map((layer) => layer.name),
+      world.layers().map((layer) => layer.name),
       ["Ground", "Draft"]
     );
   });

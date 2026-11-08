@@ -23,7 +23,7 @@ const kQuarterTurn = VoxelTransform.pack({ rotation: 1 });
 function makeWorld(): VoxelWorld {
   const world = new VoxelWorld(4);
   world.addLayer("Ground");
-  world.setLayerPosition("Ground", { x: 10, y: 0, z: 0 });
+  world.placeLayer("Ground", { x: 10, y: 0, z: 0 });
   writeVoxel(world, "Ground", { x: 10, y: 0, z: 0 }, makeVoxelEntry(1));
   writeVoxel(world, "Ground", { x: 11, y: 0, z: 0 }, makeVoxelEntry(2, kQuarterTurn));
   writeVoxel(world, "Ground", { x: 10, y: 1, z: 2 }, makeVoxelEntry(3));
@@ -34,7 +34,7 @@ function makeWorld(): VoxelWorld {
 function scanCells(
   world: VoxelWorld
 ): number[][] {
-  const layer = world.getLayer("Ground");
+  const layer = world.findLayer("Ground");
   assert.ok(layer !== undefined);
 
   return Array.from(layer.localVoxels(), ([x, y, z, packed]) => [
@@ -57,7 +57,7 @@ describe("VoxelWorld.transformLayer", () => {
       [10, 0, 0, 2, VoxelTransform.pack({ rotation: 2 })],
       [12, 1, 1, 3, kQuarterTurn]
     ]);
-    assert.deepEqual(world.getLayer("Ground")?.position, { x: 10, y: 0, z: 0 });
+    assert.deepEqual(world.findLayer("Ground")?.position, { x: 10, y: 0, z: 0 });
   });
 
   it("mirrors the voxels in place, keeping their bounds", () => {

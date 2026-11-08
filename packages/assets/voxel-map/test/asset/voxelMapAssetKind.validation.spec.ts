@@ -98,7 +98,7 @@ describe("voxelMapAssetKind", () => {
       }));
     });
     assert.deepEqual(
-      state.world.getLayers().map((layer) => layer.name),
+      state.world.layers().map((layer) => layer.name),
       ["Ground"]
     );
   });
@@ -135,7 +135,7 @@ describe("voxelMapAssetKind", () => {
   test("a document saved with another chunk size loads", async() => {
     const source = new VoxelMapState(32);
     source.world.restoreLayer({ id: "Ground", name: "Ground" });
-    source.world.setVoxel("Ground", {
+    source.world.placeVoxel("Ground", {
       position: { x: 20, y: 0, z: -3 },
       blockId: 4
     });
@@ -145,7 +145,7 @@ describe("voxelMapAssetKind", () => {
     foldAssetEvent(handler, state, documentEvent(source));
 
     assert.equal(state.world.chunkSize, 16);
-    assert.equal(state.world.getVoxelAt({ x: 20, y: 0, z: -3 })?.blockId, 4);
+    assert.equal(state.world.voxelAt({ x: 20, y: 0, z: -3 })?.blockId, 4);
     const saved = decodeVoxelWorld(await handler.serialize(state));
     assert.equal(saved.chunkSize, 16);
     assert.deepEqual(saved.layers[0].chunks.map(({ at }) => at), [[1, 0, -1]]);
@@ -173,7 +173,7 @@ describe("voxelMapAssetKind", () => {
     }));
 
     assert.strictEqual(
-      second.world.getVoxelAt({ x: 4, y: 1, z: 4 })?.blockId,
+      second.world.voxelAt({ x: 4, y: 1, z: 4 })?.blockId,
       9
     );
   });
@@ -227,14 +227,14 @@ describe("voxelMapAssetKind", () => {
       }
     }));
     foldAssetEvent(handler, state, event(VOXEL_MAP_COMMAND, null));
-    assert.strictEqual(state.world.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
+    assert.strictEqual(state.world.voxelAt({ x: 0, y: 0, z: 0 }), undefined);
 
     foldAssetEvent(
       handler,
       state,
       event(VOXEL_MAP_COMMAND, voxelSetCmd({ blockId: 9 }))
     );
-    assert.strictEqual(state.world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 9);
+    assert.strictEqual(state.world.voxelAt({ x: 0, y: 0, z: 0 })?.blockId, 9);
   });
 
   test("an uncommitted arbitration leaves the tracker untouched", () => {

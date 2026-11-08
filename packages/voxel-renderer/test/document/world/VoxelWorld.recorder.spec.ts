@@ -27,7 +27,7 @@ function cellChange(
   after: number
 ): VoxelCellChange {
   return {
-    layerId: world.getLayer(kLayer)!.id,
+    layerId: world.findLayer(kLayer)!.id,
     position: kOrigin,
     before,
     after,
@@ -44,7 +44,7 @@ describe("VoxelWorld recorder", () => {
       record: (changes) => recorded.push(changes)
     });
 
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
     world.removeVoxel(kLayer, { position: kOrigin });
 
     assert.deepEqual(recorded, [
@@ -64,9 +64,9 @@ describe("VoxelWorld recorder", () => {
     });
     world.addRecorder(recorder);
 
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
     assert.strictEqual(world.removeRecorder(recorder), true);
-    world.setVoxel(kLayer, { position: kNext, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kNext, blockId: 1 });
 
     assert.deepEqual(first, [1, 1]);
     assert.deepEqual(second, [1]);
@@ -80,7 +80,7 @@ describe("VoxelWorld recorder", () => {
       record: (changes) => recorded.push(changes)
     }, { includeUnrecorded: true });
 
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
     world.transaction(() => history.undo());
 
     assert.deepEqual(recorded, [

@@ -5,7 +5,8 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
 
-export type SelectableBlocks = Pick<BlockRegistry, "get" | "has" | "getAll">;
+export type SelectableBlocks = Pick<BlockRegistry, "get" | "has"> &
+  Iterable<ResolvedBlockDefinition>;
 
 export type BlockSelectionEvents = {
   change: (id: number | null) => void;
@@ -42,7 +43,7 @@ export class BlockSelection extends Emitter<BlockSelectionEvents> {
       return;
     }
 
-    const [first] = blocks.getAll();
+    const [first] = blocks;
     this.id = first?.id ?? null;
   }
 }

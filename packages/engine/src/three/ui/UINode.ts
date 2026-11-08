@@ -45,10 +45,10 @@ export class UINode<TContext = WorldDefaultContext> extends ActorComponent<TCont
       this.actor.world.input.screen.bounds
     );
 
-    this.actor.transform.setLocalPosition({
+    this.actor.transform.local.position = {
       x,
       y,
       z: 0
-    });
+    };
   }
 }

@@ -32,8 +32,8 @@ function makeWorld(): VoxelWorld {
 function mergeAt(
   world: VoxelWorld
 ): void {
-  world.setVoxel(kLayer, { position: kCell, blockId: kStone });
-  world.setVoxel(kLayer, {
+  world.placeVoxel(kLayer, { position: kCell, blockId: kStone });
+  world.placeVoxel(kLayer, {
     position: kCell,
     blockId: kWood,
     flipY: true,
@@ -46,7 +46,7 @@ describe("VoxelWorld - merged cells", () => {
     const world = makeWorld();
     mergeAt(world);
 
-    assert.deepEqual(world.getVoxelAt(kCell), {
+    assert.deepEqual(world.voxelAt(kCell), {
       blockId: kStone,
       transform: 0,
       partner: {
@@ -54,30 +54,30 @@ describe("VoxelWorld - merged cells", () => {
         transform: VoxelTransform.pack({ flipY: true })
       }
     });
-    assert.equal(world.getLayer(kLayer)!.voxelCount, 1);
+    assert.equal(world.findLayer(kLayer)!.voxelCount, 1);
   });
 
   it("writes a merged voxel into an empty cell as a plain voxel", () => {
     const world = makeWorld();
-    world.setVoxel(kLayer, { position: kCell, blockId: kWood, merge: true });
+    world.placeVoxel(kLayer, { position: kCell, blockId: kWood, merge: true });
 
-    assert.deepEqual(world.getVoxelAt(kCell), { blockId: kWood, transform: 0 });
+    assert.deepEqual(world.voxelAt(kCell), { blockId: kWood, transform: 0 });
   });
 
   it("replaces both shapes when merging into a cell that is already merged", () => {
     const world = makeWorld();
     mergeAt(world);
-    world.setVoxel(kLayer, { position: kCell, blockId: kGlass, merge: true });
+    world.placeVoxel(kLayer, { position: kCell, blockId: kGlass, merge: true });
 
-    assert.deepEqual(world.getVoxelAt(kCell), { blockId: kGlass, transform: 0 });
+    assert.deepEqual(world.voxelAt(kCell), { blockId: kGlass, transform: 0 });
   });
 
   it("replaces both shapes on a plain set", () => {
     const world = makeWorld();
     mergeAt(world);
-    world.setVoxel(kLayer, { position: kCell, blockId: kGlass });
+    world.placeVoxel(kLayer, { position: kCell, blockId: kGlass });
 
-    assert.deepEqual(world.getVoxelAt(kCell), { blockId: kGlass, transform: 0 });
+    assert.deepEqual(world.voxelAt(kCell), { blockId: kGlass, transform: 0 });
   });
 
   it("removes both shapes with the cell", () => {
@@ -85,7 +85,7 @@ describe("VoxelWorld - merged cells", () => {
     mergeAt(world);
     world.removeVoxel(kLayer, { position: kCell });
 
-    assert.equal(world.getVoxelAt(kCell), undefined);
+    assert.equal(world.voxelAt(kCell), undefined);
     assert.equal(world.countBlock(kWood), 0);
   });
 
@@ -102,7 +102,7 @@ describe("VoxelWorld - merged cells", () => {
     mergeAt(world);
     world.transformLayer(kLayer, { rotation: 1 });
 
-    const [[, , , packed, partner]] = world.getLayer(kLayer)!.localVoxels();
+    const [[, , , packed, partner]] = world.findLayer(kLayer)!.localVoxels();
     const transforms = [packed, partner].map(voxelTransform).sort();
 
     assert.deepEqual(transforms, [
@@ -116,7 +116,7 @@ describe("VoxelWorld - merged cells", () => {
     mergeAt(world);
 
     assert.equal(world.removeBlocks([kStone]), 1);
-    assert.deepEqual(world.getVoxelAt(kCell), {
+    assert.deepEqual(world.voxelAt(kCell), {
       blockId: kWood,
       transform: VoxelTransform.pack({ flipY: true })
     });
@@ -133,8 +133,8 @@ describe("VoxelWorld - merged cells", () => {
       position: { x: 0, y: 2, z: 0 }
     });
 
-    const placed = world.getVoxelAt({ x: 0, y: 2, z: 0 });
-    assert.deepEqual(placed, world.getVoxelAt(kCell));
+    const placed = world.voxelAt({ x: 0, y: 2, z: 0 });
+    assert.deepEqual(placed, world.voxelAt(kCell));
     assert.ok(placed?.partner);
   });
 
@@ -148,7 +148,7 @@ describe("VoxelWorld - merged cells", () => {
     });
 
     world.transaction(() => {
-      world.setVoxel(kLayer, { position: { x: 3, y: 0, z: 0 }, blockId: kGlass });
+      world.placeVoxel(kLayer, { position: { x: 3, y: 0, z: 0 }, blockId: kGlass });
       mergeAt(world);
     });
 
@@ -166,8 +166,8 @@ describe("VoxelWorld - merged cells", () => {
       [1, kWood, 0]
     );
 
-    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 })?.partner, undefined);
-    assert.equal(world.getVoxelAt(kCell)?.partner?.blockId, kWood);
+    assert.equal(world.voxelAt({ x: 0, y: 0, z: 0 })?.partner, undefined);
+    assert.equal(world.voxelAt(kCell)?.partner?.blockId, kWood);
   });
 
   it("rejects a patch partner that targets an air cell", () => {

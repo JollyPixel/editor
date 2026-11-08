@@ -14,7 +14,7 @@ import { TemplateDraft } from "./editing/TemplateDraft.ts";
 
 export type TemplateWorld = Pick<
   VoxelWorld,
-  "templates" | "getLayerById" | "removeLayer" | "unrecorded"
+  "templates" | "findLayerById" | "removeLayer" | "unrecorded"
 >;
 
 export interface MapTemplatesOptions {

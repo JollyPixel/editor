@@ -67,7 +67,7 @@ export function templateEditingFixture(
 ) {
   const world = new VoxelWorld(4);
   world.addLayer("Ground");
-  world.setVoxelBulk("Ground", [
+  world.placeVoxelBulk("Ground", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -147,14 +147,14 @@ export function shownInView(
   view: VoxelLayerVisibility,
   layerId: string
 ): boolean {
-  return view.isVisible(world.getLayerById(layerId)!);
+  return view.isVisible(world.findLayerById(layerId)!);
 }
 
 export function paintDraft(
   world: VoxelWorld,
   x: number
 ): void {
-  world.setVoxel(world.getLayerById(DRAFT_LAYER)!.name, {
+  world.placeVoxel(world.findLayerById(DRAFT_LAYER)!.name, {
     position: { x, y: 0, z: 0 },
     blockId: 3
   });

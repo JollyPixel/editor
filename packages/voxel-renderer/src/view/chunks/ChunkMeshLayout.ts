@@ -108,14 +108,14 @@ export class ChunkMeshLayout {
   collectMembers(
     target: ChunkMeshTarget
   ): IterableLayerChunk[] {
-    const layers = this.#world.getLayers();
+    const layers = this.#world.layers();
 
     if (target.kind === "layer") {
       const { layer } = target;
       const chunk = layers.includes(layer) &&
         this.#visibility.isVisible(layer) &&
         !this.composites(layer) ?
-        layer.getChunk(target.cx, target.cy, target.cz) :
+        layer.chunkAt(target.cx, target.cy, target.cz) :
         undefined;
 
       return chunk === undefined ? [] : [{ layer, chunk }];
@@ -129,7 +129,7 @@ export class ChunkMeshLayout {
       }
 
       const { x, y, z } = candidate.position;
-      const chunk = candidate.getChunk(
+      const chunk = candidate.chunkAt(
         target.cx - (x / size),
         target.cy - (y / size),
         target.cz - (z / size)

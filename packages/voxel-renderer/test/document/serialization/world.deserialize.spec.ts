@@ -45,7 +45,7 @@ describe("deserializeVoxelWorld", () => {
     world.addLayer("Existing");
     deserializeVoxelWorld(emptyDocument(), world);
 
-    assert.equal(world.getLayers().length, 0);
+    assert.equal(world.layers().length, 0);
   });
 
   it("replaces the blockset links, clearing them when none are saved", () => {
@@ -82,7 +82,7 @@ describe("deserializeVoxelWorld", () => {
       world
     );
 
-    const layer = world.getLayer("Ground");
+    const layer = world.findLayer("Ground");
     assert.ok(layer !== undefined);
     assert.equal(layer.compositing, "composite");
     assert.equal("opacity" in serializeVoxelWorld(world).layers[0], false);
@@ -102,7 +102,7 @@ describe("deserializeVoxelWorld", () => {
     );
 
     assert.deepEqual(
-      world.getLayers().map(({ name, order }) => [name, order]),
+      world.layers().map(({ name, order }) => [name, order]),
       [["Top", 1], ["Ground", 0]]
     );
   });
@@ -126,7 +126,7 @@ describe("deserializeVoxelWorld", () => {
       world
     );
 
-    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2);
+    assert.equal(world.voxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2);
   });
 
   it("re-partitions a document saved with another chunk size", () => {
@@ -154,7 +154,7 @@ describe("deserializeVoxelWorld", () => {
       world
     );
 
-    const layer = world.getLayer("Ground");
+    const layer = world.findLayer("Ground");
     assert.ok(layer !== undefined);
     assert.equal(layer.voxelCount, 5);
     assert.equal(layer.chunkCount, 3);
@@ -199,7 +199,7 @@ describe("deserializeVoxelWorld", () => {
       world
     );
 
-    assert.equal(world.getVoxelAt({ x: 11, y: 0, z: 0 })?.partner?.blockId, 2);
+    assert.equal(world.voxelAt({ x: 11, y: 0, z: 0 })?.partner?.blockId, 2);
   });
 
   it("rejects a partner on a cell that holds no voxel", () => {
@@ -232,7 +232,7 @@ describe("deserializeVoxelWorld", () => {
     assert.throws(
       () => deserializeVoxelWorld(untrusted({ version: 3 }), world, { blocksets })
     );
-    assert.equal(world.getLayers().length, 1);
+    assert.equal(world.layers().length, 1);
     assert.equal(blocksets.has("atlas"), true);
   });
 
@@ -255,7 +255,7 @@ describe("deserializeVoxelWorld", () => {
       })), world, { blocksets }),
       /layer "l1", chunk \[1000,0,0\] does not fit a world with chunkSize 16/
     );
-    assert.deepEqual(world.getLayers().map(({ name }) => name), ["Existing"]);
+    assert.deepEqual(world.layers().map(({ name }) => name), ["Existing"]);
     assert.equal(blocksets.has("atlas"), true);
   });
 });

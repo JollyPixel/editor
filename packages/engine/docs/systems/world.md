@@ -148,7 +148,7 @@ class Mover extends Behavior {
   }
 
   update(_deltaTime: number, alpha: number) {
-    this.actor.transform.setLocalPosition({ x: this.#x.at(alpha), y: 0, z: 0 });
+    this.actor.transform.local.position = { x: this.#x.at(alpha), y: 0, z: 0 };
   }
 }
 ```

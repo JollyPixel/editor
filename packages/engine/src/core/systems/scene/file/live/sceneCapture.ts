@@ -27,7 +27,7 @@ export function captureSceneActors(
       id: actor.persistentId,
       name: actor.name,
       parentId: parent?.persistentId ?? null,
-      visible: actor.transform.getVisible(),
+      visible: actor.transform.visible,
       transform: localSceneTransform(actor.transform),
       components: captureComponents(actor, components),
       ...socket instanceof AnchorSocket ? { anchor: { ...socket.anchor } } : {}

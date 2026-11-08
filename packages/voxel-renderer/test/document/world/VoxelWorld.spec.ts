@@ -12,19 +12,19 @@ import { eraseVoxel, writeVoxel } from "../../helpers/world.ts";
 function layerNames(
   world: VoxelWorld
 ): string[] {
-  return world.getLayers().map((layer) => layer.name);
+  return world.layers().map((layer) => layer.name);
 }
 
 describe("VoxelWorld — layer lifecycle", () => {
   it("starts empty and finds a layer back by name", () => {
     const world = new VoxelWorld(4);
-    assert.equal(world.getLayers().length, 0);
+    assert.equal(world.layers().length, 0);
 
     const layer = world.addLayer("Ground");
 
     assert.equal(layer.name, "Ground");
-    assert.equal(world.getLayer("Ground"), layer);
-    assert.equal(world.getLayer("NoSuchLayer"), undefined);
+    assert.equal(world.findLayer("Ground"), layer);
+    assert.equal(world.findLayer("NoSuchLayer"), undefined);
   });
 
   it("adds a layer under a given id once, and hands that layer back after", () => {
@@ -36,7 +36,7 @@ describe("VoxelWorld — layer lifecycle", () => {
     const again = world.addLayer("Other", { id: "draft" });
 
     assert.equal(again, draft);
-    assert.equal(world.getLayerById("draft"), draft);
+    assert.equal(world.findLayerById("draft"), draft);
     assert.deepEqual(layerNames(world), ["Draft"]);
     assert.deepEqual(commands.map((command) => command.action), ["added"]);
     assert.deepEqual(commands[0], {
@@ -55,7 +55,7 @@ describe("VoxelWorld — layer lifecycle", () => {
     const base = world.addLayer("Base");
     const top = world.addLayer("Top");
 
-    assert.deepEqual(world.getLayers(), [top, base]);
+    assert.deepEqual(world.layers(), [top, base]);
   });
 
   it("removes a layer and reports whether there was one", () => {
@@ -63,8 +63,8 @@ describe("VoxelWorld — layer lifecycle", () => {
     world.addLayer("Ground");
 
     assert.equal(world.removeLayer("Ground"), true);
-    assert.equal(world.getLayer("Ground"), undefined);
-    assert.equal(world.getLayers().length, 0);
+    assert.equal(world.findLayer("Ground"), undefined);
+    assert.equal(world.layers().length, 0);
 
     assert.equal(world.removeLayer("Ground"), false);
   });
@@ -78,8 +78,8 @@ describe("VoxelWorld — layer lifecycle", () => {
 
     world.clear();
 
-    assert.equal(world.getLayers().length, 0);
-    assert.deepEqual([...world.getAllChunksToBeRemoved()], []);
+    assert.equal(world.layers().length, 0);
+    assert.deepEqual([...world.drainDetachedChunks()], []);
   });
 });
 
@@ -94,7 +94,7 @@ describe("VoxelWorld — layer ordering", () => {
     world.addLayer("D");
 
     assert.deepEqual(
-      world.getLayers().map((layer) => [layer.name, layer.order]),
+      world.layers().map((layer) => [layer.name, layer.order]),
       [["D", 2], ["C", 1], ["B", 0]]
     );
   });
@@ -146,7 +146,7 @@ describe("VoxelWorld — layer ordering", () => {
     world.moveLayerTo("C", 2);
 
     assert.deepEqual(
-      world.getLayers().map((layer) => layer.order),
+      world.layers().map((layer) => layer.order),
       [2, 1, 0]
     );
   });
@@ -209,18 +209,18 @@ describe("VoxelWorld — voxel access", () => {
     const entry = makeVoxelEntry(5);
 
     writeVoxel(world, "Ground", { x: 2, y: 1, z: 3 }, entry);
-    assert.deepEqual(world.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
+    assert.deepEqual(world.voxelAt({ x: 2, y: 1, z: 3 }), entry);
 
     eraseVoxel(world, "Ground", { x: 2, y: 1, z: 3 });
-    assert.equal(world.getVoxelAt({ x: 2, y: 1, z: 3 }), undefined);
+    assert.equal(world.voxelAt({ x: 2, y: 1, z: 3 }), undefined);
   });
 
   it("reads nothing out of an empty world", () => {
     const world = new VoxelWorld(4);
 
-    assert.equal(world.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
-    assert.equal(world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 }), undefined);
-    assert.equal(world.getVoxelNeighbour({ x: 0, y: 0, z: 0 }, FACE.PosX), undefined);
+    assert.equal(world.voxelAt({ x: 0, y: 0, z: 0 }), undefined);
+    assert.equal(world.voxelWithLayerAt({ x: 0, y: 0, z: 0 }), undefined);
+    assert.equal(world.neighbourVoxel({ x: 0, y: 0, z: 0 }, FACE.PosX), undefined);
   });
 
   it("never hands out a layer id that a restored layer already holds", () => {
@@ -230,7 +230,7 @@ describe("VoxelWorld — voxel access", () => {
     const added = world.addLayer("Added");
 
     assert.notEqual(added.id, "layer_1");
-    assert.equal(new Set(world.getLayers().map((layer) => layer.id)).size, 2);
+    assert.equal(new Set(world.layers().map((layer) => layer.id)).size, 2);
   });
 
   it("emits nothing for an erase aimed at a layer that does not exist", () => {
@@ -248,7 +248,7 @@ describe("VoxelWorld — voxel access", () => {
     const world = new VoxelWorld(4);
 
     assert.throws(
-      () => world.setVoxel("NoSuch", { position: { x: 0, y: 0, z: 0 }, blockId: 1 }),
+      () => world.placeVoxel("NoSuch", { position: { x: 0, y: 0, z: 0 }, blockId: 1 }),
       /layer "NoSuch" does not exist/
     );
     assert.doesNotThrow(
@@ -263,7 +263,7 @@ describe("VoxelWorld — voxel access", () => {
     writeVoxel(world, "Ground", { x: 1, y: 0, z: 0 }, entry);
 
     assert.deepEqual(
-      world.getVoxelNeighbour({ x: 0, y: 0, z: 0 }, FACE.PosX),
+      world.neighbourVoxel({ x: 0, y: 0, z: 0 }, FACE.PosX),
       entry
     );
   });

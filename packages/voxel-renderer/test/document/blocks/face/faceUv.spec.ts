@@ -93,7 +93,7 @@ describe("faceUvSpan", () => {
 });
 
 describe("built-in shape uv convention", () => {
-  const shapes = [...BlockShapeRegistry.createDefault().getAll()];
+  const shapes = [...BlockShapeRegistry.createDefault()];
 
   for (const shape of shapes) {
     it(`${shape.id} never mirrors a tile`, () => {

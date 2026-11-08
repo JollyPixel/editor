@@ -117,9 +117,9 @@ describe("RigidBody", () => {
   it("creates its body at the actor world pose with its settings", () => {
     const { world, physics } = createPhysicsHarness();
     const parent = world.createActor("parent");
-    parent.transform.setLocalPosition(new THREE.Vector3(10, 0, 0));
+    parent.transform.local.position = new THREE.Vector3(10, 0, 0);
     const actor = world.createActor("box", { parent });
-    actor.transform.setLocalPosition(new THREE.Vector3(0, 2, 0));
+    actor.transform.local.position = new THREE.Vector3(0, 2, 0);
 
     actor.addComponentAndGet(RigidBody, {
       kind: "dynamic",
@@ -142,7 +142,7 @@ describe("RigidBody", () => {
 
     tick({ steps: 1, alpha: 0.25 });
 
-    assert.equal(actor.transform.getGlobalPosition().y, -0.25);
+    assert.equal(actor.transform.global.position.y, -0.25);
   });
 
   it("pushes a kinematic actor pose to its body before each step", () => {
@@ -150,7 +150,7 @@ describe("RigidBody", () => {
     const actor = world.createActor("platform");
     actor.addComponentAndGet(RigidBody, { kind: "kinematic" });
 
-    actor.transform.setLocalPosition(new THREE.Vector3(4, 0, 0));
+    actor.transform.local.position = new THREE.Vector3(4, 0, 0);
     tick();
 
     assert.deepEqual(
@@ -167,7 +167,7 @@ describe("RigidBody", () => {
     rigidBody.teleport({ x: 0, y: 8, z: 0 });
     tick({ steps: 0, alpha: 0.5 });
 
-    assert.equal(actor.transform.getGlobalPosition().y, 8);
+    assert.equal(actor.transform.global.position.y, 8);
   });
 
   it("attaches one unit box by default, or the colliders it is given", () => {
@@ -205,9 +205,9 @@ describe("RigidBody", () => {
   it("scales collider shapes and offsets by the actor's world scale", () => {
     const { world } = createPhysicsHarness();
     const parent = world.createActor("parent");
-    parent.transform.setLocalScale(new THREE.Vector3(2, 2, 2));
+    parent.transform.local.scale = new THREE.Vector3(2, 2, 2);
     const actor = world.createActor("plank", { parent });
-    actor.transform.setLocalScale(new THREE.Vector3(2, 0.5, 1));
+    actor.transform.local.scale = new THREE.Vector3(2, 0.5, 1);
 
     const rigidBody = actor.addComponentAndGet(RigidBody, {
       colliders: [

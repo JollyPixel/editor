@@ -12,7 +12,7 @@ import {
   readSceneTransform,
   writeSceneTransform
 } from "../../../src/core/systems/scene/file/index.ts";
-import { Transform } from "../../../src/core/actor/Transform.ts";
+import { Transform } from "../../../src/core/actor/transform/Transform.ts";
 
 describe("Systems.localSceneTransform", () => {
   test("reads back the transform written to a transform, then its rotated pose, in degrees", () => {
@@ -24,9 +24,8 @@ describe("Systems.localSceneTransform", () => {
     });
 
     const written = localSceneTransform(transform);
-    transform.setLocalOrientation(
-      new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2)
-    );
+    transform.local.orientation = new THREE.Quaternion()
+      .setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
     const rotated = localSceneTransform(transform);
 
     assert.deepEqual(written.position, { x: 1, y: 2, z: 3 });
@@ -48,7 +47,7 @@ describe("Systems.composeSceneTransform", () => {
 
     const matrix = composeSceneTransform(file);
 
-    const { elements } = transform.getGlobalMatrix();
+    const { elements } = transform.global.matrix;
     assert.ok(matrix.elements.every((value, index) => Math.abs(value - elements[index]) < 1e-9));
     const pose = {
       position: new THREE.Vector3(),

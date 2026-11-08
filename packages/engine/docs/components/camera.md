@@ -24,9 +24,8 @@ the `THREE.Camera` are overwritten on the next frame:
 component.threeCamera.position.set(10, 10, 5);
 
 // ✅
-component.actor.transform
-  .setLocalPosition({ x: 10, y: 10, z: 5 })
-  .lookAt({ x: 0, y: 0, z: 0 });
+component.actor.transform.local.position = { x: 10, y: 10, z: 5 };
+component.actor.transform.lookAt({ x: 0, y: 0, z: 0 });
 ```
 
 A camera actor parented to another actor follows it.

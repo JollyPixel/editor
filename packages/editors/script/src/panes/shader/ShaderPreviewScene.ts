@@ -100,8 +100,7 @@ export class ShaderPreviewScene extends Systems.Scene {
       shader.createMaterial().material
     );
     try {
-      const { fragmentShader, vertexShader } = await world.renderer
-        .getSource()
+      const { fragmentShader, vertexShader } = await world.renderer.source
         .debug.getShaderAsync(world.sceneManager.graph.scene, camera.threeCamera, probe);
 
       return {

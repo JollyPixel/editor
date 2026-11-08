@@ -53,7 +53,7 @@ export class ActorTree<
     }
   }
 
-  * getActors(
+  * findActors(
     pattern: string
   ): IterableIterator<Actor<TContext>> {
     if (pattern.includes("/")) {
@@ -72,11 +72,11 @@ export class ActorTree<
     }
   }
 
-  getActor(
+  findActor(
     name: string
   ): Actor<TContext> | null {
     if (name.includes("/")) {
-      return this.#getActorByPath(name);
+      return this.#findActorByPath(name);
     }
 
     for (const { actor } of this.walk()) {
@@ -88,7 +88,7 @@ export class ActorTree<
     return null;
   }
 
-  #getActorByPath(
+  #findActorByPath(
     path: string
   ): Actor<TContext> | null {
     let candidates: Actor<TContext>[] = this.children;
@@ -105,20 +105,6 @@ export class ActorTree<
     }
 
     return current;
-  }
-
-  * getRootActors(): IterableIterator<Actor<TContext>> {
-    for (const rootActor of this.children) {
-      if (!rootActor.pendingForDestruction) {
-        yield rootActor;
-      }
-    }
-  }
-
-  * getAllActors(): IterableIterator<Actor<TContext>> {
-    for (const { actor } of this.walk()) {
-      yield actor;
-    }
   }
 
   destroyActor(
@@ -150,7 +136,11 @@ export class ActorTree<
   }
 
   * [Symbol.iterator](): IterableIterator<Actor<TContext>> {
-    yield* this.getRootActors();
+    for (const rootActor of this.children) {
+      if (!rootActor.pendingForDestruction) {
+        yield rootActor;
+      }
+    }
   }
 }
 

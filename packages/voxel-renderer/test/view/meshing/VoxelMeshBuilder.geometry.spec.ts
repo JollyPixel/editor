@@ -206,7 +206,7 @@ describe("VoxelMeshBuilder - build statistics", () => {
     place(fixture, [0, 0, 0]);
     buildGeometries(fixture);
 
-    const empty = fixture.layer.getOrCreateChunk(2, 0, 0);
+    const empty = fixture.layer.ensureChunk(2, 0, 0);
     assert.equal(fixture.builder.buildChunkGeometries([{ layer: fixture.layer, chunk: empty }]).size, 0);
 
     assert.equal(fixture.builder.stats.faces, 0);

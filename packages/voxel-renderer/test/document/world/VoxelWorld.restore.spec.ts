@@ -11,7 +11,7 @@ import { makeVoxelEntry } from "../../helpers/voxelEntry.ts";
 function layerNames(
   world: VoxelWorld
 ): string[] {
-  return world.getLayers().map((layer) => layer.name);
+  return world.layers().map((layer) => layer.name);
 }
 
 describe("VoxelWorld — restore and recording", () => {
@@ -27,7 +27,7 @@ describe("VoxelWorld — restore and recording", () => {
       position: { x: 4, y: 0, z: 0 }
     });
 
-    assert.equal(world.getLayers()[0], layer);
+    assert.equal(world.layers()[0], layer);
     assert.equal(layer.id, "layer_42");
     assert.deepEqual(layer.position, { x: 4, y: 0, z: 0 });
     assert.deepEqual(actions, []);
@@ -43,9 +43,9 @@ describe("VoxelWorld — restore and recording", () => {
     world.addRecorder(recorder);
 
     world.unrecorded(
-      () => world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 })
+      () => world.placeVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 })
     );
-    world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 1 });
+    world.placeVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 1 });
 
     assert.strictEqual(world.removeRecorder(recorder), true);
     assert.deepEqual(recorded, [1]);
@@ -59,8 +59,8 @@ describe("VoxelWorld — compositing", () => {
     const top = world.addLayer("Top");
     const baseEntry = makeVoxelEntry(1);
     const topEntry = makeVoxelEntry(2);
-    base.setVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
-    top.setVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
+    base.writeVoxelAt({ x: 0, y: 0, z: 0 }, baseEntry);
+    top.writeVoxelAt({ x: 0, y: 0, z: 0 }, topEntry);
 
     return { world, base, top, baseEntry, topEntry };
   }
@@ -68,7 +68,7 @@ describe("VoxelWorld — compositing", () => {
   it("takes the voxel from the highest-priority layer that has one", () => {
     const { world, topEntry } = stacked();
 
-    assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), topEntry);
+    assert.deepEqual(world.voxelAt({ x: 0, y: 0, z: 0 }), topEntry);
   });
 
   it("falls through to a lower layer where the higher one is empty", () => {
@@ -76,27 +76,27 @@ describe("VoxelWorld — compositing", () => {
     const base = world.addLayer("Base");
     world.addLayer("Top");
     const entry = makeVoxelEntry(1);
-    base.setVoxelAt({ x: 5, y: 0, z: 0 }, entry);
+    base.writeVoxelAt({ x: 5, y: 0, z: 0 }, entry);
 
-    assert.deepEqual(world.getVoxelAt({ x: 5, y: 0, z: 0 }), entry);
+    assert.deepEqual(world.voxelAt({ x: 5, y: 0, z: 0 }), entry);
   });
 
   it("skips an invisible layer", () => {
     const { world, top, baseEntry } = stacked();
     top.visible = false;
 
-    assert.deepEqual(world.getVoxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
+    assert.deepEqual(world.voxelAt({ x: 0, y: 0, z: 0 }), baseEntry);
   });
 
   it("names the layer the winning voxel came from", () => {
     const { world, top, base, topEntry } = stacked();
 
-    const winner = world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 });
+    const winner = world.voxelWithLayerAt({ x: 0, y: 0, z: 0 });
     assert.deepEqual(winner?.entry, topEntry);
     assert.equal(winner?.layer, top);
 
     top.visible = false;
-    assert.equal(world.getVoxelWithLayerAt({ x: 0, y: 0, z: 0 })?.layer, base);
+    assert.equal(world.voxelWithLayerAt({ x: 0, y: 0, z: 0 })?.layer, base);
   });
 });
 
@@ -131,13 +131,13 @@ describe("VoxelWorld — layer identity", () => {
     const moves = [
       {
         action: "layer-moved",
-        layerId: seed.getLayer("A")!.id,
-        metadata: { rank: rankBetween(seed.getLayer("C")!.rank, null) }
+        layerId: seed.findLayer("A")!.id,
+        metadata: { rank: rankBetween(seed.findLayer("C")!.rank, null) }
       },
       {
         action: "layer-moved",
-        layerId: seed.getLayer("C")!.id,
-        metadata: { rank: rankBetween(null, seed.getLayer("A")!.rank) }
+        layerId: seed.findLayer("C")!.id,
+        metadata: { rank: rankBetween(null, seed.findLayer("A")!.rank) }
       }
     ] as const;
     const first = new VoxelWorld(4);
@@ -164,8 +164,8 @@ describe("VoxelWorld — layer identity", () => {
       metadata: { entries: [{ position: { x: 0, y: 0, z: 0 }, blockId: 2 }] }
     });
 
-    assert.strictEqual(world.getLayer("Floor"), layer);
-    assert.strictEqual(layer.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2);
+    assert.strictEqual(world.findLayer("Floor"), layer);
+    assert.strictEqual(layer.voxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2);
     assert.deepEqual(commands, [
       { action: "updated", layerId: layer.id, metadata: { options: { name: "Floor" } } }
     ]);

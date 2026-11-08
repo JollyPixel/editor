@@ -172,7 +172,7 @@ function buildDiorama(
   });
 
   for (let x = 2; x < kSize - 2; x++) {
-    world.setVoxel(kLayer, {
+    world.placeVoxel(kLayer, {
       position: { x, y: 1, z: 5 },
       blockId: x < kCenter ? ReliefBlock.BrickRamp : ReliefBlock.PlankStair
     });

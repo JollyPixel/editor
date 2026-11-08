@@ -33,14 +33,14 @@ export function applyBrushStroke(
   }
 
   const { world } = view.document;
-  const layer = world.getLayer(stroke.layerName);
+  const layer = world.findLayer(stroke.layerName);
   if (stroke.paint) {
     const paint = stroke.paint;
     const transform = new VoxelTransform(paint).packed;
     const entries: VoxelSetOptions[] = [];
     const halves: VoxelSetOptions[] = [];
     for (const position of cells) {
-      const entry = layer?.getVoxelAt(position);
+      const entry = layer?.voxelAt(position);
       const half = stroke.mode === "replace" && entry !== undefined ?
         stroke.aimedHalfAt(position, entry) :
         null;
@@ -78,17 +78,17 @@ export function applyBrushStroke(
     }
 
     if (entries.length > 0) {
-      world.setVoxelBulk(stroke.layerName, entries);
+      world.placeVoxelBulk(stroke.layerName, entries);
     }
     if (halves.length > 0) {
-      world.transaction(() => world.setVoxelBulk(stroke.layerName, halves));
+      world.transaction(() => world.placeVoxelBulk(stroke.layerName, halves));
     }
   }
   else {
     const removals: VoxelRemoveOptions[] = [];
     const survivors: VoxelSetOptions[] = [];
     for (const position of cells) {
-      const entry = layer?.getVoxelAt(position);
+      const entry = layer?.voxelAt(position);
       if (entry === undefined) {
         continue;
       }
@@ -109,7 +109,7 @@ export function applyBrushStroke(
       world.removeVoxelBulk(stroke.layerName, removals);
     }
     if (survivors.length > 0) {
-      world.setVoxelBulk(stroke.layerName, survivors);
+      world.placeVoxelBulk(stroke.layerName, survivors);
     }
   }
 

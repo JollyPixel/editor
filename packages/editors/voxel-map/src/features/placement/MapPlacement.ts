@@ -402,7 +402,7 @@ export class MapPlacement {
     layerName: string,
     patch: VoxelPatch
   ): boolean {
-    if (this.#world.getLayer(layerName) === undefined) {
+    if (this.#world.findLayer(layerName) === undefined) {
       return false;
     }
 
@@ -474,7 +474,7 @@ export class MapPlacement {
     source: LayerSource
   ): boolean {
     const { layerName } = source;
-    if (this.#world.getLayer(layerName) === undefined) {
+    if (this.#world.findLayer(layerName) === undefined) {
       return false;
     }
 
@@ -485,7 +485,7 @@ export class MapPlacement {
       );
     }
 
-    const bounds = this.#world.getLayer(layerName)?.worldBounds() ?? null;
+    const bounds = this.#world.findLayer(layerName)?.worldBounds() ?? null;
     if (bounds === null) {
       return true;
     }

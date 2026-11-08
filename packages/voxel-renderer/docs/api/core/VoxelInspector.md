@@ -111,7 +111,7 @@ inspectBlocksetUsage(blocksetId: string): VoxelBlocksetUsage;
 | `stats` field | Description |
 | --- | --- |
 | `voxels` | Voxels stored in every layer. |
-| `layers` | `{ layerName, voxels, chunks }` per layer, in `world.getLayers()` order. |
+| `layers` | `{ layerName, voxels, chunks }` per layer, in `world.layers()` order. |
 | `blocks` | `Map` of voxel count per stored block id, orphans included. |
 | `unusedBlocks` | Registered ids no voxel uses, in registry order. |
 | `orphanBlocks` | Stored ids missing from the registry, ascending. |

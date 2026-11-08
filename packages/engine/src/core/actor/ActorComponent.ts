@@ -75,7 +75,7 @@ export class ActorComponent<
     return this.actor.world.context;
   }
 
-  protected getAsset<TValue>(
+  protected resolveAsset<TValue>(
     reference: AssetReference<TValue>
   ): TValue {
     return this.actor.world.assetCoordinator.get(reference);

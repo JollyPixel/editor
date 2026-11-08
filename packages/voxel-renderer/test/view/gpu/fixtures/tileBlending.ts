@@ -79,7 +79,7 @@ export async function renderBlendScene(
   const layer = view.document.world.addLayer("ground");
   for (let x = 0; x < kColumns; x++) {
     for (let z = 0; z < kRows; z++) {
-      layer.setVoxelAt({ x, y: 0, z }, {
+      layer.writeVoxelAt({ x, y: 0, z }, {
         blockId: x < kColumns / 2 ? kGrassId : kDirtId,
         transform: 0
       });

@@ -176,7 +176,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
     return this.#compositor.components;
   }
 
-  getSource() {
+  get source(): THREE.WebGPURenderer {
     return this.webGPURenderer;
   }
 
@@ -200,9 +200,19 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
     this.#compositor.remove(component);
   }
 
-  setRatio(
-    ratio: number | null = null
+  lockAspectRatio(
+    ratio: number
   ) {
+    return this.#fit(ratio);
+  }
+
+  unlockAspectRatio() {
+    return this.#fit(null);
+  }
+
+  #fit(
+    ratio: number | null
+  ): this {
     this.#size.layout = createCanvasFit(ratio);
     Object.assign(
       this.webGPURenderer.domElement.style,

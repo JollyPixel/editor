@@ -40,7 +40,7 @@ export function captureVoxelWorld(
   return {
     chunkSize: world.chunkSize,
     blocksets: Array.from(blocksets, serializeBlocksetDefinition),
-    layers: world.getLayers().map(captureVoxelLayer),
+    layers: world.layers().map(captureVoxelLayer),
     objectLayers: world.objectLayers.toArray(),
     templates: world.templates.toArray().map(
       (template) => captureVoxelTemplate(template, world.chunkSize)
@@ -84,7 +84,7 @@ export function captureVoxelLayer(
   layer: VoxelLayer
 ): VoxelLayerData {
   const chunks: VoxelChunkData[] = [];
-  for (const chunk of layer.getChunks()) {
+  for (const chunk of layer.chunks()) {
     if (chunk.voxelCount > 0) {
       chunks.push(captureVoxelChunk(chunk));
     }

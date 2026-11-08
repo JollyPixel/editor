@@ -122,7 +122,7 @@ describe("PlacementPresence", () => {
   test("tells regions of the same layer apart", () => {
     const world = new VoxelWorld();
     world.addLayer("Draft");
-    world.setVoxelBulk("Draft", [0, 1, 2].map((x) => {
+    world.placeVoxelBulk("Draft", [0, 1, 2].map((x) => {
       return {
         position: { x, y: 0, z: 0 },
         blockId: 1

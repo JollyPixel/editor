@@ -115,7 +115,7 @@ function createScene() {
     visibility: new VoxelLayerVisibility()
   });
   const targets: LitTarget[] = [];
-  for (const chunk of document.world.getLayer(kLayer)!.getChunks()) {
+  for (const chunk of document.world.findLayer(kLayer)!.chunks()) {
     targets.push({
       key: `${chunk.cx},${chunk.cy},${chunk.cz}`,
       origin: {
@@ -193,7 +193,7 @@ for (let run = 0; run < runs; run++) {
     const placing = i % 2 === 0;
     editSamples.push(timed(() => {
       if (placing) {
-        document.world.setVoxel(kLayer, { position, blockId: kStoneId });
+        document.world.placeVoxel(kLayer, { position, blockId: kStoneId });
       }
       else {
         document.world.removeVoxel(kLayer, { position });

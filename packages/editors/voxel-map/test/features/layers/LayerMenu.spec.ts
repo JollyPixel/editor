@@ -30,7 +30,7 @@ function makeWorld(): VoxelWorld {
   const world = new VoxelWorld(4);
   world.addLayer("Ground");
   world.addLayer("Deco");
-  world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+  world.placeVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
   world.objectLayers.add("Triggers");
   world.objectLayers.add("Spawns");
   world.objectLayers.addObject("Triggers", {

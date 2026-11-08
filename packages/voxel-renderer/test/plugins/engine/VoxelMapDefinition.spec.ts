@@ -146,7 +146,7 @@ describe("VoxelMapDefinition", () => {
     const probe = makeMapSource();
     const { world } = probe.source.document;
     world.updateLayer("Ground", { anchor: true });
-    world.setLayerPosition("Ground", { x: 4, y: 2, z: 0 });
+    world.placeLayer("Ground", { x: 4, y: 2, z: 0 });
     world.objectLayers.add("Points");
     world.objectLayers.addObject("Points", {
       id: "spawn",
@@ -173,7 +173,7 @@ describe("VoxelMapDefinition", () => {
 
     assert.deepStrictEqual([...definition.anchors(renderer).list()], [
       {
-        key: `layer:${world.getLayer("Ground")!.id}`,
+        key: `layer:${world.findLayer("Ground")!.id}`,
         label: "Ground",
         kind: "layer",
         pose: {
@@ -218,10 +218,10 @@ describe("VoxelMapDefinition", () => {
     let notified = 0;
     const unsubscribe = anchors.subscribe(() => notified++);
 
-    world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+    world.placeVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
     assert.strictEqual(notified, 0);
 
-    world.setLayerPosition("Ground", { x: 0, y: 6, z: 0 });
+    world.placeLayer("Ground", { x: 0, y: 6, z: 0 });
     assert.strictEqual(notified, 1);
     assert.deepStrictEqual(
       [...anchors.list()].map(({ pose }) => pose.position),

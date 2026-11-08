@@ -45,7 +45,7 @@ export interface MeshableChunk {
     ly: number,
     lz: number
   ): PackedVoxel;
-  getPartnerAt(
+  partnerAt(
     lx: number,
     ly: number,
     lz: number
@@ -62,7 +62,7 @@ export interface MeshableLayer {
   readonly visible: boolean;
   readonly compositing: "replace" | "composite";
   readonly position: Readonly<VoxelCoord>;
-  getChunk(
+  chunkAt(
     cx: number,
     cy: number,
     cz: number
@@ -76,7 +76,7 @@ export interface MeshableLayerChunk {
 
 export interface MeshableWorld {
   readonly chunkSize: number;
-  getLayers(): readonly MeshableLayer[];
+  layers(): readonly MeshableLayer[];
 }
 
 export interface MeshableLayerVisibility {

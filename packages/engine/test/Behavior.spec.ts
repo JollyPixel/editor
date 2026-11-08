@@ -50,8 +50,8 @@ describe("Behavior", () => {
     const second = new BehaviorOne(actor);
     const other = new BehaviorTwo(actor);
 
-    assert.deepEqual([...actor.getComponents(BehaviorOne)], [first, second]);
-    assert.deepEqual([...actor.getComponents(BehaviorTwo)], [other]);
+    assert.deepEqual([...actor.findComponents(BehaviorOne)], [first, second]);
+    assert.deepEqual([...actor.findComponents(BehaviorTwo)], [other]);
   });
 
   test("should leave the other behaviors on the actor when one is destroyed", () => {

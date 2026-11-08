@@ -52,7 +52,7 @@ export class LightChanges {
   #sync(
     changed: Set<LightChunkKey> | null
   ): void {
-    const layers = this.#world.getLayers();
+    const layers = this.#world.layers();
     for (const layer of layers) {
       this.#syncLayer(layer, changed);
     }
@@ -95,7 +95,7 @@ export class LightChanges {
     }
 
     snapshot.revision = layer.revision;
-    for (const chunk of layer.getChunks()) {
+    for (const chunk of layer.chunks()) {
       if (snapshot.chunks.get(chunk) !== chunk.revision) {
         snapshot.chunks.set(chunk, chunk.revision);
         this.#cover(snapshot, chunk, changed);
@@ -104,7 +104,7 @@ export class LightChanges {
 
     if (snapshot.chunks.size > layer.chunkCount) {
       for (const chunk of snapshot.chunks.keys()) {
-        if (layer.getChunk(chunk.cx, chunk.cy, chunk.cz) !== chunk) {
+        if (layer.chunkAt(chunk.cx, chunk.cy, chunk.cz) !== chunk) {
           snapshot.chunks.delete(chunk);
           this.#cover(snapshot, chunk, changed);
         }

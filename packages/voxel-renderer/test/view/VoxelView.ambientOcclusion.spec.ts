@@ -77,7 +77,7 @@ describe("VoxelView - ambient occlusion", () => {
 
     view.lighting.ambientOcclusion = 0.8;
 
-    const dirty = [...view.document.world.getAllChunks()]
+    const dirty = [...view.document.world.chunks()]
       .filter(({ chunk }) => chunk.dirty);
     assert.equal(view.lighting.ambientOcclusion, 0.8);
     assert.deepEqual(dirty, []);

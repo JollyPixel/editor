@@ -33,3 +33,7 @@ export interface Component {
   markDestructionPending(): void;
   destroy(): void;
 }
+
+export type ComponentClass<T extends Component = Component> = abstract new (
+  ...args: any[]
+) => T;

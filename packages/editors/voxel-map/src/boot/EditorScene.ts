@@ -161,7 +161,7 @@ export class EditorScene extends Systems.Scene {
     const scene = world.sceneManager.graph.scene;
     const layerVisibility = new LayerVisibilityStore();
 
-    const lighting = new SceneLighting(world.renderer.getSource());
+    const lighting = new SceneLighting(world.renderer.source);
     scene.add(...lighting.lights);
 
     const camera = new EditorCamera({
@@ -202,7 +202,7 @@ export class EditorScene extends Systems.Scene {
     ): void {
       camera.glow = enabled && anyGlows(materialGroups);
     }
-    const viewport = world.renderer.getSource().domElement.parentElement;
+    const viewport = world.renderer.source.domElement.parentElement;
     function applyBackdrop(): void {
       if (viewport !== null) {
         viewport.dataset.backdrop = environment.backdrop;
@@ -452,7 +452,7 @@ export class EditorScene extends Systems.Scene {
         camera.spawn(EditorMap.layers(view.document.world));
       }),
       editContext.subscribe("change", (draft) => {
-        objectLayers.transform.setVisible(draft === null);
+        objectLayers.transform.visible = draft === null;
         world.invalidate();
       }),
       state.view.subscribe("change", (settings) => {

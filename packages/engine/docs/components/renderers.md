@@ -39,7 +39,7 @@ const renderer = actor.addComponentAndGet(ModelRenderer, {
   asset: KnightModel
 });
 
-renderer.animation.setFadeDuration(0.25);
+renderer.animation.fadeDuration = 0.25;
 renderer.animation.play("walk");
 renderer.animation.stop();
 ```
@@ -108,9 +108,9 @@ const sprite = actor.addComponentAndGet(SpriteRenderer, {
   animations: { run: { from: 0, to: 5 } }
 });
 
-sprite.setFrame(3);
-sprite.setHorizontalFlip(true);
-sprite.setOpacity(0.8);
+sprite.frameIndex = 3;
+sprite.flip = { horizontal: true, vertical: false };
+sprite.opacity = 0.8;
 sprite.animation.play("run", { duration: 0.6, loop: true });
 ```
 
@@ -118,8 +118,8 @@ sprite.animation.play("run", { duration: 0.6, loop: true });
   non-looping animation stops on its last frame and `isPlaying` becomes
   `false`.
 - An unknown animation name logs a warning and changes nothing.
-- `frameIndex` and `flip` are read-only; use `setFrame()` and the flip
-  setters. Frames count left to right from the top row.
+- Assigning `frameIndex` or `flip` rewrites the texture UVs. Frames count
+  left to right from the top row.
 - `sheet` is the `SpriteSheet` built from the tile counts; it throws a
   `RangeError` for a count below 1 or not an integer.
   `sheet.writeFrame(texture, frame, flip)` sets a texture's `repeat` and

@@ -124,8 +124,19 @@ export class ModelAnimation<
     return this.#current?.name ?? null;
   }
 
-  setMixer(
-    mixer: THREE.AnimationMixer
+  get fadeDuration(): number {
+    return this.#defaultFadeDuration;
+  }
+
+  set fadeDuration(
+    duration: number
+  ) {
+    this.#defaultFadeDuration = duration;
+  }
+
+  bind(
+    mixer: THREE.AnimationMixer,
+    clips: THREE.AnimationClip[]
   ) {
     this.#mixer = mixer;
     mixer.addEventListener("finished", (event) => {
@@ -136,11 +147,14 @@ export class ModelAnimation<
         this.onFinished?.(finished.name);
       }
     });
+    for (const clip of clips) {
+      this.#clips.set(this.#clipNameRewriter(clip.name), mixer.clipAction(clip));
+    }
 
     return this;
   }
 
-  setClipNameRewriter(
+  renameClips(
     rewriter: ModelAnimationClipNameRewriter
   ) {
     this.#clipNameRewriter = rewriter;
@@ -151,25 +165,6 @@ export class ModelAnimation<
       }
       this.#clips = renamedClips;
     }
-
-    return this;
-  }
-
-  setClips(
-    clips: THREE.AnimationClip[]
-  ) {
-    const mixer = this.#requireMixer();
-    for (const clip of clips) {
-      this.#clips.set(this.#clipNameRewriter(clip.name), mixer.clipAction(clip));
-    }
-
-    return this;
-  }
-
-  setFadeDuration(
-    duration: number
-  ) {
-    this.#defaultFadeDuration = duration;
 
     return this;
   }
@@ -288,7 +283,7 @@ export class ModelAnimation<
 
   #requireMixer(): THREE.AnimationMixer {
     if (this.#mixer === null) {
-      throw new Error("ModelAnimation needs a mixer: call setMixer() first.");
+      throw new Error("ModelAnimation needs a mixer: call bind() first.");
     }
 
     return this.#mixer;

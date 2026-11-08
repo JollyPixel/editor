@@ -18,11 +18,11 @@ const suite = defineSuite("engine / ActorTree", (bench) => {
   const { tree } = world.sceneManager;
 
   bench
-    .add("getActor by name, last of 1k", () => {
-      tree.getActor("group-99");
+    .add("findActor by name, last of 1k", () => {
+      tree.findActor("group-99");
     })
-    .add("getActor by path", () => {
-      tree.getActor("group-99/child-8");
+    .add("findActor by path", () => {
+      tree.findActor("group-99/child-8");
     })
     .add("walk 1k actors", () => {
       let count = 0;

@@ -36,16 +36,16 @@ function makeView(): VoxelView {
 
   const { world } = view.document;
   for (let x = 0; x < 5; x++) {
-    world.setVoxel("Ground", {
+    world.placeVoxel("Ground", {
       position: { x, y: 0, z: 0 },
       blockId: kGrass
     });
   }
-  world.setVoxel("Top", {
+  world.placeVoxel("Top", {
     position: { x: 0, y: 1, z: 0 },
     blockId: kStone
   });
-  world.setVoxel("Top", {
+  world.placeVoxel("Top", {
     position: { x: 1, y: 1, z: 0 },
     blockId: kDeleted
   });

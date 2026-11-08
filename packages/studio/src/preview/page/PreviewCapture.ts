@@ -54,7 +54,7 @@ export class PreviewCapture {
         this.#render(target);
       }
       const pixels = await ReadbackPixels.fromRenderTarget(
-        this.#renderer.getSource(),
+        this.#renderer.source,
         target
       );
 
@@ -92,7 +92,7 @@ export class PreviewCapture {
     target: THREE.RenderTarget
   ): void {
     renderToTarget(
-      this.#renderer.getSource(),
+      this.#renderer.source,
       this.#scene,
       this.#camera,
       target

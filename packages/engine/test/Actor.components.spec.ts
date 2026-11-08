@@ -90,11 +90,11 @@ describe("Actor components", () => {
     const root = createActor("root").addComponent(Health);
     const arm = createActor("arm", root);
     const hand = createActor("hand", arm).addComponent(Weapon);
-    const sword = hand.getComponent(Weapon);
+    const sword = hand.findComponent(Weapon);
 
     assert.strictEqual(root.findComponentInChildren(Weapon), sword);
     assert.strictEqual(root.findComponentInChildren(Health), null);
-    assert.strictEqual(hand.findComponentInParent(Health), root.getComponent(Health));
+    assert.strictEqual(hand.findComponentInParent(Health), root.findComponent(Health));
     assert.strictEqual(hand.findComponentInParent(Weapon), null);
   });
 });

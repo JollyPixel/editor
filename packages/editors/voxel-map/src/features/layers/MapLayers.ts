@@ -167,7 +167,7 @@ export class MapLayers {
   ): Box3 | null {
     switch (ref.kind) {
       case "voxel-layer":
-        return this.#world.getLayer(ref.name)?.worldBounds() ?? null;
+        return this.#world.findLayer(ref.name)?.worldBounds() ?? null;
       case "object-layer":
         return objectBounds(
           this.#world.objectLayers.get(ref.name)?.objects ?? []
@@ -271,7 +271,7 @@ export class MapLayers {
       return collectLayerSelections(this.#world);
     }
 
-    const layer = this.#world.getLayerById(draft.layerId);
+    const layer = this.#world.findLayerById(draft.layerId);
 
     return layer === undefined ? [] : [new VoxelLayerRef(layer.name)];
   }

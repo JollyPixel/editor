@@ -111,7 +111,7 @@ export class Camera3DControls extends CameraComponent<any> {
     );
 
     this.#euler.setFromQuaternion(
-      transform.getLocalOrientation(this.#orientation)
+      this.#orientation.copy(transform.local.orientation)
     );
     this.#euler.y -= mouseDelta.x * this.#rotationSpeed;
     this.#euler.x += mouseDelta.y * this.#rotationSpeed;
@@ -120,9 +120,7 @@ export class Camera3DControls extends CameraComponent<any> {
       Math.min(this.maxRollUp, this.#euler.x)
     );
 
-    transform.setLocalOrientation(
-      this.#orientation.setFromEuler(this.#euler)
-    );
+    transform.local.orientation = this.#orientation.setFromEuler(this.#euler);
   }
 
   update() {
@@ -146,7 +144,7 @@ export class Camera3DControls extends CameraComponent<any> {
         .multiplyScalar(distance)
     );
     if (vector.y !== 0) {
-      transform.moveGlobal(
+      transform.global.move(
         this.#translation.set(0, vector.y * distance, 0)
       );
     }

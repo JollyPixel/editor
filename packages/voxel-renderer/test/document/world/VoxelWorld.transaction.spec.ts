@@ -40,9 +40,9 @@ describe("VoxelWorld.transaction", () => {
     const { world } = makeWorld();
 
     const result = world.transaction(() => {
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 3 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 3 });
 
-      return world.getVoxelAt(kOrigin)?.blockId;
+      return world.voxelAt(kOrigin)?.blockId;
     });
 
     assert.equal(result, 3);
@@ -54,15 +54,15 @@ describe("VoxelWorld.transaction", () => {
     commands.length = 0;
 
     world.transaction(() => {
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 3 });
-      world.setVoxel("Top", { position: { x: 5, y: 0, z: 0 }, blockId: 7 });
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 4, rotation: 1 });
-      world.setVoxelBulk(kLayer, [{ position: { x: 1, y: 2, z: 3 }, blockId: 9 }]);
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 3 });
+      world.placeVoxel("Top", { position: { x: 5, y: 0, z: 0 }, blockId: 7 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 4, rotation: 1 });
+      world.placeVoxelBulk(kLayer, [{ position: { x: 1, y: 2, z: 3 }, blockId: 9 }]);
     });
 
     assert.deepEqual(
       commands.filter(isVoxelLayerCommand).map(
-        (command) => ("layerId" in command ? world.getLayerById(command.layerId)?.name : null)
+        (command) => ("layerId" in command ? world.findLayerById(command.layerId)?.name : null)
       ),
       [kLayer, "Top"]
     );
@@ -88,10 +88,10 @@ describe("VoxelWorld.transaction", () => {
 
     world.transaction(() => {
       for (const position of cells) {
-        world.setVoxel(kLayer, { position, blockId: 2 });
+        world.placeVoxel(kLayer, { position, blockId: 2 });
       }
       for (const position of cells.toReversed()) {
-        world.setVoxel(kLayer, { position, blockId: 3 });
+        world.placeVoxel(kLayer, { position, blockId: 3 });
       }
     });
 
@@ -110,7 +110,7 @@ describe("VoxelWorld.transaction", () => {
 
     world.transaction(() => {
       world.removeVoxel(kLayer, { position: kOrigin });
-      world.setVoxel(kLayer, { position: { x: 1, y: 0, z: 0 }, blockId: 5 });
+      world.placeVoxel(kLayer, { position: { x: 1, y: 0, z: 0 }, blockId: 5 });
       world.removeVoxelBulk(kLayer, [{ position: { x: 1, y: 0, z: 0 } }]);
     });
 
@@ -124,7 +124,7 @@ describe("VoxelWorld.transaction", () => {
     const { world, commands } = makeWorld();
 
     world.transaction(() => {
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 2 });
       world.removeVoxel(kLayer, { position: kOrigin });
     });
 
@@ -136,10 +136,10 @@ describe("VoxelWorld.transaction", () => {
 
     world.transaction(() => {
       world.transaction(() => {
-        world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
+        world.placeVoxel(kLayer, { position: kOrigin, blockId: 2 });
       });
       assert.deepEqual(commands, []);
-      world.setVoxel(kLayer, { position: { x: 1, y: 0, z: 0 }, blockId: 2 });
+      world.placeVoxel(kLayer, { position: { x: 1, y: 0, z: 0 }, blockId: 2 });
     });
 
     assert.equal(commands.length, 1);
@@ -150,9 +150,9 @@ describe("VoxelWorld.transaction", () => {
     const { world, commands } = makeWorld();
 
     world.transaction(() => {
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 2 });
       world.translateLayer(kLayer, { x: 4, y: 0, z: 0 });
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 3 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 3 });
     });
 
     assert.deepEqual(
@@ -167,13 +167,13 @@ describe("VoxelWorld.transaction", () => {
     ]);
 
     const remote = new VoxelWorld(4);
-    remote.restoreLayer({ id: world.getLayer(kLayer)!.id, name: kLayer });
+    remote.restoreLayer({ id: world.findLayer(kLayer)!.id, name: kLayer });
     for (const command of commands) {
       remote.applyCommand(command);
     }
     assert.deepEqual(
-      voxelContent(remote.getLayer(kLayer)!),
-      voxelContent(world.getLayer(kLayer)!)
+      voxelContent(remote.findLayer(kLayer)!),
+      voxelContent(world.findLayer(kLayer)!)
     );
   });
 
@@ -181,7 +181,7 @@ describe("VoxelWorld.transaction", () => {
     const { world, commands } = makeWorld();
 
     assert.throws(() => world.transaction(() => {
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 2 });
       throw new Error("boom");
     }), /boom/);
 
@@ -193,11 +193,11 @@ describe("VoxelWorld.transaction", () => {
     const history = worldHistory(world);
 
     world.silently(() => world.transaction(() => {
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 2 });
     }));
 
     assert.deepEqual(commands, []);
     assert.equal(history.canUndo, false);
-    assert.equal(world.getVoxelAt(kOrigin)?.blockId, 2);
+    assert.equal(world.voxelAt(kOrigin)?.blockId, 2);
   });
 });

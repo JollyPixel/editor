@@ -99,7 +99,7 @@ export class VoxelEditBatch {
     const z = position.z - layer.position.z;
     const touched = this.#touch(layer, x, y, z);
     if (!options.track) {
-      layer.setPackedVoxelAt(position, packed, partner);
+      layer.writePackedAt(position, packed, partner);
 
       return;
     }
@@ -112,17 +112,17 @@ export class VoxelEditBatch {
     const index = lx + (size * (ly + (size * lz)));
     let entry = cells.entryIndex(index);
     if (entry < 0) {
-      const chunk = layer.getChunk(touched.cx, touched.cy, touched.cz);
+      const chunk = layer.chunkAt(touched.cx, touched.cy, touched.cz);
       entry = cells.track(
         index,
-        chunk === undefined ? VOXEL_ABSENT : chunk.getPackedAt(lx, ly, lz),
-        chunk === undefined ? VOXEL_ABSENT : chunk.getPartnerAt(lx, ly, lz),
+        chunk === undefined ? VOXEL_ABSENT : chunk.packedAt(lx, ly, lz),
+        chunk === undefined ? VOXEL_ABSENT : chunk.partnerAt(lx, ly, lz),
         options.reach
       );
       this.#pendingCells++;
     }
     cells.write(entry, packed, partner);
-    layer.setPackedVoxelAt(position, packed, partner);
+    layer.writePackedAt(position, packed, partner);
   }
 
   touch(

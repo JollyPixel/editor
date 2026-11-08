@@ -41,7 +41,7 @@ export class TerrainRenderer extends ActorComponent {
       requestFrame,
       ...viewOptions
     } = options;
-    const renderer: TextureCopier = actor.world.renderer.getSource();
+    const renderer: TextureCopier = actor.world.renderer.source;
     this.#camera = camera;
     this.view = new TerrainView(terrain, {
       textureCopier: renderer,

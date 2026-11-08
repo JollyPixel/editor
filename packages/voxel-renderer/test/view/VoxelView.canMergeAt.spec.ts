@@ -34,7 +34,7 @@ function makeStairView(): VoxelView {
       makeBlockDef(kSlabBottom, "slabBottom")
     ]
   });
-  view.document.world.setVoxel(kLayer, { position: kCell, blockId: kStair });
+  view.document.world.placeVoxel(kLayer, { position: kCell, blockId: kStair });
   kViews.add(view);
 
   return view;
@@ -75,7 +75,7 @@ describe("VoxelView.canMergeVoxelPart", () => {
     const part = { blockId: kSlabBeam, transform: kUpsideDown };
 
     assert.equal(view.canMergeVoxelPart(kLayer, { x: 1, y: 0, z: 0 }, part), false);
-    view.document.world.setVoxel(kLayer, {
+    view.document.world.placeVoxel(kLayer, {
       position: kCell,
       blockId: kSlabBeam,
       flipY: true,

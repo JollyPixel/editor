@@ -27,7 +27,7 @@ function makeMeshedView(): VoxelView {
 function anyChunkDirty(
   view: VoxelView
 ): boolean {
-  return [...view.document.world.getAllChunks()].some(({ chunk }) => chunk.dirty);
+  return [...view.document.world.chunks()].some(({ chunk }) => chunk.dirty);
 }
 
 describe("VoxelView - block order", () => {
@@ -45,7 +45,7 @@ describe("VoxelView - block order", () => {
 function dirtyChunkXs(
   view: VoxelView
 ): number[] {
-  return [...view.document.world.getAllChunks()]
+  return [...view.document.world.chunks()]
     .filter(({ chunk }) => chunk.dirty)
     .map(({ chunk }) => chunk.cx)
     .sort((left, right) => left - right);

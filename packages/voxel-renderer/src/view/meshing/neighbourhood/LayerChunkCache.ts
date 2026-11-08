@@ -80,7 +80,7 @@ export class LayerChunkCache {
     for (let dx = 0; dx < kSpan; dx++) {
       for (let dy = 0; dy < kSpan; dy++) {
         for (let dz = 0; dz < kSpan; dz++) {
-          const chunk = layer.getChunk(baseCx + dx, baseCy + dy, baseCz + dz);
+          const chunk = layer.chunkAt(baseCx + dx, baseCy + dy, baseCz + dz);
           if (chunk === undefined) {
             continue;
           }
@@ -217,7 +217,7 @@ export class LayerChunkCache {
 
     return chunk === null ?
       VOXEL_ABSENT :
-      chunk.getPartnerAt(x & mask, y & mask, z & mask);
+      chunk.partnerAt(x & mask, y & mask, z & mask);
   }
 
   #packedOutsideCentre(
@@ -259,7 +259,7 @@ export class LayerChunkCache {
 
     return (dx | dy | dz) >= 0 && dx < kSpan && dy < kSpan && dz < kSpan ?
       this.#chunks[(dx * kSpan * kSpan) + (dy * kSpan) + dz] :
-      this.layer.getChunk(cx, cy, cz) ?? null;
+      this.layer.chunkAt(cx, cy, cz) ?? null;
   }
 }
 

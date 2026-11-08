@@ -51,7 +51,7 @@ export class SharedVoxelChunk implements MeshableChunk {
     return this.store.get(lx | (ly << shift) | (lz << (shift * 2)));
   }
 
-  getPartnerAt(
+  partnerAt(
     lx: number,
     ly: number,
     lz: number

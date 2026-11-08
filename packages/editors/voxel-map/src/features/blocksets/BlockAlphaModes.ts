@@ -91,7 +91,7 @@ export class BlockAlphaModes {
 
     const { shapes, document } = this.#view;
     const affected = findBlocksReferencingBlockset(
-      document.blocks.getAll(),
+      document.blocks,
       (shapeId) => shapes.get(shapeId),
       blocksetId,
       source.tileSize

@@ -86,7 +86,7 @@ describe("voxelMapAssetKind — blocksets", () => {
       event(VOXEL_MAP_COMMAND, voxelSetCmd({ blockId: 3, seq: 2 }))
     );
 
-    assert.strictEqual(state.world.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 3);
+    assert.strictEqual(state.world.voxelAt({ x: 0, y: 0, z: 0 })?.blockId, 3);
     assert.strictEqual("blocks" in state, false);
   });
 });

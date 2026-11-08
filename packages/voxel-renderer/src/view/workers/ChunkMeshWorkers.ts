@@ -300,7 +300,7 @@ export class ChunkMeshWorkers {
     const layers: MeshWorkerLayer[] = [];
     const indices = new Map<VoxelLayer, number>();
 
-    for (const layer of world.getLayers()) {
+    for (const layer of world.layers()) {
       const chunks = visibility.isVisible(layer) ?
         this.#shareWindow(job, layer) :
         [];
@@ -353,7 +353,7 @@ export class ChunkMeshWorkers {
     for (let dx = 0; dx < kNeighbourSpan; dx++) {
       for (let dy = 0; dy < kNeighbourSpan; dy++) {
         for (let dz = 0; dz < kNeighbourSpan; dz++) {
-          const chunk = layer.getChunk(baseCx + dx, baseCy + dy, baseCz + dz);
+          const chunk = layer.chunkAt(baseCx + dx, baseCy + dy, baseCz + dz);
           if (chunk !== undefined) {
             chunks.push(this.#share(job, chunk));
           }

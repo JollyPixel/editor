@@ -38,12 +38,12 @@ describe("Systems.SceneInstance", () => {
     assert.deepEqual(sm.tree.children, [root]);
     assert.strictEqual(child.parent, root);
     assert.strictEqual(child.name, "Child");
-    assert.strictEqual(child.transform.getVisible(), false);
-    assert.deepEqual(root.transform.getLocalPosition().toArray(), [1, 2, 3]);
-    assert.ok(Math.abs(root.transform.getLocalEulerAngles().y - (Math.PI / 2)) < 1e-9);
-    assert.deepEqual(root.transform.getLocalScale().toArray(), [2, 2, 2]);
+    assert.strictEqual(child.transform.visible, false);
+    assert.deepEqual(root.transform.local.position.toArray(), [1, 2, 3]);
+    assert.ok(Math.abs(root.transform.local.eulerAngles.y - (Math.PI / 2)) < 1e-9);
+    assert.deepEqual(root.transform.local.scale.toArray(), [2, 2, 2]);
     assert.deepEqual(
-      child.transform.getGlobalPosition().toArray(),
+      child.transform.global.position.toArray(),
       [1, 2, 3]
     );
   });
@@ -73,8 +73,8 @@ describe("Systems.SceneInstance", () => {
 
     const { name, transform } = instance.actor("root")!;
     assert.strictEqual(name, "Renamed");
-    assert.strictEqual(transform.getVisible(), false);
-    assert.deepEqual(transform.getLocalPosition().toArray(), [4, 0, 0]);
+    assert.strictEqual(transform.visible, false);
+    assert.deepEqual(transform.local.position.toArray(), [4, 0, 0]);
   });
 
   test("skips an actor whose parent was not built, with its subtree", () => {

@@ -37,11 +37,11 @@ describe("VoxelWorld — cloneLayer", () => {
     world.cloneLayer("Middle", { name: "Copy" });
 
     assert.deepEqual(
-      world.getLayers().map((layer) => layer.name),
+      world.layers().map((layer) => layer.name),
       ["Top", "Copy", "Middle", "Bottom"]
     );
     assert.deepEqual(
-      world.getLayers().map((layer) => layer.order),
+      world.layers().map((layer) => layer.order),
       [3, 2, 1, 0]
     );
   });
@@ -60,7 +60,7 @@ describe("VoxelWorld — cloneLayer", () => {
     const clone = world.cloneLayer("A", { name: "A_1", visible: false });
 
     assert.ok(clone);
-    assert.ok(world.getLayer("A"));
+    assert.ok(world.findLayer("A"));
     assert.deepEqual(withoutId(clone), {
       ...withoutId(original),
       name: "A_1",
@@ -73,7 +73,7 @@ describe("VoxelWorld — cloneLayer", () => {
     const world = new VoxelWorld(8);
 
     assert.equal(world.cloneLayer("A", { name: "A_1" }), undefined);
-    assert.equal(world.getLayer("A_1"), undefined);
+    assert.equal(world.findLayer("A_1"), undefined);
   });
 });
 
@@ -87,13 +87,13 @@ describe("VoxelWorld — mergeLayer", () => {
 
     assert.equal(world.mergeLayer("Source", "Target"), true);
 
-    assert.equal(world.getLayer("Source"), undefined);
+    assert.equal(world.findLayer("Source"), undefined);
     assert.deepEqual(
-      world.getLayer("Target")?.getVoxelAt({ x: 1, y: 0, z: 0 }),
+      world.findLayer("Target")?.voxelAt({ x: 1, y: 0, z: 0 }),
       moved
     );
     assert.deepEqual(
-      world.getLayers().map((layer) => layer.order),
+      world.layers().map((layer) => layer.order),
       [0]
     );
   });
@@ -109,7 +109,7 @@ describe("VoxelWorld — mergeLayer", () => {
     assert.equal(world.mergeLayer("Source", "Target"), true);
 
     assert.deepEqual(
-      world.getLayer("Target")?.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      world.findLayer("Target")?.voxelAt({ x: 0, y: 0, z: 0 }),
       winner
     );
   });
@@ -125,7 +125,7 @@ describe("VoxelWorld — mergeLayer", () => {
     assert.equal(world.mergeLayer("Source", "Target"), true);
 
     assert.deepEqual(
-      world.getLayer("Target")?.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      world.findLayer("Target")?.voxelAt({ x: 0, y: 0, z: 0 }),
       winner
     );
   });
@@ -137,7 +137,7 @@ describe("VoxelWorld — mergeLayer", () => {
 
     assert.equal(world.mergeLayer("Source", "Target"), true);
 
-    assert.deepEqual(world.getLayer("Target")?.properties, {
+    assert.deepEqual(world.findLayer("Target")?.properties, {
       biome: "forest",
       tag: "keep",
       seed: 7
@@ -151,7 +151,7 @@ describe("VoxelWorld — mergeLayer", () => {
     assert.equal(world.mergeLayer("NoSuch", "Known"), false);
     assert.equal(world.mergeLayer("Known", "NoSuch"), false);
     assert.equal(world.mergeLayer("Known", "Known"), false);
-    assert.ok(world.getLayer("Known"));
+    assert.ok(world.findLayer("Known"));
   });
 });
 
@@ -168,8 +168,8 @@ describe("VoxelWorld — mergeAllLayers", () => {
     const merged = world.mergeAllLayers();
 
     assert.equal(merged.length, 1);
-    assert.deepEqual(world.getLayers(), merged);
-    assert.deepEqual(merged[0].getVoxelAt({ x: 0, y: 0, z: 0 }), winner);
+    assert.deepEqual(world.layers(), merged);
+    assert.deepEqual(merged[0].voxelAt({ x: 0, y: 0, z: 0 }), winner);
   });
 
   it("hands back the only layer untouched", () => {
@@ -179,8 +179,8 @@ describe("VoxelWorld — mergeAllLayers", () => {
     writeVoxel(world, "Only", { x: 0, y: 0, z: 0 }, entry);
 
     assert.deepEqual(world.mergeAllLayers(), [layer]);
-    assert.equal(world.getLayers().length, 1);
-    assert.deepEqual(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), entry);
+    assert.equal(world.layers().length, 1);
+    assert.deepEqual(layer.voxelAt({ x: 0, y: 0, z: 0 }), entry);
   });
 
   it("has nothing to merge in an empty world", () => {
@@ -208,7 +208,7 @@ describe("VoxelWorld — mergeAllLayers", () => {
     const merged = world.mergeAllLayers({ except: ["Water"] });
 
     assert.deepEqual(merged, [decor, base]);
-    assert.deepEqual(world.getLayers(), [decor, water, base]);
+    assert.deepEqual(world.layers(), [decor, water, base]);
   });
 
   it("keeps an excluded layer between the layers it sat between", () => {
@@ -229,9 +229,9 @@ describe("VoxelWorld — mergeAllLayers", () => {
 
     world.mergeAllLayers({ except: ["Water"] });
 
-    assert.equal(world.getLayers().length, 3);
-    assert.deepEqual(world.getVoxelAt(overGround), water);
-    assert.deepEqual(world.getVoxelAt(underTop), top);
+    assert.equal(world.layers().length, 3);
+    assert.deepEqual(world.voxelAt(overGround), water);
+    assert.deepEqual(world.voxelAt(underTop), top);
   });
 
   it("merges nothing when every layer is excluded", () => {
@@ -240,7 +240,7 @@ describe("VoxelWorld — mergeAllLayers", () => {
     const top = world.addLayer("Top");
 
     assert.deepEqual(world.mergeAllLayers({ except: ["Base", "Top"] }), []);
-    assert.deepEqual(world.getLayers(), [top, base]);
+    assert.deepEqual(world.layers(), [top, base]);
   });
 
   it("ignores excluded names that match no layer", () => {

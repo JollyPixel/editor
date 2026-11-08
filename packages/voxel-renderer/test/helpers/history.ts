@@ -42,7 +42,7 @@ export function worldHistory(
     world.unrecorded(() => {
       for (const [layerId, patch] of voxelPatchesRestoring(changes, side)) {
         world.patchVoxels(
-          world.getLayerById(layerId)!.name,
+          world.findLayerById(layerId)!.name,
           patch.cells,
           patch.partners
         );

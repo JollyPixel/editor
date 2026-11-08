@@ -175,7 +175,7 @@ export class CameraComponent<
   ): void {
     const camera = this.threeCamera;
 
-    this.actor.transform.getGlobalMatrix(camera.matrixWorld);
+    camera.matrixWorld.copy(this.actor.transform.global.matrix);
     camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
 
     camera.matrixWorld.decompose(

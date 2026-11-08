@@ -140,7 +140,7 @@ export class TextRenderer<
 
   awake(): void {
     if (this.#asset !== null) {
-      this.font = this.getAsset(this.#asset);
+      this.font = this.resolveAsset(this.#asset);
     }
   }
 

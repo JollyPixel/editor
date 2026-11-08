@@ -62,16 +62,12 @@ export class BlockShapeRegistry implements Iterable<BlockShape> {
     return this.#shapes.has(id);
   }
 
-  getAll(): IterableIterator<BlockShape> {
-    return this.#shapes.values();
-  }
-
   ids(): IterableIterator<BlockShapeID> {
     return this.#shapes.keys();
   }
 
   [Symbol.iterator](): IterableIterator<BlockShape> {
-    return this.getAll();
+    return this.#shapes.values();
   }
 
   static createDefault(): BlockShapeRegistry {

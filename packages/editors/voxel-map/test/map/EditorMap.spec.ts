@@ -205,7 +205,7 @@ describe("EditorMap", () => {
     const { view, editorMap } = setup();
     const layersOnReset: string[] = [];
     editorMap.on("reset", () => {
-      layersOnReset.push(...view.world.getLayers().map((layer) => layer.name));
+      layersOnReset.push(...view.world.layers().map((layer) => layer.name));
     });
 
     view.emit("loaded");
@@ -220,7 +220,7 @@ describe("EditorMap", () => {
     const { view } = setup(map);
 
     assert.deepEqual(
-      view.world.getLayers().map((layer) => layer.name),
+      view.world.layers().map((layer) => layer.name),
       [kDefaultLayerName]
     );
   });
@@ -230,7 +230,7 @@ describe("EditorMap", () => {
 
     view.emit("loaded");
 
-    assert.equal(view.world.getLayers().length, 0);
+    assert.equal(view.world.layers().length, 0);
   });
 
   it("keeps the layers of a map that loads with layers", () => {
@@ -240,7 +240,7 @@ describe("EditorMap", () => {
     view.emit("loaded");
 
     assert.deepEqual(
-      view.world.getLayers().map((layer) => layer.name),
+      view.world.layers().map((layer) => layer.name),
       ["Sky"]
     );
   });
@@ -253,6 +253,6 @@ describe("EditorMap", () => {
     view.emit("loaded");
 
     assert.deepEqual(seen, []);
-    assert.equal(view.world.getLayers().length, 0);
+    assert.equal(view.world.layers().length, 0);
   });
 });

@@ -135,9 +135,9 @@ export class Logger {
     return this.#root.level;
   }
 
-  setLevel(
+  set level(
     level: LogLevel
-  ): void {
+  ) {
     this.#root.level = level;
   }
 

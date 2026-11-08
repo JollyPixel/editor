@@ -57,7 +57,7 @@ function setup() {
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -137,7 +137,7 @@ describe("MapPlacement regions", () => {
 
     assert.equal(placement.liftRegion("Draft", kLowerCorner), true);
 
-    assert.deepEqual(readBlocks(world.getLayer("Draft")!), [[2, 0, 0, 1]]);
+    assert.deepEqual(readBlocks(world.findLayer("Draft")!), [[2, 0, 0, 1]]);
     const current = placement.current!;
     assert.equal(current.kind, "region");
     assert.equal(current.target, "Draft");
@@ -153,7 +153,7 @@ describe("MapPlacement regions", () => {
 
   test("lifts and moves only the voxels connected to a cell, as one undo step", () => {
     const { world, history, placement } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
     const before = scanCells(draft);
 
     assert.equal(placement.liftConnected("Draft", { x: 1, y: 0, z: 0 }), true);
@@ -198,7 +198,7 @@ describe("MapPlacement regions", () => {
 
   test("moves the lifted voxels and clears the cells they left, as one undo step", () => {
     const { world, history, placement } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
     const before = scanCells(draft);
     placement.liftRegion("Draft", kLowerCorner);
 
@@ -230,14 +230,14 @@ describe("MapPlacement regions", () => {
         2,
         0,
         0,
-        world.getLayer("Draft")!.getPackedVoxelAt({ x: 2, y: 0, z: 0 }),
+        world.findLayer("Draft")!.packedAt({ x: 2, y: 0, z: 0 }),
         VOXEL_ABSENT
       ]
     ].sort(compareCells);
 
     placement.commit();
 
-    assert.deepEqual(scanCells(world.getLayer("Draft")!), expected);
+    assert.deepEqual(scanCells(world.findLayer("Draft")!), expected);
   });
 
   test("an unmoved commit ends the session without writing history", () => {
@@ -252,7 +252,7 @@ describe("MapPlacement regions", () => {
 
   test("deleting removes only the lifted voxels, as one undo step", () => {
     const { world, history, placement } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
     const before = scanCells(draft);
     placement.liftRegion("Draft", kLowerCorner);
     placement.moveBoundsTo({ x: 8, y: 0, z: 8 });

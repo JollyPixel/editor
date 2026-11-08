@@ -16,7 +16,7 @@ const kFixedDelta60 = 1000 / 60;
 
 class Walker extends Behavior {
   update(): void {
-    this.actor.transform.moveLocal({ x: 1, y: 0, z: 0 });
+    this.actor.transform.local.move({ x: 1, y: 0, z: 0 });
   }
 }
 
@@ -44,7 +44,7 @@ describe("Systems.World on the headless backend", () => {
   test("runs behaviors, transforms and draws without a render scene", () => {
     const { renderer, world } = createHeadlessWorld();
     const parent = world.createActor("parent");
-    parent.transform.setLocalPosition({ x: 10, y: 0, z: 0 });
+    parent.transform.local.position = { x: 10, y: 0, z: 0 };
     const walker = world.createActor("walker", { parent });
     walker.addComponent(Walker);
     let draws = 0;
@@ -55,7 +55,7 @@ describe("Systems.World on the headless backend", () => {
     world.tick(scheduler.advance(kFixedDelta60));
     world.tick(scheduler.advance(kFixedDelta60 * 2));
 
-    assert.deepEqual(walker.transform.getGlobalPosition().toArray(), [12, 0, 0]);
+    assert.deepEqual(walker.transform.global.position.toArray(), [12, 0, 0]);
     assert.strictEqual(draws, 2);
   });
 });

@@ -75,9 +75,9 @@ describe("Systems.Scene.ActorRegistry active actors", () => {
     const mover = createProbe("mover");
     inactive.actor.active = false;
 
-    mover.actor.setParent(inactive.actor);
+    mover.actor.reparent(inactive.actor);
     frame();
-    mover.actor.setParent(null);
+    mover.actor.reparent(null);
     frame();
 
     assert.strictEqual(mover.updates, 1);

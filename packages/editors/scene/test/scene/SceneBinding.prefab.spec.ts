@@ -109,7 +109,7 @@ describe("SceneBinding prefab instances", () => {
 
     assert.strictEqual(binding.actor(doorPath), door);
     assert.strictEqual(door.name, "Front door");
-    assert.strictEqual(door.transform.getLocalPosition().x, 3);
+    assert.strictEqual(door.transform.local.position.x, 3);
     assert.strictEqual((binding.component(`${instanceId}/knob`) as Probe).label, "steel");
     assert.strictEqual(binding.expandedActor(doorPath)?.name, "Front door");
     assert.deepEqual(
@@ -120,7 +120,7 @@ describe("SceneBinding prefab instances", () => {
     history.undo(SCENE_HISTORY_SCOPE);
 
     assert.strictEqual(door.name, "Door");
-    assert.strictEqual(door.transform.getLocalPosition().x, 0);
+    assert.strictEqual(door.transform.local.position.x, 0);
     assert.strictEqual((binding.component(`${instanceId}/knob`) as Probe).label, "brass");
   });
 

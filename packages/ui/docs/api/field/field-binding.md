@@ -106,7 +106,7 @@ receives; nothing is copied onto the bound object.
     return { x, y, z };
   },
   write: (value) => {
-    this.world.setLayerPosition(this.layerName, {
+    this.world.placeLayer(this.layerName, {
       x: Math.round(value.x),
       y: Math.round(value.y),
       z: Math.round(value.z)

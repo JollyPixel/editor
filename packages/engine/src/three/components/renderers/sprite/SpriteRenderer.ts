@@ -70,7 +70,7 @@ export class SpriteRenderer extends ActorComponent<any> {
   }
 
   awake() {
-    this.texture = this.getAsset(this.#asset).clone();
+    this.texture = this.resolveAsset(this.#asset).clone();
     this.threeObject.material.map = this.texture;
     this.threeObject.material.needsUpdate = true;
     this.#applyUVs();
@@ -80,25 +80,32 @@ export class SpriteRenderer extends ActorComponent<any> {
     return this.#frameIndex;
   }
 
+  set frameIndex(
+    index: number
+  ) {
+    this.#frameIndex = index;
+    this.#applyUVs();
+  }
+
   get flip(): Readonly<SpriteFlip> {
     return this.#flip;
   }
 
-  setHorizontalFlip(
-    value: boolean
+  set flip(
+    value: SpriteFlip
   ) {
-    this.#flip.horizontal = value;
+    this.#flip = {
+      horizontal: value.horizontal,
+      vertical: value.vertical
+    };
     this.#applyUVs();
   }
 
-  setVerticalFlip(
-    value: boolean
-  ) {
-    this.#flip.vertical = value;
-    this.#applyUVs();
+  get opacity(): number {
+    return this.threeObject.material.opacity;
   }
 
-  setOpacity(
+  set opacity(
     opacity: number
   ) {
     this.threeObject.material.transparent = true;
@@ -109,14 +116,7 @@ export class SpriteRenderer extends ActorComponent<any> {
   start() {
     this.actor.node.object3D.add(this.threeObject);
     this.threeObject.updateMatrixWorld(false);
-    this.setFrame(0);
-  }
-
-  setFrame(
-    index: number
-  ) {
-    this.#frameIndex = index;
-    this.#applyUVs();
+    this.frameIndex = 0;
   }
 
   #applyUVs(): void {
@@ -130,7 +130,7 @@ export class SpriteRenderer extends ActorComponent<any> {
   ) {
     const frame = this.animation.update(deltaTime);
     if (frame !== null) {
-      this.setFrame(frame);
+      this.frameIndex = frame;
     }
     if (!this.animation.isPlaying) {
       this.needUpdate = false;

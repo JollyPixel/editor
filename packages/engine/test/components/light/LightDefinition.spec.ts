@@ -51,14 +51,14 @@ describe("Components.LightDefinition", () => {
 
   test("aims a directional light along the actor's forward axis", () => {
     const { actor, component } = createLight({ kind: "directional" });
-    actor.transform.setLocalEulerAngles(new THREE.Euler(0, Math.PI / 2, 0));
+    actor.transform.local.eulerAngles = new THREE.Euler(0, Math.PI / 2, 0);
 
     const light = component.threeLight as THREE.DirectionalLight;
     const direction = light.target.getWorldPosition(new THREE.Vector3())
       .sub(light.getWorldPosition(new THREE.Vector3()));
 
     assert.strictEqual(light.parent, actor.node.object3D);
-    assert.ok(direction.distanceTo(actor.transform.getForward(new THREE.Vector3())) < 1e-9);
+    assert.ok(direction.distanceTo(actor.transform.global.forward) < 1e-9);
   });
 
   test("apply patches the live light in place", () => {

@@ -229,7 +229,7 @@ export class TemplateManager extends EditingElement {
     const { world } = editing.editorMap;
     const marks = editing.state.presence.layerSelections;
     const drafts = new Map<string, TreeBadge[]>();
-    for (const layer of world.getLayers()) {
+    for (const layer of world.layers()) {
       const draft = TemplateDraftId.parse(layer.id);
       if (draft !== null) {
         drafts.set(

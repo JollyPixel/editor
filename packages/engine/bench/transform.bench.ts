@@ -32,7 +32,7 @@ function populate(
     roots.push(root);
     for (let child = 0; child < kChildren; child++) {
       const actor = bench.createActor(`child-${child}`, root);
-      actor.transform.setLocalPosition({ x: child, y: 0, z: 0 });
+      actor.transform.local.position = { x: child, y: 0, z: 0 };
       children.push(actor);
     }
   }
@@ -53,16 +53,16 @@ const suite = defineSuite("engine / Transform", (bench) => {
     bench
       .add(`move 1k actors, ${label}`, () => {
         for (const child of children) {
-          child.transform.moveLocal(offset);
+          child.transform.local.move(offset);
         }
       })
       .add(`move 100 roots then read 900 children, ${label}`, () => {
         for (const root of roots) {
-          root.transform.moveLocal(offset);
+          root.transform.local.move(offset);
         }
         let sum = 0;
         for (const child of children) {
-          sum += child.transform.getGlobalPosition(position).x;
+          sum += position.copy(child.transform.global.position).x;
         }
 
         return sum;

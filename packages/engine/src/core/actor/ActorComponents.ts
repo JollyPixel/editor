@@ -1,9 +1,8 @@
 // Import Internal Dependencies
-import type { Component } from "../components/types.ts";
-
-export type ComponentClass<T extends Component = Component> = abstract new (
-  ...args: any[]
-) => T;
+import type {
+  Component,
+  ComponentClass
+} from "../components/types.ts";
 
 export class ActorComponents implements Iterable<Component> {
   #all: Component[] = [];

@@ -22,7 +22,7 @@ describe("BlockShapeRegistry (empty)", () => {
 
     assert.equal(registry.has("cube"), false);
     assert.equal(registry.get("cube"), undefined);
-    assert.deepEqual([...registry.getAll()], []);
+    assert.deepEqual([...registry], []);
     assert.deepEqual([...registry.ids()], []);
   });
 });
@@ -116,7 +116,7 @@ describe("BlockShapeRegistry.registerMany", () => {
 
     registry.registerMany([]);
 
-    assert.deepEqual([...registry.getAll()], []);
+    assert.deepEqual([...registry], []);
     assert.equal(registry.version, 0);
   });
 });
@@ -136,14 +136,14 @@ describe("BlockShapeRegistry.createDefault", () => {
   });
 });
 
-describe("BlockShapeRegistry.getAll", () => {
+describe("BlockShapeRegistry.values", () => {
   it("yields the registered shapes in registration order", () => {
     const registry = new BlockShapeRegistry();
     const first = makeShape("first");
     const second = makeShape("second");
     registry.register(first).register(second);
 
-    assert.deepEqual([...registry.getAll()], [first, second]);
+    assert.deepEqual([...registry], [first, second]);
   });
 
   it("keeps the original position when a shape is overwritten", () => {
@@ -155,19 +155,10 @@ describe("BlockShapeRegistry.getAll", () => {
       .register(replacement);
 
     assert.deepEqual(
-      [...registry.getAll()].map((shape) => shape.id),
+      [...registry].map((shape) => shape.id),
       ["first", "second"]
     );
-    assert.equal([...registry.getAll()][0], replacement);
-  });
-});
-
-describe("BlockShapeRegistry[Symbol.iterator]", () => {
-  it("yields the same shapes as getAll", () => {
-    const registry = new BlockShapeRegistry();
-    registry.register(makeShape("first")).register(makeShape("second"));
-
-    assert.deepEqual([...registry], [...registry.getAll()]);
+    assert.equal([...registry][0], replacement);
   });
 });
 

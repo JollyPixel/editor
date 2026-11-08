@@ -250,7 +250,7 @@ export class SceneInstance<
     const parent = parentId === null ?
       null :
       this.#actors.get(parentId) ?? null;
-    actor.setParent(parent, true);
+    actor.reparent(parent, true);
     this.#seat(actor, parent, anchor);
   }
 
@@ -264,7 +264,7 @@ export class SceneInstance<
     }
 
     actor.name = file.name;
-    actor.transform.setVisible(file.visible);
+    actor.transform.visible = file.visible;
     writeSceneTransform(actor.transform, file.transform);
   }
 

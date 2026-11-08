@@ -216,7 +216,7 @@ describe("Systems.Scene.ActorRegistry", () => {
     registry.endFrame();
 
     assert.deepEqual(destroyCalls.map((call) => call.mock.callCount()), [1, 1, 1]);
-    assert.strictEqual(registry.tree.getActor("parent"), null);
+    assert.strictEqual(registry.tree.findActor("parent"), null);
   });
 
   test("should destroy the roots of collected actors and skip the ones already gone", () => {

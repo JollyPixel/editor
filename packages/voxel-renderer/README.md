@@ -75,7 +75,7 @@ Place voxels through the document; the view picks the edits up:
 ```ts
 for (let x = 0; x < 8; x++) {
   for (let z = 0; z < 8; z++) {
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: {
         x,
         y: 0,
@@ -179,7 +179,7 @@ If something isn't working as expected, enable verbose logging to get detailed r
 ```ts
 // Enable debug logs for the entire runtime
 const { world } = runtime;
-world.logger.setLevel("debug");
+world.logger.level = "debug";
 world.logger.enableNamespace("*");
 ```
 

@@ -89,7 +89,7 @@ export class MapArchive {
     const { world } = this.#state;
 
     return {
-      layers: world.getLayers().map((layer) => {
+      layers: world.layers().map((layer) => {
         return {
           name: layer.name,
           voxels: layer.voxelCount
@@ -101,7 +101,7 @@ export class MapArchive {
       paintedTiles: this.#paintedTiles,
       voxelCount: world.voxelCount,
       cells: [...cells].map((cell) => {
-        const blockId = world.getVoxelAt(cell)?.blockId;
+        const blockId = world.voxelAt(cell)?.blockId;
 
         return {
           x: cell.x,

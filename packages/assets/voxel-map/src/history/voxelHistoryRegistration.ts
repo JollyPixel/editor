@@ -85,9 +85,9 @@ class VoxelGuard implements HistoryGuard<VoxelKeySet, Int32Array> {
     const values = new Int32Array(this.keys.cellCount * 2);
     let offset = 0;
     for (const { layerId, position } of this.keys.cells()) {
-      const layer = this.#world.getLayerById(layerId);
-      values[offset++] = layer?.getPackedVoxelAt(position) ?? VOXEL_ABSENT;
-      values[offset++] = layer?.getPartnerVoxelAt(position) ?? VOXEL_ABSENT;
+      const layer = this.#world.findLayerById(layerId);
+      values[offset++] = layer?.packedAt(position) ?? VOXEL_ABSENT;
+      values[offset++] = layer?.partnerAt(position) ?? VOXEL_ABSENT;
     }
 
     return values;

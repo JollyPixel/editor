@@ -52,7 +52,7 @@ export const templates = new Tour({
         "The tour goes on once they are selected.",
       when: TourHooks.when((editing) => {
         const name = editing.state.selection.lastVoxelLayer;
-        const layer = name === null ? undefined : editing.editorMap.world.getLayer(name);
+        const layer = name === null ? undefined : editing.editorMap.world.findLayer(name);
 
         return editing.placement.current === null &&
           editing.access.current.has("voxels") &&

@@ -166,14 +166,14 @@ export async function probe(options: ProbeOptions): Promise<number[]> {
   }
   const layer = view.document.world.addLayer("test");
   if (options.backing) {
-    layer.setVoxelAt({
+    layer.writeVoxelAt({
       x: 0,
       y: 0,
       z: options.reverse ? 1 : -1
     }, { blockId: 3, transform: 0 });
   }
   for (let depthIndex = 0; depthIndex < (options.count ?? 1); depthIndex++) {
-    layer.setVoxelAt({
+    layer.writeVoxelAt({
       x: 0,
       y: 0,
       z: (options.startZ ?? 0) + depthIndex * (options.spacing ?? 1)

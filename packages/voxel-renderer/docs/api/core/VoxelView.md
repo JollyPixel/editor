@@ -114,7 +114,7 @@ view.layerVisibility.isVisible(layer);
 ```
 
 Shows or hides a layer in this view only, keyed by layer name. The layer's own
-`visible`, which is saved and used by `world.getVoxelAt()`, is unchanged, and
+`visible`, which is saved and used by `world.voxelAt()`, is unchanged, and
 other views are not affected. `overrides` lists the active overrides.
 
 ## Lifecycle
@@ -138,7 +138,7 @@ dispose(): void;
   left alone.
 
 ```ts
-document.world.setVoxel("Ground", { position, blockId });
+document.world.placeVoxel("Ground", { position, blockId });
 await view.whenIdle();
 ```
 
@@ -258,7 +258,7 @@ through `document.blocks`, shapes through `shapes`.
 ```ts
 const part = { blockId: kSlabTop, transform: 0 };
 if (view.canMergeVoxelPart("Ground", position, part)) {
-  view.document.world.setVoxel("Ground", { position, blockId: kSlabTop, merge: true });
+  view.document.world.placeVoxel("Ground", { position, blockId: kSlabTop, merge: true });
 }
 ```
 

@@ -1,20 +1,20 @@
 # VoxelLayer
 
 A named voxel layer with its own position in the world. Get one from
-`world.addLayer()` or `world.getLayer()` on a [`VoxelWorld`](./VoxelWorld.md).
+`world.addLayer()` or `world.findLayer()` on a [`VoxelWorld`](./VoxelWorld.md).
 
 > [!IMPORTANT]
-> Writes made on a layer (`setVoxelAt`, `setPackedVoxelAt`, `removeVoxelAt`,
+> Writes made on a layer (`writeVoxelAt`, `writePackedAt`, `removeVoxelAt`,
 > `rebase`, `mergeFrom`) are raw: they emit no command and reach no
 > [recorder](./VoxelWorld.md#recorders), so no undo history sees them. Edit through
 > [`VoxelWorld`](./VoxelWorld.md) for synced and undoable changes. The same
 > applies to assigning the properties below: use `world.updateLayer()`,
-> `world.setLayerPosition()` and the other world methods.
+> `world.placeLayer()` and the other world methods.
 
 ```ts
-const layer = document.world.getLayer("Ground");
+const layer = document.world.findLayer("Ground");
 
-layer.getVoxelAt({ x: 10, y: 5, z: 0 });
+layer.voxelAt({ x: 10, y: 5, z: 0 });
 layer.worldBounds();
 ```
 
@@ -58,19 +58,19 @@ A layer has no `toJSON()`; use
 
 ## Reading
 
-#### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
+#### `voxelAt(position: Vector3Like): VoxelEntry | undefined`
 
 The voxel at a world position, or `undefined` for air. Each call returns a new
 object, so compare entries by value. A
 [merged cell](./VoxelWorld.md#merged-cells) carries its second shape in
 `partner`.
 
-#### `getPackedVoxelAt(position: Vector3Like): PackedVoxel`
+#### `packedAt(position: Vector3Like): PackedVoxel`
 
-#### `getPartnerVoxelAt(position: Vector3Like): PackedVoxel`
+#### `partnerAt(position: Vector3Like): PackedVoxel`
 
 Same lookup without allocating, for the first and the second shape. Return
-`VOXEL_ABSENT` for air, and `getPartnerVoxelAt()` also for a cell that is not
+`VOXEL_ABSENT` for air, and `partnerAt()` also for a cell that is not
 merged; see [packed voxels](./VoxelChunk.md#packed-voxels).
 
 #### `positionsUsingBlocks(blockIds: ReadonlySet<number>): IterableIterator<VoxelCoord>`
@@ -106,9 +106,9 @@ Center of `worldBounds()`. An empty layer returns its position.
 
 ## Raw writes
 
-#### `setVoxelAt(position: Vector3Like, entry: VoxelEntry): void`
+#### `writeVoxelAt(position: Vector3Like, entry: VoxelEntry): void`
 
-#### `setPackedVoxelAt(position: Vector3Like, packed: PackedVoxel, partner?: PackedVoxel): void`
+#### `writePackedAt(position: Vector3Like, packed: PackedVoxel, partner?: PackedVoxel): void`
 
 Write a cell at a world position, replacing both shapes of a merged cell.
 `entry.partner` or `partner` makes it a merged cell. `VOXEL_ABSENT` removes

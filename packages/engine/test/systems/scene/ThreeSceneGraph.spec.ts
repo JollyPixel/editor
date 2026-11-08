@@ -48,8 +48,8 @@ describe("Systems.ThreeSceneGraph", () => {
     const other = createActor("other");
 
     child.name = "renamed";
-    child.transform.setVisible(false);
-    child.setParent(other);
+    child.transform.visible = false;
+    child.reparent(other);
     new Actor(world, { name: "layered", layer: 3 });
 
     assert.strictEqual(child.node.object3D.parent, other.node.object3D);
@@ -61,17 +61,16 @@ describe("Systems.ThreeSceneGraph", () => {
   test("places a node where the engine transform puts the actor", () => {
     const { createActor } = createWorld();
     const parent = createActor("parent");
-    parent.transform
-      .setLocalPosition({ x: 10, y: 0, z: 0 })
-      .setLocalEulerAngles(new THREE.Euler(0, Math.PI / 2, 0));
+    parent.transform.local.position = { x: 10, y: 0, z: 0 };
+    parent.transform.local.eulerAngles = new THREE.Euler(0, Math.PI / 2, 0);
     const child = createActor("child", parent);
-    child.transform.setLocalPosition({ x: 0, y: 0, z: -2 });
+    child.transform.local.position = { x: 0, y: 0, z: -2 };
 
-    child.setParent(null);
+    child.reparent(null);
 
     assert.deepEqual(
       worldPosition(child.node.object3D),
-      child.transform.getGlobalPosition().toArray().map((value) => (Math.round(value * 1e6) / 1e6) + 0)
+      child.transform.global.position.toArray().map((value) => (Math.round(value * 1e6) / 1e6) + 0)
     );
     assert.deepEqual(worldPosition(child.node.object3D), [8, 0, 0]);
   });
@@ -99,7 +98,7 @@ describe("Systems.ThreeSceneGraph", () => {
     assert.deepEqual(hero.node.object3D.position.toArray(), [0, 0, 0]);
     assert.deepEqual(worldPosition(hero.node.object3D), [105, 0, 0]);
 
-    hero.setParent(null);
+    hero.reparent(null);
 
     assert.strictEqual(hero.node.object3D.parent, instance.actor("map")!.world.sceneManager.graph.scene);
     assert.strictEqual(socket.parent, null);

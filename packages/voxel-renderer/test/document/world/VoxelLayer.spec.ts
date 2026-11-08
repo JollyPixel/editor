@@ -46,60 +46,60 @@ describe("VoxelLayer.markBoxDirty", () => {
   it("dirties the existing chunks overlapping a world box, through the layer position", () => {
     const layer = makeLayer({ chunkSize: 4, position: { x: 4, y: 0, z: 0 } });
     for (const x of [0, 4, 8]) {
-      layer.setVoxelAt({ x: x + 4, y: 0, z: 0 }, makeVoxelEntry());
+      layer.writeVoxelAt({ x: x + 4, y: 0, z: 0 }, makeVoxelEntry());
     }
-    for (const chunk of layer.getChunks()) {
+    for (const chunk of layer.chunks()) {
       chunk.dirty = false;
     }
 
     layer.markBoxDirty({ x: 7, y: 0, z: 0 }, { x: 8, y: 0, z: 0 });
 
     assert.deepEqual(
-      [...layer.getChunks()].map((chunk) => [chunk.cx, chunk.dirty]),
+      [...layer.chunks()].map((chunk) => [chunk.cx, chunk.dirty]),
       [[0, true], [1, true], [2, false]]
     );
   });
 });
 
-describe("VoxelLayer setVoxelAt / getVoxelAt round-trip", () => {
+describe("VoxelLayer writeVoxelAt / voxelAt round-trip", () => {
   it("retrieves the entry at the same position", () => {
     const layer = makeLayer();
     const entry = makeVoxelEntry(7, 3);
-    layer.setVoxelAt({ x: 2, y: 1, z: 3 }, entry);
-    assert.deepEqual(layer.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
+    layer.writeVoxelAt({ x: 2, y: 1, z: 3 }, entry);
+    assert.deepEqual(layer.voxelAt({ x: 2, y: 1, z: 3 }), entry);
   });
 
   it("returns undefined for positions not set", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    assert.equal(layer.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    assert.equal(layer.voxelAt({ x: 1, y: 0, z: 0 }), undefined);
   });
 
   it("rejects air instead of storing it as a voxel", () => {
     const layer = makeLayer();
 
     assert.throws(
-      () => layer.setVoxelAt(
+      () => layer.writeVoxelAt(
         { x: 0, y: 0, z: 0 },
         makeVoxelEntry(AIR_BLOCK_ID)
       ),
       /reserved for air/
     );
-    assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
+    assert.equal(layer.voxelAt({ x: 0, y: 0, z: 0 }), undefined);
     assert.equal(layer.chunkCount, 0);
   });
 
   it("creates one chunk when first voxel is set in it", () => {
     const layer = makeLayer();
     assert.equal(layer.chunkCount, 0);
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     assert.equal(layer.chunkCount, 1);
   });
 
   it("creates a second chunk for a voxel in a different chunk", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
     assert.equal(layer.chunkCount, 2);
   });
 });
@@ -107,8 +107,8 @@ describe("VoxelLayer setVoxelAt / getVoxelAt round-trip", () => {
 describe("VoxelLayer negative coordinates", () => {
   it("negative x=-1 lands in chunk cx=-1", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: -1, y: 0, z: 0 }, makeVoxelEntry());
-    const chunk = layer.getChunk(-1, 0, 0);
+    layer.writeVoxelAt({ x: -1, y: 0, z: 0 }, makeVoxelEntry());
+    const chunk = layer.chunkAt(-1, 0, 0);
     assert.ok(chunk !== undefined, "chunk at cx=-1 should exist");
     assert.equal(chunk.voxelCount, 1);
   });
@@ -117,10 +117,10 @@ describe("VoxelLayer negative coordinates", () => {
     const layer = makeLayer({ chunkSize: 4 });
     const entryNeg = makeVoxelEntry(1);
     const entryPos = makeVoxelEntry(2);
-    layer.setVoxelAt({ x: -1, y: 0, z: 0 }, entryNeg);
-    layer.setVoxelAt({ x: 3, y: 0, z: 0 }, entryPos);
-    assert.deepEqual(layer.getVoxelAt({ x: -1, y: 0, z: 0 }), entryNeg);
-    assert.deepEqual(layer.getVoxelAt({ x: 3, y: 0, z: 0 }), entryPos);
+    layer.writeVoxelAt({ x: -1, y: 0, z: 0 }, entryNeg);
+    layer.writeVoxelAt({ x: 3, y: 0, z: 0 }, entryPos);
+    assert.deepEqual(layer.voxelAt({ x: -1, y: 0, z: 0 }), entryNeg);
+    assert.deepEqual(layer.voxelAt({ x: 3, y: 0, z: 0 }), entryPos);
   });
 });
 
@@ -140,8 +140,8 @@ describe("VoxelLayer coordinates and bounds", () => {
 
   it("reports local and world voxel bounds", () => {
     const layer = makeLayer({ position: { x: 10, y: 2, z: -3 } });
-    layer.setVoxelAt({ x: 8, y: 2, z: -4 }, makeVoxelEntry());
-    layer.setVoxelAt({ x: 12, y: 3, z: -3 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 8, y: 2, z: -4 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 12, y: 3, z: -3 }, makeVoxelEntry());
 
     const local = layer.localBounds();
     const world = layer.worldBounds();
@@ -156,8 +156,8 @@ describe("VoxelLayer coordinates and bounds", () => {
 
   it("shrinks its bounds when the outermost voxel is removed", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    layer.setVoxelAt({ x: 9, y: 5, z: -6 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 9, y: 5, z: -6 }, makeVoxelEntry());
     layer.localBounds();
 
     layer.removeVoxelAt({ x: 9, y: 5, z: -6 });
@@ -178,14 +178,14 @@ describe("VoxelLayer coordinates and bounds", () => {
 
   it("rebases local storage without moving voxels in world space", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 10, y: 2, z: -3 }, makeVoxelEntry(1));
-    layer.setVoxelAt({ x: 12, y: 2, z: -3 }, makeVoxelEntry(2));
+    layer.writeVoxelAt({ x: 10, y: 2, z: -3 }, makeVoxelEntry(1));
+    layer.writeVoxelAt({ x: 12, y: 2, z: -3 }, makeVoxelEntry(2));
 
     layer.rebase({ x: 10, y: 2, z: -3 });
 
     assert.deepEqual(layer.position, { x: 10, y: 2, z: -3 });
-    assert.equal(layer.getVoxelAt({ x: 10, y: 2, z: -3 })?.blockId, 1);
-    assert.equal(layer.getVoxelAt({ x: 12, y: 2, z: -3 })?.blockId, 2);
+    assert.equal(layer.voxelAt({ x: 10, y: 2, z: -3 })?.blockId, 1);
+    assert.equal(layer.voxelAt({ x: 12, y: 2, z: -3 })?.blockId, 2);
     assert.deepEqual(Array.from(layer.localVoxels(), ([x, y, z]) => `${x},${y},${z}`).sort(), [
       "0,0,0",
       "2,0,0"
@@ -194,55 +194,55 @@ describe("VoxelLayer coordinates and bounds", () => {
 
   it("changes nothing when rebased onto its own position", () => {
     const layer = makeLayer({ position: { x: 4, y: 0, z: 0 } });
-    layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
-    const chunk = layer.getChunk(0, 0, 0)!;
+    layer.writeVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
+    const chunk = layer.chunkAt(0, 0, 0)!;
     chunk.dirty = false;
 
     layer.rebase({ x: 4, y: 0, z: 0 });
 
-    assert.equal(layer.getChunk(0, 0, 0), chunk);
+    assert.equal(layer.chunkAt(0, 0, 0), chunk);
     assert.equal(chunk.dirty, false);
   });
 
   it("keeps a chunk instance when rebasing leaves its coordinates unchanged", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 2, y: 0, z: 0 }, makeVoxelEntry());
-    const chunk = layer.getChunk(0, 0, 0);
+    layer.writeVoxelAt({ x: 2, y: 0, z: 0 }, makeVoxelEntry());
+    const chunk = layer.chunkAt(0, 0, 0);
 
     layer.rebase({ x: 1, y: 0, z: 0 });
 
-    assert.equal(layer.getChunk(0, 0, 0), chunk);
+    assert.equal(layer.chunkAt(0, 0, 0), chunk);
   });
 
   it("retires a chunk when rebasing moves its contents to another chunk", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    const previous = layer.getChunk(0, 0, 0);
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    const previous = layer.chunkAt(0, 0, 0);
 
     layer.rebase({ x: 4, y: 0, z: 0 });
 
-    assert.equal(layer.getChunk(0, 0, 0), undefined);
-    assert.notEqual(layer.getChunk(-1, 0, 0), previous);
+    assert.equal(layer.chunkAt(0, 0, 0), undefined);
+    assert.notEqual(layer.chunkAt(-1, 0, 0), previous);
     assert.deepEqual([...layer.drainPendingRemovals()], [previous]);
-    assert.deepEqual(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), makeVoxelEntry());
+    assert.deepEqual(layer.voxelAt({ x: 0, y: 0, z: 0 }), makeVoxelEntry());
   });
 });
 
 describe("VoxelLayer removeVoxelAt", () => {
   it("removes an existing voxel", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
     layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
-    assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
+    assert.equal(layer.voxelAt({ x: 0, y: 0, z: 0 }), undefined);
   });
 
   it("treats an absent packed write as a removal", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
 
-    layer.setPackedVoxelAt({ x: 0, y: 0, z: 0 }, VOXEL_ABSENT);
+    layer.writePackedAt({ x: 0, y: 0, z: 0 }, VOXEL_ABSENT);
 
-    assert.equal(layer.getVoxelAt({ x: 0, y: 0, z: 0 }), undefined);
+    assert.equal(layer.voxelAt({ x: 0, y: 0, z: 0 }), undefined);
     assert.equal(layer.chunkCount, 0);
   });
 
@@ -258,18 +258,18 @@ describe("VoxelLayer removeVoxelAt", () => {
 
   it("does not delete the chunk when another voxel remains", () => {
     const layer = makeLayer();
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    layer.setVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry());
     layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
     assert.equal(layer.chunkCount, 1);
   });
 });
 
-describe("VoxelLayer getOrCreateChunk", () => {
+describe("VoxelLayer ensureChunk", () => {
   it("returns the same instance on subsequent calls", () => {
     const layer = makeLayer();
-    const c1 = layer.getOrCreateChunk(0, 0, 0);
-    const c2 = layer.getOrCreateChunk(0, 0, 0);
+    const c1 = layer.ensureChunk(0, 0, 0);
+    const c2 = layer.ensureChunk(0, 0, 0);
     assert.equal(c1, c2);
   });
 });

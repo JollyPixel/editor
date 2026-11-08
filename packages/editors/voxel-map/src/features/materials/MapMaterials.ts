@@ -24,9 +24,8 @@ const kCopySuffix = " copy";
 export type MaterialRename = "renamed" | "unchanged" | "taken";
 
 export interface MaterialSources {
-  readonly blocks: {
+  readonly blocks: Iterable<ResolvedBlockDefinition> & {
     get(blockId: number): ResolvedBlockDefinition | undefined;
-    getAll(): Iterable<ResolvedBlockDefinition>;
   };
   readonly materialGroups: MaterialGroupList;
 }
@@ -81,7 +80,7 @@ export class MapMaterials {
         users.set(group.id, []);
       }
     }
-    for (const block of blocks.getAll()) {
+    for (const block of blocks) {
       const groupId = block.materialGroup;
       if (groupId === undefined || slot.decodeLocalGroupId(groupId) === null) {
         continue;
@@ -102,7 +101,7 @@ export class MapMaterials {
   swatches(): Map<number, MaterialSwatch> {
     const byGroup = new Map<string, MaterialSwatch>();
     const swatches = new Map<number, MaterialSwatch>();
-    for (const block of this.#sources.blocks.getAll()) {
+    for (const block of this.#sources.blocks) {
       const groupId = block.materialGroup;
       if (groupId === undefined) {
         continue;
@@ -273,7 +272,7 @@ export class MapMaterials {
       return true;
     }
 
-    for (const block of this.#sources.blocks.getAll()) {
+    for (const block of this.#sources.blocks) {
       if (block.materialGroup === groupId) {
         return true;
       }

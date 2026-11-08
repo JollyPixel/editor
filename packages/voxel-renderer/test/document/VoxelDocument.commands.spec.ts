@@ -87,14 +87,14 @@ describe("VoxelDocument - command origin", () => {
     ["voxels-set", (document) => {
       return {
         action: "voxels-set",
-        layerId: document.world.getLayer("Ground")!.id,
+        layerId: document.world.findLayer("Ground")!.id,
         metadata: { entries: [{ position: { x: 5, y: 0, z: 5 }, blockId: 1 }] }
       };
     }],
     ["layer-moved", (document) => {
       return {
         action: "layer-moved",
-        layerId: document.world.getLayer("Ground")!.id,
+        layerId: document.world.findLayer("Ground")!.id,
         metadata: { rank: "z" }
       };
     }],
@@ -119,7 +119,7 @@ describe("VoxelDocument - command origin", () => {
     const document = makeDocument(["Ground", "Top"]);
     const events = trace(document);
 
-    const ground = document.world.getLayer("Ground")!;
+    const ground = document.world.findLayer("Ground")!;
     assert.equal(document.applyCommand({
       action: "layer-moved",
       layerId: ground.id,
@@ -134,7 +134,7 @@ describe("VoxelDocument - command origin", () => {
     const events = trace(document);
 
     document.applyCommand(makeAddedCommand("Remote"), { origin: "remote" });
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 1, y: 0, z: 0 },
       blockId: CUBE_ID
     });

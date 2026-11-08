@@ -107,7 +107,7 @@ export class SceneEnvironment {
 
     this.#shadows = settings.shadows;
     if (settings.shadows) {
-      this.#renderer.getSource().shadowMap.enabled = true;
+      this.#renderer.source.shadowMap.enabled = true;
       this.#lighting.directional.castShadow = true;
     }
     else {
@@ -137,7 +137,7 @@ export class SceneEnvironment {
   get environmentMap(): THREE.Texture | null {
     if (this.#environment === null && this.#roomEnvironment !== null) {
       this.#environment = this.#roomEnvironment.createRenderTarget(
-        this.#renderer.getSource()
+        this.#renderer.source
       );
     }
 

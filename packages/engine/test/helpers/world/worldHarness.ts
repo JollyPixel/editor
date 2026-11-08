@@ -32,7 +32,7 @@ function createMockRenderer() {
     clear: mock.fn(),
     observeResize: mock.fn(),
     unobserveResize: mock.fn(),
-    getSource: mock.fn(),
+    source: null,
     dispose: mock.fn()
   };
 }

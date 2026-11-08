@@ -71,7 +71,7 @@ export class VoxelMapAnchors implements Systems.ComponentAnchors {
   * list(): IterableIterator<Systems.ComponentAnchor> {
     const { world } = this.#document;
 
-    for (const layer of world.getLayers()) {
+    for (const layer of world.layers()) {
       if (layer.anchor) {
         yield layerAnchor(layer);
       }

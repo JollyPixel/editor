@@ -50,12 +50,12 @@ describe("SceneDraft", () => {
     document.transform(otherId, { position: { x: 1, y: 1, z: 1 } });
     assert.strictEqual(changes, 1);
     assert.deepEqual(draft.transform(document.tree.actor(actorId)!).position, { x: 5, y: 0, z: 0 });
-    assert.deepEqual(transform.getLocalPosition().toArray(), [5, 0, 0]);
+    assert.deepEqual(transform.local.position.toArray(), [5, 0, 0]);
     assert.deepEqual(document.tree.actor(actorId)!.transform.position, { x: 0, y: 0, z: 0 });
 
     document.transform(actorId, { position: { x: 2, y: 0, z: 0 } });
     assert.deepEqual(draft.transform(document.tree.actor(actorId)!).position, { x: 2, y: 0, z: 0 });
-    assert.deepEqual(transform.getLocalPosition().toArray(), [2, 0, 0]);
+    assert.deepEqual(transform.local.position.toArray(), [2, 0, 0]);
   });
 
   test("previews a transform edit over the stored transform and restores it on discard", () => {
@@ -69,15 +69,15 @@ describe("SceneDraft", () => {
     });
 
     draft.editTransform(actorId, { position: { x: 5, y: 0, z: 0 } });
-    assert.deepEqual(transform.getLocalPosition().toArray(), [5, 0, 0]);
-    assert.deepEqual(transform.getLocalScale().toArray(), [2, 2, 2]);
+    assert.deepEqual(transform.local.position.toArray(), [5, 0, 0]);
+    assert.deepEqual(transform.local.scale.toArray(), [2, 2, 2]);
 
     draft.discardTransform(actorId);
     draft.discardTransform(actorId);
 
     assert.strictEqual(changes, 2);
     assert.deepEqual(draft.transform(document.tree.actor(actorId)!).position, { x: 0, y: 0, z: 0 });
-    assert.deepEqual(transform.getLocalPosition().toArray(), [0, 0, 0]);
+    assert.deepEqual(transform.local.position.toArray(), [0, 0, 0]);
     assert.deepEqual(document.tree.actor(actorId)!.transform.position, { x: 0, y: 0, z: 0 });
   });
 

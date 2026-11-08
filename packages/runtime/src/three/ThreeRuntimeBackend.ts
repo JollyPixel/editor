@@ -66,8 +66,8 @@ export class ThreeRuntimeBackend<
     options: ThreeRuntimeBackendOptions<TContext> = {}
   ) {
     this.renderer = renderer;
-    this.frameSource = new AnimationLoopFrameSource(renderer.getSource());
-    this.metrics = new RendererMetrics(renderer.getSource());
+    this.frameSource = new AnimationLoopFrameSource(renderer.source);
+    this.metrics = new RendererMetrics(renderer.source);
 
     const output = options.renderer?.output;
     this.#adaptivePixelRatio = output?.pixelRatio === undefined &&
@@ -79,7 +79,7 @@ export class ThreeRuntimeBackend<
       LazyCompressedTextureLoader.ktx2(
         this.manager,
         ktx2,
-        renderer.getSource()
+        renderer.source
       );
 
     const world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
@@ -122,7 +122,7 @@ export class ThreeRuntimeBackend<
     ratio: number
   ): void {
     if (this.#adaptivePixelRatio) {
-      this.renderer.getSource().setPixelRatio(ratio);
+      this.renderer.source.setPixelRatio(ratio);
     }
   }
 

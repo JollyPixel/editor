@@ -268,21 +268,16 @@ export class SceneManager<
     );
   }
 
-  getScene(): Scene<TContext> | null;
-  getScene(id: number): Scene<TContext> | null;
-  getScene(name: string): Scene<TContext>[];
-  getScene(
-    target?: number | string
-  ): Scene<TContext> | null | Scene<TContext>[] {
-    if (target === undefined) {
-      return this.#currentScene;
-    }
+  findScene(
+    id: number
+  ): Scene<TContext> | null {
+    return this.#appended.find(id);
+  }
 
-    if (typeof target === "number") {
-      return this.#appended.find(target);
-    }
-
-    return [...this.#appended.named(target)];
+  scenesNamed(
+    name: string
+  ): Scene<TContext>[] {
+    return [...this.#appended.named(name)];
   }
 
   beginFrame() {
@@ -343,10 +338,10 @@ export class SceneManager<
     this.actors.endFrame();
   }
 
-  getActor(
+  findActor(
     name: string
   ): Actor<TContext> | null {
-    return this.tree.getActor(name);
+    return this.tree.findActor(name);
   }
 }
 

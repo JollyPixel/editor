@@ -98,7 +98,7 @@ dictionary of Behaviors. The engine uses the name *Actor* (inspired by [Superpow
 
 ```ts
 const player = world.createActor("Player");
-player.transform.setLocalPosition({ x: 0, y: 1, z: 0 });
+player.transform.local.position = { x: 0, y: 1, z: 0 };
 
 const child = world.createActor("Weapon", {
   parent: player
@@ -213,7 +213,7 @@ UI elements are anchored to screen edges and support pointer interaction through
 ## 🧪 Benchmarks
 
 The suites measure `World#tick()` over static and updating actors, actor
-churn and `getComponent`, `ActorTree` lookups, and `CameraCompositor#render`.
+churn and `findComponent`, `ActorTree` lookups, and `CameraCompositor#render`.
 They run on a headless world with no-op renderer and input, so the numbers
 cover the engine and leave out three.js and the GPU.
 

@@ -86,7 +86,7 @@ export const OBJECT_AND_TEMPLATE_CASES: RoundTripCase[] = [
   {
     name: "merges a voxel into an occupied cell",
     seed: ground,
-    act: (world) => world.setVoxel("Ground", {
+    act: (world) => world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: 3,
       flipY: true,
@@ -94,14 +94,14 @@ export const OBJECT_AND_TEMPLATE_CASES: RoundTripCase[] = [
     }),
     actions: ["voxel-set"],
     check: (remote) => assert.equal(
-      remote.getVoxelAt({ x: 0, y: 0, z: 0 })?.partner?.blockId,
+      remote.voxelAt({ x: 0, y: 0, z: 0 })?.partner?.blockId,
       3
     )
   },
   {
     name: "patches merged cells with their second shape",
     seed: ground,
-    act: (world) => world.transaction(() => world.setVoxelBulk("Ground", [
+    act: (world) => world.transaction(() => world.placeVoxelBulk("Ground", [
       {
         position: { x: 1, y: 0, z: 0 },
         blockId: 3,
@@ -110,7 +110,7 @@ export const OBJECT_AND_TEMPLATE_CASES: RoundTripCase[] = [
     ])),
     actions: ["voxels-patched"],
     check: (remote) => assert.equal(
-      remote.getVoxelAt({ x: 1, y: 0, z: 0 })?.partner?.blockId,
+      remote.voxelAt({ x: 1, y: 0, z: 0 })?.partner?.blockId,
       3
     )
   },

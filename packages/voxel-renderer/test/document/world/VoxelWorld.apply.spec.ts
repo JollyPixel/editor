@@ -61,7 +61,7 @@ describe("VoxelWorld.applyCommand - unknown layer", () => {
 
       assert.equal(world.applyCommand(command, makeLogger(warnings)), null);
 
-      assert.equal(world.getLayer("Gone"), undefined);
+      assert.equal(world.findLayer("Gone"), undefined);
       assert.equal(warnings.length, 1);
       assert.match(warnings[0], new RegExp(`dropped '${command.action}' for unknown layer 'Gone'`));
     });
@@ -75,7 +75,7 @@ describe("VoxelWorld.applyCommand - unknown layer", () => {
     world.applyCommand(kVoxelCommands[0], makeLogger(warnings));
 
     assert.deepEqual(warnings, []);
-    assert.equal(world.getLayer("Gone")?.getVoxelAt(kOrigin)?.blockId, 1);
+    assert.equal(world.findLayer("Gone")?.voxelAt(kOrigin)?.blockId, 1);
   });
 
   it("leaves the layer lifecycle actions to their own guards", () => {
@@ -94,7 +94,7 @@ describe("VoxelWorld.applyCommand - unknown layer", () => {
     }, makeLogger(warnings)), null);
 
     assert.deepEqual(warnings, []);
-    assert.deepEqual(world.getLayers(), []);
+    assert.deepEqual(world.layers(), []);
   });
 });
 
@@ -124,7 +124,7 @@ describe("VoxelWorld.applyCommand - applied command", () => {
     });
 
     assert.equal(applied?.action, "added");
-    assert.equal(world.getLayer("Ground")?.id, "ground");
+    assert.equal(world.findLayer("Ground")?.id, "ground");
     assert.deepEqual(emitted, []);
   });
 
@@ -133,7 +133,7 @@ describe("VoxelWorld.applyCommand - applied command", () => {
 
     assert.equal(world.applyCommand({
       action: "added",
-      layerId: world.getLayer("Ground")!.id,
+      layerId: world.findLayer("Ground")!.id,
       metadata: { name: "Other", rank: "a", options: {} }
     }), null);
     assert.deepEqual(world.applyCommand({
@@ -149,7 +149,7 @@ describe("VoxelWorld.applyCommand - applied command", () => {
 
   it("renames a layer, keeping names unique", () => {
     const { world } = makeWorld("Bottom", "Top");
-    const top = world.getLayer("Top")!;
+    const top = world.findLayer("Top")!;
 
     const applied = world.applyCommand({
       action: "updated",
@@ -167,7 +167,7 @@ describe("VoxelWorld.applyCommand - applied command", () => {
   it("returns null for a layer command that changes nothing", () => {
     const { world } = makeWorld("Bottom", "Top");
 
-    const bottom = world.getLayer("Bottom")!;
+    const bottom = world.findLayer("Bottom")!;
     assert.equal(world.applyCommand({
       action: "layer-moved",
       layerId: bottom.id,
@@ -187,7 +187,7 @@ describe("VoxelWorld.applyCommand - applied command", () => {
 
   it("moves a layer to its rank", () => {
     const { world } = makeWorld("Bottom", "Top");
-    const top = world.getLayer("Top")!;
+    const top = world.findLayer("Top")!;
 
     world.applyCommand({
       action: "layer-moved",
@@ -195,12 +195,12 @@ describe("VoxelWorld.applyCommand - applied command", () => {
       metadata: { rank: "0V" }
     });
 
-    assert.deepEqual(world.getLayers().map((layer) => layer.name), ["Bottom", "Top"]);
+    assert.deepEqual(world.layers().map((layer) => layer.name), ["Bottom", "Top"]);
   });
 
   it("returns the clone name the world resolved", () => {
     const { world } = makeWorld("Ground");
-    const ground = world.getLayer("Ground")!;
+    const ground = world.findLayer("Ground")!;
 
     assert.deepEqual(world.applyCommand({
       action: "cloned",
@@ -211,15 +211,15 @@ describe("VoxelWorld.applyCommand - applied command", () => {
       layerId: ground.id,
       metadata: { cloneId: "copy", rank: "z", options: { name: "Ground (1)" } }
     });
-    assert.equal(world.getLayerById("copy")?.name, "Ground (1)");
+    assert.equal(world.findLayerById("copy")?.name, "Ground (1)");
   });
 
   it("returns only the patched cells that changed", () => {
     const { world, emitted } = makeWorld("Ground");
-    world.setVoxel("Ground", { position: kOrigin, blockId: 2 });
+    world.placeVoxel("Ground", { position: kOrigin, blockId: 2 });
     emitted.length = 0;
 
-    const layerId = world.getLayer("Ground")!.id;
+    const layerId = world.findLayer("Ground")!.id;
     const applied = world.applyCommand({
       action: "voxels-patched",
       layerId,
@@ -243,19 +243,19 @@ describe("VoxelWorld.applyCommand - applied command", () => {
     const { world, emitted } = makeWorld("Ground");
 
     world.transaction(() => {
-      world.setVoxel("Ground", { position: kOrigin, blockId: 2 });
+      world.placeVoxel("Ground", { position: kOrigin, blockId: 2 });
       world.applyCommand({
         action: "voxels-patched",
-        layerId: world.getLayer("Ground")!.id,
+        layerId: world.findLayer("Ground")!.id,
         metadata: { cells: [0, 0, 0, 3, 0] }
       });
-      world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 4 });
+      world.placeVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 4 });
     });
 
     assert.deepEqual(emitted.map(({ metadata }) => metadata), [
       { cells: [0, 0, 0, 2, 0] },
       { cells: [1, 0, 0, 4, 0] }
     ]);
-    assert.equal(world.getVoxelAt(kOrigin)?.blockId, 3);
+    assert.equal(world.voxelAt(kOrigin)?.blockId, 3);
   });
 });

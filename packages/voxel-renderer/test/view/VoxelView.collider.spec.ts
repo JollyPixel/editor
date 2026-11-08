@@ -46,7 +46,7 @@ describe("VoxelView - collider wiring", () => {
 
   it("rebuilds collision for a dirty chunk at its world origin", () => {
     const { view, fake } = makeCollidingView();
-    view.document.world.setLayerPosition("Ground", { x: 8, y: 0, z: 4 });
+    view.document.world.placeLayer("Ground", { x: 8, y: 0, z: 4 });
     placeCube(view, "Ground", { x: 8, y: 0, z: 4 });
 
     view.tick(0);
@@ -71,21 +71,21 @@ describe("VoxelView - collider wiring", () => {
     const [[key, collision]] = fake.rebuilt;
     assert.equal(key, "cell:0,0,0");
     assert.deepEqual(collision.chunks, [
-      view.document.world.getLayer("Top")!.getChunk(0, 0, 0),
-      view.document.world.getLayer("Ground")!.getChunk(0, 0, 0)
+      view.document.world.findLayer("Top")!.chunkAt(0, 0, 0),
+      view.document.world.findLayer("Ground")!.chunkAt(0, 0, 0)
     ]);
   });
 
   it("rebuilds collision for a chunk that draws no face", () => {
     const { view, fake } = makeCollidingView();
     view.document.world.addLayer("Top", { compositing: "replace" });
-    view.document.world.setLayerPosition("Ground", { x: 1, y: 0, z: 0 });
+    view.document.world.placeLayer("Ground", { x: 1, y: 0, z: 0 });
     placeCube(view, "Ground", { x: 1, y: 0, z: 0 });
     placeCube(view, "Top", { x: 1, y: 0, z: 0 });
 
     view.flush();
 
-    const groundId = view.document.world.getLayer("Ground")!.id;
+    const groundId = view.document.world.findLayer("Ground")!.id;
     const ground = fake.rebuilt.find(([key]) => key === `layer:${groundId}:0,0,0`);
     assert.ok(ground);
     assert.equal(ground[1].geometries.size, 0);
@@ -94,7 +94,7 @@ describe("VoxelView - collider wiring", () => {
 
   it("hands colliders indexed vertices relative to the chunk origin", () => {
     const { view, fake } = makeCollidingView();
-    view.document.world.getLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
+    view.document.world.findLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
     placeCube(view, "Ground", { x: 10, y: 2, z: 3 });
 
     view.flush();

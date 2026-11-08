@@ -46,7 +46,7 @@ function voxelId(
 function stack(
   world: VoxelWorld
 ): string[] {
-  return world.getLayers().map((layer) => layer.name);
+  return world.layers().map((layer) => layer.name);
 }
 
 function objectIds(

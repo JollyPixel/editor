@@ -151,7 +151,7 @@ async function viewSnapshot(
     ): value is Camera {
       return typeof value === "object" && value !== null && "isCamera" in value;
     }
-    const components = world.sceneManager.getActor("editor-camera")?.components;
+    const components = world.sceneManager.findActor("editor-camera")?.components;
     const camera = [...components ?? []]
       .map((component) => ("camera" in component ? component.camera : null))
       .find(isCamera);

@@ -57,7 +57,7 @@ export class ThreeSceneEnvironment implements SceneEnvironment {
           return;
         }
         this.#room = room.createRenderTarget(
-          this.#world.renderer.getSource()
+          this.#world.renderer.source
         );
         if (this.#wantsRoom) {
           this.#scene.environment = this.#room.texture;

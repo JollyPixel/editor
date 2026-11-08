@@ -229,7 +229,7 @@ describe("VoxelView - view distance", () => {
 
   it("leaves chunks beyond the view distance dirty and meshes their missed edits later", () => {
     const view = makeFourChunkView({ range: { viewDistance: 1 } });
-    const lastChunk = view.document.world.getLayer("Ground")!.getChunk(3, 0, 0)!;
+    const lastChunk = view.document.world.findLayer("Ground")!.chunkAt(3, 0, 0)!;
     view.focus = kNear;
     view.tick(0);
     assert.equal(lastChunk.dirty, true);
@@ -260,7 +260,7 @@ describe("VoxelView - view distance", () => {
     const { built, visible } = snapshot(view);
     assert.deepEqual(built, kFirstPair);
     assert.deepEqual(visible, kFirstPair);
-    assert.equal(view.document.world.getLayer("Ground")!.getChunk(3, 0, 0)!.dirty, true);
+    assert.equal(view.document.world.findLayer("Ground")!.chunkAt(3, 0, 0)!.dirty, true);
   });
 
   it("meshes a chunk edited in range while chunks beyond it stay dirty", () => {
@@ -271,7 +271,7 @@ describe("VoxelView - view distance", () => {
     placeCube(view, "Ground", { x: 1, y: 5, z: 1 });
     view.tick(0);
 
-    const beyond = view.document.world.getLayer("Ground")!.getChunk(3, 0, 0)!;
+    const beyond = view.document.world.findLayer("Ground")!.chunkAt(3, 0, 0)!;
     assert.ok(snapshot(view).built.includes("0,1,0"));
     assert.equal(beyond.dirty, true);
   });

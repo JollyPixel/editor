@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { Matrix4 } from "../../../../math.ts";
 import type { Actor } from "../../../../actor/Actor.ts";
-import type { TransformSocket } from "../../../../actor/Transform.ts";
+import type { TransformSocket } from "../../../../actor/transform/Transform.ts";
 import type {
   ComponentAnchor,
   ComponentAnchors,

@@ -2,7 +2,7 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Transform } from "../../../src/core/actor/Transform.ts";
+import { Transform } from "../../../src/core/actor/transform/Transform.ts";
 import { ActorComponents } from "../../../src/core/actor/ActorComponents.ts";
 import { ActorRegistry } from "../../../src/core/systems/scene/ActorRegistry.ts";
 import {

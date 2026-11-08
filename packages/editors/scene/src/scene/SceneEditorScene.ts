@@ -176,7 +176,7 @@ export class SceneEditorScene extends Systems.Scene {
     world
       .createActor("selection-highlight")
       .addComponent(SelectionHighlight, {
-        renderer: world.renderer.getSource(),
+        renderer: world.renderer.source,
         camera: camera.camera,
         binding,
         selection,

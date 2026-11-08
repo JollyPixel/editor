@@ -219,7 +219,7 @@ export class MapBlocksets
     const { atlases, shapes, document } = this.#view;
     const atlas = atlases.get(blocksetId)?.def;
     const occupancy = TileOccupancy.collect(
-      document.blocks.getAll(),
+      document.blocks,
       (shapeId) => shapes.get(shapeId),
       blocksetId,
       tileSize
@@ -248,7 +248,7 @@ export class MapBlocksets
     blockId: number
   ): number | null {
     const owner = this.findOwner(blockId);
-    const blocks = [...this.#view.document.blocks.getAll()];
+    const blocks = [...this.#view.document.blocks];
     const index = blocks.findIndex((block) => block.id === blockId);
     if (owner === undefined || index === -1) {
       return null;

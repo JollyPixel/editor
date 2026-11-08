@@ -42,7 +42,7 @@ describe("Scene persistent actors", () => {
     sm.update(0);
 
     assert.deepEqual(sm.tree.children, [player]);
-    assert.notStrictEqual(sm.tree.getActor("player/hand"), null);
+    assert.notStrictEqual(sm.tree.findActor("player/hand"), null);
     assert.strictEqual(player.node.object3D.parent, sm.graph.scene);
     assert.strictEqual(enemy.pendingForDestruction, true);
     assert.strictEqual(probe.updates, 1);

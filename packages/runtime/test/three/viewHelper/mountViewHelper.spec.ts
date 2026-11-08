@@ -190,12 +190,9 @@ class FakeSource {
 
   readonly clearDepth = mock.fn();
   readonly setViewport = mock.fn();
-
-  getViewport(
+  readonly getViewport = (
     target: THREE.Vector4
-  ): THREE.Vector4 {
-    return target.set(0, 0, 100, 100);
-  }
+  ): THREE.Vector4 => target.set(0, 0, 100, 100);
 
   render(
     scene: RenderedHelper

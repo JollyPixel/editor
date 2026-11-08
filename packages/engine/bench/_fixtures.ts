@@ -117,9 +117,7 @@ function createRenderer() {
     unobserveResize() {
       return;
     },
-    getSource() {
-      return null;
-    },
+    source: null,
     dispose() {
       return;
     }

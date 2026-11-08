@@ -29,7 +29,7 @@ class AssetConsumer extends ActorComponent {
   read<TValue>(
     reference: AssetReference<TValue>
   ): TValue {
-    return this.getAsset(reference);
+    return this.resolveAsset(reference);
   }
 }
 

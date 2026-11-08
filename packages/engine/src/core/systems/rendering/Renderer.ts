@@ -35,10 +35,12 @@ export interface Renderer<
   readonly canvas: HTMLCanvasElement;
   readonly renderComponents: readonly BackendRenderComponent[];
 
-  getSource(): T;
-  setRatio(
-    ratio: number | null
+  readonly source: T;
+
+  lockAspectRatio(
+    ratio: number
   ): this;
+  unlockAspectRatio(): this;
 
   addRenderComponent(
     component: BackendRenderComponent

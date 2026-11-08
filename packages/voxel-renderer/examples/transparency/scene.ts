@@ -84,23 +84,23 @@ function buildShapeCluster(
   const z = 10;
 
   for (const rotation of [0, 1, 2, 3] as const) {
-    world.setVoxel(Ground, {
+    world.placeVoxel(Ground, {
       position: { x: 2 + rotation, y: 2, z },
       blockId: TransparencyBlock.StoneRamp,
       rotation
     });
-    world.setVoxel(Ground, {
+    world.placeVoxel(Ground, {
       position: { x: 2 + rotation, y: 2, z: z + 2 },
       blockId: TransparencyBlock.StoneStair,
       rotation
     });
   }
 
-  world.setVoxel(Ground, {
+  world.placeVoxel(Ground, {
     position: { x: 6, y: 2, z },
     blockId: TransparencyBlock.PlankSlab
   });
-  world.setVoxel(Ground, {
+  world.placeVoxel(Ground, {
     position: { x: 6, y: 2, z: z + 2 },
     blockId: TransparencyBlock.StonePole
   });
@@ -143,7 +143,7 @@ function buildGreenhouse(
   fillBox(world, Ground, TransparencyBlock.Plank, {
     x0: 14, x1: 16, y0: 2, y1: 2, z0: 17, z1: 19
   });
-  world.setVoxel(Ground, {
+  world.placeVoxel(Ground, {
     position: { x: 15, y: 3, z: 18 },
     blockId: TransparencyBlock.Ruby
   });

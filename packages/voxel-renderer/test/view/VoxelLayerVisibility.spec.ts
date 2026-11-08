@@ -14,7 +14,7 @@ function layer(
     visible,
     compositing: "composite" as const,
     position: { x: 0, y: 0, z: 0 },
-    getChunk: () => undefined
+    chunkAt: () => undefined
   };
 }
 

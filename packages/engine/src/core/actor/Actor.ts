@@ -1,14 +1,12 @@
 // Import Internal Dependencies
 import { ActorTree } from "./ActorTree.ts";
-import { Transform } from "./Transform.ts";
-import {
-  ActorComponents,
-  type ComponentClass
-} from "./ActorComponents.ts";
+import { Transform } from "./transform/Transform.ts";
+import { ActorComponents } from "./ActorComponents.ts";
 import type { World, WorldDefaultContext } from "../systems/World.ts";
 import type { BackendActorNode } from "../systems/SceneBackend.ts";
 import type {
-  Component
+  Component,
+  ComponentClass
 } from "../components/types.ts";
 
 type ComponentConstructor = new (actor: Actor<any>, ...args: any[]) => Component;
@@ -93,7 +91,7 @@ export class Actor<
     }
 
     this.transform = new Transform(this.node);
-    this.transform.setVisible(visible);
+    this.transform.visible = visible;
 
     actors.attach(this);
   }
@@ -178,13 +176,13 @@ export class Actor<
     return component as InstanceType<T>;
   }
 
-  getComponent<T extends Component>(
+  findComponent<T extends Component>(
     typeNameOrClass: string | ComponentClass<T>
   ): T | null {
     return this.components.find(typeNameOrClass);
   }
 
-  getComponents<T extends Component>(
+  findComponents<T extends Component>(
     componentClass: ComponentClass<T>
   ): IterableIterator<T> {
     return this.components.matching(componentClass);
@@ -312,12 +310,12 @@ export class Actor<
     this.destroyAllActors();
   }
 
-  setParent(
+  reparent(
     newParent: Actor<TContext> | null,
     keepLocal = false
   ) {
     if (this.pendingForDestruction) {
-      throw new Error("Cannot set parent of destroyed actor");
+      throw new Error("Cannot reparent destroyed actor");
     }
     if (newParent?.pendingForDestruction) {
       throw new Error("Cannot reparent actor to destroyed actor");

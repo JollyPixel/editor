@@ -75,7 +75,7 @@ describe("Components.ScriptDefinition", () => {
 
     const mover = component as Mover & { extra?: unknown; };
     assert.ok(mover instanceof Mover);
-    assert.deepEqual([...actor.getComponents(Mover)], [mover]);
+    assert.deepEqual([...actor.findComponents(Mover)], [mover]);
     assert.strictEqual(mover.speed, 3);
     assert.strictEqual(mover.speedSeenInAwake, 3);
     assert.strictEqual(mover.label, "idle");

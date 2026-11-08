@@ -46,12 +46,12 @@ function mergePair(
   second: Omit<VoxelSetOptions, "position">
 ): void {
   const { world } = view.document;
-  world.setVoxel(kLayer, { ...first, position: kCell });
+  world.placeVoxel(kLayer, { ...first, position: kCell });
   assert.ok(view.canMergeVoxelPart(kLayer, kCell, {
     blockId: second.blockId,
     transform: VoxelTransform.pack(second)
   }));
-  world.setVoxel(kLayer, { ...second, position: kCell, merge: true });
+  world.placeVoxel(kLayer, { ...second, position: kCell, merge: true });
 }
 
 function blockAt(
@@ -122,7 +122,7 @@ describe("VoxelView.pickVoxelPart", () => {
 
   it("returns the only shape of an unmerged cell, wherever the point is", () => {
     const view = makePartView();
-    view.document.world.setVoxel(kLayer, {
+    view.document.world.placeVoxel(kLayer, {
       position: kCell,
       blockId: kSlabBottom
     });

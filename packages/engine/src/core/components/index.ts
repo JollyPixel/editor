@@ -15,6 +15,7 @@ export {
 
 export type {
   Component,
+  ComponentClass,
   FreeComponentEnum,
   StrictComponentEnum
 } from "./types.ts";

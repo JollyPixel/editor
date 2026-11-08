@@ -82,7 +82,7 @@ describe("ActorTree", () => {
     });
   });
 
-  describe("getActor", () => {
+  describe("findActor", () => {
     test("should find actor by name", () => {
       const actorTree = new ActorTree();
       const targetActor = createFakeActor({
@@ -95,7 +95,7 @@ describe("ActorTree", () => {
       // @ts-expect-error
       actorTree.children.push(targetActor, otherActor);
 
-      const result = actorTree.getActor("Player");
+      const result = actorTree.findActor("Player");
       assert.equal(result, targetActor);
     });
 
@@ -108,7 +108,7 @@ describe("ActorTree", () => {
       // @ts-expect-error
       actorTree.children.push(actor);
 
-      const result = actorTree.getActor("NonExistent");
+      const result = actorTree.findActor("NonExistent");
       assert.equal(result, null);
     });
 
@@ -122,12 +122,12 @@ describe("ActorTree", () => {
       // @ts-expect-error
       actorTree.children.push(actor);
 
-      const result = actorTree.getActor("Player");
+      const result = actorTree.findActor("Player");
       assert.equal(result, null);
     });
   });
 
-  describe("getRootActors", () => {
+  describe("[Symbol.iterator]", () => {
     test("should yield only non-destroyed root actors", () => {
       const actorTree = new ActorTree();
       const validActor = createFakeActor();
@@ -137,7 +137,7 @@ describe("ActorTree", () => {
       // @ts-expect-error
       actorTree.children.push(validActor, destroyedActor);
 
-      const result = Array.from(actorTree.getRootActors());
+      const result = Array.from(actorTree);
       assert.deepEqual(result, [validActor]);
     });
 
@@ -149,24 +149,8 @@ describe("ActorTree", () => {
       // @ts-expect-error
       actorTree.children.push(destroyedActor);
 
-      const result = Array.from(actorTree.getRootActors());
+      const result = Array.from(actorTree);
       assert.deepEqual(result, []);
-    });
-  });
-
-  describe("getAllActors", () => {
-    test("should yield all actors including children", () => {
-      const actorTree = new ActorTree();
-      const child = createFakeActor();
-      const parent = createFakeActor({
-        children: [child]
-      });
-
-      // @ts-expect-error
-      actorTree.children.push(parent);
-
-      const result = Array.from(actorTree.getAllActors());
-      assert.deepEqual(result, [parent, child]);
     });
   });
 

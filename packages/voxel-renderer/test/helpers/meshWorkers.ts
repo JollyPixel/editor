@@ -100,7 +100,7 @@ export function meshSnapshot(
   view: VoxelView
 ): Map<string, MeshSnapshot> {
   const snapshot = new Map<string, MeshSnapshot>();
-  const layers = view.document.world.getLayers();
+  const layers = view.document.world.layers();
   for (const mesh of chunkMeshes(view)) {
     const geometry = mesh.geometry as PulledChunkGeometry;
     const attributes: Record<string, number[]> = {};

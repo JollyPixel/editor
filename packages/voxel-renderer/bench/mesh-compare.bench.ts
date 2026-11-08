@@ -87,7 +87,7 @@ function meshAll(
   let vertices = 0;
   let bytes = 0;
 
-  for (const { layer, chunk } of view.document.world.getAllChunks()) {
+  for (const { layer, chunk } of view.document.world.chunks()) {
     const geometries = builder.buildChunkGeometries([{ layer, chunk }]);
     if (geometries === null) {
       continue;

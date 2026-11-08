@@ -199,7 +199,7 @@ export class OrbitFlyCamera extends CameraComponent {
   ): void {
     this.exitOrbitFocus();
     this.teleport(frameBounds(bounds, {
-      forward: this.actor.transform.getForward(new THREE.Vector3()),
+      forward: this.actor.transform.global.forward.clone(),
       fov: this.settings.fov,
       ...options
     }));
@@ -231,7 +231,7 @@ export class OrbitFlyCamera extends CameraComponent {
   #writeBody(): void {
     const { position, orientation } = this.#rig.body;
 
-    this.actor.transform.setLocalOrientation(orientation);
-    this.actor.transform.setLocalPosition(position);
+    this.actor.transform.local.orientation = orientation;
+    this.actor.transform.local.position = position;
   }
 }

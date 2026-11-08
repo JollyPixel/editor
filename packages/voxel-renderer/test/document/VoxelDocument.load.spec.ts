@@ -51,7 +51,7 @@ describe("VoxelDocument.load", () => {
 
   it("replays the world without emitting its commands, then announces it", () => {
     const source = makeDocument();
-    source.world.setVoxel("Ground", {
+    source.world.placeVoxel("Ground", {
       position: { x: 1, y: 0, z: 1 },
       blockId: CUBE_ID
     });
@@ -63,7 +63,7 @@ describe("VoxelDocument.load", () => {
 
     assert.deepEqual(events, [{ event: "loaded" }]);
     assert.equal(
-      document.world.getVoxelAt({ x: 1, y: 0, z: 1 })?.blockId,
+      document.world.voxelAt({ x: 1, y: 0, z: 1 })?.blockId,
       CUBE_ID
     );
   });
@@ -91,7 +91,7 @@ describe("VoxelDocument.load", () => {
     });
 
     assert.deepEqual(
-      document.world.getLayers().map((layer) => layer.name),
+      document.world.layers().map((layer) => layer.name),
       ["Top", "Water", "Base"]
     );
   });
@@ -107,7 +107,7 @@ describe("VoxelDocument.load", () => {
       mergeLayers: { except: ["Water"] }
     });
 
-    assert.equal(document.world.getLayers().length, 1);
+    assert.equal(document.world.layers().length, 1);
     assert.equal(warnings.length, 1);
     assert.match(warnings[0], /'Water'/);
   });

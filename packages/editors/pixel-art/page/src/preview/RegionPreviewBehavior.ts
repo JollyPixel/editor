@@ -97,7 +97,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
       this.mesh,
       ...this.#shape.decorations
     );
-    this.#targetPosition = this.actor.transform.getLocalPosition();
+    this.#targetPosition = this.actor.transform.local.position.clone();
   }
 
   get rotation(): THREE.Euler {
@@ -131,7 +131,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
   rotateTo(
     rotation: THREE.Euler
   ): void {
-    this.actor.transform.setLocalEulerAngles(this.#angles.copy(rotation));
+    this.actor.transform.local.eulerAngles = this.#angles.copy(rotation);
   }
 
   dispose(): void {
@@ -145,7 +145,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
     if (this.#style.rotating) {
       this.#angles.x += kRotationSpeedX * deltaTime;
       this.#angles.y += kRotationSpeedY * deltaTime;
-      transform.setLocalEulerAngles(this.#angles);
+      transform.local.eulerAngles = this.#angles;
     }
 
     const alpha = 1 - Math.exp(-kPositionLerpRate * deltaTime);

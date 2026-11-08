@@ -1,19 +1,19 @@
 # VoxelTransform
 
 Immutable quarter-turn rotation around Y and mirror flags for one voxel.
-`world.setVoxel()` takes the same options and packs them for you.
+`world.placeVoxel()` takes the same options and packs them for you.
 
 ```ts
 import { VoxelRotation, VoxelTransform } from "@jolly-pixel/voxel.renderer";
 
-document.world.setVoxel("Ground", {
+document.world.placeVoxel("Ground", {
   position: { x: 0, y: 0, z: 0 },
   blockId: 3,
   rotation: VoxelRotation.CW90,
   flipX: true
 });
 
-const { transform } = document.world.getVoxelAt({ x: 0, y: 0, z: 0 });
+const { transform } = document.world.voxelAt({ x: 0, y: 0, z: 0 });
 VoxelTransform.fromPacked(transform).rotation; // 3
 ```
 

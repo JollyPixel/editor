@@ -151,7 +151,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
   blockAt(
     position: THREE.Vector3Like
   ): ResolvedBlockDefinition | undefined {
-    const entry = this.world.getVoxelAt(position);
+    const entry = this.world.voxelAt(position);
 
     return entry && this.blocks.get(entry.blockId);
   }
@@ -159,7 +159,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
   blockPropertiesAt(
     position: THREE.Vector3Like
   ): BlockProperties | undefined {
-    const entry = this.world.getVoxelAt(position);
+    const entry = this.world.voxelAt(position);
 
     return entry && this.blocks.copyProperties(entry.blockId);
   }
@@ -225,7 +225,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
   ): void {
     const except = [...options.except ?? []];
     for (const name of except) {
-      if (!this.world.getLayer(name)) {
+      if (!this.world.findLayer(name)) {
         this.#logger.warn(
           `Cannot keep unknown layer '${name}' out of the merge.`
         );

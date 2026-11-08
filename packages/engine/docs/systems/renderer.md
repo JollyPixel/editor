@@ -94,11 +94,10 @@ settings without creating a context.
 `THREE.VSMShadowMap`. `THREE.PCFSoftShadowMap` was removed from
 `WebGPURenderer`; use `THREE.PCFShadowMap` for filtered shadows.
 
-The underlying `THREE.WebGPURenderer` stays accessible via
-`getSource()`:
+The underlying `THREE.WebGPURenderer` stays accessible via `source`:
 
 ```ts
-const webGPU = renderer.getSource();
+const webGPU = renderer.source;
 webGPU.toneMappingExposure = 1.5;
 ```
 
@@ -177,15 +176,14 @@ changed with `configure()` applies on the next draw.
 ## Aspect ratio
 
 By default the renderer fills its parent element. An explicit
-aspect ratio can be enforced with `setRatio`. A negative or infinite
+aspect ratio can be enforced with `lockAspectRatio`. A negative or infinite
 ratio throws a `RangeError`:
 
 ```ts
-// Lock to 16:9
-renderer.setRatio(16 / 9);
+renderer.lockAspectRatio(16 / 9);
 
-// Reset to fill parent
-renderer.setRatio(null);
+// Fill the parent again
+renderer.unlockAspectRatio();
 ```
 
 When a ratio is set, the canvas is centered and letter-boxed
@@ -250,7 +248,7 @@ every frame, comes out incomplete while its pipelines compile. Render it, wait
 for `compiled()`, then render it again:
 
 ```ts
-const generator = new THREE.PMREMGenerator(renderer.getSource());
+const generator = new THREE.PMREMGenerator(renderer.source);
 const target = generator.fromScene(room, 0.04);
 scene.environment = target.texture;
 

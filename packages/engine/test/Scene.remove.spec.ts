@@ -48,8 +48,8 @@ describe("Scene", () => {
       activateAppendedScene(sm, b);
       sm.removeScene("shared");
 
-      assert.strictEqual(sm.getScene("shared").length, 0);
-      assert.strictEqual(sm.getScene(a.id), null);
+      assert.strictEqual(sm.scenesNamed("shared").length, 0);
+      assert.strictEqual(sm.findScene(a.id), null);
       assert.strictEqual(a.destroySpy.mock.calls.length, 1);
       assert.strictEqual(b.destroySpy.mock.calls.length, 1);
     });
@@ -63,8 +63,8 @@ describe("Scene", () => {
       activateAppendedScene(sm, b);
       sm.removeScene(a);
 
-      assert.strictEqual(sm.getScene(a.id), null);
-      assert.ok(sm.getScene(b.id) !== null, "b should still be appended");
+      assert.strictEqual(sm.findScene(a.id), null);
+      assert.ok(sm.findScene(b.id) !== null, "b should still be appended");
       assert.strictEqual(a.destroySpy.mock.calls.length, 1);
       assert.strictEqual(b.destroySpy.mock.calls.length, 0);
     });
@@ -95,7 +95,7 @@ describe("Scene", () => {
       sm.beginFrame();
 
       assert.strictEqual(load.status, "cancelled");
-      assert.strictEqual(sm.getScene(appended.id), null);
+      assert.strictEqual(sm.findScene(appended.id), null);
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
     });
   });
@@ -114,8 +114,8 @@ describe("Scene", () => {
 
       assert.strictEqual(prefabA.destroySpy.mock.calls.length, 1);
       assert.strictEqual(prefabB.destroySpy.mock.calls.length, 1);
-      assert.strictEqual(sm.getScene("A").length, 0);
-      assert.strictEqual(sm.getScene("B").length, 0);
+      assert.strictEqual(sm.scenesNamed("A").length, 0);
+      assert.strictEqual(sm.scenesNamed("B").length, 0);
     });
 
     test("replacement emits sceneRemoved before appended teardown", () => {
@@ -153,7 +153,7 @@ describe("Scene", () => {
 
       assert.strictEqual(appendedLoad.status, "cancelled");
       assert.strictEqual(sm.currentScene, replacement);
-      assert.strictEqual(sm.getScene(appended.id), null);
+      assert.strictEqual(sm.findScene(appended.id), null);
     });
   });
 });

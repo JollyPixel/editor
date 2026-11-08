@@ -81,7 +81,7 @@ export class UIText<TContext = WorldDefaultContext> {
     this.#element.textContent = value;
   }
 
-  setStyle(style: Partial<UITextStyle>): void {
+  restyle(style: Partial<UITextStyle>): void {
     Object.assign(this.#style, style);
     this.#applyStyle(this.#style);
   }

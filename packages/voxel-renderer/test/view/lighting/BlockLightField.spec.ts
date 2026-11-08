@@ -227,7 +227,7 @@ describe("BlockLightField", () => {
       layers: ["Ground", "Lamps"]
     });
     place({ x: 0, y: 0, z: 0 }, GLOW_ID);
-    document.world.setVoxel("Lamps", {
+    document.world.placeVoxel("Lamps", {
       position: { x: 0, y: 4, z: 0 },
       blockId: GLOW_ID
     });
@@ -247,7 +247,7 @@ describe("BlockLightField", () => {
     place({ x: 0, y: 0, z: 0 }, GLOW_ID);
     field.update();
 
-    document.world.setLayerPosition("Ground", { x: 5, y: 0, z: 0 });
+    document.world.placeLayer("Ground", { x: 5, y: 0, z: 0 });
     field.update();
 
     assert.equal(levelAt(field, 5), 15);

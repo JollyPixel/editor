@@ -95,7 +95,7 @@ describe("Components.Camera.Camera3DControls", () => {
       controls.update();
 
       assert.strictEqual(
-        Math.round(actor.transform.getLocalPosition().z * 100) / 100,
+        Math.round(actor.transform.local.position.z * 100) / 100,
         -1,
         "forward is -Z: speed 10 for 0.1s"
       );
@@ -113,7 +113,7 @@ describe("Components.Camera.Camera3DControls", () => {
       controls.update();
 
       assert.strictEqual(
-        Math.round(actor.transform.getLocalPosition().z * 100) / 100,
+        Math.round(actor.transform.local.position.z * 100) / 100,
         -1
       );
     });
@@ -129,7 +129,7 @@ describe("Components.Camera.Camera3DControls", () => {
       controls.update();
 
       assert.strictEqual(
-        Math.round(actor.transform.getGlobalPosition().y * 100) / 100,
+        Math.round(actor.transform.global.position.y * 100) / 100,
         1
       );
     });
@@ -140,7 +140,7 @@ describe("Components.Camera.Camera3DControls", () => {
       controls.update();
 
       assert.deepStrictEqual(
-        actor.transform.getLocalPosition().toArray(),
+        actor.transform.local.position.toArray(),
         [0, 0, 0],
         "normalizing a zero movement vector must not produce NaN"
       );

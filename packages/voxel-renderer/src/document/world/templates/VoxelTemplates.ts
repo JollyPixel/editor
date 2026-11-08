@@ -202,7 +202,7 @@ export class VoxelTemplates implements Iterable<VoxelTemplate> {
     for (const [x, y, z, packed, partner] of placed) {
       if (
         overwrite ||
-        layer.getPackedVoxelAt({ x, y, z }) === VOXEL_ABSENT
+        layer.packedAt({ x, y, z }) === VOXEL_ABSENT
       ) {
         patch.push({ x, y, z }, packed, partner);
       }

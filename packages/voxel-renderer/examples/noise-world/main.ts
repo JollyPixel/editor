@@ -78,7 +78,7 @@ const flyCamera = world.createActor("camera")
 const daylight = flyCamera.actor.addComponentAndGet(Daylight, {
   camera: flyCamera.camera,
   scene,
-  renderer: world.renderer.getSource(),
+  renderer: world.renderer.source,
   fog: {
     density: kFog.density * kFogDensityScale,
     floor: kFog.floor,

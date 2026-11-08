@@ -207,7 +207,7 @@ export class ModelEditorScene extends Systems.Scene {
       scene,
       view,
       environment: this.#options.roomEnvironment
-        ?.createRenderTarget(this.world.renderer.getSource()) ?? null,
+        ?.createRenderTarget(this.world.renderer.source) ?? null,
       casters: () => blocks.visibleMeshes()
     });
     const unfollowLit = view.follow((settings) => {
@@ -269,7 +269,7 @@ export class ModelEditorScene extends Systems.Scene {
     const viewport = new ViewportRenderer(camera);
     this.#viewport = viewport;
     const highlight = new HighlightBridge({
-      renderer: this.world.renderer.getSource(),
+      renderer: this.world.renderer.source,
       scene,
       camera: camera.threeCamera,
       blocks,

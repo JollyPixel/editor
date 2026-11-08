@@ -42,7 +42,7 @@ export function readState(
   world: VoxelWorld
 ): unknown {
   return {
-    layers: world.getLayers().map(withoutId),
+    layers: world.layers().map(withoutId),
     objectLayers: world.objectLayers.toArray().map(({ id, ...rest }) => structuredClone(rest)),
     templates: world.templates.toArray().map((template) => serializeVoxelTemplate(template))
   };
@@ -60,7 +60,7 @@ export function mergedGround(
   world: VoxelWorld
 ): void {
   ground(world);
-  world.setVoxel("Ground", {
+  world.placeVoxel("Ground", {
     position: { x: 0, y: 0, z: 0 },
     blockId: 3,
     flipY: true,

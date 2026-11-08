@@ -111,7 +111,7 @@ export class LocalLayerVisibility {
         break;
       case "cloned": {
         const clone = new VoxelLayerRef(command.metadata.options.name).key;
-        const source = this.#world.getLayerById(command.layerId);
+        const source = this.#world.findLayerById(command.layerId);
         if (source !== undefined) {
           this.#visibility.copy(new VoxelLayerRef(source.name).key, clone);
         }
@@ -152,7 +152,7 @@ export class LocalLayerVisibility {
   };
 
   #applyAll(): void {
-    for (const layer of this.#world.getLayers()) {
+    for (const layer of this.#world.layers()) {
       this.#apply(new VoxelLayerRef(layer.name).key);
     }
   }

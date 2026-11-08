@@ -37,18 +37,18 @@ space. Methods take local coordinates `lx`, `ly`, `lz` in `0..size - 1`.
 
 ## Methods
 
-#### `getAt(lx: number, ly: number, lz: number): VoxelEntry | undefined`
+#### `voxelAt(lx: number, ly: number, lz: number): VoxelEntry | undefined`
 
 The voxel at a local position, or `undefined` for air. Each call returns a new
 object, so compare entries by value.
 
-#### `getPackedAt(lx: number, ly: number, lz: number): PackedVoxel`
+#### `packedAt(lx: number, ly: number, lz: number): PackedVoxel`
 
-#### `getPartnerAt(lx: number, ly: number, lz: number): PackedVoxel`
+#### `partnerAt(lx: number, ly: number, lz: number): PackedVoxel`
 
 Same lookup without allocating, for the first and the second shape of a
 [merged cell](./VoxelWorld.md#merged-cells). Return `VOXEL_ABSENT` for air,
-and `getPartnerAt()` also for a cell that is not merged. Both return values
+and `partnerAt()` also for a cell that is not merged. Both return values
 as `packVoxel()` builds them.
 
 #### `storedAt(lx: number, ly: number, lz: number): PackedVoxel`
@@ -56,7 +56,7 @@ as `packVoxel()` builds them.
 The raw stored value, as `store.values` holds it. On a merged cell it carries a
 flag bit, so it differs from `packVoxel()` of the same block and transform;
 decode it with `voxelBlockId()` and `voxelTransform()`. Meant for meshing hot
-paths; prefer `getPackedAt()` elsewhere.
+paths; prefer `packedAt()` elsewhere.
 
 #### `entries(): IterableIterator<[number, VoxelEntry]>`
 

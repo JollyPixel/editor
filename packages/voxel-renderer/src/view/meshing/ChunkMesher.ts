@@ -67,7 +67,7 @@ export class ChunkMesher {
       if (isMergedVoxel(packed)) {
         const merged = this.#variants.resolveMerged(
           packed,
-          chunk.getPartnerAt(
+          chunk.partnerAt(
             linearIdx & mask,
             (linearIdx >> shift) & mask,
             linearIdx >> shiftZ

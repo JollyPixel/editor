@@ -91,7 +91,7 @@ export class ChunkNeighbourhood {
     const layers: LayerChunkCache[] = [];
     const { chunkSize } = world;
 
-    for (const candidate of world.getLayers()) {
+    for (const candidate of world.layers()) {
       if (!visibility.isVisible(candidate)) {
         continue;
       }

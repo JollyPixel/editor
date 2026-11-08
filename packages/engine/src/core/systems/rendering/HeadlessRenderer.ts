@@ -24,11 +24,13 @@ export class HeadlessRenderer extends Emitter<RendererEvents<null>> implements R
     return this.#components;
   }
 
-  getSource(): null {
-    return null;
+  readonly source = null;
+
+  lockAspectRatio(): this {
+    return this;
   }
 
-  setRatio(): this {
+  unlockAspectRatio(): this {
     return this;
   }
 

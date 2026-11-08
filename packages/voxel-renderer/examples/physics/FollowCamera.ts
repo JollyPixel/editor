@@ -52,8 +52,7 @@ export class FollowCamera extends ActorComponent {
     }
 
     this.#position.copy(this.#focus).add(this.#offset);
-    this.actor.transform
-      .setLocalPosition(this.#position)
-      .lookAt(this.#focus);
+    this.actor.transform.local.position = this.#position;
+    this.actor.transform.lookAt(this.#focus);
   }
 }

@@ -102,10 +102,10 @@ export class ModelRenderer<
     const { animations } = options;
     if (animations) {
       if (animations.fadeDuration !== undefined) {
-        this.animation.setFadeDuration(animations.fadeDuration);
+        this.animation.fadeDuration = animations.fadeDuration;
       }
       if (animations.clipNameRewriter) {
-        this.animation.setClipNameRewriter(animations.clipNameRewriter);
+        this.animation.renameClips(animations.clipNameRewriter);
       }
       if (animations.default) {
         this.animation.play(animations.default);
@@ -115,7 +115,7 @@ export class ModelRenderer<
 
   awake() {
     const { object, animations } = this.#source.model ??
-      this.getAsset(this.#source.asset);
+      this.resolveAsset(this.#source.asset);
     if (this.#debug) {
       console.log({ object, animations });
     }
@@ -135,8 +135,7 @@ export class ModelRenderer<
     this.actor.node.object3D.add(this.group);
 
     this.#mixer = new THREE.AnimationMixer(this.group);
-    this.animation.setMixer(this.#mixer);
-    this.animation.setClips(animations);
+    this.animation.bind(this.#mixer, animations);
   }
 
   start() {

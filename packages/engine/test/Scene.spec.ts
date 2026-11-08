@@ -48,13 +48,13 @@ describe("Scene", () => {
       assert.strictEqual(listener.mock.calls[0].arguments[0], scene);
     });
 
-    test("getScene() with no argument returns the current scene", () => {
+    test("currentScene returns the started scene", () => {
       const { sm } = createSceneSetup();
       const scene = new ConcreteScene("test");
 
-      assert.strictEqual(sm.getScene(), null);
+      assert.strictEqual(sm.currentScene, null);
       activateScene(sm, scene);
-      assert.strictEqual(sm.getScene(), scene);
+      assert.strictEqual(sm.currentScene, scene);
     });
 
     test("only calls scene.start() once across multiple beginFrame calls", () => {
@@ -114,12 +114,12 @@ describe("Scene", () => {
       const sceneB = new ConcreteScene("B");
 
       activateScene(sm, sceneA);
-      assert.ok(sm.getActor("ActorA") !== null, "ActorA should exist after activation");
-      assert.ok(sm.getActor("ActorB") !== null, "ActorB should exist after activation");
+      assert.ok(sm.findActor("ActorA") !== null, "ActorA should exist after activation");
+      assert.ok(sm.findActor("ActorB") !== null, "ActorB should exist after activation");
 
       activateScene(sm, sceneB);
-      assert.strictEqual(sm.getActor("ActorA"), null, "ActorA should be gone after scene swap");
-      assert.strictEqual(sm.getActor("ActorB"), null, "ActorB should be gone after scene swap");
+      assert.strictEqual(sm.findActor("ActorA"), null, "ActorA should be gone after scene swap");
+      assert.strictEqual(sm.findActor("ActorB"), null, "ActorB should be gone after scene swap");
     });
 
     test("drops pending component starts when swapping scenes", () => {

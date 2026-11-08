@@ -73,7 +73,7 @@ export class VoxelLayerPanel extends LitElement {
     position: () => this._layer?.position ?? null,
     move: (position) => {
       if (this.layerName !== null) {
-        this.world.setLayerPosition(this.layerName, position);
+        this.world.placeLayer(this.layerName, position);
       }
     }
   }));
@@ -90,7 +90,7 @@ export class VoxelLayerPanel extends LitElement {
   #onLayerUpdated = (event: VoxelLayerCommand) => {
     if (
       "layerId" in event &&
-      this.world.getLayerById(event.layerId)?.name === this.layerName
+      this.world.findLayerById(event.layerId)?.name === this.layerName
     ) {
       this.#syncFromLayer();
     }
@@ -129,7 +129,7 @@ export class VoxelLayerPanel extends LitElement {
 
   #syncFromLayer(): void {
     const layer = this.layerName ?
-      this.world.getLayer(this.layerName) ?? null :
+      this.world.findLayer(this.layerName) ?? null :
       null;
     this._layer = layer;
     if (layer) {

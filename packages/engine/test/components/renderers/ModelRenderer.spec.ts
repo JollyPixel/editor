@@ -125,4 +125,23 @@ describe("Components.Renderers.ModelRenderer", () => {
     );
     assert.strictEqual(renderer.animation.state, "stopped");
   });
+
+  test("should bind clips under the names its rewriter gives them", () => {
+    const model = createModel();
+    model.animations.push(new THREE.AnimationClip("Armature|Spin", 1, []));
+    const actor = new Actor(createWorld(model) as any, { name: "renamed" });
+    const renderer = actor.addComponentAndGet(ModelRenderer, {
+      asset: reference,
+      animations: {
+        clipNameRewriter: (name) => name.replace("Armature|", "")
+      }
+    });
+    actor.awake();
+
+    assert.doesNotThrow(() => renderer.animation.play("Spin"));
+    assert.throws(
+      () => renderer.animation.play("Armature|Spin"),
+      { message: "Animation clip \"Armature|Spin\" not found!" }
+    );
+  });
 });

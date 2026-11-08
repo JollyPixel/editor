@@ -71,7 +71,7 @@ const blocksets = await loadBlocksets([
 ]);
 
 const { world } = runtime;
-world.logger.setLevel("debug");
+world.logger.level = "debug";
 world.logger.enableNamespace("*");
 
 const scene = world.sceneManager.graph.scene;
@@ -160,7 +160,7 @@ function place(
   blockId: number,
   rotation = 0
 ): void {
-  voxelWorld.setVoxel(kLayer, {
+  voxelWorld.placeVoxel(kLayer, {
     position: { x, y, z },
     blockId,
     rotation
@@ -202,7 +202,7 @@ for (let x = 23; x <= 29; x += 3) {
 }
 
 const sphere = world.createActor("sphere");
-sphere.transform.setLocalPosition({ x: 15.5, y: 9, z: 15.5 });
+sphere.transform.local.position = { x: 15.5, y: 9, z: 15.5 };
 sphere.node.object3D.add(new THREE.Mesh(
   new THREE.SphereGeometry(kSphereRadius, 24, 16),
   new THREE.MeshLambertMaterial({ color: 0xff3333 })

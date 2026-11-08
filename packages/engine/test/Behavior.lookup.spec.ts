@@ -62,20 +62,20 @@ function createRealActor() {
 }
 
 describe("Actor Component Lookup", () => {
-  describe("getComponent", () => {
+  describe("findComponent", () => {
     test("should return the correct behavior instance", () => {
       const actor = createRealActor();
 
       const behavior = new BehaviorOne(actor);
 
-      const retrievedBehavior = actor.getComponent(BehaviorOne);
+      const retrievedBehavior = actor.findComponent(BehaviorOne);
       assert.equal(retrievedBehavior, behavior);
     });
 
     test("should return null if behavior does not exist", () => {
       const actor = createRealActor();
 
-      const retrievedBehavior = actor.getComponent(BehaviorOne);
+      const retrievedBehavior = actor.findComponent(BehaviorOne);
       assert.equal(retrievedBehavior, null);
     });
 
@@ -85,7 +85,7 @@ describe("Actor Component Lookup", () => {
       const behavior1 = new BehaviorOne(actor);
       new BehaviorOne(actor);
 
-      const retrievedBehavior = actor.getComponent(BehaviorOne);
+      const retrievedBehavior = actor.findComponent(BehaviorOne);
       assert.equal(retrievedBehavior, behavior1);
     });
 
@@ -97,7 +97,7 @@ describe("Actor Component Lookup", () => {
 
       destroyedBehavior.markDestructionPending();
 
-      const retrievedBehavior = actor.getComponent(BehaviorOne);
+      const retrievedBehavior = actor.findComponent(BehaviorOne);
       assert.equal(retrievedBehavior, validBehavior);
     });
 
@@ -106,7 +106,7 @@ describe("Actor Component Lookup", () => {
 
       const childBehavior = new ChildBehavior(actor);
 
-      const retrievedBehavior = actor.getComponent(BehaviorOne);
+      const retrievedBehavior = actor.findComponent(BehaviorOne);
       assert.equal(retrievedBehavior, childBehavior);
     });
 
@@ -119,26 +119,26 @@ describe("Actor Component Lookup", () => {
       behavior1.markDestructionPending();
       behavior2.markDestructionPending();
 
-      const retrievedBehavior = actor.getComponent(BehaviorOne);
+      const retrievedBehavior = actor.findComponent(BehaviorOne);
       assert.equal(retrievedBehavior, null);
     });
   });
 
-  describe("getComponents", () => {
+  describe("findComponents", () => {
     test("should return all instances of the behavior", () => {
       const actor = createRealActor();
 
       const behavior1 = new BehaviorOne(actor);
       const behavior2 = new BehaviorOne(actor);
 
-      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.findComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, [behavior1, behavior2]);
     });
 
     test("should return an empty array if no behaviors exist", () => {
       const actor = createRealActor();
 
-      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.findComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, []);
     });
 
@@ -148,8 +148,8 @@ describe("Actor Component Lookup", () => {
       const behavior1 = new BehaviorOne(actor);
       const behavior2 = new BehaviorTwo(actor);
 
-      const retrievedBehaviorsOne = Array.from(actor.getComponents(BehaviorOne));
-      const retrievedBehaviorsTwo = Array.from(actor.getComponents(BehaviorTwo));
+      const retrievedBehaviorsOne = Array.from(actor.findComponents(BehaviorOne));
+      const retrievedBehaviorsTwo = Array.from(actor.findComponents(BehaviorTwo));
 
       assert.deepEqual(retrievedBehaviorsOne, [behavior1]);
       assert.deepEqual(retrievedBehaviorsTwo, [behavior2]);
@@ -164,7 +164,7 @@ describe("Actor Component Lookup", () => {
 
       destroyedBehavior.markDestructionPending();
 
-      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.findComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, [validBehavior1, validBehavior2]);
     });
 
@@ -175,7 +175,7 @@ describe("Actor Component Lookup", () => {
       const childBehavior1 = new ChildBehavior(actor);
       const childBehavior2 = new ChildBehavior(actor);
 
-      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.findComponents(BehaviorOne));
       assert.equal(retrievedBehaviors.length, 3);
       assert.ok(retrievedBehaviors.includes(parentBehavior));
       assert.ok(retrievedBehaviors.includes(childBehavior1));
@@ -190,7 +190,7 @@ describe("Actor Component Lookup", () => {
 
       parentBehavior.markDestructionPending();
 
-      const retrievedBehaviors = Array.from(actor.getComponents(BehaviorOne));
+      const retrievedBehaviors = Array.from(actor.findComponents(BehaviorOne));
       assert.deepEqual(retrievedBehaviors, [childBehavior]);
     });
   });

@@ -208,7 +208,7 @@ export class VoxelLayer {
     return new Vector3(local.x, local.y, local.z);
   }
 
-  getOrCreateChunk(
+  ensureChunk(
     cx: number,
     cy: number,
     cz: number
@@ -242,7 +242,7 @@ export class VoxelLayer {
     return chunk;
   }
 
-  getChunk(
+  chunkAt(
     cx: number,
     cy: number,
     cz: number
@@ -265,19 +265,19 @@ export class VoxelLayer {
     return chunk;
   }
 
-  getVoxelAt(
+  voxelAt(
     position: Vector3Like
   ): VoxelEntry | undefined {
     const { x, y, z } = this.#toLocal(position);
 
-    return this.#chunkAtLocal(x, y, z)?.getAt(
+    return this.#chunkAtLocal(x, y, z)?.voxelAt(
       this.#worldToLocal(x),
       this.#worldToLocal(y),
       this.#worldToLocal(z)
     );
   }
 
-  getPackedVoxelAt(
+  packedAt(
     position: Vector3Like
   ): PackedVoxel {
     const { x, y, z } = this.#toLocal(position);
@@ -286,14 +286,14 @@ export class VoxelLayer {
       return VOXEL_ABSENT;
     }
 
-    return chunk.getPackedAt(
+    return chunk.packedAt(
       this.#worldToLocal(x),
       this.#worldToLocal(y),
       this.#worldToLocal(z)
     );
   }
 
-  getPartnerVoxelAt(
+  partnerAt(
     position: Vector3Like
   ): PackedVoxel {
     const { x, y, z } = this.#toLocal(position);
@@ -302,7 +302,7 @@ export class VoxelLayer {
       return VOXEL_ABSENT;
     }
 
-    return chunk.getPartnerAt(
+    return chunk.partnerAt(
       this.#worldToLocal(x),
       this.#worldToLocal(y),
       this.#worldToLocal(z)
@@ -314,20 +314,20 @@ export class VoxelLayer {
     y: number,
     z: number
   ): VoxelChunk | undefined {
-    return this.getChunk(
+    return this.chunkAt(
       this.#worldToChunk(x),
       this.#worldToChunk(y),
       this.#worldToChunk(z)
     );
   }
 
-  setVoxelAt(
+  writeVoxelAt(
     position: Vector3Like,
     entry: VoxelEntry
   ): void {
     const { partner } = entry;
 
-    this.setPackedVoxelAt(
+    this.writePackedAt(
       position,
       packVoxel(entry.blockId, entry.transform),
       partner === undefined ?
@@ -336,7 +336,7 @@ export class VoxelLayer {
     );
   }
 
-  setPackedVoxelAt(
+  writePackedAt(
     position: Vector3Like,
     packed: PackedVoxel,
     partner: PackedVoxel = VOXEL_ABSENT
@@ -345,11 +345,11 @@ export class VoxelLayer {
       this.removeVoxelAt(position);
     }
     else {
-      this.#setPackedLocal(this.#toLocal(position), packed, partner);
+      this.#writePackedLocal(this.#toLocal(position), packed, partner);
     }
   }
 
-  #setPackedLocal(
+  #writePackedLocal(
     position: Vector3Like,
     packed: PackedVoxel,
     partner: PackedVoxel = VOXEL_ABSENT
@@ -359,9 +359,9 @@ export class VoxelLayer {
     const cx = this.#worldToChunk(x);
     const cy = this.#worldToChunk(y);
     const cz = this.#worldToChunk(z);
-    const chunk = this.getOrCreateChunk(cx, cy, cz);
+    const chunk = this.ensureChunk(cx, cy, cz);
 
-    chunk.setPackedAt(
+    chunk.writePackedAt(
       this.#worldToLocal(x),
       this.#worldToLocal(y),
       this.#worldToLocal(z),
@@ -384,7 +384,7 @@ export class VoxelLayer {
     let run = 0;
 
     for (let i = 0; i < count; i++) {
-      const next = this.getOrCreateChunk(
+      const next = this.ensureChunk(
         positions[i * 3] >> shift,
         positions[(i * 3) + 1] >> shift,
         positions[(i * 3) + 2] >> shift
@@ -411,7 +411,7 @@ export class VoxelLayer {
       const y = positions[(i * 3) + 1];
       const z = positions[(i * 3) + 2];
 
-      this.getOrCreateChunk(x >> shift, y >> shift, z >> shift).setPackedAt(
+      this.ensureChunk(x >> shift, y >> shift, z >> shift).writePackedAt(
         x & mask,
         y & mask,
         z & mask,
@@ -432,7 +432,7 @@ export class VoxelLayer {
       return;
     }
 
-    this.getOrCreateChunk(cx, cy, cz).loadPackedEntries(
+    this.ensureChunk(cx, cy, cz).loadPackedEntries(
       cells,
       voxels,
       partners
@@ -448,16 +448,16 @@ export class VoxelLayer {
     const cx = this.#worldToChunk(x);
     const cy = this.#worldToChunk(y);
     const cz = this.#worldToChunk(z);
-    const chunk = this.getChunk(cx, cy, cz);
+    const chunk = this.chunkAt(cx, cy, cz);
     if (!chunk) {
       return;
     }
 
-    chunk.delete([
+    chunk.removeAt(
       this.#worldToLocal(x),
       this.#worldToLocal(y),
       this.#worldToLocal(z)
-    ]);
+    );
     this.#revision++;
 
     if (chunk.isEmpty()) {
@@ -556,7 +556,7 @@ export class VoxelLayer {
       z: position.z
     };
     for (const [local, packed, partner] of entries) {
-      this.#setPackedLocal(local, packed, partner);
+      this.#writePackedLocal(local, packed, partner);
     }
 
     for (const [key, chunk] of this.#chunks) {
@@ -590,7 +590,7 @@ export class VoxelLayer {
     cy: number,
     cz: number
   ): void {
-    const chunk = this.getChunk(cx, cy, cz);
+    const chunk = this.chunkAt(cx, cy, cz);
 
     if (chunk) {
       chunk.dirty = true;
@@ -630,11 +630,11 @@ export class VoxelLayer {
     }
   }
 
-  * getChunks(): IterableIterator<VoxelChunk> {
+  * chunks(): IterableIterator<VoxelChunk> {
     yield* this.#chunks.values();
   }
 
-  * getDirtyChunks(): IterableIterator<VoxelChunk> {
+  * dirtyChunks(): IterableIterator<VoxelChunk> {
     yield* this.#dirtyChunks;
   }
 
@@ -725,9 +725,9 @@ export class VoxelLayer {
       const position = source.localToWorld({ x, y, z });
       if (
         overwrite ||
-        this.getPackedVoxelAt(position) === VOXEL_ABSENT
+        this.packedAt(position) === VOXEL_ABSENT
       ) {
-        this.setPackedVoxelAt(position, packed, partner);
+        this.writePackedAt(position, packed, partner);
       }
     }
   }

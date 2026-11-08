@@ -16,7 +16,7 @@ const renderer = actor.addComponentAndGet(VoxelRenderer, {
   }
 });
 
-renderer.document.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+renderer.document.world.placeVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
 ```
 
 ## Options

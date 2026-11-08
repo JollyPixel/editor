@@ -74,7 +74,7 @@ describe("VoxelMeshBuilder - merged cells", () => {
     it(name, () => {
       const fixture = makeFixture();
       const [x, y, z] = kOrigin;
-      fixture.layer.setVoxelAt({ x, y, z }, {
+      fixture.layer.writeVoxelAt({ x, y, z }, {
         blockId: kSlabBottomId,
         transform: 0,
         partner: {
@@ -94,7 +94,7 @@ describe("VoxelMeshBuilder - merged cells", () => {
     const fixture = makeFixture();
     const turned = new VoxelTransform({ rotation: 1 });
     const upsideDown = new VoxelTransform({ rotation: 2, flipY: true });
-    fixture.layer.setVoxelAt({ x: 1, y: 1, z: 1 }, {
+    fixture.layer.writeVoxelAt({ x: 1, y: 1, z: 1 }, {
       blockId: kRampId,
       transform: turned.packed,
       partner: {

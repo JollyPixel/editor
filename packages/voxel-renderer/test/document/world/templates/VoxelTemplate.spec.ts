@@ -129,9 +129,9 @@ describe("VoxelTemplate.fromLayer", () => {
         z: -3
       }
     });
-    layer.setPackedVoxelAt({ x: 10, y: 0, z: -3 }, packVoxel(1, 0));
-    layer.setPackedVoxelAt({ x: 11, y: 0, z: -3 }, packVoxel(2, 1));
-    layer.setPackedVoxelAt({ x: 15, y: 2, z: -3 }, packVoxel(3, 0));
+    layer.writePackedAt({ x: 10, y: 0, z: -3 }, packVoxel(1, 0));
+    layer.writePackedAt({ x: 11, y: 0, z: -3 }, packVoxel(2, 1));
+    layer.writePackedAt({ x: 15, y: 2, z: -3 }, packVoxel(3, 0));
 
     return layer;
   }

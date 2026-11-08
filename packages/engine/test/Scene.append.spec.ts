@@ -97,12 +97,12 @@ describe("Scene", () => {
 
       activateScene(sm, new MainScene("main"));
       activateAppendedScene(sm, new PrefabScene("prefab"));
-      assert.ok(sm.getActor("PrefabActor") !== null);
+      assert.ok(sm.findActor("PrefabActor") !== null);
 
       sm.removeScene("prefab");
 
-      assert.ok(sm.getActor("MainActor") !== null, "pre-existing actor should survive removeScene");
-      assert.strictEqual(sm.getActor("PrefabActor"), null, "owned actor should be destroyed");
+      assert.ok(sm.findActor("MainActor") !== null, "pre-existing actor should survive removeScene");
+      assert.strictEqual(sm.findActor("PrefabActor"), null, "owned actor should be destroyed");
     });
 
     test("multiple appended scenes run update and fixedUpdate each frame", () => {
@@ -122,22 +122,22 @@ describe("Scene", () => {
       assert.strictEqual(prefabB.fixedUpdateSpy.mock.calls.length, 1);
     });
 
-    test("getScene(id) returns the appended scene by id", () => {
+    test("findScene(id) returns the appended scene", () => {
       const { sm } = createSceneSetup();
       const appended = new ConcreteScene("prefab");
 
       activateAppendedScene(sm, appended);
 
-      assert.strictEqual(sm.getScene(appended.id), appended);
+      assert.strictEqual(sm.findScene(appended.id), appended);
     });
 
-    test("getScene(id) returns null for unknown id", () => {
+    test("findScene(id) returns null for unknown id", () => {
       const { sm } = createSceneSetup();
 
-      assert.strictEqual(sm.getScene(9999), null);
+      assert.strictEqual(sm.findScene(9999), null);
     });
 
-    test("getScene(name) returns all appended scenes sharing that name", () => {
+    test("scenesNamed(name) returns all appended scenes sharing that name", () => {
       const { sm } = createSceneSetup();
       const a = new ConcreteScene("shared");
       const b = new ConcreteScene("shared");
@@ -147,7 +147,7 @@ describe("Scene", () => {
       activateAppendedScene(sm, b);
       activateAppendedScene(sm, c);
 
-      const scenes = sm.getScene("shared");
+      const scenes = sm.scenesNamed("shared");
       assert.strictEqual(scenes.length, 2);
       assert.ok(scenes.includes(a));
       assert.ok(scenes.includes(b));
@@ -166,7 +166,7 @@ describe("Scene", () => {
       sm.beginFrame();
 
       assert.strictEqual(load.status, "loading");
-      assert.strictEqual(sm.getScene(appended.id), null);
+      assert.strictEqual(sm.findScene(appended.id), null);
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
 
       assets.loader.resolve("a");
@@ -174,7 +174,7 @@ describe("Scene", () => {
       sm.beginFrame();
 
       assert.strictEqual(load.status, "active");
-      assert.strictEqual(sm.getScene(appended.id), appended);
+      assert.strictEqual(sm.findScene(appended.id), appended);
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 1);
     });
 
@@ -188,13 +188,13 @@ describe("Scene", () => {
       sm.beginFrame();
 
       assert.strictEqual(load.status, "ready");
-      assert.strictEqual(sm.getScene(appended.id), null);
+      assert.strictEqual(sm.findScene(appended.id), null);
 
       load.allowActivation();
       sm.beginFrame();
 
       assert.strictEqual(load.status, "active");
-      assert.strictEqual(sm.getScene(appended.id), appended);
+      assert.strictEqual(sm.findScene(appended.id), appended);
     });
 
     test("loads different appended scenes independently", async() => {
@@ -216,8 +216,8 @@ describe("Scene", () => {
 
       assert.strictEqual(firstLoad.status, "active");
       assert.strictEqual(secondLoad.status, "active");
-      assert.strictEqual(sm.getScene(first.id), first);
-      assert.strictEqual(sm.getScene(second.id), second);
+      assert.strictEqual(sm.findScene(first.id), first);
+      assert.strictEqual(sm.findScene(second.id), second);
     });
 
     test("does not append a scene when an asset fails", async() => {
@@ -236,7 +236,7 @@ describe("Scene", () => {
       assert.strictEqual(load.status, "failed");
       assert.ok(load.error instanceof AssetBatchLoadError);
       assert.strictEqual(load.error.failures[0]?.error, error);
-      assert.strictEqual(sm.getScene(appended.id), null);
+      assert.strictEqual(sm.findScene(appended.id), null);
       assert.strictEqual(appended.awakeSpy.mock.calls.length, 0);
     });
   });

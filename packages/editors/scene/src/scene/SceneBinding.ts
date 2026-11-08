@@ -24,9 +24,6 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type { PrefabScenes } from "./PrefabScenes.ts";
 
-// CONSTANTS
-const kWorldPosition = new THREE.Vector3();
-
 export interface SceneEnvironmentTarget {
   apply(environment: SceneEnvironmentJSON): void;
 }
@@ -181,7 +178,7 @@ export class SceneBinding
       const actor = this.#instance.actor(id);
       if (actor !== null) {
         bounds.expandByObject(actor.node.object3D);
-        bounds.expandByPoint(actor.transform.getGlobalPosition(kWorldPosition));
+        bounds.expandByPoint(actor.transform.global.position);
       }
     }
 

@@ -93,7 +93,7 @@ export function place(
   transform = 0
 ): void {
   const layer = "layer" in target ? target.layer : target;
-  layer.setVoxelAt({ x, y, z }, { blockId, transform });
+  layer.writeVoxelAt({ x, y, z }, { blockId, transform });
 }
 
 export function buildChunk(
@@ -101,7 +101,7 @@ export function buildChunk(
   chunkCoords: Vec3Tuple = [0, 0, 0]
 ): Map<ChunkGeometryKey, PulledChunkGeometry> {
   const { layer, builder } = fixture;
-  const chunk = layer.getChunk(...chunkCoords);
+  const chunk = layer.chunkAt(...chunkCoords);
 
   return chunk ? builder.buildChunkGeometries([{ layer, chunk }]) : new Map();
 }
@@ -121,7 +121,7 @@ function countLayerVertices(
   fixture: MeshFixture,
   layer: VoxelLayer
 ): number {
-  const chunk = layer.getChunk(0, 0, 0);
+  const chunk = layer.chunkAt(0, 0, 0);
 
   return chunk
     ? countVertices(fixture.builder.buildChunkGeometries([{ layer, chunk }]))
@@ -138,7 +138,7 @@ export function getChunk(
   fixture: MeshFixture,
   chunkCoords: Vec3Tuple = [0, 0, 0]
 ): VoxelChunk {
-  const chunk = fixture.layer.getChunk(...chunkCoords);
+  const chunk = fixture.layer.chunkAt(...chunkCoords);
   assert.ok(chunk);
 
   return chunk;

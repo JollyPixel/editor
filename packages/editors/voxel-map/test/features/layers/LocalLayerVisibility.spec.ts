@@ -60,7 +60,7 @@ function groundShown(
   world: VoxelWorld,
   layers: VoxelLayerVisibility
 ): boolean {
-  return layers.isVisible(world.getLayer("Ground")!);
+  return layers.isVisible(world.findLayer("Ground")!);
 }
 
 describe("LocalLayerVisibility", () => {
@@ -71,7 +71,7 @@ describe("LocalLayerVisibility", () => {
     visibility.override("voxel:Ground", false);
 
     assert.strictEqual(groundShown(world, layers), false);
-    assert.strictEqual(world.getLayer("Ground")?.visible, true);
+    assert.strictEqual(world.findLayer("Ground")?.visible, true);
     assert.deepStrictEqual(commands, []);
   });
 
@@ -101,7 +101,7 @@ describe("LocalLayerVisibility", () => {
 
     world.updateLayer("Ground", { visible: false });
 
-    assert.strictEqual(world.getLayer("Ground")?.visible, false);
+    assert.strictEqual(world.findLayer("Ground")?.visible, false);
     assert.strictEqual(groundShown(world, layers), true);
   });
 
@@ -199,7 +199,7 @@ describe("LocalLayerVisibility", () => {
     function shown(
       name: string
     ): boolean {
-      return layers.isVisible(world.getLayer(name)!);
+      return layers.isVisible(world.findLayer(name)!);
     }
 
     const release = local.isolate("Draft");

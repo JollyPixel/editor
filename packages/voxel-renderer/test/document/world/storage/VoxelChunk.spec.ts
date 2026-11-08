@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { VoxelChunk, DEFAULT_CHUNK_SIZE } from "../../../../src/document/world/index.ts";
-import { makeVoxelEntry } from "../../../helpers/voxelEntry.ts";
+import {
+  makeVoxelEntry,
+  writeChunkVoxel
+} from "../../../helpers/voxelEntry.ts";
 
 describe("VoxelChunk constructor", () => {
   it("stores chunk coords", () => {
@@ -39,29 +42,29 @@ describe("VoxelChunk constructor", () => {
 describe("VoxelChunk set / get", () => {
   it("get returns undefined for empty coords", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    assert.equal(chunk.get([0, 0, 0]), undefined);
+    assert.equal(chunk.voxelAt(0, 0, 0), undefined);
   });
 
   it("returns stored entry after set", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
     const entry = makeVoxelEntry(5, 2);
-    chunk.set([1, 2, 3], entry);
-    assert.deepEqual(chunk.get([1, 2, 3]), entry);
+    writeChunkVoxel(chunk, [1, 2, 3], entry);
+    assert.deepEqual(chunk.voxelAt(1, 2, 3), entry);
   });
 
   it("get returns undefined for a different coord", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    chunk.set([1, 0, 0], makeVoxelEntry());
-    assert.equal(chunk.get([2, 0, 0]), undefined);
+    writeChunkVoxel(chunk, [1, 0, 0], makeVoxelEntry());
+    assert.equal(chunk.voxelAt(2, 0, 0), undefined);
   });
 
   it("overwrite replaces the entry", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
     const first = makeVoxelEntry(1);
     const second = makeVoxelEntry(2);
-    chunk.set([0, 0, 0], first);
-    chunk.set([0, 0, 0], second);
-    assert.deepEqual(chunk.get([0, 0, 0]), second);
+    writeChunkVoxel(chunk, [0, 0, 0], first);
+    writeChunkVoxel(chunk, [0, 0, 0], second);
+    assert.deepEqual(chunk.voxelAt(0, 0, 0), second);
   });
 });
 
@@ -69,30 +72,30 @@ describe("VoxelChunk dirty flag", () => {
   it("set marks dirty", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
     chunk.dirty = false;
-    chunk.set([0, 0, 0], makeVoxelEntry());
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry());
     assert.equal(chunk.dirty, true);
   });
 
   it("get does not change dirty", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    chunk.set([0, 0, 0], makeVoxelEntry());
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry());
     chunk.dirty = false;
-    chunk.get([0, 0, 0]);
+    chunk.voxelAt(0, 0, 0);
     assert.equal(chunk.dirty, false);
   });
 
   it("delete of existing entry marks dirty", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    chunk.set([0, 0, 0], makeVoxelEntry());
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry());
     chunk.dirty = false;
-    chunk.delete([0, 0, 0]);
+    chunk.removeAt(0, 0, 0);
     assert.equal(chunk.dirty, true);
   });
 
   it("delete of missing entry does NOT mark dirty", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
     chunk.dirty = false;
-    chunk.delete([0, 0, 0]);
+    chunk.removeAt(0, 0, 0);
     assert.equal(chunk.dirty, false);
   });
 });
@@ -100,45 +103,45 @@ describe("VoxelChunk dirty flag", () => {
 describe("VoxelChunk delete", () => {
   it("returns true when entry existed", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    chunk.set([0, 0, 0], makeVoxelEntry());
-    assert.equal(chunk.delete([0, 0, 0]), true);
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry());
+    assert.equal(chunk.removeAt(0, 0, 0), true);
   });
 
   it("returns false when entry did not exist", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    assert.equal(chunk.delete([0, 0, 0]), false);
+    assert.equal(chunk.removeAt(0, 0, 0), false);
   });
 
   it("entry is gone after delete", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    chunk.set([5, 5, 5], makeVoxelEntry());
-    chunk.delete([5, 5, 5]);
-    assert.equal(chunk.get([5, 5, 5]), undefined);
+    writeChunkVoxel(chunk, [5, 5, 5], makeVoxelEntry());
+    chunk.removeAt(5, 5, 5);
+    assert.equal(chunk.voxelAt(5, 5, 5), undefined);
   });
 });
 
 describe("VoxelChunk isEmpty / voxelCount", () => {
   it("isEmpty is false and voxelCount increments after set", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    chunk.set([0, 0, 0], makeVoxelEntry());
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry());
     assert.equal(chunk.isEmpty(), false);
     assert.equal(chunk.voxelCount, 1);
-    chunk.set([1, 0, 0], makeVoxelEntry());
+    writeChunkVoxel(chunk, [1, 0, 0], makeVoxelEntry());
     assert.equal(chunk.voxelCount, 2);
   });
 
   it("voxelCount decrements after delete", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    chunk.set([0, 0, 0], makeVoxelEntry());
-    chunk.set([1, 0, 0], makeVoxelEntry());
-    chunk.delete([0, 0, 0]);
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry());
+    writeChunkVoxel(chunk, [1, 0, 0], makeVoxelEntry());
+    chunk.removeAt(0, 0, 0);
     assert.equal(chunk.voxelCount, 1);
   });
 
   it("overwriting the same cell does not increase voxelCount", () => {
     const chunk = new VoxelChunk([0, 0, 0]);
-    chunk.set([0, 0, 0], makeVoxelEntry(1));
-    chunk.set([0, 0, 0], makeVoxelEntry(2));
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry(1));
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry(2));
     assert.equal(chunk.voxelCount, 1);
   });
 });
@@ -148,8 +151,8 @@ describe("VoxelChunk entries()", () => {
     const chunk = new VoxelChunk([0, 0, 0], 4);
     const e1 = makeVoxelEntry(1);
     const e2 = makeVoxelEntry(2);
-    chunk.set([0, 0, 0], e1);
-    chunk.set([2, 1, 3], e2);
+    writeChunkVoxel(chunk, [0, 0, 0], e1);
+    writeChunkVoxel(chunk, [2, 1, 3], e2);
 
     const collected = new Map<number, typeof e1>();
     for (const [idx, entry] of chunk.entries()) {
@@ -162,14 +165,14 @@ describe("VoxelChunk entries()", () => {
   });
 });
 
-describe("VoxelChunk getAt()", () => {
+describe("VoxelChunk voxelAt()", () => {
   it("returns the same entry as get() without the tuple", () => {
     const chunk = new VoxelChunk([0, 0, 0], 4);
     const entry = makeVoxelEntry(7);
-    chunk.set([1, 2, 3], entry);
+    writeChunkVoxel(chunk, [1, 2, 3], entry);
 
-    assert.deepEqual(chunk.getAt(1, 2, 3), entry);
-    assert.equal(chunk.getAt(3, 2, 1), undefined);
+    assert.deepEqual(chunk.voxelAt(1, 2, 3), entry);
+    assert.equal(chunk.voxelAt(3, 2, 1), undefined);
   });
 });
 
@@ -183,8 +186,8 @@ describe("VoxelChunk mayContain()", () => {
 
   it("covers every written voxel and rejects positions outside their box", () => {
     const chunk = new VoxelChunk([0, 0, 0], 8);
-    chunk.set([2, 3, 4], makeVoxelEntry(1));
-    chunk.set([5, 3, 4], makeVoxelEntry(2));
+    writeChunkVoxel(chunk, [2, 3, 4], makeVoxelEntry(1));
+    writeChunkVoxel(chunk, [5, 3, 4], makeVoxelEntry(2));
 
     assert.equal(chunk.mayContain(2, 3, 4), true);
     assert.equal(chunk.mayContain(5, 3, 4), true);
@@ -197,11 +200,11 @@ describe("VoxelChunk mayContain()", () => {
 
   it("stays conservative after a delete rather than shrinking", () => {
     const chunk = new VoxelChunk([0, 0, 0], 8);
-    chunk.set([1, 1, 1], makeVoxelEntry(1));
-    chunk.set([6, 6, 6], makeVoxelEntry(2));
-    chunk.delete([6, 6, 6]);
+    writeChunkVoxel(chunk, [1, 1, 1], makeVoxelEntry(1));
+    writeChunkVoxel(chunk, [6, 6, 6], makeVoxelEntry(2));
+    chunk.removeAt(6, 6, 6);
 
-    assert.equal(chunk.getAt(6, 6, 6), undefined);
+    assert.equal(chunk.voxelAt(6, 6, 6), undefined);
     assert.equal(chunk.mayContain(6, 6, 6), true);
   });
 });
@@ -211,17 +214,17 @@ describe("VoxelChunk contentBounds()", () => {
     const chunk = new VoxelChunk([0, 0, 0], 4);
     assert.equal(chunk.contentBounds(), null);
 
-    chunk.set([1, 2, 3], makeVoxelEntry(1));
-    chunk.delete([1, 2, 3]);
+    writeChunkVoxel(chunk, [1, 2, 3], makeVoxelEntry(1));
+    chunk.removeAt(1, 2, 3);
     assert.equal(chunk.contentBounds(), null);
   });
 
   it("spans the stored voxels exactly, shrinking after a delete", () => {
     const chunk = new VoxelChunk([0, 0, 0], 8);
-    chunk.set([2, 3, 4], makeVoxelEntry(1));
-    chunk.set([5, 1, 6], makeVoxelEntry(2));
-    chunk.set([7, 7, 7], makeVoxelEntry(3));
-    chunk.delete([7, 7, 7]);
+    writeChunkVoxel(chunk, [2, 3, 4], makeVoxelEntry(1));
+    writeChunkVoxel(chunk, [5, 1, 6], makeVoxelEntry(2));
+    writeChunkVoxel(chunk, [7, 7, 7], makeVoxelEntry(3));
+    chunk.removeAt(7, 7, 7);
 
     assert.deepEqual(chunk.contentBounds(), {
       minX: 2,
@@ -235,12 +238,12 @@ describe("VoxelChunk contentBounds()", () => {
 
   it("reuses its bounds until the chunk changes", () => {
     const chunk = new VoxelChunk([0, 0, 0], 4);
-    chunk.set([0, 0, 0], makeVoxelEntry(1));
+    writeChunkVoxel(chunk, [0, 0, 0], makeVoxelEntry(1));
 
     const first = chunk.contentBounds();
     assert.equal(chunk.contentBounds(), first);
 
-    chunk.set([3, 0, 0], makeVoxelEntry(1));
+    writeChunkVoxel(chunk, [3, 0, 0], makeVoxelEntry(1));
     assert.notEqual(chunk.contentBounds(), first);
     assert.equal(chunk.contentBounds()?.maxX, 3);
   });

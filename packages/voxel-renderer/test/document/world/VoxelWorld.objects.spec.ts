@@ -54,11 +54,11 @@ describe("VoxelWorld - object edits", () => {
     const world = makeWorld();
 
     assert.equal(
-      world.objectLayers.getObject("From", "obj1"),
+      world.objectLayers.findObject("From", "obj1"),
       world.objectLayers.get("From")?.objects[0]
     );
-    assert.equal(world.objectLayers.getObject("To", "obj1"), undefined);
-    assert.equal(world.objectLayers.getObject("NoSuch", "obj1"), undefined);
+    assert.equal(world.objectLayers.findObject("To", "obj1"), undefined);
+    assert.equal(world.objectLayers.findObject("NoSuch", "obj1"), undefined);
   });
 });
 

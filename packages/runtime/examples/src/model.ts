@@ -35,17 +35,16 @@ class ModelsScene extends Systems.Scene {
       new THREE.AmbientLight(new THREE.Color("#ffffff"), 1)
     );
 
-    this.world.createActor("camera")
-      .addComponent(Camera3DControls, { speed: 0.25, rotationSpeed: 0.50 })
-      .transform
-      .setLocalPosition({ x: 5, y: 5, z: 5 })
-      .lookAt({ x: 0, y: 0, z: 0 });
+    const { transform } = this.world.createActor("camera")
+      .addComponent(Camera3DControls, { speed: 0.25, rotationSpeed: 0.50 });
+    transform.local.position = { x: 5, y: 5, z: 5 };
+    transform.lookAt({ x: 0, y: 0, z: 0 });
 
     this.world.createActor("tinyWitchModel")
       .addComponent(ModelRenderer, {
         asset: kTinyWitchModel
       })
-      .transform.setLocalPosition({ x: -5, y: 0, z: 0 });
+      .transform.local.position = { x: -5, y: 0, z: 0 };
 
     this.world.createActor("player")
       .addComponent(ModelRenderer, {

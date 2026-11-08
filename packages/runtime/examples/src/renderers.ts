@@ -37,11 +37,10 @@ class RenderersScene extends Systems.Scene {
       new THREE.AmbientLight(new THREE.Color("#ffffffff"), 3)
     );
 
-    this.world.createActor("camera")
-      .addComponent(Camera3DControls)
-      .transform
-      .setLocalPosition({ x: 10, y: 10, z: 5 })
-      .lookAt({ x: 0, y: 0, z: 0 });
+    const { transform } = this.world.createActor("camera")
+      .addComponent(Camera3DControls);
+    transform.local.position = { x: 10, y: 10, z: 5 };
+    transform.lookAt({ x: 0, y: 0, z: 0 });
 
     const textActor = this.world.createActor("text")
       .addComponent(TextRenderer, {
@@ -50,7 +49,7 @@ class RenderersScene extends Systems.Scene {
         size: 2,
         depth: 2
       });
-    textActor.transform.setLocalPosition({ x: 0, y: 5, z: 0 });
+    textActor.transform.local.position = { x: 0, y: 5, z: 0 };
 
     const audioManager = GlobalAudioManager.fromWorld(this.world);
     this.audioBackground = new AudioBackground({

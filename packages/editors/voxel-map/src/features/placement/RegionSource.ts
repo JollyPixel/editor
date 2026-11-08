@@ -31,7 +31,7 @@ export class RegionSource {
     layerName: string,
     region: CellRegion
   ): RegionSource | null {
-    const layer = world.getLayer(layerName);
+    const layer = world.findLayer(layerName);
     if (layer === undefined) {
       return null;
     }
@@ -53,7 +53,7 @@ export class RegionSource {
     layerName: string,
     start: VoxelCoord
   ): RegionSource | null {
-    const layer = world.getLayer(layerName);
+    const layer = world.findLayer(layerName);
     const cells = layer === undefined ?
       null :
       ConnectedCells.flood(layer, start);
@@ -121,7 +121,7 @@ export class RegionSource {
   resolve(
     world: VoxelWorld
   ): VoxelTemplate | undefined {
-    return world.getLayer(this.layerName) === undefined ?
+    return world.findLayer(this.layerName) === undefined ?
       undefined :
       this.snapshot;
   }

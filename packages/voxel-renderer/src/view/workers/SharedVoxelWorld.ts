@@ -32,7 +32,7 @@ export class SharedVoxelLayer implements MeshableLayer {
     }
   }
 
-  getChunk(
+  chunkAt(
     cx: number,
     cy: number,
     cz: number
@@ -46,7 +46,7 @@ export class SharedVoxelWorld implements MeshableWorld {
 
   #layers: SharedVoxelLayer[] = [];
 
-  getLayers(): readonly SharedVoxelLayer[] {
+  layers(): readonly SharedVoxelLayer[] {
     return this.#layers;
   }
 
@@ -62,7 +62,7 @@ export class SharedVoxelWorld implements MeshableWorld {
     const members: MeshableLayerChunk[] = [];
     for (const { layer: index, cx, cy, cz } of request.members) {
       const layer = this.#layers[index];
-      const chunk = layer?.getChunk(cx, cy, cz);
+      const chunk = layer?.chunkAt(cx, cy, cz);
       if (chunk !== undefined) {
         members.push({ layer, chunk });
       }

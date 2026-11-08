@@ -48,7 +48,7 @@ child(options: { namespace: string }): Logger;
 
 A child appends its namespace to its parent's (`boot` then `scene` gives
 `boot.scene`) and shares the parent's level, patterns and adapter, so
-`setLevel`, `enableNamespace` and `disableNamespace` on any logger of the tree
+assigning `level`, `enableNamespace` and `disableNamespace` on any logger of the tree
 apply to all of them.
 
 ## Writing

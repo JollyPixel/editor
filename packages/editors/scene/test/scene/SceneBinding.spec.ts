@@ -35,7 +35,7 @@ describe("SceneBinding", () => {
     const root = binding.actor(rootId)!;
     const child = binding.actor(childId)!;
     assert.strictEqual(child.parent, root);
-    assert.deepEqual(root.transform.getLocalPosition().toArray(), [1, 2, 3]);
+    assert.deepEqual(root.transform.local.position.toArray(), [1, 2, 3]);
     assert.strictEqual((binding.component("probe") as Probe).label, "sun");
     assert.deepEqual(environments, [document.tree.environment]);
   });
@@ -100,8 +100,8 @@ describe("SceneBinding", () => {
 
     const child = binding.actor(childId)!;
     assert.strictEqual(child.parent, null);
-    assert.deepEqual(child.transform.getLocalPosition().toArray(), [4, 0, 0]);
-    assert.ok(Math.abs(child.transform.getLocalEulerAngles().y - (Math.PI / 2)) < 1e-9);
+    assert.deepEqual(child.transform.local.position.toArray(), [4, 0, 0]);
+    assert.ok(Math.abs(child.transform.local.eulerAngles.y - (Math.PI / 2)) < 1e-9);
   });
 
   test("moves an actor onto the anchor a move names and lists its owner's anchors", () => {
@@ -126,7 +126,7 @@ describe("SceneBinding", () => {
 
     const coin = binding.actor(coinId)!;
     assert.strictEqual(coin.parent, binding.actor(mapId));
-    assert.deepEqual(coin.transform.getGlobalPosition().toArray(), [5, 1, 0]);
+    assert.deepEqual(coin.transform.global.position.toArray(), [5, 1, 0]);
     assert.deepEqual([...binding.anchors(mapId)].map(({ anchor }) => anchor.label), ["Spawn"]);
   });
 
@@ -160,7 +160,7 @@ describe("SceneBinding", () => {
     const fresh = binding.actor("fresh")!;
     assert.strictEqual(binding.actor(oldId), null);
     assert.deepEqual(sceneManager.tree.children, [fresh]);
-    assert.strictEqual(fresh.transform.getVisible(), false);
+    assert.strictEqual(fresh.transform.visible, false);
     assert.deepEqual(environments.at(-1), foggy);
   });
 

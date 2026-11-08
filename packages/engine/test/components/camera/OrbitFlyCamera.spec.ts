@@ -11,7 +11,7 @@ import type {
   PostProcessing
 } from "../../../src/three/rendering/compositing/PostProcessing.ts";
 import { Viewport } from "../../../src/core/systems/rendering/Viewport.ts";
-import { Transform } from "../../../src/core/actor/Transform.ts";
+import { Transform } from "../../../src/core/actor/transform/Transform.ts";
 import type { Actor } from "../../../src/core/actor/Actor.ts";
 
 describe("OrbitFlyCamera vertical movement", () => {
@@ -206,7 +206,7 @@ describe("OrbitFlyCamera under a parent actor", () => {
   test("holds its local pose while idle", () => {
     const harness = createHarness();
     const parent = new Transform(harness.graph.createNode({} as Actor));
-    parent.setLocalPosition({ x: 10, y: 0, z: 0 });
+    parent.local.position = { x: 10, y: 0, z: 0 };
     harness.transform.attach(parent);
 
     harness.advance(3);

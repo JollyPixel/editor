@@ -157,9 +157,13 @@ class SceneManager<TContext> {
   unloadScene(scene: Scene<TContext>): void;
   /** Removes an appended scene, by instance or name. */
   removeScene(scene: Scene<TContext> | string): void;
+  /** An appended scene by id, or `null`. */
+  findScene(id: number): Scene<TContext> | null;
+  /** Every appended scene with this name. */
+  scenesNamed(name: string): Scene<TContext>[];
 
   /** First non-pending actor with this name, or at this root-anchored path. */
-  getActor(name: string): Actor<TContext> | null;
+  findActor(name: string): Actor<TContext> | null;
 }
 
 class ActorRegistry<TContext> {

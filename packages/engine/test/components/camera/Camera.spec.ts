@@ -42,7 +42,7 @@ describe("Components.Camera.CameraComponent", () => {
 
     test("should take its world matrix from the actor", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
-      actor.transform.setLocalPosition({ x: 3, y: 4, z: 5 });
+      actor.transform.local.position = { x: 3, y: 4, z: 5 };
 
       camera.prepareRender(new CanvasDimensions(800, 600));
 
@@ -54,9 +54,8 @@ describe("Components.Camera.CameraComponent", () => {
 
     test("should mirror the actor pose into position and quaternion", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
-      actor.transform
-        .setLocalPosition({ x: 10, y: 2, z: -4 })
-        .lookAt({ x: 0, y: 0, z: 0 });
+      actor.transform.local.position = { x: 10, y: 2, z: -4 };
+      actor.transform.lookAt({ x: 0, y: 0, z: 0 });
 
       camera.prepareRender(new CanvasDimensions(800, 600));
 
@@ -73,7 +72,7 @@ describe("Components.Camera.CameraComponent", () => {
 
     test("should keep matrixWorldInverse consistent with matrixWorld", () => {
       const camera = new CameraComponent(actor as unknown as Actor);
-      actor.transform.setLocalPosition({ x: 7, y: 0, z: 1 });
+      actor.transform.local.position = { x: 7, y: 0, z: 1 };
 
       camera.prepareRender(new CanvasDimensions(800, 600));
 
@@ -91,7 +90,7 @@ describe("Components.Camera.CameraComponent", () => {
       const camera = new CameraComponent(actor as unknown as Actor, {
         addAudioListener: true
       });
-      actor.transform.setLocalPosition({ x: 0, y: 12, z: 0 });
+      actor.transform.local.position = { x: 0, y: 12, z: 0 };
 
       camera.prepareRender(new CanvasDimensions(800, 600));
 

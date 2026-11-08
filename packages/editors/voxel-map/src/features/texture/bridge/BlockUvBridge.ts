@@ -108,7 +108,7 @@ export class BlockUvBridge {
       return [];
     }
 
-    return [...this.#view.document.blocks.getAll()].filter(
+    return [...this.#view.document.blocks].filter(
       (block) => slot.ownsBlockId(block.id) &&
         this.#resolveBlockUv(block).layout.usesBlockset(slot.id)
     );

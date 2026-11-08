@@ -40,7 +40,7 @@ function createSlabView(): VoxelView {
     layers: ["Ground"],
     blocks
   }));
-  view.document.world.setVoxel("Ground", {
+  view.document.world.placeVoxel("Ground", {
     position: { x: 0, y: 0, z: 0 },
     blockId: 1
   });
@@ -96,7 +96,7 @@ describe("applyBrushStroke", () => {
 
     assert.ok(placeStroke(view, 2, [{ x: 0, y: 0, z: 0 }]));
     assert.deepStrictEqual(
-      view.document.world.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      view.document.world.voxelAt({ x: 0, y: 0, z: 0 }),
       {
         blockId: 1,
         transform: 0,
@@ -120,7 +120,7 @@ describe("applyBrushStroke", () => {
 
       assert.ok(applyBrushStroke(view, stroke, [origin], 1));
       assert.deepStrictEqual(
-        view.document.world.getVoxelAt(origin),
+        view.document.world.voxelAt(origin),
         { blockId: kept, transform: 0 }
       );
       view.dispose();
@@ -131,7 +131,7 @@ describe("applyBrushStroke", () => {
     const view = createSlabView();
     const origin = { x: 0, y: 0, z: 0 };
     const next = { x: 1, y: 0, z: 0 };
-    view.document.world.setVoxel("Ground", { position: next, blockId: 1 });
+    view.document.world.placeVoxel("Ground", { position: next, blockId: 1 });
     placeStroke(view, 2, [origin, next]);
 
     const stroke = new BrushStroke({
@@ -143,10 +143,10 @@ describe("applyBrushStroke", () => {
 
     assert.ok(applyBrushStroke(view, stroke, [origin, next], 1));
     assert.deepStrictEqual(
-      view.document.world.getVoxelAt(origin),
+      view.document.world.voxelAt(origin),
       { blockId: 1, transform: 0 }
     );
-    assert.strictEqual(view.document.world.getVoxelAt(next), undefined);
+    assert.strictEqual(view.document.world.voxelAt(next), undefined);
     view.dispose();
   });
 
@@ -157,7 +157,7 @@ describe("applyBrushStroke", () => {
 
     assert.ok(replaceUpperHalf(view, { blockId: 4, rotation: 0, flipY: false }));
     assert.deepStrictEqual(
-      view.document.world.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      view.document.world.voxelAt({ x: 0, y: 0, z: 0 }),
       {
         blockId: 1,
         transform: 0,
@@ -173,7 +173,7 @@ describe("applyBrushStroke", () => {
 
     assert.ok(replaceUpperHalf(view, { blockId: 4, rotation: 0, flipY: true }));
     assert.deepStrictEqual(
-      view.document.world.getVoxelAt({ x: 0, y: 0, z: 0 })?.partner,
+      view.document.world.voxelAt({ x: 0, y: 0, z: 0 })?.partner,
       { blockId: 4, transform: 0 }
     );
     view.dispose();
@@ -184,7 +184,7 @@ describe("applyBrushStroke", () => {
 
     assert.ok(replaceUpperHalf(view, { blockId: 5, rotation: 0, flipY: false }));
     assert.deepStrictEqual(
-      view.document.world.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      view.document.world.voxelAt({ x: 0, y: 0, z: 0 }),
       { blockId: 5, transform: 0 }
     );
     view.dispose();
@@ -205,7 +205,7 @@ describe("applyBrushStroke", () => {
 
     assert.strictEqual(placeStroke(view, 3, [{ x: 0, y: 0, z: 0 }]), false);
     assert.strictEqual(
-      view.document.world.getVoxelAt({ x: 0, y: 0, z: 0 })?.partner,
+      view.document.world.voxelAt({ x: 0, y: 0, z: 0 })?.partner,
       undefined
     );
     view.dispose();

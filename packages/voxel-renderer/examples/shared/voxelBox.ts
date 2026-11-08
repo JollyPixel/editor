@@ -31,7 +31,7 @@ export function fillBox(
   blockId: number,
   box: VoxelBox
 ): void {
-  world.setVoxelBulk(
+  world.placeVoxelBulk(
     layerName,
     Array.from(positionsIn(box), (position) => {
       return { position, blockId };

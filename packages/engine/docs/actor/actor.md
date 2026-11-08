@@ -54,7 +54,7 @@ const hand = new Actor(world, {
 });
 
 // Nested actors can be found by path through ActorTree
-const found = world.sceneManager.tree.getActor("Player/RightHand");
+const found = world.sceneManager.tree.findActor("Player/RightHand");
 ```
 
 ## Adding components
@@ -78,13 +78,13 @@ const camera = actor.addComponentAndGet(Camera3DControls, {
 
 ## Retrieving components
 
-Use `getComponent` to look up a component by class or by type name.
-Use `getComponents` to iterate over all matching instances:
+Use `findComponent` to look up a component by class or by type name.
+Use `findComponents` to iterate over all matching instances:
 
 ```ts
-const behavior = actor.getComponent(PlayerBehavior);
+const behavior = actor.findComponent(PlayerBehavior);
 
-for (const enemyScript of actor.getComponents(EnemyBehavior)) {
+for (const enemyScript of actor.findComponents(EnemyBehavior)) {
   enemyScript.reset();
 }
 ```
@@ -153,7 +153,7 @@ often shared.
 [ActorTree](actor-tree.md) lookups and walks work from any actor:
 
 ```ts
-for (const child of player.getRootActors()) {
+for (const child of player) {
   console.log(child.name);
 }
 ```
@@ -170,27 +170,27 @@ if (player.hasDescendant(pickedActor)) {
 
 ## Re-parenting
 
-`setParent` keeps the actor's global position and orientation by default.
+`reparent` keeps the actor's global position and orientation by default.
 
 ```ts
-hand.setParent(otherActor);
+hand.reparent(otherActor);
 ```
 
 Pass `keepLocal = true` to preserve the local values instead.
 
 ```ts
-hand.setParent(otherActor, true);
+hand.reparent(otherActor, true);
 ```
 
 ## Active state
 
 Setting `active` to `false` stops `update()` and `fixedUpdate()` for the
-actor and its subtree. It keeps rendering: hide it with `transform.setVisible(false)`. `activeInHierarchy` is `true` only when the actor and
+actor and its subtree. It keeps rendering: hide it with `transform.visible = false`. `activeInHierarchy` is `true` only when the actor and
 all its ancestors are active.
 
 ```ts
 enemy.active = false;
-enemy.transform.setVisible(false);
+enemy.transform.visible = false;
 ```
 
 A child keeps its own `active` value. Reactivating a parent does not

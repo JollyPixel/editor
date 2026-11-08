@@ -35,7 +35,7 @@ export class ConnectedCells implements Iterable<VoxelCoord> {
       y: start.y,
       z: start.z
     };
-    if (layer.getPackedVoxelAt(cell) === VOXEL_ABSENT) {
+    if (layer.packedAt(cell) === VOXEL_ABSENT) {
       return null;
     }
 
@@ -50,8 +50,8 @@ export class ConnectedCells implements Iterable<VoxelCoord> {
       cell.x = x;
       cell.y = y;
       cell.z = z;
-      voxels.push(layer.getPackedVoxelAt(cell));
-      partners.push(layer.getPartnerVoxelAt(cell));
+      voxels.push(layer.packedAt(cell));
+      partners.push(layer.partnerAt(cell));
 
       for (const [dx, dy, dz] of kFaceNeighbours) {
         cell.x = x + dx;
@@ -60,7 +60,7 @@ export class ConnectedCells implements Iterable<VoxelCoord> {
         const key = `${cell.x},${cell.y},${cell.z}`;
         if (
           !visited.has(key) &&
-          layer.getPackedVoxelAt(cell) !== VOXEL_ABSENT
+          layer.packedAt(cell) !== VOXEL_ABSENT
         ) {
           visited.add(key);
           positions.push(cell.x, cell.y, cell.z);

@@ -52,7 +52,7 @@ describe("VoxelRenderer", () => {
     });
     const dispose = context.mock.method(renderer.document, "dispose");
 
-    assert.ok(renderer.document.world.getLayer("Ground"));
+    assert.ok(renderer.document.world.findLayer("Ground"));
     assert.strictEqual(renderer.view.document, renderer.document);
 
     renderer.destroy();

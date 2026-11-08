@@ -17,7 +17,7 @@ export function markBlockDirty(
   for (const layer of layers) {
     const size = layer.chunkSize;
     const { x, y, z } = layer.position;
-    for (const chunk of layer.getChunks()) {
+    for (const chunk of layer.chunks()) {
       if (!chunk.countBlocks().has(blockId)) {
         continue;
       }

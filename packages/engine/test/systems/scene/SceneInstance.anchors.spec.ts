@@ -43,8 +43,7 @@ function createAnchoredScene() {
 function worldPosition(
   actor: Actor
 ): number[] {
-  return actor.transform
-    .getGlobalPosition()
+  return actor.transform.global.position
     .toArray()
     .map((value) => Math.round(value * 1e6) / 1e6);
 }
@@ -68,7 +67,7 @@ describe("Systems.SceneInstance anchors", () => {
     const hero = instance.actor("hero")!;
     assert.deepEqual(worldPosition(hero), [100, 1, 8]);
     assert.ok(Math.abs(
-      hero.transform.getGlobalOrientation().angleTo(
+      hero.transform.global.orientation.angleTo(
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
       )
     ) < 1e-6);

@@ -8,7 +8,7 @@ import {
   type QuaternionLike,
   type Vector3Like
 } from "../../../math.ts";
-import type { Transform } from "../../../actor/Transform.ts";
+import type { Transform } from "../../../actor/transform/Transform.ts";
 import type { SceneTransformFile } from "./SceneFile.ts";
 
 export interface SceneTransformPose {
@@ -28,16 +28,16 @@ export function writeSceneTransform(
   file: SceneTransformFile
 ): void {
   loadFilePose(file);
-  transform.place(kPosition, kQuaternion, kScale);
+  transform.local.place(kPosition, kQuaternion, kScale);
 }
 
 export function localSceneTransform(
   transform: Transform
 ): SceneTransformFile {
   return readSceneTransform({
-    position: transform.getLocalPosition(kPosition),
-    quaternion: transform.getLocalOrientation(kQuaternion),
-    scale: transform.getLocalScale(kScale)
+    position: kPosition.copy(transform.local.position),
+    quaternion: kQuaternion.copy(transform.local.orientation),
+    scale: kScale.copy(transform.local.scale)
   });
 }
 

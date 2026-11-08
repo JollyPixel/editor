@@ -24,15 +24,15 @@ export class PlayerBehavior extends Behavior {
   model: ModelRenderer;
 
   awake() {
-    this.actor.transform.rotateLocalEulerAngles(
+    this.actor.transform.local.rotateEulerAngles(
       new THREE.Euler(-Math.PI / 2, 0, 0)
     );
 
-    this.model.animation.setClipNameRewriter(
+    this.model.animation.renameClips(
       (name) => name.slice(name.indexOf("|") + 1).toLowerCase()
     );
     this.model.animation.play("idle_loop");
-    this.model.animation.setFadeDuration(0.25);
+    this.model.animation.fadeDuration = 0.25;
   }
 
   fixedUpdate() {

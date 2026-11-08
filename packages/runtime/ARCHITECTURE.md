@@ -56,7 +56,7 @@ flowchart TB
     Registry --> Coordinator
     Coordinator --> Startup["load({ assets })<br/>startup batch"]
     Coordinator --> Scenes["SceneManager<br/>scene.assets batch"]
-    Coordinator --> Components["ActorComponent.getAsset()"]
+    Coordinator --> Components["ActorComponent.resolveAsset()"]
 ```
 
 `Runtime.create()` fetches and parses a catalog URL once; no catalog means an

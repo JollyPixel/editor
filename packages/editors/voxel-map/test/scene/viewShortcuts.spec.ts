@@ -33,25 +33,25 @@ function setup() {
   world.addLayer("Ground");
   world.addLayer("Tower");
   world.addLayer("Hidden");
-  world.setVoxelBulk("Ground", [
+  world.placeVoxelBulk("Ground", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
     }
   ]);
-  world.setVoxelBulk("Tower", [
+  world.placeVoxelBulk("Tower", [
     {
       position: { x: 4, y: 3, z: 2 },
       blockId: 1
     }
   ]);
-  world.setVoxelBulk("Hidden", [
+  world.placeVoxelBulk("Hidden", [
     {
       position: { x: 40, y: 0, z: 0 },
       blockId: 1
     }
   ]);
-  world.getLayer("Hidden")!.visible = false;
+  world.findLayer("Hidden")!.visible = false;
   world.objectLayers.add("Triggers");
   world.objectLayers.addObject("Triggers", {
     id: "obj_1",
