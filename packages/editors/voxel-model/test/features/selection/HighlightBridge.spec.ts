@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import { HighlightSilhouette } from "@jolly-pixel/three";
+import { PeerMarks } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { HighlightBridge } from "#src/features/selection/HighlightBridge.ts";
@@ -51,9 +52,9 @@ function peerMarks(
   uuid: string,
   clientId = "bob",
   color = "#ff0000"
-): Map<string, { clientId: string; displayName: string; color: string; }[]> {
-  return new Map([
-    [uuid, [{ clientId, displayName: "Bob", color }]]
+): PeerMarks<string> {
+  return new PeerMarks([
+    [{ clientId, displayName: "Bob", color }, uuid]
   ]);
 }
 
@@ -107,7 +108,7 @@ describe("HighlightBridge peer selection", () => {
     const block = addBlock();
     presence.blockSelections = peerMarks(block.uuid);
 
-    presence.blockSelections = new Map();
+    presence.blockSelections = new PeerMarks();
 
     assert.equal(findOverlay(block)?.uuid, undefined);
   });
@@ -140,7 +141,7 @@ describe("HighlightBridge peer hover", () => {
     const block = addBlock();
     presence.blockHovers = peerMarks(block.uuid);
 
-    presence.blockHovers = new Map();
+    presence.blockHovers = new PeerMarks();
 
     assert.equal(findOverlay(block)?.uuid, undefined);
   });

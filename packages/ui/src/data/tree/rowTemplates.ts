@@ -9,7 +9,7 @@ import {
 import type { TreeBadge } from "./contract.ts";
 import type { TreeRail } from "./TreeRowLayout.ts";
 import type { TreeRowView } from "./TreeRowView.ts";
-import "../../peer/Avatar.ts";
+import "../../peer/avatar/Avatar.ts";
 import "../../feedback/Spinner.ts";
 
 // CONSTANTS

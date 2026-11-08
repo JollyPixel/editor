@@ -2,6 +2,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { PeerMarks } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import {
   GLASS_SURFACE,
@@ -127,7 +130,7 @@ describe("MaterialSurfaceController", () => {
     harness.controller.select(harness.glass);
     const ada = { clientId: "ada", displayName: "Ada", color: "#ff0000" };
 
-    harness.presence.materialEdits = new Map([[harness.glass, [ada]]]);
+    harness.presence.materialEdits = new PeerMarks([[ada, harness.glass]]);
 
     assert.deepEqual(harness.surface.editors, [ada]);
   });

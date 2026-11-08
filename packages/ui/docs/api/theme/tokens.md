@@ -34,10 +34,6 @@ A token resolved to a colour, for canvas use.
 Resolves a CSS colour value, such as `light-dark()` or `var()`, for canvas
 use.
 
-### `peerColor(index: number): string`
-
-A collaborator colour.
-
 ## Following the page theme
 
 An element that declares tokens of its own stops inheriting the scope around

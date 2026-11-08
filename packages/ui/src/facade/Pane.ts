@@ -8,7 +8,7 @@ import type {
   IconName,
   IconTone
 } from "../icon/registry.ts";
-import type { PresenceSource } from "../peer/PresenceSource.ts";
+import type { FieldLockSource } from "../peer/lock/FieldLockSource.ts";
 import {
   FacadeFolder,
   type FolderOptions
@@ -119,14 +119,14 @@ export class Pane extends FacadeContainer {
     this.element.hidden = options.hidden ?? false;
   }
 
-  get presence(): PresenceSource | null {
-    return this.#pane.presence;
+  get fieldLocks(): FieldLockSource | null {
+    return this.#pane.fieldLocks;
   }
 
-  set presence(
-    value: PresenceSource | null
+  set fieldLocks(
+    value: FieldLockSource | null
   ) {
-    this.#pane.presence = value;
+    this.#pane.fieldLocks = value;
   }
 
   override get hidden(): boolean {

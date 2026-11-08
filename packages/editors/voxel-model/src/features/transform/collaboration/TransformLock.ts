@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { PresenceChannel } from "@jolly-pixel/network/client";
+import {
+  PresenceChannel,
+  decodeString
+} from "@jolly-pixel/network/client";
 import { Emitter } from "@openally/emitt";
 import type { PresencePeer } from "@jolly-pixel/ui";
 import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/client";
@@ -32,7 +35,7 @@ export class TransformLock extends Emitter<TransformLockEvents> {
     this.#room = options.room;
     this.#channel = new PresenceChannel<string | null>(options.room, {
       key: PRESENCE_KEYS.transformLock,
-      decode: readLockUuid
+      decode: decodeString
     });
     this.#channel.on("change", this.#onChange);
   }
@@ -82,10 +85,4 @@ export class TransformLock extends Emitter<TransformLockEvents> {
     this.#channel.destroy();
     this.removeAllListeners();
   }
-}
-
-function readLockUuid(
-  value: unknown
-): string | undefined {
-  return typeof value === "string" ? value : undefined;
 }

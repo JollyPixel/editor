@@ -12,6 +12,7 @@ import {
   type TreeDropAccept,
   type TreeNode,
   MenuSession,
+  PeerMarks,
   disableEntries,
   type MenuPoint
 } from "@jolly-pixel/ui";
@@ -476,8 +477,8 @@ export class MaterialLibraryController {
       nodes: toMaterialTreeNodes({
         materials: [...tree?.materials.materials() ?? []],
         users: materialUsers(tree?.blocks() ?? []),
-        marks: editing?.presence.materialEdits ?? new Map(),
-        blockMarks: editing?.presence.blockSelections ?? new Map()
+        marks: editing?.presence.materialEdits ?? new PeerMarks(),
+        blockMarks: editing?.presence.blockSelections ?? new PeerMarks()
       }),
       selectedId: this.#highlightedRow(),
       editedId: editing?.materialFocus.edited ?? null,

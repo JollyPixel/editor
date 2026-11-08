@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import type { PeerPresence } from "@jolly-pixel/pixel-draw.renderer";
-import {
-  reconcilePeerMarks,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
+import { PeerMarkSync } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { PresenceStore } from "../../state/index.ts";
@@ -21,24 +18,7 @@ export interface PeerRegionSelectionsOptions {
 
 export class PeerRegionSelections {
   #target: PeerRegionSelectionTarget;
-  #uuidByClient = new Map<string, string>();
   #unsubscribe: () => void;
-
-  #onSelectionsChange = (
-    selections: PeerMarkMap<string>
-  ): void => {
-    this.#uuidByClient = reconcilePeerMarks(
-      selections,
-      this.#uuidByClient,
-      {
-        hold: (peer, uuid) => this.#target.set(peer.clientId, {
-          regionId: blockRegionId(uuid),
-          color: peer.color
-        }),
-        release: (clientId) => this.#target.remove(clientId)
-      }
-    );
-  };
 
   constructor(
     options: PeerRegionSelectionsOptions
@@ -46,16 +26,22 @@ export class PeerRegionSelections {
     const { presence, target } = options;
     this.#target = target;
 
-    this.#onSelectionsChange(presence.blockSelections);
+    const regions = new PeerMarkSync<string>({
+      hold: (peer, uuid) => target.set(peer.clientId, {
+        regionId: blockRegionId(uuid),
+        color: peer.color
+      }),
+      release: (clientId) => target.remove(clientId)
+    });
+    regions.apply(presence.blockSelections);
     this.#unsubscribe = presence.subscribe(
       "blockSelectionsChange",
-      this.#onSelectionsChange
+      (selections) => regions.apply(selections)
     );
   }
 
   dispose(): void {
     this.#unsubscribe();
     this.#target.clearAll();
-    this.#uuidByClient.clear();
   }
 }

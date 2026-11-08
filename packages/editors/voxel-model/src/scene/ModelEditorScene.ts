@@ -9,7 +9,7 @@ import {
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { registerPixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 import type { Preferences } from "@jolly-pixel/preferences";
-import type { PresenceSource } from "@jolly-pixel/ui";
+import type { FieldLockSource } from "@jolly-pixel/ui";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
 import type {
   ModelDocument,
@@ -109,7 +109,7 @@ export interface ModelEditing {
   tool: TransformTool;
   lock: TransformLock;
   presence: PresenceStore;
-  fields: PresenceSource;
+  fields: FieldLockSource;
   previews: MaterialPreviews;
   view: ViewSettingsStore;
   shortcuts: ShortcutLabels<ModelAction>;

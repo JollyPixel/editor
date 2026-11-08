@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
-import type { TreeNode } from "@jolly-pixel/ui";
-import {
-  peerBadges,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
+import type {
+  PeerMarks,
+  TreeNode
+} from "@jolly-pixel/ui";
 import type { ModelMaterialJSON } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -27,18 +26,18 @@ export interface MaterialTreeSources {
   /**
    * Peers editing each material.
    */
-  marks: PeerMarkMap<string>;
+  marks: PeerMarks<string>;
   /**
    * Peers selecting each block.
    */
-  blockMarks: PeerMarkMap<string>;
+  blockMarks: PeerMarks<string>;
 }
 
 export function toMaterialTreeNodes(
   sources: MaterialTreeSources
 ): TreeNode[] {
   return sources.materials.map((material) => {
-    const badges = peerBadges(material.id, sources.marks);
+    const badges = sources.marks.badges(material.id);
     const users = sources.users.get(material.id) ?? [];
 
     return {
@@ -60,9 +59,9 @@ export function toMaterialTreeNodes(
 
 function usageRow(
   user: MaterialUser,
-  blockMarks: PeerMarkMap<string>
+  blockMarks: PeerMarks<string>
 ): TreeNode {
-  const badges = peerBadges(user.id, blockMarks);
+  const badges = blockMarks.badges(user.id);
 
   return {
     id: usageRowId(user.id),

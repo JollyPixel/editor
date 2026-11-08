@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { PeerUVSelectionState } from "@jolly-pixel/pixel-draw.renderer";
+import { PeerMarks } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -30,15 +31,11 @@ function createTarget(): PeerRegionSelectionTarget & { calls: TargetCall[]; } {
 
 function peerMarks(
   entries: Array<[uuid: string, clientId: string, color: string]>
-): Map<string, { clientId: string; displayName: string; color: string; }[]> {
-  const marks = new Map<string, { clientId: string; displayName: string; color: string; }[]>();
-  for (const [uuid, clientId, color] of entries) {
-    const peers = marks.get(uuid) ?? [];
-    peers.push({ clientId, displayName: clientId, color });
-    marks.set(uuid, peers);
-  }
-
-  return marks;
+): PeerMarks<string> {
+  return new PeerMarks(entries.map(([uuid, clientId, color]) => [
+    { clientId, displayName: clientId, color },
+    uuid
+  ] as const));
 }
 
 describe("PeerRegionSelections", () => {
@@ -61,7 +58,7 @@ describe("PeerRegionSelections", () => {
 
     presence.blockSelections = peerMarks([["torso", "bob", "#ff0000"]]);
     presence.blockSelections = peerMarks([["head", "bob", "#ff0000"]]);
-    presence.blockSelections = new Map();
+    presence.blockSelections = new PeerMarks();
 
     assert.deepEqual(target.calls, [
       ["set", "bob", { regionId: "block-torso", color: "#ff0000" }],

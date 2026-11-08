@@ -9,8 +9,7 @@ import type {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { RoomPresenceSource } from "../src/network/RoomPresenceSource.ts";
-import { resolveLock } from "../src/peer/resolveLock.ts";
+import { RoomFieldLocks } from "../src/network/RoomFieldLocks.ts";
 
 // CONSTANTS
 const kPeerCount = 8;
@@ -42,26 +41,20 @@ const suite = defineSuite("presence", (bench) => {
     on: () => void 0,
     off: () => void 0
   } as unknown as Room;
-  const source = new RoomPresenceSource(room);
+  const locks = new RoomFieldLocks(room);
   const paths = Array.from(
     { length: kFieldCount },
     (_, index) => `field-${index}`
   );
 
-  bench
-    .add("peers read", () => source.peers.size)
-    .add("lock refresh, every field", () => {
-      let held = 0;
-      for (const path of paths) {
-        held += resolveLock(
-          source.peers.values(),
-          path,
-          source.clientId
-        ).peers.length;
-      }
+  bench.add("lock refresh, every field", () => {
+    let held = 0;
+    for (const path of paths) {
+      held += locks.editors(path).length;
+    }
 
-      return held;
-    });
+    return held;
+  });
 });
 
 export default suite;

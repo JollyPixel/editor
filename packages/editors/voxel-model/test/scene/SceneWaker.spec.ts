@@ -5,6 +5,7 @@ import { describe, test } from "node:test";
 // Import Third-party Dependencies
 import { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { Preferences } from "@jolly-pixel/preferences";
+import { PeerMarks } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { SceneWaker } from "#src/scene/SceneWaker.ts";
@@ -61,8 +62,8 @@ describe("SceneWaker", () => {
     const { presence, view, frames } = createHarness();
 
     presence.peers = [];
-    presence.blockSelections = new Map();
-    presence.blockHovers = new Map();
+    presence.blockSelections = new PeerMarks();
+    presence.blockHovers = new PeerMarks();
     view.update({ lighting: view.settings.lighting === "flat" ? "studio" : "flat" });
 
     assert.equal(frames.requested, 4);

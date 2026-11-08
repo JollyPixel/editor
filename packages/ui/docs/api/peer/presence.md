@@ -20,7 +20,10 @@ interface PresenceElement {
   selectable: boolean;
 }
 
-interface PresencePeer extends CollaboratorPresence {
+interface PresencePeer {
+  clientId: string;
+  displayName: string;
+  color: string; // CSS color
   self?: boolean;
   peerId?: string; // picks the default avatar, default clientId
   avatar?: string; // image URL
@@ -29,8 +32,7 @@ interface PresencePeer extends CollaboratorPresence {
 ```
 
 - Each row starts with a [`jolly-avatar`](./avatar.md).
-- `editing` is ignored: this is a session list, not a field.
-- Build the list with [`toPresencePeers`](./presence-source.md#mapping).
+- [`PeerRoster`](../network.md#peerroster) builds the list from a room.
 - When `max` hides the local peer, it replaces the last visible remote peer.
 - Parts: `summary`, `list`, `peer`, `peer-button`, `avatar`, `badge`,
   `overflow`.

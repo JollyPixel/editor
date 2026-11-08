@@ -6,7 +6,7 @@ viewport corner.
 
 ```ts
 const stack = document.createElement("jolly-presence-stack");
-stack.peers = toPresencePeers(source.peers, selfId);
+stack.peers = peers;
 stack.max = 6;
 stack.selectable = true;
 stack.addEventListener("jolly-peer-select", (event) => {

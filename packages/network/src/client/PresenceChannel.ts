@@ -25,6 +25,12 @@ export interface PresenceChannelOptions<T> {
   equals?: (left: T, right: T) => boolean;
 }
 
+export function decodeString(
+  value: unknown
+): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 function toDecodeFn<T>(
   decoder: PresenceDecoder<T>
 ): PresenceDecodeFn<T> {

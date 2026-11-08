@@ -29,7 +29,7 @@ interface Transform {
 }
 ```
 
-- `state` sets `lockedBy`, `peers`, `disabled`, `readonly` and `error` on each
+- `state` sets `editors`, `disabled`, `readonly` and `error` on each
   row independently, so the three rows lock separately.
 - A row edit emits `jolly-input` or `jolly-change` with a
   `TransformChangeDetail`: `value` is the whole transform and `field` names

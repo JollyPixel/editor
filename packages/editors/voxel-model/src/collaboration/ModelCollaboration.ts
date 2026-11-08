@@ -4,7 +4,7 @@ import type * as THREE from "three";
 import type { Systems } from "@jolly-pixel/engine";
 import {
   PeerRoster,
-  RoomPresenceSource
+  RoomFieldLocks
 } from "@jolly-pixel/ui/network";
 import type {
   ModelDocument,
@@ -53,7 +53,7 @@ export class ModelCollaboration {
   readonly lock: TransformLock;
   readonly live: TransformLiveSync;
   readonly frustums: PeerFrustums;
-  readonly fields: RoomPresenceSource;
+  readonly fields: RoomFieldLocks;
 
   #roster: PeerRoster;
   #selections: BlockMarkPresence;
@@ -104,7 +104,7 @@ export class ModelCollaboration {
       requestFrame: () => options.world.invalidate()
     });
     this.lock = new TransformLock({ room });
-    this.fields = new RoomPresenceSource(room);
+    this.fields = new RoomFieldLocks(room);
     this.#materialLive = new MaterialLiveSync({
       room,
       document: options.document,

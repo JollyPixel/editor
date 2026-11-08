@@ -1,0 +1,36 @@
+// Import Node.js Dependencies
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import { ColorSequence } from "@jolly-pixel/color";
+
+// Import Internal Dependencies
+import { peerIdentity } from "../../../src/peer/identity/PeerIdentity.ts";
+
+describe("peerIdentity", () => {
+  test("colors the identity from its peer id", () => {
+    assert.deepEqual(peerIdentity("alice", "p-1"), {
+      username: "alice",
+      peerId: "p-1",
+      color: ColorSequence.default.pick("p-1")
+    });
+  });
+
+  test("carries the avatar path it is given", () => {
+    assert.deepEqual(peerIdentity("alice", "p-1", "/avatars/p-1"), {
+      username: "alice",
+      peerId: "p-1",
+      color: ColorSequence.default.pick("p-1"),
+      avatar: "/avatars/p-1"
+    });
+  });
+
+  test("mints a fresh peer id when none is given", () => {
+    const first = peerIdentity("alice");
+    const second = peerIdentity("alice");
+
+    assert.notEqual(first.peerId, second.peerId);
+    assert.equal(first.color, ColorSequence.default.pick(first.peerId));
+  });
+});

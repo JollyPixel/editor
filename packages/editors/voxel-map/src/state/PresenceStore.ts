@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
-import type { PresencePeer } from "@jolly-pixel/ui";
-import type { PeerMarkMap } from "@jolly-pixel/ui/network";
+import {
+  PeerMarks,
+  type PresencePeer
+} from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
 
 export type PresenceStoreEvents = {
@@ -8,17 +10,17 @@ export type PresenceStoreEvents = {
     peers: readonly PresencePeer[]
   ) => void;
   blockSelectionsChange: (
-    selections: PeerMarkMap<number>
+    selections: PeerMarks<number>
   ) => void;
   layerSelectionsChange: (
-    selections: PeerMarkMap<string>
+    selections: PeerMarks<string>
   ) => void;
 };
 
 export class PresenceStore extends Emitter<PresenceStoreEvents> {
   #peers: readonly PresencePeer[] = [];
-  #blockSelections: PeerMarkMap<number> = new Map();
-  #layerSelections: PeerMarkMap<string> = new Map();
+  #blockSelections = new PeerMarks<number>();
+  #layerSelections = new PeerMarks<string>();
 
   get peers(): readonly PresencePeer[] {
     return this.#peers;
@@ -34,12 +36,12 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
     );
   }
 
-  get blockSelections(): PeerMarkMap<number> {
+  get blockSelections(): PeerMarks<number> {
     return this.#blockSelections;
   }
 
   set blockSelections(
-    selections: PeerMarkMap<number>
+    selections: PeerMarks<number>
   ) {
     this.#blockSelections = selections;
     this.emit(
@@ -48,12 +50,12 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
     );
   }
 
-  get layerSelections(): PeerMarkMap<string> {
+  get layerSelections(): PeerMarks<string> {
     return this.#layerSelections;
   }
 
   set layerSelections(
-    selections: PeerMarkMap<string>
+    selections: PeerMarks<string>
   ) {
     this.#layerSelections = selections;
     this.emit(

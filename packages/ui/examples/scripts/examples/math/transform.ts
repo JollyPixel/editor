@@ -2,7 +2,7 @@
 import "../../../../src/math/Transform.ts";
 import type { GalleryExample } from "../../types.ts";
 import { readDetail } from "../../../../src/dom.ts";
-import { peerColor } from "../../../../src/theme/peerColor.ts";
+import { peerColor } from "../../../../src/peer/peerColor.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 import type { Transform } from "../../../../src/math/Transform.ts";
 import {
@@ -53,11 +53,11 @@ export const TRANSFORM_EXAMPLE: GalleryExample<TransformOptionKey> = {
     if (options.lockedRotation) {
       transform.state = {
         rotation: {
-          lockedBy: {
+          editors: [{
             clientId: "peer-ada",
             displayName: "Ada",
-            color: peerColor(0)
-          }
+            color: peerColor("peer-ada")
+          }]
         }
       };
     }

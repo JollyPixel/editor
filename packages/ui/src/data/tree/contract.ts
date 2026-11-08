@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { emitComposedEvent } from "../../events.ts";
 import type { IconName } from "../../icon/registry.ts";
-import type { PeerAvatar } from "../../peer/Avatar.ts";
+import type { PeerAvatar } from "../../peer/avatar/Avatar.ts";
 
 export type TreeDropWhere =
   | "above"

@@ -6,6 +6,7 @@ import type {
   Systems
 } from "@jolly-pixel/engine";
 import type { SceneRoom } from "@jolly-pixel/asset.scene/client";
+import { decodeString } from "@jolly-pixel/network/client";
 import {
   PeerMarkTracker,
   PeerRoster
@@ -30,17 +31,11 @@ export class SceneCollaboration {
   #roster: PeerRoster;
   #selections: PeerMarkTracker<string>;
   #frustums: PeerFrustums;
-  #selection: SelectionStore;
-
-  #onSelect = (): void => {
-    this.#selections.publishLocal();
-  };
 
   constructor(
     options: SceneCollaborationOptions
   ) {
     const { room, selection, presence } = options;
-    this.#selection = selection;
 
     this.#roster = new PeerRoster({
       room,
@@ -51,8 +46,11 @@ export class SceneCollaboration {
     this.#selections = new PeerMarkTracker({
       room,
       presenceKey: kSelectionKey,
-      localKey: () => selection.primary,
-      readKey: (value) => (typeof value === "string" ? value : null),
+      decode: decodeString,
+      local: {
+        read: () => selection.primary,
+        subscribe: (listener) => selection.subscribe("change", listener)
+      },
       publish: (marks) => {
         presence.selections = marks;
       }
@@ -63,7 +61,6 @@ export class SceneCollaboration {
         room,
         camera: options.camera
       });
-    selection.on("change", this.#onSelect);
   }
 
   peerPose(
@@ -73,7 +70,6 @@ export class SceneCollaboration {
   }
 
   dispose(): void {
-    this.#selection.off("change", this.#onSelect);
     this.#selections.dispose();
     this.#roster.dispose();
   }

@@ -53,34 +53,36 @@ const roster = new PeerRoster({
 ## 3. Mark what each peer selected
 
 ```ts
-import { PeerMarkTracker, peerBadges } from "@jolly-pixel/ui/network";
+import { decodeString } from "@jolly-pixel/network/client";
+import { PeerMarkTracker } from "@jolly-pixel/ui/network";
 
 const marks = new PeerMarkTracker<string>({
   room,
   presenceKey: "layer",
-  localKey: () => selection.layerId,
-  readKey: (value) => (typeof value === "string" ? value : null),
-  publish: (map) => {
-    panel.layerMarks = map;
+  decode: decodeString,
+  local: {
+    read: () => selection.layerId,
+    subscribe: (listener) => selection.subscribe("change", listener)
+  },
+  publish: (layerMarks) => {
+    panel.layerMarks = layerMarks;
   }
 });
-
-selection.subscribe("change", () => marks.publishLocal());
 ```
 
 ```ts
 const node: TreeNode = {
   id: layer.id,
   label: layer.name,
-  badges: peerBadges(layer.id, this.layerMarks)
+  badges: this.layerMarks.badges(layer.id)
 };
 ```
 
 - The tracker publishes one key per client under `presenceKey`, and folds the
-  remote keys into a map from key to peers.
-- Call `publishLocal()` when the local selection changes. An unchanged key is
+  remote keys into [`PeerMarks`](../api/peer/peer-marks.md).
+- It republishes the local key whenever `local` notifies. An unchanged key is
   not sent again.
-- `peerBadges` gives at most three coloured dots per row, titled with the peer
+- `badges` gives at most three coloured dots per row, titled with the peer
   names.
 - One tracker per kind of mark: a `layer` tracker and a `block` tracker do not
   mix.
@@ -90,10 +92,10 @@ const node: TreeNode = {
 ## 4. Lock the field a peer is editing
 
 ```ts
-import { RoomPresenceSource } from "@jolly-pixel/ui/network";
+import { RoomFieldLocks } from "@jolly-pixel/ui/network";
 
 const inspector = document.querySelector("jolly-pane[key=inspector]");
-inspector.presence = new RoomPresenceSource(room);
+inspector.fieldLocks = new RoomFieldLocks(room);
 ```
 
 ```ts
@@ -119,19 +121,14 @@ html`
 
 ## 5. Without `@jolly-pixel/network`
 
-`PresenceSource` is a port. Implement it over another transport, and the
-fields lock the same way:
+[`FieldLockSource`](../api/peer/field-locks.md#fieldlocksource) is a port.
+Implement it over another transport, and the fields lock the same way:
 
 ```ts
-interface PresenceSource {
-  readonly clientId: string;
-  readonly peers: ReadonlyMap<string, CollaboratorPresence>;
-  claim(path: string): LockState;
+interface FieldLockSource {
+  editors(path: string): readonly PresencePeer[]; // local peer first
+  claim(path: string): void;
   release(path: string): void;
-  on(event: "change", listener: () => void): void;
-  off(event: "change", listener: () => void): void;
+  subscribe(listener: () => void): () => void;
 }
 ```
-
-Feed `jolly-presence` from the same source with
-`toPresencePeers(source.peers.values(), source.clientId)`.

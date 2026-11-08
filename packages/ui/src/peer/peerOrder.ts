@@ -1,8 +1,5 @@
 // Import Internal Dependencies
-import type {
-  CollaboratorPresence,
-  PresencePeer
-} from "./types.ts";
+import type { PresencePeer } from "./PresencePeer.ts";
 
 export function compareClientIds(
   left: string,
@@ -13,20 +10,6 @@ export function compareClientIds(
   }
 
   return left < right ? -1 : 1;
-}
-
-export function sortSelfFirst<TPeer extends CollaboratorPresence>(
-  peers: Iterable<TPeer>,
-  selfId: string
-): TPeer[] {
-  return [...peers].sort((left, right) => {
-    if (left.clientId === selfId || right.clientId === selfId) {
-      return Number(right.clientId === selfId) -
-        Number(left.clientId === selfId);
-    }
-
-    return compareClientIds(left.clientId, right.clientId);
-  });
 }
 
 export function normalizePeerMax(

@@ -13,7 +13,7 @@ import { render } from "lit";
 
 // Import Internal Dependencies
 import { LogQueue } from "../../src/feedback/LogQueue.ts";
-import type { PresencePeer } from "../../src/peer/types.ts";
+import type { PresencePeer } from "../../src/peer/PresencePeer.ts";
 import { PeerRoster } from "../../src/network/PeerRoster.ts";
 import { peerProfileColor } from "../../src/network/peerProfile.ts";
 import {

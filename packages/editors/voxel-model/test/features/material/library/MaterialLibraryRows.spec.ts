@@ -3,7 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { ContextMenuEntry } from "@jolly-pixel/ui";
+import {
+  PeerMarks,
+  type ContextMenuEntry
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -40,8 +43,8 @@ describe("MaterialLibraryController block rows", () => {
     const arm = harness.addBlock({ name: "Arm", materialId: harness.glass });
     harness.addBlock({ name: "Bare" });
     const leg = harness.addBlock({ name: "Leg", materialId: harness.glass });
-    harness.presence.blockSelections = new Map([
-      [leg.uuid, [{ clientId: "bob", displayName: "Bob", color: "#ff0000" }]]
+    harness.presence.blockSelections = new PeerMarks([
+      [{ clientId: "bob", displayName: "Bob", color: "#ff0000" }, leg.uuid]
     ]);
 
     const [glass] = harness.controller.state.nodes;

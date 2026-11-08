@@ -25,22 +25,21 @@ export function trackBlockPresence(
   const marks = new PeerMarkTracker({
     room,
     presenceKey: kPresenceKey,
-    localKey: () => block.id,
-    readKey: readBlockId,
+    decode: decodeBlockId,
+    local: {
+      read: () => block.id,
+      subscribe: (listener) => block.subscribe("change", listener)
+    },
     publish: (selections) => {
       presence.blockSelections = selections;
     }
   });
-  const unsubscribe = block.subscribe("change", () => marks.publishLocal());
 
-  return () => {
-    unsubscribe();
-    marks.dispose();
-  };
+  return () => marks.dispose();
 }
 
-function readBlockId(
+function decodeBlockId(
   value: unknown
-): number | null {
-  return typeof value === "number" && Number.isInteger(value) ? value : null;
+): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) ? value : undefined;
 }

@@ -3,9 +3,7 @@ import {
   isMixed,
   type FieldValue
 } from "./mixed.ts";
-import type {
-  CollaboratorPresence
-} from "../peer/types.ts";
+import type { PresencePeer } from "../peer/PresencePeer.ts";
 
 // CONSTANTS
 const kNoPeerChips: PeerChips = Object.freeze({
@@ -14,7 +12,7 @@ const kNoPeerChips: PeerChips = Object.freeze({
 });
 
 export interface PeerChips {
-  shown: readonly CollaboratorPresence[];
+  shown: readonly PresencePeer[];
   overflow: number;
 }
 
@@ -34,38 +32,28 @@ export function isModified<TValue>(
   return !equals(value, fallback);
 }
 
-export function resolveHolder(
-  peers: readonly CollaboratorPresence[],
-  lockedBy: CollaboratorPresence | null,
-  selfId: string
-): CollaboratorPresence | null {
-  if (lockedBy !== null) {
-    return lockedBy;
-  }
-  if (
-    peers.some((peer) => peer.clientId === selfId && peer.editing !== undefined)
-  ) {
+export function lockHolder(
+  editors: readonly PresencePeer[]
+): PresencePeer | null {
+  if (editors.some((peer) => peer.self === true)) {
     return null;
   }
 
-  return peers.find(
-    (peer) => peer.editing !== undefined
-  ) ?? null;
+  return editors[0] ?? null;
 }
 
 export function splitPeerChips(
-  peers: readonly CollaboratorPresence[],
-  limit: number,
-  selfId: string
+  editors: readonly PresencePeer[],
+  limit: number
 ): PeerChips {
-  if (peers.length === 0) {
+  if (editors.length === 0) {
     return kNoPeerChips;
   }
 
-  const shown: CollaboratorPresence[] = [];
+  const shown: PresencePeer[] = [];
   let others = 0;
-  for (const peer of peers) {
-    if (peer.clientId === selfId) {
+  for (const peer of editors) {
+    if (peer.self === true) {
       continue;
     }
 

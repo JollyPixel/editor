@@ -3,7 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { PresencePeer } from "@jolly-pixel/ui";
+import {
+  PeerMarks,
+  type PresencePeer
+} from "@jolly-pixel/ui";
 import { MaterialSurface } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -48,7 +51,7 @@ describe("toTreeNodes", () => {
     const nodes = toTreeNodes([node("limbs", "folder", [
       node("arm", "block"),
       { ...node("leg", "block"), shape: { type: "cone", sides: 4 }, material: glass }
-    ])], new Map(), (id) => id !== "leg");
+    ])], new PeerMarks(), (id) => id !== "leg");
 
     assert.deepEqual(nodes, [{
       id: "limbs",
@@ -81,7 +84,7 @@ describe("toTreeNodes", () => {
     const [clashing, plain] = toTreeNodes([
       { ...node("arm", "block"), nameClash: "Another root block is named \"arm\"" },
       node("leg", "block")
-    ], new Map(), allVisible);
+    ], new PeerMarks(), allVisible);
 
     assert.equal(clashing.warning, "Another root block is named \"arm\"");
     assert.equal("warning" in plain, false);
@@ -96,18 +99,20 @@ describe("toTreeNodes", () => {
       node("empty", "folder")
     ];
 
-    const [outer, empty] = toTreeNodes(tree, new Map(), (id) => id === "finger");
+    const [outer, empty] = toTreeNodes(tree, new PeerMarks(), (id) => id === "finger");
     assert.equal(outer.visible, true);
     assert.equal(outer.children?.[0].visible, true);
     assert.equal(empty.visible, undefined);
 
-    const [hidden] = toTreeNodes(tree, new Map(), (id) => id === "arm");
+    const [hidden] = toTreeNodes(tree, new PeerMarks(), (id) => id === "arm");
     assert.equal(hidden.visible, true);
     assert.equal(hidden.children?.[0].visible, false);
   });
 
   test("stamps up to three peer badges on the matching node, at any depth", () => {
-    const marks = new Map([["arm", ["a", "b", "c", "d"].map(peer)]]);
+    const marks = new PeerMarks(
+      ["a", "b", "c", "d"].map((id) => [peer(id), "arm"] as const)
+    );
 
     const [root] = toTreeNodes([node("body", "block", [node("arm", "block")])], marks, allVisible);
 
@@ -122,7 +127,9 @@ describe("toTreeNodes", () => {
 
 describe("collectExpandableIds", () => {
   test("returns an empty list when no node has children", () => {
-    assert.deepEqual(collectExpandableIds(toTreeNodes([node("a", "block")], new Map(), allVisible)), []);
+    const nodes = toTreeNodes([node("a", "block")], new PeerMarks(), allVisible);
+
+    assert.deepEqual(collectExpandableIds(nodes), []);
   });
 
   test("returns every ancestor id, root to leaf, skipping childless nodes", () => {
@@ -131,7 +138,7 @@ describe("collectExpandableIds", () => {
         node("middle", "folder", [node("leaf", "block")]),
         node("sibling", "block")
       ])
-    ], new Map(), allVisible);
+    ], new PeerMarks(), allVisible);
 
     assert.deepEqual(collectExpandableIds(tree), ["root", "middle"]);
   });

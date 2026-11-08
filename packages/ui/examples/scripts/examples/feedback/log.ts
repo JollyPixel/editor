@@ -5,7 +5,7 @@ import { html } from "lit";
 import "../../../../src/feedback/Log.ts";
 import type { GalleryExample } from "../../types.ts";
 import { LogQueue } from "../../../../src/feedback/LogQueue.ts";
-import { peerColor } from "../../../../src/theme/peerColor.ts";
+import { peerColor } from "../../../../src/peer/peerColor.ts";
 import { button } from "../shared/containerBuilders.ts";
 
 // CONSTANTS
@@ -54,7 +54,7 @@ export const LOG_EXAMPLE: GalleryExample = {
 
     join.addEventListener("click", () => {
       const name = kPeers[peer % kPeers.length];
-      queue.push(html`<b style="color: ${peerColor(peer)}">${name}</b> has joined`);
+      queue.push(html`<b style="color: ${peerColor(name)}">${name}</b> has joined`);
       peer += 1;
     });
     status.addEventListener("click", () => {

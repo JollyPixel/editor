@@ -5,7 +5,10 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { SceneDocument } from "@jolly-pixel/asset.scene/client";
 import type { Systems } from "@jolly-pixel/engine";
-import type { PresencePeer } from "@jolly-pixel/ui";
+import {
+  PeerMarks,
+  type PresencePeer
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -58,10 +61,10 @@ describe("HierarchyRows", () => {
       ]
     })!;
     document.addActor({ name: "Bulb", parentId: childId });
-    const peer = { clientId: "p", displayName: "Peer", color: "#ff0000" } as PresencePeer;
+    const peer: PresencePeer = { clientId: "p", displayName: "Peer", color: "#ff0000" };
 
     const rows = readRows(document.tree, kNoAnchors, {
-      marks: new Map([[childId, [peer]]])
+      marks: new PeerMarks([[peer, childId]])
     });
 
     const [root] = rows.roots;

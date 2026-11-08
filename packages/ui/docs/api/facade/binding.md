@@ -50,7 +50,7 @@ type DispatchView =
 - `labelPosition` and `stackBelow` default to the pane's
   [field layout](./pane.md#field-layout).
 - `path` is forwarded to the field's `path`. A
-  [`PresenceSource`](../peer/presence-source.md) on the pane matches peer
+  [`FieldLockSource`](../peer/field-locks.md) on the pane matches peer
   locks against it. Leave it unset for a field no peer can hold.
 
 ## Control selection

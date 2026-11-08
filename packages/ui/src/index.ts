@@ -2,7 +2,6 @@ export * from "./theme/styles/themeStyles.ts";
 export * from "./theme/tokens/semantic.ts";
 export * from "./theme/tokens/density.ts";
 export * from "./theme/tokens/scales.ts";
-export * from "./theme/peerColor.ts";
 export * from "./theme/font.ts";
 export * from "./theme/types.ts";
 export type * from "./theme/components/ScopeHost.ts";
@@ -56,20 +55,21 @@ export {
 export * from "./reactive/SubscriptionController.ts";
 export * from "./reactive/FrameUpdateController.ts";
 export * from "./reactive/LazyTemplate.ts";
-export * from "./peer/types.ts";
-export * from "./peer/identity.ts";
-export * from "./peer/promptPeerIdentity.ts";
+export type { PresencePeer } from "./peer/PresencePeer.ts";
+export * from "./peer/PeerMarks.ts";
+export * from "./peer/PeerMarkSync.ts";
+export * from "./peer/identity/PeerIdentity.ts";
+export * from "./peer/identity/promptPeerIdentity.ts";
 
-export type * from "./peer/Presence.ts";
-export type * from "./peer/PresenceStack.ts";
-export type * from "./peer/Avatar.ts";
-export * from "./peer/PresenceSource.ts";
-export * from "./peer/toPresencePeers.ts";
-export * from "./peer/bindPresenceStack.ts";
+export type * from "./peer/presence/Presence.ts";
+export type * from "./peer/presence/PresenceStack.ts";
+export type * from "./peer/avatar/Avatar.ts";
+export type * from "./peer/lock/FieldLockSource.ts";
+export * from "./peer/presence/bindPresenceStack.ts";
 export type {
   JollyPeerSelectDetail,
   PeerEventMap
-} from "./peer/events.ts";
+} from "./peer/presence/events.ts";
 
 export * from "./icon/registry.ts";
 export type * from "./icon/Icon.ts";

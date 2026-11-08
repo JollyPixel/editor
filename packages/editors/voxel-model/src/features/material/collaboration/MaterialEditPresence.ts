@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import { PeerMarkTracker } from "@jolly-pixel/ui/network";
+import { decodeString } from "@jolly-pixel/network/client";
 import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -17,11 +18,6 @@ export interface MaterialEditPresenceOptions {
 
 export class MaterialEditPresence {
   #tracker: PeerMarkTracker<string>;
-  #unsubscribe: () => void;
-
-  #onEdit = (): void => {
-    this.#tracker.publishLocal();
-  };
 
   constructor(
     options: MaterialEditPresenceOptions
@@ -30,17 +26,18 @@ export class MaterialEditPresence {
     this.#tracker = new PeerMarkTracker({
       room: options.room,
       presenceKey: PRESENCE_KEYS.materialEdit,
-      localKey: () => focus.edited,
-      readKey: (value) => (typeof value === "string" ? value : null),
+      decode: decodeString,
+      local: {
+        read: () => focus.edited,
+        subscribe: (listener) => focus.subscribe("edit", listener)
+      },
       publish: (marks) => {
         presence.materialEdits = marks;
       }
     });
-    this.#unsubscribe = focus.subscribe("edit", this.#onEdit);
   }
 
   dispose(): void {
-    this.#unsubscribe();
     this.#tracker.dispose();
   }
 }

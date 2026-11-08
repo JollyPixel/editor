@@ -289,14 +289,18 @@ import {
 
 #### Presence
 
-- [Presence and locking](./docs/api/peer/presence-source.md): the `PresenceSource` port, and its
-  `RoomPresenceSource` network adapter.
+- [Field locks](./docs/api/peer/field-locks.md): the `FieldLockSource` port that
+  locks a field while a peer edits it.
+- [`PeerMarks`](./docs/api/peer/peer-marks.md): which peers mark which key,
+  with tree badges.
+- [`PeerMarkSync`](./docs/api/peer/peer-mark-sync.md): draws successive
+  `PeerMarks` on a view, one call per peer that moved or left.
 - [`bindPresenceStack`](./docs/api/peer/bind-presence-stack.md): a
   `jolly-presence-stack` kept in step with a `PeerListSource`.
 - [Peer identity](./docs/api/peer/identity.md): `promptPeerIdentity`, `peerIdentity` and the
   profile helpers.
-- [Room roster and peer marks](./docs/api/peer/roster.md): the `PeerRoster`, `PeerMarkTracker` and
-  `peerBadges` network adapters.
+- [Room adapters](./docs/api/network.md): `PeerRoster`, `PeerMarkTracker` and
+  `RoomFieldLocks` over a `@jolly-pixel/network` room.
 
 #### Lit helpers
 

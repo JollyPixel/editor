@@ -48,7 +48,8 @@ From the `./network` subpath.
 
 The `{ username, peerId }` profile for `new Client({ profile })`. It leaves
 `avatar` out: only the server can set one. `{ observer: true }` adds
-`observer: true`, so `PeerRoster` and `RoomPresenceSource` leave the peer out.
+`observer: true`, so `PeerRoster`, `PeerMarkTracker` and `RoomFieldLocks` leave
+the peer out.
 
 ### `peerProfileColor(clientId, profile): string`
 

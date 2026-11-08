@@ -11,22 +11,17 @@ import * as z from "zod/mini";
 // Import Internal Dependencies
 import {
   PresenceChannel,
+  decodeString,
   type PresenceChange
 } from "#src/index.ts";
 import { RoomHarness } from "../helpers/client/RoomHarness.ts";
-
-function decodeTool(
-  value: unknown
-): string | undefined {
-  return typeof value === "string" ? value : undefined;
-}
 
 function setup(
   harness = new RoomHarness()
 ) {
   const channel = new PresenceChannel(harness.room, {
     key: "tool",
-    decode: decodeTool
+    decode: decodeString
   });
   const changes: PresenceChange<string>[] = [];
   channel.on("change", (change) => changes.push(change));
@@ -46,7 +41,7 @@ describe("PresenceChannel", () => {
 
     const channel = new PresenceChannel(harness.room, {
       key: "tool",
-      decode: decodeTool
+      decode: decodeString
     });
 
     assert.deepEqual([...channel.values], [["B", "brush"]]);

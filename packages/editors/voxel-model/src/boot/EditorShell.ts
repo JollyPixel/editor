@@ -187,7 +187,7 @@ export class EditorShell {
     this.#leftPanel.editing = editing;
     this.#syncGizmo();
     this.#syncTab();
-    this.#materialPane.presence = editing.fields;
+    this.#materialPane.fieldLocks = editing.fields;
     this.#leftPanel.onPeerUvDragging = (region) => {
       editing.textures.previewPeerDrag(region);
     };

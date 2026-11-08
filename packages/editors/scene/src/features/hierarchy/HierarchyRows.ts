@@ -7,13 +7,10 @@ import type {
 import { Systems } from "@jolly-pixel/engine";
 import {
   resolveReparentMoves,
+  type PeerMarks,
   type JollyReparentDetail,
   type TreeNode
 } from "@jolly-pixel/ui";
-import {
-  peerBadges,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -41,7 +38,7 @@ type LiveActors = ActorAnchors & Pick<SceneLiveView, "expandedActors">;
 type RowComponents = Pick<SceneComponents, "find" | "icon" | "summary">;
 
 export interface RowSources {
-  marks: PeerMarkMap<string>;
+  marks: PeerMarks<string>;
   components: RowComponents;
   naming: AssetNaming;
   live: LiveActors;
@@ -415,9 +412,9 @@ function anchorNode(
 
 function actorNode(
   actor: SceneActorView,
-  marks: PeerMarkMap<string>
+  marks: PeerMarks<string>
 ): TreeNode {
-  const badges = peerBadges(actor.id, marks);
+  const badges = marks.badges(actor.id);
 
   return {
     id: actor.id,

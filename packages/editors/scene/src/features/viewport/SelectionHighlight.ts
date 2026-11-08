@@ -10,10 +10,7 @@ import {
   PeerHighlights,
   createListedColorAllocator
 } from "@jolly-pixel/three";
-import {
-  reconcilePeerMarks,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
+import { PeerMarkSync } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
@@ -35,7 +32,7 @@ export class SelectionHighlight extends ActorComponent {
   #options: SelectionHighlightOptions;
   #highlight: MeshHighlight;
   #targets = new Map<string, THREE.Object3D>();
-  #peerTargets = new Map<string, string>();
+  #peerTargets: PeerMarkSync<string>;
 
   #sync = (): void => {
     const { selection, presence } = this.#options;
@@ -58,13 +55,8 @@ export class SelectionHighlight extends ActorComponent {
     );
     highlight.select(primary);
     highlight.emphasize(others);
-    this.#peerTargets = reconcilePeerMarks(
-      targetedMarks(presence.selections, targets),
-      this.#peerTargets,
-      {
-        hold: (peer, id) => highlight.peers.select(peer.clientId, id),
-        release: (clientId) => highlight.peers.select(clientId, null)
-      }
+    this.#peerTargets.apply(
+      presence.selections.filter((id) => targets.has(id))
     );
     this.actor.world.invalidate();
   };
@@ -99,6 +91,11 @@ export class SelectionHighlight extends ActorComponent {
         colorAllocator: createListedColorAllocator(() => presence.peers)
       })
     });
+    const { peers } = this.#highlight;
+    this.#peerTargets = new PeerMarkSync({
+      hold: (peer, id) => peers.select(peer.clientId, id),
+      release: (clientId) => peers.select(clientId, null)
+    });
 
     const subscriptions = [
       selection.subscribe("change", this.#sync),
@@ -131,13 +128,4 @@ export class SelectionHighlight extends ActorComponent {
 
     return targets;
   }
-}
-
-function targetedMarks(
-  marks: PeerMarkMap<string>,
-  targets: ReadonlyMap<string, THREE.Object3D>
-): PeerMarkMap<string> {
-  return new Map(
-    [...marks].filter(([id]) => targets.has(id))
-  );
 }

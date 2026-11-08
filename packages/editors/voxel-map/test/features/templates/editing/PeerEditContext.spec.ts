@@ -7,7 +7,10 @@ import {
 
 // Import Third-party Dependencies
 import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
-import type { PresencePeer } from "@jolly-pixel/ui";
+import {
+  PeerMarks,
+  type PresencePeer
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { PeerEditContext } from "../../../../src/features/templates/editing/PeerEditContext.ts";
@@ -50,8 +53,8 @@ function peer(
 describe("PeerEditContext", () => {
   test("shares the map with a peer on a map layer or with no selection", () => {
     const { presence, peers } = setup();
-    presence.layerSelections = new Map([
-      [new VoxelLayerRef("Ground").key, [peer("bob")]]
+    presence.layerSelections = new PeerMarks([
+      [peer("bob"), new VoxelLayerRef("Ground").key]
     ]);
 
     assert.equal(peers.shares("bob"), true);
@@ -60,9 +63,9 @@ describe("PeerEditContext", () => {
 
   test("shares a template only with the peers editing that template", () => {
     const { context, presence, peers } = setup();
-    presence.layerSelections = new Map([
-      [new VoxelLayerRef("House draft").key, [peer("bob")]],
-      [new VoxelLayerRef("Ground").key, [peer("carol")]]
+    presence.layerSelections = new PeerMarks([
+      [peer("bob"), new VoxelLayerRef("House draft").key],
+      [peer("carol"), new VoxelLayerRef("Ground").key]
     ]);
 
     assert.equal(peers.shares("bob"), false);
@@ -79,7 +82,7 @@ describe("PeerEditContext", () => {
     peers.subscribe("change", () => changes++);
 
     context.draft = new TemplateDraftId("house");
-    presence.layerSelections = new Map();
+    presence.layerSelections = new PeerMarks();
     peers.dispose();
     context.draft = null;
 

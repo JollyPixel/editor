@@ -1,99 +1,73 @@
 // Import Third-party Dependencies
 import {
   PresenceChannel,
+  type PresenceDecoder,
   type Room
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { compareClientIds } from "../peer/peerOrder.ts";
-import type { PresencePeer } from "../peer/types.ts";
-import { toPresencePeer } from "./peerProfile.ts";
+import { PeerMarks } from "../peer/PeerMarks.ts";
+import { markedPeers } from "./peerProfile.ts";
 
-export type PeerMarkMap<TKey> = ReadonlyMap<TKey, readonly PresencePeer[]>;
-
-export type MarkedPeer<TValue> = readonly [peer: PresencePeer, value: TValue];
-
-export function markedPeers<TValue>(
-  room: Pick<Room, "peers">,
-  values: ReadonlyMap<string, TValue | null>
-): MarkedPeer<TValue>[] {
-  const marked: MarkedPeer<TValue>[] = [];
-  const entries = [...values]
-    .sort(([left], [right]) => compareClientIds(left, right));
-  for (const [clientId, value] of entries) {
-    const peer = room.peers.get(clientId);
-    if (peer !== undefined && value !== null) {
-      marked.push([toPresencePeer(peer), value]);
-    }
-  }
-
-  return marked;
-}
-
-export function peerMarks<TKey>(
-  marked: Iterable<MarkedPeer<TKey>>
-): PeerMarkMap<TKey> {
-  const marks = new Map<TKey, PresencePeer[]>();
-  for (const [peer, key] of marked) {
-    const bucket = marks.get(key) ?? [];
-    bucket.push(peer);
-    marks.set(key, bucket);
-  }
-
-  return marks;
+export interface PeerMarkLocal<TKey> {
+  read(): TKey | null;
+  subscribe(
+    listener: () => void
+  ): () => void;
 }
 
 export interface PeerMarkTrackerOptions<TKey> {
   room: Room;
   presenceKey: string;
-  localKey: () => TKey | null;
-  readKey: (
-    value: unknown
-  ) => TKey | null;
+  decode: PresenceDecoder<TKey>;
+  local: PeerMarkLocal<TKey>;
   publish: (
-    marks: PeerMarkMap<TKey>
+    marks: PeerMarks<TKey>
   ) => void;
 }
 
 export class PeerMarkTracker<TKey> {
   #room: Room;
   #channel: PresenceChannel<TKey | null>;
-  #localKey: () => TKey | null;
+  #local: PeerMarkLocal<TKey>;
+  #unsubscribeLocal: () => void;
   #publishMarks: (
-    marks: PeerMarkMap<TKey>
+    marks: PeerMarks<TKey>
   ) => void;
 
   #publish = (): void => {
     this.#publishMarks(
-      peerMarks(markedPeers(this.#room, this.#channel.values))
+      new PeerMarks(markedPeers(this.#room, this.#channel.values))
     );
+  };
+
+  #publishLocal = (): void => {
+    this.#channel.publish(this.#local.read());
   };
 
   constructor(
     options: PeerMarkTrackerOptions<TKey>
   ) {
-    const { readKey } = options;
-
     this.#room = options.room;
-    this.#localKey = options.localKey;
+    this.#local = options.local;
     this.#publishMarks = options.publish;
     this.#channel = new PresenceChannel<TKey | null>(options.room, {
       key: options.presenceKey,
-      decode: (value) => readKey(value) ?? undefined
+      decode: options.decode
     });
 
     this.#channel.on("change", this.#publish);
-    this.publishLocal();
+    this.#room.on("peer-profile", this.#publish);
+    this.#unsubscribeLocal = this.#local.subscribe(this.#publishLocal);
+    this.#publishLocal();
     this.#publish();
   }
 
-  publishLocal(): void {
-    this.#channel.publish(this.#localKey());
-  }
-
   dispose(): void {
+    this.#unsubscribeLocal();
+    this.#room.off("peer-profile", this.#publish);
     this.#channel.off("change", this.#publish);
     this.#channel.destroy();
-    this.#publishMarks(new Map());
+    this.#publishMarks(new PeerMarks());
   }
 }

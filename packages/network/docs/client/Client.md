@@ -124,7 +124,8 @@ interface PresenceChannelOptions<T> {
 }
 ```
 
-`new PresenceChannel(room, options)` tracks one typed field.
+`new PresenceChannel(room, options)` tracks one typed field. `decodeString`
+keeps string values and drops the rest.
 
 ### `publish(value): boolean` / `published` / `values`
 
