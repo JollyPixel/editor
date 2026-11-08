@@ -20,8 +20,23 @@ import type {
   NormalMapSettings
 } from "../normal/types.ts";
 import type { SavedUVNetData } from "../uv/region/SavedUVNet.ts";
+import type { UVOrientationOperation } from "../uv/map/UVMap.events.ts";
 
-export type UVRegionRotation =
+// CONSTANTS
+const kOrientationActions = {
+  rotate: "uv-region-rotated",
+  mirror: "uv-region-mirrored"
+} as const satisfies Record<UVOrientationOperation, PixelCommandAction>;
+
+type UVOrientationAction =
+  (typeof kOrientationActions)[UVOrientationOperation];
+
+export type UVOrientationCommand = Extract<
+  PixelDocumentCommand,
+  { action: UVOrientationAction; }
+>;
+
+export type UVRegionOrientation =
   | {
     id: string;
     face: UVSlot;
@@ -133,7 +148,11 @@ type CommandOf<TPixels> =
   }
   | {
     action: "uv-region-rotated";
-    metadata: UVRegionRotation;
+    metadata: UVRegionOrientation;
+  }
+  | {
+    action: "uv-region-mirrored";
+    metadata: UVRegionOrientation;
   }
   | UVNetCommand
   | NormalMapCommand;
@@ -295,11 +314,11 @@ export function uvRegionStateChanged(
   };
 }
 
-export function uvRegionRotated(
+function uvRegionOrientation(
   region: UVRegion,
   face: UVSlot | null
-): PixelDocumentCommand {
-  const rotation: UVRegionRotation = face === null ?
+): UVRegionOrientation {
+  return face === null ?
     {
       id: region.id,
       face,
@@ -310,11 +329,23 @@ export function uvRegionRotated(
       face,
       geometry: region.slotGeometry(face)
     };
+}
 
+export function uvRegionReoriented(
+  operation: UVOrientationOperation,
+  region: UVRegion,
+  face: UVSlot | null
+): PixelDocumentCommand {
   return {
-    action: "uv-region-rotated",
-    metadata: rotation
+    action: kOrientationActions[operation],
+    metadata: uvRegionOrientation(region, face)
   };
+}
+
+export function orientationOperation(
+  action: UVOrientationAction
+): UVOrientationOperation {
+  return action === kOrientationActions.rotate ? "rotate" : "mirror";
 }
 
 export function uvNetSaved(

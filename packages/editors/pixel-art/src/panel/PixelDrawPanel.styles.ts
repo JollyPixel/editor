@@ -242,33 +242,67 @@ export const panelStyles = css`
     user-select: none;
   }
 
-  .ink-overlay {
-    flex-wrap: wrap;
-    justify-content: center;
+  .overlay-toolbar .ink-trigger {
+    padding: 0 4px 0 6px;
+    gap: 4px;
   }
 
-  .ink-option {
-    padding: 2px 6px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--color-text-muted);
-    font: inherit;
-    cursor: pointer;
+  .ink-trigger .tool-option-label {
+    margin-inline-end: 4px;
   }
 
-  .ink-option:hover {
+  .ink-trigger .icon:not(:last-child) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .ink-current {
+    color: var(--color-text);
+  }
+
+  .ink-trigger:hover .ink-current {
     color: var(--color-text-emphasis);
   }
 
-  .ink-option[aria-pressed="true"] {
-    background: var(--color-accent);
-    color: var(--color-text-on-accent);
+  .ink-menu {
+    font-size: 11px;
   }
 
-  .ink-option:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 1px;
+  .ink-menu .ink-option {
+    align-items: flex-start;
+    padding: 6px 8px;
+    gap: 8px;
+  }
+
+  .ink-menu .ink-option .icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .ink-option-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: start;
+  }
+
+  .ink-menu .ink-option .ink-check {
+    width: 12px;
+    height: 12px;
+    margin-inline-start: auto;
+    padding-inline-start: 8px;
+    box-sizing: content-box;
+    align-self: center;
+    visibility: hidden;
+  }
+
+  .ink-option[aria-checked="true"] .ink-check {
+    visibility: visible;
+  }
+
+  .ink-option-description {
+    color: var(--color-text-muted);
   }
 
   .brush-preview {
@@ -493,19 +527,19 @@ export const panelStyles = css`
     transform: translateX(-50%);
   }
 
-  .overlay-toolbar .uv-state-trigger {
+  .overlay-toolbar .overlay-menu-trigger {
     width: auto;
     padding: 0 4px;
     gap: 1px;
   }
 
-  .overlay-toolbar .uv-state-trigger .icon:last-child {
+  .overlay-toolbar .overlay-menu-trigger .icon:last-child {
     width: 10px;
     height: 10px;
     opacity: 0.7;
   }
 
-  .uv-state-menu {
+  .overlay-menu {
     position: fixed;
     margin: 0;
     padding: 4px;
@@ -527,7 +561,7 @@ export const panelStyles = css`
       display 90ms allow-discrete;
   }
 
-  .uv-state-menu:popover-open {
+  .overlay-menu:popover-open {
     opacity: 1;
     transform: none;
     pointer-events: auto;
@@ -535,19 +569,19 @@ export const panelStyles = css`
   }
 
   @starting-style {
-    .uv-state-menu:popover-open {
+    .overlay-menu:popover-open {
       opacity: 0;
       transform: scale(0.96);
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .uv-state-menu {
+    .overlay-menu {
       transition: none;
     }
   }
 
-  .uv-state-option {
+  .overlay-menu-option {
     display: flex;
     width: 100%;
     padding: 4px 8px;
@@ -562,23 +596,23 @@ export const panelStyles = css`
     white-space: nowrap;
   }
 
-  .uv-state-option .icon {
+  .overlay-menu-option .icon {
     width: 14px;
     height: 14px;
   }
 
-  .uv-state-option:hover,
-  .uv-state-option:focus-visible {
+  .overlay-menu-option:hover,
+  .overlay-menu-option:focus-visible {
     background: var(--color-divider);
     color: var(--color-text-emphasis);
   }
 
-  .uv-state-option:focus-visible {
+  .overlay-menu-option:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: -2px;
   }
 
-  .uv-state-option[aria-disabled="true"] {
+  .overlay-menu-option[aria-disabled="true"] {
     cursor: default;
     opacity: 0.45;
   }
@@ -596,7 +630,7 @@ export const panelStyles = css`
     font-size: 0.85em;
   }
 
-  .view-options-menu .uv-state-option {
+  .view-options-menu .overlay-menu-option {
     box-sizing: border-box;
   }
 
@@ -605,7 +639,7 @@ export const panelStyles = css`
     accent-color: var(--color-accent);
   }
 
-  .view-options-menu .uv-state-option:focus-within {
+  .view-options-menu .overlay-menu-option:focus-within {
     background: var(--color-divider);
   }
 

@@ -148,7 +148,7 @@ export class UVGeometryBinding {
     uv.on("region-moved", this.#onRegionMoved);
     uv.on("region-dragging", this.#onRegionDragging);
     uv.on("region-state-changed", this.#onRegionReplaced);
-    uv.on("region-rotated", this.#onRegionReplaced);
+    uv.on("region-reoriented", this.#onRegionReplaced);
   }
 
   unfollow(): void {
@@ -159,7 +159,7 @@ export class UVGeometryBinding {
     this.#uv.off("region-moved", this.#onRegionMoved);
     this.#uv.off("region-dragging", this.#onRegionDragging);
     this.#uv.off("region-state-changed", this.#onRegionReplaced);
-    this.#uv.off("region-rotated", this.#onRegionReplaced);
+    this.#uv.off("region-reoriented", this.#onRegionReplaced);
     this.#uv = null;
   }
 

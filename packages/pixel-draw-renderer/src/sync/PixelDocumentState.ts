@@ -34,16 +34,17 @@ import {
   uvRegionCreated,
   uvRegionDeleted,
   uvRegionMoved,
-  uvRegionRotated,
+  uvRegionReoriented,
   uvRegionStateChanged,
   uvNetDefaultChanged,
   uvNetDeleted,
   uvNetId,
   uvNetSaved,
+  orientationOperation,
   type PixelDocumentCommand,
   type NormalMapCommand,
   type UVNetCommand,
-  type UVRegionRotation
+  type UVOrientationCommand
 } from "./PixelCommand.ts";
 import { NormalMapChange } from "./NormalMapChange.ts";
 import {
@@ -165,7 +166,8 @@ export class PixelDocumentState<
         this.uv.restoreState(command.metadata.region);
         break;
       case "uv-region-rotated":
-        this.#rotate(command.metadata);
+      case "uv-region-mirrored":
+        this.#reorient(command);
         break;
       case "uv-net-saved":
       case "uv-net-deleted":
@@ -194,6 +196,7 @@ export class PixelDocumentState<
       case "uv-region-deleted":
       case "uv-region-moved":
       case "uv-region-rotated":
+      case "uv-region-mirrored":
         return this.uv.get(command.metadata.id) !== undefined;
       case "uv-region-state-changed":
         return this.uv.get(command.metadata.region.id) !== undefined;
@@ -316,10 +319,19 @@ export class PixelDocumentState<
 
         return region ? [uvRegionStateChanged(region.toJSON())] : [];
       }
-      case "uv-region-rotated": {
+      case "uv-region-rotated":
+      case "uv-region-mirrored": {
         const region = this.uv.get(command.metadata.id);
 
-        return region ? [uvRegionRotated(region, command.metadata.face)] : [];
+        return region ?
+          [
+            uvRegionReoriented(
+              orientationOperation(command.action),
+              region,
+              command.metadata.face
+            )
+          ] :
+          [];
       }
       case "normal-map-toggled":
       case "normal-map-defaults-patched":
@@ -350,20 +362,22 @@ export class PixelDocumentState<
     this.buffer.copyToMaster();
   }
 
-  #rotate(
-    rotation: UVRegionRotation
+  #reorient(
+    { action, metadata: orientation }: UVOrientationCommand
   ): void {
-    if (rotation.face === null) {
-      this.uv.restoreRotation(rotation.region);
+    const operation = orientationOperation(action);
+    if (orientation.face === null) {
+      this.uv.restoreOrientation(orientation.region, operation);
 
       return;
     }
 
-    const region = this.uv.get(rotation.id);
+    const region = this.uv.get(orientation.id);
     if (region) {
-      this.uv.restoreRotation(
-        region.withGeometry(rotation.face, rotation.geometry),
-        rotation.face
+      this.uv.restoreOrientation(
+        region.withGeometry(orientation.face, orientation.geometry),
+        operation,
+        orientation.face
       );
     }
   }

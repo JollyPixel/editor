@@ -13,6 +13,7 @@ const kActions: { readonly [TAction in PixelCommandAction]: true; } = {
   "uv-region-moved": true,
   "uv-region-state-changed": true,
   "uv-region-rotated": true,
+  "uv-region-mirrored": true,
   "uv-net-saved": true,
   "uv-net-deleted": true,
   "uv-net-default-changed": true,

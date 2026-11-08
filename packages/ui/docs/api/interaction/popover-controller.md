@@ -20,6 +20,8 @@ interface PopoverControllerOptions {
   // An element, or a viewport rectangle. A zero-size rectangle is a point.
   anchor: () => HTMLElement | AnchorRect | null;
   popover: () => HTMLElement | null;
+  // Rectangle placed against instead of the anchor; null uses the anchor.
+  placeAgainst?: () => AnchorRect | null;
   gap?: number; // default 4
   side?: PopoverSide | (() => PopoverSide); // callback runs on each placement
   align?: "center" | "start" | "end"; // default "start"

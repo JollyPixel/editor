@@ -1,10 +1,8 @@
 // Import Third-party Dependencies
 import {
   html,
-  type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
-import { PopoverController } from "@jolly-pixel/ui";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import { encodePng } from "@jolly-pixel/image";
 
@@ -16,6 +14,10 @@ import {
 import { PngFile } from "../../shared/PngFile.ts";
 import { renderIcon } from "../../shared/icons.ts";
 import { renderRailButton } from "../../shared/railButton.ts";
+import {
+  OverlayMenu,
+  type OverlayMenuHost
+} from "../../shared/OverlayMenu.ts";
 
 // CONSTANTS
 const kAlbedoFileName = "texture.png";
@@ -40,31 +42,23 @@ type NormalMapExportFormat = "normal-opengl" | "normal-directx";
 
 export type TextureExportFormat = "albedo" | NormalMapExportFormat;
 
-export type TextureExporterHost = ReactiveControllerHost & {
-  renderRoot: DocumentFragment | HTMLElement;
-};
-
 export interface TextureExporterOptions {
   canvas: () => PixelArtCanvas | null;
   normalMap: () => boolean;
 }
 
 export class TextureExporter {
-  readonly #host: TextureExporterHost;
   readonly #options: TextureExporterOptions;
-  readonly #popup: PopoverController;
+  readonly #menu: OverlayMenu;
 
   constructor(
-    host: TextureExporterHost,
+    host: OverlayMenuHost,
     options: TextureExporterOptions
   ) {
-    this.#host = host;
     this.#options = options;
-    this.#popup = new PopoverController(host, {
-      anchor: () => this.#element("[part=\"export-button\"]"),
-      popover: () => this.#element("[part=\"export-menu\"]"),
+    this.#menu = new OverlayMenu(host, "export", {
       side: "above",
-      align: "start"
+      hover: false
     });
   }
 
@@ -99,7 +93,7 @@ export class TextureExporter {
   async export(
     format: TextureExportFormat
   ): Promise<void> {
-    this.#popup.hide();
+    this.#menu.hide();
     const file = await this.capture(format);
     file?.download();
   }
@@ -115,30 +109,16 @@ export class TextureExporter {
       });
     }
 
-    return html`
-      <button
-        class="rail-btn uv-state-trigger"
-        part="export-button"
-        popovertarget="export-menu"
-        aria-haspopup="menu"
-        aria-expanded=${this.#popup.open}
-        aria-label="Export textures"
-      >
+    return this.#menu.render({
+      label: "Export textures",
+      trigger: html`
         ${renderIcon("export")}
         ${renderIcon("chevronDown")}
         <span class="tooltip">Export textures</span>
-      </button>
-      <div
-        class="uv-state-menu"
-        part="export-menu"
-        id="export-menu"
-        role="menu"
-        popover
-        @beforetoggle=${this.#popup.onBeforeToggle}
-        @toggle=${this.#popup.onToggle}
-      >
+      `,
+      items: html`
         <button
-          class="uv-state-option"
+          class="overlay-menu-option"
           part="export-albedo-button"
           role="menuitem"
           @click=${() => void this.export("albedo")}
@@ -147,7 +127,7 @@ export class TextureExporter {
         </button>
         ${kNormalFormats.map(({ format, label }) => html`
           <button
-            class="uv-state-option"
+            class="overlay-menu-option"
             part="export-${format}"
             role="menuitem"
             @click=${() => void this.export(format)}
@@ -155,8 +135,8 @@ export class TextureExporter {
             <span>${label}</span>
           </button>
         `)}
-      </div>
-    `;
+      `
+    });
   }
 
   static async #captureAlbedo(
@@ -176,11 +156,5 @@ export class TextureExporter {
       height,
       data
     }));
-  }
-
-  #element(
-    selector: string
-  ): HTMLElement | null {
-    return this.#host.renderRoot.querySelector<HTMLElement>(selector);
   }
 }

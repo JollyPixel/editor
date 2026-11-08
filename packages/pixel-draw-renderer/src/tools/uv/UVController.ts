@@ -20,6 +20,7 @@ import type {
 import type { ScreenProjection } from "../../rendering/Viewport.ts";
 import type { TextureGrid } from "../../grid/TextureGrid.ts";
 import type {
+  MirrorAxis,
   RotationDirection,
   Vec2
 } from "../../types.ts";
@@ -35,13 +36,18 @@ export interface UVControllerOptions {
   viewport: ScreenProjection;
   grid: TextureGrid;
   resizable?: boolean;
+  mirrorable?: boolean;
 }
 
 export interface UVTool {
   resizable: boolean;
+  mirrorable: boolean;
+  mirror(axis: MirrorAxis): boolean;
 }
 
 export class UVController implements UVTool {
+  mirrorable: boolean;
+
   #uvMap: UVMap;
   #overlay: UVRegionLayer;
   #gesture: UVGesture | null = null;
@@ -66,6 +72,7 @@ export class UVController implements UVTool {
     this.#grid = options.grid;
     this.#resizable = options.resizable ?? false;
     this.#overlay.resizable = this.#resizable;
+    this.mirrorable = options.mirrorable ?? true;
   }
 
   get resizable(): boolean {
@@ -232,6 +239,17 @@ export class UVController implements UVTool {
     }
 
     return this.#uvMap.rotate(id, direction, this.#uvMap.selectedSlot);
+  }
+
+  mirror(
+    axis: MirrorAxis
+  ): boolean {
+    const id = this.#uvMap.selectedRegionId;
+    if (!this.mirrorable || id === null || this.#gesture !== null) {
+      return false;
+    }
+
+    return this.#uvMap.mirror(id, axis, this.#uvMap.selectedSlot);
   }
 
   handleDelete(): boolean {

@@ -8,6 +8,7 @@ import type {
   UVSlot
 } from "../../geometry/types.ts";
 import type {
+  MirrorAxis,
   SelectionRect,
   Vec2
 } from "../../../types.ts";
@@ -67,6 +68,12 @@ export abstract class UVLayout {
     return slot !== null && this.activeSlots.includes(slot);
   }
 
+  canMirror(
+    _slot: UVSlot | null
+  ): boolean {
+    return this.faces.areRects();
+  }
+
   withGeometry(
     _slot: UVSlot,
     _geometry: UVGeometry
@@ -105,6 +112,11 @@ export abstract class UVLayout {
 
   abstract rotated(
     turns: number,
+    slot: UVSlot | null
+  ): UVLayout;
+
+  abstract mirrored(
+    axis: MirrorAxis,
     slot: UVSlot | null
   ): UVLayout;
 

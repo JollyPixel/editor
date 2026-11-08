@@ -146,6 +146,7 @@ describe("pixelArtAssetKind", () => {
       "uv-region-moved",
       "uv-region-state-changed",
       "uv-region-rotated",
+      "uv-region-mirrored",
       "uv-net-saved",
       "uv-net-deleted",
       "uv-net-default-changed",

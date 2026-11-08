@@ -64,7 +64,7 @@ A preview lasts until `preview(null)` or until the source's settings change, by 
 | pixels written in `bounds` | the islands touching `bounds` grown by 1 px; `"regions"` and `"bevel"` islands whole, others only around `bounds` |
 | defaults patched, feature toggled, snapshot | every island |
 | zone set or deleted | the islands of that region |
-| UV region created, deleted, moved, rotated or changed state; resize; texture replaced | the island map, then every island |
+| UV region created, deleted, moved, rotated, mirrored or changed state; resize; texture replaced | the island map, then every island |
 
 ## Generation
 

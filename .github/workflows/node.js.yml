@@ -97,6 +97,8 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Build tested workspaces and their dependencies
         run: pnpm $BUILD_FILTERS --if-present run build
+      - name: Build packages tested workspaces resolve at runtime
+        run: pnpm $TEST_FILTERS --if-present run build:deps
       - name: Run unit tests
         run: pnpm $TEST_FILTERS --if-present run test-only
       - name: Run type tests

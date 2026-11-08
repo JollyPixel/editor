@@ -162,7 +162,7 @@ deleteNormalMapZone(regionId: string): void;
 
 `normalMap` holds the committed [settings](./normal/NormalMapConfig.md), `null` while the feature is off. `normals` is the generated [`NormalMap`](./normal/NormalMap.md), created on first access and idle until retained. To show settings while a slider is dragged, use [`normals.preview()`](./normal/NormalMap.md#preview) and commit on release.
 
-`islands` is the [island map](./normal/IslandMap.md) of the UV regions, built on first access and kept until a region is created, deleted, moved, rotated or changes state, or the texture is resized or replaced. Each of these emits `islands-changed`, and the next read rebuilds the map. `normals` reads its islands from here.
+`islands` is the [island map](./normal/IslandMap.md) of the UV regions, built on first access and kept until a region is created, deleted, moved, rotated, mirrored or changes state, or the texture is resized or replaced. Each of these emits `islands-changed`, and the next read rebuilds the map. `normals` reads its islands from here.
 
 `useIslandFaces` builds the islands from the given faces instead of the UV regions, for a host that places its faces itself, such as a voxel blockset. Region changes then leave the islands alone: the host calls `invalidateIslands` when its faces change, and a resize or replace still rebuilds them. The returned function goes back to the UV regions, unless another `useIslandFaces` call replaced these faces since.
 

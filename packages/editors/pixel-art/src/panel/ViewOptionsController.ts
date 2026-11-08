@@ -1,13 +1,11 @@
 // Import Third-party Dependencies
 import {
   html,
-  nothing,
-  type ReactiveControllerHost
+  nothing
 } from "lit";
-import {
-  PopoverController,
-  type JollyChangeDetail,
-  type JollyOption
+import type {
+  JollyChangeDetail,
+  JollyOption
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button-group";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
@@ -17,13 +15,13 @@ import {
   renderIcon,
   type IconName
 } from "../shared/icons.ts";
+import {
+  OverlayMenu,
+  type OverlayMenuHost
+} from "../shared/OverlayMenu.ts";
 
 // CONSTANTS
 const kGridSizes: readonly number[] = [8, 16, 32, 64];
-
-export type ViewOptionsHost = ReactiveControllerHost & {
-  renderRoot: DocumentFragment | HTMLElement;
-};
 
 export interface ViewOptionsMenu {
   regions: boolean;
@@ -53,34 +51,20 @@ function gridSizeOptions(
 }
 
 export class ViewOptionsController {
-  readonly #host: ViewOptionsHost;
+  readonly #host: OverlayMenuHost;
   readonly #canvas: () => PixelArtCanvas | null;
-  readonly #popup: PopoverController;
+  readonly #menu: OverlayMenu;
 
   constructor(
-    host: ViewOptionsHost,
+    host: OverlayMenuHost,
     canvas: () => PixelArtCanvas | null
   ) {
     this.#host = host;
     this.#canvas = canvas;
-    this.#popup = new PopoverController(host, {
-      anchor: () => this.#element("[part=\"view-options-button\"]"),
-      popover: () => this.#element("[part=\"view-options-menu\"]"),
+    this.#menu = new OverlayMenu(host, "view-options", {
       side: "below",
-      align: "start",
-      openOnHover: {
-        delay: 200
-      },
-      closeOnHoverLeave: {
-        delay: 200
-      }
+      hover: true
     });
-  }
-
-  #element(
-    selector: string
-  ): HTMLElement | null {
-    return this.#host.renderRoot.querySelector<HTMLElement>(selector);
   }
 
   #renderToggle<TKey extends PropertyKey>(
@@ -89,7 +73,7 @@ export class ViewOptionsController {
     toggle: ViewToggle
   ) {
     return html`
-      <label class="uv-state-option">
+      <label class="overlay-menu-option">
         <input
           type="checkbox"
           part=${toggle.part}
@@ -196,36 +180,21 @@ export class ViewOptionsController {
 
     return html`
       <div class="overlay-toolbar" part="view-options-toolbar">
-        <button
-          class="rail-btn uv-state-trigger"
-          part="view-options-button"
-          popovertarget="view-options-menu"
-          aria-haspopup="dialog"
-          aria-expanded=${this.#popup.open}
-          aria-label="View options"
-          aria-description=${canvas ? this.#describe(canvas, menu) : nothing}
-          ?disabled=${!canvas}
-          @pointerenter=${this.#popup.onPointerEnter}
-          @pointerleave=${this.#popup.onPointerLeave}
-        >
-          ${renderIcon(this.#icon(canvas, menu))}
-          ${renderIcon("chevronDown")}
-        </button>
-        <div
-          class="uv-state-menu view-options-menu"
-          part="view-options-menu"
-          id="view-options-menu"
-          role="dialog"
-          aria-label="View options"
-          popover
-          @pointerenter=${this.#popup.onPointerEnter}
-          @pointerleave=${this.#popup.onPointerLeave}
-          @beforetoggle=${this.#popup.onBeforeToggle}
-          @toggle=${this.#popup.onToggle}
-        >
-          ${canvas && menu.regions ? this.#renderRegions(canvas.uv) : nothing}
-          ${canvas ? this.#renderGrid(canvas.grid, menu) : nothing}
-        </div>
+        ${this.#menu.render({
+          role: "dialog",
+          label: "View options",
+          menuLabel: "View options",
+          description: canvas ? this.#describe(canvas, menu) : undefined,
+          disabled: !canvas,
+          trigger: html`
+            ${renderIcon(this.#icon(canvas, menu))}
+            ${renderIcon("chevronDown")}
+          `,
+          items: html`
+            ${canvas && menu.regions ? this.#renderRegions(canvas.uv) : nothing}
+            ${canvas ? this.#renderGrid(canvas.grid, menu) : nothing}
+          `
+        })}
       </div>
     `;
   }

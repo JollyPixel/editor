@@ -41,7 +41,7 @@ import { TextureDropController } from "../textures/import/TextureDropController.
 import type { TextureFileDrop } from "../textures/import/TextureFileDrop.ts";
 import { renderHistoryFileToolbar } from "./historyFileToolbar.ts";
 import { renderBrushSizeOverlay } from "../tools/brushSizeOverlay.ts";
-import { renderInkOverlay } from "../tools/inkOverlay.ts";
+import { InkMenuController } from "../tools/InkMenuController.ts";
 import type { PaletteRampSpace } from "../color/PaletteState.ts";
 import { NormalMapController } from "../normal/NormalMapController.ts";
 import { DockSlot } from "./DockSlot.ts";
@@ -259,6 +259,7 @@ export class PixelDrawPanel extends LitElement {
     this,
     this.#activeCanvas
   );
+  readonly #inkMenu = new InkMenuController(this);
   readonly #selectToolbar = new SelectToolbarController(
     this,
     this.#activeCanvas,
@@ -696,7 +697,7 @@ export class PixelDrawPanel extends LitElement {
               renderBrushSizeOverlay(canvas, () => this.requestUpdate()) :
               nothing}
             ${canvas && isInkMode(mode) ?
-              renderInkOverlay(canvas, () => this.requestUpdate()) :
+              this.#inkMenu.render(canvas) :
               nothing}
             ${this.#selectToolbar.render(mode === "select")}
             ${this.#uvToolbar.render(

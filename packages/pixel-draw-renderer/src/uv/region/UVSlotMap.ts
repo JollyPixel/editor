@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type {
+  MirrorAxis,
   SelectionRect,
   Vec2
 } from "../../types.ts";
@@ -7,6 +8,8 @@ import {
   copyGeometry,
   geometryAt,
   geometryKey,
+  isRectGeometry,
+  mirrorRect,
   quarterTurn,
   boundingRect,
   rotateGeometry,
@@ -135,6 +138,46 @@ export class UVSlotMap {
       }
 
       return geometry;
+    });
+  }
+
+  areRects(
+    slots: readonly UVSlot[] = this.slots
+  ): boolean {
+    return slots.every((slot) => {
+      const geometry = this.#slots.get(slot);
+
+      return geometry !== undefined && isRectGeometry(geometry);
+    });
+  }
+
+  mirrored(
+    axis: MirrorAxis,
+    slots: readonly UVSlot[] = this.slots
+  ): UVSlotMap {
+    return this.#mapped((geometry, slot) => (
+      slots.includes(slot) && isRectGeometry(geometry) ?
+        mirrorRect(geometry, axis) :
+        geometry
+    ));
+  }
+
+  mirroredWithin(
+    frame: SelectionRect,
+    axis: MirrorAxis
+  ): UVSlotMap {
+    return this.mirrored(axis).#mapped((geometry) => {
+      const rect = boundingRect(geometry);
+
+      return geometryAt(geometry, axis === "horizontal" ?
+        {
+          ...rect,
+          x: (2 * frame.x) + frame.width - rect.x - rect.width
+        } :
+        {
+          ...rect,
+          y: (2 * frame.y) + frame.height - rect.y - rect.height
+        });
     });
   }
 

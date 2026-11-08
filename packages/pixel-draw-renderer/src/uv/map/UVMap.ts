@@ -3,6 +3,7 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type {
+  MirrorAxis,
   RotationDirection,
   SelectionRect,
   Vec2
@@ -21,12 +22,17 @@ import {
   type UVRegionState
 } from "../region/UVRegion.ts";
 import { RectArea } from "../../utils/RectArea.ts";
-import type { UVMapEvent } from "./UVMap.events.ts";
+import type {
+  UVMapEvent,
+  UVOrientationOperation
+} from "./UVMap.events.ts";
 
 export type {
   UVMapEvent,
   UVMapEventType,
-  UVMapListener
+  UVMapListener,
+  UVOrientationOperation,
+  UVRegionOrientationChange
 } from "./UVMap.events.ts";
 export type {
   UVRegionCreateOptions,
@@ -458,6 +464,47 @@ export class UVMap extends Emitter<
     direction: RotationDirection,
     slot: UVSlot | null = null
   ): boolean {
+    return this.#reorient(
+      id,
+      slot,
+      "rotate",
+      (region, face) => this.bounds.clamp(region.rotated(direction, face), face)
+    );
+  }
+
+  mirror(
+    id: string,
+    axis: MirrorAxis,
+    slot: UVSlot | null = null
+  ): boolean {
+    return this.#reorient(
+      id,
+      slot,
+      "mirror",
+      (region, face) => region.mirrored(axis, face)
+    );
+  }
+
+  restoreOrientation(
+    value: UVRegion | UVRegionData,
+    operation: UVOrientationOperation,
+    face: UVSlot | null = null
+  ): boolean {
+    const next = UVRegion.from(value);
+
+    return this.#replace(
+      next.id,
+      () => next,
+      this.#reoriented(face, operation)
+    );
+  }
+
+  #reorient(
+    id: string,
+    slot: UVSlot | null,
+    operation: UVOrientationOperation,
+    transform: (region: UVRegion, face: UVSlot | null) => UVRegion
+  ): boolean {
     const movement = this.#movement(this.#regions.get(id), slot);
     if (movement === null) {
       return false;
@@ -467,18 +514,9 @@ export class UVMap extends Emitter<
 
     return this.#replace(
       id,
-      (current) => this.bounds.clamp(current.rotated(direction, face), face),
-      this.#rotated(face)
+      (region) => transform(region, face),
+      this.#reoriented(face, operation)
     );
-  }
-
-  restoreRotation(
-    value: UVRegion | UVRegionData,
-    face: UVSlot | null = null
-  ): boolean {
-    const next = UVRegion.from(value);
-
-    return this.#replace(next.id, () => next, this.#rotated(face));
   }
 
   #withState(
@@ -546,11 +584,17 @@ export class UVMap extends Emitter<
     };
   }
 
-  #rotated(
-    face: UVSlot | null
+  #reoriented(
+    face: UVSlot | null,
+    operation: UVOrientationOperation
   ): UVRegionChange {
     return (region, previous) => {
-      this.emit("region-rotated", { region, previous, face });
+      this.emit("region-reoriented", {
+        region,
+        previous,
+        face,
+        operation
+      });
     };
   }
 

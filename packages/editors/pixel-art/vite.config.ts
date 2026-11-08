@@ -42,6 +42,9 @@ export default defineConfig((env) => {
   return {
     root: "page",
     base: "./",
+    define: {
+      "import.meta.env.PIXEL_ART_PLAYGROUND": JSON.stringify(mode.serve)
+    },
     build: {
       outDir: "../dist-page",
       emptyOutDir: true

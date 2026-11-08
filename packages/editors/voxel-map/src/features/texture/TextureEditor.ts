@@ -48,7 +48,8 @@ const kCanvasOptions: PixelArtCanvasOptions = {
     color: "#000000"
   },
   uv: {
-    deselectOnEmptyClick: false
+    deselectOnEmptyClick: false,
+    mirrorable: false
   }
 };
 const kBlocksetDropTypes = [

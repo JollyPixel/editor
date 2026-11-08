@@ -30,7 +30,7 @@ export {
   type PixelCommand,
   type PixelCommandAction,
   type UVNetCommand,
-  type UVRegionRotation
+  type UVRegionOrientation
 } from "./sync/PixelCommand.ts";
 export type {
   GlobalFill,
@@ -72,6 +72,7 @@ export * from "./rendering/Zoom.ts";
 export * from "./grid/TextureGrid.ts";
 export type {
   ByteColorInput,
+  MirrorAxis,
   PeerStrokePixel,
   RGBA8,
   RotationDirection,

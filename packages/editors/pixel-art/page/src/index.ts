@@ -16,7 +16,8 @@ declare global {
   }
 }
 
-const features = import.meta.env.DEV ?
+const playground = import.meta.env.PIXEL_ART_PLAYGROUND;
+const features = playground ?
   PixelArtFeatures.playground.withQuery() :
   PixelArtFeatures.editor;
 if (features.appearance !== null) {
@@ -25,7 +26,7 @@ if (features.appearance !== null) {
 
 const editor = PixelArtEditor.definition({
   features,
-  loadPreview: import.meta.env.DEV && features.preview ?
+  loadPreview: playground && features.preview ?
     async() => (await import("./preview/PreviewPane.ts")).PreviewPane :
     null
 });

@@ -25,7 +25,8 @@ export type PixelUvRegionCommand = Extract<
       | "uv-region-moved"
       | "uv-region-deleted"
       | "uv-region-state-changed"
-      | "uv-region-rotated";
+      | "uv-region-rotated"
+      | "uv-region-mirrored";
   }
 >;
 
@@ -98,12 +99,13 @@ export function uvWriteKeys(
           slot: command.metadata.face
         })
       ];
-    case "uv-region-rotated": {
-      const rotation = command.metadata;
+    case "uv-region-rotated":
+    case "uv-region-mirrored": {
+      const orientation = command.metadata;
 
-      return rotation.face === null ?
-        regionDataKeys(rotation.region) :
-        [uvTargetKey({ regionId: rotation.id, slot: rotation.face })];
+      return orientation.face === null ?
+        regionDataKeys(orientation.region) :
+        [uvTargetKey({ regionId: orientation.id, slot: orientation.face })];
     }
     default:
       return regionDataKeys(command.metadata.region);
@@ -119,6 +121,7 @@ export function pixelCommandKeys(
       return paintedPositions(command)!.map(pixelKey);
     case "uv-region-moved":
     case "uv-region-rotated":
+    case "uv-region-mirrored":
     case "uv-region-state-changed":
       return uvWriteKeys(command);
     case "palette-color-changed":

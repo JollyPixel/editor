@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type {
+  MirrorAxis,
   RotationDirection,
   SelectionRect,
   Vec2
@@ -220,6 +221,19 @@ export class UVRegion {
     slot: UVSlot | null = null
   ): UVRegion {
     return this.#with(this.#layout.rotated(directionQuarterTurns(direction), slot));
+  }
+
+  canMirror(
+    slot: UVSlot | null = null
+  ): boolean {
+    return this.#layout.canMirror(slot);
+  }
+
+  mirrored(
+    axis: MirrorAxis,
+    slot: UVSlot | null = null
+  ): UVRegion {
+    return this.#with(this.#layout.mirrored(axis, slot));
   }
 
   toLayout(): UVLayoutData {

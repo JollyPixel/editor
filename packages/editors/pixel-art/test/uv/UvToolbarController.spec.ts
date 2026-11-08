@@ -41,6 +41,9 @@ function makeCanvas(
   };
   const canvas = {
     document: new UvNetTestDocument(),
+    tools: {
+      uv: { mirrorable: false }
+    },
     uv: {
       selectedRegionId,
       selectedSlot: null,

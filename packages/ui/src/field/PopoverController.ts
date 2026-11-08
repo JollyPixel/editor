@@ -29,6 +29,11 @@ export interface PopoverControllerOptions {
    */
   popover: () => HTMLElement | null;
   /**
+   * Viewport rectangle placed against instead of the anchor; null falls back
+   * to the anchor.
+   */
+  placeAgainst?: () => AnchorRect | null;
+  /**
    * Gap from the anchor in pixels; defaults to 4.
    */
   gap?: number;
@@ -275,9 +280,11 @@ export class PopoverController implements ReactiveController {
       return;
     }
 
-    const anchorRect = anchor instanceof HTMLElement ?
-      anchor.getBoundingClientRect() :
-      anchor;
+    const anchorRect = this.#options.placeAgainst?.() ?? (
+      anchor instanceof HTMLElement ?
+        anchor.getBoundingClientRect() :
+        anchor
+    );
     const anchorBox = {
       top: anchorRect.top,
       bottom: anchorRect.bottom,

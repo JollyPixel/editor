@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { UVMap } from "../uv/map/UVMap.ts";
+import type { UVRegionOrientationChange } from "../uv/map/UVMap.events.ts";
 import {
   UVRegion,
   type UVSlot,
@@ -11,7 +12,7 @@ import {
   uvRegionCreated,
   uvRegionDeleted,
   uvRegionMoved,
-  uvRegionRotated,
+  uvRegionReoriented,
   uvRegionStateChanged,
   type PixelDocumentCommand,
   type PixelCommand
@@ -45,7 +46,7 @@ export class UVOwnership {
     uv.on("region-deleted", ({ region }) => this.#deleted(region));
     uv.on("region-moved", ({ region, face, previousRect }) => this.#moved(region, face, previousRect));
     uv.on("region-state-changed", ({ region, previous }) => this.#stateChanged(region, previous));
-    uv.on("region-rotated", ({ region, previous, face }) => this.#rotated(region, previous, face));
+    uv.on("region-reoriented", (event) => this.#reoriented(event));
   }
 
   disown(
@@ -80,6 +81,7 @@ export class UVOwnership {
       case "uv-region-deleted":
       case "uv-region-moved":
       case "uv-region-rotated":
+      case "uv-region-mirrored":
         return this.owns(command.metadata.id);
       default:
         return true;
@@ -156,18 +158,16 @@ export class UVOwnership {
     });
   }
 
-  #rotated(
-    region: UVRegion,
-    previous: UVRegionData,
-    face: UVSlot | null
+  #reoriented(
+    { region, previous, face, operation }: UVRegionOrientationChange
   ): void {
     if (!this.#tracks(region.id)) {
       return;
     }
 
     this.#record({
-      command: uvRegionRotated(region, face),
-      inverse: [uvRegionRotated(UVRegion.from(previous), face)]
+      command: uvRegionReoriented(operation, region, face),
+      inverse: [uvRegionReoriented(operation, UVRegion.from(previous), face)]
     });
   }
 }
