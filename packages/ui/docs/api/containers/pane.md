@@ -29,7 +29,7 @@ interface PaneElement {
   floatHeight: number | undefined; // attribute float-height
   storageKey: string; // attribute storage-key
   storage: StorageAdapter; // property only, default LocalStorageAdapter
-  presence: PresenceSource | null; // property only
+  fieldLocks: FieldLockSource | null; // property only
 
   // Set by its container.
   movable: boolean; // inside a dock layout or floating window
@@ -50,8 +50,8 @@ interface PaneElement {
 - `chromeElement` is the element that draws the pane with its heading: the
   parent `jolly-pane-group` when grouped, otherwise the pane. Measure it to
   outline the whole pane.
-- `presence` feeds every field below the pane, see
-  [Presence and locking](../peer/presence-source.md).
+- `fieldLocks` feeds every field below the pane, see
+  [Field locks](../peer/field-locks.md).
 
 ## Events
 

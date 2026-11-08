@@ -15,9 +15,9 @@ interface JollyField<T> {
   disabled: boolean;
   readonly: boolean;
   colored: boolean; // active parts use the accent fill
-  lockedBy: CollaboratorPresence | null; // property only
-  peers: readonly CollaboratorPresence[]; // property only
+  editors: readonly PresencePeer[]; // property only, peers editing this field
   path: string | null; // lock identity, null opts out
+  readonly lockedBy: PresencePeer | null; // derived from editors
   align: "start" | "end"; // default "start"
   labelPosition: "inline" | "top" | "auto"; // attribute label-position
   stackBelow: number; // attribute stack-below, default 200
@@ -86,23 +86,25 @@ commits a concrete value.
 ## Collaboration
 
 ```ts
-interface CollaboratorPresence {
-  clientId: string;
-  displayName: string;
-  color: string;
-  editing?: string; // field path being edited
-}
+field.editors = [
+  { clientId: "ada", displayName: "Ada", color: "#e07a5f" }
+];
+field.lockedBy; // Ada: the field is locked
 ```
 
-- `lockedBy` makes the field read-only and keeps it focusable. The row shows
-  the holder's colour as a left bar and tint, and "Held by" on hover. The
-  layout does not change.
-- `peers` shows collaborator chips at the end of the label cell, except the
-  local peer. Chips are hidden while locked.
+- `editors` lists the peers editing the field, as
+  [`PresencePeer`](../peer/presence.md#properties).
+- `lockedBy` is the first of them, or `null` when the list holds the local
+  peer (`self: true`): local focus beats a remote claim.
+- A locked field is read-only and stays focusable. The row shows the holder's
+  colour as a left bar and tint, and "Held by" on hover. The layout does not
+  change.
+- While the field is not locked, the other peers show as chips at the end of
+  the label cell.
 - `path` is the identity the field claims while focused, agreed between
-  clients. Under a pane with a [`PresenceSource`](../peer/presence-source.md),
-  `lockedBy` and `peers` are written for the field: it claims on focus and
-  releases on blur and disconnection.
+  clients. Under a pane with a [`FieldLockSource`](../peer/field-locks.md),
+  `editors` is written for the field: it claims on focus and releases on blur
+  and disconnection.
 - The package owns no collaboration transport.
 
 ## Searching

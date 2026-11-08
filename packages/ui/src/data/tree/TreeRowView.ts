@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { IconName } from "../../icon/registry.ts";
-import type { PeerAvatar } from "../../peer/Avatar.ts";
+import type { PeerAvatar } from "../../peer/avatar/Avatar.ts";
 import type { SearchMatch } from "../../search/SearchQuery.ts";
 import type {
   TreeBadge,

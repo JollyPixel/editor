@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import "../../../../src/peer/PresenceStack.ts";
+import "../../../../src/peer/presence/PresenceStack.ts";
 import type { GalleryExample } from "../../types.ts";
 
 export const PRESENCE_STACK_EXAMPLE: GalleryExample = {

@@ -6,11 +6,13 @@ import {
   type PeerProfileMetadata,
   type Room
 } from "@jolly-pixel/network/client";
-import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import type { PeerIdentity } from "../peer/identity.ts";
-import type { PresencePeer } from "../peer/types.ts";
+import type { PeerIdentity } from "../peer/identity/PeerIdentity.ts";
+import type { PeerMark } from "../peer/PeerMarks.ts";
+import { peerColor } from "../peer/peerColor.ts";
+import { compareClientIds } from "../peer/peerOrder.ts";
+import type { PresencePeer } from "../peer/PresencePeer.ts";
 
 interface RoomMember {
   clientId: string;
@@ -42,16 +44,6 @@ export function toPeerProfileMetadata(
     profile;
 }
 
-export function* collaborators<TMember extends RoomMember>(
-  members: Iterable<TMember>
-): IterableIterator<TMember> {
-  for (const member of members) {
-    if (parsePeerProfile(member.profile).observer !== true) {
-      yield member;
-    }
-  }
-}
-
 export function peerProfileColor(
   clientId: string,
   profile: PeerMetadata | undefined
@@ -74,21 +66,53 @@ export function toPresencePeer(
   };
 }
 
-export function localPresencePeer(
-  room: Pick<Room, "clientId" | "profile">
-): PresencePeer {
-  return {
+export function remotePeers(
+  room: Pick<Room, "peers">
+): PresencePeer[] {
+  const peers: PresencePeer[] = [];
+  for (const member of room.peers.values()) {
+    if (parsePeerProfile(member.profile).observer !== true) {
+      peers.push(toPresencePeer(member));
+    }
+  }
+
+  return peers.sort(
+    (left, right) => compareClientIds(left.clientId, right.clientId)
+  );
+}
+
+export function roomPeers(
+  room: Pick<Room, "clientId" | "profile" | "peers">
+): PresencePeer[] {
+  const local: PresencePeer = {
     ...toPresencePeer({
       clientId: room.clientId ?? "",
       profile: room.profile
     }),
     self: true
   };
+
+  return [local, ...remotePeers(room)];
+}
+
+export function markedPeers<TValue>(
+  room: Pick<Room, "peers">,
+  values: ReadonlyMap<string, TValue | null>
+): PeerMark<TValue>[] {
+  const marks: PeerMark<TValue>[] = [];
+  for (const peer of remotePeers(room)) {
+    const value = values.get(peer.clientId);
+    if (value !== undefined && value !== null) {
+      marks.push([peer, value]);
+    }
+  }
+
+  return marks;
 }
 
 function profileColor(
   clientId: string,
   profile: PeerProfile
 ): string {
-  return ColorSequence.default.pick(profile.peerId ?? clientId);
+  return peerColor(profile.peerId ?? clientId);
 }

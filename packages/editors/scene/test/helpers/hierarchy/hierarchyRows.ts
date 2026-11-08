@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { SceneTreeReader } from "@jolly-pixel/asset.scene/client";
+import { PeerMarks } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -14,7 +15,7 @@ export function readRows(
   sources: Partial<RowSources> = {}
 ): HierarchyRows {
   return HierarchyRows.read(tree, {
-    marks: new Map(),
+    marks: new PeerMarks(),
     components: createSceneComponents(),
     naming: { name: () => "Overworld" },
     live,

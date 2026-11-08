@@ -15,6 +15,7 @@ import {
   ContextMenuController,
   LazyTemplate,
   MenuSession,
+  PeerMarks,
   formatCount,
   type ContextMenu
 } from "@jolly-pixel/ui";
@@ -33,7 +34,7 @@ import {
   LIBRARY_MENU,
   type BlockCommand
 } from "./BlockMenu.ts";
-import { PeerMarks } from "./PeerMarks.ts";
+import { withSelf } from "./withSelf.ts";
 import type { MaterialSwatch } from "../../materials/MaterialSwatch.ts";
 import type {
   BlockContextDetail,
@@ -490,7 +491,7 @@ export class BlockLibrary extends EditingElement {
     editing: VoxelMapEditing
   ): void {
     const { presence } = editing.state;
-    this._marks = PeerMarks.withSelf(
+    this._marks = withSelf(
       presence.blockSelections,
       this._selectedId,
       presence.peers

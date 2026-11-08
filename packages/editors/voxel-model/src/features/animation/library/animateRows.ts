@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
-import type { TreeNode } from "@jolly-pixel/ui";
-import {
-  peerBadges,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
+import type {
+  PeerMarks,
+  TreeNode
+} from "@jolly-pixel/ui";
 import {
   TICKS_PER_SECOND,
   type AnimationClipJSON
@@ -20,7 +19,7 @@ import {
   type ClipKey
 } from "../../../state/index.ts";
 
-export type ClipFocuses = PeerMarkMap<ClipKey>;
+export type ClipFocuses = PeerMarks<ClipKey>;
 
 export interface RowTarget {
   setId: string;
@@ -63,7 +62,7 @@ export function clipNodes(
       label: clip.name,
       renamable: true,
       detail: `${(clip.length / TICKS_PER_SECOND).toFixed(1)}s`,
-      badges: peerBadges(id, focuses),
+      badges: focuses.badges(id),
       data: { setId: set.id, target, clipId: clip.id }
     };
   });

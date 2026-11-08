@@ -1,1 +1,1 @@
-export { PresenceElement } from "../peer/Presence.ts";
+export { PresenceElement } from "../peer/presence/Presence.ts";

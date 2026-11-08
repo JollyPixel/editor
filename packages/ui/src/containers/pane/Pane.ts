@@ -41,10 +41,10 @@ import {
   pageNamespace
 } from "../../storage/keys.ts";
 import {
-  providePresenceSource,
-  type PresenceProvider
-} from "../../peer/presenceContext.ts";
-import type { PresenceSource } from "../../peer/PresenceSource.ts";
+  provideFieldLocks,
+  type FieldLocksProvider
+} from "../../peer/lock/fieldLockContext.ts";
+import type { FieldLockSource } from "../../peer/lock/FieldLockSource.ts";
 import { hiddenStyles } from "../../theme/styles/hiddenStyles.ts";
 
 // CONSTANTS
@@ -150,7 +150,7 @@ export class PaneElement extends LitElement {
   declare storage: StorageAdapter;
 
   @property({ attribute: false })
-  declare presence: PresenceSource | null;
+  declare fieldLocks: FieldLockSource | null;
 
   @state()
   declare _hasActions: boolean;
@@ -190,7 +190,7 @@ export class PaneElement extends LitElement {
     }
   });
   #hosted = false;
-  #presenceProvider: PresenceProvider | null = null;
+  #fieldLocksProvider: FieldLocksProvider | null = null;
   #folders = new FolderListController(this, {
     content: () => this._content,
     contentSlot: () => this._contentSlot,
@@ -267,7 +267,7 @@ export class PaneElement extends LitElement {
     this.searchable = false;
     this.storageKey = "";
     this.storage = defaultStorageAdapter();
-    this.presence = null;
+    this.fieldLocks = null;
     this._hasActions = false;
     this._announcement = "";
     this.movable = false;
@@ -275,14 +275,14 @@ export class PaneElement extends LitElement {
   }
 
   override disconnectedCallback(): void {
-    this.#presenceProvider?.dispose();
-    this.#presenceProvider = null;
+    this.#fieldLocksProvider?.dispose();
+    this.#fieldLocksProvider = null;
     super.disconnectedCallback();
   }
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.#presenceProvider = providePresenceSource(this, () => this.presence);
+    this.#fieldLocksProvider = provideFieldLocks(this, () => this.fieldLocks);
     this.#managed = this.closest("jolly-dock-layout") !== null;
     this.grouped = this.parentElement?.tagName === "JOLLY-PANE-GROUP";
     if (!this.grouped) {
@@ -304,8 +304,8 @@ export class PaneElement extends LitElement {
   protected override willUpdate(
     changed: Map<PropertyKey, unknown>
   ): void {
-    if (changed.has("presence")) {
-      this.#presenceProvider?.notify();
+    if (changed.has("fieldLocks")) {
+      this.#fieldLocksProvider?.notify();
     }
     if (changed.has("icon") || changed.has("tone")) {
       applyAreaTone(this, this.areaTone);

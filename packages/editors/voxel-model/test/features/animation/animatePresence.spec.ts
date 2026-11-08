@@ -63,9 +63,9 @@ describe("AnimatePresence", () => {
     });
 
     patch({ animateCursor: { clip: wave, tick: 0, keys: [] } });
-    const marked = [...model.presence.clipFocuses].map(([clip, peers]) => [
+    const marked = [...model.presence.clipFocuses.keys()].map((clip) => [
       clip,
-      peers.map(({ displayName }) => displayName)
+      model.presence.clipFocuses.peersAt(clip).map(({ displayName }) => displayName)
     ]);
     assert.deepEqual(marked, [[wave, ["bob"]]]);
 

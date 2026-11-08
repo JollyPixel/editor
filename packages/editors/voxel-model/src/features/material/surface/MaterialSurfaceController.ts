@@ -77,7 +77,7 @@ export class MaterialSurfaceController {
   get editors(): readonly PresencePeer[] {
     return this.#materialId === null ?
       [] :
-      this.#editing?.presence.materialEdits.get(this.#materialId) ?? [];
+      this.#editing?.presence.materialEdits.peersAt(this.#materialId) ?? [];
   }
 
   get editable(): boolean {

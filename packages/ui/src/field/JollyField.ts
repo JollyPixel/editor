@@ -28,17 +28,17 @@ import { hiddenStyles } from "../theme/styles/hiddenStyles.ts";
 import { emitFieldEvent } from "./events.ts";
 import {
   isModified,
-  resolveHolder,
+  lockHolder,
   splitPeerChips
 } from "./predicates.ts";
 import {
   isMixed,
   type FieldValue
 } from "./mixed.ts";
-import type { CollaboratorPresence } from "../peer/types.ts";
+import type { PresencePeer } from "../peer/PresencePeer.ts";
 import type { SearchQuery } from "../search/SearchQuery.ts";
 import type { Searchable } from "../search/Searchable.ts";
-import { LockController } from "../peer/LockController.ts";
+import { LockController } from "../peer/lock/LockController.ts";
 import { resolveThemeToken } from "../theme/resolveThemeToken.ts";
 import { revealOverflowTitle } from "../interaction/overflowTitle.ts";
 
@@ -76,10 +76,7 @@ export abstract class JollyField<TValue> extends LitElement
   declare default: TValue | undefined;
 
   @property({ attribute: false })
-  declare lockedBy: CollaboratorPresence | null;
-
-  @property({ attribute: false })
-  declare peers: readonly CollaboratorPresence[];
+  declare editors: readonly PresencePeer[];
 
   @property({ type: String, reflect: true })
   declare path: string | null;
@@ -129,8 +126,7 @@ export abstract class JollyField<TValue> extends LitElement
     this.label = "";
     this.description = "";
     this.default = undefined;
-    this.lockedBy = null;
-    this.peers = [];
+    this.editors = [];
     this.path = null;
     this.error = null;
     this.disabled = false;
@@ -141,6 +137,10 @@ export abstract class JollyField<TValue> extends LitElement
     this.stackBelow = DEFAULT_STACK_BELOW;
     this.descriptionDisplay = "block";
     new LabelStackController(this);
+  }
+
+  get lockedBy(): PresencePeer | null {
+    return lockHolder(this.editors);
   }
 
   applySearch(
@@ -241,14 +241,6 @@ export abstract class JollyField<TValue> extends LitElement
       : `Held by ${this.lockedBy.displayName}`;
   }
 
-  protected get holder(): CollaboratorPresence | null {
-    return resolveHolder(
-      this.peers,
-      this.lockedBy,
-      this.#lock.selfId
-    );
-  }
-
   override connectedCallback(): void {
     super.connectedCallback();
     queueMicrotask(() => this.#warnWhenUnscoped());
@@ -261,7 +253,7 @@ export abstract class JollyField<TValue> extends LitElement
       this.#lock.pathChanged();
     }
 
-    const holder = this.holder;
+    const holder = this.lockedBy;
 
     this.toggleAttribute(
       "locked",
@@ -306,7 +298,7 @@ export abstract class JollyField<TValue> extends LitElement
   }
 
   override render(): TemplateResult {
-    const holder = this.holder;
+    const holder = this.lockedBy;
 
     return html`
       <div
@@ -377,7 +369,7 @@ export abstract class JollyField<TValue> extends LitElement
     const {
       shown,
       overflow
-    } = splitPeerChips(this.peers, kMaxChips, this.#lock.selfId);
+    } = splitPeerChips(this.editors, kMaxChips);
     if (shown.length === 0) {
       return nothing;
     }

@@ -10,10 +10,12 @@ import { ColorSequence } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
 import {
+  markedPeers,
   peerProfileColor,
   toPeerProfileMetadata,
   toPresencePeer
 } from "../../src/network/peerProfile.ts";
+import { createRoomHarness } from "../helpers/network/roomHarness.ts";
 
 describe("peer profile", () => {
   test("publishes the username and peer id of an identity", () => {
@@ -66,5 +68,27 @@ describe("peer profile", () => {
 
     assert.equal(peer.badge, "via link");
     assert.equal(peer.peerId, undefined);
+  });
+});
+
+describe("markedPeers", () => {
+  test("pairs present peers with their values by client id, skipping null values and absent senders", () => {
+    const harness = createRoomHarness();
+    harness.addPeer("zoe", { profile: { username: "Zoe", peerId: "zoe" } });
+    harness.addPeer("ada", { profile: { username: "Ada", peerId: "ada" } });
+    harness.addPeer("bob");
+    const values = new Map<string, { clip: string; } | null>([
+      ["zoe", { clip: "walk" }],
+      ["gone", { clip: "walk" }],
+      ["bob", null],
+      ["ada", { clip: "run" }]
+    ]);
+
+    const marked = markedPeers(harness.room, values);
+
+    assert.deepEqual(
+      marked.map(([peer, value]) => [peer.displayName, value.clip]),
+      [["Ada", "run"], ["Zoe", "walk"]]
+    );
   });
 });

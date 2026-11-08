@@ -5,10 +5,7 @@ bottom and fade after a grace period. It holds no state: a
 [`LogQueue`](#logqueue) owns the entries.
 
 ```ts
-import {
-  LogQueue,
-  peerColor
-} from "@jolly-pixel/ui";
+import { LogQueue } from "@jolly-pixel/ui";
 import { html } from "lit";
 
 const queue = new LogQueue();
@@ -19,7 +16,7 @@ queue.subscribe((entries) => {
 });
 
 queue.push("Camera switched to free fly");
-queue.push(html`<b style="color: ${peerColor(3)}">Ada</b> has joined`);
+queue.push(html`<b style="color: ${ada.color}">Ada</b> has joined`);
 ```
 
 ## Properties

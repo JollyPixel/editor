@@ -2,6 +2,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { PeerMarks } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import {
   GLASS_SURFACE,
@@ -198,8 +201,8 @@ describe("MaterialLibraryController peers", () => {
     harness.controller.select(null);
     assert.equal(harness.materialFocus.edited, null);
 
-    harness.presence.materialEdits = new Map([
-      [harness.glass, [{ clientId: "b", color: "#ff0000", displayName: "Bea" }]]
+    harness.presence.materialEdits = new PeerMarks([
+      [{ clientId: "b", color: "#ff0000", displayName: "Bea" }, harness.glass]
     ]);
 
     assert.deepEqual(harness.controller.state.nodes[0].badges, [

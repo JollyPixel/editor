@@ -7,6 +7,7 @@ import {
 
 // Import Third-party Dependencies
 import type { VoxelWorldContentCommand } from "@jolly-pixel/voxel.renderer";
+import { PeerMarks } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import { TemplateDraftId } from "../../../../src/map/TemplateDraftId.ts";
@@ -58,8 +59,8 @@ describe("TemplateEditing.close", () => {
   test("keeps the draft for a peer still editing it", () => {
     const { world, presence, editing } = templateEditingFixture();
     editing.open("house");
-    presence.layerSelections = new Map([
-      [new VoxelLayerRef(world.getLayerById(DRAFT_LAYER)!.name).key, [presencePeer("bob")]]
+    presence.layerSelections = new PeerMarks([
+      [presencePeer("bob"), new VoxelLayerRef(world.getLayerById(DRAFT_LAYER)!.name).key]
     ]);
 
     editing.close();

@@ -59,21 +59,18 @@ export class PeerEditContext extends Emitter<PeerEditContextEvents> {
   #draftLayerId(
     clientId: string
   ): string | null {
-    for (const [key, peers] of this.#presence.layerSelections) {
-      if (!peers.some((peer) => peer.clientId === clientId)) {
-        continue;
-      }
-
-      const ref = parseLayerRef(key);
-      const layer = ref.kind === "voxel-layer" ?
-        this.#world.getLayer(ref.name) :
-        undefined;
-
-      return layer !== undefined && TemplateDraftId.isDraft(layer) ?
-        layer.id :
-        null;
+    const key = this.#presence.layerSelections.markedBy(clientId);
+    if (key === undefined) {
+      return null;
     }
 
-    return null;
+    const ref = parseLayerRef(key);
+    const layer = ref.kind === "voxel-layer" ?
+      this.#world.getLayer(ref.name) :
+      undefined;
+
+    return layer !== undefined && TemplateDraftId.isDraft(layer) ?
+      layer.id :
+      null;
   }
 }

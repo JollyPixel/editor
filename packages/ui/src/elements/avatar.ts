@@ -1,1 +1,1 @@
-export { Avatar } from "../peer/Avatar.ts";
+export { Avatar } from "../peer/avatar/Avatar.ts";

@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import "../../../../src/controls/Text.ts";
 import type { GalleryExample } from "../../types.ts";
-import { peerColor } from "../../../../src/theme/peerColor.ts";
+import { peerColor } from "../../../../src/peer/peerColor.ts";
 import { readDetail } from "../../../../src/dom.ts";
 import type { JollyChangeDetail } from "../../../../src/field/events.ts";
 import type { Text } from "../../../../src/controls/Text.ts";
@@ -31,11 +31,11 @@ export const UNLABELED_FIELDS_EXAMPLE: GalleryExample = {
       }),
       buildRow("unlabeled+locked", (field) => {
         field.value = "Background";
-        field.lockedBy = {
+        field.editors = [{
           clientId: "peer-ada",
           displayName: "Ada",
-          color: peerColor(0)
-        };
+          color: peerColor("peer-ada")
+        }];
       }),
       buildRow("unlabeled+top", (field) => {
         field.value = "Background";

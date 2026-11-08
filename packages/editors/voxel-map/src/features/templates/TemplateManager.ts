@@ -14,7 +14,6 @@ import {
   type TreeBadge,
   type TreeNode
 } from "@jolly-pixel/ui";
-import { peerBadges } from "@jolly-pixel/ui/network";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/tree";
@@ -235,7 +234,7 @@ export class TemplateManager extends EditingElement {
       if (draft !== null) {
         drafts.set(
           draft.templateId,
-          peerBadges(new VoxelLayerRef(layer.name).key, marks)
+          marks.badges(new VoxelLayerRef(layer.name).key)
         );
       }
     }

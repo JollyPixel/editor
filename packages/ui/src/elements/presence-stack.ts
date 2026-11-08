@@ -1,1 +1,1 @@
-export { PresenceStack } from "../peer/PresenceStack.ts";
+export { PresenceStack } from "../peer/presence/PresenceStack.ts";

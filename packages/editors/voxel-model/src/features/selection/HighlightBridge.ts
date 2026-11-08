@@ -6,10 +6,7 @@ import {
   PeerHighlights,
   createListedColorAllocator
 } from "@jolly-pixel/three";
-import {
-  reconcilePeerMarks,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
+import { PeerMarkSync } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type { ModelBlock, ModelBlocks } from "../../scene/blocks/index.ts";
@@ -42,8 +39,8 @@ export class HighlightBridge {
   #selection: BlockSelectionStore;
   #presence: PresenceStore;
   #selectedBlock: ModelBlock | null = null;
-  #highlightedUuidByClient = new Map<string, string>();
-  #hoveredUuidByClient = new Map<string, string>();
+  #peerSelections: PeerMarkSync<string>;
+  #peerHovers: PeerMarkSync<string>;
   #subscriptions: Array<() => void>;
 
   #onBlockAdded = (
@@ -81,18 +78,6 @@ export class HighlightBridge {
     );
   };
 
-  #onPresenceChange = (
-    selections: PeerMarkMap<string>
-  ): void => {
-    this.#applyPresence(selections);
-  };
-
-  #onHoverPresenceChange = (
-    hovers: PeerMarkMap<string>
-  ): void => {
-    this.#applyHoverPresence(hovers);
-  };
-
   constructor(
     options: HighlightBridgeOptions
   ) {
@@ -124,14 +109,24 @@ export class HighlightBridge {
       })
     });
 
+    const { peers } = this.#meshHighlight;
+    this.#peerSelections = new PeerMarkSync({
+      hold: (peer, uuid) => peers.select(peer.clientId, uuid),
+      release: (clientId) => peers.select(clientId, null)
+    });
+    this.#peerHovers = new PeerMarkSync({
+      hold: (peer, uuid) => peers.hover(peer.clientId, uuid),
+      release: (clientId) => peers.hover(clientId, null)
+    });
+
     for (const block of this.#blocks.values()) {
       this.#onBlockAdded(block);
     }
     this.#onSelect(this.#selection.selected);
     this.#onHover(this.#selection.hovered);
     this.#onEmphasize(this.#selection.emphasized);
-    this.#applyPresence(this.#presence.blockSelections);
-    this.#applyHoverPresence(this.#presence.blockHovers);
+    this.#peerSelections.apply(this.#presence.blockSelections);
+    this.#peerHovers.apply(this.#presence.blockHovers);
 
     this.#subscriptions = [
       this.#blocks.subscribe("blockAdded", this.#onBlockAdded),
@@ -139,8 +134,14 @@ export class HighlightBridge {
       this.#selection.subscribe("select", this.#onSelect),
       this.#selection.subscribe("hover", this.#onHover),
       this.#selection.subscribe("emphasize", this.#onEmphasize),
-      this.#presence.subscribe("blockSelectionsChange", this.#onPresenceChange),
-      this.#presence.subscribe("blockHoversChange", this.#onHoverPresenceChange)
+      this.#presence.subscribe(
+        "blockSelectionsChange",
+        (marks) => this.#peerSelections.apply(marks)
+      ),
+      this.#presence.subscribe(
+        "blockHoversChange",
+        (marks) => this.#peerHovers.apply(marks)
+      )
     ];
   }
 
@@ -154,33 +155,5 @@ export class HighlightBridge {
       unsubscribe();
     }
     this.#meshHighlight.dispose();
-  }
-
-  #applyPresence(
-    selections: PeerMarkMap<string>
-  ): void {
-    const { peers } = this.#meshHighlight;
-    this.#highlightedUuidByClient = reconcilePeerMarks(
-      selections,
-      this.#highlightedUuidByClient,
-      {
-        hold: (peer, uuid) => peers.select(peer.clientId, uuid),
-        release: (clientId) => peers.select(clientId, null)
-      }
-    );
-  }
-
-  #applyHoverPresence(
-    hovers: PeerMarkMap<string>
-  ): void {
-    const { peers } = this.#meshHighlight;
-    this.#hoveredUuidByClient = reconcilePeerMarks(
-      hovers,
-      this.#hoveredUuidByClient,
-      {
-        hold: (peer, uuid) => peers.hover(peer.clientId, uuid),
-        release: (clientId) => peers.hover(clientId, null)
-      }
-    );
   }
 }

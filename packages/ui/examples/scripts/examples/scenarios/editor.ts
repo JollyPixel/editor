@@ -18,28 +18,28 @@ import "../../../../src/controls/Toggle.ts";
 import "../../../../src/math/Quaternion.ts";
 import "../../../../src/math/Vector3.ts";
 import { Mixed, type FieldValue } from "../../../../src/field/mixed.ts";
-import { peerColor } from "../../../../src/theme/peerColor.ts";
+import { peerColor } from "../../../../src/peer/peerColor.ts";
 import { readDetail } from "../../../../src/dom.ts";
 import { showConfirm } from "../../../../src/containers/dialog/dialogHelpers.ts";
-import type { CollaboratorPresence } from "../../../../src/peer/types.ts";
+import type { PresencePeer } from "../../../../src/peer/PresencePeer.ts";
 import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
-const kPeers: CollaboratorPresence[] = [
+const kPeers: PresencePeer[] = [
   {
     clientId: "ana",
     displayName: "Ana",
-    color: peerColor(0)
+    color: peerColor("ana")
   },
   {
     clientId: "bo",
     displayName: "Bo",
-    color: peerColor(1)
+    color: peerColor("bo")
   },
   {
     clientId: "cy",
     displayName: "Cy",
-    color: peerColor(2)
+    color: peerColor("cy")
   }
 ];
 
@@ -315,8 +315,7 @@ function buildTransform(): HTMLElementTagNameMap["jolly-folder"] {
     z: 0,
     w: 0.9238795325112867
   };
-  rotation.lockedBy = kPeers[0];
-  rotation.peers = [kPeers[0], kPeers[1]];
+  rotation.editors = [kPeers[0], kPeers[1]];
 
   folder.append(readonlyField, rotation);
 
@@ -374,7 +373,7 @@ function buildMaterial(): HTMLElementTagNameMap["jolly-folder"] {
   peered.max = 1;
   peered.step = 0.01;
   peered.value = 0.8;
-  peered.peers = kPeers;
+  peered.editors = kPeers;
 
   const erroredSlider = bind(document.createElement("jolly-slider"));
   erroredSlider.label = "Emission";

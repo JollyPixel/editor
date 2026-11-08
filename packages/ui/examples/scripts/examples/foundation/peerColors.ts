@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { peerColor } from "../../../../src/theme/peerColor.ts";
+import { peerColor } from "../../../../src/peer/peerColor.ts";
 import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
@@ -14,7 +14,7 @@ export const PEER_COLORS_EXAMPLE: GalleryExample = {
     const chips = Array.from({ length: kPeerCount }, (_, index) => {
       const chip = document.createElement("span");
       chip.className = "peer-chip";
-      chip.style.background = peerColor(index);
+      chip.style.background = peerColor(`peer-${index}`);
       chip.textContent = String(index);
       row.append(chip);
 

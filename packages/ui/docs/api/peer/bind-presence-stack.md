@@ -29,9 +29,8 @@ interface PeerListSource {
 }
 ```
 
-- `PeerListSource` is a ready list of `PresencePeer`. It is not the
-  [`PresenceSource`](./presence-source.md) port, whose peers become a list
-  with `toPresencePeers(presence.peers.values(), presence.clientId)`.
+- `PeerListSource` is a ready list of `PresencePeer`, such as an editor store
+  fed by [`PeerRoster`](../network.md#peerroster).
 - The element shows `source.peers`, and is hidden while the local peer is
   alone.
 - `onSelect` receives the client id of the peer clicked in the stack.

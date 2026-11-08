@@ -55,12 +55,18 @@ export class LayerSummary extends LitElement {
 A source with an `on`/`off` pair returns the matching `off`:
 
 ```ts
-#presence = new SubscriptionController<PresenceSource>(this, (presence) => {
+interface PeerSource {
+  readonly peers: readonly PresencePeer[];
+  on(event: "change", listener: () => void): void;
+  off(event: "change", listener: () => void): void;
+}
+
+#peers = new SubscriptionController<PeerSource>(this, (source) => {
   const repaint = () => this.requestUpdate();
-  presence.on("change", repaint);
+  source.on("change", repaint);
 
   return [
-    () => presence.off("change", repaint)
+    () => source.off("change", repaint)
   ];
 });
 ```

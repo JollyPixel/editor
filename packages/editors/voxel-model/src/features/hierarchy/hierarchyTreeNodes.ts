@@ -1,12 +1,9 @@
 // Import Third-party Dependencies
 import type {
   IconName,
+  PeerMarks,
   TreeNode
 } from "@jolly-pixel/ui";
-import {
-  peerBadges,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -18,11 +15,11 @@ import { matchBlockShapeEntry } from "../../shared/blockShapes.ts";
 
 export function toTreeNodes(
   nodes: readonly HierarchyNode[],
-  marks: PeerMarkMap<string>,
+  marks: PeerMarks<string>,
   isVisible: (id: string) => boolean
 ): TreeNode[] {
   return nodes.map((node) => {
-    const badges = peerBadges(node.id, marks);
+    const badges = marks.badges(node.id);
     const children = toTreeNodes(node.children, marks, isVisible);
 
     return {

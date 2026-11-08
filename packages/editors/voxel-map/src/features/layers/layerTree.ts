@@ -2,12 +2,9 @@
 import type { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 import {
   formatCount,
+  type PeerMarks,
   type TreeNode
 } from "@jolly-pixel/ui";
-import {
-  peerBadges,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -84,12 +81,12 @@ export function layerTreeNodes(
 
 export function withLayerBadges(
   nodes: readonly TreeNode<LayerRef>[],
-  marks: PeerMarkMap<string>
+  marks: PeerMarks<string>
 ): TreeNode<LayerRef>[] {
   return nodes.map((node) => {
     const badges = node.data === undefined ?
       [] :
-      peerBadges(node.data.key, marks);
+      marks.badges(node.data.key);
     const children = node.children === undefined
       ? undefined
       : withLayerBadges(node.children, marks);

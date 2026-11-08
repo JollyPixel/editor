@@ -3,8 +3,10 @@ import { Client } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { Pane } from "../shared/facadePane.ts";
-import { toPresencePeers } from "../../../../src/peer/toPresencePeers.ts";
-import { RoomPresenceSource } from "../../../../src/network/index.ts";
+import {
+  PeerRoster,
+  RoomFieldLocks
+} from "../../../../src/network/index.ts";
 import type { GalleryExample } from "../../types.ts";
 
 // CONSTANTS
@@ -51,21 +53,16 @@ export const LOCKING_EXAMPLE: GalleryExample = {
     });
     const room = client.room(roomName);
     room.join();
-    const source = new RoomPresenceSource(room);
-
-    function repaint(): void {
-      presence.update(
-        toPresencePeers(source.peers.values(), source.clientId)
-      );
-    }
-    source.on("change", repaint);
-    repaint();
-
-    pane.presence = source;
+    const roster = new PeerRoster({
+      room,
+      publish: (peers) => presence.update(peers)
+    });
+    const fieldLocks = new RoomFieldLocks(room);
+    pane.fieldLocks = fieldLocks;
 
     return () => {
-      source.off("change", repaint);
-      source.dispose();
+      fieldLocks.dispose();
+      roster.dispose();
       room.leave();
       client.destroy();
       pane.dispose();

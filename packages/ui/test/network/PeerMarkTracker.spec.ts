@@ -6,30 +6,35 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import {
-  markedPeers,
-  peerMarks,
-  PeerMarkTracker,
-  type PeerMarkMap
-} from "../../src/network/PeerMarkTracker.ts";
+import { PeerMarkTracker } from "../../src/network/PeerMarkTracker.ts";
+import { PeerMarks } from "../../src/peer/PeerMarks.ts";
 import { createRoomHarness } from "../helpers/network/roomHarness.ts";
 
 interface TrackerHarness extends ReturnType<typeof createRoomHarness> {
   tracker: PeerMarkTracker<string>;
-  marks: () => PeerMarkMap<string>;
+  marks: () => PeerMarks<string>;
   setLocal: (key: string | null) => void;
+  localListeners: () => number;
 }
 
 function createTracker(): TrackerHarness {
   const room = createRoomHarness();
+  const listeners = new Set<() => void>();
   let local: string | null = "local-key";
-  let published: PeerMarkMap<string> = new Map();
+  let published = new PeerMarks<string>();
 
   const tracker = new PeerMarkTracker<string>({
     room: room.room,
     presenceKey: "block",
-    localKey: () => local,
-    readKey: readStringKey,
+    decode: (value) => (typeof value === "string" ? value : undefined),
+    local: {
+      read: () => local,
+      subscribe: (listener) => {
+        listeners.add(listener);
+
+        return () => listeners.delete(listener);
+      }
+    },
     publish: (marks) => {
       published = marks;
     }
@@ -41,23 +46,19 @@ function createTracker(): TrackerHarness {
     marks: () => published,
     setLocal(key) {
       local = key;
-    }
+      for (const listener of listeners) {
+        listener();
+      }
+    },
+    localListeners: () => listeners.size
   };
 }
 
-function readStringKey(
-  value: unknown
-): string | null {
-  return typeof value === "string" ? value : null;
-}
-
-function listClientIds(
-  marks: PeerMarkMap<string>
-): [string, string[]][] {
-  return [...marks].map(([key, bucket]) => [
-    key,
-    bucket.map((mark) => mark.clientId)
-  ]);
+function clientIdsAt(
+  marks: PeerMarks<string>,
+  key: string
+): string[] {
+  return marks.peersAt(key).map((peer) => peer.clientId);
 }
 
 describe("PeerMarkTracker", () => {
@@ -70,10 +71,9 @@ describe("PeerMarkTracker", () => {
 
   it("publishes null when nothing is selected locally", () => {
     const harness = createTracker();
-    harness.setLocal(null);
     harness.published.length = 0;
 
-    harness.tracker.publishLocal();
+    harness.setLocal(null);
 
     assert.deepEqual(harness.published, [{ block: null }]);
     harness.tracker.dispose();
@@ -83,7 +83,7 @@ describe("PeerMarkTracker", () => {
     const harness = createTracker();
     harness.published.length = 0;
 
-    harness.tracker.publishLocal();
+    harness.setLocal("local-key");
 
     assert.deepEqual(harness.published, []);
     harness.tracker.dispose();
@@ -97,10 +97,8 @@ describe("PeerMarkTracker", () => {
 
     harness.emit("sync");
 
-    assert.deepEqual(listClientIds(harness.marks()), [
-      ["a", ["bob", "cleo"]],
-      ["b", ["dan"]]
-    ]);
+    assert.deepEqual(clientIdsAt(harness.marks(), "a"), ["bob", "cleo"]);
+    assert.deepEqual(clientIdsAt(harness.marks(), "b"), ["dan"]);
     harness.tracker.dispose();
   });
 
@@ -111,10 +109,7 @@ describe("PeerMarkTracker", () => {
 
     harness.emit("sync");
 
-    assert.deepEqual(
-      harness.marks().get("a")?.map((mark) => mark.clientId),
-      ["ada", "zoe"]
-    );
+    assert.deepEqual(clientIdsAt(harness.marks(), "a"), ["ada", "zoe"]);
     harness.tracker.dispose();
   });
 
@@ -126,10 +121,28 @@ describe("PeerMarkTracker", () => {
     });
 
     harness.emit("sync");
-    const [mark] = harness.marks().get("a") ?? [];
+    const [mark] = harness.marks().peersAt("a");
 
     assert.equal(mark.displayName, "Bob");
     assert.match(mark.color, /^#[0-9a-f]{6}$/i);
+    harness.tracker.dispose();
+  });
+
+  it("renames a mark when the peer profile changes", () => {
+    const harness = createTracker();
+    harness.addPeer("bob", {
+      profile: { username: "Bob", peerId: "bob" },
+      presence: { block: "a" }
+    });
+    harness.emit("sync");
+
+    harness.addPeer("bob", {
+      profile: { username: "Robert", peerId: "bob" },
+      presence: { block: "a" }
+    });
+    harness.emit("peer-profile", { clientId: "bob" });
+
+    assert.equal(harness.marks().peersAt("a")[0].displayName, "Robert");
     harness.tracker.dispose();
   });
 
@@ -143,11 +156,8 @@ describe("PeerMarkTracker", () => {
       patch: { block: "b" }
     });
 
-    assert.equal(harness.marks().has("a"), false);
-    assert.deepEqual(
-      harness.marks().get("b")?.map((mark) => mark.clientId),
-      ["bob"]
-    );
+    assert.deepEqual(clientIdsAt(harness.marks(), "a"), []);
+    assert.deepEqual(clientIdsAt(harness.marks(), "b"), ["bob"]);
     harness.tracker.dispose();
   });
 
@@ -161,10 +171,7 @@ describe("PeerMarkTracker", () => {
       patch: { frustum: {} }
     });
 
-    assert.deepEqual(
-      harness.marks().get("a")?.map((mark) => mark.clientId),
-      ["bob"]
-    );
+    assert.deepEqual(clientIdsAt(harness.marks(), "a"), ["bob"]);
     harness.tracker.dispose();
   });
 
@@ -191,14 +198,11 @@ describe("PeerMarkTracker", () => {
     harness.removePeer("bob");
     harness.emit("peer-left", { clientId: "bob" });
 
-    assert.deepEqual(
-      harness.marks().get("a")?.map((mark) => mark.clientId),
-      ["cleo"]
-    );
+    assert.deepEqual(clientIdsAt(harness.marks(), "a"), ["cleo"]);
     harness.tracker.dispose();
   });
 
-  it("clears the marks and the listeners on dispose", () => {
+  it("clears the marks and every listener on dispose", () => {
     const harness = createTracker();
     harness.addPeer("bob", { presence: { block: "a" } });
     harness.emit("sync");
@@ -206,45 +210,10 @@ describe("PeerMarkTracker", () => {
     harness.tracker.dispose();
 
     assert.equal(harness.marks().size, 0);
+    assert.equal(harness.localListeners(), 0);
     assert.equal(harness.listenerCount("sync"), 0);
     assert.equal(harness.listenerCount("peer-left"), 0);
     assert.equal(harness.listenerCount("peer-presence"), 0);
-  });
-});
-
-describe("markedPeers and peerMarks", () => {
-  it("pairs present peers with their values by client id, skipping null values and absent senders", () => {
-    const harness = createRoomHarness();
-    harness.addPeer("zoe", { profile: { username: "Zoe", peerId: "zoe" } });
-    harness.addPeer("ada", { profile: { username: "Ada", peerId: "ada" } });
-    harness.addPeer("bob");
-    const values = new Map<string, { clip: string; } | null>([
-      ["zoe", { clip: "walk" }],
-      ["gone", { clip: "walk" }],
-      ["bob", null],
-      ["ada", { clip: "run" }]
-    ]);
-
-    const marked = markedPeers(harness.room, values);
-
-    assert.deepEqual(
-      marked.map(([peer, value]) => [peer.displayName, value.clip]),
-      [["Ada", "run"], ["Zoe", "walk"]]
-    );
-  });
-
-  it("folds marked peers into buckets in their given order", () => {
-    const harness = createRoomHarness();
-    harness.addPeer("ada");
-    harness.addPeer("zoe");
-    const [ada, zoe] = markedPeers(harness.room, new Map([["ada", 1], ["zoe", 2]]))
-      .map(([peer]) => peer);
-
-    const marks = peerMarks([[zoe, "walk"], [ada, "walk"], [ada, "run"]]);
-
-    assert.deepEqual(listClientIds(marks), [
-      ["walk", ["zoe", "ada"]],
-      ["run", ["ada"]]
-    ]);
+    assert.equal(harness.listenerCount("peer-profile"), 0);
   });
 });

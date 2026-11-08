@@ -5,6 +5,7 @@ import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import { ResizeHandle } from "@jolly-pixel/resize-handle";
 import {
   LocalStorageAdapter,
+  PeerMarks,
   type StorageAdapter
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/icon";
@@ -23,10 +24,7 @@ import {
   type BlockMoveDetail,
   type ClientPoint
 } from "./BlockReorderController.ts";
-import {
-  PeerMarks,
-  type PeerMarkView
-} from "./PeerMarks.ts";
+import { PeerMarkView } from "./PeerMarkView.ts";
 import type { BlockLibraryLayout } from "./BlockLibrary.ts";
 import type { MaterialSwatch } from "../../materials/MaterialSwatch.ts";
 
@@ -508,7 +506,7 @@ export class BlockLibraryViewport extends LitElement {
 
     const cells: MarkedCell[] = [];
     this._laidOut.forEach((block, index) => {
-      const view = this.marks.createView(block.id);
+      const view = PeerMarkView.create(this.marks, block.id);
       if (view === null) {
         return;
       }

@@ -5,24 +5,21 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   isModified,
-  resolveHolder,
+  lockHolder,
   splitPeerChips
 } from "../../src/field/predicates.ts";
 import { Mixed } from "../../src/field/mixed.ts";
-import type { CollaboratorPresence } from "../../src/peer/types.ts";
-
-// CONSTANTS
-const kSelf = "self";
+import type { PresencePeer } from "../../src/peer/PresencePeer.ts";
 
 function peer(
   clientId: string,
-  editing?: string
-): CollaboratorPresence {
+  self = false
+): PresencePeer {
   return {
     clientId,
     displayName: clientId,
     color: "oklch(60% 0.16 0)",
-    ...(editing === undefined ? {} : { editing })
+    self
   };
 }
 
@@ -84,39 +81,17 @@ describe("Field.isModified", () => {
   });
 });
 
-describe("Field.resolveHolder", () => {
-  test("prefers an explicit lockedBy over any peer", () => {
-    const held = peer("ada");
-
-    assert.equal(
-      resolveHolder([peer("linus", "x")], held, kSelf),
-      held
-    );
+describe("Field.lockHolder", () => {
+  test("a remote editor holds the field", () => {
+    assert.equal(lockHolder([peer("ada"), peer("linus")])?.clientId, "ada");
   });
 
-  test("falls back to the first peer declaring itself editing", () => {
-    const holder = resolveHolder(
-      [
-        peer("ada"),
-        peer("linus", "position.x"),
-        peer("grace", "position.y")
-      ],
-      null,
-      kSelf
-    );
-
-    assert.equal(holder?.clientId, "linus");
+  test("the local peer never locks its own field, even when contended", () => {
+    assert.equal(lockHolder([peer("me", true), peer("ada")]), null);
   });
 
-  test("is null when peers are present but none is editing", () => {
-    assert.equal(
-      resolveHolder([peer("ada"), peer("linus")], null, kSelf),
-      null
-    );
-  });
-
-  test("is null with no peers at all", () => {
-    assert.equal(resolveHolder([], null, kSelf), null);
+  test("is null with no editors", () => {
+    assert.equal(lockHolder([]), null);
   });
 });
 
@@ -126,7 +101,7 @@ describe("Field.splitPeerChips", () => {
       peer("a"),
       peer("b")
     ];
-    const { shown, overflow } = splitPeerChips(peers, 3, kSelf);
+    const { shown, overflow } = splitPeerChips(peers, 3);
 
     assert.equal(shown.length, 2);
     assert.equal(overflow, 0);
@@ -135,8 +110,7 @@ describe("Field.splitPeerChips", () => {
   test("shows every peer when exactly at the limit", () => {
     const { shown, overflow } = splitPeerChips(
       [peer("a"), peer("b"), peer("c")],
-      3,
-      kSelf
+      3
     );
 
     assert.equal(shown.length, 3);
@@ -151,7 +125,7 @@ describe("Field.splitPeerChips", () => {
       peer("d"),
       peer("e")
     ];
-    const { shown, overflow } = splitPeerChips(peers, 3, kSelf);
+    const { shown, overflow } = splitPeerChips(peers, 3);
 
     assert.deepEqual(
       shown.map((entry) => entry.clientId),
@@ -162,9 +136,8 @@ describe("Field.splitPeerChips", () => {
 
   test("gives the local peer no chip and no overflow count", () => {
     const { shown, overflow } = splitPeerChips(
-      [peer("self"), peer("a"), peer("b"), peer("c")],
-      3,
-      "self"
+      [peer("self", true), peer("a"), peer("b"), peer("c")],
+      3
     );
 
     assert.deepEqual(
@@ -172,12 +145,12 @@ describe("Field.splitPeerChips", () => {
       ["a", "b", "c"]
     );
     assert.equal(overflow, 0);
-    assert.deepEqual(splitPeerChips([peer("self")], 3, "self").shown, []);
+    assert.deepEqual(splitPeerChips([peer("self", true)], 3).shown, []);
   });
 
   test("copies rather than aliasing the input", () => {
     const peers = [peer("a")];
-    const { shown } = splitPeerChips(peers, 3, kSelf);
+    const { shown } = splitPeerChips(peers, 3);
 
     assert.notEqual(shown, peers);
   });

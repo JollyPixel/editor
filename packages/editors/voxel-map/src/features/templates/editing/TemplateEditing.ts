@@ -246,7 +246,7 @@ export class TemplateEditing {
   ): number {
     const key = new VoxelLayerRef(draft.layerName).key;
 
-    return this.#presence.layerSelections.get(key)?.length ?? 0;
+    return this.#presence.layerSelections.peersAt(key).length;
   }
 
   #end(): void {

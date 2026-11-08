@@ -1,8 +1,8 @@
 // Import Internal Dependencies
 import { Mixed } from "../../src/field/mixed.ts";
-import { peerColor } from "../../src/theme/peerColor.ts";
+import { peerColor } from "../../src/peer/peerColor.ts";
 import { readDetail } from "../../src/dom.ts";
-import type { CollaboratorPresence } from "../../src/peer/types.ts";
+import type { PresencePeer } from "../../src/peer/PresencePeer.ts";
 import type { JollyChangeDetail } from "../../src/field/events.ts";
 
 export interface FieldLike {
@@ -13,8 +13,7 @@ export interface FieldLike {
   disabled: boolean;
   readonly: boolean;
   colored: boolean;
-  lockedBy: CollaboratorPresence | null;
-  peers: readonly CollaboratorPresence[];
+  editors: readonly PresencePeer[];
   labelPosition: "inline" | "top" | "auto";
 }
 
@@ -44,11 +43,10 @@ export type MatrixState =
   | typeof kColoredRows[number];
 
 // CONSTANTS
-const kHolder: CollaboratorPresence = {
+const kHolder: PresencePeer = {
   clientId: "peer-ada",
   displayName: "Ada",
-  color: peerColor(0),
-  editing: "example.field"
+  color: peerColor("peer-ada")
 };
 
 const kRows = [
@@ -69,31 +67,37 @@ const kColoredRows = [
   "colored+modified"
 ] as const;
 
-const kCrowd: CollaboratorPresence[] = [
+const kCrowd: PresencePeer[] = [
+  {
+    clientId: "peer-me",
+    displayName: "Me",
+    color: peerColor("peer-me"),
+    self: true
+  },
   {
     clientId: "peer-linus",
     displayName: "Linus",
-    color: peerColor(1)
+    color: peerColor("peer-linus")
   },
   {
     clientId: "peer-grace",
     displayName: "Grace",
-    color: peerColor(2)
+    color: peerColor("peer-grace")
   },
   {
     clientId: "peer-alan",
     displayName: "Alan",
-    color: peerColor(3)
+    color: peerColor("peer-alan")
   },
   {
     clientId: "peer-edsger",
     displayName: "Edsger",
-    color: peerColor(4)
+    color: peerColor("peer-edsger")
   },
   {
     clientId: "peer-barbara",
     displayName: "Barbara",
-    color: peerColor(5)
+    color: peerColor("peer-barbara")
   }
 ];
 
@@ -199,11 +203,10 @@ function applyState<
       field.readonly = true;
       break;
     case "locked":
-      field.lockedBy = kHolder;
-      field.peers = [kHolder];
+      field.editors = [kHolder];
       break;
     case "peers":
-      field.peers = kCrowd;
+      field.editors = kCrowd;
       break;
     case "colored":
       field.colored = true;
@@ -217,7 +220,7 @@ function applyState<
       break;
     case "stacked+modified+peers":
       field.labelPosition = "top";
-      field.peers = kCrowd;
+      field.editors = kCrowd;
       setModified?.(field);
       break;
     default:

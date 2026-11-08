@@ -7,13 +7,8 @@ import type {
 
 // Import Internal Dependencies
 import type { LogQueue } from "../feedback/LogQueue.ts";
-import { compareClientIds } from "../peer/peerOrder.ts";
-import type { PresencePeer } from "../peer/types.ts";
-import {
-  collaborators,
-  localPresencePeer,
-  toPresencePeer
-} from "./peerProfile.ts";
+import type { PresencePeer } from "../peer/PresencePeer.ts";
+import { roomPeers } from "./peerProfile.ts";
 
 export interface PeerRosterOptions {
   room: Room;
@@ -32,7 +27,7 @@ export class PeerRoster {
   #known = new Map<string, PresencePeer>();
 
   #publish = (): void => {
-    const peers = this.#snapshot();
+    const peers = roomPeers(this.#room);
     this.#known = new Map(peers.map((peer) => [peer.clientId, peer]));
     this.#publishPeers(peers);
   };
@@ -88,17 +83,5 @@ export class PeerRoster {
     this.#log.push(html`<b style="color: ${peer.color}">${
       peer.displayName
     }</b> has ${verb}`);
-  }
-
-  #snapshot(): PresencePeer[] {
-    const remote = Array.from(
-      collaborators(this.#room.peers.values()),
-      toPresencePeer
-    ).sort((left, right) => compareClientIds(left.clientId, right.clientId));
-
-    return [
-      localPresencePeer(this.#room),
-      ...remote
-    ];
   }
 }

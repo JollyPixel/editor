@@ -32,7 +32,7 @@ interface FieldLayoutOptions {
 - `storageKey` defaults to the page path plus the title, so renaming the pane
   drops what it remembered.
 - `hidden` on a floating pane is persisted, and a stored value wins.
-- `pane.presence` sets the [`PresenceSource`](../peer/presence-source.md) of
+- `pane.fieldLocks` sets the [`FieldLockSource`](../peer/field-locks.md) of
   the `jolly-pane`.
 - `dispose()` removes the pane, its window and the scope it created.
 

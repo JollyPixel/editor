@@ -1,11 +1,9 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
-import type { PresencePeer } from "@jolly-pixel/ui";
 import {
-  peerMarks,
-  type MarkedPeer,
-  type PeerMarkMap
-} from "@jolly-pixel/ui/network";
+  PeerMarks,
+  type PresencePeer
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import type {
@@ -29,16 +27,16 @@ export type PresenceStoreEvents = {
     peers: readonly PresencePeer[]
   ) => void;
   blockSelectionsChange: (
-    selections: PeerMarkMap<string>
+    selections: PeerMarks<string>
   ) => void;
   blockHoversChange: (
-    hovers: PeerMarkMap<string>
+    hovers: PeerMarks<string>
   ) => void;
   materialEditsChange: (
-    edits: PeerMarkMap<string>
+    edits: PeerMarks<string>
   ) => void;
   clipFocusesChange: (
-    focuses: PeerMarkMap<ClipKey>
+    focuses: PeerMarks<ClipKey>
   ) => void;
   animateCursorsChange: (
     cursors: readonly PeerAnimateCursor[]
@@ -47,10 +45,10 @@ export type PresenceStoreEvents = {
 
 export class PresenceStore extends Emitter<PresenceStoreEvents> {
   #peers: readonly PresencePeer[] = [];
-  #blockSelections: PeerMarkMap<string> = new Map();
-  #blockHovers: PeerMarkMap<string> = new Map();
-  #materialEdits: PeerMarkMap<string> = new Map();
-  #clipFocuses: PeerMarkMap<ClipKey> = new Map();
+  #blockSelections = new PeerMarks<string>();
+  #blockHovers = new PeerMarks<string>();
+  #materialEdits = new PeerMarks<string>();
+  #clipFocuses = new PeerMarks<ClipKey>();
   #animateCursors: readonly PeerAnimateCursor[] = [];
 
   get peers(): readonly PresencePeer[] {
@@ -67,12 +65,12 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
     );
   }
 
-  get blockSelections(): PeerMarkMap<string> {
+  get blockSelections(): PeerMarks<string> {
     return this.#blockSelections;
   }
 
   set blockSelections(
-    selections: PeerMarkMap<string>
+    selections: PeerMarks<string>
   ) {
     this.#blockSelections = selections;
     this.emit(
@@ -81,12 +79,12 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
     );
   }
 
-  get blockHovers(): PeerMarkMap<string> {
+  get blockHovers(): PeerMarks<string> {
     return this.#blockHovers;
   }
 
   set blockHovers(
-    hovers: PeerMarkMap<string>
+    hovers: PeerMarks<string>
   ) {
     this.#blockHovers = hovers;
     this.emit(
@@ -95,12 +93,12 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
     );
   }
 
-  get materialEdits(): PeerMarkMap<string> {
+  get materialEdits(): PeerMarks<string> {
     return this.#materialEdits;
   }
 
   set materialEdits(
-    edits: PeerMarkMap<string>
+    edits: PeerMarks<string>
   ) {
     this.#materialEdits = edits;
     this.emit(
@@ -109,7 +107,7 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
     );
   }
 
-  get clipFocuses(): PeerMarkMap<ClipKey> {
+  get clipFocuses(): PeerMarks<ClipKey> {
     return this.#clipFocuses;
   }
 
@@ -126,10 +124,10 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
       cursors
     );
 
-    const focuses = peerMarks(
-      cursors.map(({ peer, cursor }): MarkedPeer<ClipKey> => [peer, cursor.clip])
+    const focuses = new PeerMarks(
+      cursors.map(({ peer, cursor }) => [peer, cursor.clip] as const)
     );
-    if (!sameMarks(this.#clipFocuses, focuses)) {
+    if (!this.#clipFocuses.equals(focuses)) {
       this.#clipFocuses = focuses;
       this.emit(
         "clipFocusesChange",
@@ -137,26 +135,4 @@ export class PresenceStore extends Emitter<PresenceStoreEvents> {
       );
     }
   }
-}
-
-function sameMarks<TKey>(
-  left: PeerMarkMap<TKey>,
-  right: PeerMarkMap<TKey>
-): boolean {
-  return left.size === right.size &&
-    [...left].every(([key, peers]) => samePeers(peers, right.get(key) ?? []));
-}
-
-function samePeers(
-  left: readonly PresencePeer[],
-  right: readonly PresencePeer[]
-): boolean {
-  return left.length === right.length &&
-    left.every((peer, index) => {
-      const other = right[index];
-
-      return peer.clientId === other.clientId &&
-        peer.displayName === other.displayName &&
-        peer.color === other.color;
-    });
 }

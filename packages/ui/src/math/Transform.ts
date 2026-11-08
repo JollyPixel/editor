@@ -15,7 +15,7 @@ import type { FieldValue } from "../field/mixed.ts";
 import type { JollyChangeDetail } from "../field/events.ts";
 import { emitComposedEvent } from "../events.ts";
 import { readDetail } from "../dom.ts";
-import type { CollaboratorPresence } from "../peer/types.ts";
+import type { PresencePeer } from "../peer/PresencePeer.ts";
 import type {
   AxisStyle,
   QuatLike,
@@ -52,8 +52,7 @@ export interface TransformDefault {
 }
 
 export interface TransformSubFieldState {
-  lockedBy?: CollaboratorPresence | null;
-  peers?: CollaboratorPresence[];
+  editors?: PresencePeer[];
   disabled?: boolean;
   readonly?: boolean;
   error?: string | null;
@@ -67,7 +66,7 @@ export interface TransformFieldState {
 
 // CONSTANTS
 const kEmptySubState: TransformSubFieldState = {};
-const kNoPeers: CollaboratorPresence[] = [];
+const kNoEditors: PresencePeer[] = [];
 const kEulerStep = 1;
 
 @customElement("jolly-transform")
@@ -219,8 +218,7 @@ export class Transform extends LitElement {
         .step=${step}
         .value=${this.value[field]}
         .default=${this.default?.[field]}
-        .lockedBy=${state.lockedBy ?? null}
-        .peers=${state.peers ?? kNoPeers}
+        .editors=${state.editors ?? kNoEditors}
         .error=${state.error ?? null}
         ?disabled=${state.disabled ?? false}
         ?readonly=${state.readonly ?? false}
@@ -242,8 +240,7 @@ export class Transform extends LitElement {
         axis-style=${this.axisStyle ?? Quaternion.Defaults.axisStyle}
         .value=${this.value.rotation}
         .default=${this.default?.rotation}
-        .lockedBy=${state.lockedBy ?? null}
-        .peers=${state.peers ?? kNoPeers}
+        .editors=${state.editors ?? kNoEditors}
         .error=${state.error ?? null}
         ?disabled=${state.disabled ?? false}
         ?readonly=${state.readonly ?? false}

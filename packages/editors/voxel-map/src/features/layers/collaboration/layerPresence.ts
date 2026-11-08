@@ -25,22 +25,21 @@ export function trackLayerPresence(
   const marks = new PeerMarkTracker({
     room,
     presenceKey: kPresenceKey,
-    localKey: () => selection.current?.key ?? null,
-    readKey: readLayerKey,
+    decode: decodeLayerKey,
+    local: {
+      read: () => selection.current?.key ?? null,
+      subscribe: (listener) => selection.subscribe("change", listener)
+    },
     publish: (selections) => {
       presence.layerSelections = selections;
     }
   });
-  const unsubscribe = selection.subscribe("change", () => marks.publishLocal());
 
-  return () => {
-    unsubscribe();
-    marks.dispose();
-  };
+  return () => marks.dispose();
 }
 
-function readLayerKey(
+function decodeLayerKey(
   value: unknown
-): string | null {
-  return typeof value === "string" && value.length > 0 ? value : null;
+): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }

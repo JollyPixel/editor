@@ -1,7 +1,7 @@
 // Import Internal Dependencies
-import { PresenceElement } from "../peer/Presence.ts";
-import type { PresencePeer } from "../peer/types.ts";
-import type { JollyPeerSelectDetail } from "../peer/events.ts";
+import { PresenceElement } from "../peer/presence/Presence.ts";
+import type { PresencePeer } from "../peer/PresencePeer.ts";
+import type { JollyPeerSelectDetail } from "../peer/presence/events.ts";
 import { FacadeItem } from "./FacadeItem.ts";
 
 export interface PresenceOptions {

@@ -36,27 +36,24 @@ interface SubscriptionController<TSource> {
 - The source stays attached across a disconnect.
 
 ```ts
-@customElement("peer-count")
-export class PeerCount extends LitElement {
-  #presence = new SubscriptionController<PresenceSource>(this, (presence) => {
-    const repaint = () => this.requestUpdate();
-    presence.on("change", repaint);
-
+@customElement("width-editors")
+export class WidthEditors extends LitElement {
+  #locks = new SubscriptionController<FieldLockSource>(this, (locks) => {
     return [
-      () => presence.off("change", repaint)
+      locks.subscribe(() => this.requestUpdate())
     ];
   });
 
-  set presence(
-    presence: PresenceSource
+  set fieldLocks(
+    locks: FieldLockSource
   ) {
-    this.#presence.attach(presence);
+    this.#locks.attach(locks);
   }
 
   override render() {
-    const peers = this.#presence.current?.peers.size ?? 0;
+    const editors = this.#locks.current?.editors("map.width").length ?? 0;
 
-    return html`${peers} peers`;
+    return html`${editors} editing`;
   }
 }
 ```
