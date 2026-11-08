@@ -28,6 +28,7 @@ export const PIXEL_ART_CAPABILITIES = new CapabilityTable<
   "uv-region-moved": "uv",
   "uv-region-state-changed": "uv",
   "uv-region-rotated": "uv",
+  "uv-region-mirrored": "uv",
   "uv-net-saved": "uv",
   "uv-net-deleted": "uv",
   "uv-net-default-changed": "uv",

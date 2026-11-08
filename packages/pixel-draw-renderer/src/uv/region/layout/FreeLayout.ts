@@ -19,6 +19,7 @@ import type {
   UVSlot
 } from "../../geometry/types.ts";
 import type {
+  MirrorAxis,
   SelectionRect,
   Vec2
 } from "../../../types.ts";
@@ -80,6 +81,23 @@ export class FreeLayout extends SpreadLayout {
     }
 
     return this.withFaces(this.faces.rotated(turns, [slot]));
+  }
+
+  override canMirror(
+    slot: UVSlot | null
+  ): slot is UVSlot {
+    return this.isTarget(slot) && this.faces.areRects([slot]);
+  }
+
+  mirrored(
+    axis: MirrorAxis,
+    slot: UVSlot | null
+  ): FreeLayout {
+    if (!this.canMirror(slot)) {
+      return this;
+    }
+
+    return this.withFaces(this.faces.mirrored(axis, [slot]));
   }
 
   override withGeometry(

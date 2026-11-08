@@ -13,7 +13,7 @@ canvas.mode = "uv";
 canvas.uv.select(region.id);
 ```
 
-In UV mode, click a visible region to select it, drag it to move it ([carrying the regions nested inside it](../tools/UVTool.md#carrying-nested-regions) while `Shift` is held), drag its handles to resize it when [`canvas.tools.uv.resizable`](../tools/UVTool.md) is on, call [`shortcuts.rotate()`](../input/CanvasShortcuts.md) to rotate it, or `shortcuts.delete()` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
+In UV mode, click a visible region to select it, drag it to move it ([carrying the regions nested inside it](../tools/UVTool.md#carrying-nested-regions) while `Shift` is held), drag its handles to resize it when [`canvas.tools.uv.resizable`](../tools/UVTool.md) is on, call [`shortcuts.rotate()`](../input/CanvasShortcuts.md) to rotate it, `shortcuts.flipHorizontal()` or `flipVertical()` to [mirror it](#mirrorid-axis-slot), or `shortcuts.delete()` to remove it. A click outside every visible region clears the selection, unless [`uv.deselectOnEmptyClick`](../PixelArtCanvasOptions.md#uvdeselectonemptyclick) is disabled. Create regions and change their state through this API.
 
 See [`UVRegion`](./UVRegion.md) for region geometry and serialized data.
 
@@ -75,14 +75,14 @@ A region with `activeSlots` or `slotGeometries` starts free. Other regions start
 | `"region-dragging"` | `region`, `face` |
 | `"region-drag-ended"` | `id`, `committed` |
 | `"region-state-changed"` | `region`, `previous`, `net` |
-| `"region-rotated"` | `region`, `previous`, `face` |
+| `"region-reoriented"` | `region`, `previous`, `face`, `operation` |
 | `"selection-changed"` | `selectedRegionId`, `selectedSlot` |
 | `"visibility-changed"` | `showAll` |
 | `"label-visibility-changed"` | `showRegionLabels` |
 | `"size-label-visibility-changed"` | `showSizeLabels` |
 | `"label-scope-changed"` | `labelScope` |
 
-`net` is the [net](./UVNet.md) an unfold used, from [`applyState()`](#applystateid-state-slot) or [`unfold()`](#unfoldid-net), and `null` for every other replacement. A listener that rebuilds the region can unfold it again with that net. `face` is `null` for anything but a free region, since stacked and unfolded regions move, resize and rotate whole. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. Canvas gestures emit it on pointer-down with the initial geometry, then whenever the preview changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
+`net` is the [net](./UVNet.md) an unfold used, from [`applyState()`](#applystateid-state-slot) or [`unfold()`](#unfoldid-net), and `null` for every other replacement. A listener that rebuilds the region can unfold it again with that net. `face` is `null` for anything but a free region, since stacked and unfolded regions move, resize, rotate and mirror whole. `operation` is `"rotate"` or `"mirror"`, after the method that changed the region. `"region-dragging"` is the preview event of a move or resize: `region` is the region as the drag shows it, and `face` names the only slot that changes. Canvas gestures emit it on pointer-down with the initial geometry, then whenever the preview changes. It does not mutate the map. `"region-drag-ended"` closes that preview lifecycle and allows presence consumers to clear cancelled or no-op drags. `"changed"` is the consolidated rendering invalidation emitted after stored state or view preferences change.
 
 ## Properties
 
@@ -308,7 +308,7 @@ rotate(id: string, direction: RotationDirection, slot?: UVSlot | null): boolean
 type RotationDirection = "cw" | "ccw";
 ```
 
-Turns a region 90 degrees and emits `"region-rotated"` with the previous region as serialized data. What turns depends on the state, like moving does:
+Turns a region 90 degrees and emits `"region-reoriented"` with `operation: "rotate"` and the previous region as serialized data. What turns depends on the state, like moving does:
 
 - **stacked**: the shared rect and every slot.
 - **unfolded**: the whole net as one piece around its bounds.
@@ -318,6 +318,18 @@ The top-left corner stays fixed and a non-square rect swaps its width and height
 
 In UV mode, `shortcuts.rotate("cw")` and `shortcuts.rotate("ccw")` rotate the selected region, or the selected slot of a free region, clockwise and counter-clockwise. They do nothing during a drag.
 
+### `mirror(id, axis, slot?)`
+
+```ts
+mirror(id: string, axis: MirrorAxis, slot?: UVSlot | null): boolean
+
+type MirrorAxis = "horizontal" | "vertical";
+```
+
+Flips what a region shows across the canvas axis and emits `"region-reoriented"` with `operation: "mirror"` and the previous region as serialized data. The stacked, unfolded and free states pick what flips as [`rotate()`](#rotateid-direction-slot) does; an unfolded net also swaps its cells across its bounds. Bounds never change, so nothing is clamped. Returns `false` for an unknown id, a free region without an active `slot`, or a target with a triangle or compound face, which [`UVRegion.canMirror()`](./UVRegion.md#canmirrorslot) reports. See [`UVRegion.mirrored()`](./UVRegion.md#mirroredaxis-slot) for the geometry.
+
+In UV mode, `shortcuts.flipHorizontal()` and `shortcuts.flipVertical()` mirror the selected region, or the selected slot of a free region. They do nothing during a drag or when [`canvas.tools.uv.mirrorable`](../tools/UVTool.md#mirrorable) is off.
+
 ### `select(id, slot?)`
 
 ```ts
@@ -326,16 +338,20 @@ select(id: string | null, slot?: UVSlot | null): void
 
 Selects a region or clears selection with `null`. For a free region, an omitted or inactive slot falls back to the first active slot; every other state ignores `slot`. A click picks the slot the overlay paints last: the selected one when it is under the cursor, otherwise the last one in region order. Repeated clicks cycle in region order through the slots that are exactly coincident with it. The cycle advances on release, so pressing the selected slot and dragging it moves that slot. A press counts as a drag, not a click, once the pointer leaves the pixel it started on. A slot that merely overlaps sits below and is reachable only where it is uncovered. A click outside every region restarts that cycle whether or not it clears the selection.
 
-### `restore(region)` / `restoreState(region)` / `restoreRotation(region, face?)` / `restoreMove(id, rect, slot?)`
+### `restore(region)` / `restoreState(region)` / `restoreOrientation(region, operation, face?)` / `restoreMove(id, rect, slot?)`
 
 ```ts
 restore(region: UVRegion | UVRegionData): UVRegion
 restoreState(region: UVRegion | UVRegionData): boolean
-restoreRotation(region: UVRegion | UVRegionData, face?: UVSlot | null): boolean
+restoreOrientation(
+  region: UVRegion | UVRegionData,
+  operation: "rotate" | "mirror",
+  face?: UVSlot | null
+): boolean
 restoreMove(id: string, rect: SelectionRect, slot?: UVSlot | null): boolean
 ```
 
-`restore()` adds a saved region without cascading placement and emits `"region-created"`. `restoreState()` replaces an existing region and emits `"region-state-changed"`. `restoreRotation()` replaces an existing region and emits `"region-rotated"` with `face`, which defaults to `null`. `restoreMove()` works like [`move()`](#moveid-rect-slot) but keeps the position as given, ignoring the canvas and [`overflow`](#overflow). History and network hydration use these methods.
+`restore()` adds a saved region without cascading placement and emits `"region-created"`. `restoreState()` replaces an existing region and emits `"region-state-changed"`. `restoreOrientation()` replaces an existing region and emits `"region-reoriented"` with `operation` and `face`, which defaults to `null`. `restoreMove()` works like [`move()`](#moveid-rect-slot) but keeps the position as given, ignoring the canvas and [`overflow`](#overflow). History and network hydration use these methods.
 
 ### `clear()`
 

@@ -8,6 +8,15 @@ import type {
 } from "../region/UVRegion.ts";
 import type { UVLabelScope } from "./UVMap.ts";
 
+export type UVOrientationOperation = "rotate" | "mirror";
+
+export interface UVRegionOrientationChange {
+  region: UVRegion;
+  previous: UVRegionData;
+  face: UVSlot | null;
+  operation: UVOrientationOperation;
+}
+
 export type UVMapEvent = {
   changed: () => void;
   "region-created": (event: { region: UVRegion; }) => void;
@@ -30,11 +39,7 @@ export type UVMapEvent = {
     previous: UVRegionData;
     net: UVNet | null;
   }) => void;
-  "region-rotated": (event: {
-    region: UVRegion;
-    previous: UVRegionData;
-    face: UVSlot | null;
-  }) => void;
+  "region-reoriented": (event: UVRegionOrientationChange) => void;
   "selection-changed": (event: {
     selectedRegionId: string | null;
     selectedSlot: UVSlot | null;

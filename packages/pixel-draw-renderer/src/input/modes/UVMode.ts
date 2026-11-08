@@ -99,6 +99,14 @@ export class UVMode extends InteractionMode {
     return this.#uv.rotate(direction);
   }
 
+  onFlipHorizontal(): boolean {
+    return this.#uv.mirror("horizontal");
+  }
+
+  onFlipVertical(): boolean {
+    return this.#uv.mirror("vertical");
+  }
+
   onBlur(): void {
     this.#uv.cancelDrag();
     this.#uv.lineHeld = false;

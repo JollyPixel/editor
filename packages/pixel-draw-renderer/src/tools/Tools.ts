@@ -42,6 +42,7 @@ export interface ToolsOptions {
   uvOverlay: UVRegionLayer;
   uvDeselectOnEmptyClick?: boolean;
   uvResizable?: boolean;
+  uvMirrorable?: boolean;
   viewport: ScreenProjection;
   grid: TextureGrid;
   onProgress?: (pixels: PeerStrokePixel[]) => void;
@@ -103,6 +104,7 @@ export class Tools {
       overlay: options.uvOverlay,
       deselectOnEmptyClick: options.uvDeselectOnEmptyClick,
       resizable: options.uvResizable,
+      mirrorable: options.uvMirrorable,
       viewport: options.viewport,
       grid: options.grid
     });

@@ -280,4 +280,16 @@ describe("pixelCommandProtocol — uv rotation", () => {
       geometry: kTile
     })), false);
   });
+
+  test("accepts a mirror carrying the mirrored slot geometry", () => {
+    assert.ok(accepts({
+      ...kHeader,
+      action: "uv-region-mirrored",
+      metadata: {
+        id: "block-1",
+        face: "top",
+        geometry: { ...kTile, rotation: 2, mirrored: true }
+      }
+    }));
+  });
 });

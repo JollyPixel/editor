@@ -133,7 +133,7 @@ describe("UVGeometryBinding", () => {
       assert.deepStrictEqual(readUv(geometry, 0), [0, 1]);
     });
 
-    test("tracks region-rotated", () => {
+    test("tracks region-reoriented", () => {
       bindCreated();
 
       uv.rotate("tracked", "cw");

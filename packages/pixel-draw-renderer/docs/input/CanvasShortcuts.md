@@ -86,7 +86,7 @@ Each method returns `true` when it handled the intent. The host should then prev
 | `undo()` | Same as `canvas.undo()`. | History is off or empty. |
 | `redo()` | Same as `canvas.redo()`. | History is off or there is nothing to redo. |
 | `rotate(direction)` | Turns the selection 90 degrees in `"select"` mode, or the selected UV region or slot in `"uv"` mode. `direction` is `"cw"` or `"ccw"`. | The mode has nothing to rotate. |
-| `flipHorizontal()` | Mirrors the selection left to right in `"select"` mode. | There is no selection. |
-| `flipVertical()` | Mirrors the selection top to bottom in `"select"` mode. | There is no selection. |
+| `flipHorizontal()` | Mirrors the selection left to right in `"select"` mode, or [mirrors](../uv/UVMap.md#mirrorid-axis-slot) the selected UV region or slot in `"uv"` mode. | The mode has nothing to mirror. |
+| `flipVertical()` | Mirrors the selection top to bottom in `"select"` mode, or the selected UV region or slot in `"uv"` mode. | The mode has nothing to mirror. |
 
 `copy()` and `paste()` start the clipboard work and return before it ends. Read the outcome from [`onClipboardResult`](../PixelArtCanvasOptions.md#onclipboardresult), or await `canvas.copySelection()` and `canvas.pasteClipboard()` instead.

@@ -15,10 +15,15 @@ type PixelCommand = (
   | { action: "uv-region-deleted"; metadata: { id: string } }
   | { action: "uv-region-moved"; metadata: { id: string; face: UVSlot | null; rect: SelectionRect } }
   | { action: "uv-region-state-changed"; metadata: { region: UVRegionData } }
-  | { action: "uv-region-rotated"; metadata: UVRegionRotation }
+  | { action: "uv-region-rotated"; metadata: UVRegionOrientation }
+  | { action: "uv-region-mirrored"; metadata: UVRegionOrientation }
   | UVNetCommand
   | NormalMapCommand
 );
+
+type UVRegionOrientation =
+  | { id: string; face: UVSlot; geometry: UVGeometry }
+  | { id: string; face: null; region: UVRegionData };
 
 type UVNetCommand =
   | { action: "uv-net-saved"; metadata: { net: SavedUVNetData } }
@@ -61,6 +66,7 @@ function toPixelDocumentCommand(command: PixelCommand): PixelDocumentCommand;
 | `uv-region-moved` | moves the region, or the slot of a free region, kept inside the texture; an unknown slot is ignored |
 | `uv-region-state-changed` | replaces an existing region |
 | `uv-region-rotated` | replaces an existing region, or one slot's geometry |
+| `uv-region-mirrored` | same as `uv-region-rotated` |
 | `uv-net-saved` | adds the [saved net](./uv/SavedUVNet.md), or replaces the one with its id; throws like the `SavedUVNet` constructor for an invalid net |
 | `uv-net-deleted` | removes the saved net and leaves the default id unchanged |
 | `uv-net-default-changed` | sets the default net id, `null` for none |

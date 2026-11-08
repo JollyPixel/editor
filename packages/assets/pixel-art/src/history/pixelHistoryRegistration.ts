@@ -43,6 +43,7 @@ const kLabels: Readonly<Record<PixelDocumentCommand["action"], string>> = {
   "uv-region-moved": "Move UV",
   "uv-region-state-changed": "Edit UV",
   "uv-region-rotated": "Rotate UV",
+  "uv-region-mirrored": "Mirror UV",
   "uv-net-saved": "Save UV net",
   "uv-net-deleted": "Delete UV net",
   "uv-net-default-changed": "Change default UV net",
@@ -236,12 +237,13 @@ function namedEntries(
       return regionEntries(document, { id: command.metadata.id });
     case "uv-region-moved":
       return [slotEntry(document, command.metadata.id, command.metadata.face)];
-    case "uv-region-rotated": {
-      const rotation = command.metadata;
+    case "uv-region-rotated":
+    case "uv-region-mirrored": {
+      const orientation = command.metadata;
 
-      return rotation.face === null ?
-        regionEntries(document, rotation.region) :
-        [slotEntry(document, rotation.id, rotation.face)];
+      return orientation.face === null ?
+        regionEntries(document, orientation.region) :
+        [slotEntry(document, orientation.id, orientation.face)];
     }
     case "uv-net-saved":
     case "uv-net-deleted":

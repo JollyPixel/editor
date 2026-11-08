@@ -198,7 +198,7 @@ export class BlockTextures {
       uv.subscribe("region-created", this.#onRegionCreated),
       uv.subscribe("region-deleted", this.#onRegionDeleted),
       uv.subscribe("region-moved", this.#onRegionEdited),
-      uv.subscribe("region-rotated", this.#onRegionEdited),
+      uv.subscribe("region-reoriented", this.#onRegionEdited),
       uv.subscribe("region-state-changed", this.#onRegionEdited),
       uv.subscribe("selection-changed", this.#onRegionSelected),
       this.#document.subscribe("change", this.#onChange),

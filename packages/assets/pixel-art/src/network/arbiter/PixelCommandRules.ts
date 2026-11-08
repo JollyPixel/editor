@@ -47,7 +47,8 @@ function acceptsPixelCommand(
     case "uv-region-state-changed":
       return isUVRegionData(command.metadata.region);
     case "uv-region-rotated":
-      return isValidRotation(command);
+    case "uv-region-mirrored":
+      return isValidOrientation(command);
     case "resized":
     case "texture-replaced":
       return state.buffer.acceptsSize(command.metadata.size);
@@ -99,6 +100,7 @@ function pixelCommandWrites(
     }
     case "uv-region-moved":
     case "uv-region-rotated":
+    case "uv-region-mirrored":
     case "uv-region-state-changed":
       return {
         scope: "uv",
@@ -144,12 +146,15 @@ function isValidNormalMap(
   return config === null || NormalMapConfig.parse(config) !== null;
 }
 
-function isValidRotation(
-  command: Extract<PixelWireCommand, { action: "uv-region-rotated"; }>
+function isValidOrientation(
+  command: Extract<
+    PixelWireCommand,
+    { action: "uv-region-rotated" | "uv-region-mirrored"; }
+  >
 ): boolean {
-  const rotation = command.metadata;
+  const orientation = command.metadata;
 
-  return rotation.face === null ?
-    isUVRegionData(rotation.region) && rotation.region.id === rotation.id :
-    isUVGeometry(rotation.geometry);
+  return orientation.face === null ?
+    isUVRegionData(orientation.region) && orientation.region.id === orientation.id :
+    isUVGeometry(orientation.geometry);
 }

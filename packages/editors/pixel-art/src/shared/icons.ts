@@ -16,6 +16,8 @@ import type { GridIconName } from "./gridIcons.ts";
 import "./gridIcons.ts";
 import type { PaletteIconName } from "./paletteIcons.ts";
 import "./paletteIcons.ts";
+import type { InkIconName } from "./inkIcons.ts";
+import "./inkIcons.ts";
 
 // CONSTANTS
 const kTextGlyphs = {
@@ -63,7 +65,8 @@ export type IconName =
   | NormalMapIconName
   | TextureIconName
   | GridIconName
-  | PaletteIconName;
+  | PaletteIconName
+  | InkIconName;
 
 registerIcon("move", svg`
     <path

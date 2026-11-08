@@ -268,3 +268,27 @@ test("clicks outside the trigger leave a hover-opened popover alone", (t) => {
   })), true);
   assert.equal(clickTrigger(f), false);
 });
+
+test("placeAgainst replaces the anchor box, null falls back", (t) => {
+  const toolbar = { top: 10, bottom: 40, left: 20, right: 120 };
+  const trigger = { top: 100, bottom: 126, left: 50, right: 80 };
+  for (const scenario of ["rect", "null"]) {
+    const f = fixture({
+      anchor: () => trigger,
+      placeAgainst: () => (scenario === "rect" ? toolbar : null)
+    });
+    t.after(() => f.cleanup());
+    t.mock.method(
+      f.popover,
+      "matches",
+      (selector: string) => selector === ":popover-open"
+    );
+    f.controller.show();
+
+    assert.deepEqual(
+      [f.popover.style.left, f.popover.style.top],
+      scenario === "rect" ? ["20px", "44px"] : ["50px", "130px"],
+      scenario
+    );
+  }
+});

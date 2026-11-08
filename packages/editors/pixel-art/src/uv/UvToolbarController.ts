@@ -2,13 +2,12 @@
 import {
   html,
   nothing,
-  type ReactiveControllerHost,
   type TemplateResult
 } from "lit";
-import { PopoverController } from "@jolly-pixel/ui";
 import type {
   PixelArtCanvas,
-  UVRegionState
+  UVRegionState,
+  UVTool
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -20,6 +19,10 @@ import {
   RAIL_DIVIDER,
   renderRailButton
 } from "../shared/railButton.ts";
+import {
+  OverlayMenu,
+  type OverlayMenuHost
+} from "../shared/OverlayMenu.ts";
 import type { UvNetController } from "./nets/UvNetController.ts";
 
 // CONSTANTS
@@ -48,10 +51,6 @@ const kStateOrder: readonly UVRegionState[] = [
   "unfolded",
   "free"
 ];
-
-export type UvToolbarHost = ReactiveControllerHost & {
-  renderRoot: DocumentFragment | HTMLElement;
-};
 
 type UVMap = PixelArtCanvas["uv"];
 type UVRegion = NonNullable<ReturnType<UVMap["get"]>>;
@@ -82,38 +81,22 @@ function renderBadgedIcon(
 }
 
 export class UvToolbarController {
-  readonly #host: UvToolbarHost;
   readonly #canvas: () => PixelArtCanvas | null;
-  readonly #statePopup: PopoverController;
+  readonly #stateMenu: OverlayMenu;
   readonly #nets: UvNetController;
   #uvNextId = 0;
 
   constructor(
-    host: UvToolbarHost,
+    host: OverlayMenuHost,
     canvas: () => PixelArtCanvas | null,
     nets: UvNetController
   ) {
-    this.#host = host;
     this.#canvas = canvas;
     this.#nets = nets;
-    this.#statePopup = new PopoverController(host, {
-      anchor: () => this.#stateElement("[part=\"uv-state-button\"]"),
-      popover: () => this.#stateElement("[part=\"uv-state-menu\"]"),
+    this.#stateMenu = new OverlayMenu(host, "uv-state", {
       side: "below",
-      align: "start",
-      openOnHover: {
-        delay: 200
-      },
-      closeOnHoverLeave: {
-        delay: 200
-      }
+      hover: true
     });
-  }
-
-  #stateElement(
-    selector: string
-  ): HTMLElement | null {
-    return this.#host.renderRoot.querySelector<HTMLElement>(selector);
   }
 
   #create(
@@ -155,7 +138,7 @@ export class UvToolbarController {
     regionId: string,
     state: UVRegionState
   ): void {
-    this.#statePopup.hide();
+    this.#stateMenu.hide();
     uv.applyState(
       regionId,
       state,
@@ -169,36 +152,18 @@ export class UvToolbarController {
   ) {
     const current = region.state;
 
-    return html`
-      <button
-        class="rail-btn uv-state-trigger"
-        part="uv-state-button"
-        popovertarget="uv-state-menu"
-        aria-haspopup="menu"
-        aria-expanded=${this.#statePopup.open}
-        aria-label="Region state: ${kStateLabels[current]}"
-        @pointerenter=${this.#statePopup.onPointerEnter}
-        @pointerleave=${this.#statePopup.onPointerLeave}
-      >
+    return this.#stateMenu.render({
+      label: `Region state: ${kStateLabels[current]}`,
+      trigger: html`
         ${renderIcon(kStateIcons[current])}
         ${renderIcon("chevronDown")}
-      </button>
-      <div
-        class="uv-state-menu"
-        part="uv-state-menu"
-        id="uv-state-menu"
-        role="menu"
-        popover
-        @pointerenter=${this.#statePopup.onPointerEnter}
-        @pointerleave=${this.#statePopup.onPointerLeave}
-        @beforetoggle=${this.#statePopup.onBeforeToggle}
-        @toggle=${this.#statePopup.onToggle}
-      >
+      `,
+      items: html`
         ${kStateOrder
           .filter((state) => state !== current)
           .map((state) => html`
             <button
-              class="uv-state-option"
+              class="overlay-menu-option"
               part="uv-${state}-button"
               role="menuitem"
               @click=${() => this.#applyState(uv, regionId, state)}
@@ -207,17 +172,18 @@ export class UvToolbarController {
               <span>${kStateLabels[state]}</span>
             </button>
           `)}
-        ${this.#nets.renderMenu(regionId, region, () => this.#statePopup.hide())}
-      </div>
-    `;
+        ${this.#nets.renderMenu(regionId, region, () => this.#stateMenu.hide())}
+      `
+    });
   }
 
-  #renderRotateButtons(
+  #renderOrientationButtons(
     uv: UVMap,
     { id: regionId, region }: UVSelection
   ) {
     const slot = region.movementScope === "slot" ? uv.selectedSlot : null;
     const target = slot === null ? "region" : `slot "${slot}"`;
+    const tool = this.#canvas()?.tools.uv;
 
     return html`
       ${renderRailButton({
@@ -235,6 +201,32 @@ export class UvToolbarController {
         icon: "rotateClockwise",
         text: "90°",
         onClick: () => uv.rotate(regionId, "cw", slot)
+      })}
+      ${tool?.mirrorable ?
+        this.#renderMirrorButtons(tool, target, !region.canMirror(slot)) :
+        nothing}
+    `;
+  }
+
+  #renderMirrorButtons(
+    tool: UVTool,
+    target: string,
+    disabled: boolean
+  ) {
+    return html`
+      ${renderRailButton({
+        part: "uv-mirror-horizontal-button",
+        label: `Mirror ${target} horizontally`,
+        icon: "flipHorizontal",
+        disabled,
+        onClick: () => tool.mirror("horizontal")
+      })}
+      ${renderRailButton({
+        part: "uv-mirror-vertical-button",
+        label: `Mirror ${target} vertically`,
+        icon: "flipVertical",
+        disabled,
+        onClick: () => tool.mirror("vertical")
       })}
     `;
   }
@@ -295,7 +287,7 @@ export class UvToolbarController {
         ${allowCreateDelete ? this.#renderCreateDelete(uv) : nothing}
         ${selection === null ? nothing : html`
           ${this.#renderStateDropdown(uv, selection)}
-          ${this.#renderRotateButtons(uv, selection)}
+          ${this.#renderOrientationButtons(uv, selection)}
         `}
         ${extra}
       </div>

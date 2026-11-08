@@ -62,6 +62,19 @@ const kSavedUvNetSchema = z.object({
 const kFlatIntegers = z.array(z.int());
 const kFlatNumbers = z.array(z.number());
 
+const kUvOrientationSchemas: readonly z.core.$ZodLooseShape[] = [
+  {
+    id: z.string(),
+    face: uvSlotSchema,
+    geometry: uvGeometrySchema
+  },
+  {
+    id: z.string(),
+    face: z.null(),
+    region: uvRegionSchema
+  }
+];
+
 const kPixelCommandMetadata: Record<
   PixelCommandAction,
   readonly z.core.$ZodLooseShape[]
@@ -111,18 +124,8 @@ const kPixelCommandMetadata: Record<
   "uv-region-state-changed": [{
     region: uvRegionSchema
   }],
-  "uv-region-rotated": [
-    {
-      id: z.string(),
-      face: uvSlotSchema,
-      geometry: uvGeometrySchema
-    },
-    {
-      id: z.string(),
-      face: z.null(),
-      region: uvRegionSchema
-    }
-  ],
+  "uv-region-rotated": kUvOrientationSchemas,
+  "uv-region-mirrored": kUvOrientationSchemas,
   "uv-net-saved": [{
     net: kSavedUvNetSchema
   }],

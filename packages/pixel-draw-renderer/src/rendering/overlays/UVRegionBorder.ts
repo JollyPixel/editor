@@ -6,6 +6,7 @@ import { SVG_NS } from "../constants.ts";
 import {
   outlinePoints,
   boundingRect,
+  geometryMirrored,
   geometryRotation,
   triangleCorner
 } from "../../uv/geometry/geometry.ts";
@@ -31,6 +32,34 @@ const kSelectedFillOpacity = "0.06";
 const kOutlineCacheLimit = 64;
 const kOutlineCache = new Map<string, Vec2[][] | null>();
 const kMarkerSize = 5;
+const kMarkerFrames: Record<UVQuarterTurn, MarkerFrame> = {
+  0: {
+    edge: { x: 0.5, y: 0 },
+    inward: { x: 0, y: 1 },
+    along: { x: 1, y: 0 }
+  },
+  1: {
+    edge: { x: 1, y: 0.5 },
+    inward: { x: -1, y: 0 },
+    along: { x: 0, y: 1 }
+  },
+  2: {
+    edge: { x: 0.5, y: 1 },
+    inward: { x: 0, y: -1 },
+    along: { x: -1, y: 0 }
+  },
+  3: {
+    edge: { x: 0, y: 0.5 },
+    inward: { x: 1, y: 0 },
+    along: { x: 0, y: -1 }
+  }
+};
+
+interface MarkerFrame {
+  edge: Vec2;
+  inward: Vec2;
+  along: Vec2;
+}
 
 export interface UVRegionBorderStyle {
   color: string;
@@ -78,7 +107,11 @@ export class UVRegionBorder {
       width: screen.width - (2 * inset),
       height: screen.height - (2 * inset)
     }));
-    this.#placeMarker(geometryRotation(geometry), screen);
+    this.#placeMarker(
+      geometryRotation(geometry),
+      geometryMirrored(geometry),
+      screen
+    );
   }
 
   paint(
@@ -124,9 +157,10 @@ export class UVRegionBorder {
 
   #placeMarker(
     rotation: UVQuarterTurn,
+    mirrored: boolean,
     screen: SelectionRect
   ): void {
-    if (rotation === 0) {
+    if (rotation === 0 && !mirrored) {
       this.#marker.remove();
 
       return;
@@ -135,7 +169,7 @@ export class UVRegionBorder {
     this.#group.appendChild(this.#marker);
     this.#marker.setAttribute(
       "points",
-      markerPoints(rotation, screen)
+      markerPoints(rotation, mirrored, screen)
         .map((point) => `${point.x},${point.y}`)
         .join(" ")
     );
@@ -152,42 +186,31 @@ export class UVRegionBorder {
 
 function markerPoints(
   rotation: UVQuarterTurn,
+  mirrored: boolean,
   screen: SelectionRect
 ): Vec2[] {
   const size = Math.min(kMarkerSize, screen.width / 3, screen.height / 3);
-  const left = screen.x;
-  const top = screen.y;
-  const right = screen.x + screen.width;
-  const bottom = screen.y + screen.height;
-  const centerX = screen.x + (screen.width / 2);
-  const centerY = screen.y + (screen.height / 2);
+  const { edge, inward, along } = kMarkerFrames[rotation];
+  const anchor = {
+    x: screen.x + (edge.x * screen.width),
+    y: screen.y + (edge.y * screen.height)
+  };
 
-  switch (rotation) {
-    case 1:
-      return [
-        { x: right, y: centerY - size },
-        { x: right, y: centerY + size },
-        { x: right - size, y: centerY }
-      ];
-    case 2:
-      return [
-        { x: centerX - size, y: bottom },
-        { x: centerX + size, y: bottom },
-        { x: centerX, y: bottom - size }
-      ];
-    case 3:
-      return [
-        { x: left, y: centerY - size },
-        { x: left, y: centerY + size },
-        { x: left + size, y: centerY }
-      ];
-    default:
-      return [
-        { x: centerX - size, y: top },
-        { x: centerX + size, y: top },
-        { x: centerX, y: top + size }
-      ];
+  function offset(
+    direction: Vec2,
+    scale: number
+  ): Vec2 {
+    return {
+      x: anchor.x + (direction.x * scale),
+      y: anchor.y + (direction.y * scale)
+    };
   }
+
+  return [
+    offset(along, -size),
+    mirrored ? anchor : offset(along, size),
+    offset(inward, size)
+  ];
 }
 
 function geometryPath(

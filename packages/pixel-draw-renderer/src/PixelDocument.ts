@@ -71,7 +71,7 @@ const kIslandEvents = [
   "region-deleted",
   "region-moved",
   "region-state-changed",
-  "region-rotated"
+  "region-reoriented"
 ] as const;
 
 export interface PixelDocumentOptions {

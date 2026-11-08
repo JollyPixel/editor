@@ -26,6 +26,8 @@ export type TextureView = "albedo" | "normal";
 
 export type RotationDirection = "cw" | "ccw";
 
+export type MirrorAxis = "horizontal" | "vertical";
+
 export interface SelectionRect {
   x: number;
   y: number;

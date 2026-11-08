@@ -16,7 +16,7 @@ test("top and bottom toolbars stay reachable as the panel narrows", async({ pane
       const root = element.shadowRoot!;
       const stage = root.querySelector(".stage")!.getBoundingClientRect();
       const buttons = root.querySelectorAll(
-        ":is([part=history-file-toolbar], [part=top-row]) button:not([role=menuitem])"
+        ":is([part=history-file-toolbar], [part=top-row]) button:not([role^=menuitem])"
       );
 
       return Array.from(buttons).every((button) => {

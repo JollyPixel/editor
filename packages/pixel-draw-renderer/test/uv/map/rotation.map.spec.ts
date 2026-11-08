@@ -12,18 +12,19 @@ import {
 } from "../../helpers/uv/map.ts";
 
 describe("UVMap.rotate", () => {
-  test("rotates a stacked region and emits region-rotated", () => {
+  test("rotates a stacked region and emits region-reoriented", () => {
     const map = makeUvMap();
     const region = map.create({ width: 16, height: 8 });
-    const rotated: EventPayload<"region-rotated">[] = [];
+    const rotated: EventPayload<"region-reoriented">[] = [];
     const stateChanged: unknown[] = [];
-    map.on("region-rotated", (event) => rotated.push(event));
+    map.on("region-reoriented", (event) => rotated.push(event));
     map.on("region-state-changed", (event) => stateChanged.push(event));
 
     assert.ok(map.rotate(region.id, "cw"));
 
     assert.strictEqual(rotated.length, 1);
     assert.strictEqual(rotated[0].face, null);
+    assert.strictEqual(rotated[0].operation, "rotate");
     assert.strictEqual(rotated[0].region, map.get(region.id));
     assert.deepStrictEqual(rotated[0].previous, region.toJSON());
     assert.strictEqual(stateChanged.length, 0);
@@ -47,8 +48,8 @@ describe("UVMap.rotate", () => {
     const region = map.create({ width: 4, height: 16 });
     map.applyState(region.id, "free");
     map.move(region.id, { x: 28, y: 0, width: 4, height: 16 }, "top");
-    const events: EventPayload<"region-rotated">[] = [];
-    map.on("region-rotated", (event) => events.push(event));
+    const events: EventPayload<"region-reoriented">[] = [];
+    map.on("region-reoriented", (event) => events.push(event));
 
     assert.ok(!map.rotate(region.id, "cw"));
     assert.ok(map.rotate(region.id, "cw", "top"));
@@ -66,16 +67,17 @@ describe("UVMap.rotate", () => {
     assert.ok(!makeUvMap().rotate("missing", "cw"));
   });
 
-  test("restoreRotation replaces the region and reports the rotated face", () => {
+  test("restoreOrientation replaces the region and reports the rotated face", () => {
     const map = makeUvMap();
     const region = map.create({ width: 4, height: 4 });
-    const events: EventPayload<"region-rotated">[] = [];
-    map.on("region-rotated", (event) => events.push(event));
+    const events: EventPayload<"region-reoriented">[] = [];
+    map.on("region-reoriented", (event) => events.push(event));
 
-    assert.ok(map.restoreRotation(region.rotated("cw").toJSON()));
+    assert.ok(map.restoreOrientation(region.rotated("cw").toJSON(), "rotate"));
 
     assert.strictEqual(map.get(region.id)!.slotGeometry("front").rotation, 1);
     assert.strictEqual(events[0].face, null);
+    assert.strictEqual(events[0].operation, "rotate");
   });
 
   test("moves keep the current size and rotation", () => {

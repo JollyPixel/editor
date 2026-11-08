@@ -27,6 +27,7 @@ import type {
   UVSlot
 } from "../../geometry/types.ts";
 import type {
+  MirrorAxis,
   SelectionRect,
   Vec2
 } from "../../../types.ts";
@@ -118,6 +119,16 @@ export class NetLayout extends SpreadLayout {
     turns: number
   ): NetLayout {
     return this.withFaces(this.faces.rotatedWithin(this.bounds, turns));
+  }
+
+  mirrored(
+    axis: MirrorAxis
+  ): NetLayout {
+    if (!this.canMirror(null)) {
+      return this;
+    }
+
+    return this.withFaces(this.faces.mirroredWithin(this.bounds, axis));
   }
 
   resizeTargets(): UVLayoutResizeTarget[] {

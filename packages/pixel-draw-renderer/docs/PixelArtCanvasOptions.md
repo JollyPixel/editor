@@ -63,6 +63,7 @@ interface SelectOptions {
 interface UVOptions {
   deselectOnEmptyClick?: boolean;
   resizable?: boolean;
+  mirrorable?: boolean;
 }
 
 type PixelArtCanvasHistory =
@@ -181,6 +182,10 @@ Set it to `false` when the host application owns the selection, for instance whe
 ### `uv.resizable`
 
 Whether the selected region shows resize handles in UV mode. It defaults to `false`, and [`canvas.tools.uv.resizable`](./tools/UVTool.md#resizable) changes it later.
+
+### `uv.mirrorable`
+
+Whether the flip shortcuts mirror the selected region in UV mode. It defaults to `true`, and [`canvas.tools.uv.mirrorable`](./tools/UVTool.md#mirrorable) changes it later.
 
 ## History
 

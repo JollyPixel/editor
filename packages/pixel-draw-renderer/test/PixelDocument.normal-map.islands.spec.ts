@@ -29,6 +29,19 @@ describe("PixelDocument normal map", () => {
       assert.equal(doc.islands.islandsInRegion("tile").length, 1);
     });
 
+    test("are rebuilt after a UV region mirror", () => {
+      const doc = createNormalMapDocument();
+      addRegion(doc, "tile");
+      let changes = 0;
+      doc.on("islands-changed", () => changes++);
+      const islands = doc.islands;
+
+      assert.ok(doc.uv.mirror("tile", "horizontal"));
+
+      assert.equal(changes, 1);
+      assert.notEqual(doc.islands, islands);
+    });
+
     test("are rebuilt after a resize", () => {
       const doc = createNormalMapDocument();
       let changes = 0;

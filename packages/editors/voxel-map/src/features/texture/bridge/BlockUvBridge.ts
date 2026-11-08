@@ -67,7 +67,7 @@ export class BlockUvBridge {
     this.#uv.on("region-dragging", this.#onRegionDragging);
     this.#uv.on("region-drag-ended", this.#flushDrag);
     this.#uv.on("region-state-changed", this.#onRegionStateChanged);
-    this.#uv.on("region-rotated", this.#onRegionRotated);
+    this.#uv.on("region-reoriented", this.#onRegionReoriented);
     this.#uv.on("region-deleted", this.#onRegionDeleted);
     this.#unsubscribeRegistry = options.editorMap.subscribe(
       "blockRegistryChanged",
@@ -96,7 +96,7 @@ export class BlockUvBridge {
     this.#uv.off("region-dragging", this.#onRegionDragging);
     this.#uv.off("region-drag-ended", this.#flushDrag);
     this.#uv.off("region-state-changed", this.#onRegionStateChanged);
-    this.#uv.off("region-rotated", this.#onRegionRotated);
+    this.#uv.off("region-reoriented", this.#onRegionReoriented);
     this.#uv.off("region-deleted", this.#onRegionDeleted);
     this.#unsubscribeRegistry();
     this.#selection.dispose();
@@ -275,7 +275,7 @@ export class BlockUvBridge {
     this.#applyRegionToBlock(event.region);
   };
 
-  readonly #onRegionRotated: UVMapListener<"region-rotated"> = (event) => {
+  readonly #onRegionReoriented: UVMapListener<"region-reoriented"> = (event) => {
     if (this.#rebuilding) {
       return;
     }

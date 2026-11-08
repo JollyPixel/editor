@@ -164,6 +164,7 @@ export const colorPickerStyles = css`
     align-items: center;
     justify-self: start;
     height: var(--jolly-control-height, 20px);
+    padding-inline-start: var(--jolly-space-2, 8px);
     cursor: pointer;
   }
 
@@ -219,7 +220,6 @@ export const colorPickerStyles = css`
     font: inherit;
   }
 
-  .setting-select:focus-visible,
   .settings-toggle,
   .eyedropper {
     --jolly-icon-size: 14px;
@@ -249,6 +249,7 @@ export const colorPickerStyles = css`
     color: inherit;
   }
 
+  .setting-select:focus-visible,
   .settings-toggle:focus-visible,
   .eyedropper:focus-visible {
     ${focusRing}

@@ -98,7 +98,7 @@ export class UvNetController implements ReactiveController {
 
         return html`
           <button
-            class="uv-state-option"
+            class="overlay-menu-option"
             part="uv-net-option"
             role="menuitem"
             data-net=${preset.id}
@@ -120,7 +120,7 @@ export class UvNetController implements ReactiveController {
       })}
       <div class="view-options-divider" role="separator"></div>
       <button
-        class="uv-state-option"
+        class="overlay-menu-option"
         part="uv-net-edit-button"
         role="menuitem"
         @click=${() => {

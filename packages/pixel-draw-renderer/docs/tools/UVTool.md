@@ -10,8 +10,12 @@ canvas.tools.uv.resizable = true;
 ## Types
 
 ```ts
+type MirrorAxis = "horizontal" | "vertical";
+
 interface UVTool {
   resizable: boolean;
+  mirrorable: boolean;
+  mirror(axis: MirrorAxis): boolean;
 }
 ```
 
@@ -39,6 +43,26 @@ Dragging snaps to whole texture pixels and keeps the opposite edge in place. Han
 While a peer drag preview is active, that region's handles hide and new local move and resize gestures on it are blocked. This applies to the whole region even when the peer edits one slot. Other regions remain editable. Handles return when the last peer preview for the region is removed, using the stored geometry. Presence blocks gestures after it arrives; simultaneous starts still require server arbitration for strict mutual exclusion.
 
 While [`shortcuts.lineHeld`](../input/CanvasShortcuts.md#lineheld) is `true`, usually bound to `Shift`, resizing a net face resizes its aligned row or column with it: every face whose bottom (or right) edge lies on the same line and touches the dragged face along it, directly or through another such face, moves that edge too. Changing it mid-drag updates the preview at once. Stacked and free regions ignore it.
+
+### `mirrorable`
+
+```ts
+mirrorable: boolean
+```
+
+Lets [`mirror()`](#mirroraxis), and through it `shortcuts.flipHorizontal()` and `shortcuts.flipVertical()`, [mirror](../uv/UVMap.md#mirrorid-axis-slot) the selected region in UV mode. It starts from [`uv.mirrorable`](../PixelArtCanvasOptions.md#uvmirrorable), which defaults to `true`. Turn it off when the regions feed a format that cannot store a mirrored face. `UVMap.mirror()` ignores it.
+
+When a region is mirrored or rotated, the overlay draws a notch on the edge where the face's top lands. A mirrored face gets half the notch.
+
+## Methods
+
+### `mirror(axis)`
+
+```ts
+mirror(axis: MirrorAxis): boolean
+```
+
+Mirrors the selected region, or its selected slot when the region is free, through [`UVMap.mirror()`](../uv/UVMap.md#mirrorid-axis-slot). Returns `false` when `mirrorable` is off, nothing is selected, a drag is in progress, or the map leaves the region unchanged.
 
 ## Snapping to the grid
 

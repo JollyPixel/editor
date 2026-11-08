@@ -106,6 +106,7 @@ export interface PixelArtCanvasOptions {
   uv?: {
     deselectOnEmptyClick?: boolean;
     resizable?: boolean;
+    mirrorable?: boolean;
   };
   grid?: TextureGridOptions;
   onDrawEnd?: () => void;
@@ -210,6 +211,7 @@ export class PixelArtCanvas {
       uvOverlay: this.#view.overlays.uvOverlay,
       uvDeselectOnEmptyClick: options.uv?.deselectOnEmptyClick,
       uvResizable: options.uv?.resizable,
+      uvMirrorable: options.uv?.mirrorable,
       viewport: this.#view.viewport,
       grid: this.grid,
       onProgress: (pixels) => this.#onStrokeProgress?.(pixels),

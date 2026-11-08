@@ -184,6 +184,28 @@ Turns the region 90 degrees clockwise (`"cw"`) or counter-clockwise (`"ccw"`), k
 
 Four turns return the starting geometry. Nothing here knows about the canvas; [`UVMap.rotate()`](./UVMap.md#rotateid-direction-slot) clamps the result.
 
+### `mirrored(axis, slot?)`
+
+```ts
+mirrored(axis: "horizontal" | "vertical", slot?: UVSlot | null): UVRegion
+```
+
+Flips what each rect shows across the canvas axis, in place. A horizontal mirror toggles `mirrored` and negates `rotation`; a vertical one toggles `mirrored` and turns `rotation` into `2 - rotation`. Bounds stay the same:
+
+- **stacked**: the shared rect and every slot.
+- **unfolded**: every face, and the net swaps its cells across its `bounds`.
+- **free**: only `slot`. Returns `this` when `slot` is `null` or not active.
+
+Returns `this` when [`canMirror(slot)`](#canmirrorslot) is `false`. Mirroring twice on the same axis returns the starting geometry.
+
+### `canMirror(slot?)`
+
+```ts
+canMirror(slot?: UVSlot | null): boolean
+```
+
+Returns `true` when [`mirrored()`](#mirroredaxis-slot) would change the region: every face of a stacked or unfolded region is a rect, or, for a free region, `slot` is active and holds a rect.
+
 ### `resized(rect, slot?, options?)`
 
 ```ts
@@ -305,7 +327,7 @@ Returns the geometry's `rotation`, or `0`.
 geometryMirrored(geometry: UVGeometry): boolean
 ```
 
-Returns `true` for a rect whose `mirrored` is set. Triangles and compounds are never mirrored. A mesh consumer flips `u` to `1 - u` before `rotateUv()`. Moving, resizing and rotating a rect keep the flag.
+Returns `true` for a rect whose `mirrored` is set. Triangles and compounds are never mirrored. A mesh consumer flips `u` to `1 - u` before `rotateUv()`. Moving, resizing and rotating a rect keep the flag; [`mirrored()`](#mirroredaxis-slot) toggles it.
 
 ### `withRotation(geometry, rotation)`
 

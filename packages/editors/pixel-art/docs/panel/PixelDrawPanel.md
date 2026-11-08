@@ -213,9 +213,10 @@ and two strips.
 
 ## Brush ink
 
-In Paint and Fill modes the top row shows the brush ink: Blend, Replace or
-Lock alpha, as described for the renderer's brush. The ink is part of the
-tool settings that carry over between textures.
+In Paint and Fill modes the top row shows the brush ink. Hovering or clicking
+it opens a menu of Blend, Replace and Lock alpha, each with a one-line summary
+of the renderer's brush ink it selects. The ink is part of the tool settings
+that carry over between textures.
 
 ## View settings
 

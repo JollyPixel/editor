@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type {
+  MirrorAxis,
   RotationDirection,
   SelectionRect,
   Vec2
@@ -113,30 +114,54 @@ export function geometryMirrored(
   return !("shape" in geometry) && geometry.mirrored === true;
 }
 
+export function orientedRect(
+  rect: SelectionRect,
+  rotation: number,
+  mirrored: boolean
+): UVRect {
+  const oriented: UVRect = copyRect(rect);
+  const turns = quarterTurn(rotation);
+  if (turns !== 0) {
+    oriented.rotation = turns;
+  }
+  if (mirrored) {
+    oriented.mirrored = true;
+  }
+
+  return oriented;
+}
+
+export function orientedLike(
+  rect: SelectionRect,
+  source: UVGeometry,
+  turns = 0
+): UVRect {
+  return orientedRect(
+    rect,
+    geometryRotation(source) + turns,
+    geometryMirrored(source)
+  );
+}
+
+export function mirrorRect(
+  rect: UVRect,
+  axis: MirrorAxis
+): UVRect {
+  const rotation = geometryRotation(rect);
+
+  return orientedRect(
+    rect,
+    axis === "horizontal" ? -rotation : 2 - rotation,
+    !geometryMirrored(rect)
+  );
+}
+
 export function sameOrientation(
   a: UVGeometry,
   b: UVGeometry
 ): boolean {
   return geometryRotation(a) === geometryRotation(b) &&
     geometryMirrored(a) === geometryMirrored(b);
-}
-
-function orientedLike(
-  rect: SelectionRect,
-  source: UVGeometry,
-  turns = 0
-): UVGeometry {
-  const rotated = withRotation(
-    copyRect(rect),
-    geometryRotation(source) + turns
-  );
-
-  return geometryMirrored(source) ?
-    {
-      ...rotated,
-      mirrored: true
-    } :
-    rotated;
 }
 
 export function withRotation(

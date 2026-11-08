@@ -3,11 +3,15 @@ import {
   copyRect,
   geometryAt,
   isRectGeometry,
-  quarterTurn,
+  mirrorRect,
+  orientedLike,
+  orientedRect,
   boundingRect,
   rotateGeometry,
   rotateRect,
+  geometryMirrored,
   geometryRotation,
+  sameOrientation,
   sameRect
 } from "../../geometry/geometry.ts";
 import { UVSlotMap } from "../UVSlotMap.ts";
@@ -29,6 +33,7 @@ import {
   type UVSlot
 } from "../../geometry/types.ts";
 import type {
+  MirrorAxis,
   SelectionRect,
   Vec2
 } from "../../../types.ts";
@@ -38,17 +43,15 @@ type StackedData = Extract<UVLayoutData, { state: "stacked"; }>;
 export class StackedLayout extends UVLayout {
   readonly state = "stacked";
   readonly movementScope: UVMovementScope = "region";
-  readonly #rect: SelectionRect;
-  readonly #rotation: UVQuarterTurn;
+  readonly #rect: UVRect;
   readonly #slot: UVSlot | null;
 
   static from(
     data: StackedData
   ): StackedLayout {
-    const rotation = geometryRotation(data.rect);
     const faces = data.faces ?
       new UVSlotMap(data.faces) :
-      UVSlotMap.shared(StackedLayout.#rotated(data.rect, rotation));
+      UVSlotMap.shared(data.rect);
 
     return new StackedLayout(
       faces,
@@ -77,12 +80,13 @@ export class StackedLayout extends UVLayout {
         })
       )
     );
-    const rect = boundingRect(aligned.get(target));
+    const targetGeometry = aligned.get(target);
+    const rect = boundingRect(targetGeometry);
 
     return new StackedLayout(
       aligned.stackedAt(rect),
       activeSlots,
-      StackedLayout.#rotated(rect, rotation),
+      orientedRect(rect, rotation, geometryMirrored(targetGeometry)),
       target
     );
   }
@@ -98,8 +102,7 @@ export class StackedLayout extends UVLayout {
       throw new RangeError(`Unknown stacked UV slot "${slot}"`);
     }
 
-    this.#rect = copyRect(rect);
-    this.#rotation = geometryRotation(rect);
+    this.#rect = orientedLike(rect, rect);
     this.#slot = slot;
   }
 
@@ -162,7 +165,14 @@ export class StackedLayout extends UVLayout {
     return new StackedLayout(
       this.faces.translated(dx, dy),
       this.activeSlots,
-      StackedLayout.#rotated({ ...this.#rect, x: position.x, y: position.y }, this.#rotation),
+      orientedLike(
+        {
+          ...this.#rect,
+          x: position.x,
+          y: position.y
+        },
+        this.#rect
+      ),
       this.#slot
     );
   }
@@ -174,19 +184,27 @@ export class StackedLayout extends UVLayout {
       return this;
     }
 
-    const geometry = StackedLayout.#rotated(rect, this.#rotation);
     const faces = this.faces.withSlots(new Map(
       this.faces.slots.map((slot) => {
         const current = this.faces.get(slot);
 
-        return [slot, isRectGeometry(current) ? geometry : geometryAt(current, rect)];
+        return [
+          slot,
+          isRectGeometry(current) ?
+            orientedRect(
+              rect,
+              geometryRotation(this.#rect),
+              geometryMirrored(current)
+            ) :
+            geometryAt(current, rect)
+        ];
       })
     ));
 
     return new StackedLayout(
       faces,
       this.activeSlots,
-      geometry,
+      orientedLike(rect, this.#rect),
       this.#slot
     );
   }
@@ -197,10 +215,22 @@ export class StackedLayout extends UVLayout {
     return new StackedLayout(
       this.faces.rotated(turns),
       this.activeSlots,
-      StackedLayout.#rotated(
-        rotateRect(this.#rect, turns),
-        quarterTurn(this.#rotation + turns)
-      ),
+      orientedLike(rotateRect(this.#rect, turns), this.#rect, turns),
+      this.#slot
+    );
+  }
+
+  mirrored(
+    axis: MirrorAxis
+  ): StackedLayout {
+    if (!this.canMirror(null)) {
+      return this;
+    }
+
+    return new StackedLayout(
+      this.faces.mirrored(axis),
+      this.activeSlots,
+      mirrorRect(this.#rect, axis),
       this.#slot
     );
   }
@@ -232,7 +262,7 @@ export class StackedLayout extends UVLayout {
   }
 
   #geometry(): UVRect {
-    return StackedLayout.#rotated(this.#rect, this.#rotation);
+    return orientedLike(this.#rect, this.#rect);
   }
 
   #hasTopology(): boolean {
@@ -246,20 +276,8 @@ export class StackedLayout extends UVLayout {
 
         return !isRectGeometry(geometry) ||
           !sameRect(geometry, this.#rect) ||
-          geometryRotation(geometry) !== this.#rotation;
+          !sameOrientation(geometry, this.#rect);
       });
-  }
-
-  static #rotated(
-    rect: SelectionRect,
-    rotation: UVQuarterTurn
-  ): UVRect {
-    return rotation === 0 ?
-      copyRect(rect) :
-      {
-        ...copyRect(rect),
-        rotation
-      };
   }
 
   static #target(
