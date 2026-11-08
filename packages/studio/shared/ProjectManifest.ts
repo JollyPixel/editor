@@ -29,7 +29,7 @@ const kProjectManifestSchema = z.object({
     convertsFrom: z.array(z.string()),
     extensions: z.array(z.string()),
     maxContentBytes: z.number().optional(),
-    preview: z.literal("server").optional()
+    preview: z.enum(["server", "frame"]).optional()
   })),
   kindPackages: z.array(z.object({
     name: z.string(),
@@ -37,6 +37,16 @@ const kProjectManifestSchema = z.object({
   })),
   maxContentBytes: z.number()
 });
+
+export type KindPreview = "server" | "frame";
+
+export interface ManifestKind extends Omit<LoadedAssetKind, "preview"> {
+  /**
+   * `"server"` when the kind's handler draws previews, `"frame"` when an
+   * editor package lists the kind in `jollypixel.preview`.
+   */
+  preview?: KindPreview;
+}
 
 export interface KindPackageDescriptor {
   name: string;
@@ -49,14 +59,14 @@ export interface EditorScopes extends EditorPreferenceScopes {
 
 export interface ProjectManifestData {
   editors: readonly EditorDescriptor[];
-  kinds: readonly LoadedAssetKind[];
+  kinds: readonly ManifestKind[];
   kindPackages: readonly KindPackageDescriptor[];
   maxContentBytes: number;
 }
 
 export class ProjectManifest implements ProjectManifestData {
   readonly editors: readonly EditorDescriptor[];
-  readonly kinds: readonly LoadedAssetKind[];
+  readonly kinds: readonly ManifestKind[];
   readonly kindPackages: readonly KindPackageDescriptor[];
   readonly maxContentBytes: number;
 

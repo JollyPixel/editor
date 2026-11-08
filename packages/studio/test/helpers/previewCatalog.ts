@@ -3,14 +3,14 @@ import type { AssetPreview } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import type { AssetPreviewTarget } from "../../src/catalog/AssetSummary.ts";
-import type { PreviewCatalog } from "../../src/shell/assets/AssetPreviewCache.ts";
+import type { PreviewSource } from "../../src/shell/assets/AssetPreviewCache.ts";
 
 interface PendingPreview {
   readonly assetId: string;
   resolve(preview: AssetPreview | null): void;
 }
 
-export class FakePreviewCatalog implements PreviewCatalog {
+export class FakePreviewCatalog implements PreviewSource {
   readonly requests: string[] = [];
   #pending: PendingPreview[] = [];
 
@@ -53,10 +53,12 @@ export function pngPreview(
 
 export function previewTarget(
   assetId: string,
-  revision = "r1"
+  revision = "r1",
+  source: AssetPreviewTarget["source"] = "server"
 ): AssetPreviewTarget {
   return {
     assetId,
-    revision
+    revision,
+    source
   };
 }

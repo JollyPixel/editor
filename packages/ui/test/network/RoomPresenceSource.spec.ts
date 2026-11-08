@@ -83,6 +83,20 @@ describe("RoomPresenceSource — identity", () => {
     assert.equal(ada?.color, ColorSequence.default.pick("peer-ada"));
   });
 
+  test("leaves an observer out of the peers", () => {
+    const { harness, source } = createSource();
+    harness.addPeer("preview", {
+      profile: {
+        username: "Me",
+        peerId: "account-1",
+        observer: true
+      }
+    });
+    harness.emit("peer-joined", { clientId: "preview" });
+
+    assert.deepEqual([...source.peers.keys()], [kSelf]);
+  });
+
   test("lists a peer that never claimed a path", () => {
     const { harness, source } = createSource();
     harness.addPeer("ada");

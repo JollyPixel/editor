@@ -32,17 +32,20 @@ type PeerProfileMetadata = {
   peerId?: string;
   avatar?: string | null;
   via?: string;
+  observer?: boolean;
 };
 ```
 
 The shape to publish. `peerId` is the stable identity of the person, the same
 across tabs and reconnects, unlike the per-connection `clientId`. `avatar` is
 written by the server only, and `null` clears it. `via` names how a guest got
-in, such as `"link"` for a share link.
+in, such as `"link"` for a share link. `observer` marks a client that reads
+rooms without a person behind it, such as the studio's asset preview, so
+collaborator lists leave it out.
 
 ## `parsePeerProfile(metadata)`
 
-Reads a profile into a readonly `PeerProfile` with the same four fields. It
+Reads a profile into a readonly `PeerProfile` with the same five fields. It
 never throws: a field of the wrong type reads as `undefined`, and a missing or
 malformed `username` reads as `GUEST_USERNAME` (`"Guest"`). `avatar` is kept
 only when it is a same-origin path, starting with a single `/`, so a peer

@@ -42,15 +42,18 @@ function createLeases() {
   ]);
   const opened: string[] = [];
   const released: string[] = [];
+  const loads = new Map<string, PromiseWithResolvers<void>>();
   const assets = {
     open: (kind: AssetDocumentKind<unknown>, assetId: string) => {
       opened.push(assetId);
       const document = documents.get(kind);
       assert.ok(document, `unexpected document kind for ${assetId}`);
+      const load = Promise.withResolvers<void>();
+      loads.set(assetId, load);
 
       return {
         document,
-        ready: Promise.resolve(),
+        ready: load.promise,
         release: () => released.push(assetId)
       };
     }
@@ -61,6 +64,7 @@ function createLeases() {
     pixels,
     opened,
     released,
+    loads,
     assets: assets as unknown as AssetLeases
   };
 }
@@ -100,6 +104,21 @@ describe("VoxelModelViewer", () => {
     assert.equal(viewer.document, model);
     assert.deepEqual(opened, ["model-1", "texture-1"]);
     assert.equal(blockMesh(view).material.map, viewer.texture.map);
+  });
+
+  it("is ready once the model and its texture are both loaded", async() => {
+    const { viewer, loads } = setup();
+    let ready = false;
+    const settled = viewer.ready.then(() => {
+      ready = true;
+    });
+
+    loads.get("model-1")?.resolve();
+    await Promise.resolve();
+    assert.equal(ready, false);
+    loads.get("texture-1")?.resolve();
+    await settled;
+    assert.equal(ready, true);
   });
 
   it("refuses a model that links no texture, before leasing anything", () => {

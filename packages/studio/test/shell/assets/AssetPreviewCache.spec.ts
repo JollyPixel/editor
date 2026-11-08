@@ -27,7 +27,7 @@ async function fetched(
 describe("AssetPreviewCache", () => {
   test("asks the catalog once per revision of an asset", async() => {
     const catalog = new FakePreviewCatalog();
-    const cache = new AssetPreviewCache(catalog);
+    const cache = new AssetPreviewCache({ server: catalog, frame: catalog });
 
     const loads = [
       cache.load(previewTarget("grass", "r1")),
@@ -50,10 +50,24 @@ describe("AssetPreviewCache", () => {
     cache.dispose();
   });
 
+  test("asks the source of each target", async() => {
+    const catalog = new FakePreviewCatalog();
+    const frame = new FakePreviewCatalog();
+    const cache = new AssetPreviewCache({ server: catalog, frame });
+
+    const model = cache.load(previewTarget("model", "r1", "frame"));
+    await frame.reply("model", pngPreview("model"));
+
+    assert.match(await model ?? "", /^blob:/);
+    assert.deepStrictEqual(frame.requests, ["model"]);
+    assert.deepStrictEqual(catalog.requests, []);
+    cache.dispose();
+  });
+
   test("revokes the least recently used preview past its capacity", async(t) => {
     const revoke = t.mock.method(URL, "revokeObjectURL");
     const catalog = new FakePreviewCatalog();
-    const cache = new AssetPreviewCache(catalog, 2);
+    const cache = new AssetPreviewCache({ server: catalog, frame: catalog }, 2);
 
     await fetched(cache, catalog, "a");
     const urlB = await fetched(cache, catalog, "b");
@@ -70,7 +84,7 @@ describe("AssetPreviewCache", () => {
   test("dispose revokes every preview and drops one still on its way", async(t) => {
     const revoke = t.mock.method(URL, "revokeObjectURL");
     const catalog = new FakePreviewCatalog();
-    const cache = new AssetPreviewCache(catalog);
+    const cache = new AssetPreviewCache({ server: catalog, frame: catalog });
     const urlA = await fetched(cache, catalog, "a");
     const loadedB = cache.load(previewTarget("b"));
 

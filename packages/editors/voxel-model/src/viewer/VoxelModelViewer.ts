@@ -40,6 +40,7 @@ export class VoxelModelViewer implements VoxelModelSource {
 
   readonly document: ModelDocument;
   readonly texture: ModelViewTexture;
+  readonly ready: Promise<void>;
   readonly #model: AssetLease<ModelDocument>;
   readonly #pixels: AssetLease<PixelDocument>;
   readonly #canvas: PixelCanvasTexture;
@@ -66,6 +67,9 @@ export class VoxelModelViewer implements VoxelModelSource {
     this.#model = assets.open(VOXEL_MODEL_DOCUMENT_KIND, modelId);
     this.#pixels = assets.open(MODEL_TEXTURE_DOCUMENT_KIND, textureId);
     this.document = this.#model.document;
+    this.ready = Promise.all([this.#model.ready, this.#pixels.ready])
+      .then(() => undefined);
+    this.ready.catch(() => undefined);
 
     const pixels = this.#pixels.document;
     this.#canvas = new PixelCanvasTexture({

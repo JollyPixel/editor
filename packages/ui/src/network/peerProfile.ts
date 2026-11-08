@@ -17,13 +17,39 @@ interface RoomMember {
   profile?: PeerMetadata;
 }
 
+export interface PeerProfileOptions {
+  /**
+   * Joins as an observer, which collaborator lists leave out.
+   * @default false
+   */
+  observer?: boolean;
+}
+
 export function toPeerProfileMetadata(
-  identity: PeerIdentity
+  identity: PeerIdentity,
+  options: PeerProfileOptions = {}
 ): PeerProfileMetadata {
-  return {
+  const profile: PeerProfileMetadata = {
     username: identity.username,
     peerId: identity.peerId
   };
+
+  return options.observer === true ?
+    {
+      ...profile,
+      observer: true
+    } :
+    profile;
+}
+
+export function* collaborators<TMember extends RoomMember>(
+  members: Iterable<TMember>
+): IterableIterator<TMember> {
+  for (const member of members) {
+    if (parsePeerProfile(member.profile).observer !== true) {
+      yield member;
+    }
+  }
 }
 
 export function peerProfileColor(

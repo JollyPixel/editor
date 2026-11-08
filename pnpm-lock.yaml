@@ -1586,6 +1586,9 @@ importers:
       '@jolly-pixel/editor.voxel-model':
         specifier: workspace:*
         version: link:../editors/voxel-model
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../engine
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../event-store
@@ -1598,6 +1601,9 @@ importers:
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../preferences
+      '@jolly-pixel/three':
+        specifier: workspace:*
+        version: link:../three
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1616,6 +1622,9 @@ importers:
       lit:
         specifier: 3.3.3
         version: 3.3.3
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
       zod:
         specifier: 4.6.7
         version: 4.6.7

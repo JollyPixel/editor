@@ -74,6 +74,19 @@ describe("EditorRegistry", () => {
     );
   });
 
+  test("opens the preview page on the same back-end as the editor pages", () => {
+    assert.equal(new EditorRegistry(kOptions).previewUrl(), "preview/index.html");
+    assert.equal(
+      new EditorRegistry({
+        query: {
+          offline: "studio"
+        },
+        maxContentBytes: 1024
+      }).previewUrl(),
+      "preview/index.html?offline=studio"
+    );
+  });
+
   test("snapshots the registered kinds in registration order", () => {
     const registry = new EditorRegistry(kOptions)
       .registerKind(kMapKind)

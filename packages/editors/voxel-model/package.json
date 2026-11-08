@@ -12,7 +12,8 @@
       "page": "index.html",
       "preferences": "src/preferences.ts"
     },
-    "scene": "./scene"
+    "scene": "./scene",
+    "preview": ["voxelmodel"]
   },
   "exports": {
     ".": "./src/viewer/index.ts",

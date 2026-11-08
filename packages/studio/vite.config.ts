@@ -28,6 +28,10 @@ import { StudioProject } from "./server/project/StudioProject.ts";
 import { backend } from "./vite/backend.ts";
 import { editorPages } from "./vite/editorPages.ts";
 import { projectManifest } from "./vite/projectManifest.ts";
+import {
+  PREVIEW_PAGE_DIR,
+  PREVIEW_PAGE_PATH
+} from "./shared/EditorDescriptor.ts";
 
 // CONSTANTS
 const kViteDefaultDeny = [
@@ -74,7 +78,13 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),
       editorPages(
-        new EditorPages(project.editors)
+        new EditorPages(project.editors),
+        {
+          shellPages: {
+            index: "index.html",
+            [PREVIEW_PAGE_DIR]: PREVIEW_PAGE_PATH
+          }
+        }
       ),
       mode.serve && backend(project, mode)
     ]

@@ -24,7 +24,8 @@ describe("parsePeerProfile", () => {
       username: "Ada",
       peerId: "peer-1",
       avatar: "/api/accounts/a/avatar?v=1",
-      via: "link"
+      via: "link",
+      observer: true
     };
 
     assert.deepEqual(parsePeerProfile(written), written);
@@ -39,12 +40,14 @@ describe("parsePeerProfile", () => {
     const profile = parsePeerProfile({
       username: "Ada",
       peerId: 7,
-      via: false
+      via: false,
+      observer: "yes"
     });
 
     assert.equal(profile.username, "Ada");
     assert.equal(profile.peerId, undefined);
     assert.equal(profile.via, undefined);
+    assert.equal(profile.observer, undefined);
   });
 
   test("keeps an avatar only when it is a same-origin path", () => {

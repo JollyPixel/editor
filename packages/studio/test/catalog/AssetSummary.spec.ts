@@ -29,7 +29,8 @@ const kKinds = new AssetKindSet({
       label: "Voxel map",
       extension: ".voxelmap.json",
       extensions: [".voxelmap.json"],
-      icon: "voxel-map"
+      icon: "voxel-map",
+      preview: "frame"
     },
     {
       kind: "blockset",
@@ -62,7 +63,11 @@ describe("AssetSummary", () => {
       kindLabel: "Voxel map",
       location: "/maps",
       editableAssetId: "map-cave",
-      preview: null
+      preview: {
+        assetId: "map-cave",
+        revision: "map-cave@r1",
+        source: "frame"
+      }
     });
   });
 
@@ -73,12 +78,19 @@ describe("AssetSummary", () => {
     });
   });
 
-  test("an asset of a kind with previews names the asset and revision to preview", () => {
+  test("an asset of a kind with previews names the asset, revision and source to preview", () => {
     assert.partialDeepStrictEqual(createSummary(assetNodeId("blockset-overworld")), {
       preview: {
         assetId: "blockset-overworld",
-        revision: "blockset-overworld@r1"
+        revision: "blockset-overworld@r1",
+        source: "server"
       }
+    });
+  });
+
+  test("an asset of a kind without previews names nothing to preview", () => {
+    assert.partialDeepStrictEqual(createSummary(assetNodeId("notes-hero")), {
+      preview: null
     });
   });
 

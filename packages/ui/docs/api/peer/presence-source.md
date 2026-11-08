@@ -85,6 +85,7 @@ const source = new RoomPresenceSource(room);
 - `@jolly-pixel/network` is an optional peer dependency. The subpath imports
   its `./client` entry, which keeps the server and `ws` out of browser bundles.
 - Peers are keyed by connection: two tabs of one account are two peers.
+- A remote peer whose profile sets `observer: true` is left out of `peers`.
 - `clientId` is `room.clientId`, `""` until admitted.
 - Names and colours come from
   [`toPresencePeer`](./identity.md#profile-helpers).

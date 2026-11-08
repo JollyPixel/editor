@@ -5,9 +5,9 @@ import {
   Systems,
   type Actor
 } from "@jolly-pixel/engine";
+import type { NamedSceneComponentPackage } from "@jolly-pixel/editor.host/scene";
 
 // Import Internal Dependencies
-import type { NamedSceneComponentPackage } from "../../src/components/SceneComponents.ts";
 import type { PrefabScenes } from "../../src/scene/PrefabScenes.ts";
 import { createSceneBinding } from "./sceneBinding.ts";
 

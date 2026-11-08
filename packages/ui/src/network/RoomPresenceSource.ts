@@ -11,6 +11,7 @@ import type {
 } from "../peer/PresenceSource.ts";
 import type { CollaboratorPresence } from "../peer/types.ts";
 import {
+  collaborators,
   localPresencePeer,
   toPresencePeer
 } from "./peerProfile.ts";
@@ -116,7 +117,7 @@ export class RoomPresenceSource implements PresenceSource {
     const peers = new Map<string, CollaboratorPresence>([
       [local.clientId, withEditing(local, this.#channel.published ?? null)]
     ]);
-    for (const peer of this.#room.peers.values()) {
+    for (const peer of collaborators(this.#room.peers.values())) {
       peers.set(peer.clientId, withEditing(
         toPresencePeer(peer),
         this.#channel.values.get(peer.clientId) ?? null

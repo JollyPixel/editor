@@ -11,9 +11,14 @@ import {
   openSocketChannel
 } from "./protocol.ts";
 
+export interface JoinOfflineOwnerOptions {
+  observer?: boolean;
+}
+
 export async function joinOfflineOwner(
   name: string,
-  databaseName: string
+  databaseName: string,
+  options: JoinOfflineOwnerOptions = {}
 ): Promise<OfflineGuest> {
   const channel = openBridgeChannel(name);
   const tab = crypto.randomUUID();
@@ -59,6 +64,7 @@ export async function joinOfflineOwner(
     onHostLost: () => {
       setTimeout(() => location.reload(), DISCOVERY_INTERVAL_MS);
     },
-    onClose: release
+    onClose: release,
+    observer: options.observer
   });
 }

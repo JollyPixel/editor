@@ -5,9 +5,13 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
 import { CatalogClient } from "@jolly-pixel/asset-server/client";
+import { parsePeerProfile } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { openOfflineBackend } from "#src/offline/shared-tab/openOfflineBackend.ts";
+import {
+  joinOfflineBackend,
+  openOfflineBackend
+} from "#src/offline/shared-tab/openOfflineBackend.ts";
 import { openBridgeChannel } from "#src/offline/shared-tab/protocol.ts";
 
 async function openTabs() {
@@ -58,6 +62,25 @@ describe("joinOfflineOwner", () => {
       catalog?.dispose();
       first.client.destroy();
       second.client.destroy();
+    }
+  });
+
+  it("claims an observer profile for a page that joins as an observer", async() => {
+    await using tabs = await openTabs();
+    const observer = await joinOfflineBackend({
+      name: tabs.name,
+      observer: true
+    });
+    const { client } = observer.connect();
+    try {
+      assert.strictEqual(
+        parsePeerProfile(client.room("lobby").profile).observer,
+        true
+      );
+    }
+    finally {
+      client.destroy();
+      await observer.close();
     }
   });
 

@@ -46,7 +46,11 @@ import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import { askConversion } from "./dialogs/askConversion.ts";
 import { askLargeFiles } from "./dialogs/askLargeFiles.ts";
 import { assetOpenEvent } from "./assetOpen.ts";
-import { AssetPreviewCache } from "./AssetPreviewCache.ts";
+import {
+  AssetPreviewCache,
+  type PreviewSource
+} from "./AssetPreviewCache.ts";
+import { previewRevision } from "../../catalog/previewRevision.ts";
 import {
   AssetTreeView,
   type AssetDropQuestions,
@@ -73,6 +77,7 @@ export interface AssetBrowserOptions {
   shares: StudioShareLinks | null;
   browserState: BrowserState;
   notifications: Notifier;
+  previews: PreviewSource;
 }
 
 @customElement("asset-browser")
@@ -347,7 +352,9 @@ export class AssetBrowser extends LitElement {
         .summary=${summarizeSelection(
           selection,
           this.#kinds,
-          (assetId) => this.#bound?.catalog.record(assetId)?.revision
+          (assetId) => (this.#bound === null ?
+            undefined :
+            previewRevision(this.#bound.catalog, assetId))
         )}
         .previews=${this.#previews}
       ></asset-details>
@@ -378,7 +385,10 @@ export class AssetBrowser extends LitElement {
     this.#bound = options;
     this.#previews = options === null ?
       null :
-      new AssetPreviewCache(options.catalog);
+      new AssetPreviewCache({
+        server: options.catalog,
+        frame: options.previews
+      });
     const shares = options?.shares ?? null;
     this.#view = options === null ? null : new AssetTreeView({
       catalog: options.catalog,

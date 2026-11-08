@@ -98,6 +98,12 @@ kind opens in at most one editor.
 An editor's built `index.html`, served at `editors/<name>/` beside the shell.
 Each one runs `editor.host` with its own client, session and runtime.
 
+### Preview frame
+
+The hidden `preview/index.html` frame that renders the 3D kinds listed in
+`jollypixel.preview` into PNG previews, one asset at a time, from the scene
+contributions. It joins asset rooms as an observer and never writes.
+
 ### Tab
 
 One open editor page in the shell, keyed by the asset id it opened. The

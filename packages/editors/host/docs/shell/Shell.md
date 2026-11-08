@@ -162,8 +162,9 @@ The setters throw when no scope exists; `apply` does nothing then.
 the server cannot be reached, shows the Retry or Work offline dialog of
 [`bootStandalone`](../boot/bootStandalone.md#startup).
 
-`openOfflineBackend({ project, name? })` from `@jolly-pixel/editor.host/offline`
-runs the asset back-end in the page. `backend.connect().client` feeds a
+`openOfflineBackend({ project, name? })` from
+`@jolly-pixel/editor.host/offline` runs the asset back-end in the page, or
+joins the tab that already owns the data. `backend.connect().client` feeds a
 `CatalogShare`, and `offlineQuery(name)` gives the query that opens editor
 frames on the same data:
 
@@ -172,6 +173,11 @@ const backend = await openOfflineBackend({ project, name: "studio" });
 const share = await CatalogShare.open(backend.connect().client);
 const editorQuery = offlineQuery("studio"); // { offline: "studio" }
 ```
+
+`joinOfflineBackend({ name?, observer? })` only joins the owning tab, and
+never runs a back-end of its own. With `observer: true`, its connections
+claim `observer` in their peer profile, so collaborator lists leave the page
+out.
 
 ## Other helpers
 

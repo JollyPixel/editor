@@ -1,26 +1,33 @@
 // Import Third-party Dependencies
-import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import type { AssetPreview } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import type { AssetPreviewTarget } from "../../catalog/AssetSummary.ts";
+import type { KindPreview } from "../../../shared/ProjectManifest.ts";
 
 // CONSTANTS
 const kDefaultCapacity = 32;
 
-export type PreviewCatalog = Pick<CatalogClient, "preview">;
+export interface PreviewSource {
+  preview(
+    assetId: string
+  ): Promise<AssetPreview | null>;
+}
+
+export type PreviewSources = Readonly<Record<KindPreview, PreviewSource>>;
 
 export class AssetPreviewCache {
-  #catalog: PreviewCatalog;
+  #sources: PreviewSources;
   #capacity: number;
   #urls = new Map<string, string | null>();
   #pending = new Map<string, Promise<string | null>>();
   #disposed = false;
 
   constructor(
-    catalog: PreviewCatalog,
+    sources: PreviewSources,
     capacity = kDefaultCapacity
   ) {
-    this.#catalog = catalog;
+    this.#sources = { ...sources };
     this.#capacity = capacity;
   }
 
@@ -37,7 +44,7 @@ export class AssetPreviewCache {
     }
 
     const pending = this.#pending.get(key) ??
-      this.#fetch(target.assetId, key);
+      this.#fetch(this.#sources[target.source], target.assetId, key);
     this.#pending.set(key, pending);
 
     return pending;
@@ -53,11 +60,12 @@ export class AssetPreviewCache {
   }
 
   async #fetch(
+    source: PreviewSource,
     assetId: string,
     key: string
   ): Promise<string | null> {
     try {
-      const preview = await this.#catalog.preview(assetId);
+      const preview = await source.preview(assetId);
       if (this.#disposed) {
         return null;
       }

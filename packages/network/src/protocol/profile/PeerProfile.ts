@@ -17,7 +17,8 @@ const kPeerProfileSchema = z.readonly(z.object({
   username: z.catch(z.string(), GUEST_USERNAME),
   peerId: z.catch(z.optional(z.string()), undefined),
   avatar: z.catch(z.optional(kSameOriginPathSchema), undefined),
-  via: z.catch(z.optional(z.string()), undefined)
+  via: z.catch(z.optional(z.string()), undefined),
+  observer: z.catch(z.optional(z.boolean()), undefined)
 }));
 
 export type PeerProfile = z.infer<typeof kPeerProfileSchema>;
@@ -27,6 +28,7 @@ export type PeerProfileMetadata = {
   peerId?: string;
   avatar?: string | null;
   via?: string;
+  observer?: boolean;
 };
 
 export function parsePeerProfile(

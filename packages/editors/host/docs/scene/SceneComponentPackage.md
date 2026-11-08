@@ -2,7 +2,8 @@
 
 The contract a package implements to add component types to the scene editor.
 The `scene` entry holds types, the `FormRows` builder, the
-`SharedSceneViewers` resolver, `SCENE_COMPONENT_CATEGORIES` and
+`SharedSceneViewers` resolver, the [contribution](#contributions) helpers,
+`SCENE_COMPONENT_CATEGORIES` and
 [`registerKindIcon`](../shell/Shell.md#other-helpers).
 
 ```ts
@@ -75,6 +76,39 @@ interface SceneComponentPackage {
 
 The editor refuses to boot when two packages declare the same component type
 or the same asset kind.
+
+## Contributions
+
+```ts
+interface SceneContribution {
+  readonly name: string;
+  readonly module: {
+    readonly SCENE_COMPONENTS?: SceneComponentPackage;
+  };
+}
+
+type NamedSceneComponentPackage = readonly [
+  name: string,
+  components: SceneComponentPackage
+];
+
+type AssetSlots = Readonly<Record<string, AssetType<unknown>>>;
+
+function contributedScenePackages(
+  contributions: Iterable<SceneContribution>
+): NamedSceneComponentPackage[];
+function requiredAssetSlots(kind: SceneComponentKind): AssetSlots;
+```
+
+`SceneContribution` is one entry of the
+`virtual:jolly-pixel/contributions/scene` module: a package that declares
+`jollypixel.scene` and the module its subpath exports.
+
+- `contributedScenePackages()` pairs each package name with its
+  `SCENE_COMPONENTS`. It throws a `TypeError` naming the package when a module
+  does not export it.
+- `requiredAssetSlots()` returns the `definition.assets` slots that are not
+  listed in `optionalAssets`.
 
 ## SceneComponentKind
 
@@ -243,6 +277,7 @@ interface SceneAssetUpdates {
 
 interface SceneAssetResolver<TValue = unknown> {
   resolve(reference: AssetReferenceData): TValue | null;
+  ready?(reference: AssetReferenceData): Promise<void>;
   dispose(): void;
 }
 ```
@@ -260,6 +295,10 @@ opens.
   the asset.
 - `updates.loaded()` tells the editor an asset arrived; the editor
   rebuilds the scene, and `resolve()` must then return the value.
+- `ready()` settles once the value for that reference is complete: its leases
+  are ready and its images decoded. It rejects when the asset fails to load.
+  The studio's asset preview waits on it before it reads the pixels back, and
+  renders no preview for a kind whose resolver lacks it.
 
 ## SharedSceneViewers
 
@@ -270,6 +309,7 @@ class SharedSceneViewers<TViewer extends SharedSceneViewer, TSource>
 }
 
 interface SharedSceneViewer {
+  readonly ready: Promise<void>;
   release(): void;
 }
 
@@ -291,3 +331,5 @@ components show that asset.
 - The viewer is released one microtask after its last held detach, so a
   component rebuilt in the same task keeps it. `dispose()` releases every open
   viewer.
+- `ready()` returns the viewer's `ready`, opening the viewer when no component
+  holds it yet. A viewer opened that way stays open until `dispose()`.

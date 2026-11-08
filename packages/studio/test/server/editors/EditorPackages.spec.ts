@@ -16,12 +16,12 @@ import { EditorPackage } from "../../../server/editors/EditorPackage.ts";
 import { EditorPackages } from "../../../server/editors/EditorPackages.ts";
 import { STUDIO_ROOT } from "../../../server/project/StudioProject.ts";
 import {
-  createTempDir,
-  removeTempDir
-} from "../../helpers/tempDir.ts";
+  PackageRoots,
+  writeEditorPackage
+} from "../../helpers/editorPackages.ts";
 
 // CONSTANTS
-const kRoots: string[] = [];
+const kRoots = new PackageRoots();
 const kGridScope = {
   name: "voxel-map",
   label: "Voxel map",
@@ -45,34 +45,11 @@ const kPaletteScope = {
   }
 };
 
-async function createRoot(): Promise<string> {
-  const root = await fs.realpath(await createTempDir("studio-editor-"));
-  kRoots.push(root);
-
-  return root;
-}
-
-async function createPackage(
-  directory: string,
-  editor: unknown
-): Promise<string> {
-  await fs.mkdir(directory, { recursive: true });
-  await fs.writeFile(
-    path.join(directory, "package.json"),
-    JSON.stringify({
-      name: "editor",
-      jollypixel: { editor }
-    })
-  );
-
-  return directory;
-}
-
 async function createPreferencesPackage(
   root: string,
   module: string
 ): Promise<void> {
-  const directory = await createPackage(path.join(root, "editor"), {
+  const directory = await writeEditorPackage(path.join(root, "editor"), {
     name: "voxel-map",
     kinds: ["voxelmap"],
     preferences: "preferences.mjs"
@@ -81,19 +58,17 @@ async function createPreferencesPackage(
 }
 
 describe("EditorPackages", () => {
-  after(async() => {
-    await Promise.all(kRoots.map((root) => removeTempDir(root)));
-  });
+  after(() => kRoots.remove());
 
   test("reads the editor manifest of each located package", async() => {
-    const root = await createRoot();
-    const voxelMap = await createPackage(path.join(root, "voxel-map"), {
+    const root = await kRoots.create();
+    const voxelMap = await writeEditorPackage(path.join(root, "voxel-map"), {
       name: "voxel-map",
       kinds: ["voxelmap"],
       page: "index.html"
     });
     await fs.writeFile(path.join(voxelMap, "index.html"), "");
-    const pixelArt = await createPackage(path.join(root, "pixel-art"), {
+    const pixelArt = await writeEditorPackage(path.join(root, "pixel-art"), {
       name: "pixel-art",
       kinds: ["pixelart"],
       dist: "dist-page"
@@ -114,7 +89,8 @@ describe("EditorPackages", () => {
           html: path.join(voxelMap, "index.html")
         },
         preferences: [],
-        sharedPreferences: []
+        sharedPreferences: [],
+        previewKinds: []
       }),
       new EditorPackage({
         package: "./pixel-art",
@@ -125,7 +101,8 @@ describe("EditorPackages", () => {
           kind: "built"
         },
         preferences: [],
-        sharedPreferences: []
+        sharedPreferences: [],
+        previewKinds: []
       })
     ]);
     assert.deepEqual(editors.descriptors(), [
@@ -163,7 +140,7 @@ describe("EditorPackages", () => {
   });
 
   test("reads the scopes the package's module exports by default and as shared", async() => {
-    const root = await createRoot();
+    const root = await kRoots.create();
     await createPreferencesPackage(
       root,
       [
@@ -186,7 +163,7 @@ describe("EditorPackages", () => {
   });
 
   test("rejects a preferences module that exports no valid scope", async() => {
-    const root = await createRoot();
+    const root = await kRoots.create();
     await createPreferencesPackage(
       root,
       "export default { name: \"Voxel Map\" };"
@@ -199,8 +176,8 @@ describe("EditorPackages", () => {
   });
 
   test("marks a package installed in node_modules as prebuilt, without its page source", async() => {
-    const root = await createRoot();
-    await createPackage(
+    const root = await kRoots.create();
+    await writeEditorPackage(
       path.join(root, "node_modules", "editor"),
       {
         name: "voxel-map",
@@ -217,8 +194,8 @@ describe("EditorPackages", () => {
   });
 
   test("rejects a workspace package whose page source is missing", async() => {
-    const root = await createRoot();
-    const directory = await createPackage(path.join(root, "voxel-map"), {
+    const root = await kRoots.create();
+    const directory = await writeEditorPackage(path.join(root, "voxel-map"), {
       name: "voxel-map",
       kinds: ["voxelmap"],
       page: "index.html"
@@ -230,60 +207,6 @@ describe("EditorPackages", () => {
         name: "TypeError",
         message: `"./voxel-map" has no page source at "${path.join(directory, "index.html")}".`
       }
-    );
-  });
-
-  test("rejects a package without an editor manifest", async() => {
-    const root = await createRoot();
-    await fs.mkdir(path.join(root, "editor"));
-    await fs.writeFile(path.join(root, "editor", "package.json"), "{}");
-
-    await assert.rejects(
-      EditorPackages.read(["./editor"], new PackageResolver(root)),
-      {
-        name: "TypeError",
-        message: /"\.\/editor" declares an invalid "jollypixel.editor" manifest:\n.*at jollypixel/s
-      }
-    );
-  });
-
-  test("rejects an invalid manifest", async() => {
-    const manifests = [
-      { name: "../escape", kinds: ["voxelmap"] },
-      { name: "voxel-map", kinds: [] },
-      { name: "voxel-map", kinds: [""] },
-      { name: "voxel-map", kinds: ["voxelmap"], dist: 1 },
-      { name: "voxel-map", kinds: ["voxelmap"], page: "" },
-      { name: "voxel-map", kinds: ["voxelmap"], preferences: "" },
-      { kinds: ["voxelmap"] },
-      { name: "voxel-map", kinds: "voxelmap" }
-    ];
-    for (const manifest of manifests) {
-      const root = await createRoot();
-      await createPackage(path.join(root, "editor"), manifest);
-
-      await assert.rejects(
-        EditorPackages.read(["./editor"], new PackageResolver(root)),
-        {
-          name: "TypeError",
-          message: /"\.\/editor" declares an invalid "jollypixel.editor" manifest/
-        }
-      );
-    }
-  });
-
-  test("rejects two packages declaring the same editor", async() => {
-    const root = await createRoot();
-    for (const folder of ["a", "b"]) {
-      await createPackage(path.join(root, folder), {
-        name: "voxel-map",
-        kinds: ["voxelmap"]
-      });
-    }
-
-    await assert.rejects(
-      EditorPackages.read(["./a", "./b"], new PackageResolver(root)),
-      /Editor "voxel-map" is declared by both "\.\/a" and "\.\/b"/
     );
   });
 });

@@ -12,7 +12,8 @@
       ],
       "page": "index.html"
     },
-    "scene": "./scene"
+    "scene": "./scene",
+    "preview": ["model"]
   },
   "exports": {
     ".": "./src/sceneComponents/index.ts",

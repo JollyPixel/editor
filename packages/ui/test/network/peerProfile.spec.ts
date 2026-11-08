@@ -28,6 +28,16 @@ describe("peer profile", () => {
     });
   });
 
+  test("marks an observer identity in its profile", () => {
+    const profile = toPeerProfileMetadata({
+      username: "Ada",
+      peerId: "peer-1",
+      color: "#000000"
+    }, { observer: true });
+
+    assert.equal(profile.observer, true);
+  });
+
   test("colors a peer from its published peer id, falling back to its client id", () => {
     assert.equal(peerProfileColor("client-1", { peerId: "peer-1" }), ColorSequence.default.pick("peer-1"));
     assert.equal(peerProfileColor("client-1", {}), ColorSequence.default.pick("client-1"));

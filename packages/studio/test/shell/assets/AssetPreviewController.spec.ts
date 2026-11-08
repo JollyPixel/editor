@@ -24,7 +24,7 @@ function showPreview(
   assetId: string
 ): ShownPreview {
   const catalog = new FakePreviewCatalog();
-  const cache = new AssetPreviewCache(catalog);
+  const cache = new AssetPreviewCache({ server: catalog, frame: catalog });
   const controller = new AssetPreviewController({
     requestUpdate: () => undefined
   });

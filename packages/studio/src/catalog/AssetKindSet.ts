@@ -7,6 +7,7 @@ import type {
 
 // Import Internal Dependencies
 import type { AssetKindPresenter } from "./AssetTreeModel.ts";
+import type { KindPreview } from "../../shared/ProjectManifest.ts";
 
 // CONSTANTS
 const kFallbackIcon: IconName = "file";
@@ -22,7 +23,7 @@ export interface AssetKindEntry {
   readonly convertsFrom?: readonly string[];
   readonly extensions: readonly string[];
   readonly maxContentBytes?: number;
-  readonly preview?: "server";
+  readonly preview?: KindPreview;
 }
 
 export interface AssetKindSetInit {
@@ -125,10 +126,10 @@ export class AssetKindSet implements AssetKindPresenter {
     return this.#editable.has(kind);
   }
 
-  hasPreview(
+  previewSource(
     kind: string
-  ): boolean {
-    return this.#byKind.get(kind)?.preview !== undefined;
+  ): KindPreview | undefined {
+    return this.#byKind.get(kind)?.preview;
   }
 
   kindDetail(

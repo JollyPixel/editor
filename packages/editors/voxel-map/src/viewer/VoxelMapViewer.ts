@@ -50,12 +50,13 @@ export class VoxelMapViewer implements VoxelMapSource {
 
     this.#lease = assets.open(VOXEL_MAP_DOCUMENT_KIND, options.mapId);
     this.document = this.#lease.document.voxels;
-    this.ready = this.#lease.ready;
     this.#blocksets = new LinkedBlocksets({
       document: this.document,
       catalog: options.catalog,
       open: (assetId) => openBlockset(assets, assetId)
     });
+    this.ready = this.#lease.ready.then(() => this.#blocksets.ready());
+    this.ready.catch(() => undefined);
   }
 
   attach(

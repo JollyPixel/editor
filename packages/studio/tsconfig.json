@@ -43,6 +43,12 @@
       "path": "../editors/host"
     },
     {
+      "path": "../engine"
+    },
+    {
+      "path": "../three"
+    },
+    {
       "path": "../network"
     },
     {

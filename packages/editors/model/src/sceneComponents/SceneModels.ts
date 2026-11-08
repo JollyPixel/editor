@@ -19,10 +19,15 @@ import { ModelPreview } from "../preview/ModelPreview.ts";
 // CONSTANTS
 export const MODEL_FILE_DOCUMENT_KIND = modelFileDocumentKind();
 
+interface OpenModel {
+  preview: ModelPreview | null;
+  readonly settled: Promise<void>;
+}
+
 export class SceneModels implements SceneAssetResolver<Model> {
   #session: SceneAssetContext;
   #updates: SceneAssetUpdates;
-  #previews = new Map<string, ModelPreview | null>();
+  #models = new Map<string, OpenModel>();
   #leases: AssetLease<ModelFileDocument>[] = [];
   #unfollows: (() => void)[] = [];
   #disposed = false;
@@ -38,11 +43,13 @@ export class SceneModels implements SceneAssetResolver<Model> {
   resolve(
     reference: AssetReferenceData
   ): Model | null {
-    if (!this.#previews.has(reference.id)) {
-      this.#open(reference.id);
-    }
+    return this.#open(reference.id).preview?.model ?? null;
+  }
 
-    return this.#previews.get(reference.id)?.model ?? null;
+  ready(
+    reference: AssetReferenceData
+  ): Promise<void> {
+    return this.#open(reference.id).settled;
   }
 
   dispose(): void {
@@ -53,29 +60,43 @@ export class SceneModels implements SceneAssetResolver<Model> {
     for (const lease of this.#leases) {
       lease.release();
     }
-    this.#previews.clear();
+    this.#models.clear();
   }
 
   #open(
     assetId: string
-  ): void {
+  ): OpenModel {
+    const open = this.#models.get(assetId);
+    if (open !== undefined) {
+      return open;
+    }
+
     const lease = this.#session.assets.open(MODEL_FILE_DOCUMENT_KIND, assetId);
-    this.#previews.set(assetId, null);
+    const entry: OpenModel = {
+      preview: null,
+      settled: lease.ready.then(
+        () => this.#follow(assetId, entry, lease.document)
+      )
+    };
+    entry.settled.catch(() => undefined);
+    this.#models.set(assetId, entry);
     this.#leases.push(lease);
-    lease.ready.then(
-      () => this.#follow(assetId, lease.document),
-      () => undefined
-    );
+
+    return entry;
   }
 
   #follow(
     assetId: string,
+    entry: OpenModel,
     document: ModelFileDocument
-  ): void {
+  ): Promise<void> {
+    if (this.#disposed) {
+      throw new Error("The scene models were disposed.");
+    }
     const { catalog } = this.#session;
     const targetRecord = catalog.record(assetId);
-    if (this.#disposed || targetRecord === undefined) {
-      return;
+    if (targetRecord === undefined) {
+      throw new Error(`No catalog record for model "${assetId}".`);
     }
 
     const preview = new ModelPreview(
@@ -89,10 +110,35 @@ export class SceneModels implements SceneAssetResolver<Model> {
       }
     });
     const unfollow = preview.follow();
-    this.#previews.set(assetId, preview);
+    entry.preview = preview;
     this.#unfollows.push(() => {
       unsubscribe();
       unfollow();
     });
+
+    return settled(preview);
   }
+}
+
+function settled(
+  preview: ModelPreview
+): Promise<void> {
+  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  function settle(): void {
+    const { view } = preview;
+    if (view.status === "loading") {
+      return;
+    }
+    stop();
+    if (view.status === "failed") {
+      reject(new Error(view.error));
+    }
+    else {
+      resolve();
+    }
+  }
+  const stop = preview.subscribe("change", settle);
+  settle();
+
+  return promise;
 }

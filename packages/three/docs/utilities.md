@@ -87,3 +87,63 @@ context.fillRect(0, 0, 32, 32);
 
 const texture = new THREE.CanvasTexture(canvas);
 ```
+
+## Render targets
+
+### `renderToTarget`
+
+```ts
+function renderToTarget(
+  renderer: THREE.WebGPURenderer,
+  scene: THREE.Object3D,
+  camera: THREE.Camera,
+  target: THREE.RenderTarget
+): void;
+```
+
+Renders `scene` into `target` over a transparent clear, then puts back the
+renderer's render target, clear color, clear alpha and `autoClear`, even when
+the render throws.
+
+### `ReadbackPixels`
+
+```ts
+class ReadbackPixels {
+  static fromRenderTarget(
+    renderer: THREE.WebGPURenderer,
+    target: THREE.RenderTarget
+  ): Promise<ReadbackPixels>;
+  static fromReadback(readback: PixelReadback): ReadbackPixels;
+
+  readonly data: Uint8ClampedArray<ArrayBuffer>;
+  readonly width: number;
+  readonly height: number;
+
+  toImageData(): ImageData;
+}
+
+interface PixelReadback {
+  data: THREE.TypedArray;
+  width: number;
+  height: number;
+  bottomUp: boolean;
+}
+```
+
+Turns the bytes of `readRenderTargetPixelsAsync` on an sRGB RGBA8 target into
+tightly packed, top-down, straight-alpha RGBA that a 2D canvas can draw.
+
+- Row padding is dropped. WebGPU pads each row to 256 bytes; the stride is
+  derived from `data.length`.
+- Set `bottomUp` on the WebGL backend, which reads the bottom row first.
+- Premultiplied colors are divided by alpha in linear light, so an
+  antialiased edge keeps its color instead of darkening.
+
+`fromRenderTarget` reads the whole target and sets `bottomUp` from the
+renderer's coordinate system. `fromReadback` takes bytes already read.
+
+```ts
+renderToTarget(renderer, scene, camera, target);
+const pixels = await ReadbackPixels.fromRenderTarget(renderer, target);
+context.putImageData(pixels.toImageData(), 0, 0);
+```

@@ -79,6 +79,9 @@ export interface SceneAssetResolver<TValue = unknown> {
   resolve(
     reference: AssetReferenceData
   ): TValue | null;
+  ready?(
+    reference: AssetReferenceData
+  ): Promise<void>;
   dispose(): void;
 }
 

@@ -15,12 +15,25 @@ import { ServedEditorPages } from "./ServedEditorPages.ts";
 
 // CONSTANTS
 const kHtmlFile = /\.html$/;
-const kShellPage = "index.html";
+const kShellPages = {
+  index: "index.html"
+};
 const kUiModule = /[\\/](?:packages|@jolly-pixel)[\\/]ui[\\/]dist[\\/]/;
 
+export interface EditorPagesPluginOptions {
+  /**
+   * Studio pages bundled next to the editor pages, by entry name, relative to
+   * the Vite root.
+   * @default { index: "index.html" }
+   */
+  shellPages?: Readonly<Record<string, string>>;
+}
+
 export function editorPages(
-  pages: EditorPages
+  pages: EditorPages,
+  options: EditorPagesPluginOptions = {}
 ): Plugin {
+  const { shellPages = kShellPages } = options;
   let outDir: string;
   let watcher: EditorPagesWatcher | null = null;
   const inputs = new Map<string, EditorPageInput>();
@@ -32,14 +45,11 @@ export function editorPages(
       for (const input of EditorPageInput.compiled(root, pages.editors)) {
         inputs.set(input.id, input);
       }
-      if (inputs.size === 0) {
-        return null;
-      }
       if (env.command === "serve") {
         return {
           optimizeDeps: {
             entries: [
-              kShellPage,
+              ...Object.values(shellPages),
               ...Array.from(inputs.values(), (input) => input.entry)
             ]
           }
@@ -50,7 +60,11 @@ export function editorPages(
         build: {
           rolldownOptions: {
             input: {
-              index: path.join(root, kShellPage),
+              ...Object.fromEntries(
+                Object.entries(shellPages).map(
+                  ([name, page]) => [name, path.join(root, page)]
+                )
+              ),
               ...Object.fromEntries(
                 Array.from(inputs.values(), (input) => [input.name, input.id])
               )

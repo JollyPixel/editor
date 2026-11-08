@@ -5,6 +5,7 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { SceneAssetResolver } from "./SceneComponentPackage.ts";
 
 export interface SharedSceneViewer {
+  readonly ready: Promise<void>;
   release(): void;
 }
 
@@ -56,6 +57,12 @@ export class SharedSceneViewers<
         queueMicrotask(() => this.#releaseUnused(assetId, shared));
       };
     });
+  }
+
+  ready(
+    reference: AssetReferenceData
+  ): Promise<void> {
+    return this.#shared(reference.id).viewer.ready;
   }
 
   dispose(): void {

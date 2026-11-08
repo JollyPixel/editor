@@ -30,7 +30,8 @@ const kKinds = [
       tone: "green"
     },
     convertsFrom: [],
-    extensions: [".voxelmap.json"]
+    extensions: [".voxelmap.json"],
+    preview: "frame" as const
   },
   {
     kind: "blockset",

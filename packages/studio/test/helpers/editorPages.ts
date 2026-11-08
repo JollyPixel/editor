@@ -83,6 +83,7 @@ export async function writeEditorPage(
 export interface VoxelMapEditorOptions {
   name?: string;
   page?: EditorPage;
+  previewKinds?: readonly string[];
 }
 
 export function voxelMapEditor(
@@ -93,7 +94,8 @@ export function voxelMapEditor(
     name = "voxel-map",
     page = {
       kind: "built"
-    }
+    },
+    previewKinds = []
   } = options;
 
   return new EditorPackage({
@@ -103,7 +105,8 @@ export function voxelMapEditor(
     dist,
     page,
     preferences: [],
-    sharedPreferences: []
+    sharedPreferences: [],
+    previewKinds
   });
 }
 
@@ -127,7 +130,8 @@ export function voxelMapPages(
 
 export function voxelMapProject(
   root: string,
-  dist: string
+  dist: string,
+  editor: VoxelMapEditorOptions = {}
 ): StudioProject {
   return new StudioProject(
     new ProjectFile(root, {
@@ -135,7 +139,7 @@ export function voxelMapProject(
     }, {
       inMemory: true
     }),
-    new EditorPackages([voxelMapEditor(dist)]),
+    new EditorPackages([voxelMapEditor(dist, editor)]),
     new ProjectKinds([
       new KindPackage({
         name: "@jolly-pixel/asset.voxel-map",

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type * as THREE from "three";
+import * as THREE from "three/webgpu";
 
 // CONSTANTS
 const kChannels = 4;
@@ -14,17 +14,38 @@ const kEncode = Uint8Array.from(
   (_, step) => Math.round(encodeSRGB(step / kEncodeSteps) * kOpaque)
 );
 
-export interface PreviewReadback {
+export interface PixelReadback {
   data: THREE.TypedArray;
   width: number;
   height: number;
   bottomUp: boolean;
 }
 
-export class PreviewPixels {
+export class ReadbackPixels {
+  static async fromRenderTarget(
+    renderer: THREE.WebGPURenderer,
+    target: THREE.RenderTarget
+  ): Promise<ReadbackPixels> {
+    const { width, height } = target;
+    const data = await renderer.readRenderTargetPixelsAsync(
+      target,
+      0,
+      0,
+      width,
+      height
+    );
+
+    return ReadbackPixels.fromReadback({
+      data,
+      width,
+      height,
+      bottomUp: renderer.coordinateSystem === THREE.WebGLCoordinateSystem
+    });
+  }
+
   static fromReadback(
-    readback: PreviewReadback
-  ): PreviewPixels {
+    readback: PixelReadback
+  ): ReadbackPixels {
     const { data, width, height, bottomUp } = readback;
     const rowLength = width * kChannels;
     const stride = height > 1 ?
@@ -41,7 +62,7 @@ export class PreviewPixels {
     }
     straightenAlpha(pixels);
 
-    return new PreviewPixels(pixels, width, height);
+    return new ReadbackPixels(pixels, width, height);
   }
 
   readonly data: Uint8ClampedArray<ArrayBuffer>;
