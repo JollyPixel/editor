@@ -35,7 +35,8 @@ const kKinds = new AssetKindSet({
       kind: "blockset",
       label: "Blockset",
       extension: ".blockset.json",
-      extensions: [".blockset.json"]
+      extensions: [".blockset.json"],
+      preview: "server"
     }
   ],
   editable: ["voxelmap"],
@@ -45,7 +46,11 @@ const kKinds = new AssetKindSet({
 function createSummary(
   ...nodeIds: string[]
 ): AssetSummary {
-  return summarizeSelection(new AssetSelection(kModel, nodeIds), kKinds);
+  return summarizeSelection(
+    new AssetSelection(kModel, nodeIds),
+    kKinds,
+    (assetId) => `${assetId}@r1`
+  );
 }
 
 describe("AssetSummary", () => {
@@ -56,7 +61,8 @@ describe("AssetSummary", () => {
       icon: "voxel-map",
       kindLabel: "Voxel map",
       location: "/maps",
-      editableAssetId: "map-cave"
+      editableAssetId: "map-cave",
+      preview: null
     });
   });
 
@@ -64,6 +70,15 @@ describe("AssetSummary", () => {
     assert.partialDeepStrictEqual(createSummary(assetNodeId("blockset-overworld")), {
       kindLabel: "Blockset",
       editableAssetId: null
+    });
+  });
+
+  test("an asset of a kind with previews names the asset and revision to preview", () => {
+    assert.partialDeepStrictEqual(createSummary(assetNodeId("blockset-overworld")), {
+      preview: {
+        assetId: "blockset-overworld",
+        revision: "blockset-overworld@r1"
+      }
     });
   });
 

@@ -22,6 +22,7 @@ export interface AssetKindEntry {
   readonly convertsFrom?: readonly string[];
   readonly extensions: readonly string[];
   readonly maxContentBytes?: number;
+  readonly preview?: "server";
 }
 
 export interface AssetKindSetInit {
@@ -122,6 +123,12 @@ export class AssetKindSet implements AssetKindPresenter {
     kind: string
   ): boolean {
     return this.#editable.has(kind);
+  }
+
+  hasPreview(
+    kind: string
+  ): boolean {
+    return this.#byKind.get(kind)?.preview !== undefined;
   }
 
   kindDetail(

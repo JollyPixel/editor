@@ -1,156 +1,97 @@
 # Asset server architecture
 
-The event store is the backend's history. The catalog, physical projection,
-and live state are separate views of that history.
+`@jolly-pixel/asset-server` records every asset change in an event store, then
+turns that history into files, a catalog and live editing rooms. Terms are
+defined in the [glossary](./GLOSSARY.md).
 
-## Read by task
-
-- [Startup and ownership](./architecture/Startup.md): assembly order, files,
-  injected resources, and shutdown.
-- [Events and projections](./architecture/EventsAndProjections.md): which
-  events change the catalog, source, and live state.
-- [Asset parts](./architecture/AssetParts.md): kinds whose content is
-  stored, loaded and sent in parts. Design for terrain M2.
-- [Rooms and reconciliation](./architecture/RoomsAndReconciliation.md): edits
-  from clients and changes made directly to physical storage.
-
-## Workspace map
+## History first
 
 ```mermaid
 flowchart TB
-    Editor["Editor clients"]
-    Tool["External tools"]
-    Files[("Physical asset storage")]
+    Room["Asset room"] -->|"domain event"| Store[("Event store")]
+    Writer["AssetWriter"] -->|"lifecycle event"| Store
+    Store --> Projector["AssetProjector<br/>paths and content"]
+    Store --> Live["Live state<br/>open assets only"]
+    Projector --> Catalog["Catalog<br/>id · kind · path · revision"]
+    Projector --> Files[("Files")]
+```
 
-    subgraph Backend["Asset backend"]
-        CatalogRoom["Catalog room"]
-        AssetRoom["Asset room"]
-        Writer["AssetWriter"]
-        Store[("Event store")]
-        Catalog["CatalogProjection<br/>ID · kind · path · revision"]
-        Projector["AssetProjector<br/>path · serialized content"]
-        State["AssetStateStore<br/>live in-memory state"]
-        Scheduler["SnapshotScheduler"]
-        Reconciler["Reconciler"]
+- Files, catalog and live state are views of the history, never the source.
+- The projection and catalog are rebuilt at startup. Live state is replayed
+  when a room opens and dropped after it closes.
+- Code: `storage/writer/`, `storage/projection/`, `catalog/`, `live/`.
 
-        CatalogRoom -->|"create · rename · delete"| Writer
-        AssetRoom -->|"domain event"| Store
-        Writer -->|"lifecycle event"| Store
+## Two ways in
 
-        Store -->|"lifecycle events"| Projector
-        Projector -->|"desired state"| Catalog
-        Store -->|"replay and new events"| State
-
-        Catalog -->|"snapshot and changes"| CatalogRoom
-        Catalog -.->|"room admission and deletion"| AssetRoom
-        State -->|"state snapshot and arbitration"| AssetRoom
-
-        Store -.->|"domain event"| Scheduler
-        State -.->|"serialize"| Scheduler
-        Scheduler -->|"asset.updated"| Writer
-
-        Projector -.->|"last written state"| Reconciler
-        Reconciler -->|"detected lifecycle change"| Writer
+```mermaid
+flowchart TB
+    subgraph Editor["Edited in a room"]
+        Room["Asset room"] --> Live["Live state"]
+        Live -->|"quiet period"| Scheduler["SnapshotScheduler"]
     end
-
-    Editor <--> CatalogRoom
-    Editor <--> AssetRoom
-    Projector -->|"write · move · delete"| Files
-    Tool -->|"edit outside the backend"| Files
-    Files -->|"scan"| Reconciler
+    subgraph Outside["Edited by another tool"]
+        Files[("Files")] --> Reconciler["Reconciler"]
+    end
+    Scheduler -->|"asset.updated"| Writer["AssetWriter"]
+    Reconciler -->|"created · moved · deleted"| Writer
 ```
 
-The three views answer different questions:
+- Room commands reach the file through a snapshot. That `asset.updated` is
+  also the checkpoint the next replay starts from.
+- The reconciler compares files with what the projector last wrote, so a
+  detected change is never written back.
+- Code: `live/SnapshotScheduler.ts`, `storage/reconcile/`.
 
-| View | What it answers | Lifetime |
-|---|---|---|
-| Catalog | Which assets exist, and where are they? | Rebuilt when the backend starts, then kept current. |
-| Physical projection | What path and bytes should storage contain? | Rebuilt when the backend starts, then kept in sync with the asset source. |
-| Live state | What is the editable state of this open asset? | Replayed when its room opens and released after eviction. |
-
-## Source layout
-
-Each folder under `src/` imports only from the folders listed above it:
-
-- `common/`: helpers with no asset vocabulary (`contentHash`, `Logger`).
-- `model/`: asset kinds, their handlers, and the asset event types.
-- `storage/`: the physical projection. `AssetWriter`, `AssetProjector`,
-  `Reconciler`, and the files in the state directory.
-- `catalog/`: `CatalogProjection`, the catalog room, tags, archives, and the
-  browser client served as `./client`.
-- `live/`: asset rooms, `AssetStateStore`, and `SnapshotScheduler`.
-- `node/`: the `./node` entry. `AssetServer`, the HTTP catalog handler,
-  Vite plugins, and the project file.
-
-`createAssetBackend.ts` at the root wires these together.
-
-## Live state lifetime
+## A room lives while someone is in it
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Replaying: first client joins
-    Replaying --> Open: checkpoint + later events folded
-    Open --> Open: domain events folded
-    Open --> Grace: last client leaves
-    Grace --> Open: client rejoins
-    Grace --> Evicted: grace period expires
-    Evicted --> [*]: flush pending snapshot and release state
+flowchart TB
+    Join["First join"] -->|"replay from checkpoint"| Open["Open"]
+    Open -->|"last member leaves"| Grace["Grace period"]
+    Grace -->|"member rejoins"| Open
+    Grace -->|"expires"| Evicted["Evicted<br/>flush snapshot, drop state"]
 ```
 
-## A room edit reaches storage
+- One command at a time: arbitrate, append, broadcast. Arbitration always sees
+  every earlier command.
+- A tag room shows one tagged content and accepts no command.
+- Large binary snapshots go out as content refs, fetched over HTTP and kept by
+  the browser cache.
+- Code: `live/`.
+
+## Kinds plug in
 
 ```mermaid
-sequenceDiagram
-    participant Client
-    participant Room as Asset room
-    participant Store as Event store
-    participant State as Live state
-    participant Scheduler as Snapshot scheduler
-    participant Writer as AssetWriter
-    participant Catalog
-    participant Projector as AssetProjector
-    participant Files as Physical storage
-
-    Client->>Room: editing command
-    Room->>Store: append domain event
-    Store->>State: fold command
-    Store->>Scheduler: schedule snapshot
-    Room-->>Client: broadcast accepted command
-
-    Note over Scheduler: quiet period or explicit flush
-    Scheduler->>State: serialize
-    Scheduler->>Writer: update with serialized bytes
-    Writer->>Store: append asset.updated
-    Store->>Projector: fold lifecycle event
-    Projector->>Catalog: refresh revision
-    Projector->>Files: write content
+flowchart TB
+    Handler["AssetKindHandler"] -->|"extensions"| Catalog["Catalog<br/>which files are this kind"]
+    Handler -->|"load · serialize"| Projector["Projection<br/>bytes on disk"]
+    Handler -->|"commands"| Room["Asset room<br/>live editing"]
+    Handler -->|"preview"| Preview["catalog:preview<br/>image"]
 ```
 
-The room snapshot sent on join and the persisted snapshot serve different
-paths. Only the persisted `asset.updated` event is a replay checkpoint.
+- The backend knows no kind by name. A kind without `commands` is stored and
+  listed, but never opens a room.
+- A project loads extra kinds from packages named in its project file.
+- Code: `model/kinds/`, `node/project/`.
 
-## An external file change enters history
+## Parts: large assets in pieces
 
-```mermaid
-sequenceDiagram
-    participant Tool as External tool
-    participant Files as Physical storage
-    participant Reconciler
-    participant Projector as AssetProjector
-    participant Writer as AssetWriter
-    participant Store as Event store
-    participant Catalog
-    participant State as Live state
-
-    Tool->>Files: edit, move, create, or delete
-    Reconciler->>Files: scan path and content hashes
-    Reconciler->>Projector: compare with last written state
-    Reconciler->>Writer: record detected change
-    Writer->>Store: append lifecycle event
-    Store->>Projector: fold lifecycle event
-    Projector->>Catalog: update record
-    Store->>State: load or clear if open
-    Writer->>Projector: mark already projected
-
-    Note over Projector,Files: no echo write to storage
 ```
+world.terrain           manifest, sent on join
+world.terrain.parts/
+  0_0.bin               one part per chunk, sent on subscribe
+  0_1.bin
+```
+
+- A kind opts in with `parts`. A member subscribes to the parts it needs and
+  is sent the commands that touch them.
+- A generation stores the changed parts inline and points to older
+  checkpoints for the rest.
+- Code: `storage/AssetPartFiles.ts`, `live/PartSubscriptions.ts`.
+
+## Layers
+
+`common` → `model` → `storage` → `catalog` → `live` → `node`. Each folder
+imports only from the ones before it, and `createAssetBackend.ts` wires them.
+`AssetServer` (`./node`) adds the network server and the SQLite event store at
+`.jollypixel/events.db`.

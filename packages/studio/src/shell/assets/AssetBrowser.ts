@@ -46,6 +46,7 @@ import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import { askConversion } from "./dialogs/askConversion.ts";
 import { askLargeFiles } from "./dialogs/askLargeFiles.ts";
 import { assetOpenEvent } from "./assetOpen.ts";
+import { AssetPreviewCache } from "./AssetPreviewCache.ts";
 import {
   AssetTreeView,
   type AssetDropQuestions,
@@ -165,7 +166,7 @@ export class AssetBrowser extends LitElement {
       }
 
       asset-details {
-        flex: 0 0 168px;
+        flex: 0 0 auto;
       }
 
       asset-delete-dialog,
@@ -198,6 +199,7 @@ export class AssetBrowser extends LitElement {
     import("./dialogs/AssetShareDialog.ts")
   ]));
   #view: AssetTreeView | null = null;
+  #previews: AssetPreviewCache | null = null;
   #bound: AssetBrowserOptions | null = null;
   #menuTarget: AssetSelection | null = null;
 
@@ -342,7 +344,12 @@ export class AssetBrowser extends LitElement {
       </div>
       <asset-details
         class="card"
-        .summary=${summarizeSelection(selection, this.#kinds)}
+        .summary=${summarizeSelection(
+          selection,
+          this.#kinds,
+          (assetId) => this.#bound?.catalog.record(assetId)?.revision
+        )}
+        .previews=${this.#previews}
       ></asset-details>
       <jolly-context-menu
         label="Asset actions"
@@ -367,7 +374,11 @@ export class AssetBrowser extends LitElement {
     }
 
     this.#view?.dispose();
+    this.#previews?.dispose();
     this.#bound = options;
+    this.#previews = options === null ?
+      null :
+      new AssetPreviewCache(options.catalog);
     const shares = options?.shares ?? null;
     this.#view = options === null ? null : new AssetTreeView({
       catalog: options.catalog,

@@ -8,6 +8,7 @@ import {
 // Import Internal Dependencies
 import {
   AssetKindRegistry,
+  AssetPreviews,
   AssetTags,
   AssetWriter,
   CatalogFolders,
@@ -240,6 +241,12 @@ export function catalogBackend(
       flush: (assetId) => backend.flush(assetId),
       backups: sync.backups,
       kinds: sync.kinds
+    }),
+    previews: new AssetPreviews({
+      catalog,
+      kinds: sync.kinds,
+      source: sync.source,
+      states: sync.states
     })
   };
 }

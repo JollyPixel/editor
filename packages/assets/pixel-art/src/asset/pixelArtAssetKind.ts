@@ -6,12 +6,14 @@ import {
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
+  type AssetPreview,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
 import {
   decodePixelArtFile,
   deserializePixelDocument,
   encodePixelArtFile,
+  encodePngPixels,
   InvalidPixelArtFileError,
   PixelBuffer,
   PixelDocumentState,
@@ -90,6 +92,16 @@ export class PixelArtState {
       pixels: new Uint8ClampedArray(size.x * size.y * 4)
     });
   }
+
+  async toPng(): Promise<Uint8Array> {
+    const { buffer } = this.document;
+    const png = await encodePngPixels(
+      buffer.pixels(),
+      buffer.size()
+    );
+
+    return png.data;
+  }
 }
 
 export interface PixelArtAssetKindOptions {
@@ -157,6 +169,15 @@ export function pixelArtAssetKind(
       return Promise.resolve(
         encodePixelArtFile(state.toJSON())
       );
+    },
+
+    async preview(
+      state: PixelArtState
+    ): Promise<AssetPreview> {
+      return {
+        type: "image/png",
+        bytes: await state.toPng()
+      };
     },
 
     commands: {

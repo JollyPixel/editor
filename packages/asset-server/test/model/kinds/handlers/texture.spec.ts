@@ -95,4 +95,38 @@ describe("textureAssetKind", () => {
     });
     assert.deepStrictEqual(snapshots, ["first", "second"]);
   });
+
+  test("previews the stored bytes of an image a browser shows", async() => {
+    const handler = textureAssetKind();
+    const images: readonly (readonly [string, readonly number[]])[] = [
+      ["image/png", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0]],
+      ["image/jpeg", [0xFF, 0xD8, 0xFF, 0xE0]],
+      ["image/gif", [...bytes("GIF89a")]],
+      ["image/webp", [...bytes("RIFF"), 1, 2, 3, 4, ...bytes("WEBPVP8 ")]],
+      ["image/bmp", [...bytes("BM"), 0, 0]]
+    ];
+
+    for (const [type, content] of images) {
+      const state = handler.create("a1");
+      handler.load(state, new Uint8Array(content));
+
+      const preview = await handler.preview!(state);
+
+      assert.strictEqual(preview?.type, type);
+      assert.deepStrictEqual(preview.bytes, state.bytes);
+    }
+  });
+
+  test("has no preview for ktx2 or for an image over 2 MiB", async() => {
+    const handler = textureAssetKind();
+    const ktx2 = handler.create("a1");
+    handler.load(ktx2, new Uint8Array([0xAB, ...bytes("KTX 20"), 0xBB]));
+    const large = handler.create("a2");
+    const png = new Uint8Array(2 * 1024 * 1024 + 1);
+    png.set([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+    handler.load(large, png);
+
+    assert.strictEqual(await handler.preview!(ktx2), null);
+    assert.strictEqual(await handler.preview!(large), null);
+  });
 });

@@ -3,7 +3,7 @@
 Binary frames, the compress hint and the byte migrations are committed. HTTP
 content refs for model and sound are built and not yet committed. The frame
 format is in [Messages](./docs/protocol/Messages.md#frames); content refs are
-described in the asset-server `RoomsAndReconciliation.md`.
+`ContentRefs` in `@jolly-pixel/asset-server`.
 
 ## Content refs
 

@@ -47,7 +47,7 @@ export interface ArchiveProject extends AsyncDisposable {
 
 export type ArchiveProjectOptions = Pick<
   AssetBackendOptions,
-  "catalog"
+  "catalog" | "handlers"
 >;
 
 export async function archiveProject(
@@ -59,7 +59,7 @@ export async function archiveProject(
     ...options,
     source,
     eventStore,
-    handlers: [liveLinkHandler()],
+    handlers: options.handlers ?? [liveLinkHandler()],
     reconcile: {
       watch: false
     }

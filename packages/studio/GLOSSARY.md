@@ -40,6 +40,7 @@ create it when the project has none.
 
 The `<asset-browser>` element in the asset dock on Home: the kind filter, the
 asset actions, the tree of catalog records and the details of the selection.
+The details start with the asset's preview image when its kind has one.
 
 ### Folder
 

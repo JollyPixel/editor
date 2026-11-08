@@ -40,3 +40,6 @@ export {
   ASSET_CONTENT_URL_PATH,
   type ContentRef
 } from "../../model/kinds/ContentRef.ts";
+export type {
+  AssetPreview
+} from "../../model/kinds/AssetKindHandler.ts";

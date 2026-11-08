@@ -28,7 +28,8 @@ const kProjectManifestSchema = z.object({
     creatable: z.boolean().optional(),
     convertsFrom: z.array(z.string()),
     extensions: z.array(z.string()),
-    maxContentBytes: z.number().optional()
+    maxContentBytes: z.number().optional(),
+    preview: z.literal("server").optional()
   })),
   kindPackages: z.array(z.object({
     name: z.string(),

@@ -58,7 +58,8 @@ export class EditorRegistry {
       creatable: descriptor.creatable,
       convertsFrom: descriptor.convertsFrom,
       extensions: descriptor.extensions,
-      maxContentBytes: descriptor.maxContentBytes
+      maxContentBytes: descriptor.maxContentBytes,
+      preview: descriptor.preview
     });
 
     return this;

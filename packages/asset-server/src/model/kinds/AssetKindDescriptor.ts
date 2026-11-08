@@ -38,4 +38,8 @@ export interface LoadedAssetKind extends AssetKindDescriptor {
    * The handler's `maxContentBytes`, absent when the catalog's limit applies.
    */
   maxContentBytes?: number;
+  /**
+   * `"server"` when the kind's handler draws previews with its `preview` hook.
+   */
+  preview?: "server";
 }

@@ -38,7 +38,8 @@ const kKinds = [
     extension: ".blockset.json",
     convertsFrom: [".png"],
     extensions: [".blockset.json"],
-    maxContentBytes: 2048
+    maxContentBytes: 2048,
+    preview: "server" as const
   }
 ];
 const kKindPackages = [

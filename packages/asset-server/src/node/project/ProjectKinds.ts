@@ -5,10 +5,7 @@ import { pathToFileURL } from "node:url";
 import type { LoadedAssetKind } from "../../model/kinds/AssetKindDescriptor.ts";
 import type { AnyAssetKindHandler } from "../../model/kinds/AssetKindHandler.ts";
 import { BINARY_KIND } from "../../model/kinds/handlers/binary.ts";
-import {
-  builtInAssetKinds,
-  BUILT_IN_KINDS_PACKAGE
-} from "../../model/kinds/handlers/builtIn.ts";
+import { BUILT_IN_KINDS_PACKAGE } from "../../model/kinds/handlers/builtIn.ts";
 import {
   KindPackage,
   type PackageLoader
@@ -31,6 +28,7 @@ export class ProjectKinds {
   readonly resolver: PackageResolver;
 
   #packages: KindPackage[];
+  #builtIn = KindPackage.builtIn();
 
   static async load(
     file: ProjectFile,
@@ -59,13 +57,10 @@ export class ProjectKinds {
     resolver: PackageResolver
   ) {
     const list = [...packages];
-    const owners = new Map<string, string>(
-      [
-        BINARY_KIND,
-        ...builtInAssetKinds().map((handler) => handler.kind)
-      ].map((kind) => [kind, BUILT_IN_KINDS_PACKAGE])
-    );
-    for (const kindPackage of list) {
+    const owners = new Map<string, string>([
+      [BINARY_KIND, BUILT_IN_KINDS_PACKAGE]
+    ]);
+    for (const kindPackage of [this.#builtIn, ...list]) {
       for (const { kind } of kindPackage.handlers) {
         const owner = owners.get(kind);
         if (owner !== undefined) {
@@ -107,16 +102,13 @@ export class ProjectKinds {
   }
 
   handlers(): AnyAssetKindHandler[] {
-    return [
-      ...this.packages.flatMap(
-        (kindPackage) => kindPackage.handlers
-      ),
-      ...builtInAssetKinds()
-    ];
+    return [...this.packages, this.#builtIn].flatMap(
+      (kindPackage) => kindPackage.handlers
+    );
   }
 
   descriptors(): LoadedAssetKind[] {
-    return this.packages.flatMap(
+    return [...this.packages, this.#builtIn].flatMap(
       (kindPackage) => kindPackage.descriptors
     );
   }

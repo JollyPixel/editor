@@ -61,10 +61,19 @@ describe("ProjectKinds", () => {
       kinds.handlers().map((handler) => handler.kind),
       ["beta", "gamma", "alpha", TEXTURE_KIND]
     );
+    const descriptors = kinds.descriptors();
     assert.deepEqual(
-      kinds.descriptors(),
+      descriptors.slice(0, 3),
       ["beta", "gamma", "alpha"].map((kind) => loadedKind(kind))
     );
+    assert.partialDeepStrictEqual(descriptors.slice(3), [
+      {
+        kind: TEXTURE_KIND,
+        label: "Texture",
+        creatable: false,
+        preview: "server"
+      }
+    ]);
   });
 
   test("resolves the packages from the project root", async() => {

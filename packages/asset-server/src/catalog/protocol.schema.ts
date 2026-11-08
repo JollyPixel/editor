@@ -20,6 +20,7 @@ import {
   CATALOG_IMPORT,
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
+  CATALOG_PREVIEW,
   CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
@@ -77,7 +78,8 @@ const kCommandTypes = [
   CATALOG_UNTAG,
   CATALOG_RESTORE,
   CATALOG_REPLACE,
-  CATALOG_READ
+  CATALOG_READ,
+  CATALOG_PREVIEW
 ] as const;
 
 export const assetRecordSchema = z.object({
@@ -190,6 +192,9 @@ export const catalogCommandProtocol = new MessageProtocol(
     }),
     requestVariant(CATALOG_READ, {
       assetId: kString
+    }),
+    requestVariant(CATALOG_PREVIEW, {
+      assetId: kString
     })
   ]),
   {
@@ -266,6 +271,13 @@ export const catalogMessageProtocol = new MessageProtocol(
       appliedVariant(z.literal(CATALOG_READ), {
         assetId: kString,
         content: bytesSchema
+      }),
+      appliedVariant(z.literal(CATALOG_PREVIEW), {
+        assetId: kString,
+        preview: z.nullable(z.object({
+          type: kString,
+          bytes: bytesSchema
+        }))
       })
     ]),
     requestVariant(CATALOG_REJECTED, {

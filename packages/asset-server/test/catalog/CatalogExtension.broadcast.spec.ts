@@ -20,6 +20,7 @@ import {
   CATALOG_IMPORT,
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
+  CATALOG_PREVIEW,
   CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
@@ -149,7 +150,8 @@ describe("CatalogExtension — broadcast", () => {
         CATALOG_UNTAG,
         CATALOG_RESTORE,
         CATALOG_REPLACE,
-        CATALOG_READ
+        CATALOG_READ,
+        CATALOG_PREVIEW
       ]
     );
     assert.deepEqual(

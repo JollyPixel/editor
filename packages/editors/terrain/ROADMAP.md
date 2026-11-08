@@ -46,8 +46,8 @@ The [design](./docs/design.md) holds the decisions every milestone builds on.
   `<asset>.parts/` folder; a checkpoint is one generation, a single
   `asset.updated` holding the manifest, the changed parts and the version
   that holds each other part; the server keeps every part in memory; the
-  `subscribeParts` reply carries the parts. See the
-  [asset parts design](../../asset-server/architecture/AssetParts.md).
+  `subscribeParts` reply carries the parts. The contract is the `AssetParts`
+  interface of `@jolly-pixel/asset-server`.
 - **Part checkpoints: done** (2026-10-21). A kind declares `parts`;
   creation, generations, replay and compaction handle them. Kinds without
   parts are unchanged.

@@ -82,7 +82,8 @@ describe("EditorRegistry", () => {
         label: "Pixel art",
         extension: ".pixelart",
         convertsFrom: [".png"],
-        extensions: [".pixelart"]
+        extensions: [".pixelart"],
+        preview: "server"
       })
       .registerKind({
         kind: "font",
@@ -104,7 +105,8 @@ describe("EditorRegistry", () => {
         creatable: undefined,
         convertsFrom: [],
         extensions: [".voxelmap.json"],
-        maxContentBytes: undefined
+        maxContentBytes: undefined,
+        preview: undefined
       },
       {
         kind: "pixelart",
@@ -114,7 +116,8 @@ describe("EditorRegistry", () => {
         creatable: undefined,
         convertsFrom: [".png"],
         extensions: [".pixelart"],
-        maxContentBytes: undefined
+        maxContentBytes: undefined,
+        preview: "server"
       },
       {
         kind: "font",
@@ -124,7 +127,8 @@ describe("EditorRegistry", () => {
         creatable: false,
         convertsFrom: [".ttf"],
         extensions: [".typeface.json"],
-        maxContentBytes: 2048
+        maxContentBytes: 2048,
+        preview: undefined
       }
     ]);
   });
