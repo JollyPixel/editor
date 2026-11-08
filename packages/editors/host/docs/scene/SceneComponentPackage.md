@@ -86,6 +86,7 @@ interface SceneComponentKind<TData extends object = any, TAssets = any> {
   initialData?: Systems.JSONObject;
   icon?: string;
   form: ComponentForm<TData, TAssets>;
+  optionalAssets?: readonly (keyof TAssets & string)[];
   describe?: ComponentDescriber<TData, TAssets>;
   anchorAsset?: string;
   origin?: "center" | "corner";
@@ -128,6 +129,13 @@ categories in the order of `SCENE_COMPONENT_CATEGORIES` (`{ id, label }`).
 A category without kinds is hidden, and a category holding one kind shows that
 kind in place of the folder. A kind whose `definition.assets` slots pick an
 asset ends with an ellipsis.
+
+`optionalAssets` lists slots the scene editor leaves empty when it adds the
+component; the inspector still offers them. An optional slot names no icon,
+adds no ellipsis to the menu entry, and is hidden while no `assets` source
+opens its kind. Picking or clearing one also clears the component's slots
+that `definition.assets` does not declare, such as the texture slots a shader
+adds to the form. The built-in `Mesh` declares its `shader` slot this way.
 
 `initialData` is the data a component starts with when the scene editor adds
 it, for example `{ castShadow: true }`. It defaults to `{}`.
@@ -172,6 +180,7 @@ class FormRows<TData> {
   color(path: FieldPath<TData>, label: string): ColorRow<TData>;
   choice(path: FieldPath<TData>, label: string, options: readonly ChoiceOption[]): ChoiceRow<TData>;
   vector(path: FieldPath<TData>, label: string, bounds?: NumberBounds): VectorRow<TData>;
+  asset(slot: string, label: string, type: AssetType<unknown>): AssetRow;
   list(key: ListKey<TData>, label: string, list: ListItems<Item>): ListRow;
 }
 
@@ -189,7 +198,13 @@ interface ListItems<TItem> {
 - A `choice` row with `resets: true` replaces its parent object instead of
   merging into it. Its value also picks the defaults that the other rows of
   that object show.
-- A `vector` row edits an `{ x, y, z }` object.
+- A `vector` row edits an `{ x, y, z }` object, or `{ x, y }` and
+  `{ x, y, z, w }` with `size: 2` or `size: 4`.
+- Any field row takes an optional `fallback`, the value shown and used as the
+  default while the data has none.
+- An `asset` row is an asset picker for the component's `assets` map under
+  `slot`, which the definition need not declare. It writes the reference, not
+  the data.
 - A `list` row edits an array field of objects. `rows` returns the rows of
   one parsed item; their paths start at the item. Each item shows as a folder
   titled `itemLabel` and its number,
@@ -199,6 +214,14 @@ interface ListItems<TItem> {
   `declared` list (`key`, `type`, `label`, `description`, `default`) shows
   those properties first with a fixed key and type; a declared property
   without a stored value shows its default.
+
+### shaderUniformRows(shader): FormRow[]
+
+Returns one row per uniform the shader declares, for data with a `uniforms`
+object: a `number`, `color` or `vector` row at `["uniforms", name]` with the
+declared default as `fallback`, or an `asset` row for the texture slot
+`shaderTextureSlot(name)`. It returns `[]` for `null`, so a form can call it
+with `assets.resolve("shader")` while the shader loads.
 
 ## SceneAssetSource
 

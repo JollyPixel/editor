@@ -3,11 +3,13 @@ import type { AssetSeedMap } from "@jolly-pixel/asset-server";
 import {
   SCRIPT_KIND,
   SCRIPT_TEMPLATE,
+  SHADER_KIND,
+  SHADER_TEMPLATE,
   TEXT_KIND
 } from "@jolly-pixel/asset.script";
 
 // CONSTANTS
-const kReadme = "# Script project\n\nBehaviors live in `scripts/`.\n";
+const kReadme = "# Script project\n\nBehaviors live in `scripts/`, TSL shaders in `shaders/`.\n";
 
 export interface ScriptProject {
   seed: AssetSeedMap;
@@ -24,6 +26,11 @@ export function createScriptProject(): ScriptProject {
             SCRIPT_TEMPLATE.replace("NewBehavior", "PlayerBehavior")
           )
         )
+      },
+      "shaders/Wave.tsl.ts": {
+        id: crypto.randomUUID(),
+        kind: SHADER_KIND,
+        content: () => Promise.resolve(new TextEncoder().encode(SHADER_TEMPLATE))
       },
       "README.md": {
         id: crypto.randomUUID(),

@@ -4,6 +4,11 @@ import type * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import { ActorComponent } from "../../../actor/ActorComponent.ts";
 import type { Actor } from "../../../actor/Actor.ts";
+import type {
+  ShadedMaterial,
+  Shader,
+  ShaderUniformValues
+} from "../../../assets/shader.ts";
 import type { WorldDefaultContext } from "../../../systems/World.ts";
 import {
   type MeshGeometry,
@@ -26,6 +31,20 @@ export interface MeshRendererOptions extends MeshSurfaceOptions {
   geometry?: MeshGeometry;
 }
 
+export interface MeshRendererCreateOptions extends MeshRendererOptions {
+  /**
+   * Builds the material the mesh renders with. The mesh then ignores the
+   * material settings.
+   * @default null
+   */
+  shader?: Shader | null;
+  /**
+   * Values passed to the shader; a missing uniform keeps its declared default.
+   * @default {}
+   */
+  uniforms?: ShaderUniformValues;
+}
+
 export interface MeshSettings extends MeshSurfaceSettings {
   geometry: MeshGeometry;
 }
@@ -41,10 +60,12 @@ export class MeshRenderer<
 > extends ActorComponent<TContext> {
   #settings: MeshSettings;
   #surface: SurfaceMesh;
+  #shader: Shader | null;
+  #shading: ShadedMaterial | null;
 
   constructor(
     actor: Actor<TContext>,
-    options: MeshRendererOptions = {}
+    options: MeshRendererCreateOptions = {}
   ) {
     super({
       actor,
@@ -52,16 +73,27 @@ export class MeshRenderer<
     });
 
     this.#settings = mergeSettings(MESH_RENDERER_DEFAULTS, options);
-    this.#surface = new SurfaceMesh(
-      actor.object3D,
-      createMeshGeometry(this.#settings.geometry),
-      this.#settings
-    );
+    const geometry = createMeshGeometry(this.#settings.geometry);
+    const { shader = null, uniforms = {} } = options;
+    this.#shader = shader;
+    this.#shading = shader?.createMaterial(uniforms) ?? null;
+    this.#surface = this.#shading === null ?
+      SurfaceMesh.standard(actor.object3D, geometry, this.#settings) :
+      SurfaceMesh.shaded(
+        actor.object3D,
+        geometry,
+        this.#settings,
+        this.#shading.material
+      );
     this.addTeardown(() => this.#surface.dispose());
   }
 
-  get threeMesh(): THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> {
+  get threeMesh(): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {
     return this.#surface.mesh;
+  }
+
+  get shader(): Shader | null {
+    return this.#shader;
   }
 
   get geometry(): MeshGeometry {
@@ -82,6 +114,14 @@ export class MeshRenderer<
       this.#surface.replaceGeometry(createMeshGeometry(this.#settings.geometry));
     }
     this.#surface.configure(this.#settings);
+
+    return this;
+  }
+
+  assignUniforms(
+    values: ShaderUniformValues
+  ): this {
+    this.#shading?.assign(values);
 
     return this;
   }

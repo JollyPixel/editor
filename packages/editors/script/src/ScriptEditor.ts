@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   SCRIPT_KIND,
+  SHADER_KIND,
   TEXT_KIND,
   textDocumentKind,
   type ScriptDocument
@@ -21,6 +22,7 @@ import { bindMarkdownPreview } from "./panes/preview/bindMarkdownPreview.ts";
 // CONSTANTS
 const kScriptKind = textDocumentKind(SCRIPT_KIND);
 const kTextKind = textDocumentKind(TEXT_KIND);
+const kShaderKind = textDocumentKind(SHADER_KIND);
 
 export interface ScriptEditorParts {
   session: EditorSession;
@@ -34,7 +36,7 @@ export class ScriptEditor {
   static readonly identity = {
     title: "Join script"
   };
-  static readonly kinds = [kScriptKind, kTextKind];
+  static readonly kinds = [kScriptKind, kTextKind, kShaderKind];
   static readonly archive = {
     fallbackName: "script",
     resetWarning: "Every script stored in this browser is deleted. " +
@@ -45,8 +47,8 @@ export class ScriptEditor {
     context: EditorContext
   ): Promise<ScriptEditor> {
     const { session } = context;
-    const { path } = session.targetRecord;
-    const target = session.targetLease(kScriptKind, kTextKind);
+    const { path, kind } = session.targetRecord;
+    const target = session.targetLease(kScriptKind, kTextKind, kShaderKind);
     const language = fileLanguage(path);
     const teardown = new Teardown();
 
@@ -57,7 +59,8 @@ export class ScriptEditor {
       }
       const code = document.querySelector("jolly-script-code");
       const preview = document.querySelector("jolly-markdown");
-      if (code === null || preview === null) {
+      const shaderView = document.querySelector<HTMLElement>("#shader-preview");
+      if (code === null || preview === null || shaderView === null) {
         throw new Error("ScriptEditor: the page is missing a script pane.");
       }
 
@@ -76,7 +79,7 @@ export class ScriptEditor {
         ));
       }
 
-      const ready = target.ready.then(() => {
+      const ready = target.ready.then(async() => {
         const readOnly = target.room.access !== "write";
         teardown.defer(code.attach({
           document: target.document,
@@ -87,6 +90,20 @@ export class ScriptEditor {
         if (language === "markdown") {
           code.hidden = readOnly;
           teardown.defer(bindMarkdownPreview(preview, target.document));
+        }
+        if (kind === SHADER_KIND) {
+          try {
+            const { bindShaderPreview } = await import("./panes/shader/bindShaderPreview.ts");
+            teardown.defer(await bindShaderPreview({
+              view: shaderView,
+              document: target.document,
+              name: path,
+              context
+            }));
+          }
+          catch (error) {
+            context.logger.error("shader preview failed", { error });
+          }
         }
       });
 

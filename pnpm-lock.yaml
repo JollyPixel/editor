@@ -1013,9 +1013,18 @@ importers:
       '@shikijs/langs-precompiled':
         specifier: 4.5.0
         version: 4.5.0
+      '@swc/wasm-typescript-esm':
+        specifier: 1.16.18
+        version: 1.16.18
+      es-module-lexer:
+        specifier: 3.0.4
+        version: 3.0.4
       lit:
         specifier: 3.3.3
         version: 3.3.3
+      three:
+        specifier: 0.186.1
+        version: 0.186.1
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -3343,6 +3352,9 @@ packages:
     peerDependencies:
       stylelint: ^17.6.0
 
+  '@swc/wasm-typescript-esm@1.16.18':
+    resolution: {integrity: sha512-56rEQ1grBkrY4qF5HNJnJhqmbwFHc6bPIe6/RxxeGDA8noYbGb6ql80t0Hacv72ufhFvyD6+TgBFjRraGnw8hA==}
+
   '@ts-morph/common@0.29.0':
     resolution: {integrity: sha512-35oUmphHbJvQ/+UTwFNme/t2p3FoKiGJ5auTjjpNTop2dyREspirjMy82PLSC1pnDJ8ah1GU98hwpVt64YXQsg==}
 
@@ -4243,6 +4255,9 @@ packages:
 
   error-ex@1.3.4:
     resolution: {integrity: sha512-sqQamAnR14VgCr1A618A3sGrygcpK+HEbenA/HiEAkkUwcZIIB/tgWqHFxWgOyDh4nB4JCRimh79dR5Ywc9MDQ==}
+
+  es-module-lexer@3.0.4:
+    resolution: {integrity: sha512-BldNY5mwkVu+cQ5Ymn3e6hB9Sx8XHx4ZevWbiUyZbfKxJxYO27Hf0wfzkxIaD5CAJMaGl3YspKELj0ff/7nCMA==}
 
   es-toolkit@1.52.0:
     resolution: {integrity: sha512-XTNEJQh1tY1ZJVcf6ayP/2n4ZPyaHlW2FWs7xvw5ddPuhUVjLD3olQVQS7kf58JbAB48iL0uL/jerTrjtV3lDA==}
@@ -7221,6 +7236,8 @@ snapshots:
       style-search: 0.1.0
       stylelint: 17.15.0(supports-color@10.2.2)(typescript@6.0.3)
 
+  '@swc/wasm-typescript-esm@1.16.18': {}
+
   '@ts-morph/common@0.29.0':
     dependencies:
       minimatch: 10.2.6
@@ -8121,6 +8138,8 @@ snapshots:
   error-ex@1.3.4:
     dependencies:
       is-arrayish: 0.2.1
+
+  es-module-lexer@3.0.4: {}
 
   es-toolkit@1.52.0: {}
 

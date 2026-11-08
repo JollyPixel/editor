@@ -2,6 +2,7 @@
 import { AssetType } from "@jolly-pixel/asset";
 import {
   SCRIPT_ASSET,
+  SHADER_ASSET,
   SCRIPT_KIND,
   type ScriptOutline
 } from "@jolly-pixel/asset.script/client";
@@ -19,6 +20,10 @@ import {
   SCRIPT_DOCUMENT_KIND,
   SceneScripts
 } from "./SceneScripts.ts";
+import {
+  SHADER_DOCUMENT_KIND,
+  SceneShaders
+} from "./SceneShaders.ts";
 import { scriptForm } from "./scriptForm.ts";
 
 type ScriptAssets = {
@@ -55,6 +60,11 @@ export const SCENE_COMPONENTS: SceneComponentPackage = {
       descriptor: SCRIPT_ASSET,
       documentKinds: [SCRIPT_DOCUMENT_KIND],
       open: (session, updates) => new SceneScripts(session, updates)
+    },
+    {
+      descriptor: SHADER_ASSET,
+      documentKinds: [SHADER_DOCUMENT_KIND],
+      open: (session, updates) => new SceneShaders(session, updates)
     }
   ]
 };

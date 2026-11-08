@@ -25,7 +25,12 @@ export class Teardown {
   defer(
     step: TeardownStep
   ): void {
-    this.#steps.push(step);
+    if (this.#closed) {
+      step();
+    }
+    else {
+      this.#steps.push(step);
+    }
   }
 
   run(): void {

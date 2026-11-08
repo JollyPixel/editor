@@ -18,6 +18,21 @@ import { Systems } from "@jolly-pixel/engine";
 
 // CONSTANTS
 export const EMPTY_ACTOR_ICON = "actor-empty";
+const kNoSlots: KindSlots = {
+  optional: new Set(),
+  required: {},
+  shown: {}
+};
+
+type AssetSlots = Readonly<Record<string, AssetType<unknown>>>;
+
+export type AssetChange = Record<string, AssetReferenceData | null>;
+
+interface KindSlots {
+  readonly optional: ReadonlySet<string>;
+  readonly required: AssetSlots;
+  readonly shown: AssetSlots;
+}
 
 export interface AssetNaming {
   name(
@@ -51,11 +66,28 @@ export class SceneComponents {
     owners.set(key, owner);
   }
 
+  static #partition(
+    kind: SceneComponentKind,
+    sources: ReadonlyMap<string, SceneAssetSource>
+  ): KindSlots {
+    const optional = new Set<string>(kind.optionalAssets);
+    const slots = Object.entries(kind.definition.assets ?? {});
+
+    return {
+      optional,
+      required: Object.fromEntries(slots.filter(([name]) => !optional.has(name))),
+      shown: Object.fromEntries(slots.filter(
+        ([name, slot]) => !optional.has(name) || sources.has(slot.kind.value)
+      ))
+    };
+  }
+
   static #icon(
     kind: SceneComponentKind,
+    slots: KindSlots,
     assetIcons: ReadonlyMap<string, string | undefined>
   ): string {
-    for (const slot of Object.values(kind.definition.assets ?? {})) {
+    for (const slot of Object.values(slots.required)) {
       const icon = assetIcons.get(slot.kind.value);
       if (icon !== undefined) {
         return icon;
@@ -69,6 +101,7 @@ export class SceneComponents {
 
   #kinds = new Map<string, SceneComponentKind>();
   #assetSources = new Map<string, SceneAssetSource>();
+  #slots: ReadonlyMap<string, KindSlots>;
   #icons: ReadonlyMap<string, string>;
 
   constructor(
@@ -92,9 +125,13 @@ export class SceneComponents {
       ([kind, { descriptor }]) => [kind, registerKindIcon(descriptor)]
     ));
     this.kinds = [...this.#kinds.values()];
-    this.#icons = new Map(this.kinds.map(
-      (kind) => [kind.definition.type, SceneComponents.#icon(kind, assetIcons)]
+    this.#slots = new Map(this.kinds.map(
+      (kind) => [kind.definition.type, SceneComponents.#partition(kind, this.#assetSources)]
     ));
+    this.#icons = new Map(this.kinds.map((kind) => [
+      kind.definition.type,
+      SceneComponents.#icon(kind, this.#findSlots(kind.definition.type), assetIcons)
+    ]));
   }
 
   get descriptors(): AssetKindDescriptor[] {
@@ -148,7 +185,9 @@ export class SceneComponents {
       return kind.describe(kind.definition.parse(component.data), names);
     }
 
-    const [detail] = Object.values(names);
+    const detail = Object.keys(this.#findSlots(component.type).required)
+      .map((slot) => names[slot])
+      .find((name) => name !== undefined);
 
     return detail === undefined ?
       { label: kind.label } :
@@ -172,19 +211,51 @@ export class SceneComponents {
 
   assetSlots(
     type: string
-  ): Readonly<Record<string, AssetType<unknown>>> {
-    return this.find(type)?.definition.assets ?? {};
+  ): AssetSlots {
+    return this.#findSlots(type).shown;
+  }
+
+  requiredAssetSlots(
+    type: string
+  ): AssetSlots {
+    return this.#findSlots(type).required;
   }
 
   picksAssets(
     type: string
   ): boolean {
-    return Object.keys(this.assetSlots(type)).length > 0;
+    return Object.keys(this.requiredAssetSlots(type)).length > 0;
+  }
+
+  assetChange(
+    component: Pick<DescribedComponent, "type" | "assets">,
+    slot: string,
+    reference: AssetReferenceData | null
+  ): AssetChange {
+    const change: AssetChange = { [slot]: reference };
+    if (!this.#findSlots(component.type).optional.has(slot)) {
+      return change;
+    }
+
+    const declared = this.find(component.type)?.definition.assets ?? {};
+    for (const [other, current] of Object.entries(component.assets)) {
+      if (!Object.hasOwn(declared, other) && current !== null) {
+        change[other] = null;
+      }
+    }
+
+    return change;
   }
 
   createDefinitions(): Systems.ComponentDefinitions {
     return new Systems.ComponentDefinitions().register(
       ...this.kinds.map((kind) => kind.definition)
     );
+  }
+
+  #findSlots(
+    type: string
+  ): KindSlots {
+    return this.#slots.get(type) ?? kNoSlots;
   }
 }

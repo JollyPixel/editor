@@ -4,12 +4,20 @@ import {
   ModelAssetType,
   type Model
 } from "../../../assets/model.ts";
+import {
+  ShaderAssetType,
+  type Shader
+} from "../../../assets/shader.ts";
 import { ComponentData } from "../../../systems/scene/file/definitions/ComponentData.ts";
 import type {
   ComponentContext,
   ComponentDefinition
 } from "../../../systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../../systems/scene/file/SceneFile.ts";
+import {
+  parseUniformData,
+  resolveShaderInputs
+} from "../shaderInputs.ts";
 import { ModelRenderer } from "./ModelRenderer.ts";
 
 export interface ModelSettings {
@@ -28,8 +36,16 @@ export interface ModelSettings {
   receiveShadow: boolean;
 }
 
+export interface ModelData extends ModelSettings {
+  /**
+   * Values of the shader's uniforms, keyed by uniform name.
+   */
+  uniforms: JSONObject;
+}
+
 export type ModelAssets = {
   model: Model;
+  shader: Shader;
 };
 
 // CONSTANTS
@@ -40,18 +56,19 @@ export const MODEL_DEFAULTS = {
 } as const satisfies ModelSettings;
 
 export class ModelDefinition implements ComponentDefinition<
-  ModelSettings,
+  ModelData,
   ModelRenderer,
   ModelAssets
 > {
   readonly type = "Model";
   readonly assets = {
-    model: ModelAssetType
+    model: ModelAssetType,
+    shader: ShaderAssetType
   };
 
   parse(
     data: Readonly<JSONObject>
-  ): ModelSettings {
+  ): ModelData {
     const fields = new ComponentData(data);
 
     return {
@@ -60,13 +77,14 @@ export class ModelDefinition implements ComponentDefinition<
       receiveShadow: fields.boolean(
         "receiveShadow",
         MODEL_DEFAULTS.receiveShadow
-      )
+      ),
+      uniforms: parseUniformData(data)
     };
   }
 
   create(
     actor: Actor<any>,
-    data: ModelSettings,
+    data: ModelData,
     context: ComponentContext<ModelAssets>
   ): ModelRenderer | null {
     const model = context.assets.resolve("model");
@@ -81,6 +99,7 @@ export class ModelDefinition implements ComponentDefinition<
       model,
       castShadow: data.castShadow,
       receiveShadow: data.receiveShadow,
+      ...resolveShaderInputs(context.assets, data.uniforms),
       animations: plays ? { default: data.animation } : {}
     });
   }

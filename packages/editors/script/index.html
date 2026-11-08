@@ -15,6 +15,13 @@
       <section id="script-view">
         <jolly-script-code></jolly-script-code>
         <jolly-markdown hidden></jolly-markdown>
+        <section id="shader-preview" hidden>
+          <div class="shader-viewport">
+            <canvas tabindex="-1"></canvas>
+            <jolly-select aria-label="Preview geometry" title="Preview geometry"></jolly-select>
+          </div>
+          <jolly-shader-output></jolly-shader-output>
+        </section>
         <jolly-presence-stack selectable max="6" hidden></jolly-presence-stack>
       </section>
     </div>

@@ -218,7 +218,7 @@ interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
   ): TComponent | null;
   apply?(component: TComponent, data: TData): boolean | void;
   owns?(component: Component): component is TComponent;
-  capture?(component: TComponent): JSONObject;
+  capture?(component: TComponent, stored: Readonly<JSONObject>): JSONObject;
   anchors?(component: TComponent): ComponentAnchors;
 }
 
@@ -238,7 +238,10 @@ interface ComponentContext<TAssets> {
 - `apply` patches a live component with the full data. Without it, or when
   it returns `false`, a data change rebuilds the component.
 - `capture` is the inverse of `parse`: it writes the current state of a live
-  component as `data`. `owns` tells whether a component the scene file did
+  component as `data`. `stored` is the data the component was built with,
+  after the last `apply`, or `{}` for a component the scene file did not
+  build; it keeps the fields the live component does not hold. `owns` tells
+  whether a component the scene file did
   not build is one the definition captures; without it, only the components
   the definition built are captured. `toHexColor(value)` turns any
   `THREE.ColorRepresentation` into the `"#rrggbb"` form
@@ -277,6 +280,12 @@ definition declares for it. Returns `null` for an empty or missing slot.
 `ComponentAssetResolver` to `SceneInstance`. Its `resolve` returns `null`
 for an asset that is still loading; the editor rebuilds the component once
 the asset arrives.
+
+### ComponentAssets.resolveSlot(slot, type): TValue | null
+
+Resolves any slot of the component's `assets` map with the given type, for
+slots the definition does not declare, such as the texture slots of a shader
+uniform.
 
 ### ComponentDefinitions
 

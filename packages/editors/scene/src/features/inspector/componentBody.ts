@@ -3,14 +3,20 @@ import {
   html,
   type TemplateResult
 } from "lit";
-import type { AssetType } from "@jolly-pixel/asset";
+import type {
+  AssetReferenceData,
+  AssetType
+} from "@jolly-pixel/asset";
 import type {
   ComponentChange,
   JSONObject,
   JSONValue,
   SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
-import type { DeclaredProperty } from "@jolly-pixel/editor.host/scene";
+import type {
+  DeclaredProperty,
+  VectorRow
+} from "@jolly-pixel/editor.host/scene";
 import { Systems } from "@jolly-pixel/engine";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
@@ -22,7 +28,9 @@ import "@jolly-pixel/ui/elements/reference";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/vector2";
 import "@jolly-pixel/ui/elements/vector3";
+import "@jolly-pixel/ui/elements/vector4";
 
 // Import Internal Dependencies
 import {
@@ -78,22 +86,31 @@ export function renderComponentBody(
 
   return html`
     ${renderAssetSlots(entry, components.assetSlots(entry.type), context)}
-    ${inspection.rows.map((inspected) => (inspected.kind === "list" ?
-      renderList(inspected, {
-        add: () => commit(inspection.addItem(inspected)),
-        remove: (index) => commit(inspection.removeItem(inspected, index)),
-        item: (index, field) => {
-          return {
-            preview: (next) => preview(inspection.editItem(inspected, index, field, next)),
-            commit: (next) => commit(inspection.editItem(inspected, index, field, next))
-          };
-        }
-      }) :
-      renderRow(inspected, {
+    ${inspection.rows.map((inspected) => {
+      if (inspected.kind === "asset") {
+        const { slot, label, type } = inspected.row;
+
+        return renderAssetSlot(entry, slot, label, type, context);
+      }
+
+      if (inspected.kind === "list") {
+        return renderList(inspected, {
+          add: () => commit(inspection.addItem(inspected)),
+          remove: (index) => commit(inspection.removeItem(inspected, index)),
+          item: (index, field) => {
+            return {
+              preview: (next) => preview(inspection.editItem(inspected, index, field, next)),
+              commit: (next) => commit(inspection.editItem(inspected, index, field, next))
+            };
+          }
+        });
+      }
+
+      return renderRow(inspected, {
         preview: (next) => preview(inspection.edit(inspected, next)),
         commit: (next) => commit(inspection.edit(inspected, next))
-      })
-    ))}
+      });
+    })}
   `;
 }
 
@@ -183,18 +200,7 @@ function renderRow(
         ></jolly-select>
       `;
     case "vector":
-      return html`
-        <jolly-vector3
-          label=${row.label}
-          .value=${Systems.isJSONObject(value) ? { ...value } : {}}
-          .default=${fallback}
-          .min=${row.min ?? -Infinity}
-          .max=${row.max ?? Infinity}
-          .step=${row.step ?? 0.1}
-          @jolly-input=${(event: ChangeEvent<JSONObject>) => preview(event.detail.value)}
-          @jolly-change=${(event: ChangeEvent<JSONObject>) => commit(event.detail.value)}
-        ></jolly-vector3>
-      `;
+      return renderVector(row, value, fallback, edit);
     case "text":
       return html`
         <jolly-text
@@ -218,39 +224,117 @@ function renderAssetSlots(
   slots: Readonly<Record<string, AssetType<unknown>>>,
   context: ComponentBodyContext
 ): TemplateResult[] {
-  const { assetSlots, writes } = context;
+  return Object.entries(slots).map(([slot, type]) => renderAssetSlot(
+    entry,
+    slot,
+    slot[0].toUpperCase() + slot.slice(1),
+    type,
+    context
+  ));
+}
 
-  return Object.entries(slots).map(([slot, type]) => {
-    const reference = entry.assets[slot] ?? null;
-    const label = slot[0].toUpperCase() + slot.slice(1);
-    async function pick(): Promise<void> {
-      const picked = await assetSlots.pick(type, reference);
-      if (picked !== null) {
-        writes.changeComponentAssets(entry.id, { [slot]: picked });
-      }
+function renderAssetSlot(
+  entry: SceneComponentJSON,
+  slot: string,
+  label: string,
+  type: AssetType<unknown>,
+  context: ComponentBodyContext
+): TemplateResult {
+  const { assetSlots, writes, components } = context;
+  const reference = entry.assets[slot] ?? null;
+  function change(next: AssetReferenceData | null): void {
+    writes.changeComponentAssets(
+      entry.id,
+      components.assetChange(entry, slot, next)
+    );
+  }
+  async function pick(): Promise<void> {
+    const picked = await assetSlots.pick(type, reference);
+    if (picked !== null) {
+      change(picked);
     }
-    function clear(event: ChangeEvent<string | null>): void {
-      if (event.detail.value === null) {
-        writes.changeComponentAssets(entry.id, { [slot]: null });
-      }
+  }
+  function clear(event: ChangeEvent<string | null>): void {
+    if (event.detail.value === null) {
+      change(null);
     }
-    function open(): void {
-      if (reference !== null) {
-        assetSlots.open?.(reference);
-      }
+  }
+  function open(): void {
+    if (reference !== null) {
+      assetSlots.open?.(reference);
     }
+  }
 
-    return html`
-      <jolly-reference
-        label=${label}
-        .value=${reference?.id ?? null}
-        .text=${reference === null ? "" : assetSlots.name(reference)}
-        @jolly-browse=${pick}
-        @jolly-change=${clear}
-        @jolly-open=${open}
-      ></jolly-reference>
-    `;
-  });
+  return html`
+    <jolly-reference
+      label=${label}
+      .value=${reference?.id ?? null}
+      .text=${reference === null ? "" : assetSlots.name(reference)}
+      @jolly-browse=${pick}
+      @jolly-change=${clear}
+      @jolly-open=${open}
+    ></jolly-reference>
+  `;
+}
+
+function renderVector(
+  row: VectorRow,
+  value: unknown,
+  fallback: unknown,
+  edit: RowEdit
+): TemplateResult {
+  const vector = Systems.isJSONObject(value) ? { ...value } : {};
+  const min = row.min ?? -Infinity;
+  const max = row.max ?? Infinity;
+  const step = row.step ?? 0.1;
+  function input(event: ChangeEvent<JSONObject>): void {
+    edit.preview(event.detail.value);
+  }
+  function change(event: ChangeEvent<JSONObject>): void {
+    edit.commit(event.detail.value);
+  }
+
+  switch (row.size ?? 3) {
+    case 2:
+      return html`
+        <jolly-vector2
+          label=${row.label}
+          .value=${vector}
+          .default=${fallback}
+          .min=${min}
+          .max=${max}
+          .step=${step}
+          @jolly-input=${input}
+          @jolly-change=${change}
+        ></jolly-vector2>
+      `;
+    case 4:
+      return html`
+        <jolly-vector4
+          label=${row.label}
+          .value=${vector}
+          .default=${fallback}
+          .min=${min}
+          .max=${max}
+          .step=${step}
+          @jolly-input=${input}
+          @jolly-change=${change}
+        ></jolly-vector4>
+      `;
+    default:
+      return html`
+        <jolly-vector3
+          label=${row.label}
+          .value=${vector}
+          .default=${fallback}
+          .min=${min}
+          .max=${max}
+          .step=${step}
+          @jolly-input=${input}
+          @jolly-change=${change}
+        ></jolly-vector3>
+      `;
+  }
 }
 
 function renderProperties(

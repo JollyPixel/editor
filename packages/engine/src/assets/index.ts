@@ -23,6 +23,17 @@ export {
   FontAssetType,
   type Font
 } from "./font.ts";
+export {
+  ShaderAssetType,
+  describeShaderUniform,
+  isShaderUniformValue,
+  shaderTextureSlot,
+  type ShadedMaterial,
+  type Shader,
+  type ShaderUniformDescription,
+  type ShaderUniformValue,
+  type ShaderUniformValues
+} from "./shader.ts";
 
 export const AssetLoaders = {
   model: ModelAssetLoader,

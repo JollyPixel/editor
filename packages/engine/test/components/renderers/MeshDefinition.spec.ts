@@ -4,25 +4,86 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { Actor } from "../../../src/actor/Actor.ts";
+import {
+  shaderTextureSlot,
+  type Shader,
+  type ShaderUniformValues
+} from "../../../src/assets/shader.ts";
 import { MeshDefinition } from "../../../src/components/renderers/mesh/MeshDefinition.ts";
+import { ComponentAssets } from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 
+interface MeshAssetsFixture {
+  shader?: Shader;
+  textures?: Readonly<Record<string, THREE.Texture>>;
+}
+
 function createMesh(
-  data: JSONObject = {}
+  data: JSONObject = {},
+  fixture: MeshAssetsFixture = {}
 ) {
   const { world } = createSceneSetup();
   const actor = new Actor(world as any, { name: "mesh" });
   const definition = new MeshDefinition();
+  const references: Record<string, AssetReferenceData> = {};
+  const values = new Map<string, unknown>();
+  if (fixture.shader !== undefined) {
+    references.shader = { kind: "shader", id: "shader" };
+    values.set("shader", fixture.shader);
+  }
+  for (const [uniform, texture] of Object.entries(fixture.textures ?? {})) {
+    references[shaderTextureSlot(uniform)] = { kind: "texture", id: uniform };
+    values.set(uniform, texture);
+  }
   const component = definition.create(
     actor,
-    definition.parse(data)
+    definition.parse(data),
+    {
+      mode: "edit",
+      assets: new ComponentAssets(definition.assets, references, {
+        resolve: <TValue>(reference: AssetReferenceData): TValue | null => (
+          values.get(reference.id) ?? null
+        ) as TValue | null
+      })
+    }
   );
 
   return { actor, definition, component };
+}
+
+function recordingShader(
+  uniforms: ShaderUniformValues = {}
+) {
+  const calls: ShaderUniformValues[] = [];
+  const assigned: ShaderUniformValues[] = [];
+  const material = new THREE.MeshBasicMaterial();
+  const shader: Shader = {
+    uniforms,
+    createMaterial: (values = {}) => {
+      calls.push(values);
+
+      return {
+        material,
+        assign: (next) => assigned.push(next)
+      };
+    }
+  };
+
+  return { shader, calls, assigned, material };
+}
+
+function standardMaterial(
+  mesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material>
+): THREE.MeshStandardMaterial {
+  const { material } = mesh;
+  assert.ok(material instanceof THREE.MeshStandardMaterial);
+
+  return material;
 }
 
 describe("Components.MeshDefinition", () => {
@@ -51,9 +112,10 @@ describe("Components.MeshDefinition", () => {
     assert.strictEqual(mesh.parent, actor.object3D);
     assert.ok(mesh.geometry instanceof THREE.SphereGeometry);
     assert.strictEqual(mesh.geometry.parameters.radius, 2);
-    assert.strictEqual(mesh.material.color.getHexString(), "00ff00");
-    assert.strictEqual(mesh.material.roughness, 0.25);
-    assert.strictEqual(mesh.material.transparent, true);
+    const material = standardMaterial(mesh);
+    assert.strictEqual(material.color.getHexString(), "00ff00");
+    assert.strictEqual(material.roughness, 0.25);
+    assert.strictEqual(material.transparent, true);
     assert.strictEqual(mesh.castShadow, true);
     assert.strictEqual(mesh.receiveShadow, false);
   });
@@ -67,7 +129,7 @@ describe("Components.MeshDefinition", () => {
     const { definition, component } = createMesh(data);
 
     assert.deepEqual(
-      definition.parse(definition.capture(component)),
+      definition.parse(definition.capture(component, data)),
       definition.parse(data)
     );
   });
@@ -82,7 +144,7 @@ describe("Components.MeshDefinition", () => {
     }));
 
     assert.strictEqual(component.threeMesh.geometry, geometry);
-    assert.strictEqual(component.threeMesh.material.metalness, 1);
+    assert.strictEqual(standardMaterial(component.threeMesh).metalness, 1);
   });
 
   test("apply rebuilds the geometry when its parameters change", () => {
@@ -99,6 +161,71 @@ describe("Components.MeshDefinition", () => {
     assert.ok(geometry instanceof THREE.BoxGeometry);
     assert.notStrictEqual(geometry, previous);
     assert.strictEqual(geometry.parameters.width, 4);
+    assert.strictEqual(disposed, true);
+  });
+});
+
+describe("Components.MeshDefinition shader slot", () => {
+  test("renders with a material built by the shader", () => {
+    const { shader, material } = recordingShader();
+    const { component } = createMesh({}, { shader });
+
+    assert.strictEqual(component.threeMesh.material, material);
+  });
+
+  test("builds the material from the uniform data and slot textures, defaults for the rest", () => {
+    const map = new THREE.Texture();
+    const { shader, calls } = recordingShader({
+      speed: 1,
+      tint: new THREE.Color("#ffffff"),
+      offset: new THREE.Vector3(1, 1, 1),
+      scale: 2,
+      map: new THREE.Texture()
+    });
+
+    createMesh({
+      uniforms: {
+        speed: 3,
+        tint: "#ff0000",
+        offset: { y: 2 },
+        scale: "large"
+      }
+    }, { shader, textures: { map } });
+
+    const [values] = calls;
+    assert.deepEqual(Object.keys(values).sort(), ["map", "offset", "scale", "speed", "tint"]);
+    assert.strictEqual(values.speed, 3);
+    assert.strictEqual(values.scale, 2);
+    assert.strictEqual((values.tint as THREE.Color).getHexString(), "ff0000");
+    assert.deepEqual((values.offset as THREE.Vector3).toArray(), [1, 2, 1]);
+    assert.strictEqual(values.map, map);
+  });
+
+  test("apply assigns the uniform data to the live material, defaults for missing values", () => {
+    const { shader, calls, assigned, material } = recordingShader({
+      speed: 1,
+      map: new THREE.Texture()
+    });
+    const { definition, component } = createMesh({ uniforms: { speed: 3 } }, { shader });
+
+    definition.apply(component, definition.parse({ castShadow: true }));
+
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(component.threeMesh.material, material);
+    assert.strictEqual(component.threeMesh.castShadow, true);
+    assert.deepEqual(assigned, [{ speed: 1 }]);
+  });
+
+  test("disposes the shader material with the component", () => {
+    const { shader, material } = recordingShader();
+    let disposed = false;
+    material.addEventListener("dispose", () => {
+      disposed = true;
+    });
+    const { component } = createMesh({}, { shader });
+
+    component.destroy();
+
     assert.strictEqual(disposed, true);
   });
 });

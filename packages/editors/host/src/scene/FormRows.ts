@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { AssetType } from "@jolly-pixel/asset";
 import type {
   ScenePropertyType,
   Systems
@@ -33,6 +34,10 @@ export interface ChoiceOption {
 interface RowBase<TData> {
   path: FieldPath<TData>;
   label: string;
+  /**
+   * Value shown, and used as the default, while the data has none.
+   */
+  fallback?: Systems.JSONValue;
 }
 
 export interface NumberRow<TData = unknown> extends RowBase<TData> {
@@ -79,6 +84,11 @@ export interface PropertiesRow<TData = unknown> extends RowBase<TData> {
 
 export interface VectorRow<TData = unknown> extends RowBase<TData> {
   control: "vector";
+  /**
+   * Number of components, read and written as `x`, `y`, `z` and `w`.
+   * @default 3
+   */
+  size?: 2 | 3 | 4;
   min?: number;
   max?: number;
   step?: number;
@@ -111,9 +121,20 @@ export interface ListRow extends ListItems {
   label: string;
 }
 
+export interface AssetRow {
+  control: "asset";
+  /**
+   * Key of the component `assets` map the picked reference is stored under.
+   */
+  slot: string;
+  label: string;
+  type: AssetType<unknown>;
+}
+
 export type FormRow<TData = unknown> =
   | FieldRow<TData>
-  | ListRow;
+  | ListRow
+  | AssetRow;
 
 export type ComponentForm<
   TData,
@@ -184,6 +205,19 @@ export class FormRows<TData> {
       path,
       label,
       ...bounds
+    };
+  }
+
+  asset(
+    slot: string,
+    label: string,
+    type: AssetType<unknown>
+  ): AssetRow {
+    return {
+      control: "asset",
+      slot,
+      label,
+      type
     };
   }
 

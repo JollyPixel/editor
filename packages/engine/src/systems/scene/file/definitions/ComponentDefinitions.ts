@@ -128,7 +128,7 @@ export class ComponentDefinitions {
       return {
         id: built.id,
         type: built.type,
-        data: definition?.capture?.(component) ?? built.data,
+        data: definition?.capture?.(component, built.data) ?? built.data,
         assets: { ...built.assets }
       };
     }
@@ -141,7 +141,7 @@ export class ComponentDefinitions {
         return {
           id: randomPersistentId(),
           type: definition.type,
-          data: definition.capture(component),
+          data: definition.capture(component, {}),
           assets: {}
         };
       }

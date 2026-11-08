@@ -63,6 +63,12 @@ interface ModelSettings {
 `MODEL_DEFAULTS` holds these defaults. In edit mode the model keeps its
 rest pose, and a clip the model does not have plays nothing.
 
+Its data also takes `uniforms` (`ModelData`) and it has a second asset slot,
+`shader`, read as for [MeshDefinition](#meshdefinition). `ModelRenderer`
+then takes `shader` and `uniforms` options: it builds one material and gives
+it to every mesh of its model copy, and disposes it with the component. The
+source model's materials are left alone.
+
 ## SpriteRenderer
 
 Renders a 2D sprite from a spritesheet, with frame animation, flipping and
@@ -183,8 +189,8 @@ above; its `font` asset slot takes a `font` asset.
 
 ## MeshRenderer
 
-Renders a primitive geometry with a `MeshStandardMaterial`. It needs no
-asset.
+Renders a primitive geometry with a `MeshStandardMaterial`, or with the
+material of a shader.
 
 ```ts
 import { Actor, MeshRenderer } from "@jolly-pixel/engine";
@@ -221,6 +227,13 @@ interface MeshRendererOptions {
 
 `MESH_RENDERER_DEFAULTS` holds these defaults.
 
+The constructor also takes `shader?: Shader | null` (`null` by default) and
+`uniforms?: ShaderUniformValues` (`{}`). The renderer calls
+`shader.createMaterial(uniforms)` once, renders with the returned material and
+disposes it with the component. The `material` settings are still kept and
+captured, but the shader material ignores them. `threeMesh.material` is typed
+`THREE.Material` for that reason, and `shader` returns the shader or `null`.
+
 `MeshGeometry` is a union over `kind` (`box`, `sphere`, `plane`, `cylinder`,
 `cone`, `torus`, `capsule`). Its other fields are the size and segment
 parameters of the matching three.js geometry constructor.
@@ -232,7 +245,31 @@ parameters.
 Merges `options` into the current settings, field by field for `material`,
 and writes them to the live mesh. A geometry with different parameters
 replaces the current one, which is disposed; the material is updated in
-place.
+place. A shader material is never replaced by `configure`.
+
+### assignUniforms(values): this
+
+Sets the given uniforms on the live shader material, without rebuilding it.
+Uniforms missing from `values` keep their current value. Does nothing on a
+mesh without a shader.
+
+### MeshDefinition
+
+The scene file definition of type `"Mesh"`. Its data is the settings above
+plus `uniforms`, a JSON object of shader uniform values keyed by uniform name
+(`MeshData`). Its `shader` asset slot takes a `shader` asset
+(`ShaderAssetType`); while the slot is empty or unresolved, the mesh uses the
+standard material.
+
+- A number uniform reads a number, a color uniform a `#rrggbb` string, and a
+  vector uniform an object of `x`, `y`, `z` and `w` numbers; a missing axis
+  keeps the default. A value of the wrong type is ignored.
+- A texture uniform reads the `texture` asset in the component slot
+  `shaderTextureSlot(name)` (`"texture:<name>"`). These slots are not declared
+  in `assets`; the scene still tracks them as dependencies.
+- `apply` updates the number, color and vector uniforms of a shaded mesh in
+  place; a missing or mistyped value goes back to the declared default.
+- `capture` writes back the `uniforms` of the stored data, when it has some.
 
 ## See also
 

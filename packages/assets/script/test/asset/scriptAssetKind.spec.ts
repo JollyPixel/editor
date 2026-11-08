@@ -13,17 +13,19 @@ import {
   ASSET_KINDS,
   SCRIPT_KIND,
   SCRIPT_TEMPLATE,
+  SHADER_KIND,
   TEXT_KIND,
   scriptAssetKind,
   textAssetKind
 } from "#src/index.ts";
 
 describe("ASSET_KINDS", () => {
-  test("resolves code to the script kind and other text files to the text kind", () => {
+  test("resolves TSL files to shaders, other code to scripts and other text files to text", () => {
     const registry = new AssetKindRegistry(ASSET_KINDS.handlers({}));
     const cases: Array<[string, string]> = [
       ["scripts/Player.ts", SCRIPT_KIND],
       ["scripts/legacy.js", SCRIPT_KIND],
+      ["shaders/Water.tsl.ts", SHADER_KIND],
       ["README.md", TEXT_KIND],
       ["config/game.json", TEXT_KIND],
       ["config/ci.yml", TEXT_KIND],

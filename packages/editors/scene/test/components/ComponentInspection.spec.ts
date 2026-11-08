@@ -3,10 +3,13 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   LIGHT_DEFAULTS,
-  MESH_GEOMETRY_DEFAULTS
+  MESH_GEOMETRY_DEFAULTS,
+  type Shader
 } from "@jolly-pixel/engine";
+import * as THREE from "three/webgpu";
 import {
   ComponentChange,
   type JSONObject,
@@ -38,19 +41,21 @@ const kUnitBoxCollider = {
 
 function inspect(
   type: string,
-  data: JSONObject
+  data: JSONObject,
+  shader: Pick<Shader, "uniforms"> | null = null
 ): ComponentInspection {
   const kind = kComponents.find(type);
   assert.ok(kind, `no component kind ${type}`);
+  const shaderReference: AssetReferenceData = { kind: "shader", id: "shader" };
   const entry: SceneComponentJSON = {
     id: "component",
     type,
     data,
-    assets: {}
+    assets: shader === null ? {} : { shader: shaderReference }
   };
 
   return new ComponentInspection(entry, kind, {
-    resolve: () => null
+    resolve: <TValue>(): TValue | null => shader as TValue | null
   });
 }
 
@@ -59,7 +64,7 @@ function find(
   path: string[]
 ): InspectedRow {
   const inspected = inspection.rows.find(
-    (candidate) => candidate.row.path.join(".") === path.join(".")
+    (candidate) => rowKey(candidate) === path.join(".")
   );
   assert.ok(inspected, `no row for ${path.join(".")}`);
 
@@ -102,7 +107,15 @@ function itemRow(
 function paths(
   inspection: ComponentInspection
 ): string[] {
-  return inspection.rows.map(({ row }) => row.path.join("."));
+  return inspection.rows.map(rowKey);
+}
+
+function rowKey(
+  inspected: InspectedRow
+): string {
+  return inspected.kind === "asset" ?
+    inspected.row.slot :
+    inspected.row.path.join(".");
 }
 
 describe("ComponentInspection", () => {
@@ -237,5 +250,49 @@ describe("ComponentInspection", () => {
       [kUnitBoxCollider, sensor, kUnitBoxCollider]
     );
     assert.deepEqual(inspection.removeItem(colliders, 0).data.colliders, [sensor]);
+  });
+});
+
+describe("ComponentInspection with a shaded mesh", () => {
+  const kShader: Pick<Shader, "uniforms"> = {
+    uniforms: {
+      speed: 1,
+      tint: new THREE.Color("#2f6fd6"),
+      map: new THREE.Texture()
+    }
+  };
+
+  test("swaps the material rows for the shader's uniforms and texture slots", () => {
+    assert.deepEqual(paths(inspect("Mesh", {}, kShader)), [
+      "geometry.kind",
+      "geometry.width",
+      "geometry.height",
+      "geometry.depth",
+      "geometry.widthSegments",
+      "geometry.heightSegments",
+      "geometry.depthSegments",
+      "castShadow",
+      "receiveShadow",
+      "uniforms.speed",
+      "uniforms.tint",
+      "texture:map"
+    ]);
+  });
+
+  test("shows a uniform's declared default until the data sets it", () => {
+    const unset = rowAt(inspect("Mesh", {}, kShader), "uniforms", "tint");
+    const set = rowAt(inspect("Mesh", { uniforms: { tint: "#ff0000" } }, kShader), "uniforms", "tint");
+
+    assert.deepEqual([unset.value, unset.fallback], ["#2f6fd6", "#2f6fd6"]);
+    assert.strictEqual(set.value, "#ff0000");
+  });
+
+  test("writes a uniform into the stored uniforms object", () => {
+    const inspection = inspect("Mesh", { uniforms: { tint: "#ff0000" } }, kShader);
+
+    assert.deepEqual(
+      inspection.edit(rowAt(inspection, "uniforms", "speed"), 3),
+      new ComponentChange({ data: { uniforms: { tint: "#ff0000", speed: 3 } } })
+    );
   });
 });

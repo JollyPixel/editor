@@ -115,7 +115,7 @@ export class TextRenderer<
   #asset: AssetReference<Font> | null;
   #font: Font | null;
   #settings: TextSettings;
-  #surface: SurfaceMesh;
+  #surface: SurfaceMesh<THREE.MeshStandardMaterial>;
 
   constructor(
     actor: Actor<TContext>,
@@ -130,7 +130,7 @@ export class TextRenderer<
     this.#asset = asset;
     this.#font = font;
     this.#settings = mergeSettings(TEXT_RENDERER_DEFAULTS, settings);
-    this.#surface = new SurfaceMesh(
+    this.#surface = SurfaceMesh.standard(
       actor.object3D,
       this.#createGeometry(),
       this.#settings

@@ -119,4 +119,40 @@ from `three/examples/jsm/libs/basis/`. `detectSupport()` needs an initialized
 renderer. The caller disposes the loader; `@jolly-pixel/runtime` does it for
 its `assets.ktx2` option.
 
+### Shaders
+
+`ShaderAssetType` (kind `shader`) types a `Shader`:
+
+```ts
+type ShaderUniformValue =
+  number | THREE.Color | THREE.Vector2 | THREE.Vector3 | THREE.Vector4 | THREE.Texture;
+
+interface Shader {
+  readonly uniforms: Readonly<Record<string, ShaderUniformValue>>; // declared defaults
+  createMaterial(values?: Readonly<Record<string, ShaderUniformValue>>): ShadedMaterial;
+}
+
+interface ShadedMaterial {
+  readonly material: THREE.Material;
+  assign(values: Readonly<Record<string, ShaderUniformValue>>): void;
+}
+```
+
+`createMaterial` builds a new material on each call; a uniform missing from
+`values` keeps its default. `assign` changes the uniforms it is given on that
+live material and leaves the others as they are. Each value must have the
+kind of the declared default. The engine has no loader for shaders: the
+editor that owns the kind resolves them.
+
+The uniform helpers work on any of those values:
+
+- `isShaderUniformValue(value)` tells whether `value` is one of them.
+- `describeShaderUniform(value)` returns `{ kind: "texture" }`, or the `kind`
+  (`"number"`, `"color"`, `"vector2"`, `"vector3"` or `"vector4"`) with
+  `json`, the value as a `MeshDefinition` reads it from its `uniforms` data: a
+  number as is, a color as `#rrggbb` and a vector as an object of `x`, `y`,
+  `z` and `w` numbers.
+- `shaderTextureSlot(name)` is the component asset slot of a texture uniform,
+  `"texture:<name>"`.
+
 Catalogs, references and handles come from `@jolly-pixel/asset`.

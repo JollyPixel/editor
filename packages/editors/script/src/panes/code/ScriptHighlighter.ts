@@ -31,7 +31,8 @@ const kGrammars = {
   xml: () => import("@shikijs/langs-precompiled/xml"),
   html: () => import("@shikijs/langs-precompiled/html"),
   css: () => import("@shikijs/langs-precompiled/css"),
-  markdown: () => import("@shikijs/langs-precompiled/markdown")
+  markdown: () => import("@shikijs/langs-precompiled/markdown"),
+  wgsl: () => import("@shikijs/langs-precompiled/wgsl")
 };
 
 const kLanguages = new Map<string, ScriptLanguage>([

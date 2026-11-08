@@ -1,12 +1,40 @@
 ## 📌 About
 
-Private editor workspace for `@jolly-pixel/asset.script` scripts and text files, booted through `@jolly-pixel/editor.host`.
+Private editor workspace for `@jolly-pixel/asset.script` scripts, shaders and text files, booted through `@jolly-pixel/editor.host`.
 
 - The code view is a transparent `<textarea>` over the highlighted lines. Highlighting uses Shiki's raw JavaScript engine with the precompiled grammar of the file extension (TypeScript, JavaScript, JSON, YAML, TOML, XML, HTML, CSS or Markdown), loaded on demand. A `.txt` file is not highlighted. Each line keeps its tokenizer state, so an edit retokenizes from its line until the state matches again. Only the visible lines render.
 - Peers see each other's carets and selections. Tab and Shift+Tab indent, Enter keeps the indentation, and Ctrl+Z / Ctrl+Y undo and redo local edits only.
 - A Markdown file opens next to a rendered preview, updated 150 ms after the last edit. A member who cannot edit sees the preview only.
+- A shader (`.tsl.ts`) opens next to a WebGPU preview, rebuilt 300 ms after the last edit. Under it, Fragment and Vertex tabs show the WGSL three.js generates (`renderer.debug.getShaderAsync`), or the error with its line and column. A broken edit keeps the last working material on screen. The preview mesh can be a sphere, box, plane, torus, cylinder or capsule.
 
-The package also contributes the scene `Script` component (`jollypixel.scene`, export `./scene`). Its script slot takes a script asset; the inspector then offers that script's behaviors and lists the picked behavior's properties with their types and defaults. The standalone scene editor loads no component package, so try it through the studio.
+### Shader modules
+
+A shader is a TypeScript module whose default export returns a node material. It may import only `three`, `three/webgpu` and `three/tsl`, which resolve to the editor's own three.js; any other import, and any dynamic import, is refused.
+
+```ts
+import { color, mix, sin, time, uv } from "three/tsl";
+import { Color, MeshStandardNodeMaterial, Texture } from "three/webgpu";
+
+export const uniforms = {
+  tint: new Color("#2f6fd6"),
+  speed: 1,
+  map: new Texture()
+};
+
+export default function material({ tint, speed, map }) {
+  const material = new MeshStandardNodeMaterial();
+  const wave = sin(time.mul(speed).add(uv().x.mul(6))).mul(0.5).add(0.5);
+  material.colorNode = mix(tint, color("#d9822b"), wave).mul(map);
+
+  return material;
+}
+```
+
+The optional `uniforms` export declares the values a scene component can set, with their defaults: a number, `Color`, `Vector2`, `Vector3`, `Vector4` or `Texture`. Any other value is refused. Each material gets its own nodes: `uniform(value)` for a value and `texture(value)` for a texture, built from the component's value or the default. The preview always uses the defaults; an empty `Texture` samples black.
+
+`ShaderModule.compile(source, name)` strips the types with SWC in strip-only mode ([`@swc/wasm-typescript-esm`](https://www.npmjs.com/package/@swc/wasm-typescript-esm), the engine behind Node's own type stripping), so positions are kept. [es-module-lexer](https://github.com/guybedford/es-module-lexer) points each import at a `data:` module that re-exports the editor's three.js, and the result is imported from a `data:` URL named after the asset path with `//# sourceURL`. A thrown error therefore reports the line of the asset. Under Node, the `#stripper` import resolves to `node:module`'s `stripTypeScriptTypes` instead, so the unit tests run the same path without the wasm. The code runs in the page with the rights of the viewer, as a game would: any member who can edit a shader runs code in the tab of everyone who opens it.
+
+The package also contributes the scene `Script` component (`jollypixel.scene`, export `./scene`). Its script slot takes a script asset; the inspector then offers that script's behaviors and lists the picked behavior's properties with their types and defaults. It also opens shader assets for the optional `shader` slot of the built-in `Mesh` and of the `Model` component, whose inspector then lists the shader's uniforms (texture uniforms pick a `texture` asset). A uniform edit updates a `Mesh` material in place and rebuilds a `Model`. The scene recompiles a shader 300 ms after its last edit and rebuilds with the new material, and a broken version keeps the last working one. The compiler loads on the first shader the scene uses. The standalone scene editor loads no component package, so try it through the studio.
 
 ## 🚀 Running the editor
 
@@ -15,7 +43,7 @@ $ pnpm install
 $ pnpm --filter @jolly-pixel/editor.script dev
 ```
 
-The dev server seeds `scripts/PlayerBehavior.ts` under `assets/`; delete that directory to seed it again.
+The dev server seeds `scripts/PlayerBehavior.ts` and `shaders/Wave.tsl.ts` under `assets/`; delete that directory to seed it again.
 
 `window.scriptEditor.document` exposes the script document from the console.
 
