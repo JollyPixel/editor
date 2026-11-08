@@ -37,7 +37,7 @@ export interface SceneActionsOptions {
   document: SceneDocument;
   history: Pick<SceneHistory, "record">;
   selection: SelectionStore;
-  components: Pick<SceneComponents, "assetSlots" | "find">;
+  components: Pick<SceneComponents, "requiredAssetSlots" | "find">;
   assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
   anchors: Pick<Systems.SceneAnchorsReader, "findAnchor">;
 }
@@ -46,7 +46,7 @@ export class SceneActions {
   #document: SceneDocument;
   #history: Pick<SceneHistory, "record">;
   #selection: SelectionStore;
-  #components: Pick<SceneComponents, "assetSlots" | "find">;
+  #components: Pick<SceneComponents, "requiredAssetSlots" | "find">;
   #assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
   #anchors: Pick<Systems.SceneAnchorsReader, "findAnchor">;
 
@@ -232,7 +232,7 @@ export class SceneActions {
     type: string
   ): Promise<PickedAssets | null> {
     const assets: PickedAssets = {};
-    for (const [slot, assetType] of Object.entries(this.#components.assetSlots(type))) {
+    for (const [slot, assetType] of Object.entries(this.#components.requiredAssetSlots(type))) {
       const picked = await this.#assetSlots.pick(assetType, null);
       if (picked === null) {
         return null;

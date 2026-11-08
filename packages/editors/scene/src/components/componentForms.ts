@@ -5,13 +5,17 @@ import type {
   LightKind,
   LightSettings,
   MeshGeometryKind,
+  MeshAssets,
+  MeshData,
   MeshSettings,
   MeshSurfaceSettings,
+  Systems,
   TextAlign,
   TextSettings
 } from "@jolly-pixel/engine";
 import {
   FormRows,
+  shaderUniformRows,
   type ChoiceOption,
   type FieldPath,
   type FormRow
@@ -64,15 +68,21 @@ const kMesh = new FormRows<MeshSettings>();
 const kText = new FormRows<TextSettings>();
 const kSurface = new FormRows<MeshSurfaceSettings>();
 
-const kSurfaceRows: readonly FormRow<MeshSurfaceSettings>[] = [
+const kMaterialRows: readonly FormRow<MeshSurfaceSettings>[] = [
   kSurface.number(["material", "roughness"], "Roughness", kUnit),
   kSurface.number(["material", "metalness"], "Metalness", kUnit),
   kSurface.color(["material", "emissive"], "Emissive"),
   kSurface.number(["material", "emissiveIntensity"], "Emissive intensity", kSize),
   kSurface.number(["material", "opacity"], "Opacity", kUnit),
-  kSurface.boolean(["material", "flatShading"], "Flat shading"),
+  kSurface.boolean(["material", "flatShading"], "Flat shading")
+];
+const kShadowRows: readonly FormRow<MeshSurfaceSettings>[] = [
   kSurface.boolean(["castShadow"], "Cast shadow"),
   kSurface.boolean(["receiveShadow"], "Receive shadow")
+];
+const kSurfaceRows: readonly FormRow<MeshSurfaceSettings>[] = [
+  ...kMaterialRows,
+  ...kShadowRows
 ];
 
 const kGeometryRows: Readonly<
@@ -142,17 +152,32 @@ export function cameraForm(
 }
 
 export function meshForm(
-  data: MeshSettings
-): FormRow<MeshSettings>[] {
+  data: MeshData,
+  assets: Systems.ComponentAssets<MeshAssets>
+): FormRow<MeshData>[] {
+  const shader = assets.resolve("shader");
+  if (shader !== null) {
+    return [
+      geometryKindRow(),
+      ...kGeometryRows[data.geometry.kind],
+      ...kShadowRows,
+      ...shaderUniformRows(shader)
+    ];
+  }
+
   return [
-    {
-      ...kMesh.choice(["geometry", "kind"], "Geometry", kGeometryKinds),
-      resets: true
-    },
+    geometryKindRow(),
     kMesh.color(["material", "color"], "Color"),
     ...kGeometryRows[data.geometry.kind],
     ...kSurfaceRows
   ];
+}
+
+function geometryKindRow(): FormRow<MeshSettings> {
+  return {
+    ...kMesh.choice(["geometry", "kind"], "Geometry", kGeometryKinds),
+    resets: true
+  };
 }
 
 export function textForm(

@@ -60,6 +60,17 @@ describe("Teardown", () => {
     assert.strictEqual(runs, 1);
   });
 
+  test("runs a step deferred after it has run at once", () => {
+    const teardown = new Teardown();
+    teardown.run();
+    let runs = 0;
+
+    teardown.defer(() => runs++);
+    teardown.run();
+
+    assert.strictEqual(runs, 1);
+  });
+
   test("aborts the signal before the first step runs", () => {
     const teardown = new Teardown();
     const { signal } = teardown;

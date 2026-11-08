@@ -13,7 +13,7 @@ $ pnpm --filter @jolly-pixel/editor.scene dev
 
 The dev server seeds one empty scene under `assets/`; delete that directory to seed it again.
 
-The standalone editor offers only the built-in component types (camera, light, mesh, text, script and rigid body). Component types from other packages, such as voxel maps and voxel models, come from the project file, so open the scene editor through the studio to use them. Text needs a font asset, and fonts are imported through the studio.
+The standalone editor offers only the built-in component types (camera, light, mesh, text, script and rigid body). Component types from other packages, such as voxel maps and voxel models, come from the project file, so open the scene editor through the studio to use them. Text needs a font asset, and fonts are imported through the studio. The editor also opens `texture` assets (images) itself, for the texture uniforms of a mesh shader. A mesh with a shader hides its material rows and shows the shader's uniforms instead.
 
 `window.sceneEditor.editing` exposes the document, history, selection and actions from the console.
 

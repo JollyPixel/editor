@@ -48,7 +48,9 @@ class AsyncTeardown {
 }
 ```
 
-- `defer` adds a step. Steps run once, last added first.
+- `defer` adds a step. Steps run once, last added first. Once a `Teardown`
+  has run, `defer` runs the step at once and lets a failure throw, so a
+  resource that finishes loading after a dispose is still released.
 - `run` runs every step, even after one throws. A single failure is rethrown
   as is; several are thrown as one `AggregateError`, in run order.
 - `unwind(error)` runs the steps like `run`, then rethrows `error`. When steps

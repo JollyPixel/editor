@@ -6,6 +6,7 @@ import {
   type SceneComponentJSON
 } from "@jolly-pixel/asset.scene/client";
 import type {
+  AssetRow,
   FieldRow,
   FormRow,
   ListRow,
@@ -32,7 +33,12 @@ export interface InspectedList {
   items: readonly (readonly InspectedField[])[];
 }
 
-export type InspectedRow = InspectedField | InspectedList;
+export interface InspectedAsset {
+  kind: "asset";
+  row: AssetRow;
+}
+
+export type InspectedRow = InspectedField | InspectedList | InspectedAsset;
 
 export class ComponentInspection {
   readonly rows: readonly InspectedRow[];
@@ -149,6 +155,12 @@ function inspectRow(
   data: ParsedData,
   defaults: ParsedData
 ): InspectedRow {
+  if (row.control === "asset") {
+    return {
+      kind: "asset",
+      row
+    };
+  }
   if (row.control !== "list") {
     return inspectField(row, data, defaults);
   }
@@ -172,8 +184,8 @@ function inspectField(
   return {
     kind: "field",
     row,
-    value: readField(data, row.path),
-    fallback: readField(defaults, row.path)
+    value: readField(data, row.path) ?? row.fallback,
+    fallback: readField(defaults, row.path) ?? row.fallback
   };
 }
 
@@ -223,6 +235,9 @@ function variantsSource(
 ): JSONObject {
   let source: JSONObject = {};
   for (const row of rows) {
+    if (row.control === "asset") {
+      continue;
+    }
     if (row.control === "list") {
       source[row.path[0]] = readItems(data, row).map(
         (item) => variantsSource(item, row.rows(item))

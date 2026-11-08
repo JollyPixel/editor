@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AssetType } from "@jolly-pixel/asset";
+import { TEXTURE_ASSET } from "@jolly-pixel/asset-server";
 import { FONT_ASSET } from "@jolly-pixel/asset.font/client";
 import type {
   SceneAssetSource,
@@ -50,6 +51,20 @@ const kMapSource: SceneAssetSource = {
   open: () => {
     throw new Error("not opened");
   }
+};
+const kShaders: SceneComponentPackage = {
+  components: [],
+  assets: [
+    {
+      ...kMapSource,
+      descriptor: {
+        ...kMapSource.descriptor,
+        kind: "shader",
+        label: "Shader",
+        extension: ".tsl.ts"
+      }
+    }
+  ]
 };
 const kMaps: SceneComponentPackage = {
   components: [kMapKind],
@@ -103,7 +118,7 @@ describe("SceneComponents", () => {
       ["Camera", "Light", "3D", "Rigid body", "Note"]
     );
     assert.deepEqual(folders.get("3D"), ["Mesh", "Text…", "Map…"]);
-    assert.deepEqual(components.descriptors, [FONT_ASSET, kMapSource.descriptor]);
+    assert.deepEqual(components.descriptors, [FONT_ASSET, TEXTURE_ASSET, kMapSource.descriptor]);
   });
 
   test("shows the icon of a component's asset kind before its own icon", () => {
@@ -117,6 +132,41 @@ describe("SceneComponents", () => {
       [components.icon("Map"), components.icon("Text"), bare.icon("Map")],
       ["kind:map", "kind:font", "actor-map"]
     );
+  });
+
+  test("offers an optional asset slot without asking for it or taking its icon", () => {
+    const components = createSceneComponents(["shaders", kShaders]);
+
+    assert.deepEqual(Object.keys(components.assetSlots("Mesh")), ["shader"]);
+    assert.deepEqual(components.requiredAssetSlots("Mesh"), {});
+    assert.strictEqual(components.icon("Mesh"), "actor-mesh");
+  });
+
+  test("hides an optional asset slot whose kind no package opens", () => {
+    const components = createSceneComponents();
+
+    assert.deepEqual(components.assetSlots("Mesh"), {});
+  });
+
+  test("clears the undeclared slots of a component when its optional slot changes", () => {
+    const components = createSceneComponents(["shaders", kShaders]);
+    const mesh = {
+      type: "Mesh",
+      assets: {
+        shader: { kind: "shader", id: "wave" },
+        "texture:map": { kind: "texture", id: "bricks" },
+        "texture:mask": null
+      }
+    };
+    const texture = { kind: "texture", id: "stone" };
+
+    assert.deepEqual(components.assetChange(mesh, "shader", null), {
+      shader: null,
+      "texture:map": null
+    });
+    assert.deepEqual(components.assetChange(mesh, "texture:map", texture), {
+      "texture:map": texture
+    });
   });
 
   test("refuses a component type or asset kind declared by two packages", () => {

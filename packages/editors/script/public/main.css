@@ -68,3 +68,37 @@ jolly-scope {
   inset-inline-end: 24px;
   z-index: 5;
 }
+
+#shader-preview {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  border-inline-start: 1px solid var(--jolly-border);
+}
+
+#shader-preview .shader-viewport {
+  position: relative;
+  flex: 3;
+  min-height: 0;
+}
+
+#shader-preview canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+#shader-preview jolly-select {
+  position: absolute;
+  inset-block-start: var(--jolly-space-2);
+  inset-inline-start: var(--jolly-space-2);
+  width: 14ch;
+}
+
+#shader-preview jolly-shader-output {
+  flex: 2;
+  min-height: 0;
+  border-block-start: 1px solid var(--jolly-border);
+}

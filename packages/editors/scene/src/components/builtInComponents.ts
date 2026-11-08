@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { TEXTURE_ASSET } from "@jolly-pixel/asset-server";
 import { FONT_ASSET } from "@jolly-pixel/asset.font/client";
 import type {
   SceneComponentKind,
@@ -8,10 +9,11 @@ import {
   CameraDefinition,
   LightDefinition,
   MeshDefinition,
+  type MeshAssets,
+  type MeshData,
   TextDefinition,
   type CameraData,
   type LightSettings,
-  type MeshSettings,
   type TextSettings
 } from "@jolly-pixel/engine";
 import {
@@ -38,6 +40,10 @@ import {
   FONT_DOCUMENT_KIND,
   SceneFonts
 } from "./SceneFonts.ts";
+import {
+  TEXTURE_DOCUMENT_KIND,
+  SceneTextures
+} from "./SceneTextures.ts";
 
 // CONSTANTS
 export const BUILT_IN_PACKAGE = "@jolly-pixel/editor.scene";
@@ -61,7 +67,7 @@ const kLight: SceneComponentKind<LightSettings> = {
   form: lightForm,
   describe: describeLight
 };
-const kMesh: SceneComponentKind<MeshSettings> = {
+const kMesh: SceneComponentKind<MeshData, MeshAssets> = {
   definition: new MeshDefinition(),
   label: "Mesh",
   category: "3d",
@@ -70,6 +76,7 @@ const kMesh: SceneComponentKind<MeshSettings> = {
     receiveShadow: true
   },
   icon: "actor-mesh",
+  optionalAssets: ["shader"],
   form: meshForm,
   describe: describeMesh
 };
@@ -98,6 +105,11 @@ export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
       descriptor: FONT_ASSET,
       documentKinds: [FONT_DOCUMENT_KIND],
       open: (session, updates) => new SceneFonts(session, updates)
+    },
+    {
+      descriptor: TEXTURE_ASSET,
+      documentKinds: [TEXTURE_DOCUMENT_KIND],
+      open: (session, updates) => new SceneTextures(session, updates)
     }
   ]
 };

@@ -4,6 +4,11 @@ export {
   SCRIPT_KIND
 } from "../asset/script.ts";
 export {
+  SHADER_ASSET,
+  SHADER_EXTENSION,
+  SHADER_KIND
+} from "../asset/shader.ts";
+export {
   TEXT_ASSET,
   TEXT_EXTENSION,
   TEXT_KIND

@@ -16,6 +16,8 @@ import {
   SCRIPT_TEMPLATE
 } from "./script.ts";
 import type { ScriptText } from "./ScriptText.ts";
+import { SHADER_ASSET } from "./shader.ts";
+import { shaderAssetKind } from "./shaderAssetKind.ts";
 import { TEXT_ASSET } from "./text.ts";
 import {
   textAssetKind,
@@ -58,7 +60,11 @@ export function scriptAssetKind(
 }
 
 export const ASSET_KINDS: AssetKindPackage<Pick<ScriptAssetKindOptions, "snapshot">> = {
-  descriptors: [SCRIPT_ASSET, TEXT_ASSET],
+  descriptors: [SCRIPT_ASSET, TEXT_ASSET, SHADER_ASSET],
   optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
-  handlers: (options) => [scriptAssetKind(options), textAssetKind(options)]
+  handlers: (options) => [
+    scriptAssetKind(options),
+    textAssetKind(options),
+    shaderAssetKind(options)
+  ]
 };

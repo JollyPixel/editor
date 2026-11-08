@@ -157,6 +157,24 @@ describe("Systems.FileScene capture", () => {
     );
   });
 
+  test("keeps the applied uniforms of a mesh whose shader is not loaded", () => {
+    const { world } = createSceneSetup(createSceneAssets());
+    const actor = new Actor(world as any, { name: "ball" });
+    const components = new ComponentDefinitions().register(new MeshDefinition());
+    const mesh = components.create(
+      actor,
+      createComponentFile("ball", "Mesh", { uniforms: { speed: 3 } }),
+      {
+        mode: "play",
+        resolver: { resolve: () => null as never }
+      }
+    )!;
+
+    components.apply(mesh, "Mesh", { uniforms: { speed: 5 } });
+
+    assert.deepEqual(components.capture(mesh)?.data.uniforms, { speed: 5 });
+  });
+
   test("keeps the built data when apply declines the patch", () => {
     const { world } = createSceneSetup(createSceneAssets());
     const sign = new Actor(world as any, { name: "sign" });

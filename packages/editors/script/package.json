@@ -9,7 +9,8 @@
       "name": "script",
       "kinds": [
         "script",
-        "text"
+        "text",
+        "shader"
       ],
       "page": "index.html"
     },
@@ -42,7 +43,11 @@
     "dist"
   ],
   "imports": {
-    "#src/*": "./src/*"
+    "#src/*": "./src/*",
+    "#stripper": {
+      "browser": "./src/shader/stripper/browser.ts",
+      "default": "./src/shader/stripper/node.ts"
+    }
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
@@ -62,7 +67,10 @@
     "@shikijs/core": "4.5.0",
     "@shikijs/engine-javascript": "4.5.0",
     "@shikijs/langs-precompiled": "4.5.0",
+    "@swc/wasm-typescript-esm": "1.16.18",
+    "es-module-lexer": "3.0.4",
     "lit": "3.3.3",
+    "three": "0.186.1",
     "zod": "4.6.7"
   }
 }

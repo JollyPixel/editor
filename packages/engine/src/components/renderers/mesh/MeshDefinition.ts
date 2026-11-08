@@ -1,11 +1,19 @@
 // Import Internal Dependencies
 import type { Actor } from "../../../actor/Actor.ts";
+import { ShaderAssetType } from "../../../assets/shader.ts";
 import { ComponentData } from "../../../systems/scene/file/definitions/ComponentData.ts";
 import type {
+  ComponentContext,
   ComponentDefinition
 } from "../../../systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../../systems/scene/file/SceneFile.ts";
 import type { Component } from "../../types.ts";
+import {
+  parseUniformData,
+  readShaderUniforms,
+  resolveShaderInputs,
+  type ShaderAssets
+} from "../shaderInputs.ts";
 import {
   type MeshGeometry,
   MESH_GEOMETRY_DEFAULTS
@@ -20,35 +28,61 @@ import {
   type MeshSettings
 } from "./MeshRenderer.ts";
 
+export type MeshAssets = ShaderAssets;
+
+export interface MeshData extends MeshSettings {
+  /**
+   * Values of the shader's uniforms, keyed by uniform name.
+   */
+  uniforms: JSONObject;
+}
+
 export class MeshDefinition implements ComponentDefinition<
-  MeshSettings,
-  MeshRenderer<any>
+  MeshData,
+  MeshRenderer<any>,
+  MeshAssets
 > {
   readonly type = "Mesh";
+  readonly assets = {
+    shader: ShaderAssetType
+  };
 
   parse(
     data: Readonly<JSONObject>
-  ): MeshSettings {
+  ): MeshData {
     const fields = new ComponentData(data);
 
     return {
       ...parseMeshSurface(fields),
-      geometry: parseGeometry(fields.object("geometry") ?? new ComponentData({}))
+      geometry: parseGeometry(fields.object("geometry") ?? new ComponentData({})),
+      uniforms: parseUniformData(data)
     };
   }
 
   create(
     actor: Actor<any>,
-    data: MeshSettings
+    data: MeshData,
+    context: ComponentContext<MeshAssets>
   ): MeshRenderer<any> {
-    return actor.addComponentAndGet(MeshRenderer, data);
+    const { uniforms, ...settings } = data;
+
+    return actor.addComponentAndGet(MeshRenderer, {
+      ...settings,
+      ...resolveShaderInputs(context.assets, uniforms)
+    });
   }
 
   apply(
     component: MeshRenderer<any>,
-    data: MeshSettings
+    data: MeshData
   ): void {
-    component.configure(data);
+    const { uniforms, ...settings } = data;
+    component.configure(settings);
+
+    const { shader } = component;
+    if (shader !== null) {
+      component.assignUniforms(readShaderUniforms(shader, uniforms));
+    }
   }
 
   owns(
@@ -58,13 +92,16 @@ export class MeshDefinition implements ComponentDefinition<
   }
 
   capture(
-    component: MeshRenderer<any>
+    component: MeshRenderer<any>,
+    stored: Readonly<JSONObject>
   ): JSONObject {
     const { settings } = component;
+    const { uniforms } = stored;
 
     return {
       ...captureMeshSurface(settings),
-      geometry: { ...settings.geometry }
+      geometry: { ...settings.geometry },
+      ...(uniforms === undefined ? {} : { uniforms })
     };
   }
 }

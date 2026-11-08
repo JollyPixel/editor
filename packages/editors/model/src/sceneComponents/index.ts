@@ -1,13 +1,14 @@
 // Import Third-party Dependencies
 import { MODEL_ASSET } from "@jolly-pixel/asset.model/client";
-import type {
-  SceneComponentKind,
-  SceneComponentPackage
+import {
+  shaderUniformRows,
+  type SceneComponentKind,
+  type SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
 import {
   ModelDefinition,
   type ModelAssets,
-  type ModelSettings
+  type ModelData
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
@@ -18,11 +19,15 @@ import {
 } from "./SceneModels.ts";
 
 // CONSTANTS
-const kModel: SceneComponentKind<ModelSettings, ModelAssets> = {
+const kModel: SceneComponentKind<ModelData, ModelAssets> = {
   definition: new ModelDefinition(),
   label: "3D model",
   category: "3d",
-  form: (data, assets) => modelForm(data, assets.resolve("model"))
+  optionalAssets: ["shader"],
+  form: (data, assets) => [
+    ...modelForm(data, assets.resolve("model")),
+    ...shaderUniformRows(assets.resolve("shader"))
+  ]
 };
 
 export const SCENE_COMPONENTS: SceneComponentPackage = {

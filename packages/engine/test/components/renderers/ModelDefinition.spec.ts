@@ -9,6 +9,7 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 // Import Internal Dependencies
 import { Actor } from "../../../src/actor/index.ts";
 import type { Model } from "../../../src/assets/model.ts";
+import type { Shader } from "../../../src/assets/shader.ts";
 import { ModelDefinition } from "../../../src/components/renderers/model/ModelDefinition.ts";
 import {
   ComponentAssets,
@@ -40,7 +41,8 @@ function spinningModel(): Model {
 function createModel(
   mode: SceneMode,
   data: JSONObject,
-  model: Model | null = spinningModel()
+  model: Model | null = spinningModel(),
+  shader: Shader | null = null
 ) {
   const actor = new Actor({ sceneManager: new SceneManager() } as any, {
     name: "model"
@@ -48,8 +50,13 @@ function createModel(
   const definition = new ModelDefinition();
   const renderer = definition.create(actor, definition.parse(data), {
     mode,
-    assets: new ComponentAssets(definition.assets, { model: kModelReference }, {
-      resolve: <TValue>(): TValue | null => model as TValue | null
+    assets: new ComponentAssets(definition.assets, {
+      model: kModelReference,
+      shader: shader === null ? null : { kind: "shader", id: "shader-1" }
+    }, {
+      resolve: <TValue>(reference: AssetReferenceData): TValue | null => (
+        reference.kind === "shader" ? shader : model
+      ) as TValue | null
     })
   });
   renderer?.awake();
@@ -80,5 +87,37 @@ describe("Components.ModelDefinition", () => {
     const renderer = createModel("play", { animation: "walk" });
 
     assert.equal(renderer?.animation.currentName, null);
+  });
+});
+
+describe("Components.ModelDefinition shader slot", () => {
+  test("renders every mesh with one shader material, disposed with the component", () => {
+    const material = new THREE.MeshBasicMaterial();
+    let disposed = false;
+    material.addEventListener("dispose", () => {
+      disposed = true;
+    });
+    const model = spinningModel();
+    model.object.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial()));
+    const renderer = createModel("edit", {}, model, {
+      uniforms: {},
+      createMaterial: () => {
+        return {
+          material,
+          assign: () => undefined
+        };
+      }
+    })!;
+
+    const materials = new Set<THREE.Material | THREE.Material[]>();
+    renderer.group.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        materials.add(child.material);
+      }
+    });
+    renderer.destroy();
+
+    assert.deepEqual([...materials], [material]);
+    assert.strictEqual(disposed, true);
   });
 });

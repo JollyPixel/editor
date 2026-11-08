@@ -30,6 +30,11 @@ export interface SceneComponentKind<
   icon?: string;
   form: ComponentForm<TData, TAssets>;
   /**
+   * `definition.assets` slots the scene editor leaves empty when it adds a
+   * component, instead of asking for an asset. They name no icon either.
+   */
+  optionalAssets?: readonly (keyof TAssets & string)[];
+  /**
    * Names one component of this kind in the hierarchy and inspector.
    * Without it, the summary is `label` with the first named asset as detail.
    */
