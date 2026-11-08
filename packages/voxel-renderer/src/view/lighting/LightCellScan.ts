@@ -105,7 +105,7 @@ export class LightCellScan {
   emittingKeys(): Set<LightChunkKey> {
     const keys = new Set<LightChunkKey>();
     for (const layer of this.#visibleLayers()) {
-      for (const chunk of layer.getChunks()) {
+      for (const chunk of layer.chunks()) {
         if (!this.#containsEmitter(chunk)) {
           continue;
         }
@@ -154,7 +154,7 @@ export class LightCellScan {
   }
 
   * #visibleLayers(): IterableIterator<VoxelLayer> {
-    for (const layer of this.#world.getLayers()) {
+    for (const layer of this.#world.layers()) {
       if (this.#visibility.isVisible(layer)) {
         yield layer;
       }
@@ -203,7 +203,7 @@ export class LightCellScan {
       this.#grid.size
     );
     for (const [cx, cy, cz] of coords) {
-      const chunk = layer.getChunk(cx, cy, cz);
+      const chunk = layer.chunkAt(cx, cy, cz);
       if (chunk !== undefined && !chunk.isEmpty()) {
         yield chunk;
       }

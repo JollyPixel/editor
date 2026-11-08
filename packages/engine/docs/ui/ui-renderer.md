@@ -71,7 +71,7 @@ After changing a node's offset or anchor, `updateWorldPosition()` lays out
 every node again:
 
 ```ts
-const uiRenderer = camera2D.getComponent(UIRenderer)!;
+const uiRenderer = camera2D.findComponent(UIRenderer)!;
 uiRenderer.updateWorldPosition();
 ```
 

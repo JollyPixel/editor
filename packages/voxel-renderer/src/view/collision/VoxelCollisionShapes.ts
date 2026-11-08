@@ -136,7 +136,7 @@ export class VoxelCollisionShapes {
 
       const { lx, ly, lz } = chunk.fromLinearIndex(linearIdx);
       const primary = unmarkMerged(packed);
-      const partner = chunk.getPartnerAt(lx, ly, lz);
+      const partner = chunk.partnerAt(lx, ly, lz);
       if (this.#fillsCell(primary, partner)) {
         solids.cubes.push(linearIdx);
 

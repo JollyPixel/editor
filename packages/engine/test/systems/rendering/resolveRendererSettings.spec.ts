@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { resolveRendererSettings } from "../../../src/systems/rendering/ThreeRenderer.ts";
+import { resolveRendererSettings } from "../../../src/three/rendering/ThreeRenderer.ts";
 
 describe("Systems.Rendering.resolveRendererSettings", () => {
   describe("webgpu parameters", () => {

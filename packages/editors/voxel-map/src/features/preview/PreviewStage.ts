@@ -86,7 +86,7 @@ export class PreviewStage {
 
     mesh.rotation.set(angle.pitch, angle.yaw, 0);
     this.#scene.add(mesh);
-    const renderer = this.#renderer.getSource();
+    const renderer = this.#renderer.source;
     try {
       renderToTarget(renderer, this.#scene, this.#camera, target);
     }

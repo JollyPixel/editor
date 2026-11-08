@@ -1532,27 +1532,12 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../asset-source
-      '@jolly-pixel/asset.font':
-        specifier: workspace:*
-        version: link:../assets/font
-      '@jolly-pixel/asset.model':
-        specifier: workspace:*
-        version: link:../assets/model
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art
-      '@jolly-pixel/asset.scene':
-        specifier: workspace:*
-        version: link:../assets/scene
       '@jolly-pixel/asset.script':
         specifier: workspace:*
         version: link:../assets/script
-      '@jolly-pixel/asset.sound':
-        specifier: workspace:*
-        version: link:../assets/sound
-      '@jolly-pixel/asset.voxel-animation':
-        specifier: workspace:*
-        version: link:../assets/voxel-animation
       '@jolly-pixel/asset.voxel-map':
         specifier: workspace:*
         version: link:../assets/voxel-map
@@ -1565,27 +1550,6 @@ importers:
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../editors/host
-      '@jolly-pixel/editor.model':
-        specifier: workspace:*
-        version: link:../editors/model
-      '@jolly-pixel/editor.pixel-art':
-        specifier: workspace:*
-        version: link:../editors/pixel-art
-      '@jolly-pixel/editor.scene':
-        specifier: workspace:*
-        version: link:../editors/scene
-      '@jolly-pixel/editor.script':
-        specifier: workspace:*
-        version: link:../editors/script
-      '@jolly-pixel/editor.sound':
-        specifier: workspace:*
-        version: link:../editors/sound
-      '@jolly-pixel/editor.voxel-map':
-        specifier: workspace:*
-        version: link:../editors/voxel-map
-      '@jolly-pixel/editor.voxel-model':
-        specifier: workspace:*
-        version: link:../editors/voxel-model
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../engine

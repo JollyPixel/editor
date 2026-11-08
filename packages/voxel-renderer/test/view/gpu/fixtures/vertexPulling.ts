@@ -170,11 +170,11 @@ export async function renderParityScene(
   const layer = view.document.world.addLayer("parity");
   for (let x = 0; x < 6; x++) {
     for (let z = 0; z < 6; z++) {
-      layer.setVoxelAt({ x, y: 0, z }, { blockId: 1, transform: 0 });
+      layer.writeVoxelAt({ x, y: 0, z }, { blockId: 1, transform: 0 });
     }
   }
   kShapes.forEach((_, index) => {
-    layer.setVoxelAt({
+    layer.writeVoxelAt({
       x: index % 4,
       y: 1,
       z: Math.floor(index / 4) * 2
@@ -183,11 +183,11 @@ export async function renderParityScene(
       transform: (index * 5) % 24
     });
   });
-  layer.setVoxelAt({ x: 1, y: 2, z: 0 }, { blockId: 1, transform: 0 });
+  layer.writeVoxelAt({ x: 1, y: 2, z: 0 }, { blockId: 1, transform: 0 });
   if (lit) {
     for (let x = 1; x < 4; x++) {
       for (let z = 1; z < 4; z++) {
-        layer.setVoxelAt({ x, y: 4, z }, { blockId: 1, transform: 0 });
+        layer.writeVoxelAt({ x, y: 4, z }, { blockId: 1, transform: 0 });
       }
     }
   }

@@ -1,7 +1,20 @@
 # Renderer
 
 `Renderer` is the drawing interface [World](world.md) depends on: resize,
-draw, clear, dispose, and waiting for pipeline compiles.
+draw, clear, dispose, and waiting for pipeline compiles. Each frame, `World`
+calls `draw(graph)` with its [scene graph](scene-graph.md); a renderer only
+accepts the graph of its own backend.
+
+`RenderComponent` holds what every backend needs from a camera: `depth`,
+`viewport` and `prepareRender(canvas)`. The three.js backend extends it as
+`ThreeRenderComponent` with `threeCamera` and `postProcessing`.
+
+## HeadlessRenderer
+
+`new HeadlessRenderer(canvas)` draws nothing. It keeps the registered render
+components, emits `draw` with a `null` source, and its `compiled()` resolves
+at once. Pair it with `HeadlessSceneGraph` to run a world without a GPU, as
+in tests or a simulation.
 
 ## ThreeRenderer
 
@@ -81,11 +94,10 @@ settings without creating a context.
 `THREE.VSMShadowMap`. `THREE.PCFSoftShadowMap` was removed from
 `WebGPURenderer`; use `THREE.PCFShadowMap` for filtered shadows.
 
-The underlying `THREE.WebGPURenderer` stays accessible via
-`getSource()`:
+The underlying `THREE.WebGPURenderer` stays accessible via `source`:
 
 ```ts
-const webGPU = renderer.getSource();
+const webGPU = renderer.source;
 webGPU.toneMappingExposure = 1.5;
 ```
 
@@ -142,7 +154,7 @@ is disposed.
 
 ## Cameras (render components)
 
-A render component implements `RenderComponent`; in practice it is a
+A render component implements `ThreeRenderComponent`; in practice it is a
 [`CameraComponent`](../components/camera.md), which registers itself in
 `awake()`:
 
@@ -164,15 +176,14 @@ changed with `configure()` applies on the next draw.
 ## Aspect ratio
 
 By default the renderer fills its parent element. An explicit
-aspect ratio can be enforced with `setRatio`. A negative or infinite
+aspect ratio can be enforced with `lockAspectRatio`. A negative or infinite
 ratio throws a `RangeError`:
 
 ```ts
-// Lock to 16:9
-renderer.setRatio(16 / 9);
+renderer.lockAspectRatio(16 / 9);
 
-// Reset to fill parent
-renderer.setRatio(null);
+// Fill the parent again
+renderer.unlockAspectRatio();
 ```
 
 When a ratio is set, the canvas is centered and letter-boxed
@@ -237,7 +248,7 @@ every frame, comes out incomplete while its pipelines compile. Render it, wait
 for `compiled()`, then render it again:
 
 ```ts
-const generator = new THREE.PMREMGenerator(renderer.getSource());
+const generator = new THREE.PMREMGenerator(renderer.source);
 const target = generator.fromScene(room, 0.04);
 scene.environment = target.texture;
 

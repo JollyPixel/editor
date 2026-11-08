@@ -17,7 +17,7 @@ import type { MapGroupAction } from "../keybindings/mapActions.ts";
 export interface ViewShortcutsOptions {
   view: Pick<ViewStore, "settings" | "update">;
   camera: Pick<EditorCamera, "frame">;
-  world: Pick<VoxelWorld, "getLayers">;
+  world: Pick<VoxelWorld, "layers">;
   layers: Pick<MapLayers, "bounds">;
   selection: Pick<SelectionStore, "current">;
 }

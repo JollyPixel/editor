@@ -21,6 +21,7 @@ import {
   BlockRegistry
 } from "../../src/document/blocks/index.ts";
 import { BlockShapeRegistry } from "../../src/document/blocks/shape/index.ts";
+import { writeChunkVoxel } from "./voxelEntry.ts";
 
 // CONSTANTS
 const kNoGeometries = new Map();
@@ -151,7 +152,7 @@ export function makeChunk(
 ): VoxelChunk {
   const chunk = new VoxelChunk(coords, size);
   for (const [x, y, z, blockId = 1, transform = 0] of cells) {
-    chunk.set([x, y, z], { blockId, transform });
+    writeChunkVoxel(chunk, [x, y, z], { blockId, transform });
   }
 
   return chunk;

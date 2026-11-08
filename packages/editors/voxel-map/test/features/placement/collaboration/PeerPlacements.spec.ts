@@ -50,7 +50,7 @@ interface Replica {
 function replica(): Replica {
   const world = new VoxelWorld();
   world.addLayer("Draft");
-  world.setVoxelBulk("Draft", [0, 1, 2].map((x) => {
+  world.placeVoxelBulk("Draft", [0, 1, 2].map((x) => {
     return {
       position: { x, y: 0, z: 0 },
       blockId: 1
@@ -113,7 +113,7 @@ function relay(
 function readPreview(
   replica: Replica
 ): PlacementPreview | undefined {
-  const object = replica.actor.object3D.getObjectByName(
+  const object = replica.actor.node.object3D.getObjectByName(
     `peer-placement:${kPlacer}`
   );
 

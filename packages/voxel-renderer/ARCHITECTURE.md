@@ -41,7 +41,7 @@ Code: `src/document/world`.
 
 ```mermaid
 flowchart TB
-    Local["world.setVoxel()"] --> Apply["the owning aggregate applies it"]
+    Local["world.placeVoxel()"] --> Apply["the owning aggregate applies it"]
     Remote["document.applyCommand()"] --> Apply
     Apply --> Dirty["dirty chunks"]
     Apply --> Event["'command' event"]

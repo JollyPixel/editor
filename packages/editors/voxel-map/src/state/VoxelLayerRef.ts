@@ -42,7 +42,7 @@ export class VoxelLayerRef {
   exists(
     world: VoxelWorld
   ): boolean {
-    return world.getLayer(this.name) !== undefined;
+    return world.findLayer(this.name) !== undefined;
   }
 
   cloneIn(
@@ -72,7 +72,7 @@ export class VoxelLayerRef {
       return;
     }
 
-    const stack = world.getLayers().map((layer) => layer.name);
+    const stack = world.layers().map((layer) => layer.name);
     const fromIndex = stack.indexOf(this.name);
     const targetIndex = stack.indexOf(target.name);
     if (fromIndex === -1 || targetIndex === -1) {

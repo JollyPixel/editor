@@ -27,7 +27,7 @@ describe("VoxelWorld — layer properties", () => {
     const world = new VoxelWorld(4);
     const layer = world.addLayer("Ground");
 
-    world.setLayerPosition("Ground", { x: 16, y: 0, z: -8 });
+    world.placeLayer("Ground", { x: 16, y: 0, z: -8 });
 
     assert.deepEqual(layer.position, { x: 16, y: 0, z: -8 });
   });
@@ -43,19 +43,19 @@ describe("VoxelWorld — dirty propagation", () => {
   it("dirties an adjacent chunk when a voxel lands on the boundary", () => {
     const world = new VoxelWorld(4);
     const layer = world.addLayer("Ground");
-    layer.getOrCreateChunk(1, 0, 0).dirty = false;
+    layer.ensureChunk(1, 0, 0).dirty = false;
 
     writeVoxel(world, "Ground", { x: 3, y: 0, z: 0 }, makeVoxelEntry());
 
-    assert.equal(layer.getChunk(1, 0, 0)?.dirty, true);
+    assert.equal(layer.chunkAt(1, 0, 0)?.dirty, true);
   });
 
   it("dirties the edge and corner chunks of a voxel on a chunk corner", () => {
     const world = new VoxelWorld(4);
     const layer = world.addLayer("Ground");
-    const corner = layer.getOrCreateChunk(1, 1, 1);
-    const edge = layer.getOrCreateChunk(1, 1, 0);
-    const beyond = layer.getOrCreateChunk(2, 1, 1);
+    const corner = layer.ensureChunk(1, 1, 1);
+    const edge = layer.ensureChunk(1, 1, 0);
+    const beyond = layer.ensureChunk(2, 1, 1);
     for (const chunk of [corner, edge, beyond]) {
       chunk.dirty = false;
     }
@@ -107,7 +107,7 @@ describe("VoxelWorld — dirty propagation", () => {
     const fixture = makeTwoLayerWorld();
     clearAllDirty(fixture.world);
 
-    fixture.world.setLayerPosition("A", { x: 4, y: 0, z: 0 });
+    fixture.world.placeLayer("A", { x: 4, y: 0, z: 0 });
 
     assert.equal(dirtyFlags(fixture).a, true);
   });
@@ -117,13 +117,13 @@ describe("VoxelWorld — chunk enumeration", () => {
   it("yields every chunk, and separately only the dirty ones", () => {
     const fixture = makeTwoLayerWorld();
 
-    assert.equal([...fixture.world.getAllChunks()].length, 2);
-    assert.equal([...fixture.world.getAllDirtyChunks()].length, 2);
+    assert.equal([...fixture.world.chunks()].length, 2);
+    assert.equal([...fixture.world.dirtyChunks()].length, 2);
 
     clearAllDirty(fixture.world);
 
-    assert.equal([...fixture.world.getAllChunks()].length, 2);
-    assert.deepEqual([...fixture.world.getAllDirtyChunks()], []);
+    assert.equal([...fixture.world.chunks()].length, 2);
+    assert.deepEqual([...fixture.world.dirtyChunks()], []);
   });
 });
 
@@ -133,12 +133,12 @@ describe("VoxelWorld — cross-layer dirty propagation", () => {
     const upper = world.addLayer("Upper");
     const lower = world.addLayer("Lower");
     writeVoxel(world, "Lower", { x: 1, y: 1, z: 1 }, makeVoxelEntry());
-    lower.getChunk(0, 0, 0)!.dirty = false;
+    lower.chunkAt(0, 0, 0)!.dirty = false;
 
     writeVoxel(world, "Upper", { x: 1, y: 1, z: 1 }, makeVoxelEntry());
 
-    assert.equal(lower.getChunk(0, 0, 0)?.dirty, true);
-    assert.equal(upper.getChunk(0, 0, 0)?.dirty, true);
+    assert.equal(lower.chunkAt(0, 0, 0)?.dirty, true);
+    assert.equal(upper.chunkAt(0, 0, 0)?.dirty, true);
   });
 
   it("dirties the other layers' neighbour chunk across a boundary", () => {
@@ -146,11 +146,11 @@ describe("VoxelWorld — cross-layer dirty propagation", () => {
     world.addLayer("Upper");
     const lower = world.addLayer("Lower");
     writeVoxel(world, "Lower", { x: 4, y: 0, z: 0 }, makeVoxelEntry());
-    lower.getChunk(1, 0, 0)!.dirty = false;
+    lower.chunkAt(1, 0, 0)!.dirty = false;
 
     writeVoxel(world, "Upper", { x: 3, y: 0, z: 0 }, makeVoxelEntry());
 
-    assert.equal(lower.getChunk(1, 0, 0)?.dirty, true);
+    assert.equal(lower.chunkAt(1, 0, 0)?.dirty, true);
   });
 
   it("dirties the other layers on removal too", () => {
@@ -159,11 +159,11 @@ describe("VoxelWorld — cross-layer dirty propagation", () => {
     const lower = world.addLayer("Lower");
     writeVoxel(world, "Upper", { x: 1, y: 1, z: 1 }, makeVoxelEntry());
     writeVoxel(world, "Lower", { x: 1, y: 1, z: 1 }, makeVoxelEntry());
-    lower.getChunk(0, 0, 0)!.dirty = false;
+    lower.chunkAt(0, 0, 0)!.dirty = false;
 
     eraseVoxel(world, "Upper", { x: 1, y: 1, z: 1 });
 
-    assert.equal(lower.getChunk(0, 0, 0)?.dirty, true);
+    assert.equal(lower.chunkAt(0, 0, 0)?.dirty, true);
   });
 
   it("maps the cell through a layer's own position", () => {
@@ -172,10 +172,10 @@ describe("VoxelWorld — cross-layer dirty propagation", () => {
     const lower = world.addLayer("Lower");
     lower.position = { x: 4, y: 0, z: 0 };
     writeVoxel(world, "Lower", { x: 5, y: 1, z: 1 }, makeVoxelEntry());
-    lower.getChunk(0, 0, 0)!.dirty = false;
+    lower.chunkAt(0, 0, 0)!.dirty = false;
 
     writeVoxel(world, "Upper", { x: 5, y: 1, z: 1 }, makeVoxelEntry());
 
-    assert.equal(lower.getChunk(0, 0, 0)?.dirty, true);
+    assert.equal(lower.chunkAt(0, 0, 0)?.dirty, true);
   });
 });

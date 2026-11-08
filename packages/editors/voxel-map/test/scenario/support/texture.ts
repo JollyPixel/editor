@@ -58,7 +58,7 @@ export class TextureEditor {
   ): Promise<TexturePoint> {
     return this.#page.evaluate((name) => {
       const { view, blocksets } = window.voxelMapEditor!.editing;
-      const block = [...view.document.blocks.getAll()]
+      const block = [...view.document.blocks]
         .find((candidate) => candidate.name === name);
       const texture = block?.defaultTexture;
       const tileSize = blocksets.blocksetTileSize(texture?.blocksetId ?? "");

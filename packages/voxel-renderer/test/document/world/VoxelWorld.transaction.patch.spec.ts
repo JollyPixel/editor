@@ -41,7 +41,7 @@ function dirtyChunks(
   world: VoxelWorld
 ): string[] {
   const keys: string[] = [];
-  for (const { layer, chunk } of world.getAllChunks()) {
+  for (const { layer, chunk } of world.chunks()) {
     if (chunk.dirty) {
       keys.push(`${layer.name}:${chunk.cx},${chunk.cy},${chunk.cz}`);
     }
@@ -75,7 +75,7 @@ function dirtyAfterWrites(
   const world = new VoxelWorld(4);
   for (const [name, position] of Object.entries(positions)) {
     world.addLayer(name);
-    world.setLayerPosition(name, position);
+    world.placeLayer(name, position);
     for (const cell of randomCells(200, name.charCodeAt(0))) {
       writeVoxel(world, name, cell, { blockId: 1, transform: 0 });
     }
@@ -84,7 +84,7 @@ function dirtyAfterWrites(
 
   function write(): void {
     for (const cell of cells) {
-      world.setVoxel("A", { position: cell, blockId: 2 });
+      world.placeVoxel("A", { position: cell, blockId: 2 });
     }
   }
   if (mode === "transaction") {
@@ -120,12 +120,12 @@ describe("VoxelWorld.patchVoxels", () => {
     const [command] = commands;
     assert.equal(commands.length, 1);
     assert.equal(command?.action, "voxels-patched");
-    assert.equal(command.layerId, world.getLayer(kLayer)!.id);
+    assert.equal(command.layerId, world.findLayer(kLayer)!.id);
     assert.deepEqual(command.metadata.cells, cells);
     assert.notEqual(command.metadata.cells, cells);
-    assert.equal(world.getVoxelAt(kOrigin)?.blockId, 4);
+    assert.equal(world.voxelAt(kOrigin)?.blockId, 4);
     assert.deepEqual(
-      world.getVoxelAt({ x: 1, y: 0, z: 0 }),
+      world.voxelAt({ x: 1, y: 0, z: 0 }),
       { blockId: 3, transform: 1 }
     );
   });
@@ -156,18 +156,18 @@ describe("VoxelWorld.patchVoxels", () => {
     const { world, commands } = makeWorld();
 
     world.transaction(() => {
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 2 });
       world.patchVoxels(kLayer, [0, 0, 0, 0, 0]);
     });
 
     assert.deepEqual(commands, []);
-    assert.equal(world.getVoxelAt(kOrigin), undefined);
+    assert.equal(world.voxelAt(kOrigin), undefined);
   });
 
   it("records one undo step when the history is enabled", () => {
     const { world } = makeWorld();
     const history = worldHistory(world);
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
     world.patchVoxels(kLayer, [
       0, 0, 0, 2, 0,
@@ -176,8 +176,8 @@ describe("VoxelWorld.patchVoxels", () => {
     ]);
     history.undo();
 
-    assert.equal(world.getVoxelAt(kOrigin)?.blockId, 1);
-    assert.equal(world.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
+    assert.equal(world.voxelAt(kOrigin)?.blockId, 1);
+    assert.equal(world.voxelAt({ x: 1, y: 0, z: 0 }), undefined);
     assert.equal(history.canUndo, true);
   });
 
@@ -217,6 +217,6 @@ describe("VoxelWorld.patchVoxels", () => {
     world.silently(() => world.patchVoxels(kLayer, [0, 0, 0, 2, 0]));
 
     assert.deepEqual(commands, []);
-    assert.equal(world.getVoxelAt(kOrigin)?.blockId, 2);
+    assert.equal(world.voxelAt(kOrigin)?.blockId, 2);
   });
 });

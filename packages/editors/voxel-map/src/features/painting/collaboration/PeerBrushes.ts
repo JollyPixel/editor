@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import {
   Actor,
-  ActorComponent
+  ActorComponent,
+  disposeObject3D
 } from "@jolly-pixel/engine";
 import {
   PresenceChannel,
@@ -144,7 +145,7 @@ export class PeerBrushes extends ActorComponent {
     });
     mesh.hide();
     this.#meshes.set(clientId, mesh);
-    this.actor.addChildren(mesh);
+    this.actor.node.object3D.add(mesh);
 
     return mesh;
   }
@@ -157,7 +158,7 @@ export class PeerBrushes extends ActorComponent {
       return;
     }
 
-    this.actor.removeChildren(mesh);
+    disposeObject3D(mesh);
     this.#meshes.delete(clientId);
   }
 }

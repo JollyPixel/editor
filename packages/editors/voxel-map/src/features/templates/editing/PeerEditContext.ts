@@ -15,13 +15,13 @@ export type PeerEditContextEvents = {
 };
 
 export interface PeerEditContextOptions {
-  world: Pick<VoxelWorld, "getLayer">;
+  world: Pick<VoxelWorld, "findLayer">;
   context: Pick<EditContext, "draft" | "subscribe">;
   presence: Pick<PresenceStore, "layerSelections" | "subscribe">;
 }
 
 export class PeerEditContext extends Emitter<PeerEditContextEvents> {
-  readonly #world: Pick<VoxelWorld, "getLayer">;
+  readonly #world: Pick<VoxelWorld, "findLayer">;
   readonly #context: Pick<EditContext, "draft">;
   readonly #presence: Pick<PresenceStore, "layerSelections">;
   readonly #subscriptions: Array<() => void>;
@@ -66,7 +66,7 @@ export class PeerEditContext extends Emitter<PeerEditContextEvents> {
 
     const ref = parseLayerRef(key);
     const layer = ref.kind === "voxel-layer" ?
-      this.#world.getLayer(ref.name) :
+      this.#world.findLayer(ref.name) :
       undefined;
 
     return layer !== undefined && TemplateDraftId.isDraft(layer) ?

@@ -43,6 +43,6 @@ function readPixelRatio(
   page: Page
 ): Promise<number> {
   return page.evaluate(
-    () => window.runtimeE2E.runtime.renderer.getSource().getPixelRatio()
+    () => window.runtimeE2E.runtime.renderer.source.getPixelRatio()
   );
 }

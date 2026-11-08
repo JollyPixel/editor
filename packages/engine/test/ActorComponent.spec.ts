@@ -13,7 +13,7 @@ import {
   Actor,
   ActorComponent
 } from "../src/index.ts";
-import { Timers } from "../src/systems/Timers.ts";
+import { Timers } from "../src/core/systems/Timers.ts";
 import { createWorld } from "./helpers/actor/mockWorld.ts";
 
 class AssetConsumer extends ActorComponent {
@@ -29,7 +29,7 @@ class AssetConsumer extends ActorComponent {
   read<TValue>(
     reference: AssetReference<TValue>
   ): TValue {
-    return this.getAsset(reference);
+    return this.resolveAsset(reference);
   }
 }
 

@@ -5,7 +5,7 @@
 Use the `/noise-world/` example (`pnpm --filter @jolly-pixel/voxel.renderer dev`)
 to measure the renderer under load. It builds a heightmap world from layered
 simplex noise (continents, ridged mountains, domain warp) and reports two
-separate costs: voxel writes via `setVoxel` and chunk meshing for dirty chunks.
+separate costs: voxel writes via `placeVoxel` and chunk meshing for dirty chunks.
 
 It is configurable from the query string:
 

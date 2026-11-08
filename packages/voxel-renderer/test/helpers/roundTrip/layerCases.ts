@@ -32,18 +32,18 @@ export const LAYER_CASES: RoundTripCase[] = [
     name: "sets then translates a layer position",
     seed: ground,
     act: (world) => {
-      world.setLayerPosition("Ground", { x: 2, y: 0, z: 0 });
+      world.placeLayer("Ground", { x: 2, y: 0, z: 0 });
       world.translateLayer("Ground", { x: 3, y: 1, z: 0 });
     },
     actions: ["position-updated", "position-updated"],
-    check: (remote) => assert.deepEqual(remote.getLayer("Ground")?.position, { x: 5, y: 1, z: 0 })
+    check: (remote) => assert.deepEqual(remote.findLayer("Ground")?.position, { x: 5, y: 1, z: 0 })
   },
   {
     name: "rebases a layer without moving its voxels",
     seed: ground,
     act: (world) => world.rebaseLayer("Ground", { x: 1, y: 0, z: 0 }),
     actions: ["position-rebased"],
-    check: (remote) => assert.equal(remote.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, 2)
+    check: (remote) => assert.equal(remote.voxelAt({ x: 1, y: 0, z: 0 })?.blockId, 2)
   },
   {
     name: "swaps a layer with its neighbour",
@@ -60,7 +60,7 @@ export const LAYER_CASES: RoundTripCase[] = [
   {
     name: "sets a transformed voxel",
     seed: ground,
-    act: (world) => world.setVoxel("Ground", {
+    act: (world) => world.placeVoxel("Ground", {
       position: { x: 2, y: 0, z: 0 },
       blockId: 3,
       rotation: 1,
@@ -77,7 +77,7 @@ export const LAYER_CASES: RoundTripCase[] = [
   {
     name: "sets voxels in bulk",
     seed: ground,
-    act: (world) => world.setVoxelBulk("Ground", [
+    act: (world) => world.placeVoxelBulk("Ground", [
       { position: { x: 2, y: 0, z: 0 }, blockId: 3, rotation: 2 },
       { position: { x: 9, y: 0, z: 0 }, blockId: 4 }
     ]),
@@ -109,10 +109,10 @@ export const LAYER_CASES: RoundTripCase[] = [
       ground(world);
     },
     act: (world) => world.transaction(() => {
-      world.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: 3, rotation: 1 });
+      world.placeVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: 3, rotation: 1 });
       world.removeVoxel("Ground", { position: { x: 0, y: 0, z: 0 } });
-      world.setVoxel("Top", { position: { x: 0, y: 1, z: 0 }, blockId: 6 });
-      world.setVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: 4 });
+      world.placeVoxel("Top", { position: { x: 0, y: 1, z: 0 }, blockId: 6 });
+      world.placeVoxel("Ground", { position: { x: 2, y: 0, z: 0 }, blockId: 4 });
     }),
     actions: ["voxels-patched", "voxels-patched"]
   },
@@ -121,17 +121,17 @@ export const LAYER_CASES: RoundTripCase[] = [
     seed: ground,
     act: (world) => world.transformLayer("Ground", { rotation: 1, flipY: true }),
     actions: ["layer-transformed"],
-    check: (remote) => assert.equal(remote.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2)
+    check: (remote) => assert.equal(remote.voxelAt({ x: 0, y: 0, z: 0 })?.blockId, 2)
   },
   {
     name: "folds a layer transform into the transaction patch",
     seed: ground,
     act: (world) => world.transaction(() => {
-      world.setVoxel("Ground", { position: { x: 0, y: 0, z: 1 }, blockId: 3 });
+      world.placeVoxel("Ground", { position: { x: 0, y: 0, z: 1 }, blockId: 3 });
       world.transformLayer("Ground", { rotation: 2 });
     }),
     actions: ["voxels-patched"],
-    check: (remote) => assert.equal(remote.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, 3)
+    check: (remote) => assert.equal(remote.voxelAt({ x: 1, y: 0, z: 0 })?.blockId, 3)
   },
   {
     name: "clones a layer, voxels included, under a derived name",
@@ -145,7 +145,7 @@ export const LAYER_CASES: RoundTripCase[] = [
     },
     actions: ["cloned", "cloned"],
     check: (remote) => assert.deepEqual(
-      remote.getLayers().map((layer) => layer.name),
+      remote.layers().map((layer) => layer.name),
       ["Ground (1)", "Ground (2)", "Ground", "Bottom"]
     )
   },
@@ -160,6 +160,6 @@ export const LAYER_CASES: RoundTripCase[] = [
     },
     act: (world) => world.mergeLayer("Source", "Target"),
     actions: ["merged"],
-    check: (remote) => assert.equal(remote.getVoxelAt({ x: 0, y: 0, z: 0 })?.blockId, 9)
+    check: (remote) => assert.equal(remote.voxelAt({ x: 0, y: 0, z: 0 })?.blockId, 9)
   }
 ];

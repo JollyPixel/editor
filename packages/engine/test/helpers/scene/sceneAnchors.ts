@@ -1,13 +1,13 @@
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
+import { ActorComponent } from "../../../src/core/actor/ActorComponent.ts";
 import type {
   ComponentAnchor,
   ComponentAnchors,
   ComponentDefinition,
   JSONObject,
   Vector3JSON
-} from "../../../src/systems/scene/file/index.ts";
+} from "../../../src/core/systems/scene/file/index.ts";
 
 export class MarkerAnchors implements ComponentAnchors {
   #anchors = new Map<string, ComponentAnchor>();

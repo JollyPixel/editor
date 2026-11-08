@@ -139,7 +139,7 @@ interface ActorComponent {
   get context(): TContext;
 
   /** Returns a prepared asset value synchronously. */
-  protected getAsset<TValue>(
+  protected resolveAsset<TValue>(
     reference: AssetReference<TValue>
   ): TValue;
 
@@ -184,7 +184,7 @@ class PlayerBehavior extends ActorComponent {
   } satisfies AssetReferenceGroup;
 
   override awake(): void {
-    const model = this.getAsset(PlayerBehavior.assets.model);
+    const model = this.resolveAsset(PlayerBehavior.assets.model);
   }
 }
 ```

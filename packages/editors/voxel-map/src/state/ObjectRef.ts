@@ -77,7 +77,7 @@ export class ObjectRef {
   objectIn(
     world: VoxelWorld
   ): VoxelObjectJSON | undefined {
-    return world.objectLayers.getObject(
+    return world.objectLayers.findObject(
       this.layerName,
       this.objectId
     );

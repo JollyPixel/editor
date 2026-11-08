@@ -35,7 +35,7 @@ describe("SceneBinding", () => {
     const root = binding.actor(rootId)!;
     const child = binding.actor(childId)!;
     assert.strictEqual(child.parent, root);
-    assert.deepEqual(root.object3D.position.toArray(), [1, 2, 3]);
+    assert.deepEqual(root.transform.local.position.toArray(), [1, 2, 3]);
     assert.strictEqual((binding.component("probe") as Probe).label, "sun");
     assert.deepEqual(environments, [document.tree.environment]);
   });
@@ -100,8 +100,8 @@ describe("SceneBinding", () => {
 
     const child = binding.actor(childId)!;
     assert.strictEqual(child.parent, null);
-    assert.deepEqual(child.object3D.position.toArray(), [4, 0, 0]);
-    assert.ok(Math.abs(child.object3D.rotation.y - (Math.PI / 2)) < 1e-9);
+    assert.deepEqual(child.transform.local.position.toArray(), [4, 0, 0]);
+    assert.ok(Math.abs(child.transform.local.eulerAngles.y - (Math.PI / 2)) < 1e-9);
   });
 
   test("moves an actor onto the anchor a move names and lists its owner's anchors", () => {
@@ -126,7 +126,7 @@ describe("SceneBinding", () => {
 
     const coin = binding.actor(coinId)!;
     assert.strictEqual(coin.parent, binding.actor(mapId));
-    assert.deepEqual(coin.object3D.getWorldPosition(new THREE.Vector3()).toArray(), [5, 1, 0]);
+    assert.deepEqual(coin.transform.global.position.toArray(), [5, 1, 0]);
     assert.deepEqual([...binding.anchors(mapId)].map(({ anchor }) => anchor.label), ["Spawn"]);
   });
 
@@ -160,7 +160,7 @@ describe("SceneBinding", () => {
     const fresh = binding.actor("fresh")!;
     assert.strictEqual(binding.actor(oldId), null);
     assert.deepEqual(sceneManager.tree.children, [fresh]);
-    assert.strictEqual(fresh.object3D.visible, false);
+    assert.strictEqual(fresh.transform.visible, false);
     assert.deepEqual(environments.at(-1), foggy);
   });
 
@@ -169,7 +169,7 @@ describe("SceneBinding", () => {
     const actorId = document.addActor({ name: "Actor" })!;
     const { binding } = createProbeBinding(document);
     const mesh = new THREE.Object3D();
-    binding.actor(actorId)!.object3D.add(mesh);
+    binding.actor(actorId)!.node.object3D.add(mesh);
 
     assert.strictEqual(binding.findActorId(mesh), actorId);
     assert.strictEqual(binding.findActorId(new THREE.Object3D()), null);
@@ -218,7 +218,7 @@ describe("SceneBinding", () => {
     })!;
     const boxId = document.addActor({ name: "Box" })!;
     const { binding } = createProbeBinding(document);
-    binding.actor(boxId)!.object3D.add(
+    binding.actor(boxId)!.node.object3D.add(
       new THREE.Mesh(new THREE.BoxGeometry(2, 2, 2))
     );
 

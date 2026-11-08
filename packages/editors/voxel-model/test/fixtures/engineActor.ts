@@ -4,7 +4,6 @@ import {
   Systems,
   type Actor
 } from "@jolly-pixel/engine";
-import * as THREE from "three";
 
 export interface FrameRequests {
   invalidations: number;
@@ -13,9 +12,9 @@ export interface FrameRequests {
 export function makeActor(
   frames: FrameRequests = { invalidations: 0 }
 ): Actor {
-  const actor = {
+  const graph = new Systems.ThreeSceneGraph();
+  const actor: Record<string, unknown> = {
     components: new ActorComponents(),
-    object3D: new THREE.Group(),
     addComponentAndGet: (
       Component: new(actor: Actor, options: unknown) => unknown,
       options: unknown
@@ -25,10 +24,12 @@ export function makeActor(
         frames.invalidations++;
       },
       sceneManager: {
-        actors: new Systems.ActorRegistry(new THREE.Scene())
+        actors: new Systems.ActorRegistry(graph),
+        graph
       }
     }
   };
+  actor.node = graph.createNode(actor as unknown as Actor);
 
   return actor as unknown as Actor;
 }

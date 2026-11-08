@@ -115,15 +115,15 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
       return null;
     }
 
-    const layer = this.world.getLayerById(command.layerId);
+    const layer = this.world.findLayerById(command.layerId);
     if (layer === undefined) {
       return null;
     }
 
     const inverse = new VoxelPatchBuilder();
     for (const { position, packed, partner } of voxelPatchWrites(command.metadata)) {
-      const before = layer.getPackedVoxelAt(position);
-      const beforePartner = layer.getPartnerVoxelAt(position);
+      const before = layer.packedAt(position);
+      const beforePartner = layer.partnerAt(position);
       if (before !== packed || beforePartner !== partner) {
         inverse.push(position, before, beforePartner);
       }

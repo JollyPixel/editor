@@ -78,7 +78,7 @@ export class VoxelRenderer extends ActorComponent {
   }
 
   awake(): void {
-    this.actor.object3D.add(this.view.root);
+    this.actor.node.object3D.add(this.view.root);
     this.view.init();
   }
 
@@ -100,7 +100,7 @@ export class VoxelRenderer extends ActorComponent {
   }
 
   override destroy(): void {
-    this.actor.object3D.remove(this.view.root);
+    this.actor.node.object3D.remove(this.view.root);
     this.view.dispose();
     if (this.#ownsDocument) {
       this.document.dispose();

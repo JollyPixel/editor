@@ -74,7 +74,7 @@ export class PixelPreviewScene extends Systems.Scene {
   }
 
   override awake(): void {
-    const scene = this.world.sceneManager.getSource();
+    const scene = this.world.sceneManager.graph.scene;
     const sun = new THREE.DirectionalLight(0xffffff, 1.4);
     sun.position.set(3, 4, 5);
     scene.add(
@@ -117,7 +117,7 @@ export class PixelPreviewScene extends Systems.Scene {
     theme: ResolvedThemeMode
   ): void {
     const appearance = kSceneAppearances[theme];
-    this.world.sceneManager.getSource().background = new THREE.Color(
+    this.world.sceneManager.graph.scene.background = new THREE.Color(
       appearance.backgroundColor
     );
     this.#style.borderColor.set(appearance.borderColor);

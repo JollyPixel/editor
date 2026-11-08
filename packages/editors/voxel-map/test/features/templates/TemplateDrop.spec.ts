@@ -28,7 +28,7 @@ const kViewportEdge = 100;
 function setup() {
   const world = new VoxelWorld();
   world.addLayer("Draft");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1

@@ -8,12 +8,12 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   CameraCompositor
-} from "../../../../src/systems/rendering/compositing/CameraCompositor.ts";
-import type { RenderComponent } from "../../../../src/systems/rendering/Renderer.ts";
-import { CanvasDimensions } from "../../../../src/systems/rendering/CanvasDimensions.ts";
+} from "../../../../src/three/rendering/compositing/CameraCompositor.ts";
+import type { ThreeRenderComponent } from "../../../../src/three/rendering/ThreeRenderComponent.ts";
+import { CanvasDimensions } from "../../../../src/core/systems/rendering/CanvasDimensions.ts";
 import type {
   PostProcessingContext
-} from "../../../../src/systems/rendering/compositing/PostProcessing.ts";
+} from "../../../../src/three/rendering/compositing/PostProcessing.ts";
 import {
   createPipelineSpy,
   createRenderComponent,
@@ -43,7 +43,7 @@ describe("Systems.Rendering.CameraCompositor post-processing", () => {
     );
 
     function render(
-      components: RenderComponent[]
+      components: ThreeRenderComponent[]
     ) {
       for (const component of [...compositor.components]) {
         if (!components.includes(component)) {

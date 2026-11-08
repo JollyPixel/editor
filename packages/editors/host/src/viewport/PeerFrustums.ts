@@ -38,7 +38,7 @@ export class PeerFrustums extends ActorComponent {
     this.#camera = options.camera;
     this.#sync = new PeerFrustumSync({
       room: options.room,
-      parent: this.actor.world.sceneManager.getSource(),
+      parent: this.actor.world.sceneManager.graph.scene,
       color: peerProfileColor,
       hideWithin: kHideWithin,
       fadeWithin: kFadeWithin,

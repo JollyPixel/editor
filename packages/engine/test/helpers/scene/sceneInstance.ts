@@ -5,8 +5,8 @@ import {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
+import { ActorComponent } from "../../../src/core/actor/ActorComponent.ts";
 import {
   ComponentDefinitions,
   SceneInstance,
@@ -15,7 +15,7 @@ import {
   type JSONObject,
   type SceneInstanceOptions,
   type SceneMode
-} from "../../../src/systems/scene/file/index.ts";
+} from "../../../src/core/systems/scene/file/index.ts";
 import { createSceneSetup } from "./sceneSetup.ts";
 import { createSceneAssets } from "./sceneAssets.ts";
 import { createWarningLogger } from "./sceneFile.ts";

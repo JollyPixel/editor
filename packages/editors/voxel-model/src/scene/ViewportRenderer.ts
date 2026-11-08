@@ -4,16 +4,16 @@ import type { Systems } from "@jolly-pixel/engine";
 
 export type PreDrawStep = () => void;
 
-export class ViewportRenderer implements Systems.RenderComponent {
+export class ViewportRenderer implements Systems.ThreeRenderComponent {
   readonly viewport = null;
   readonly depth: number;
   postProcessing: Systems.PostProcessing | null = null;
 
-  #camera: Systems.RenderComponent;
+  #camera: Systems.ThreeRenderComponent;
   #steps: PreDrawStep[] = [];
 
   constructor(
-    camera: Systems.RenderComponent
+    camera: Systems.ThreeRenderComponent
   ) {
     this.#camera = camera;
     this.depth = camera.depth;

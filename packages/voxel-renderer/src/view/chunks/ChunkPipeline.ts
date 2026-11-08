@@ -180,8 +180,8 @@ export class ChunkPipeline {
       return false;
     }
 
-    for (const layer of this.#world.getLayers()) {
-      for (const chunk of layer.getDirtyChunks()) {
+    for (const layer of this.#world.layers()) {
+      for (const chunk of layer.dirtyChunks()) {
         if (viewport.contains(this.#layout.chunkWorldOrigin(layer, chunk), false)) {
           return false;
         }
@@ -208,7 +208,7 @@ export class ChunkPipeline {
   ): void {
     let grew = false;
 
-    for (const { chunk } of this.#world.getAllChunksToBeRemoved()) {
+    for (const { chunk } of this.#world.drainDetachedChunks()) {
       const placed = this.#meshes.targetContaining(chunk);
       if (placed !== undefined) {
         grew = this.#retire(placed) || grew;
@@ -238,7 +238,7 @@ export class ChunkPipeline {
       return true;
     }
 
-    const layers = this.#world.getLayers();
+    const layers = this.#world.layers();
 
     return layers.length !== this.#scannedRevisions.size ||
       layers.some(
@@ -251,7 +251,7 @@ export class ChunkPipeline {
   ): boolean {
     let grew = false;
 
-    for (const { layer, chunk } of this.#world.getAllDirtyChunks()) {
+    for (const { layer, chunk } of this.#world.dirtyChunks()) {
       const origin = this.#layout.chunkWorldOrigin(layer, chunk);
       if (!viewport.contains(origin, false)) {
         continue;
@@ -270,7 +270,7 @@ export class ChunkPipeline {
 
     this.#scannedViewport = viewport;
     this.#scannedRevisions.clear();
-    for (const layer of this.#world.getLayers()) {
+    for (const layer of this.#world.layers()) {
       this.#scannedRevisions.set(layer, layer.dirtyRevision);
     }
 

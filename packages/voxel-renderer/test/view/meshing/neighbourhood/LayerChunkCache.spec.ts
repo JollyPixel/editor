@@ -24,7 +24,7 @@ function makeWorld(
     for (let y = -3; y < 9; y++) {
       for (let z = -3; z < 9; z++) {
         if ((x * 7 + y * 3 + z * 5) % 4 === 0) {
-          layer.setPackedVoxelAt(
+          layer.writePackedAt(
             { x, y, z },
             packVoxel(1 + ((x + y + z) & 3), 0)
           );
@@ -41,7 +41,7 @@ function makeCache(
   window: Int32Array | null
 ): LayerChunkCache {
   return new LayerChunkCache({
-    layer: world.getLayers()[0],
+    layer: world.layers()[0],
     chunkSize: kChunkSize,
     minWx: -1,
     minWy: -1,

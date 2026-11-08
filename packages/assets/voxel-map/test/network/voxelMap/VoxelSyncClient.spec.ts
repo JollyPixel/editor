@@ -69,7 +69,7 @@ describe("VoxelSyncClient — local commands", () => {
     const room = createMockRoom("client-A");
     new VoxelSyncClient({ room, document });
 
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
     });
@@ -86,7 +86,7 @@ describe("VoxelSyncClient — local commands", () => {
 
     document.world.transaction(() => {
       for (let x = 0; x < 20; x++) {
-        document.world.setVoxel("Ground", {
+        document.world.placeVoxel("Ground", {
           position: { x, y: 0, z: 0 },
           blockId: 1
         });
@@ -155,7 +155,7 @@ describe("VoxelSyncClient — remote commands", () => {
     }));
 
     assert.equal(
-      document.world.getLayer("Ground")!.getVoxelAt({ x: 5, y: 0, z: 5 })?.blockId,
+      document.world.findLayer("Ground")!.voxelAt({ x: 5, y: 0, z: 5 })?.blockId,
       2
     );
     assert.equal(room.sentCommands.length, 0);
@@ -173,9 +173,9 @@ describe("VoxelSyncClient — remote commands", () => {
       metadata: { cells: [1, 0, 0, 2, 0, 3, 0, 0, 4, 0] }
     });
 
-    const ground = document.world.getLayer("Ground")!;
-    assert.equal(ground.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId, 2);
-    assert.equal(ground.getVoxelAt({ x: 3, y: 0, z: 0 })?.blockId, 4);
+    const ground = document.world.findLayer("Ground")!;
+    assert.equal(ground.voxelAt({ x: 1, y: 0, z: 0 })?.blockId, 2);
+    assert.equal(ground.voxelAt({ x: 3, y: 0, z: 0 })?.blockId, 4);
     assert.equal(room.sentCommands.length, 0);
   });
 
@@ -202,7 +202,7 @@ describe("VoxelSyncClient — remote commands", () => {
     room.simulateCommand(voxelSetCmd({ clientId: "client-A" }));
 
     assert.equal(
-      document.world.getLayer("Ground")!.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      document.world.findLayer("Ground")!.voxelAt({ x: 0, y: 0, z: 0 }),
       undefined
     );
     assert.equal(received.length, 0);
@@ -215,7 +215,7 @@ describe("VoxelSyncClient — remote commands", () => {
     const remote = makeDocument();
     const remoteRoom = createMockRoom("client-B");
     new VoxelSyncClient({ room: remoteRoom, document: remote });
-    local.world.setVoxel("Ground", { position: { x: 3, y: 1, z: 0 }, blockId: 2 });
+    local.world.placeVoxel("Ground", { position: { x: 3, y: 1, z: 0 }, blockId: 2 });
 
     const template = local.world.templates.createFromLayer("Ground", { name: "One" });
     for (const command of localRoom.sentCommands) {
@@ -240,7 +240,7 @@ describe("VoxelSyncClient — remote commands", () => {
       data: makeEmptySnapshot()
     });
 
-    assert.ok(document.world.getLayer("Ground"));
+    assert.ok(document.world.findLayer("Ground"));
     assert.equal(received.length, 0);
   });
 });
@@ -254,7 +254,7 @@ describe("VoxelSyncClient — snapshot loading", () => {
     room.simulateSnapshot(snapshotWithBlockset());
 
     assert.deepEqual(document.blocksets.definitions().map(({ id }) => id), ["stone"]);
-    assert.equal(document.world.getLayer("Ground"), undefined);
+    assert.equal(document.world.findLayer("Ground"), undefined);
     assert.equal(room.sentCommands.length, 0);
   });
 });

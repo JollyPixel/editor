@@ -9,7 +9,7 @@ import {
 import {
   ORBIT_FLY_DEFAULT_KEYS,
   OrbitFlyKeys
-} from "../../../src/components/camera/orbit-fly/OrbitFlyKeys.ts";
+} from "../../../src/three/components/camera/orbit-fly/OrbitFlyKeys.ts";
 import {
   createHarness,
   pivotArray

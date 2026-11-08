@@ -5,15 +5,15 @@ import { mock } from "node:test";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { RenderComponent } from "../../../src/systems/rendering/Renderer.ts";
-import type { CanvasDimensions } from "../../../src/systems/rendering/CanvasDimensions.ts";
+import type { ThreeRenderComponent } from "../../../src/three/rendering/ThreeRenderComponent.ts";
+import type { CanvasDimensions } from "../../../src/core/systems/rendering/CanvasDimensions.ts";
 import {
   type RenderViewport,
   Viewport
-} from "../../../src/systems/rendering/Viewport.ts";
+} from "../../../src/core/systems/rendering/Viewport.ts";
 import type {
   PostProcessing
-} from "../../../src/systems/rendering/compositing/PostProcessing.ts";
+} from "../../../src/three/rendering/compositing/PostProcessing.ts";
 
 export interface RenderComponentStubOptions {
   depth?: number;
@@ -41,7 +41,7 @@ export function createRenderComponent(
       _canvas: CanvasDimensions
     ) => {
     })
-  } satisfies RenderComponent & { prepareRender: ReturnType<typeof mock.fn>; };
+  } satisfies ThreeRenderComponent & { prepareRender: ReturnType<typeof mock.fn>; };
 }
 
 export function createPipelineSpy(

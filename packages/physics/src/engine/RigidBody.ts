@@ -98,9 +98,7 @@ export class RigidBody extends ActorComponent {
     this.settings = settings;
 
     const system = PhysicsSystem.require(actor.world);
-    const { object3D } = actor;
-    object3D.updateWorldMatrix(true, false);
-    object3D.matrixWorld.decompose(
+    actor.transform.global.matrix.decompose(
       this.#current.position,
       this.#current.rotation,
       kScale
@@ -172,11 +170,10 @@ export class RigidBody extends ActorComponent {
   }
 
   #pushKinematicPose(): void {
-    const { object3D } = this.actor;
-    object3D.updateWorldMatrix(true, false);
+    const { transform } = this.actor;
     this.body.moveTo(
-      object3D.getWorldPosition(kPosition),
-      object3D.getWorldQuaternion(kRotation)
+      kPosition.copy(transform.global.position),
+      kRotation.copy(transform.global.orientation)
     );
   }
 
@@ -196,9 +193,9 @@ export class RigidBody extends ActorComponent {
     position: THREE.Vector3,
     rotation: THREE.Quaternion
   ): void {
-    this.actor.transform
-      .setGlobalPosition(position)
-      .setGlobalOrientation(rotation);
+    const { transform } = this.actor;
+    transform.global.position = position;
+    transform.global.orientation = rotation;
   }
 }
 

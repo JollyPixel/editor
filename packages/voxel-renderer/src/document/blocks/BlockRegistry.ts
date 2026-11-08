@@ -203,11 +203,7 @@ export class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
     return this.#blocks.has(id);
   }
 
-  getAll(): IterableIterator<ResolvedBlockDefinition> {
-    return this.#blocks.values();
-  }
-
   [Symbol.iterator](): IterableIterator<ResolvedBlockDefinition> {
-    return this.getAll();
+    return this.#blocks.values();
   }
 }

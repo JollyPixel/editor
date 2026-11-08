@@ -29,7 +29,7 @@ class KnightBehavior extends ActorComponent {
   } satisfies AssetReferenceGroup;
 
   override awake(): void {
-    const model = this.getAsset(KnightBehavior.assets.model);
+    const model = this.resolveAsset(KnightBehavior.assets.model);
     // Use the prepared model synchronously.
   }
 }
@@ -57,7 +57,7 @@ actor.addComponent(ModelRenderer, {
 });
 ```
 
-`ActorComponent.getAsset(reference)` reads the loaded value synchronously.
+`ActorComponent.resolveAsset(reference)` reads the loaded value synchronously.
 A value not loaded yet throws `AssetNotReadyError`; it never starts a load.
 
 ## Built-in types and loaders

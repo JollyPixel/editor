@@ -37,6 +37,6 @@ export class VoxelModelRenderer extends ActorComponent {
   }
 
   awake(): void {
-    this.actor.object3D.add(this.view.root);
+    this.actor.node.object3D.add(this.view.root);
   }
 }

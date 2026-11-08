@@ -27,9 +27,9 @@ const kOrigin = {
 };
 
 function layerNames(
-  document: { world: { getLayers(): readonly { name: string; }[]; }; }
+  document: { world: { layers(): readonly { name: string; }[]; }; }
 ): string[] {
-  return document.world.getLayers().map((layer) => layer.name);
+  return document.world.layers().map((layer) => layer.name);
 }
 
 function readWorld(
@@ -47,7 +47,7 @@ function moveToTop(
   return {
     action: "layer-moved",
     layerId,
-    metadata: { rank: rankBetween(state.world.getLayers()[0].rank, null) },
+    metadata: { rank: rankBetween(state.world.layers()[0].rank, null) },
     ...header("A", 4)
   };
 }
@@ -59,7 +59,7 @@ function peerPatch(
 ): VoxelMapNetworkCommand {
   return {
     action: "voxels-patched",
-    layerId: state.world.getLayer(layerName)!.id,
+    layerId: state.world.findLayer(layerName)!.id,
     metadata: { cells: [kOrigin.x, kOrigin.y, kOrigin.z, blockId, 0] },
     ...header("A", 4)
   };
@@ -137,7 +137,7 @@ describe("voxel-map convergence", () => {
     t.mock.timers.enable({ apis: ["Date"], now: 200 });
     const { server, document, deliver, flush } = await setup();
 
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+    document.world.placeVoxel("L1", { position: kOrigin, blockId: 2 });
     await server.receive("A", {
       action: "voxel-set",
       layerId: "L1",
@@ -154,7 +154,7 @@ describe("voxel-map convergence", () => {
     await flush();
     deliver();
 
-    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 2);
+    assert.strictEqual(document.world.voxelAt(kOrigin)?.blockId, 2);
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
@@ -189,16 +189,16 @@ describe("voxel-map convergence", () => {
     deliver();
 
     assert.deepStrictEqual(received, ["correction"]);
-    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 1);
+    assert.strictEqual(document.world.voxelAt(kOrigin)?.blockId, 1);
     assert.deepStrictEqual(readWorld(document), readWorld(server.state));
   });
 
   test("a remote layer move is applied under pending voxel writes", async() => {
     const { server, document, deliver, flush } = await setup();
 
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+    document.world.placeVoxel("L1", { position: kOrigin, blockId: 2 });
     document.world.removeVoxel("L1", { position: kOrigin });
-    document.world.setVoxel("L2", { position: kOrigin, blockId: 3 });
+    document.world.placeVoxel("L2", { position: kOrigin, blockId: 3 });
     await server.receive("A", moveToTop(server.state, "L3"));
     deliver();
     assert.deepStrictEqual(layerNames(document), ["L3", "L1", "L2"]);
@@ -213,12 +213,12 @@ describe("voxel-map convergence", () => {
     const { server, room, document, edits, deliver, flush } = await setup();
     const history = mapHistory(edits);
 
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+    document.world.placeVoxel("L1", { position: kOrigin, blockId: 2 });
     history.undo(MAP_SCOPE);
     await server.receive("A", moveToTop(server.state, "L3"));
     deliver();
     assert.strictEqual(room.resyncs, 0);
-    assert.strictEqual(document.world.getVoxelAt(kOrigin), undefined);
+    assert.strictEqual(document.world.voxelAt(kOrigin), undefined);
 
     await flush();
     deliver();
@@ -232,7 +232,7 @@ describe("voxel-map convergence", () => {
     const refused: HistoryStepInfo[] = [];
     history.on("refused", (_scope, step) => refused.push(step));
 
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+    document.world.placeVoxel("L1", { position: kOrigin, blockId: 2 });
     await flush();
     deliver();
     await server.receive("A", peerPatch(server.state, "L1", 5));

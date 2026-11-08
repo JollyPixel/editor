@@ -31,7 +31,6 @@ class BlockRegistry implements Iterable<ResolvedBlockDefinition> {
   get(id: number): ResolvedBlockDefinition | undefined;
   copyProperties(id: number): BlockProperties | undefined;
   has(id: number): boolean;
-  getAll(): IterableIterator<ResolvedBlockDefinition>;
 }
 ```
 
@@ -65,7 +64,7 @@ block without any, and `undefined` for an unknown id.
 
 ## Ordering
 
-Blocks keep registration order, and iteration, `getAll()` and
+Blocks keep registration order, and iteration and
 [`BlocksetDocument.toJSON()`](../blocksets/BlocksetDocument.md) follow it.
 
 `moveBlockToIndex()` moves a block to `toIndex`, clamped to the list. It returns `false`

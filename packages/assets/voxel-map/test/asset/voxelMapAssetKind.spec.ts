@@ -112,14 +112,14 @@ describe("voxelMapAssetKind", () => {
     const state = voxelMapAssetKind({ chunkSize: 8 }).create("asset-1");
 
     assert.strictEqual(state.world.chunkSize, 8);
-    assert.deepEqual(state.world.getLayers(), []);
+    assert.deepEqual(state.world.layers(), []);
   });
 
   test("a lifecycle event loads the whole document", () => {
     const handler = voxelMapAssetKind({ chunkSize: 16 });
     const source = new VoxelMapState(16);
     source.world.restoreLayer({ id: "Ground", name: "Ground" });
-    source.world.setVoxel("Ground", {
+    source.world.placeVoxel("Ground", {
       position: { x: 1, y: 2, z: 3 },
       blockId: 7
     });
@@ -133,11 +133,11 @@ describe("voxelMapAssetKind", () => {
     foldAssetEvent(handler, state, documentEvent(source));
 
     assert.deepEqual(
-      state.world.getLayers().map((layer) => layer.name),
+      state.world.layers().map((layer) => layer.name),
       ["Ground"]
     );
     assert.strictEqual(
-      state.world.getVoxelAt({ x: 1, y: 2, z: 3 })?.blockId,
+      state.world.voxelAt({ x: 1, y: 2, z: 3 })?.blockId,
       7
     );
   });
@@ -170,7 +170,7 @@ describe("voxelMapAssetKind", () => {
     })));
 
     assert.strictEqual(
-      state.world.getVoxelAt({ x: 1, y: 0, z: 1 })?.blockId,
+      state.world.voxelAt({ x: 1, y: 0, z: 1 })?.blockId,
       3
     );
   });
@@ -214,7 +214,7 @@ describe("voxelMapAssetKind", () => {
     }));
 
     assert.deepEqual(
-      state.world.getLayers().map((layer) => layer.name),
+      state.world.layers().map((layer) => layer.name),
       ["Fresh"]
     );
   });
@@ -229,7 +229,7 @@ describe("voxelMapAssetKind", () => {
       kind: VOXEL_MAP_KIND
     }));
 
-    assert.deepEqual(state.world.getLayers(), []);
+    assert.deepEqual(state.world.layers(), []);
     assert.strictEqual(state.blocksets.size, 0);
   });
 });

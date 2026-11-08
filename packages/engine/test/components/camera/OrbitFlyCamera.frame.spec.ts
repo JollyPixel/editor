@@ -9,7 +9,7 @@ import {
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { frameBounds } from "../../../src/components/camera/orbit-fly/cameraFraming.ts";
+import { frameBounds } from "../../../src/three/components/camera/orbit-fly/cameraFraming.ts";
 import { createHarness } from "../../helpers/camera/orbitFlyHarness.ts";
 
 function box(
@@ -74,7 +74,7 @@ describe("OrbitFlyCamera frame", () => {
   test("leaves orbit focus and faces the bounds along its transform's forward", () => {
     const harness = createHarness({ focusMode: "lock" });
     harness.camera.enterOrbitFocus({ x: 0, y: 0, z: -5 });
-    const forward = harness.camera.actor.transform.getForward(new THREE.Vector3());
+    const forward = harness.camera.actor.transform.global.forward.clone();
 
     harness.camera.frame(box([-1, -1, -11], [1, 1, -9]));
 

@@ -6,14 +6,14 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
 import {
   Behavior,
   SceneProperty,
   ScriptDefinition
 } from "../../../src/index.ts";
-import type { SceneMode } from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
-import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
+import type { SceneMode } from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
+import type { JSONObject } from "../../../src/core/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
 import {
@@ -75,7 +75,7 @@ describe("Components.ScriptDefinition", () => {
 
     const mover = component as Mover & { extra?: unknown; };
     assert.ok(mover instanceof Mover);
-    assert.deepEqual([...actor.getComponents(Mover)], [mover]);
+    assert.deepEqual([...actor.findComponents(Mover)], [mover]);
     assert.strictEqual(mover.speed, 3);
     assert.strictEqual(mover.speedSeenInAwake, 3);
     assert.strictEqual(mover.label, "idle");

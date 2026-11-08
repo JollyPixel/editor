@@ -5,15 +5,14 @@ import {
   test
 } from "node:test";
 
-// Import Third-party Dependencies
-import * as THREE from "three/webgpu";
-
 // Import Internal Dependencies
 import { createHarness, unusedPostProcessing } from "../../helpers/camera/orbitFlyHarness.ts";
 import type {
   PostProcessing
-} from "../../../src/systems/rendering/compositing/PostProcessing.ts";
-import { Viewport } from "../../../src/systems/rendering/Viewport.ts";
+} from "../../../src/three/rendering/compositing/PostProcessing.ts";
+import { Viewport } from "../../../src/core/systems/rendering/Viewport.ts";
+import { Transform } from "../../../src/core/actor/transform/Transform.ts";
+import type { Actor } from "../../../src/core/actor/Actor.ts";
 
 describe("OrbitFlyCamera vertical movement", () => {
   test("descends while shift is held", () => {
@@ -206,10 +205,9 @@ describe("OrbitFlyCamera options", () => {
 describe("OrbitFlyCamera under a parent actor", () => {
   test("holds its local pose while idle", () => {
     const harness = createHarness();
-    const parent = new THREE.Object3D();
-    parent.position.set(10, 0, 0);
-    parent.add(harness.object);
-    parent.updateMatrixWorld(true);
+    const parent = new Transform(harness.graph.createNode({} as Actor));
+    parent.local.position = { x: 10, y: 0, z: 0 };
+    harness.transform.attach(parent);
 
     harness.advance(3);
 

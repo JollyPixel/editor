@@ -68,9 +68,9 @@ export interface EditorMapOptions {
 
 export class EditorMap extends Emitter<EditorMapEvents> {
   static layers(
-    world: Pick<VoxelWorld, "getLayers">
+    world: Pick<VoxelWorld, "layers">
   ): VoxelLayer[] {
-    return world.getLayers().filter((layer) => !TemplateDraftId.isDraft(layer));
+    return world.layers().filter((layer) => !TemplateDraftId.isDraft(layer));
   }
 
   #map: SyncedMap;

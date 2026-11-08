@@ -92,7 +92,7 @@ export class PlacementGizmo extends ActorComponent {
     controls.addEventListener("end", this.#onDragEnd);
     this.#controls = controls;
 
-    this.actor.addChildren(this.#preview);
+    this.actor.node.object3D.add(this.#preview);
     this.#subscriptions.push(
       this.#placement.subscribe("change", this.#sync),
       this.#editorMap.subscribe("blockRegistryChanged", this.#rebuild),

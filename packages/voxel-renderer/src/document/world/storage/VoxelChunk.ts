@@ -3,7 +3,6 @@ import type { VoxelEntry } from "../types.ts";
 import { VoxelStore } from "./VoxelStore.ts";
 import { assertPowerOfTwoChunkSize } from "./chunkSize.ts";
 import {
-  packVoxel,
   unpackVoxel,
   voxelBlockId,
   VOXEL_ABSENT,
@@ -19,8 +18,6 @@ import {
 
 // CONSTANTS
 export const DEFAULT_CHUNK_SIZE = 16;
-
-export type VoxelLinearCoords = [number, number, number];
 
 export type VoxelChunkDirtyListener = (
   chunk: VoxelChunk,
@@ -134,15 +131,7 @@ export class VoxelChunk {
     };
   }
 
-  get(
-    coords: VoxelLinearCoords
-  ): VoxelEntry | undefined {
-    const [lx, ly, lz] = coords;
-
-    return this.getAt(lx, ly, lz);
-  }
-
-  getAt(
+  voxelAt(
     lx: number,
     ly: number,
     lz: number
@@ -159,7 +148,7 @@ export class VoxelChunk {
     return this.#partners;
   }
 
-  getPartnerAt(
+  partnerAt(
     lx: number,
     ly: number,
     lz: number
@@ -191,7 +180,7 @@ export class VoxelChunk {
     return entry;
   }
 
-  getPackedAt(
+  packedAt(
     lx: number,
     ly: number,
     lz: number
@@ -209,25 +198,7 @@ export class VoxelChunk {
     );
   }
 
-  set(
-    coords: VoxelLinearCoords,
-    entry: VoxelEntry
-  ): void {
-    const [lx, ly, lz] = coords;
-    const { partner } = entry;
-
-    this.setPackedAt(
-      lx,
-      ly,
-      lz,
-      packVoxel(entry.blockId, entry.transform),
-      partner === undefined ?
-        VOXEL_ABSENT :
-        packVoxel(partner.blockId, partner.transform)
-    );
-  }
-
-  setPackedAt(
+  writePackedAt(
     lx: number,
     ly: number,
     lz: number,
@@ -350,10 +321,11 @@ export class VoxelChunk {
       lz >= this.#minZ && lz <= this.#maxZ;
   }
 
-  delete(
-    coords: VoxelLinearCoords
+  removeAt(
+    lx: number,
+    ly: number,
+    lz: number
   ): boolean {
-    const [lx, ly, lz] = coords;
     const index = this.linearIndex(lx, ly, lz);
     const deleted = this.store.delete(index);
     if (deleted) {

@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { UILayout } from "../../src/ui/UILayout.ts";
+import { UILayout } from "../../src/three/ui/UILayout.ts";
 
 describe("UI.UILayout", () => {
   const bounds = { left: -10, right: 10, top: 5, bottom: -5 };

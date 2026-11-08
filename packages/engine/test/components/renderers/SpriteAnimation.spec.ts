@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   SpriteAnimation,
   type SpriteAnimationOptions
-} from "../../../src/components/renderers/sprite/SpriteAnimation.ts";
+} from "../../../src/three/components/renderers/sprite/SpriteAnimation.ts";
 
 function createAnimation(
   animations: SpriteAnimationOptions

@@ -29,9 +29,10 @@ export interface BenchWorld {
 }
 
 export function createBenchWorld(
-  steps = 1
+  steps = 1,
+  graph: Systems.SceneGraph = new Systems.ThreeSceneGraph()
 ): BenchWorld {
-  const sceneManager = new Systems.SceneManager();
+  const sceneManager = new Systems.SceneManager(graph);
   const world: Systems.World = new Systems.World(
     createRenderer(),
     {
@@ -116,9 +117,7 @@ function createRenderer() {
     unobserveResize() {
       return;
     },
-    getSource() {
-      return null;
-    },
+    source: null,
     dispose() {
       return;
     }

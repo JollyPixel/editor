@@ -37,7 +37,7 @@ export class ColliderOutline extends ActorComponent {
     });
     this.#settings = settings;
     this.#root.name = "ColliderOutline";
-    actor.object3D.add(this.#root);
+    actor.node.object3D.add(this.#root);
     this.#rebuild(worldScale(actor));
   }
 
@@ -109,9 +109,7 @@ export class ColliderOutline extends ActorComponent {
 function worldScale(
   actor: Actor<any>
 ): THREE.Vector3 {
-  const { object3D } = actor;
-  object3D.updateWorldMatrix(true, false);
-  object3D.matrixWorld.decompose(
+  actor.transform.global.matrix.decompose(
     kWorldPosition,
     kWorldRotation,
     kWorldScale

@@ -10,13 +10,13 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Camera3DControls } from "../../../src/components/camera/Camera3DControls.ts";
-import type { Actor } from "../../../src/actor/Actor.ts";
+import { Camera3DControls } from "../../../src/three/components/camera/Camera3DControls.ts";
+import type { Actor } from "../../../src/core/actor/Actor.ts";
 import {
   createActorMock,
   type ActorMock
 } from "../../helpers/camera/cameraActor.ts";
-import { Viewport } from "../../../src/systems/rendering/Viewport.ts";
+import { Viewport } from "../../../src/core/systems/rendering/Viewport.ts";
 
 describe("Components.Camera.Camera3DControls", () => {
   let actor: ActorMock;
@@ -95,7 +95,7 @@ describe("Components.Camera.Camera3DControls", () => {
       controls.update();
 
       assert.strictEqual(
-        Math.round(actor.transform.getLocalPosition().z * 100) / 100,
+        Math.round(actor.transform.local.position.z * 100) / 100,
         -1,
         "forward is -Z: speed 10 for 0.1s"
       );
@@ -113,7 +113,7 @@ describe("Components.Camera.Camera3DControls", () => {
       controls.update();
 
       assert.strictEqual(
-        Math.round(actor.transform.getLocalPosition().z * 100) / 100,
+        Math.round(actor.transform.local.position.z * 100) / 100,
         -1
       );
     });
@@ -129,7 +129,7 @@ describe("Components.Camera.Camera3DControls", () => {
       controls.update();
 
       assert.strictEqual(
-        Math.round(actor.transform.getGlobalPosition().y * 100) / 100,
+        Math.round(actor.transform.global.position.y * 100) / 100,
         1
       );
     });
@@ -140,7 +140,7 @@ describe("Components.Camera.Camera3DControls", () => {
       controls.update();
 
       assert.deepStrictEqual(
-        actor.transform.getLocalPosition().toArray(),
+        actor.transform.local.position.toArray(),
         [0, 0, 0],
         "normalizing a zero movement vector must not produce NaN"
       );

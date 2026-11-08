@@ -28,47 +28,47 @@ describe("ActorTree path patterns", () => {
   test("should match a path that continues after a double star", () => {
     const { tree } = createTree();
 
-    assert.deepEqual(names(tree.getActors("**/RightHand/Weapon")), ["Weapon"]);
+    assert.deepEqual(names(tree.findActors("**/RightHand/Weapon")), ["Weapon"]);
   });
 
   test("should match a glob segment after a double star", () => {
     const { tree } = createTree();
 
-    assert.deepEqual(names(tree.getActors("Player/**/Mesh_*")), ["Mesh_Body"]);
+    assert.deepEqual(names(tree.findActors("Player/**/Mesh_*")), ["Mesh_Body"]);
   });
 
   test("should match a name glob at any depth, with dots read literally", () => {
     const { tree } = createTree();
 
-    assert.deepEqual(names(tree.getActors("Mesh_*")), ["Mesh_Body"]);
-    assert.deepEqual(names(tree.getActors("?ody")), ["Body"]);
-    assert.deepEqual(names(tree.getActors("B.dy")), []);
+    assert.deepEqual(names(tree.findActors("Mesh_*")), ["Mesh_Body"]);
+    assert.deepEqual(names(tree.findActors("?ody")), ["Body"]);
+    assert.deepEqual(names(tree.findActors("B.dy")), []);
   });
 
   test("should match single-level globs along a path", () => {
     const { tree } = createTree();
 
-    assert.deepEqual(names(tree.getActors("Player/*/RightHand")), ["RightHand"]);
+    assert.deepEqual(names(tree.findActors("Player/*/RightHand")), ["RightHand"]);
   });
 
   test("should skip pending actors inside a path", () => {
     const { tree, hand } = createTree();
     hand.pendingForDestruction = true;
 
-    assert.deepEqual(names(tree.getActors("**/RightHand/Weapon")), []);
+    assert.deepEqual(names(tree.findActors("**/RightHand/Weapon")), []);
   });
 
-  test("should anchor getActor paths at the root actors", () => {
+  test("should anchor findActor paths at the root actors", () => {
     const { tree, weapon } = createTree();
 
-    assert.equal(tree.getActor("Player/Body/RightHand/Weapon"), weapon);
-    assert.equal(tree.getActor("RightHand/Weapon"), null);
+    assert.equal(tree.findActor("Player/Body/RightHand/Weapon"), weapon);
+    assert.equal(tree.findActor("RightHand/Weapon"), null);
   });
 
   test("should not resolve a path through a pending actor", () => {
     const { tree, body } = createTree();
     body.pendingForDestruction = true;
 
-    assert.equal(tree.getActor("Player/Body/RightHand"), null);
+    assert.equal(tree.findActor("Player/Body/RightHand"), null);
   });
 });

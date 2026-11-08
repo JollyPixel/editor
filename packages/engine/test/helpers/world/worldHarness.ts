@@ -8,14 +8,14 @@ import { FrameScheduler } from "@jolly-pixel/loop";
 import {
   World,
   type WorldOptions
-} from "../../../src/systems/World.ts";
+} from "../../../src/core/systems/World.ts";
 
 // CONSTANTS
-export const SCENE_SOURCE = { isScene: true };
+export const SCENE_GRAPH = { isGraph: true };
 
 function createMockSceneManager() {
   return {
-    getSource: mock.fn(() => SCENE_SOURCE),
+    graph: SCENE_GRAPH,
     awake: mock.fn(),
     beginFrame: mock.fn(),
     update: mock.fn(),
@@ -32,7 +32,7 @@ function createMockRenderer() {
     clear: mock.fn(),
     observeResize: mock.fn(),
     unobserveResize: mock.fn(),
-    getSource: mock.fn(),
+    source: null,
     dispose: mock.fn()
   };
 }

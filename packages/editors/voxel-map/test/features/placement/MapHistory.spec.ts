@@ -49,15 +49,15 @@ function setup() {
     access: mapAccess(),
     context: new EditContext()
   });
-  world.setVoxel("Draft", {
+  world.placeVoxel("Draft", {
     position: { x: 0, y: 0, z: 0 },
     blockId: 1
   });
-  world.setVoxel("Draft", {
+  world.placeVoxel("Draft", {
     position: { x: 1, y: 0, z: 0 },
     blockId: 1
   });
-  const draft = world.getLayer("Draft")!;
+  const draft = world.findLayer("Draft")!;
 
   return {
     draft,

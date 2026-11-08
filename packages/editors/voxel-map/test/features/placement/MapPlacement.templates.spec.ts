@@ -55,7 +55,7 @@ function setup() {
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -129,7 +129,7 @@ describe("MapPlacement templates", () => {
     assert.equal(placement.current?.target, "Ground");
     assert.equal(placement.commit(), true);
 
-    const ground = world.getLayer("Ground")!;
+    const ground = world.findLayer("Ground")!;
     const expected = template.placedVoxels(
       { x: 10, y: 3, z: 10 },
       VoxelTransform.fromPacked(VoxelTransform.pack({ rotation: 1 }))
@@ -167,7 +167,7 @@ describe("MapPlacement layers", () => {
     assert.equal(placement.transformLayer("Draft"), true);
 
     const current = placement.current!;
-    const bounds = world.getLayer("Draft")!.worldBounds()!;
+    const bounds = world.findLayer("Draft")!.worldBounds()!;
     assert.equal(current.target, "Draft");
     assert.equal(placement.transforming("Draft"), true);
     assert.equal(placement.transforming("Ground"), false);
@@ -225,20 +225,20 @@ describe("MapPlacement layers", () => {
 
       assert.equal(placement.commit(), true);
       assert.equal(placement.current, null);
-      assert.deepEqual(scanCells(world.getLayer("Draft")!), expected);
+      assert.deepEqual(scanCells(world.findLayer("Draft")!), expected);
     }
   });
 
   test("an unmoved, untransformed commit leaves the layer as it was", () => {
     const { world, placement } = setup();
-    const before = scanCells(world.getLayer("Draft")!);
-    const position = { ...world.getLayer("Draft")!.position };
+    const before = scanCells(world.findLayer("Draft")!);
+    const position = { ...world.findLayer("Draft")!.position };
 
     placement.transformLayer("Draft");
     placement.commit();
 
-    assert.deepEqual(scanCells(world.getLayer("Draft")!), before);
-    assert.deepEqual(world.getLayer("Draft")!.position, position);
+    assert.deepEqual(scanCells(world.findLayer("Draft")!), before);
+    assert.deepEqual(world.findLayer("Draft")!.position, position);
   });
 
   test("disposing releases the concealed layer and stops listening", () => {

@@ -96,8 +96,7 @@ export async function gizmoHandlePoints(
 
   const [grab, release] = await editor.evaluate(({ editing, runtime }, axisName) => {
     const kDragRatio = 3;
-    const helper = runtime.world.sceneManager
-      .getSource()
+    const helper = runtime.world.sceneManager.graph.scene
       .getObjectByName("transform-gizmo");
     if (helper === undefined) {
       throw new Error("The transform gizmo is missing.");
@@ -152,7 +151,7 @@ async function viewSnapshot(
     ): value is Camera {
       return typeof value === "object" && value !== null && "isCamera" in value;
     }
-    const components = world.sceneManager.getActor("editor-camera")?.components;
+    const components = world.sceneManager.findActor("editor-camera")?.components;
     const camera = [...components ?? []]
       .map((component) => ("camera" in component ? component.camera : null))
       .find(isCamera);

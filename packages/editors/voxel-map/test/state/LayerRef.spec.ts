@@ -107,7 +107,7 @@ describe("LayerRef in a world", () => {
     new VoxelLayerRef("Ground").removeFrom(world);
 
     assert.deepEqual(world.objectLayers.get("Triggers")?.objects, []);
-    assert.deepEqual(world.getLayers(), []);
+    assert.deepEqual(world.layers(), []);
   });
 
   test("updates the object it points to", () => {

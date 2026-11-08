@@ -28,7 +28,7 @@ const kHeader = {
 function state() {
   const world = new VoxelWorld(16);
   world.restoreLayer({ id: "Ground", name: "Ground" });
-  world.setVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 3 });
+  world.placeVoxel("Ground", { position: { x: 1, y: 0, z: 0 }, blockId: 3 });
 
   return {
     world,
@@ -75,7 +75,7 @@ describe("correctVoxelCommand", () => {
 
   test("patches the second shape of a merged cell back too", () => {
     const merged = state();
-    merged.world.setVoxel("Ground", {
+    merged.world.placeVoxel("Ground", {
       position: { x: 1, y: 0, z: 0 },
       blockId: 4,
       flipY: true,

@@ -3,22 +3,22 @@ import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
-import { Scene } from "../../../src/systems/scene/Scene.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
+import { ActorComponent } from "../../../src/core/actor/ActorComponent.ts";
+import { Scene } from "../../../src/core/systems/scene/Scene.ts";
 import {
   ComponentDefinitions,
   FileScene,
   type ComponentDefinition,
   type SceneFile
-} from "../../../src/systems/scene/file/index.ts";
+} from "../../../src/core/systems/scene/file/index.ts";
 import {
   Behavior,
   MeshDefinition,
   MeshRenderer,
   SceneProperty,
   ScriptDefinition
-} from "../../../src/components/index.ts";
+} from "../../../src/index.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
 import {
@@ -103,9 +103,9 @@ describe("Systems.FileScene capture", () => {
   test("writes every live actor back with file ids, data and asset slots", async() => {
     const level = createLevel();
     const { sm, world, scene } = await load(level.file, level);
-    const hero = sm.getActor("hero")!;
-    hero.object3D.position.set(4, 0, 0);
-    hero.getComponent(Patrol)!.speed = 7;
+    const hero = sm.findActor("hero")!;
+    hero.transform.local.position = { x: 4, y: 0, z: 0 };
+    hero.findComponent(Patrol)!.speed = 7;
     const coin = new Actor(world as any, { name: "coin", parent: hero });
     coin.addComponent(MeshRenderer);
 
@@ -197,21 +197,21 @@ describe("Systems.FileScene capture", () => {
   test("reloads a capture into the state it was taken from", async() => {
     const level = createLevel();
     const first = await load(level.file, level);
-    const hero = first.sm.getActor("hero")!;
-    hero.object3D.position.set(4, 0, 0);
-    hero.getComponent(Patrol)!.speed = 7;
+    const hero = first.sm.findActor("hero")!;
+    hero.transform.local.position = { x: 4, y: 0, z: 0 };
+    hero.findComponent(Patrol)!.speed = 7;
     first.world.createActor("coin").addComponent(MeshRenderer);
     const capture = first.scene.capture();
 
     const { sm } = await load(capture, level);
 
-    const reloaded = sm.getActor("hero")!;
-    const patrol = reloaded.getComponent(Patrol)!;
-    assert.strictEqual(reloaded.object3D.position.x, 4);
+    const reloaded = sm.findActor("hero")!;
+    const patrol = reloaded.findComponent(Patrol)!;
+    assert.strictEqual(reloaded.transform.local.position.x, 4);
     assert.strictEqual(patrol.speed, 7);
-    assert.strictEqual(patrol.target, sm.getActor("door"));
-    assert.strictEqual(reloaded.getComponent(ModelComponent)!.model, "knight");
-    assert.ok(sm.getActor("coin")!.getComponent(MeshRenderer));
+    assert.strictEqual(patrol.target, sm.findActor("door"));
+    assert.strictEqual(reloaded.findComponent(ModelComponent)!.model, "knight");
+    assert.ok(sm.findActor("coin")!.findComponent(MeshRenderer));
   });
 
   test("keeps the anchor an actor sits on", async() => {

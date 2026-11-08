@@ -7,8 +7,9 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor, ActorComponent } from "../src/actor/index.ts";
-import { SceneManager } from "../src/systems/scene/SceneManager.ts";
+import { Actor, ActorComponent } from "../src/core/actor/index.ts";
+import { SceneManager } from "../src/core/systems/scene/SceneManager.ts";
+import { HeadlessSceneGraph } from "../src/core/systems/scene/HeadlessSceneGraph.ts";
 
 class Health extends ActorComponent {
   constructor(
@@ -27,7 +28,7 @@ class Weapon extends ActorComponent {
 }
 
 function createActors() {
-  const sceneManager = new SceneManager();
+  const sceneManager = new SceneManager(new HeadlessSceneGraph());
   const world = { sceneManager } as any;
 
   return {
@@ -89,11 +90,11 @@ describe("Actor components", () => {
     const root = createActor("root").addComponent(Health);
     const arm = createActor("arm", root);
     const hand = createActor("hand", arm).addComponent(Weapon);
-    const sword = hand.getComponent(Weapon);
+    const sword = hand.findComponent(Weapon);
 
     assert.strictEqual(root.findComponentInChildren(Weapon), sword);
     assert.strictEqual(root.findComponentInChildren(Health), null);
-    assert.strictEqual(hand.findComponentInParent(Health), root.getComponent(Health));
+    assert.strictEqual(hand.findComponentInParent(Health), root.findComponent(Health));
     assert.strictEqual(hand.findComponentInParent(Weapon), null);
   });
 });

@@ -28,11 +28,11 @@ const suite = defineSuite("engine / actor lifecycle", (bench) => {
       churn.world.sceneManager.tree.destroyActor(actor);
       churn.tick();
     })
-    .add("getComponent by class", () => {
-      target.getComponent(IdleBehavior);
+    .add("findComponent by class", () => {
+      target.findComponent(IdleBehavior);
     })
-    .add("getComponent by type name", () => {
-      target.getComponent("ScriptBehavior");
+    .add("findComponent by type name", () => {
+      target.findComponent("ScriptBehavior");
     });
 
   const crowd = createBenchWorld();

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import type * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { GlobalAudioManager } from "../../src/audio/AudioManager.ts";
+import { GlobalAudioManager } from "../../src/three/audio/AudioManager.ts";
 
 function createGainNode() {
   return {

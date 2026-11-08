@@ -8,7 +8,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Scene } from "../src/systems/scene/Scene.ts";
+import { Scene } from "../src/core/systems/scene/Scene.ts";
 import { UpdateProbe } from "./helpers/actor/updateProbe.ts";
 import { createSceneAssets } from "./helpers/scene/sceneAssets.ts";
 import {
@@ -41,7 +41,7 @@ describe("SceneManager.unloadScene", () => {
     sm.unloadScene(level);
 
     assert.strictEqual(level.destroySpy.mock.calls.length, 1);
-    assert.strictEqual(sm.getActor("LevelActor"), null);
+    assert.strictEqual(sm.findActor("LevelActor"), null);
     assert.strictEqual(sm.currentScene, null);
   });
 
@@ -58,7 +58,7 @@ describe("SceneManager.unloadScene", () => {
 
     assert.strictEqual(prefab.destroySpy.mock.calls.length, 1);
     assert.deepEqual(removed, ["prefab"]);
-    assert.strictEqual(sm.getScene(prefab.id), null);
+    assert.strictEqual(sm.findScene(prefab.id), null);
   });
 
   test("cancels pending append loads so they never activate", async() => {
@@ -78,7 +78,7 @@ describe("SceneManager.unloadScene", () => {
 
     assert.strictEqual(load.status, "cancelled");
     assert.strictEqual(prefab.awakeSpy.mock.calls.length, 0);
-    assert.strictEqual(sm.getScene(prefab.id), null);
+    assert.strictEqual(sm.findScene(prefab.id), null);
   });
 
   test("cancels a pending replacement load of the scene", async() => {

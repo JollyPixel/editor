@@ -172,10 +172,9 @@ describe("BlockRegistry — lookup", () => {
     assert.equal(registry.has(99), false);
   });
 
-  it("enumerates the same definitions through getAll and iteration", () => {
+  it("enumerates definitions in registration order", () => {
     const registry = new BlockRegistry([makeDef(1), makeDef(2), makeDef(3)]);
 
-    assert.deepEqual([...registry], [...registry.getAll()]);
     assert.deepEqual(
       [...registry].map((definition) => definition.id),
       [1, 2, 3]
@@ -183,7 +182,7 @@ describe("BlockRegistry — lookup", () => {
   });
 
   it("enumerates nothing while empty", () => {
-    assert.deepEqual([...new BlockRegistry().getAll()], []);
+    assert.deepEqual([...new BlockRegistry()], []);
   });
 });
 
@@ -268,6 +267,6 @@ describe("BlockRegistry — removal", () => {
 
     registry.clear();
 
-    assert.deepEqual([...registry.getAll()], []);
+    assert.deepEqual([...registry], []);
   });
 });

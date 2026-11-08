@@ -45,14 +45,14 @@ function makeRichWorld(): VoxelWorld {
     properties: { biome: "forest" }
   });
   ground.position = { x: 32, y: 0, z: -16 };
-  ground.setVoxelAt({ x: 32, y: 0, z: 0 }, makeVoxelEntry(1, 0));
-  ground.setVoxelAt({ x: 37, y: 3, z: 2 }, makeVoxelEntry(2, 1));
-  ground.setVoxelAt({ x: 31, y: 0, z: -17 }, makeVoxelEntry(3, 2));
-  ground.setVoxelAt(kMergedCell, kMergedEntry);
+  ground.writeVoxelAt({ x: 32, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+  ground.writeVoxelAt({ x: 37, y: 3, z: 2 }, makeVoxelEntry(2, 1));
+  ground.writeVoxelAt({ x: 31, y: 0, z: -17 }, makeVoxelEntry(3, 2));
+  ground.writeVoxelAt(kMergedCell, kMergedEntry);
   ground.anchor = true;
   const glass = world.addLayer("Glass", { compositing: "replace" });
   glass.visible = false;
-  glass.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(4, 0));
+  glass.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(4, 0));
   world.objectLayers.add("Spawns");
   world.templates.createFromLayer("Ground", {
     name: "House",
@@ -72,15 +72,15 @@ describe("voxel world round-trip", () => {
     deserializeVoxelWorld(untrusted(json), restored);
 
     assert.deepEqual(serializeVoxelWorld(restored), json);
-    assert.deepEqual(restored.getVoxelAt({ x: 37, y: 3, z: 2 }), makeVoxelEntry(2, 1));
-    assert.deepEqual(restored.getVoxelAt(kMergedCell), kMergedEntry);
+    assert.deepEqual(restored.voxelAt({ x: 37, y: 3, z: 2 }), makeVoxelEntry(2, 1));
+    assert.deepEqual(restored.voxelAt(kMergedCell), kMergedEntry);
     assert.ok(
       [...restored.templates.get("house")!.localVoxels()]
         .some(([, , , , partner]) => partner !== -1)
     );
-    assert.equal(restored.getLayer("Glass")?.compositing, "replace");
-    assert.equal(restored.getLayer("Ground")?.anchor, true);
-    assert.equal(restored.getLayer("Glass")?.anchor, false);
+    assert.equal(restored.findLayer("Glass")?.compositing, "replace");
+    assert.equal(restored.findLayer("Ground")?.anchor, true);
+    assert.equal(restored.findLayer("Glass")?.anchor, false);
     assert.deepEqual(restored.templates.get("house")?.properties, { tag: "home" });
   });
 
@@ -88,7 +88,7 @@ describe("voxel world round-trip", () => {
     const restored = new VoxelWorld(16);
     deserializeVoxelWorld(untrusted(serializeVoxelWorld(makeRichWorld())), restored);
 
-    const chunk = restored.getLayer("Ground")?.getChunk(0, 0, 1);
+    const chunk = restored.findLayer("Ground")?.chunkAt(0, 0, 1);
     assert.ok(chunk !== undefined);
     assert.equal(chunk.mayContain(0, 0, 0), true);
     assert.equal(chunk.mayContain(5, 3, 2), true);
@@ -163,7 +163,7 @@ describe("serializeVoxelWorld", () => {
   it("writes a lone voxel as one sparse chunk over the layer palette", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
-    layer.setVoxelAt({ x: 3, y: 2, z: 1 }, makeVoxelEntry(5, 3));
+    layer.writeVoxelAt({ x: 3, y: 2, z: 1 }, makeVoxelEntry(5, 3));
 
     const { palette, chunks } = serializeVoxelWorld(world).layers[0];
 
@@ -174,7 +174,7 @@ describe("serializeVoxelWorld", () => {
   it("writes the second shape of a merged cell as partner runs over the layer palette", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
-    layer.setVoxelAt({ x: 3, y: 2, z: 1 }, {
+    layer.writeVoxelAt({ x: 3, y: 2, z: 1 }, {
       ...makeVoxelEntry(5, 3),
       partner: makeVoxelEntry(6, 0)
     });
@@ -198,9 +198,9 @@ describe("serializeVoxelWorld", () => {
   it("lists the most frequent voxel first in the palette", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(2));
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(2));
     for (let x = 1; x < 4; x++) {
-      layer.setVoxelAt({ x, y: 0, z: 0 }, makeVoxelEntry(9, 1));
+      layer.writeVoxelAt({ x, y: 0, z: 0 }, makeVoxelEntry(9, 1));
     }
 
     assert.deepEqual(serializeVoxelWorld(world).layers[0].palette, [
@@ -214,7 +214,7 @@ describe("serializeVoxelWorld", () => {
     const layer = world.addLayer("Ground");
     for (let x = 0; x < 4; x++) {
       for (let z = 0; z < 4; z++) {
-        layer.setVoxelAt({ x, y: 0, z }, makeVoxelEntry(x < 2 ? 1 : 2));
+        layer.writeVoxelAt({ x, y: 0, z }, makeVoxelEntry(x < 2 ? 1 : 2));
       }
     }
 
@@ -233,7 +233,7 @@ describe("serializeVoxelWorld", () => {
     const world = new VoxelWorld(16);
     const layer = world.addLayer("Ground");
     layer.position = { x: 16, y: 0, z: 0 };
-    layer.setVoxelAt({ x: 16, y: 0, z: 0 }, makeVoxelEntry(1));
+    layer.writeVoxelAt({ x: 16, y: 0, z: 0 }, makeVoxelEntry(1));
 
     const json = serializeVoxelWorld(world);
 
@@ -254,10 +254,10 @@ describe("serializeVoxelWorld", () => {
     const a = forward.restoreLayer({ id: "ground", name: "Ground" });
     const b = backward.restoreLayer({ id: "ground", name: "Ground" });
     for (const [x, y, z, block] of entries) {
-      a.setVoxelAt({ x, y, z }, makeVoxelEntry(block));
+      a.writeVoxelAt({ x, y, z }, makeVoxelEntry(block));
     }
     for (const [x, y, z, block] of [...entries].reverse()) {
-      b.setVoxelAt({ x, y, z }, makeVoxelEntry(block));
+      b.writeVoxelAt({ x, y, z }, makeVoxelEntry(block));
     }
 
     assert.deepEqual(serializeVoxelWorld(backward), serializeVoxelWorld(forward));

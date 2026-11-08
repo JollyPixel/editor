@@ -21,7 +21,7 @@ const document = new VoxelDocument({
   ]
 });
 
-document.world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+document.world.placeVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
 ```
 
 Layer, voxel and object edits go through

@@ -18,7 +18,7 @@ export function removeBlockVoxels(
 ): number {
   let removed = 0;
 
-  for (const layer of world.getLayers()) {
+  for (const layer of world.layers()) {
     const positions = Array.from(layer.positionsUsingBlocks(blockIds));
     for (let start = 0; start < positions.length; start += kRemoveBatchSize) {
       const patch = new VoxelPatchBuilder();
@@ -40,12 +40,12 @@ function survivorAt(
   position: VoxelCoord,
   blockIds: ReadonlySet<number>
 ): PackedVoxel {
-  const partner = layer.getPartnerVoxelAt(position);
+  const partner = layer.partnerAt(position);
   if (partner === VOXEL_ABSENT) {
     return VOXEL_ABSENT;
   }
 
-  const survivors = [layer.getPackedVoxelAt(position), partner].filter(
+  const survivors = [layer.packedAt(position), partner].filter(
     (part) => !blockIds.has(voxelBlockId(part))
   );
 

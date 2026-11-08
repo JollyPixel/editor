@@ -55,7 +55,7 @@ export class AssetRenderer {
     this.#session = options.session;
     this.#capture = new PreviewCapture({
       renderer: runtime.renderer,
-      scene: runtime.world.sceneManager.getSource()
+      scene: runtime.world.sceneManager.graph.scene
     });
   }
 
@@ -142,7 +142,7 @@ export class AssetRenderer {
         await this.#runtime.nextFrame();
       }
 
-      return await this.#capture.capture(actor.object3D, size);
+      return await this.#capture.capture(actor.node.object3D, size);
     }
     finally {
       actor.destroy();

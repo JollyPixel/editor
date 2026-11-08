@@ -43,7 +43,7 @@ function layerId(
   view: VoxelView,
   name: string
 ): string {
-  return view.document.world.getLayer(name)!.id;
+  return view.document.world.findLayer(name)!.id;
 }
 
 describe("VoxelView - composite layers", () => {
@@ -70,7 +70,7 @@ describe("VoxelView - composite layers", () => {
 
   it("keeps a layer placed off the chunk grid in its own mesh", () => {
     const view = makeLayeredView();
-    view.document.world.setLayerPosition("Ground", { x: 2, y: 0, z: 0 });
+    view.document.world.placeLayer("Ground", { x: 2, y: 0, z: 0 });
 
     view.flush();
 
@@ -106,7 +106,7 @@ describe("VoxelView - composite layers", () => {
     const view = makeLayeredView();
     view.tick(0);
 
-    view.document.world.setLayerPosition("Top", { x: 4, y: 0, z: 0 });
+    view.document.world.placeLayer("Top", { x: 4, y: 0, z: 0 });
     view.tick(0);
 
     assert.deepEqual(meshKeys(view), ["cell:0,0,0", "cell:1,0,0"]);
@@ -132,9 +132,9 @@ describe("VoxelView - composite layers", () => {
     view.tick(0);
 
     assert.equal(countViewFaces(view), 6);
-    assert.equal(view.document.world.getLayer("Top")?.visible, true);
+    assert.equal(view.document.world.findLayer("Top")?.visible, true);
     assert.equal(
-      view.document.world.getVoxelAt({ x: 1, y: 0, z: 0 })?.blockId,
+      view.document.world.voxelAt({ x: 1, y: 0, z: 0 })?.blockId,
       1
     );
   });

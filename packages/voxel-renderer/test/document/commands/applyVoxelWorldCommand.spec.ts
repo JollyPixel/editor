@@ -57,7 +57,7 @@ describe("applyVoxelWorldCommand - blocksets", () => {
       const target = makeTarget();
       const position = { x: 0, y: 0, z: 0 };
       target.world.addLayer("Base");
-      target.world.setVoxel("Base", {
+      target.world.placeVoxel("Base", {
         position,
         blockId: composeBlockId(0, 1)
       });

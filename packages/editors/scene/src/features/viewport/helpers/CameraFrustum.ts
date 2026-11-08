@@ -33,7 +33,7 @@ export class CameraFrustum implements ComponentHelper {
         far,
         orthographicScale
       },
-      component.actor.object3D.matrixWorld
+      component.actor.transform.global.matrix
     );
   }
 

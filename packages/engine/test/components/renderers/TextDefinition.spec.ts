@@ -6,12 +6,12 @@ import assert from "node:assert/strict";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { TextDefinition } from "../../../src/components/renderers/text/TextDefinition.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
+import { TextDefinition } from "../../../src/three/components/renderers/text/TextDefinition.ts";
 import {
   ComponentAssets
-} from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
-import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
+} from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
+import type { JSONObject } from "../../../src/core/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { blockFont } from "../../helpers/text/blockFont.ts";
 

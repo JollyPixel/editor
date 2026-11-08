@@ -3,14 +3,14 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
 import {
   inferScenePropertyType,
   parseScenePropertyValue,
   serializeScenePropertyValue,
   type ScenePropertyType
-} from "../../../src/components/script/ScenePropertyValue.ts";
-import type { JSONValue } from "../../../src/systems/scene/file/SceneFile.ts";
+} from "../../../src/core/components/script/ScenePropertyValue.ts";
+import type { JSONValue } from "../../../src/core/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 
 describe("inferScenePropertyType", () => {

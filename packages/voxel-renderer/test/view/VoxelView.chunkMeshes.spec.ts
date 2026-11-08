@@ -37,7 +37,7 @@ describe("VoxelView - chunk meshes", () => {
 
   it("places each chunk mesh at its chunk origin", () => {
     const view = makeView({ layers: ["Ground"] });
-    view.document.world.getLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
+    view.document.world.findLayer("Ground")!.position = { x: 1, y: 2, z: 3 };
     placeCube(view, "Ground", { x: 10, y: 2, z: 3 });
     view.flush();
 

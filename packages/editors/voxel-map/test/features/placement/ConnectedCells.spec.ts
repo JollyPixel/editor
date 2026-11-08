@@ -21,14 +21,14 @@ function createLayer(
 ): VoxelLayer {
   const world = new VoxelWorld();
   world.addLayer("Draft");
-  world.setVoxelBulk("Draft", cells.map((position) => {
+  world.placeVoxelBulk("Draft", cells.map((position) => {
     return {
       position,
       blockId: 1
     };
   }));
 
-  return world.getLayer("Draft")!;
+  return world.findLayer("Draft")!;
 }
 
 function sorted(
@@ -73,7 +73,7 @@ describe("ConnectedCells", () => {
     const layer = createLayer([{ x: 0, y: 0, z: 0 }]);
     const packed = packVoxel(2, 0);
     const partner = packVoxel(3, 1);
-    layer.setPackedVoxelAt({ x: 1, y: 0, z: 0 }, packed, partner);
+    layer.writePackedAt({ x: 1, y: 0, z: 0 }, packed, partner);
 
     const template = ConnectedCells.flood(layer, { x: 0, y: 0, z: 0 })!
       .toTemplate({

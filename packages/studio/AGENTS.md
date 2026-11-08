@@ -5,8 +5,12 @@
 - The dev server compiles editor pages (`jollypixel.editor.page`) from source,
   but every workspace dependency loads from `dist/`. After changing ui,
   editor.host, network, asset-server or an asset package, rebuild it, or run
-  `pnpm --filter "@jolly-pixel/studio^..." run build` to rebuild them all.
+  `pnpm run build:deps` to rebuild them all.
   `pnpm run dev:editors` watches ui, editor.host and the pixel-art lib.
+- Editors and kinds under `packages/editors` and `packages/assets` resolve by
+  name from those folders (`StudioProject.resolver`). Add one to
+  `package.json` only when studio code imports it, so the `^...` filter skips
+  the others: rebuild with `build:deps`.
 
 ## Project
 

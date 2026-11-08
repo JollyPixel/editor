@@ -68,15 +68,15 @@ function targetsExist(
   }
 
   const { world } = state;
-  const source = world.getLayerById(command.layerId);
+  const source = world.findLayerById(command.layerId);
   switch (command.action) {
     case "added":
       return source === undefined;
     case "cloned":
       return source !== undefined &&
-        world.getLayerById(command.metadata.cloneId) === undefined;
+        world.findLayerById(command.metadata.cloneId) === undefined;
     case "merged": {
-      const target = world.getLayerById(command.metadata.targetLayerId);
+      const target = world.findLayerById(command.metadata.targetLayerId);
 
       return source !== undefined && target !== undefined && target !== source;
     }

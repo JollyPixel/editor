@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { parseModel } from "../../src/assets/index.ts";
+import { parseModel } from "../../src/three/assets/index.ts";
 import { spinningTriangleGlb } from "../helpers/model/glbFile.ts";
 
 describe("parseModel", () => {

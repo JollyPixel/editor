@@ -18,7 +18,7 @@ describe("VoxelView - construction", () => {
   it("creates the layers passed via options and no mesh until a tick", () => {
     const view = createView({ layers: ["Ground"] });
 
-    assert.ok(view.document.world.getLayer("Ground"));
+    assert.ok(view.document.world.findLayer("Ground"));
     assert.equal(chunkMeshes(view).length, 0);
   });
 });

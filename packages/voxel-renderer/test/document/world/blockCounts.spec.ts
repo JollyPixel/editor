@@ -19,21 +19,21 @@ describe("VoxelChunk.countBlocks", () => {
 
   it("counts voxels per block id and ignores the transform", () => {
     const chunk = new VoxelChunk([0, 0, 0], 4);
-    chunk.setPackedAt(0, 0, 0, packVoxel(1, 0));
-    chunk.setPackedAt(1, 0, 0, packVoxel(1, 3));
-    chunk.setPackedAt(2, 0, 0, packVoxel(2, 0));
+    chunk.writePackedAt(0, 0, 0, packVoxel(1, 0));
+    chunk.writePackedAt(1, 0, 0, packVoxel(1, 3));
+    chunk.writePackedAt(2, 0, 0, packVoxel(2, 0));
 
     assert.deepEqual([...chunk.countBlocks()], [[1, 2], [2, 1]]);
   });
 
   it("reuses the histogram until the chunk changes", () => {
     const chunk = new VoxelChunk([0, 0, 0], 4);
-    chunk.setPackedAt(0, 0, 0, packVoxel(1, 0));
+    chunk.writePackedAt(0, 0, 0, packVoxel(1, 0));
 
     const first = chunk.countBlocks();
     assert.equal(chunk.countBlocks(), first);
 
-    chunk.setPackedAt(0, 0, 0, packVoxel(2, 0));
+    chunk.writePackedAt(0, 0, 0, packVoxel(2, 0));
     const second = chunk.countBlocks();
     assert.notEqual(second, first);
     assert.deepEqual([...second], [[2, 1]]);
@@ -41,20 +41,20 @@ describe("VoxelChunk.countBlocks", () => {
 
   it("follows deletions but not deletions of absent voxels", () => {
     const chunk = new VoxelChunk([0, 0, 0], 4);
-    chunk.setPackedAt(0, 0, 0, packVoxel(1, 0));
-    chunk.setPackedAt(1, 0, 0, packVoxel(1, 0));
+    chunk.writePackedAt(0, 0, 0, packVoxel(1, 0));
+    chunk.writePackedAt(1, 0, 0, packVoxel(1, 0));
     const revision = chunk.revision;
 
-    assert.equal(chunk.delete([3, 3, 3]), false);
+    assert.equal(chunk.removeAt(3, 3, 3), false);
     assert.equal(chunk.revision, revision);
 
-    chunk.delete([0, 0, 0]);
+    chunk.removeAt(0, 0, 0);
     assert.deepEqual([...chunk.countBlocks()], [[1, 1]]);
   });
 
   it("follows copyFrom and clone", () => {
     const source = new VoxelChunk([0, 0, 0], 4);
-    source.setPackedAt(0, 0, 0, packVoxel(5, 0));
+    source.writePackedAt(0, 0, 0, packVoxel(5, 0));
     const target = new VoxelChunk([0, 0, 0], 4);
     target.countBlocks();
 
@@ -71,12 +71,12 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
     world.addLayer("Ground");
     world.addLayer("Top");
     for (let x = 0; x < 6; x++) {
-      world.setVoxel("Ground", {
+      world.placeVoxel("Ground", {
         position: { x, y: 0, z: 0 },
         blockId: x < 4 ? 1 : 2
       });
     }
-    world.setVoxel("Top", {
+    world.placeVoxel("Top", {
       position: { x: 0, y: 0, z: 0 },
       blockId: 2
     });
@@ -86,7 +86,7 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
 
   it("counts voxels across chunks and layers", () => {
     const world = makeWorld();
-    const ground = world.getLayer("Ground")!;
+    const ground = world.findLayer("Ground")!;
 
     assert.equal(ground.chunkCount, 2);
     assert.equal(ground.voxelCount, 6);
@@ -102,7 +102,7 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
 
   it("does not count an overwritten voxel twice", () => {
     const world = makeWorld();
-    world.setVoxel("Ground", {
+    world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: 2
     });
@@ -117,7 +117,7 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
     world.removeVoxel("Ground", { position: { x: 4, y: 0, z: 0 } });
     world.removeVoxel("Ground", { position: { x: 5, y: 0, z: 0 } });
 
-    assert.equal(world.getLayer("Ground")!.chunkCount, 1);
+    assert.equal(world.findLayer("Ground")!.chunkCount, 1);
     assert.equal(world.countBlock(2), 1);
     assert.equal(world.voxelCount, 5);
   });
@@ -133,19 +133,19 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
   it("keeps the counts through rebase, clone and merge", () => {
     const world = makeWorld();
     world.rebaseLayer("Ground", { x: 3, y: 1, z: 0 });
-    assert.equal(world.getLayer("Ground")!.countBlock(1), 4);
+    assert.equal(world.findLayer("Ground")!.countBlock(1), 4);
 
     world.cloneLayer("Ground", { name: "Copy" });
     assert.equal(world.countBlock(1), 8);
 
     world.mergeLayer("Top", "Copy");
-    assert.equal(world.getLayer("Copy")!.countBlock(2), 3);
+    assert.equal(world.findLayer("Copy")!.countBlock(2), 3);
     assert.equal(world.voxelCount, 12);
   });
 
   it("removes every voxel of the given blocks from every layer", () => {
     const world = makeWorld();
-    world.setLayerPosition("Top", { x: 10, y: 2, z: 0 });
+    world.placeLayer("Top", { x: 10, y: 2, z: 0 });
     const removed: number[] = [];
     world.on("command", (command) => {
       if (command.action === "voxels-patched") {
@@ -158,21 +158,21 @@ describe("VoxelLayer and VoxelWorld block counts", () => {
     assert.equal(world.countBlock(2), 0);
     assert.equal(world.countBlock(1), 4);
     assert.deepEqual(
-      [...world.getLayer("Top")!.positionsUsingBlocks(new Set([2]))],
+      [...world.findLayer("Top")!.positionsUsingBlocks(new Set([2]))],
       []
     );
   });
 
   it("lists the world positions of a layer's voxels of some blocks", () => {
     const world = makeWorld();
-    world.setLayerPosition("Top", { x: 10, y: 2, z: 0 });
+    world.placeLayer("Top", { x: 10, y: 2, z: 0 });
 
     assert.deepEqual(
-      [...world.getLayer("Top")!.positionsUsingBlocks(new Set([2]))],
+      [...world.findLayer("Top")!.positionsUsingBlocks(new Set([2]))],
       [{ x: 10, y: 2, z: 0 }]
     );
     assert.deepEqual(
-      [...world.getLayer("Ground")!.positionsUsingBlocks(new Set([2]))]
+      [...world.findLayer("Ground")!.positionsUsingBlocks(new Set([2]))]
         .map(({ x }) => x)
         .sort(),
       [4, 5]

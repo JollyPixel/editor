@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { SpriteSheet } from "../../../src/components/renderers/sprite/SpriteSheet.ts";
+import { SpriteSheet } from "../../../src/three/components/renderers/sprite/SpriteSheet.ts";
 
 function frameUV(
   frame: number,

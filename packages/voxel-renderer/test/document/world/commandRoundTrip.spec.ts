@@ -48,7 +48,7 @@ describe("command round-trip", () => {
       world.addLayer("Source");
     });
 
-    const sourceId = local.getLayer("Source")!.id;
+    const sourceId = local.findLayer("Source")!.id;
     local.mergeLayer("Source", "Target");
     for (const command of commands) {
       remote.applyCommand(command);

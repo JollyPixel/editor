@@ -41,7 +41,7 @@ export class TerrainRenderer extends ActorComponent {
       requestFrame,
       ...viewOptions
     } = options;
-    const renderer: TextureCopier = actor.world.renderer.getSource();
+    const renderer: TextureCopier = actor.world.renderer.source;
     this.#camera = camera;
     this.view = new TerrainView(terrain, {
       textureCopier: renderer,
@@ -54,7 +54,7 @@ export class TerrainRenderer extends ActorComponent {
   }
 
   awake(): void {
-    this.actor.object3D.add(this.view.root);
+    this.actor.node.object3D.add(this.view.root);
   }
 
   update(): void {
@@ -65,7 +65,7 @@ export class TerrainRenderer extends ActorComponent {
   }
 
   override destroy(): void {
-    this.actor.object3D.remove(this.view.root);
+    this.actor.node.object3D.remove(this.view.root);
     this.view.dispose();
 
     super.destroy();

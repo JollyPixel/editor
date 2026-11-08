@@ -11,13 +11,13 @@ export function pickBlockAt(
   view: VoxelView,
   footprint: BrushFootprint
 ): number | null {
-  const shown = view.document.world.getLayers().filter(
+  const shown = view.document.world.layers().filter(
     (layer) => view.layerVisibility.isVisible(layer)
   );
 
   for (const cell of centerFirstCells(footprint)) {
     for (const layer of shown) {
-      const entry = layer.getVoxelAt(cell);
+      const entry = layer.voxelAt(cell);
       if (entry !== undefined) {
         return entry.blockId;
       }

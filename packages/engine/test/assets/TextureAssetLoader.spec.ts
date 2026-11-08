@@ -10,7 +10,7 @@ import { AssetRecord } from "@jolly-pixel/asset";
 import {
   TextureAssetLoader,
   type CompressedTextureLoader
-} from "../../src/assets/index.ts";
+} from "../../src/three/assets/index.ts";
 
 function textureRecord(
   path: string

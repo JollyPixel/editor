@@ -4,7 +4,6 @@ import {
   Systems,
   type Actor
 } from "@jolly-pixel/engine";
-import * as THREE from "three";
 
 // Import Internal Dependencies
 import { makeLogger } from "./fakes.ts";
@@ -17,9 +16,9 @@ export interface FrameRequests {
 export function makeActor(
   frames: FrameRequests = { invalidations: 0, keepAlives: [] }
 ): Actor {
-  const actor = {
+  const graph = new Systems.ThreeSceneGraph();
+  const actor: Record<string, unknown> = {
     components: new ActorComponents(),
-    object3D: new THREE.Group(),
     addComponentAndGet: (
       Component: new(actor: Actor, options: unknown) => unknown,
       options: unknown
@@ -37,10 +36,12 @@ export function makeActor(
         };
       },
       sceneManager: {
-        actors: new Systems.ActorRegistry(new THREE.Scene())
+        actors: new Systems.ActorRegistry(graph),
+        graph
       }
     }
   };
+  actor.node = graph.createNode(actor as unknown as Actor);
 
   return actor as unknown as Actor;
 }

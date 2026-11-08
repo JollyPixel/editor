@@ -92,7 +92,7 @@ describe("VoxelDocument - block lookup by position", () => {
         properties: { hardness: 1, flammable: true }
       })
     );
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 1, y: 2, z: 3 },
       blockId: LEAVES_ID
     });
@@ -106,7 +106,7 @@ describe("VoxelDocument - block lookup by position", () => {
 
   it("reports air and a voxel whose block was unregistered as absent", () => {
     const document = makeDocument();
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: CUBE_ID
     });
@@ -144,7 +144,7 @@ describe("VoxelDocument.apply", () => {
 
     document.applyCommand({
       action: "voxel-set",
-      layerId: document.world.getLayer("Ground")!.id,
+      layerId: document.world.findLayer("Ground")!.id,
       metadata: {
         position: { x: 0, y: 0, z: 0 },
         blockId: CUBE_ID,

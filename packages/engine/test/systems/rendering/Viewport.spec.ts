@@ -3,8 +3,8 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Viewport } from "../../../src/systems/rendering/Viewport.ts";
-import { CanvasDimensions } from "../../../src/systems/rendering/CanvasDimensions.ts";
+import { Viewport } from "../../../src/core/systems/rendering/Viewport.ts";
+import { CanvasDimensions } from "../../../src/core/systems/rendering/CanvasDimensions.ts";
 
 describe("Systems.Rendering.Viewport", () => {
   const canvas = new CanvasDimensions(800, 600);

@@ -436,7 +436,7 @@ export class LocalBrush extends ActorComponent {
   #pickedPart(
     aim: BrushAim
   ): VoxelPart | null {
-    const owner = this.view.document.world.getVoxelWithLayerAt(aim.remove);
+    const owner = this.view.document.world.voxelWithLayerAt(aim.remove);
     if (owner === undefined || aim.probe === null) {
       return null;
     }
@@ -458,8 +458,8 @@ export class LocalBrush extends ActorComponent {
     }
 
     const entry = this.view.document.world
-      .getLayer(layerName)
-      ?.getVoxelAt(aim.remove);
+      .findLayer(layerName)
+      ?.voxelAt(aim.remove);
     const part = entry?.partner === undefined ?
       null :
       this.view.pickVoxelPart(layerName, aim.remove, aim.probe);
@@ -591,7 +591,7 @@ export class LocalBrush extends ActorComponent {
     }
 
     const stroke = this.#stroke;
-    const layer = this.view.document.world.getLayer(layerName);
+    const layer = this.view.document.world.findLayer(layerName);
 
     return resolveGhostTarget({
       size: this.#brush.size,
@@ -602,7 +602,7 @@ export class LocalBrush extends ActorComponent {
         center: this.#previewCenter()
       },
       paint,
-      occupied: (position) => layer?.getVoxelAt(position) !== undefined &&
+      occupied: (position) => layer?.voxelAt(position) !== undefined &&
         !this.#mergesAt(position, paint)
     });
   }

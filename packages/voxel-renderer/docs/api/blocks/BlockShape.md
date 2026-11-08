@@ -191,7 +191,6 @@ class BlockShapeRegistry implements Iterable<BlockShape> {
   registerMany(shapes: Iterable<BlockShape>): this;
   get(id: BlockShapeID): BlockShape | undefined;
   has(id: BlockShapeID): boolean;
-  getAll(): IterableIterator<BlockShape>;
   ids(): IterableIterator<BlockShapeID>;
 }
 ```

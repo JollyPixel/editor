@@ -37,7 +37,7 @@ describe("applyVoxelCommand", () => {
 
     assert.notEqual(applyVoxelCommand(target, makeAddedCommand("Ground")), null);
 
-    assert.ok(target.world.getLayer("Ground"));
+    assert.ok(target.world.findLayer("Ground"));
     assert.deepEqual(emitted, []);
   });
 

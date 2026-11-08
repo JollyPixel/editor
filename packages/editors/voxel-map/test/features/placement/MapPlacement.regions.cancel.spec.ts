@@ -55,7 +55,7 @@ function setup() {
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -135,7 +135,7 @@ describe("MapPlacement regions", () => {
 
   test("cancelling puts the lifted voxels back without writing history", () => {
     const { world, history, placement } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
     const before = scanCells(draft);
     const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     placement.liftRegion("Draft", kLowerCorner);
@@ -149,7 +149,7 @@ describe("MapPlacement regions", () => {
 
   test("cancelLift puts a lifted region back, once", () => {
     const { world, history, placement } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
     const before = scanCells(draft);
     const depth = history.state(MAP_HISTORY_SCOPE).undoCount;
     placement.liftRegion("Draft", kLowerCorner);
@@ -164,7 +164,7 @@ describe("MapPlacement regions", () => {
 
   test("puts the lifted voxels back when another placement starts or when disposed", () => {
     const { world, placement } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
     const before = scanCells(draft);
     const templateId = readTemplate(world);
 

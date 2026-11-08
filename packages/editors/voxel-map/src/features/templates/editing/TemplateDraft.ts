@@ -13,7 +13,7 @@ import { TemplateDraftId } from "../../../map/TemplateDraftId.ts";
 export type DraftWorld = Pick<
   VoxelWorld,
   | "addLayer"
-  | "getLayerById"
+  | "findLayerById"
   | "patchVoxels"
   | "removeLayer"
   | "unrecorded"
@@ -21,10 +21,10 @@ export type DraftWorld = Pick<
 
 export class TemplateDraft {
   static find(
-    world: Pick<VoxelWorld, "getLayerById">,
+    world: Pick<VoxelWorld, "findLayerById">,
     templateId: string
   ): TemplateDraft | null {
-    const layer = world.getLayerById(new TemplateDraftId(templateId).layerId);
+    const layer = world.findLayerById(new TemplateDraftId(templateId).layerId);
 
     return layer === undefined ? null : new TemplateDraft(layer);
   }

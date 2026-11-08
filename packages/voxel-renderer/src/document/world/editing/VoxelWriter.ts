@@ -207,11 +207,11 @@ export class VoxelWriter {
       const { position, packed, partner } = resolvedWrite(layer, write);
       const before = reach === 0 ?
         packed :
-        layer.getPackedVoxelAt(position);
+        layer.packedAt(position);
       const beforePartner = reach === 0 ?
         partner :
-        layer.getPartnerVoxelAt(position);
-      layer.setPackedVoxelAt(position, packed, partner);
+        layer.partnerAt(position);
+      layer.writePackedAt(position, packed, partner);
       for (const candidate of this.#layers) {
         candidate.markCellDirty(position);
       }
@@ -437,11 +437,11 @@ function mergedWrite(
   write: VoxelWrite
 ): VoxelWrite {
   const { position, packed } = write;
-  const existing = layer.getPackedVoxelAt(position);
+  const existing = layer.packedAt(position);
   const mergeable = packed !== VOXEL_ABSENT &&
     existing !== VOXEL_ABSENT &&
     existing !== packed &&
-    layer.getPartnerVoxelAt(position) === VOXEL_ABSENT;
+    layer.partnerAt(position) === VOXEL_ABSENT;
 
   return mergeable ?
     {

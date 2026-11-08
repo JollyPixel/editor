@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { VoxelTransform } from "../../../src/document/geometry/index.ts";
 import { makeBlockDef } from "../../helpers/blocks.ts";
+import { writeChunkVoxel } from "../../helpers/voxelEntry.ts";
 import {
   createCollision,
   makeChunk,
@@ -19,7 +20,7 @@ describe("PhysicsVoxelCollider.rebuildChunk", () => {
       makeBlockDef(3, "slabTop")
     ]);
     const chunk = makeChunk([[0, 0, 0]]);
-    chunk.set([1, 0, 0], {
+    writeChunkVoxel(chunk, [1, 0, 0], {
       blockId: 2,
       transform: 0,
       partner: { blockId: 3, transform: 0 }
@@ -36,7 +37,7 @@ describe("PhysicsVoxelCollider.rebuildChunk", () => {
   it("keeps a box per half when a merged cell does not fill its cell", () => {
     const { collider, world } = makeCollider([makeBlockDef(2, "slabBottom")]);
     const chunk = makeChunk([]);
-    chunk.set([0, 0, 0], {
+    writeChunkVoxel(chunk, [0, 0, 0], {
       blockId: 2,
       transform: 0,
       partner: { blockId: 2, transform: VoxelTransform.pack({ rotation: 1 }) }

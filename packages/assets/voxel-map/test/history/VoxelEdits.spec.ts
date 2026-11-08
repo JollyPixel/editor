@@ -52,7 +52,7 @@ function setup() {
     document,
     edits,
     world: document.world,
-    layerId: document.world.getLayer(kLayer)!.id,
+    layerId: document.world.findLayer(kLayer)!.id,
     history,
     refused,
     emitted
@@ -70,22 +70,22 @@ function blockAt(
   world: VoxelWorld,
   position: VoxelCoord = kOrigin
 ): number | undefined {
-  return world.getLayer(kLayer)?.getVoxelAt(position)?.blockId;
+  return world.findLayer(kLayer)?.voxelAt(position)?.blockId;
 }
 
 describe("VoxelEdits", () => {
   it("undoes and redoes a world edit, bringing back the previous block and transform", () => {
     const { world, history } = setup();
-    world.silently(() => world.setVoxel(kLayer, {
+    world.silently(() => world.placeVoxel(kLayer, {
       position: kOrigin,
       blockId: 1,
       rotation: 1,
       flipY: true
     }));
 
-    world.setVoxelBulk(kLayer, [{ position: kOrigin, blockId: 2 }]);
+    world.placeVoxelBulk(kLayer, [{ position: kOrigin, blockId: 2 }]);
     assert.equal(history.undo(kScope), true);
-    assert.deepEqual(world.getLayer(kLayer)?.getVoxelAt(kOrigin), { blockId: 1, transform: 0b10001 });
+    assert.deepEqual(world.findLayer(kLayer)?.voxelAt(kOrigin), { blockId: 1, transform: 0b10001 });
 
     assert.equal(history.redo(kScope), true);
     assert.equal(blockAt(world), 2);
@@ -94,21 +94,21 @@ describe("VoxelEdits", () => {
   it("brings both shapes of a removed merged cell back", () => {
     const { world, history } = setup();
     world.silently(() => {
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
-      world.setVoxel(kLayer, { position: kOrigin, blockId: 2, merge: true });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
+      world.placeVoxel(kLayer, { position: kOrigin, blockId: 2, merge: true });
     });
 
     world.removeVoxel(kLayer, { position: kOrigin });
     history.undo(kScope);
 
-    assert.equal(world.getLayer(kLayer)?.getVoxelAt(kOrigin)?.partner?.blockId, 2);
+    assert.equal(world.findLayer(kLayer)?.voxelAt(kOrigin)?.partner?.blockId, 2);
   });
 
   it("files no step for a write that changes nothing or runs unrecorded", () => {
     const { world, history } = setup();
 
     world.removeVoxel(kLayer, { position: kOrigin });
-    world.unrecorded(() => world.setVoxel(kLayer, { position: kOrigin, blockId: 1 }));
+    world.unrecorded(() => world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 }));
 
     assert.equal(history.state(kScope).canUndo, false);
     assert.equal(blockAt(world), 1);
@@ -118,9 +118,9 @@ describe("VoxelEdits", () => {
     const { world, history, emitted } = setup();
 
     const step = history.open(kScope, "Stroke");
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
-    world.setVoxel(kLayer, { position: kNext, blockId: 3 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 2 });
+    world.placeVoxel(kLayer, { position: kNext, blockId: 3 });
     step.commit();
     emitted.length = 0;
     history.undo(kScope);
@@ -133,7 +133,7 @@ describe("VoxelEdits", () => {
     const { edits, world, history, emitted } = setup();
     edits.receipts.attach();
 
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
     edits.receipts.confirm(recordedChange(edits, emitted[0].command)!, 7);
     history.undo(kScope);
 
@@ -144,7 +144,7 @@ describe("VoxelEdits", () => {
 
   it("a peer writing a guarded cell refuses the step and names the peer", () => {
     const { document, world, layerId, refused } = setup();
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
     document.applyCommand({
       action: "voxels-patched",
@@ -157,8 +157,8 @@ describe("VoxelEdits", () => {
 
   it("a peer moving the layer refuses every step on it", () => {
     const { document, world, layerId, history } = setup();
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
-    world.setVoxel(kLayer, { position: kNext, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kNext, blockId: 1 });
 
     document.applyCommand({
       action: "position-updated",
@@ -171,7 +171,7 @@ describe("VoxelEdits", () => {
 
   it("a replayed pending edit settles the step instead of refusing it", () => {
     const { document, world, layerId, history, refused } = setup();
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
     document.applyCommand({
       action: "voxels-patched",
@@ -186,7 +186,7 @@ describe("VoxelEdits", () => {
 
   it("an undo refuses a step whose layer moved under it instead of writing stale cells", () => {
     const { world, history, refused } = setup();
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
 
     world.translateLayer(kLayer, { x: 1, y: 0, z: 0 });
 
@@ -197,9 +197,9 @@ describe("VoxelEdits", () => {
 
   it("a load refuses the steps whose cells it changed", () => {
     const { document, world, history } = setup();
-    world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
     const saved = document.save();
-    world.setVoxel(kLayer, { position: kNext, blockId: 2 });
+    world.placeVoxel(kLayer, { position: kNext, blockId: 2 });
 
     document.load(saved);
 
@@ -216,11 +216,11 @@ describe("VoxelEdits", () => {
     const changes: VoxelChange[] = [];
     document.on("command", (command) => changes.push(recordedChange(edits, command)!));
 
-    document.world.setVoxel(kLayer, { position: kOrigin, blockId: 1 });
+    document.world.placeVoxel(kLayer, { position: kOrigin, blockId: 1 });
     const unsubscribe = edits.subscribe("change", () => undefined);
-    document.world.setVoxel(kLayer, { position: kOrigin, blockId: 2 });
+    document.world.placeVoxel(kLayer, { position: kOrigin, blockId: 2 });
     unsubscribe();
-    document.world.setVoxel(kLayer, { position: kOrigin, blockId: 3 });
+    document.world.placeVoxel(kLayer, { position: kOrigin, blockId: 3 });
 
     assert.deepEqual(changes.map(({ inverse }) => inverse.length), [0, 1, 0]);
   });

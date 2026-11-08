@@ -62,7 +62,7 @@ export function makeTwoLayerWorld(): TwoLayerWorld {
 export function clearAllDirty(
   world: VoxelWorld
 ): void {
-  for (const { chunk } of world.getAllChunks()) {
+  for (const { chunk } of world.chunks()) {
     chunk.dirty = false;
   }
 }
@@ -70,8 +70,8 @@ export function clearAllDirty(
 export function dirtyFlags(
   { a, b }: TwoLayerWorld
 ): { a: boolean; b: boolean; } {
-  const chunkA = a.getChunk(0, 0, 0);
-  const chunkB = b.getChunk(2, 0, 0);
+  const chunkA = a.chunkAt(0, 0, 0);
+  const chunkB = b.chunkAt(2, 0, 0);
   assert.ok(chunkA && chunkB, "both layers must still own their chunk");
 
   return { a: chunkA.dirty, b: chunkB.dirty };

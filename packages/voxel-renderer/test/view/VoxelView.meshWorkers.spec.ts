@@ -90,13 +90,13 @@ function makeWorld(
   for (let x = 2; x < 5; x++) {
     const position = { x, y: 4, z: 1 };
     placeCube(view, kGround, position, kSlabBottomId);
-    view.document.world.setVoxel(kGround, {
+    view.document.world.placeVoxel(kGround, {
       position,
       blockId: kSlabTopId,
       merge: true
     });
   }
-  view.document.world.setLayerPosition(kWater, { x: 0, y: 1, z: 0 });
+  view.document.world.placeLayer(kWater, { x: 0, y: 1, z: 0 });
   kViews.add(view);
 
   return view;

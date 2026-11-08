@@ -69,7 +69,7 @@ export class ChunkDragTool extends ActorComponent {
   }
 
   awake(): void {
-    this.actor.object3D.add(this.#ghost);
+    this.actor.node.object3D.add(this.#ghost);
     this.#keepAlive = this.actor.world.keepAlive(() => this.#active !== null);
   }
 
@@ -129,7 +129,7 @@ export class ChunkDragTool extends ActorComponent {
   override destroy(): void {
     this.endDrag();
     this.#keepAlive?.();
-    this.actor.object3D.remove(this.#ghost);
+    this.actor.node.object3D.remove(this.#ghost);
     this.#ghost.dispose();
 
     super.destroy();

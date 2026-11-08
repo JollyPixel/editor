@@ -41,7 +41,7 @@ function makeWorld(): VoxelWorld {
 function stack(
   world: VoxelWorld
 ): string[] {
-  return world.getLayers().map((layer) => layer.name);
+  return world.layers().map((layer) => layer.name);
 }
 
 function objectIds(
@@ -145,7 +145,7 @@ describe("MapLayers entries", () => {
     }).clone(new VoxelLayerRef("A"));
 
     assert.equal(selection.voxelLayer, "A (1)");
-    assert.equal(world.getLayers().length, 4);
+    assert.equal(world.layers().length, 4);
   });
 
   test("selects a clone of an object in the same layer", () => {
@@ -202,7 +202,7 @@ describe("MapLayers entries", () => {
 
   test("bounds a voxel layer by its voxels and an object layer by its objects", () => {
     const world = makeWorld();
-    world.setVoxel("A", { position: { x: 2, y: 1, z: 3 }, blockId: 1 });
+    world.placeVoxel("A", { position: { x: 2, y: 1, z: 3 }, blockId: 1 });
     world.objectLayers.addObject("Triggers", {
       id: "obj_2",
       name: "Wide",

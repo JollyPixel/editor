@@ -3,13 +3,13 @@ import * as THREE from "three/webgpu";
 import { pass } from "three/tsl";
 
 // Import Internal Dependencies
-import { CameraCompositor } from "../../../../../src/systems/rendering/compositing/CameraCompositor.ts";
-import type { RenderComponent } from "../../../../../src/systems/rendering/Renderer.ts";
-import { CanvasDimensions } from "../../../../../src/systems/rendering/CanvasDimensions.ts";
+import { CameraCompositor } from "../../../../../src/three/rendering/compositing/CameraCompositor.ts";
+import type { ThreeRenderComponent } from "../../../../../src/three/rendering/ThreeRenderComponent.ts";
+import { CanvasDimensions } from "../../../../../src/core/systems/rendering/CanvasDimensions.ts";
 import {
   type RenderViewport,
   Viewport
-} from "../../../../../src/systems/rendering/Viewport.ts";
+} from "../../../../../src/core/systems/rendering/Viewport.ts";
 
 // CONSTANTS
 const kSize = 32;
@@ -54,7 +54,7 @@ export async function probe(
   scene.add(plane);
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
   camera.position.z = 1;
-  const component: RenderComponent = {
+  const component: ThreeRenderComponent = {
     threeCamera: camera,
     depth: 0,
     viewport: options.viewport ? new Viewport(options.viewport) : null,

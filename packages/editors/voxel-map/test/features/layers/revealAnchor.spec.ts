@@ -22,7 +22,7 @@ function createReveal() {
   const world = new VoxelWorld(4);
   world.addLayer("Ground");
   world.addLayer("Deco");
-  world.setVoxel("Deco", { position: { x: 2, y: 0, z: 0 }, blockId: 1 });
+  world.placeVoxel("Deco", { position: { x: 2, y: 0, z: 0 }, blockId: 1 });
   world.objectLayers.add("Triggers");
   world.objectLayers.add("Spawns");
   world.objectLayers.addObject("Spawns", {
@@ -61,7 +61,7 @@ describe("revealAnchor", () => {
   test("selects and frames the layer or object an anchor key names", () => {
     const { world, selection, layers, framed, reveal } = createReveal();
 
-    reveal(`layer:${world.getLayer("Deco")!.id}`);
+    reveal(`layer:${world.findLayer("Deco")!.id}`);
     const deco = new VoxelLayerRef("Deco");
     assert.ok(deco.equals(selection.current));
 

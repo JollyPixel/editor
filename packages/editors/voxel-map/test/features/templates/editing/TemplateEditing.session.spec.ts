@@ -25,14 +25,14 @@ import {
 describe("TemplateEditing.close", () => {
   test("removes an applied draft and restores the map view, selection and camera", () => {
     const { world, view, selection, context, camera, editing } = templateEditingFixture();
-    const ground = world.getLayer("Ground")!.id;
+    const ground = world.findLayer("Ground")!.id;
     editing.open("house");
     paintDraft(world, 2);
     editing.apply();
 
     assert.equal(editing.close(), true);
 
-    assert.equal(world.getLayerById(DRAFT_LAYER), undefined);
+    assert.equal(world.findLayerById(DRAFT_LAYER), undefined);
     assert.equal(shownInView(world, view, ground), true);
     assert.equal(selection.voxelLayer, "Ground");
     assert.equal(context.draft, null);
@@ -47,25 +47,25 @@ describe("TemplateEditing.close", () => {
 
     editing.close();
 
-    assert.equal(world.getLayerById(DRAFT_LAYER)?.voxelCount, 3);
+    assert.equal(world.findLayerById(DRAFT_LAYER)?.voxelCount, 3);
     assert.equal(world.templates.get("house")?.voxelCount, 2);
     assert.notEqual(TemplateDraft.find(world, "house"), null);
     assert.equal(log.entries.length, 1);
 
     editing.open("house");
-    assert.equal(world.getLayerById(DRAFT_LAYER)?.voxelCount, 3);
+    assert.equal(world.findLayerById(DRAFT_LAYER)?.voxelCount, 3);
   });
 
   test("keeps the draft for a peer still editing it", () => {
     const { world, presence, editing } = templateEditingFixture();
     editing.open("house");
     presence.layerSelections = new PeerMarks([
-      [presencePeer("bob"), new VoxelLayerRef(world.getLayerById(DRAFT_LAYER)!.name).key]
+      [presencePeer("bob"), new VoxelLayerRef(world.findLayerById(DRAFT_LAYER)!.name).key]
     ]);
 
     editing.close();
 
-    assert.notEqual(world.getLayerById(DRAFT_LAYER), undefined);
+    assert.notEqual(world.findLayerById(DRAFT_LAYER), undefined);
   });
 });
 
@@ -77,7 +77,7 @@ describe("TemplateEditing.discard", () => {
 
     assert.equal(await editing.discard(), true);
 
-    assert.equal(world.getLayerById(DRAFT_LAYER), undefined);
+    assert.equal(world.findLayerById(DRAFT_LAYER), undefined);
     assert.equal(world.templates.get("house")?.voxelCount, 2);
     assert.equal(context.draft, null);
   });
@@ -103,7 +103,7 @@ describe("TemplateEditing with peers", () => {
     }
 
     for (const { world } of [alice, bob]) {
-      const drafts = world.getLayers().filter(TemplateDraftId.isDraft);
+      const drafts = world.layers().filter(TemplateDraftId.isDraft);
       assert.equal(drafts.length, 1);
       assert.equal(drafts[0].voxelCount, 3);
     }
@@ -113,7 +113,7 @@ describe("TemplateEditing with peers", () => {
     const { world, context, log, editing } = templateEditingFixture();
     editing.open("house");
 
-    world.removeLayer(world.getLayerById(DRAFT_LAYER)!.name);
+    world.removeLayer(world.findLayerById(DRAFT_LAYER)!.name);
 
     assert.equal(context.draft, null);
     assert.equal(editing.current, null);

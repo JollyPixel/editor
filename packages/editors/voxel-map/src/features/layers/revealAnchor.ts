@@ -41,7 +41,7 @@ function anchorRef(
   anchor: VoxelMapAnchorKey
 ): LayerRef | null {
   if (anchor.kind === "layer") {
-    const layer = world.getLayerById(anchor.id);
+    const layer = world.findLayerById(anchor.id);
 
     return layer === undefined ? null : new VoxelLayerRef(layer.name);
   }

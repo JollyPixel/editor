@@ -3,9 +3,9 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { CanvasSize } from "../../../src/systems/rendering/CanvasSize.ts";
-import { CanvasDimensions } from "../../../src/systems/rendering/CanvasDimensions.ts";
-import { Letterbox } from "../../../src/systems/rendering/CanvasFit.ts";
+import { CanvasSize } from "../../../src/core/systems/rendering/CanvasSize.ts";
+import { CanvasDimensions } from "../../../src/core/systems/rendering/CanvasDimensions.ts";
+import { Letterbox } from "../../../src/core/systems/rendering/CanvasFit.ts";
 
 describe("Systems.Rendering.CanvasSize", () => {
   test("should keep its last size while the canvas is hidden then shown again", () => {

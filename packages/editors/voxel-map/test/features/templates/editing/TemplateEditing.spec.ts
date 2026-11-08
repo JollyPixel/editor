@@ -24,24 +24,24 @@ describe("TemplateEditing.open", () => {
 
     assert.equal(editing.open("house"), true);
 
-    const draft = world.getLayerById(DRAFT_LAYER)!;
+    const draft = world.findLayerById(DRAFT_LAYER)!;
     assert.equal(draft.visible, false);
     assert.equal(draft.voxelCount, 2);
     assert.deepEqual(
-      [-1, 0].map((x) => draft.getVoxelAt({ x, y: 0, z: 0 })?.blockId),
+      [-1, 0].map((x) => draft.voxelAt({ x, y: 0, z: 0 })?.blockId),
       [1, 2]
     );
   });
 
   test("shows only the draft, selects it and frames it", () => {
     const { world, view, selection, context, camera, editing } = templateEditingFixture();
-    const ground = world.getLayer("Ground")!.id;
+    const ground = world.findLayer("Ground")!.id;
 
     editing.open("house");
 
     assert.equal(shownInView(world, view, DRAFT_LAYER), true);
     assert.equal(shownInView(world, view, ground), false);
-    assert.equal(selection.voxelLayer, world.getLayerById(DRAFT_LAYER)!.name);
+    assert.equal(selection.voxelLayer, world.findLayerById(DRAFT_LAYER)!.name);
     assert.equal(context.draft?.layerId, DRAFT_LAYER);
     assert.equal(camera.framed.length, 1);
     assert.equal(camera.framed[0]?.isEmpty(), false);
@@ -54,14 +54,14 @@ describe("TemplateEditing.open", () => {
 
     assert.equal(editing.open("house"), false);
     assert.equal(templateEditingFixture().editing.open("unknown"), false);
-    assert.equal(world.getLayerById(DRAFT_LAYER), undefined);
+    assert.equal(world.findLayerById(DRAFT_LAYER), undefined);
   });
 });
 
 describe("TemplateEditing history", () => {
   test("undo inside the template steps back draft edits only", () => {
     const { world, history, editing } = templateEditingFixture();
-    world.setVoxel("Ground", {
+    world.placeVoxel("Ground", {
       position: { x: 5, y: 0, z: 0 },
       blockId: 1
     });
@@ -72,8 +72,8 @@ describe("TemplateEditing history", () => {
     paintDraft(world, 2);
     assert.equal(history.undo(), true);
 
-    assert.equal(world.getLayerById(DRAFT_LAYER)!.voxelCount, 2);
-    assert.equal(world.getLayer("Ground")!.voxelCount, 3);
+    assert.equal(world.findLayerById(DRAFT_LAYER)!.voxelCount, 2);
+    assert.equal(world.findLayer("Ground")!.voxelCount, 3);
     assert.equal(history.undo(), false);
 
     editing.close();
@@ -117,7 +117,7 @@ describe("TemplateEditing.apply", () => {
 
     assert.equal(editing.apply(), false);
 
-    world.removeVoxelBulk(world.getLayerById(DRAFT_LAYER)!.name, [
+    world.removeVoxelBulk(world.findLayerById(DRAFT_LAYER)!.name, [
       { position: { x: -1, y: 0, z: 0 } },
       { position: { x: 0, y: 0, z: 0 } }
     ]);

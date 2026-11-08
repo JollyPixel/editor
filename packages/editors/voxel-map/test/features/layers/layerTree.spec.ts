@@ -37,7 +37,7 @@ const kViewOnly = {
 describe("layerTreeNodes", () => {
   test("projects voxel layers, object layers and their objects", () => {
     const world = {
-      getLayers: () => [
+      layers: () => [
         {
           id: "ground",
           name: "Ground",
@@ -86,7 +86,7 @@ describe("layerTreeNodes", () => {
 
   test("shows local visibility overrides over the saved values", () => {
     const world = {
-      getLayers: () => [
+      layers: () => [
         {
           id: "ground",
           name: "Ground",
@@ -138,7 +138,7 @@ describe("layerTreeNodes", () => {
 
   test("drops the lock toggle of objects the user cannot change", () => {
     const world = {
-      getLayers: () => [],
+      layers: () => [],
       objectLayers: {
         toArray: () => [
           {

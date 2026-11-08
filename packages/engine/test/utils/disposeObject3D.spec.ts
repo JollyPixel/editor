@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { disposeObject3D } from "../../src/utils/disposeObject3D.ts";
+import { disposeObject3D } from "../../src/three/utils/disposeObject3D.ts";
 
 function countDisposals(
   target: THREE.BufferGeometry | THREE.Material | THREE.Texture

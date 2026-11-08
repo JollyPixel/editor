@@ -260,7 +260,7 @@ export class LayerMenu {
     ref: LayerRef
   ): number {
     return ref.kind === "voxel-layer" ?
-      this.#world.getLayer(ref.name)?.voxelCount ?? 0 :
+      this.#world.findLayer(ref.name)?.voxelCount ?? 0 :
       0;
   }
 }

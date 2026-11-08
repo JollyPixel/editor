@@ -43,7 +43,7 @@ export class SphereBehavior extends ActorComponent {
       z += 1;
     }
 
-    const rigidBody = this.actor.getComponent(RigidBody);
+    const rigidBody = this.actor.findComponent(RigidBody);
     if (rigidBody === null || (x === 0 && z === 0)) {
       return;
     }

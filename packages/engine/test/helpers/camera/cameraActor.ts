@@ -5,9 +5,12 @@ import { mock } from "node:test";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Transform } from "../../../src/actor/Transform.ts";
-import { ActorComponents } from "../../../src/actor/ActorComponents.ts";
-import { ActorRegistry } from "../../../src/systems/scene/ActorRegistry.ts";
+import { Transform } from "../../../src/core/actor/transform/Transform.ts";
+import { ActorComponents } from "../../../src/core/actor/ActorComponents.ts";
+import { ActorRegistry } from "../../../src/core/systems/scene/ActorRegistry.ts";
+import type { Actor } from "../../../src/core/actor/Actor.ts";
+import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
+import { GlobalAudio } from "../../../src/three/audio/GlobalAudio.ts";
 
 function createRendererMock() {
   return {
@@ -17,13 +20,13 @@ function createRendererMock() {
 }
 
 export function createActorMock() {
-  const parent = new THREE.Scene();
-  const object3D = new THREE.Group();
-  parent.add(object3D);
+  const graph = new ThreeSceneGraph();
+  const node = graph.createNode({} as Actor);
+  const transform = new Transform(node).attach(null);
 
   return {
-    object3D,
-    transform: new Transform(object3D),
+    object3D: node.object3D,
+    transform,
     components: new ActorComponents(),
     world: {
       time: {
@@ -31,9 +34,11 @@ export function createActorMock() {
         unscaledDelta: 0.1
       },
       renderer: createRendererMock(),
-      audio: { threeAudioListener: new THREE.Object3D() },
+      audio: new GlobalAudio(
+        new THREE.Object3D() as unknown as THREE.AudioListener
+      ),
       sceneManager: {
-        actors: new ActorRegistry(parent)
+        actors: new ActorRegistry(graph)
       },
       input: {
         getMouseDelta: mock.fn(() => {

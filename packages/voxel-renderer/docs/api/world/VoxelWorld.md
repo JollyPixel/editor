@@ -8,8 +8,8 @@ their voxels in fixed-size [chunks](./VoxelChunk.md).
 const { world } = document;
 
 world.addLayer("Ground");
-world.setVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
-world.getVoxelAt({ x: 0, y: 0, z: 0 }); // { blockId: 1, transform: 0 }
+world.placeVoxel("Ground", { position: { x: 0, y: 0, z: 0 }, blockId: 1 });
+world.voxelAt({ x: 0, y: 0, z: 0 }); // { blockId: 1, transform: 0 }
 ```
 
 ## Coordinates and values
@@ -100,11 +100,11 @@ Adds a layer on top of the stack. A taken name gets a ` (n)` suffix. See
 [`VoxelLayer`](./VoxelLayer.md#options) for the options. `options.id` replaces
 the random UUID; an id already in use adds nothing and returns that layer.
 
-#### `getLayer(name: string): VoxelLayer | undefined`
+#### `findLayer(name: string): VoxelLayer | undefined`
 
-#### `getLayerById(id: string): VoxelLayer | undefined`
+#### `findLayerById(id: string): VoxelLayer | undefined`
 
-#### `getLayers(): readonly VoxelLayer[]`
+#### `layers(): readonly VoxelLayer[]`
 
 All layers, top of the stack first.
 
@@ -127,7 +127,7 @@ One step up or down the stack. Does nothing at the end of the stack.
 
 #### `moveLayerTo(name: string, toIndex: number): void`
 
-Moves the layer to an index of `getLayers()`, where `0` is the top. The index
+Moves the layer to an index of `layers()`, where `0` is the top. The index
 is truncated and clamped to the stack. A move to the current index emits
 nothing.
 
@@ -152,7 +152,7 @@ in `except` keep their place; each run of layers between them merges into its
 own lowest layer. Returns the remaining merged layers, top first. Emits no
 command.
 
-#### `setLayerPosition(name: string, position: VoxelCoord): void`
+#### `placeLayer(name: string, position: VoxelCoord): void`
 
 #### `translateLayer(name: string, delta: VoxelCoord): void`
 
@@ -183,19 +183,19 @@ Reads look through the layers from the top and return the first visible voxel.
 Rendering follows each layer's
 [`compositing`](./VoxelLayer.md#options) instead.
 
-#### `getVoxelAt(position: Vector3Like): VoxelEntry | undefined`
+#### `voxelAt(position: Vector3Like): VoxelEntry | undefined`
 
 `undefined` for air.
 
-#### `getPackedVoxelAt(position: Vector3Like): PackedVoxel`
+#### `packedAt(position: Vector3Like): PackedVoxel`
 
 `VOXEL_ABSENT` for air. The first shape only on a merged cell.
 
-#### `getVoxelWithLayerAt(position: Vector3Like): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
+#### `voxelWithLayerAt(position: Vector3Like): { entry: VoxelEntry; layer: VoxelLayer } | undefined`
 
 Also returns the layer the voxel comes from.
 
-#### `getVoxelNeighbour(position: Vector3Like, face: Face): VoxelEntry | undefined`
+#### `neighbourVoxel(position: Vector3Like, face: Face): VoxelEntry | undefined`
 
 The voxel next to `position` on the given face.
 
@@ -211,7 +211,7 @@ Positions are world positions. Each call emits one command and one recorded
 write unless it runs inside a transaction. Placing a voxel in an unknown layer throws;
 removing from one does nothing.
 
-#### `setVoxel(layerName: string, options: VoxelSetOptions): void`
+#### `placeVoxel(layerName: string, options: VoxelSetOptions): void`
 
 Places a voxel and emits `"voxel-set"`.
 
@@ -230,22 +230,22 @@ that is not merged yet becomes its second shape instead; on any other cell it
 is written as usual.
 
 ```ts
-world.setVoxel("Ground", { position, blockId: kSlabBottom });
-world.setVoxel("Ground", { position, blockId: kSlabTop, merge: true });
+world.placeVoxel("Ground", { position, blockId: kSlabBottom });
+world.placeVoxel("Ground", { position, blockId: kSlabTop, merge: true });
 ```
 
 #### `removeVoxel(layerName: string, options: { position: Vector3Like }): void`
 
 Emits `"voxel-removed"`. Removes both shapes of a merged cell.
 
-#### `setVoxelBulk(layerName: string, entries: VoxelSetOptions[]): void`
+#### `placeVoxelBulk(layerName: string, entries: VoxelSetOptions[]): void`
 
 #### `removeVoxelBulk(layerName: string, entries: { position: Vector3Like }[]): void`
 
 One `"voxels-set"` or `"voxels-removed"` command for the whole batch.
 
 ```ts
-world.setVoxelBulk("Ground", [
+world.placeVoxelBulk("Ground", [
   { position: { x: 0, y: 0, z: 0 }, blockId: 1 },
   { position: { x: 1, y: 0, z: 0 }, blockId: 2, rotation: VoxelRotation.CW90 }
 ]);
@@ -268,7 +268,7 @@ emitted.
 ```ts
 world.transaction(() => {
   for (const cell of island) {
-    world.setVoxel("Ground", { position: cell, blockId: 1 });
+    world.placeVoxel("Ground", { position: cell, blockId: 1 });
   }
 });
 ```
@@ -414,7 +414,7 @@ does not exist.
 | `size` | Number of object layers. |
 | `toArray()` | Layers in insertion order. |
 | `get(name)` | A layer, or `undefined`. |
-| `getObject(layerName, objectId)` | An object, or `undefined`. |
+| `findObject(layerName, objectId)` | An object, or `undefined`. |
 | `add(name)` | Adds a visible layer and returns it. |
 | `remove(name)` | Removes a layer and its objects. |
 | `update(name, { visible })` | Shows or hides a layer. |

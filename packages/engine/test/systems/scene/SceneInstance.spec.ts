@@ -2,11 +2,8 @@
 import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import * as THREE from "three/webgpu";
-
 // Import Internal Dependencies
-import { ComponentDefinitions } from "../../../src/systems/scene/file/index.ts";
+import { ComponentDefinitions } from "../../../src/core/systems/scene/file/index.ts";
 import {
   createInstance,
   TAG_DEFINITION,
@@ -41,12 +38,12 @@ describe("Systems.SceneInstance", () => {
     assert.deepEqual(sm.tree.children, [root]);
     assert.strictEqual(child.parent, root);
     assert.strictEqual(child.name, "Child");
-    assert.strictEqual(child.object3D.visible, false);
-    assert.deepEqual(root.object3D.position.toArray(), [1, 2, 3]);
-    assert.ok(Math.abs(root.object3D.rotation.y - (Math.PI / 2)) < 1e-9);
-    assert.deepEqual(root.object3D.scale.toArray(), [2, 2, 2]);
+    assert.strictEqual(child.transform.visible, false);
+    assert.deepEqual(root.transform.local.position.toArray(), [1, 2, 3]);
+    assert.ok(Math.abs(root.transform.local.eulerAngles.y - (Math.PI / 2)) < 1e-9);
+    assert.deepEqual(root.transform.local.scale.toArray(), [2, 2, 2]);
     assert.deepEqual(
-      child.object3D.getWorldPosition(new THREE.Vector3()).toArray(),
+      child.transform.global.position.toArray(),
       [1, 2, 3]
     );
   });
@@ -74,10 +71,10 @@ describe("Systems.SceneInstance", () => {
       }
     });
 
-    const { object3D } = instance.actor("root")!;
-    assert.strictEqual(object3D.name, "Renamed");
-    assert.strictEqual(object3D.visible, false);
-    assert.deepEqual(object3D.position.toArray(), [4, 0, 0]);
+    const { name, transform } = instance.actor("root")!;
+    assert.strictEqual(name, "Renamed");
+    assert.strictEqual(transform.visible, false);
+    assert.deepEqual(transform.local.position.toArray(), [4, 0, 0]);
   });
 
   test("skips an actor whose parent was not built, with its subtree", () => {

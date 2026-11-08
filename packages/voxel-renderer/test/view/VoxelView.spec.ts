@@ -41,7 +41,7 @@ function makePair(
 function dirtyChunks(
   document: VoxelDocument
 ): number {
-  return [...document.world.getAllChunks()]
+  return [...document.world.chunks()]
     .filter(({ chunk }) => chunk.dirty)
     .length;
 }
@@ -69,7 +69,7 @@ describe("VoxelView - frame requests", () => {
   it("requests a frame for a voxel edit and a world load", () => {
     const { document, counter } = makeCountingView();
 
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: CUBE_ID
     });
@@ -94,7 +94,7 @@ describe("VoxelView.meshVersion", () => {
     const { document, view } = makePair();
     const position = { x: 0, y: 0, z: 0 };
 
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position,
       blockId: CUBE_ID
     });
@@ -115,7 +115,7 @@ describe("VoxelView.meshVersion", () => {
 describe("VoxelView - document subscriptions", () => {
   it("marks the chunks holding a block dirty when its definition changes", () => {
     const { document, view } = makePair();
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: CUBE_ID
     });
@@ -143,7 +143,7 @@ describe("VoxelView - document subscriptions", () => {
 
   it("rebuilds from scratch when the document loads a world", () => {
     const { document, view } = makePair();
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: CUBE_ID
     });
@@ -174,7 +174,7 @@ describe("VoxelView - document subscriptions", () => {
 
   it("marks the chunks holding a block dirty when a remote peer removes it", () => {
     const { document, view } = makePair();
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: CUBE_ID
     });
@@ -198,7 +198,7 @@ describe("VoxelView - document subscriptions", () => {
 
   it("stops following the document once disposed", () => {
     const { document, view } = makePair();
-    document.world.setVoxel("Ground", {
+    document.world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: CUBE_ID
     });
@@ -220,7 +220,7 @@ describe("VoxelView.load", () => {
       blocks: [makeBlockDef(CUBE_ID, "cube", { name: "Cube" })],
       blocksets: [makeAtlasDef({ id: "stone" })]
     });
-    source.world.setVoxel("Ground", {
+    source.world.placeVoxel("Ground", {
       position: { x: 0, y: 0, z: 0 },
       blockId: CUBE_ID
     });

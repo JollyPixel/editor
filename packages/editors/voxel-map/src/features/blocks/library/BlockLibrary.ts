@@ -508,7 +508,7 @@ export class BlockLibrary extends EditingElement {
   #refreshBlocks(
     editing: VoxelMapEditing
   ): void {
-    this.#showBlocks(editing, [...editing.editorMap.blocks.getAll()]);
+    this.#showBlocks(editing, [...editing.editorMap.blocks]);
   }
 
   #refreshUsage(

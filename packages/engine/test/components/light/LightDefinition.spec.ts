@@ -6,10 +6,10 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { LightDefinition } from "../../../src/components/light/LightDefinition.ts";
-import { LightComponent } from "../../../src/components/light/LightComponent.ts";
-import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
+import { LightDefinition } from "../../../src/three/components/light/LightDefinition.ts";
+import { LightComponent } from "../../../src/three/components/light/LightComponent.ts";
+import type { JSONObject } from "../../../src/core/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 
 function createLight(
@@ -51,15 +51,14 @@ describe("Components.LightDefinition", () => {
 
   test("aims a directional light along the actor's forward axis", () => {
     const { actor, component } = createLight({ kind: "directional" });
-    actor.object3D.rotation.y = Math.PI / 2;
-    actor.object3D.updateMatrixWorld(true);
+    actor.transform.local.eulerAngles = new THREE.Euler(0, Math.PI / 2, 0);
 
     const light = component.threeLight as THREE.DirectionalLight;
     const direction = light.target.getWorldPosition(new THREE.Vector3())
       .sub(light.getWorldPosition(new THREE.Vector3()));
 
-    assert.strictEqual(light.parent, actor.object3D);
-    assert.ok(direction.distanceTo(actor.transform.getForward(new THREE.Vector3())) < 1e-9);
+    assert.strictEqual(light.parent, actor.node.object3D);
+    assert.ok(direction.distanceTo(actor.transform.global.forward) < 1e-9);
   });
 
   test("apply patches the live light in place", () => {
@@ -93,7 +92,7 @@ describe("Components.LightDefinition", () => {
     assert.ok(spot instanceof THREE.SpotLight);
     assert.strictEqual(component.kind, "spot");
     assert.strictEqual(previous.parent, null);
-    assert.strictEqual(spot.parent, actor.object3D);
+    assert.strictEqual(spot.parent, actor.node.object3D);
     assert.ok(Math.abs(spot.angle - (Math.PI / 6)) < 1e-9);
   });
 

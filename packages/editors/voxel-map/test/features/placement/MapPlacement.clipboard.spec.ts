@@ -55,7 +55,7 @@ function setup() {
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -105,7 +105,7 @@ describe("MapPlacement copy and paste", () => {
     assert.equal(changes.length, 1);
     assert.equal(placement.current?.kind, "region");
     assert.deepEqual(content.size, { x: 1, y: 1, z: 2 });
-    assert.equal(world.getLayer("Draft")!.voxelCount, 1);
+    assert.equal(world.findLayer("Draft")!.voxelCount, 1);
   });
 
   test("cuts a lifted region into the clipboard, but not a template placement", () => {
@@ -125,7 +125,7 @@ describe("MapPlacement copy and paste", () => {
     assert.equal(changes.length, 1);
     assert.deepEqual(placement.clipboard.content?.size, { x: 2, y: 1, z: 1 });
     assert.equal(placement.placing, false);
-    assert.deepEqual(readBlocks(world.getLayer("Draft")!), ["2,0,0:1"]);
+    assert.deepEqual(readBlocks(world.findLayer("Draft")!), ["2,0,0:1"]);
   });
 
   test("refuses to copy or paste without content", () => {
@@ -138,7 +138,7 @@ describe("MapPlacement copy and paste", () => {
 
   test("pasting commits a moved lift, then floats the copy into the selected layer", () => {
     const { world, history, placement } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
     placement.liftRegion("Draft", kLowerCorner);
     placement.copy();
     placement.moveBoundsTo({ x: 0, y: 0, z: 3 });
@@ -177,7 +177,7 @@ describe("MapPlacement copy and paste", () => {
     placement.paste({ x: 0, y: 2, z: 0 });
 
     assert.equal(placement.current?.kind, "copy");
-    assert.equal(world.getLayer("Draft")!.voxelCount, 3);
+    assert.equal(world.findLayer("Draft")!.voxelCount, 3);
   });
 
   test("forgets the clipboard when the map document resets", () => {

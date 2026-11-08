@@ -123,7 +123,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     });
     this.templates = new VoxelTemplates({
       chunkSize,
-      layer: (name) => this.getLayer(name),
+      layer: (name) => this.findLayer(name),
       dispatch: (command) => this.#dispatch(command) !== null,
       patch: (layerName, { cells, partners }) => this.patchVoxels(
         layerName,
@@ -207,7 +207,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     name: string,
     direction: "up" | "down"
   ): void {
-    const layer = this.getLayer(name);
+    const layer = this.findLayer(name);
     if (layer !== undefined) {
       const index = this.#layers.findIndex(layer);
       const toIndex = direction === "up" ? index - 1 : index + 1;
@@ -221,7 +221,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     name: string,
     toIndex: number
   ): void {
-    const layer = this.getLayer(name);
+    const layer = this.findLayer(name);
     const index = Math.min(Math.max(Math.trunc(toIndex), 0), this.#layers.size - 1);
     if (layer !== undefined && index !== this.#layers.findIndex(layer)) {
       this.#dispatch({
@@ -232,7 +232,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     }
   }
 
-  setLayerPosition(
+  placeLayer(
     name: string,
     position: VoxelCoord
   ): void {
@@ -280,7 +280,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     name: string,
     options: Partial<VoxelLayerOptions> = {}
   ): VoxelLayer | undefined {
-    const layer = this.getLayer(name);
+    const layer = this.findLayer(name);
     if (!layer) {
       return undefined;
     }
@@ -339,17 +339,17 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     return merged;
   }
 
-  getLayers(): readonly VoxelLayer[] {
+  layers(): readonly VoxelLayer[] {
     return this.#layers.toArray();
   }
 
-  getLayer(
+  findLayer(
     name: string
   ): VoxelLayer | undefined {
     return this.#layers.get(name);
   }
 
-  getLayerById(
+  findLayerById(
     id: string
   ): VoxelLayer | undefined {
     return this.#layers.byId(id);
@@ -383,42 +383,42 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     return total;
   }
 
-  getVoxelAt(
+  voxelAt(
     position: Vector3Like
   ): VoxelEntry | undefined {
-    return this.#compositedLayerAt(position)?.getVoxelAt(position);
+    return this.#compositedLayerAt(position)?.voxelAt(position);
   }
 
-  getPackedVoxelAt(
+  packedAt(
     position: Vector3Like
   ): PackedVoxel {
-    return this.#compositedLayerAt(position)?.getPackedVoxelAt(position) ??
+    return this.#compositedLayerAt(position)?.packedAt(position) ??
       VOXEL_ABSENT;
   }
 
-  getVoxelWithLayerAt(
+  voxelWithLayerAt(
     position: Vector3Like
   ): { entry: VoxelEntry; layer: VoxelLayer; } | undefined {
     const layer = this.#compositedLayerAt(position);
-    const entry = layer?.getVoxelAt(position);
+    const entry = layer?.voxelAt(position);
 
     return layer && entry && { entry, layer };
   }
 
-  getVoxelNeighbour(
+  neighbourVoxel(
     position: Vector3Like,
     face: FACE
   ): VoxelEntry | undefined {
     const offset = FACE_OFFSETS[face];
 
-    return this.getVoxelAt({
+    return this.voxelAt({
       x: position.x + offset[0],
       y: position.y + offset[1],
       z: position.z + offset[2]
     });
   }
 
-  setVoxel(
+  placeVoxel(
     layerName: string,
     options: VoxelSetOptions
   ): void {
@@ -436,7 +436,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     });
   }
 
-  setVoxelBulk(
+  placeVoxelBulk(
     layerName: string,
     entries: VoxelSetOptions[]
   ): void {
@@ -521,18 +521,18 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
     return this.#execute(normalized(command), "replay");
   }
 
-  getAllDirtyChunks(): IterableIterator<IterableLayerChunk> {
-    return layerChunks(this.#layers, (layer) => layer.getDirtyChunks());
+  dirtyChunks(): IterableIterator<IterableLayerChunk> {
+    return layerChunks(this.#layers, (layer) => layer.dirtyChunks());
   }
 
-  getAllChunks(): IterableIterator<IterableLayerChunk> {
-    return layerChunks(this.#layers, (layer) => layer.getChunks());
+  chunks(): IterableIterator<IterableLayerChunk> {
+    return layerChunks(this.#layers, (layer) => layer.chunks());
   }
 
-  * getAllChunksToBeRemoved(): IterableIterator<IterableLayerChunk> {
+  * drainDetachedChunks(): IterableIterator<IterableLayerChunk> {
     yield* layerChunks(
       this.#layers.drainDetached(),
-      (layer) => layer.getChunks()
+      (layer) => layer.chunks()
     );
     yield* layerChunks(
       this.#layers,
@@ -604,7 +604,7 @@ export class VoxelWorld extends Emitter<VoxelWorldEvents> {
   ): VoxelLayer | undefined {
     return this.#layers.toArray().find(
       (layer) => layer.visible &&
-        layer.getPackedVoxelAt(position) !== VOXEL_ABSENT
+        layer.packedAt(position) !== VOXEL_ABSENT
     );
   }
 }

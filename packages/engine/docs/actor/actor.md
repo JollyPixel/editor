@@ -30,11 +30,11 @@ The constructor accepts an `ActorOptions` object:
 
 ```ts
 interface ActorOptions {
-  /** Display name used for tree lookups, kept in `object3D.name`. */
+  /** Display name used for tree lookups, mirrored on the scene graph node. */
   name: string;
   /** Parent actor; `null` adds to the scene root. @default null */
   parent?: Actor | null;
-  /** Initial visibility of the Three.js group. @default true */
+  /** Initial visibility of the actor node. @default true */
   visible?: boolean;
   /** Rendering layer(s) to enable. */
   layer?: number | number[];
@@ -54,7 +54,7 @@ const hand = new Actor(world, {
 });
 
 // Nested actors can be found by path through ActorTree
-const found = world.sceneManager.tree.getActor("Player/RightHand");
+const found = world.sceneManager.tree.findActor("Player/RightHand");
 ```
 
 ## Adding components
@@ -78,13 +78,13 @@ const camera = actor.addComponentAndGet(Camera3DControls, {
 
 ## Retrieving components
 
-Use `getComponent` to look up a component by class or by type name.
-Use `getComponents` to iterate over all matching instances:
+Use `findComponent` to look up a component by class or by type name.
+Use `findComponents` to iterate over all matching instances:
 
 ```ts
-const behavior = actor.getComponent(PlayerBehavior);
+const behavior = actor.findComponent(PlayerBehavior);
 
-for (const enemyScript of actor.getComponents(EnemyBehavior)) {
+for (const enemyScript of actor.findComponents(EnemyBehavior)) {
   enemyScript.reset();
 }
 ```
@@ -128,25 +128,32 @@ returns `false` when there was nothing to remove.
 actor.removeComponent(ShieldBehavior);
 ```
 
-## Managing Three.js children
+## Scene graph node
 
-`addChildren` and `removeChildren` attach and detach Three.js objects to the
-actor's `object3D`. Removing a child disposes its GPU resources.
+`actor.node` is the [scene graph](../systems/scene-graph.md) node the
+backend made for the actor. The engine pushes the actor's name, visibility,
+layers, parent and local pose to it; never write the pose on the node itself.
+
+With the three.js backend, `actor.node.object3D` is the node's
+`THREE.Group`. Add meshes to it, and dispose them with `disposeObject3D`:
 
 ```ts
-actor.addChildren(new THREE.Mesh(geometry, material));
-actor.removeChildren(mesh);
+import { disposeObject3D } from "@jolly-pixel/engine";
+
+actor.node.object3D.add(mesh);
+disposeObject3D(mesh);
 ```
 
-On destruction, the actor disposes its remaining Three.js children. It stops
-at nested actors and leaves textures alone, since they are often shared.
+On destruction, the actor disposes its node and the Three.js children left
+on it. It stops at nested actors and leaves textures alone, since they are
+often shared.
 
 ## Scene tree hierarchy
 
 [ActorTree](actor-tree.md) lookups and walks work from any actor:
 
 ```ts
-for (const child of player.getRootActors()) {
+for (const child of player) {
   console.log(child.name);
 }
 ```
@@ -163,27 +170,27 @@ if (player.hasDescendant(pickedActor)) {
 
 ## Re-parenting
 
-`setParent` keeps the actor's global position and orientation by default.
+`reparent` keeps the actor's global position and orientation by default.
 
 ```ts
-hand.setParent(otherActor);
+hand.reparent(otherActor);
 ```
 
 Pass `keepLocal = true` to preserve the local values instead.
 
 ```ts
-hand.setParent(otherActor, true);
+hand.reparent(otherActor, true);
 ```
 
 ## Active state
 
 Setting `active` to `false` stops `update()` and `fixedUpdate()` for the
-actor and its subtree. It keeps rendering: hide it with `object3D.visible`. `activeInHierarchy` is `true` only when the actor and
+actor and its subtree. It keeps rendering: hide it with `transform.visible = false`. `activeInHierarchy` is `true` only when the actor and
 all its ancestors are active.
 
 ```ts
 enemy.active = false;
-enemy.object3D.visible = false;
+enemy.transform.visible = false;
 ```
 
 A child keeps its own `active` value. Reactivating a parent does not

@@ -186,14 +186,14 @@ export class VoxelView {
       }
 
       markBlockDirty(
-        this.document.world.getLayers(),
+        this.document.world.layers(),
         command.block.id,
         blended || redefinition === "added" || redefinition === "occlusion"
       );
     }
     else if (command.action === "block-removed") {
       markBlockDirty(
-        this.document.world.getLayers(),
+        this.document.world.layers(),
         command.blockId,
         true
       );
@@ -451,15 +451,15 @@ export class VoxelView {
     position: THREE.Vector3Like,
     part: VoxelPart
   ): boolean {
-    const layer = this.document.world.getLayer(layerName);
+    const layer = this.document.world.findLayer(layerName);
     if (
       layer === undefined ||
-      layer.getPartnerVoxelAt(position) !== VOXEL_ABSENT
+      layer.partnerAt(position) !== VOXEL_ABSENT
     ) {
       return false;
     }
 
-    const packed = layer.getPackedVoxelAt(position);
+    const packed = layer.packedAt(position);
 
     return packed !== VOXEL_ABSENT && this.complements.complements(
       packed,
@@ -472,13 +472,13 @@ export class VoxelView {
     position: THREE.Vector3Like,
     point: THREE.Vector3Like
   ): VoxelPart | null {
-    const layer = this.document.world.getLayer(layerName);
+    const layer = this.document.world.findLayer(layerName);
     if (layer === undefined) {
       return null;
     }
 
-    const packed = layer.getPackedVoxelAt(position);
-    const partner = layer.getPartnerVoxelAt(position);
+    const packed = layer.packedAt(position);
+    const partner = layer.partnerAt(position);
     if (packed === VOXEL_ABSENT) {
       return null;
     }

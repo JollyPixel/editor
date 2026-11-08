@@ -21,12 +21,12 @@ function makeLayer(opts?: Partial<ConstructorParameters<typeof VoxelLayer>[0]>) 
   });
 }
 
-describe("VoxelLayer getChunks", () => {
+describe("VoxelLayer chunks", () => {
   it("yields all live chunks", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    layer.setVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
-    const chunks = [...layer.getChunks()];
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 4, y: 0, z: 0 }, makeVoxelEntry());
+    const chunks = [...layer.chunks()];
     assert.equal(chunks.length, 2);
   });
 });
@@ -43,40 +43,40 @@ describe("VoxelLayer clone", () => {
   it("carries the voxels over", () => {
     const layer = makeLayer({ chunkSize: 4 });
     const entry = makeVoxelEntry(6, 1);
-    layer.setVoxelAt({ x: 1, y: 2, z: 3 }, entry);
-    layer.setVoxelAt({ x: 9, y: 0, z: 0 }, makeVoxelEntry(2, 0));
+    layer.writeVoxelAt({ x: 1, y: 2, z: 3 }, entry);
+    layer.writeVoxelAt({ x: 9, y: 0, z: 0 }, makeVoxelEntry(2, 0));
 
     const clone = layer.clone();
 
     assert.equal(clone.chunkCount, layer.chunkCount);
-    assert.deepEqual(clone.getVoxelAt({ x: 1, y: 2, z: 3 }), entry);
+    assert.deepEqual(clone.voxelAt({ x: 1, y: 2, z: 3 }), entry);
     assert.deepEqual(voxelContent(clone), voxelContent(layer));
   });
 
   it("shares no voxel storage with the source", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
 
     const clone = layer.clone();
-    clone.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(5, 0));
+    clone.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(5, 0));
     clone.removeVoxelAt({ x: 0, y: 0, z: 0 });
-    clone.setVoxelAt({ x: 20, y: 0, z: 0 }, makeVoxelEntry(3, 0));
+    clone.writeVoxelAt({ x: 20, y: 0, z: 0 }, makeVoxelEntry(3, 0));
 
     assert.deepEqual(
-      layer.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      layer.voxelAt({ x: 0, y: 0, z: 0 }),
       makeVoxelEntry(1, 0)
     );
-    assert.equal(layer.getVoxelAt({ x: 20, y: 0, z: 0 }), undefined);
+    assert.equal(layer.voxelAt({ x: 20, y: 0, z: 0 }), undefined);
   });
 
   it("keeps the source chunk size whatever the overrides ask for", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 5, y: 0, z: 0 }, makeVoxelEntry());
+    layer.writeVoxelAt({ x: 5, y: 0, z: 0 }, makeVoxelEntry());
 
     const clone = layer.clone({ chunkSize: 16 });
 
     assert.deepEqual(
-      clone.getVoxelAt({ x: 5, y: 0, z: 0 }),
+      clone.voxelAt({ x: 5, y: 0, z: 0 }),
       makeVoxelEntry()
     );
   });
@@ -101,13 +101,13 @@ describe("VoxelLayer mergeFrom overwrite", () => {
   it("replaces overlapping voxels by default", () => {
     const source = makeLayer({ id: "src", name: "Source" });
     const target = makeLayer({ id: "tgt", name: "Target" });
-    target.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
-    source.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(9, 0));
+    target.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+    source.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(9, 0));
 
     target.mergeFrom(source);
 
     assert.deepEqual(
-      target.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      target.voxelAt({ x: 0, y: 0, z: 0 }),
       makeVoxelEntry(9, 0)
     );
   });
@@ -115,18 +115,18 @@ describe("VoxelLayer mergeFrom overwrite", () => {
   it("keeps the target's voxels when overwrite is off", () => {
     const source = makeLayer({ id: "src", name: "Source" });
     const target = makeLayer({ id: "tgt", name: "Target" });
-    target.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
-    source.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(9, 0));
-    source.setVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry(8, 0));
+    target.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(1, 0));
+    source.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry(9, 0));
+    source.writeVoxelAt({ x: 1, y: 0, z: 0 }, makeVoxelEntry(8, 0));
 
     target.mergeFrom(source, { overwrite: false });
 
     assert.deepEqual(
-      target.getVoxelAt({ x: 0, y: 0, z: 0 }),
+      target.voxelAt({ x: 0, y: 0, z: 0 }),
       makeVoxelEntry(1, 0)
     );
     assert.deepEqual(
-      target.getVoxelAt({ x: 1, y: 0, z: 0 }),
+      target.voxelAt({ x: 1, y: 0, z: 0 }),
       makeVoxelEntry(8, 0)
     );
   });
@@ -137,11 +137,11 @@ describe("VoxelLayer mergeFrom", () => {
     const source = makeLayer({ id: "src", name: "Source" });
     const target = makeLayer({ id: "tgt", name: "Target" });
     const entry = makeVoxelEntry(5, 2);
-    source.setVoxelAt({ x: 2, y: 1, z: 3 }, entry);
+    source.writeVoxelAt({ x: 2, y: 1, z: 3 }, entry);
 
     target.mergeFrom(source);
 
-    assert.deepEqual(target.getVoxelAt({ x: 2, y: 1, z: 3 }), entry);
+    assert.deepEqual(target.voxelAt({ x: 2, y: 1, z: 3 }), entry);
   });
 
   it(
@@ -150,12 +150,12 @@ describe("VoxelLayer mergeFrom", () => {
       const source = makeLayer({ id: "src", name: "Source", position: { x: 5, y: 0, z: 0 } });
       const target = makeLayer({ id: "tgt", name: "Target" });
       const entry = makeVoxelEntry(3, 0);
-      source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
+      source.writeVoxelAt({ x: 6, y: 0, z: 0 }, entry);
 
       target.mergeFrom(source);
 
-      assert.deepEqual(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
-      assert.equal(target.getVoxelAt({ x: 1, y: 0, z: 0 }), undefined);
+      assert.deepEqual(target.voxelAt({ x: 6, y: 0, z: 0 }), entry);
+      assert.equal(target.voxelAt({ x: 1, y: 0, z: 0 }), undefined);
     }
   );
 
@@ -163,11 +163,11 @@ describe("VoxelLayer mergeFrom", () => {
     const source = makeLayer({ id: "src", name: "Source", position: { x: 5, y: 0, z: 0 } });
     const target = makeLayer({ id: "tgt", name: "Target", position: { x: 3, y: 0, z: 0 } });
     const entry = makeVoxelEntry(7, 1);
-    source.setVoxelAt({ x: 6, y: 0, z: 0 }, entry);
+    source.writeVoxelAt({ x: 6, y: 0, z: 0 }, entry);
 
     target.mergeFrom(source);
 
-    assert.deepEqual(target.getVoxelAt({ x: 6, y: 0, z: 0 }), entry);
+    assert.deepEqual(target.voxelAt({ x: 6, y: 0, z: 0 }), entry);
     assert.deepEqual(
       Array.from(target.localVoxels(), ([x, y, z]) => [x, y, z]),
       [[3, 0, 0]]
@@ -178,11 +178,11 @@ describe("VoxelLayer mergeFrom", () => {
     const source = makeLayer({ id: "src", name: "Source" });
     const target = makeLayer({ id: "tgt", name: "Target" });
     const entry = makeVoxelEntry(2, 0);
-    source.setVoxelAt({ x: 1, y: 1, z: 1 }, entry);
+    source.writeVoxelAt({ x: 1, y: 1, z: 1 }, entry);
 
     target.mergeFrom(source);
 
-    assert.deepEqual(source.getVoxelAt({ x: 1, y: 1, z: 1 }), entry);
+    assert.deepEqual(source.voxelAt({ x: 1, y: 1, z: 1 }), entry);
     assert.equal(source.chunkCount, 1);
   });
 });
@@ -202,7 +202,7 @@ describe("VoxelLayer chunk keys", () => {
     for (const cx of [-3, 0, 5]) {
       for (const cy of [-2, 0, 7]) {
         for (const cz of [-1, 0, 9]) {
-          const chunk = layer.getOrCreateChunk(cx, cy, cz);
+          const chunk = layer.ensureChunk(cx, cy, cz);
           assert.deepEqual([chunk.cx, chunk.cy, chunk.cz], [cx, cy, cz]);
           chunks.add(chunk);
         }
@@ -216,18 +216,18 @@ describe("VoxelLayer chunk keys", () => {
   it("throws rather than aliasing a chunk beyond the packable range", () => {
     const layer = makeLayer({ chunkSize: 4 });
 
-    assert.throws(() => layer.getOrCreateChunk(kOutOfRangeCoord, 0, 0), RangeError);
-    assert.throws(() => layer.getOrCreateChunk(0, kOutOfRangeCoord, 0), RangeError);
+    assert.throws(() => layer.ensureChunk(kOutOfRangeCoord, 0, 0), RangeError);
+    assert.throws(() => layer.ensureChunk(0, kOutOfRangeCoord, 0), RangeError);
   });
 
   it("forgets the memoized chunk once it is dropped", () => {
     const layer = makeLayer({ chunkSize: 4 });
-    layer.setVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
-    assert.ok(layer.getChunk(0, 0, 0));
+    layer.writeVoxelAt({ x: 0, y: 0, z: 0 }, makeVoxelEntry());
+    assert.ok(layer.chunkAt(0, 0, 0));
 
     layer.removeVoxelAt({ x: 0, y: 0, z: 0 });
 
-    assert.equal(layer.getChunk(0, 0, 0), undefined);
+    assert.equal(layer.chunkAt(0, 0, 0), undefined);
     assert.equal(layer.chunkCount, 0);
   });
 });
@@ -236,8 +236,8 @@ describe("VoxelLayer chunk range edges", () => {
   it("answers undefined rather than throwing for a chunk past the range", () => {
     const layer = makeLayer({ chunkSize: 4 });
 
-    assert.equal(layer.getChunk(kOutOfRangeCoord, 0, 0), undefined);
-    assert.equal(layer.getChunk(0, -kOutOfRangeCoord, 0), undefined);
+    assert.equal(layer.chunkAt(kOutOfRangeCoord, 0, 0), undefined);
+    assert.equal(layer.chunkAt(0, -kOutOfRangeCoord, 0), undefined);
   });
 
   it("marks a neighbour past the edge of the world without throwing", () => {
@@ -259,10 +259,10 @@ describe("VoxelLayer loadPackedVoxels", () => {
 
     layer.loadPackedVoxels(positions, [256, 513, 770, 1027]);
 
-    assert.equal(layer.getPackedVoxelAt({ x: 10, y: 0, z: 0 }), 256);
-    assert.equal(layer.getPackedVoxelAt({ x: 15, y: 1, z: -3 }), 513);
-    assert.equal(layer.getPackedVoxelAt({ x: 10, y: 0, z: 1 }), 770);
-    assert.equal(layer.getPackedVoxelAt({ x: 9, y: 2, z: 2 }), 1027);
+    assert.equal(layer.packedAt({ x: 10, y: 0, z: 0 }), 256);
+    assert.equal(layer.packedAt({ x: 15, y: 1, z: -3 }), 513);
+    assert.equal(layer.packedAt({ x: 10, y: 0, z: 1 }), 770);
+    assert.equal(layer.packedAt({ x: 9, y: 2, z: 2 }), 1027);
     assert.equal(layer.voxelCount, 4);
     assert.equal(layer.chunkCount, 3);
   });
@@ -272,6 +272,6 @@ describe("VoxelLayer loadPackedVoxels", () => {
 
     layer.loadPackedVoxels(new Int32Array([1, 1, 1]), [256]);
 
-    assert.equal(layer.getChunk(0, 0, 0)?.dirty, true);
+    assert.equal(layer.chunkAt(0, 0, 0)?.dirty, true);
   });
 });

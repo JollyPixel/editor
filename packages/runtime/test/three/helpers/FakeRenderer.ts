@@ -81,10 +81,6 @@ export class FakeRenderer {
     }
   }
 
-  getSource(): FakeAnimationRenderer {
-    return this.source;
-  }
-
   observeResize(): void {
     return;
   }

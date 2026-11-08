@@ -15,7 +15,7 @@ world.createActor("ground").addComponent(RigidBody, {
 });
 
 const crate = world.createActor("crate");
-crate.object3D.position.set(0, 5, 0);
+crate.transform.local.position = { x: 0, y: 5, z: 0 };
 crate.addComponentAndGet(RigidBody, { linearDamping: 0.5 })
   .body.applyImpulse({ x: 0, y: 4, z: 0 });
 ```

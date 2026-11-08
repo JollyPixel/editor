@@ -22,7 +22,7 @@ export function correctVoxelCommand(
     return null;
   }
 
-  const layer = state.world.getLayerById(command.layerId);
+  const layer = state.world.findLayerById(command.layerId);
   if (layer === undefined) {
     return null;
   }
@@ -40,8 +40,8 @@ export function correctVoxelCommand(
 
     patch.push(
       position,
-      layer.getPackedVoxelAt(position),
-      layer.getPartnerVoxelAt(position)
+      layer.packedAt(position),
+      layer.partnerAt(position)
     );
   }
 

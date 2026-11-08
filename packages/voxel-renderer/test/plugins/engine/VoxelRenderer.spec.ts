@@ -16,7 +16,7 @@ import {
 describe("VoxelRenderer", () => {
   it("runs the view through the actor component lifecycle", (context) => {
     const actor = makeActor();
-    actor.object3D.position.set(1, 2, 3);
+    actor.node.object3D.position.set(1, 2, 3);
     const focus = new THREE.Object3D();
     focus.position.set(5, 6, 7);
     focus.updateMatrixWorld(true);
@@ -31,10 +31,10 @@ describe("VoxelRenderer", () => {
     );
 
     renderer.awake();
-    actor.object3D.updateMatrixWorld(true);
+    actor.node.object3D.updateMatrixWorld(true);
     renderer.update(0.25);
 
-    assert.strictEqual(renderer.view.root.parent, actor.object3D);
+    assert.strictEqual(renderer.view.root.parent, actor.node.object3D);
     assert.strictEqual(init.mock.callCount(), 1);
     assert.deepStrictEqual(tick.mock.calls[0].arguments, [0.25]);
     assert.deepStrictEqual(renderer.view.focus, new THREE.Vector3(4, 4, 4));
@@ -52,7 +52,7 @@ describe("VoxelRenderer", () => {
     });
     const dispose = context.mock.method(renderer.document, "dispose");
 
-    assert.ok(renderer.document.world.getLayer("Ground"));
+    assert.ok(renderer.document.world.findLayer("Ground"));
     assert.strictEqual(renderer.view.document, renderer.document);
 
     renderer.destroy();

@@ -3,15 +3,16 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
-import { Actor } from "../../../src/actor/index.ts";
+import { SceneManager } from "../../../src/core/systems/scene/SceneManager.ts";
+import { HeadlessSceneGraph } from "../../../src/core/systems/scene/HeadlessSceneGraph.ts";
+import { Actor } from "../../../src/core/actor/index.ts";
 import { UpdateProbe } from "../../helpers/actor/updateProbe.ts";
 
 // CONSTANTS
 const kDeltaTime = 16.67;
 
 function createFrames() {
-  const sceneManager = new SceneManager();
+  const sceneManager = new SceneManager(new HeadlessSceneGraph());
   const world = { sceneManager } as any;
 
   return {
@@ -74,9 +75,9 @@ describe("Systems.Scene.ActorRegistry active actors", () => {
     const mover = createProbe("mover");
     inactive.actor.active = false;
 
-    mover.actor.setParent(inactive.actor);
+    mover.actor.reparent(inactive.actor);
     frame();
-    mover.actor.setParent(null);
+    mover.actor.reparent(null);
     frame();
 
     assert.strictEqual(mover.updates, 1);

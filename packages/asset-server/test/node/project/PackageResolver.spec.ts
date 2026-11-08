@@ -69,6 +69,57 @@ describe("PackageResolver", () => {
     assert.strictEqual(resolver.locate("kind-a"), await fs.realpath(directory));
   });
 
+  test("finds a package by name in a search folder", async() => {
+    await using temporary = await tempDirectory();
+    const project = path.join(temporary.root, "project");
+    const folder = path.join(temporary.root, "packages");
+    await fs.mkdir(project);
+    await fs.mkdir(path.join(folder, "empty"), { recursive: true });
+    await fs.writeFile(path.join(folder, "notes.txt"), "");
+    const directory = await writeKindPackage(
+      path.join(folder, "folder-name"),
+      "@scope/kind-a"
+    );
+    const resolver = new PackageResolver(project, {
+      searchFolders: [folder]
+    });
+
+    assert.strictEqual(
+      resolver.locate("@scope/kind-a"),
+      await fs.realpath(directory)
+    );
+    assert.strictEqual(
+      await fs.realpath(resolver.resolve("@scope/kind-a")),
+      await fs.realpath(path.join(directory, "index.js"))
+    );
+    assert.throws(
+      () => resolver.locate("folder-name"),
+      {
+        name: "TypeError",
+        message: "Cannot locate the package \"folder-name\"."
+      }
+    );
+  });
+
+  test("prefers an installed package over a search folder", async() => {
+    await using temporary = await tempDirectory();
+    const project = path.join(temporary.root, "project");
+    const host = path.join(temporary.root, "host");
+    const folder = path.join(temporary.root, "packages");
+    await fs.mkdir(project);
+    const installed = await writeKindPackage(
+      path.join(host, "node_modules", "kind-a"),
+      "kind-a"
+    );
+    await writeKindPackage(path.join(folder, "kind-a"), "kind-a");
+    const resolver = new PackageResolver(project, {
+      fallbacks: [host],
+      searchFolders: [folder]
+    });
+
+    assert.strictEqual(resolver.locate("kind-a"), await fs.realpath(installed));
+  });
+
   test("resolves a local folder against the project root", async() => {
     await using temporary = await tempDirectory();
     const exported = await writeKindPackage(

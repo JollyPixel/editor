@@ -77,7 +77,7 @@ export function fillChunks(
   blockId = CUBE_ID
 ): void {
   for (let i = 0; i < count; i++) {
-    view.document.world.setVoxel(layerName, {
+    view.document.world.placeVoxel(layerName, {
       position: { x: i * CHUNK_SIZE, y: 0, z: 0 },
       blockId
     });
@@ -90,7 +90,7 @@ export function placeCube(
   position: { x: number; y: number; z: number; },
   blockId = CUBE_ID
 ): void {
-  view.document.world.setVoxel(layerName, { position, blockId });
+  view.document.world.placeVoxel(layerName, { position, blockId });
 }
 
 export function chunkGroup(

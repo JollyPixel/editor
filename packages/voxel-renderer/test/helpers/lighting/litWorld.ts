@@ -64,7 +64,7 @@ export function litWorld(
     field,
     visibility,
     place: (position, blockId) => {
-      document.world.setVoxel(layers[0], {
+      document.world.placeVoxel(layers[0], {
         position,
         blockId
       });

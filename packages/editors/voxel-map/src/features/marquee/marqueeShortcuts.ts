@@ -41,7 +41,7 @@ export function marqueeShortcuts(
     }
 
     placement.commit();
-    const bounds = world.getLayer(layerName)?.worldBounds() ?? null;
+    const bounds = world.findLayer(layerName)?.worldBounds() ?? null;
 
     return bounds !== null && placement.liftRegion(
       layerName,

@@ -7,19 +7,20 @@ import * as THREE from "three/webgpu";
 import { AssetReference } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/index.ts";
-import { ModelRenderer } from "../../../src/components/renderers/model/ModelRenderer.ts";
+import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
+import { Actor } from "../../../src/core/actor/index.ts";
+import { ModelRenderer } from "../../../src/three/components/renderers/model/ModelRenderer.ts";
 import {
   ModelAssetType,
   type Model
-} from "../../../src/assets/model.ts";
-import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
+} from "../../../src/three/assets/model.ts";
+import { SceneManager } from "../../../src/core/systems/scene/SceneManager.ts";
 
 function createWorld(
   model: Model
 ) {
   return {
-    sceneManager: new SceneManager(),
+    sceneManager: new SceneManager(new ThreeSceneGraph()),
     assetCoordinator: {
       get: () => model
     }
@@ -49,8 +50,8 @@ describe("Components.Renderers.ModelRenderer", () => {
 
     assert.notStrictEqual(first.group, model.object);
     assert.notStrictEqual(first.group, second.group);
-    assert.strictEqual(first.group.parent, first.actor.object3D);
-    assert.strictEqual(second.group.parent, second.actor.object3D);
+    assert.strictEqual(first.group.parent, first.actor.node.object3D);
+    assert.strictEqual(second.group.parent, second.actor.node.object3D);
     assert.strictEqual(model.object.parent, null);
   });
 
@@ -59,7 +60,7 @@ describe("Components.Renderers.ModelRenderer", () => {
     const [loaded] = model.object.children as THREE.Mesh[];
     loaded.castShadow = true;
     loaded.receiveShadow = true;
-    const renderer = new Actor({ sceneManager: new SceneManager() } as any, {
+    const renderer = new Actor({ sceneManager: new SceneManager(new ThreeSceneGraph()) } as any, {
       name: "lit"
     }).addComponentAndGet(ModelRenderer, {
       model,
@@ -123,5 +124,24 @@ describe("Components.Renderers.ModelRenderer", () => {
       [false, true, true, false]
     );
     assert.strictEqual(renderer.animation.state, "stopped");
+  });
+
+  test("should bind clips under the names its rewriter gives them", () => {
+    const model = createModel();
+    model.animations.push(new THREE.AnimationClip("Armature|Spin", 1, []));
+    const actor = new Actor(createWorld(model) as any, { name: "renamed" });
+    const renderer = actor.addComponentAndGet(ModelRenderer, {
+      asset: reference,
+      animations: {
+        clipNameRewriter: (name) => name.replace("Armature|", "")
+      }
+    });
+    actor.awake();
+
+    assert.doesNotThrow(() => renderer.animation.play("Spin"));
+    assert.throws(
+      () => renderer.animation.play("Armature|Spin"),
+      { message: "Animation clip \"Armature|Spin\" not found!" }
+    );
   });
 });

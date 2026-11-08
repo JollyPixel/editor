@@ -8,13 +8,13 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   CameraCompositor
-} from "../src/systems/rendering/compositing/CameraCompositor.ts";
-import type { RenderComponent } from "../src/systems/rendering/Renderer.ts";
-import { CanvasDimensions } from "../src/systems/rendering/CanvasDimensions.ts";
+} from "../src/three/rendering/compositing/CameraCompositor.ts";
+import type { ThreeRenderComponent } from "../src/three/rendering/ThreeRenderComponent.ts";
+import { CanvasDimensions } from "../src/core/systems/rendering/CanvasDimensions.ts";
 import {
   type RenderViewport,
   Viewport
-} from "../src/systems/rendering/Viewport.ts";
+} from "../src/core/systems/rendering/Viewport.ts";
 
 const suite = defineSuite("engine / CameraCompositor#render", (bench) => {
   const scene = new THREE.Scene();
@@ -46,7 +46,7 @@ if (import.meta.main) {
 function createCamera(
   depth: number,
   viewport: RenderViewport | null
-): RenderComponent {
+): ThreeRenderComponent {
   return {
     threeCamera: new THREE.PerspectiveCamera(),
     depth,

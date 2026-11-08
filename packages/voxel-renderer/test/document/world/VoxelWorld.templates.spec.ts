@@ -41,7 +41,7 @@ function blockAt(
   world: VoxelWorld,
   position: VoxelCoord
 ): [number, number] | undefined {
-  const entry = world.getLayer("Target")?.getVoxelAt(position);
+  const entry = world.findLayer("Target")?.voxelAt(position);
 
   return entry && [entry.blockId, entry.transform];
 }
@@ -63,7 +63,7 @@ describe("VoxelWorld.templates.createFromLayer", () => {
 
   it("captures world positions, so the layer offset is applied", () => {
     const world = makeWorld();
-    world.setLayerPosition("Source", { x: 100, y: 0, z: 0 });
+    world.placeLayer("Source", { x: 100, y: 0, z: 0 });
 
     const template = world.templates.createFromLayer("Source", {
       name: "Steps",
@@ -117,7 +117,7 @@ describe("VoxelWorld.templates.createFromLayer", () => {
 describe("VoxelWorld.templates.createFromSnapshot", () => {
   it("stores the snapshot voxels and pivot under a fresh id and the given name", () => {
     const world = makeWorld();
-    const snapshot = VoxelTemplate.fromLayer(world.getLayer("Source")!, {
+    const snapshot = VoxelTemplate.fromLayer(world.findLayer("Source")!, {
       id: "selection",
       name: "Selection"
     }).transformed(VoxelTransform.fromPacked(kQuarterTurn));
@@ -237,10 +237,10 @@ describe("VoxelWorld.templates.place", () => {
       layerName: "Target",
       position: { x: 0, y: 0, z: 0 }
     });
-    assert.equal(world.getLayer("Target")?.voxelCount, 3);
+    assert.equal(world.findLayer("Target")?.voxelCount, 3);
 
     assert.equal(history.undo(), true);
-    assert.equal(world.getLayer("Target")?.voxelCount, 0);
+    assert.equal(world.findLayer("Target")?.voxelCount, 0);
     assert.equal(history.canUndo, false);
   });
 });

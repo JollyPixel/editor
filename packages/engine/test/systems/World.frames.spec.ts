@@ -8,10 +8,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { World } from "../../src/systems/World.ts";
+import type { World } from "../../src/core/systems/World.ts";
 import {
   createWorldHarness,
-  SCENE_SOURCE,
+  SCENE_GRAPH,
   type WorldHarness
 } from "../helpers/world/worldHarness.ts";
 
@@ -77,11 +77,11 @@ describe("Systems.World", () => {
   });
 
   describe("draw", () => {
-    test("should draw the scene manager's scene", () => {
+    test("should draw the scene manager's graph", () => {
       world.start();
       tick(kFixedDelta60);
 
-      assert.strictEqual(renderer.draw.mock.calls[0].arguments[0], SCENE_SOURCE);
+      assert.strictEqual(renderer.draw.mock.calls[0].arguments[0], SCENE_GRAPH);
     });
   });
 });

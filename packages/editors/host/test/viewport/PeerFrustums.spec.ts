@@ -27,6 +27,7 @@ function createFrustums(): FrustumsHarness {
   const room = new FakeRoom("voxel-map:test");
   let invalidations = 0;
 
+  const graph = new Systems.ThreeSceneGraph();
   const actor = {
     components: new ActorComponents(),
     world: {
@@ -34,8 +35,8 @@ function createFrustums(): FrustumsHarness {
         invalidations++;
       },
       sceneManager: {
-        actors: new Systems.ActorRegistry(new THREE.Scene()),
-        getSource: () => new THREE.Scene()
+        actors: new Systems.ActorRegistry(graph),
+        graph
       }
     }
   } as unknown as Actor;

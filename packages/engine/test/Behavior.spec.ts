@@ -7,7 +7,8 @@ import {
   Actor,
   Behavior
 } from "../src/index.ts";
-import { SceneManager } from "../src/systems/scene/SceneManager.ts";
+import { SceneManager } from "../src/core/systems/scene/SceneManager.ts";
+import { HeadlessSceneGraph } from "../src/core/systems/scene/HeadlessSceneGraph.ts";
 
 class BehaviorOne extends Behavior {
   starts = 0;
@@ -19,7 +20,7 @@ class BehaviorOne extends Behavior {
 class BehaviorTwo extends Behavior {}
 
 function createActor() {
-  const sceneManager = new SceneManager();
+  const sceneManager = new SceneManager(new HeadlessSceneGraph());
   const actor = new Actor(
     { sceneManager } as any,
     { name: "owner" }
@@ -49,8 +50,8 @@ describe("Behavior", () => {
     const second = new BehaviorOne(actor);
     const other = new BehaviorTwo(actor);
 
-    assert.deepEqual([...actor.getComponents(BehaviorOne)], [first, second]);
-    assert.deepEqual([...actor.getComponents(BehaviorTwo)], [other]);
+    assert.deepEqual([...actor.findComponents(BehaviorOne)], [first, second]);
+    assert.deepEqual([...actor.findComponents(BehaviorTwo)], [other]);
   });
 
   test("should leave the other behaviors on the actor when one is destroyed", () => {

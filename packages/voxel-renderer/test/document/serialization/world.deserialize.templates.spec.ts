@@ -73,7 +73,7 @@ describe("deserializeVoxelWorld", () => {
       }]
     }), world);
 
-    assert.ok(world.getVoxelAt({ x: 22, y: 4, z: 1 }) !== undefined);
-    assert.equal(world.getVoxelAt({ x: 2, y: 1, z: 5 }), undefined);
+    assert.ok(world.voxelAt({ x: 22, y: 4, z: 1 }) !== undefined);
+    assert.equal(world.voxelAt({ x: 2, y: 1, z: 5 }), undefined);
   });
 });

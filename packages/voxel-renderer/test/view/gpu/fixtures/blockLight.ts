@@ -140,11 +140,11 @@ export async function renderBlockLightScene(
   view.atlases.requireLoadedAtlas("atlas").texture.needsUpdate = true;
   const layer = view.document.world.addLayer("ground");
   for (let x = 0; x < kFloorLength; x++) {
-    layer.setVoxelAt({ x, y: 0, z: 0 }, { blockId: kFloorId, transform: 0 });
+    layer.writeVoxelAt({ x, y: 0, z: 0 }, { blockId: kFloorId, transform: 0 });
   }
-  layer.setVoxelAt({ x: 0, y: 1, z: 0 }, { blockId: kGlowId, transform: 0 });
+  layer.writeVoxelAt({ x: 0, y: 1, z: 0 }, { blockId: kGlowId, transform: 0 });
   if (options.shadowFill !== undefined) {
-    layer.setVoxelAt(kOccluder, { blockId: kFloorId, transform: 0 });
+    layer.writeVoxelAt(kOccluder, { blockId: kFloorId, transform: 0 });
   }
   view.flush();
 

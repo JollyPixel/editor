@@ -29,7 +29,7 @@ Other behaviors can subscribe to a signal with `connect` and
 unsubscribe with `disconnect`:
 
 ```ts
-const player = actor.getComponent(PlayerBehavior)!;
+const player = actor.findComponent(PlayerBehavior)!;
 
 player.onPlayerPunch.connect(() => {
   console.log("Player punched!");

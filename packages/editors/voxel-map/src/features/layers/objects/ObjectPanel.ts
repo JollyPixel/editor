@@ -138,7 +138,7 @@ export class ObjectPanel extends LitElement {
       return;
     }
 
-    const object = this.world.objectLayers.getObject(
+    const object = this.world.objectLayers.findObject(
       this.layerName,
       this.objectId
     ) ?? null;

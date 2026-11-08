@@ -78,7 +78,7 @@ export class VoxelBlockInspector {
     const layers: VoxelLayerBlockStats[] = [];
     let voxels = 0;
 
-    for (const layer of this.#world.getLayers()) {
+    for (const layer of this.#world.layers()) {
       const layerVoxels = layer.voxelCount;
       voxels += layerVoxels;
       layers.push({
@@ -123,7 +123,7 @@ export class VoxelBlockInspector {
     const layers: VoxelLayerUsage[] = [];
     let voxels = 0;
 
-    for (const layer of this.#world.getLayers()) {
+    for (const layer of this.#world.layers()) {
       const count = layer.countBlock(blockId);
       if (count > 0) {
         voxels += count;

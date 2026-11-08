@@ -36,7 +36,7 @@ function createView(
   world.addLayer("Ground");
   for (const [key, blockId] of Object.entries(blocks)) {
     const [x, y, z] = key.split(",").map(Number);
-    world.setVoxel("Ground", {
+    world.placeVoxel("Ground", {
       position: { x, y, z },
       blockId
     });
@@ -101,7 +101,7 @@ describe("pickBlockAt", () => {
     const view = createView({ "0,0,0": 7 }, layerVisibility);
     const { world } = view.document;
     world.addLayer("Draft", { visible: false });
-    world.setVoxel("Draft", {
+    world.placeVoxel("Draft", {
       position: { x: 0, y: 0, z: 0 },
       blockId: 3
     });

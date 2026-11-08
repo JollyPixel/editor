@@ -144,7 +144,7 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
     const inverse = isVoxelCellCommand(command) ?
       { kind: "cells" as const, cells: this.#cellImages(command) } :
       structuralInverse(command, (layerId) => {
-        const layer = this.#document.world.getLayerById(layerId);
+        const layer = this.#document.world.findLayerById(layerId);
 
         return layer === undefined ? undefined : captureLayerImage(layer);
       });
@@ -176,14 +176,14 @@ export class VoxelReconciler implements CommandReconciler<VoxelMapNetworkCommand
   #cellImages(
     command: VoxelCellCommand
   ): CellImage[] {
-    const layer = this.#document.world.getLayerById(command.layerId);
+    const layer = this.#document.world.findLayerById(command.layerId);
 
     return voxelCellPositions(command).map((position) => {
       return {
         layerId: command.layerId,
         position,
-        before: layer?.getPackedVoxelAt(position) ?? VOXEL_ABSENT,
-        beforePartner: layer?.getPartnerVoxelAt(position) ?? VOXEL_ABSENT
+        before: layer?.packedAt(position) ?? VOXEL_ABSENT,
+        beforePartner: layer?.partnerAt(position) ?? VOXEL_ABSENT
       };
     });
   }
@@ -348,7 +348,7 @@ function captureLayerImages(
   document: VoxelDocument
 ): Map<string, LayerImage> {
   return new Map(
-    document.world.getLayers().map(
+    document.world.layers().map(
       (layer) => [layer.id, captureLayerImage(layer)]
     )
   );

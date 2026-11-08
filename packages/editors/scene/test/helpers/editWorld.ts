@@ -10,7 +10,7 @@ export interface EditWorld {
 }
 
 export function createEditWorld(): EditWorld {
-  const sceneManager = new Systems.SceneManager();
+  const sceneManager = new Systems.SceneManager(new Systems.ThreeSceneGraph());
   const world = {
     logger: new Systems.Logger(),
     sceneManager,

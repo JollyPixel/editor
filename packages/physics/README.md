@@ -42,7 +42,7 @@ world.createActor("ground")
   });
 
 const crate = world.createActor("crate");
-crate.object3D.position.set(0, 5, 0);
+crate.transform.local.position = { x: 0, y: 5, z: 0 };
 crate.addComponent(RigidBody);
 ```
 

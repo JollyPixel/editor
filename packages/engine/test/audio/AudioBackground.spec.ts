@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import type {
   AudioBackground,
   AudioBackgroundPlaylist
-} from "../../src/audio/AudioBackground.ts";
+} from "../../src/three/audio/AudioBackground.ts";
 import {
   createAudioBackgroundHarness,
   type AudioBackgroundHarness

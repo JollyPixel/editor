@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
+import { disposeObject3D, type Actor } from "@jolly-pixel/engine";
 import * as THREE from "three";
-import type { Actor } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { BrushMesh } from "./BrushMesh.ts";
@@ -57,7 +57,7 @@ export class BrushPreview {
       tint: kRemovalTint
     });
     this.#removal.name = "removal-ghost";
-    this.#actor.addChildren(this.#mesh, this.#ghost, this.#removal);
+    this.#actor.node.object3D.add(this.#mesh, this.#ghost, this.#removal);
   }
 
   markDirty(): void {
@@ -110,7 +110,7 @@ export class BrushPreview {
   }
 
   destroy(): void {
-    this.#actor.removeChildren(this.#mesh);
+    disposeObject3D(this.#mesh);
     for (const ghost of [this.#ghost, this.#removal]) {
       ghost.removeFromParent();
       ghost.dispose();

@@ -62,7 +62,7 @@ export class LayerSource {
     world: VoxelWorld,
     layerName: string
   ): LayerSource | null {
-    const layer = world.getLayer(layerName);
+    const layer = world.findLayer(layerName);
     const bounds = layer?.worldBounds() ?? null;
     if (layer === undefined || bounds === null) {
       return null;
@@ -102,7 +102,7 @@ export class LayerSource {
   resolve(
     world: VoxelWorld
   ): VoxelTemplate | undefined {
-    return world.getLayer(this.layerName) === undefined ?
+    return world.findLayer(this.layerName) === undefined ?
       undefined :
       this.snapshot;
   }

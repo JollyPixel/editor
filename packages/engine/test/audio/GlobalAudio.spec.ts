@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { GlobalAudio } from "../../src/audio/GlobalAudio.ts";
+import { GlobalAudio } from "../../src/three/audio/GlobalAudio.ts";
 
 describe("Audio.GlobalAudio", () => {
   let globalAudio: GlobalAudio;

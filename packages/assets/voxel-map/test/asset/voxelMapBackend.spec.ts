@@ -131,7 +131,7 @@ describe("voxel-map asset kind over a real back-end", () => {
       assert.strictEqual(
         stateFromFile(
           await fs.readFile(path.join(root, kFilePath))
-        ).world.getVoxelAt({ x: 2, y: 1, z: 3 }),
+        ).world.voxelAt({ x: 2, y: 1, z: 3 }),
         undefined
       );
 
@@ -142,13 +142,13 @@ describe("voxel-map asset kind over a real back-end", () => {
         await fs.readFile(path.join(root, kFilePath))
       );
       assert.strictEqual(
-        onDisk.world.getVoxelAt({ x: 2, y: 1, z: 3 })?.blockId,
+        onDisk.world.voxelAt({ x: 2, y: 1, z: 3 })?.blockId,
         5
       );
 
       assert.strictEqual(
         (await replay(eventStore, record.id)).world
-          .getVoxelAt({ x: 2, y: 1, z: 3 })?.blockId,
+          .voxelAt({ x: 2, y: 1, z: 3 })?.blockId,
         5
       );
 

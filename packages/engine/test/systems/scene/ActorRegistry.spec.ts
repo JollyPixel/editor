@@ -10,8 +10,9 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
-import { Actor, ActorComponent } from "../../../src/actor/index.ts";
+import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
+import { SceneManager } from "../../../src/core/systems/scene/SceneManager.ts";
+import { Actor, ActorComponent } from "../../../src/core/actor/index.ts";
 
 // CONSTANTS
 const kDeltaTime = 16.67;
@@ -62,7 +63,7 @@ class Logger extends ActorComponent {
 
 function createRegistry() {
   const root = new THREE.Scene();
-  const sceneManager = new SceneManager(root);
+  const sceneManager = new SceneManager(new ThreeSceneGraph(root));
   const world = { sceneManager } as any;
 
   return {
@@ -81,8 +82,8 @@ describe("Systems.Scene.ActorRegistry", () => {
     const actor = createActor("root");
     const child = createActor("child", actor);
 
-    assert.deepStrictEqual(root.children, [actor.object3D]);
-    assert.strictEqual(child.object3D.parent, actor.object3D);
+    assert.deepStrictEqual(root.children, [actor.node.object3D]);
+    assert.strictEqual(child.node.object3D.parent, actor.node.object3D);
 
     actor.destroy();
 
@@ -215,7 +216,7 @@ describe("Systems.Scene.ActorRegistry", () => {
     registry.endFrame();
 
     assert.deepEqual(destroyCalls.map((call) => call.mock.callCount()), [1, 1, 1]);
-    assert.strictEqual(registry.tree.getActor("parent"), null);
+    assert.strictEqual(registry.tree.findActor("parent"), null);
   });
 
   test("should destroy the roots of collected actors and skip the ones already gone", () => {

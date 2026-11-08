@@ -46,7 +46,7 @@ function setup() {
   const keyboard = new KeyBindings();
   const world = new VoxelWorld();
   world.addLayer("Draft");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -104,7 +104,7 @@ function setup() {
 describe("MarqueeShortcuts", () => {
   test("Delete and Backspace delete a lifted region only", () => {
     const { world, templateId, placement, press } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
 
     placement.placeTemplate(templateId, { x: 9, y: 0, z: 9 });
     press("Delete", { key: "Delete" });
@@ -146,12 +146,12 @@ describe("MarqueeShortcuts", () => {
     press("KeyA", kSelectAll);
 
     assert.equal(placement.current?.template.voxelCount, 2);
-    assert.equal(world.getLayer("Draft")!.voxelCount, 0);
+    assert.equal(world.findLayer("Draft")!.voxelCount, 0);
   });
 
   test("Mod+X copies a lifted region, then deletes it", () => {
     const { world, templateId, placement, press } = setup();
-    const draft = world.getLayer("Draft")!;
+    const draft = world.findLayer("Draft")!;
 
     placement.placeTemplate(templateId, { x: 9, y: 0, z: 9 });
     press("KeyX", { key: "x", ...kMod });

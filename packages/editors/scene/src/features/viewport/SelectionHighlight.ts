@@ -74,7 +74,7 @@ export class SelectionHighlight extends ActorComponent {
     const { binding, selection, presence } = options;
     this.#highlight = new MeshHighlight({
       renderer: options.renderer,
-      scene: actor.world.sceneManager.getSource(),
+      scene: actor.world.sceneManager.graph.scene,
       camera: options.camera,
       mode: "outline",
       rendererFactory: ({ camera, overlayRegistry }) => new ObjectOverlayRenderer({
@@ -122,7 +122,7 @@ export class SelectionHighlight extends ActorComponent {
     for (const id of [...selection.ids, ...presence.selections.keys()]) {
       const actor = binding.actor(id);
       if (actor !== null) {
-        targets.set(id, actor.object3D);
+        targets.set(id, actor.node.object3D);
       }
     }
 

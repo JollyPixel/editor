@@ -11,96 +11,6 @@ import { typescriptConfig } from "@openally/config.oxlint";
 // CONSTANTS
 const kUiElements = readdirSync(new URL("./packages/ui/src/elements", import.meta.url))
   .map((file) => file.replace(/\.ts$/, ""));
-const kPublicAccessors = [
-  "getActor",
-  "getActorByPath",
-  "getActors",
-  "getAll",
-  "getAllActors",
-  "getAllChunks",
-  "getAllChunksToBeRemoved",
-  "getAllDirtyChunks",
-  "getAsset",
-  "getAt",
-  "getBoundingBox",
-  "getChunk",
-  "getChunks",
-  "getComponent",
-  "getComponents",
-  "getDirtyChunks",
-  "getForward",
-  "getGlobalEulerAngles",
-  "getGlobalMatrix",
-  "getGlobalOrientation",
-  "getGlobalPosition",
-  "getLayer",
-  "getLayerById",
-  "getLayers",
-  "getLocalEulerAngles",
-  "getLocalOrientation",
-  "getLocalPosition",
-  "getLocalScale",
-  "getObject",
-  "getOrCreateChunk",
-  "getPackedAt",
-  "getPackedVoxelAt",
-  "getParentGlobalOrientation",
-  "getPartnerAt",
-  "getPartnerVoxelAt",
-  "getProperty",
-  "getRight",
-  "getRootActors",
-  "getScene",
-  "getSource",
-  "getTrackByIndex",
-  "getUp",
-  "getValue",
-  "getViewport",
-  "getVisible",
-  "getVoxelAt",
-  "getVoxelNeighbour",
-  "getVoxelWithLayerAt",
-  "setClipNameRewriter",
-  "setClips",
-  "setDepth",
-  "setFadeDuration",
-  "setFont",
-  "setFov",
-  "setFrame",
-  "setGeometryOptions",
-  "setGlobalEulerAngles",
-  "setGlobalMatrix",
-  "setGlobalOrientation",
-  "setGlobalPosition",
-  "setHorizontalFlip",
-  "setLayerPosition",
-  "setLevel",
-  "setLocalEulerAngles",
-  "setLocalOrientation",
-  "setLocalPosition",
-  "setLocalScale",
-  "setMaterial",
-  "setMixer",
-  "setNearFar",
-  "setOpacity",
-  "setOrthographicScale",
-  "setPackedAt",
-  "setPackedLocal",
-  "setPackedVoxelAt",
-  "setParent",
-  "setProjectionMode",
-  "setRatio",
-  "setStyle",
-  "setTranslation",
-  "setValue",
-  "setVerticalFlip",
-  "setViewport",
-  "setVisible",
-  "setVoxel",
-  "setVoxelAt",
-  "setVoxelBulk",
-  "setWireframe"
-];
 const kAssetServerLayers = ["common", "model", "storage", "catalog", "live", "node"];
 
 function assetServerLayer(
@@ -160,9 +70,7 @@ export default defineConfig(typescriptConfig({
     "@jolly-pixel/params-per-line": "error",
     "@jolly-pixel/no-comments": "error",
     "@jolly-pixel/no-of-names": "error",
-    "@jolly-pixel/no-get-set-prefix": [
-      "error", { allow: kPublicAccessors }
-    ]
+    "@jolly-pixel/no-get-set-prefix": "error"
   },
   overrides: [
     {
@@ -227,6 +135,27 @@ export default defineConfig(typescriptConfig({
             ]
           }
         ]
+      }
+    },
+    {
+      files: ["packages/engine/src/core/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error", {
+            patterns: [
+              {
+                group: ["three", "three/*", "**/three/**"],
+                message: "The engine core stays renderer-agnostic: three.js math comes from core/math.ts, the rest lives in src/three/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      files: ["packages/engine/src/core/math.ts"],
+      rules: {
+        "no-restricted-imports": "off"
       }
     },
     {

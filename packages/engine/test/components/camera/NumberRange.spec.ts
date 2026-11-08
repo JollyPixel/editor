@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { NumberRange } from "../../../src/components/camera/orbit-fly/NumberRange.ts";
+import { NumberRange } from "../../../src/three/components/camera/orbit-fly/NumberRange.ts";
 
 describe("Components.Camera.NumberRange", () => {
   test("should clamp values on both sides", () => {

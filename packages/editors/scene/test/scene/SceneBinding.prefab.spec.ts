@@ -66,7 +66,7 @@ describe("SceneBinding prefab instances", () => {
 
     const door = binding.actor(`${instanceId}/${doorId}`)!;
 
-    assert.strictEqual(binding.findActorId(door.object3D), instanceId);
+    assert.strictEqual(binding.findActorId(door.node.object3D), instanceId);
   });
 
   test("releases a scene and the scenes it includes once no instance references them", async() => {
@@ -109,7 +109,7 @@ describe("SceneBinding prefab instances", () => {
 
     assert.strictEqual(binding.actor(doorPath), door);
     assert.strictEqual(door.name, "Front door");
-    assert.strictEqual(door.object3D.position.x, 3);
+    assert.strictEqual(door.transform.local.position.x, 3);
     assert.strictEqual((binding.component(`${instanceId}/knob`) as Probe).label, "steel");
     assert.strictEqual(binding.expandedActor(doorPath)?.name, "Front door");
     assert.deepEqual(
@@ -120,7 +120,7 @@ describe("SceneBinding prefab instances", () => {
     history.undo(SCENE_HISTORY_SCOPE);
 
     assert.strictEqual(door.name, "Door");
-    assert.strictEqual(door.object3D.position.x, 0);
+    assert.strictEqual(door.transform.local.position.x, 0);
     assert.strictEqual((binding.component(`${instanceId}/knob`) as Probe).label, "brass");
   });
 

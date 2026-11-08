@@ -26,6 +26,10 @@ import { TEXTURE_SIZE } from "../../shared/seed.ts";
 export const PROJECT_ROOT_ENV = "JOLLY_PROJECT";
 export const DEFAULT_PROJECT_DIR = "project";
 export const STUDIO_ROOT = path.join(import.meta.dirname, "..", "..");
+const kFirstPartyFolders = [
+  path.join(STUDIO_ROOT, "..", "assets"),
+  path.join(STUDIO_ROOT, "..", "editors")
+];
 const kSnapshot = {
   delay: 2_000,
   maxDelay: 30_000
@@ -107,6 +111,15 @@ export class StudioProject {
     );
   }
 
+  static resolver(
+    root: string
+  ): PackageResolver {
+    return new PackageResolver(root, {
+      fallbacks: [STUDIO_ROOT],
+      searchFolders: kFirstPartyFolders
+    });
+  }
+
   static async open(
     root: string,
     options: ProjectFileOpenOptions = {}
@@ -117,9 +130,7 @@ export class StudioProject {
       options
     );
 
-    const resolver = new PackageResolver(file.root, {
-      fallbacks: [STUDIO_ROOT]
-    });
+    const resolver = StudioProject.resolver(file.root);
     const sections = kSectionsSchema.safeParse(
       file.data
     );

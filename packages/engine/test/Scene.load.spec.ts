@@ -14,7 +14,7 @@ import {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Scene } from "../src/systems/scene/Scene.ts";
+import { Scene } from "../src/core/systems/scene/Scene.ts";
 import { createSceneAssets } from "./helpers/scene/sceneAssets.ts";
 import {
   ConcreteScene,

@@ -60,32 +60,32 @@ function setup() {
 function names(
   document: VoxelDocument
 ): string[] {
-  return document.world.getLayers().map((layer) => layer.name);
+  return document.world.layers().map((layer) => layer.name);
 }
 
 describe("VoxelReconciler", () => {
   test("reverts a pending undo from the cells it changed", () => {
     const { document, history, reconciler, pending } = setup();
 
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
+    document.world.placeVoxel("L1", { position: kOrigin, blockId: 2 });
     history.undo(MAP_SCOPE);
 
     assert.strictEqual(pending.length, 2);
     assert.strictEqual(reconciler.revert([pending[1]]), true);
-    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 2);
+    assert.strictEqual(document.world.voxelAt(kOrigin)?.blockId, 2);
     assert.strictEqual(reconciler.revert([pending[0]]), true);
-    assert.strictEqual(document.world.getVoxelAt(kOrigin), undefined);
+    assert.strictEqual(document.world.voxelAt(kOrigin), undefined);
   });
 
   test("reverts a pending removal of a merged cell to both of its shapes", () => {
     const { document, reconciler, pending } = setup();
 
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 2 });
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 3, merge: true });
+    document.world.placeVoxel("L1", { position: kOrigin, blockId: 2 });
+    document.world.placeVoxel("L1", { position: kOrigin, blockId: 3, merge: true });
     document.world.removeVoxel("L1", { position: kOrigin });
 
     assert.strictEqual(reconciler.revert([pending[2]]), true);
-    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.partner?.blockId, 3);
+    assert.strictEqual(document.world.voxelAt(kOrigin)?.partner?.blockId, 3);
   });
 
   test("reverts layer moves to the order before them", () => {
@@ -105,12 +105,12 @@ describe("VoxelReconciler", () => {
     document.world.addLayer("L4");
 
     assert.strictEqual(reconciler.revert(pending), true);
-    assert.strictEqual(document.world.getLayer("L4"), undefined);
+    assert.strictEqual(document.world.findLayer("L4"), undefined);
   });
 
   test("reverts a rename, a visibility and an anchor change to the previous values", () => {
     const { document, reconciler, pending } = setup();
-    const layer = document.world.getLayer("L1")!;
+    const layer = document.world.findLayer("L1")!;
 
     document.world.updateLayer("L1", { name: "Floor", visible: false, anchor: true });
 
@@ -122,9 +122,9 @@ describe("VoxelReconciler", () => {
 
   test("reverts a layer position and a clone", () => {
     const { document, reconciler, pending } = setup();
-    const layer = document.world.getLayer("L1")!;
+    const layer = document.world.findLayer("L1")!;
 
-    document.world.setLayerPosition("L1", { x: 4, y: 0, z: 0 });
+    document.world.placeLayer("L1", { x: 4, y: 0, z: 0 });
     document.world.cloneLayer("L1");
 
     assert.strictEqual(reconciler.revert(pending), true);
@@ -138,15 +138,15 @@ describe("VoxelReconciler", () => {
     document.world.removeLayer("L1");
 
     assert.strictEqual(reconciler.revert(pending), false);
-    assert.strictEqual(document.world.getLayer("L1"), undefined);
+    assert.strictEqual(document.world.findLayer("L1"), undefined);
   });
 
   test("a replay captures the cells it overwrites", () => {
     const { document, reconciler } = setup();
-    document.world.setVoxel("L1", { position: kOrigin, blockId: 5 });
+    document.world.placeVoxel("L1", { position: kOrigin, blockId: 5 });
     const replayed: VoxelMapNetworkCommand = {
       action: "voxel-set",
-      layerId: document.world.getLayer("L1")!.id,
+      layerId: document.world.findLayer("L1")!.id,
       metadata: {
         position: kOrigin,
         blockId: 7,
@@ -161,9 +161,9 @@ describe("VoxelReconciler", () => {
     };
 
     assert.strictEqual(reconciler.replay(replayed), true);
-    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 7);
+    assert.strictEqual(document.world.voxelAt(kOrigin)?.blockId, 7);
     assert.strictEqual(reconciler.revert([replayed]), true);
-    assert.strictEqual(document.world.getVoxelAt(kOrigin)?.blockId, 5);
+    assert.strictEqual(document.world.voxelAt(kOrigin)?.blockId, 5);
   });
 
   test("a replay on a missing layer is rejected", () => {

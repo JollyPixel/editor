@@ -43,7 +43,7 @@ function setup() {
   });
   world.addLayer("Draft");
   world.addLayer("Ground");
-  world.setVoxelBulk("Draft", [
+  world.placeVoxelBulk("Draft", [
     {
       position: { x: 0, y: 0, z: 0 },
       blockId: 1
@@ -73,7 +73,7 @@ describe("MapPlacement access", () => {
     assert.equal(placement.transformLayer("Draft"), false);
     assert.equal(placement.liftRegion("Draft", kDraftRegion), false);
     assert.equal(placement.placing, false);
-    assert.equal(world.getLayer("Draft")!.voxelCount, 2);
+    assert.equal(world.findLayer("Draft")!.voxelCount, 2);
   });
 
   test("keeps an open placement uncommitted once the role loses voxel writes", () => {
@@ -84,7 +84,7 @@ describe("MapPlacement access", () => {
 
     assert.equal(placement.commit(), false);
     assert.equal(placement.placing, true);
-    assert.equal(world.getLayer("Ground")!.voxelCount, 0);
+    assert.equal(world.findLayer("Ground")!.voxelCount, 0);
     assert.equal(placement.transformLayer("Draft"), true);
   });
 });
