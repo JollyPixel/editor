@@ -9,7 +9,6 @@ import type { AddressInfo } from "node:net";
 import type { Connect } from "vite";
 import {
   KindPackage,
-  PackageResolver,
   ProjectFile,
   ProjectKinds
 } from "@jolly-pixel/asset-server/node";
@@ -23,10 +22,7 @@ import {
 import { EditorPackages } from "../../server/editors/EditorPackages.ts";
 import { EditorPages } from "../../server/editors/EditorPages.ts";
 import { StudioAccess } from "../../server/project/StudioAccess.ts";
-import {
-  STUDIO_ROOT,
-  StudioProject
-} from "../../server/project/StudioProject.ts";
+import { StudioProject } from "../../server/project/StudioProject.ts";
 import { createTempDir } from "./tempDir.ts";
 import { KindFilter } from "../../shared/KindFilter.ts";
 
@@ -148,9 +144,7 @@ export function voxelMapProject(
         descriptors: ASSET_KINDS.descriptors,
         handlers: ASSET_KINDS.handlers()
       })
-    ], new PackageResolver(root, {
-      fallbacks: [STUDIO_ROOT]
-    })),
+    ], StudioProject.resolver(root)),
     StudioAccess.read({}, "project.json"),
     KindFilter.NONE
   );

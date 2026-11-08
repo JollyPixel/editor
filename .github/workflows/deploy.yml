@@ -43,7 +43,7 @@ jobs:
       - name: Build with VitePress
         run: pnpm run docs:build
       - name: Build the studio dependencies
-        run: pnpm --filter "@jolly-pixel/studio^..." run build
+        run: pnpm --filter @jolly-pixel/studio run build:deps
       - name: Build the static studio
         run: pnpm --filter @jolly-pixel/studio run build:static
       - name: Publish the studio under /play/

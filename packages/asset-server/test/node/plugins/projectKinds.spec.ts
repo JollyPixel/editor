@@ -71,6 +71,11 @@ describe("createProjectKindsPlugin", () => {
       "kind-b",
       "fallback-marker"
     );
+    await writeKindPackage(
+      path.join(directory.root, "packages", "kind-c"),
+      "kind-c",
+      "searched-marker"
+    );
     await fs.mkdir(app);
     await fs.writeFile(
       path.join(app, "index.html"),
@@ -90,12 +95,14 @@ describe("createProjectKindsPlugin", () => {
         version: 1,
         kinds: {
           "./kinds/local": {},
-          "kind-b": {}
+          "kind-b": {},
+          "kind-c": {}
         }
       }),
       {
         resolver: new PackageResolver(project, {
-          fallbacks: [host]
+          fallbacks: [host],
+          searchFolders: [path.join(directory.root, "packages")]
         })
       }
     );
@@ -123,5 +130,6 @@ describe("createProjectKindsPlugin", () => {
     );
     assert.match(bundle, /local-marker/);
     assert.match(bundle, /fallback-marker/);
+    assert.match(bundle, /searched-marker/);
   });
 });

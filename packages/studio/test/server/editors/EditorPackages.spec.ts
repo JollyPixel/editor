@@ -14,7 +14,7 @@ import { PackageResolver } from "@jolly-pixel/asset-server/node";
 // Import Internal Dependencies
 import { EditorPackage } from "../../../server/editors/EditorPackage.ts";
 import { EditorPackages } from "../../../server/editors/EditorPackages.ts";
-import { STUDIO_ROOT } from "../../../server/project/StudioProject.ts";
+import { StudioProject } from "../../../server/project/StudioProject.ts";
 import {
   PackageRoots,
   writeEditorPackage
@@ -121,14 +121,14 @@ describe("EditorPackages", () => {
     ]);
   });
 
-  test("reads the editor packages installed in the studio", async() => {
+  test("reads the first-party editor packages by name", async() => {
     const [voxelMap, voxelModel, pixelArt] = await EditorPackages.read(
       [
         "@jolly-pixel/editor.voxel-map",
         "@jolly-pixel/editor.voxel-model",
         "@jolly-pixel/editor.pixel-art"
       ],
-      new PackageResolver(STUDIO_ROOT)
+      StudioProject.resolver(await kRoots.create())
     );
 
     assert.deepEqual(voxelMap.kinds, ["voxelmap"]);
