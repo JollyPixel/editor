@@ -113,7 +113,7 @@ function relay(
 function readPreview(
   replica: Replica
 ): PlacementPreview | undefined {
-  const object = replica.actor.object3D.getObjectByName(
+  const object = replica.actor.node.object3D.getObjectByName(
     `peer-placement:${kPlacer}`
   );
 

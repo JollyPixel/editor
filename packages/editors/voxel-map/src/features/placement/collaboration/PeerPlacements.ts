@@ -284,7 +284,7 @@ export class PeerPlacements extends ActorComponent {
     });
     preview.name = `peer-placement:${clientId}`;
     this.#previews.set(clientId, preview);
-    this.actor.addChildren(preview);
+    this.actor.node.object3D.add(preview);
 
     return preview;
   }

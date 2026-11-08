@@ -59,7 +59,7 @@ const runtime = await Runtime.create("canvas", {
 });
 const { world } = runtime;
 
-const scene = world.sceneManager.getSource();
+const scene = world.sceneManager.graph.scene;
 
 const center = settings.size / 2;
 const cameraDistance = Math.min(
@@ -88,7 +88,7 @@ const daylight = flyCamera.actor.addComponentAndGet(Daylight, {
 
 const voxelMap = world.createActor("map")
   .addComponentAndGet(VoxelRenderer, {
-    focus: flyCamera.actor.object3D,
+    focus: flyCamera.actor.node.object3D,
     document: {
       chunkSize: settings.chunkSize,
       layers: [kTerrainLayer],

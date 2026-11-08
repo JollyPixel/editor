@@ -9,11 +9,11 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   BakedRoomEnvironment
-} from "../../../../src/systems/rendering/environment/BakedRoomEnvironment.ts";
+} from "../../../../src/three/rendering/environment/BakedRoomEnvironment.ts";
 
 // CONSTANTS
 const kAtlasPath = new URL(
-  "../../../../src/systems/rendering/environment/roomEnvironment.bin",
+  "../../../../src/three/rendering/environment/roomEnvironment.bin",
   import.meta.url
 );
 

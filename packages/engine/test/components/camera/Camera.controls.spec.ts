@@ -10,13 +10,13 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Camera3DControls } from "../../../src/components/camera/Camera3DControls.ts";
-import type { Actor } from "../../../src/actor/Actor.ts";
+import { Camera3DControls } from "../../../src/three/components/camera/Camera3DControls.ts";
+import type { Actor } from "../../../src/core/actor/Actor.ts";
 import {
   createActorMock,
   type ActorMock
 } from "../../helpers/camera/cameraActor.ts";
-import { Viewport } from "../../../src/systems/rendering/Viewport.ts";
+import { Viewport } from "../../../src/core/systems/rendering/Viewport.ts";
 
 describe("Components.Camera.Camera3DControls", () => {
   let actor: ActorMock;

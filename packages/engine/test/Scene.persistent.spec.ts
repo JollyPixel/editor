@@ -7,12 +7,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../src/actor/index.ts";
-import { Scene } from "../src/systems/scene/Scene.ts";
+import { Actor } from "../src/core/actor/index.ts";
+import { Scene } from "../src/core/systems/scene/Scene.ts";
 import {
   ComponentDefinitions,
   FileScene
-} from "../src/systems/scene/file/index.ts";
+} from "../src/core/systems/scene/file/index.ts";
 import {
   ConcreteScene,
   createSceneSetup,
@@ -43,7 +43,7 @@ describe("Scene persistent actors", () => {
 
     assert.deepEqual(sm.tree.children, [player]);
     assert.notStrictEqual(sm.tree.getActor("player/hand"), null);
-    assert.strictEqual(player.object3D.parent, sm.default);
+    assert.strictEqual(player.node.object3D.parent, sm.graph.scene);
     assert.strictEqual(enemy.pendingForDestruction, true);
     assert.strictEqual(probe.updates, 1);
   });

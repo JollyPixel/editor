@@ -4,7 +4,7 @@
 
 ## 📌 About
 
-Minimal and opinionated [ECS][ecs] built on top of Three.js inspired by [Superpowers][superpowers] and [Craftstudio][craftstudio].
+Minimal and opinionated [ECS][ecs] inspired by [Superpowers][superpowers] and [Craftstudio][craftstudio], with a renderer-agnostic core and a Three.js backend.
 
 > [!WARNING]
 > The engine is still in a heavy phase of development (expect frequent API breaking changes).
@@ -30,6 +30,10 @@ $ npm i @jolly-pixel/engine
 $ yarn add @jolly-pixel/engine
 ```
 
+## 🧱 Core and backends
+
+`@jolly-pixel/engine/core` holds actors, components, behaviors, scenes, scene files and transforms. It imports no renderer, only Three.js math classes. `@jolly-pixel/engine` re-exports it with the Three.js backend: `ThreeRenderer`, `ThreeSceneGraph`, the renderers, cameras, lights, audio and UI. A headless backend (`HeadlessRenderer`, `HeadlessSceneGraph`) runs a world without a GPU. See [Scene graph](./docs/systems/scene-graph.md).
+
 ## 🔎 Guides (WIP 🚧)
 
 - [Hello World with JollyPixel Engine](./docs/guides/hello-world.md)
@@ -51,6 +55,7 @@ each frame.
     - [BakedRoomEnvironment](./docs/systems/baked-room-environment.md): prefiltered `RoomEnvironment` reflection map, loaded instead of generated at runtime.
   - [SceneManager](./docs/systems/scene-manager.md) — the ECS world manager that owns the actor tree and drives
     per-frame lifecycle (awake → start → update → destroy).
+    - [Scene graph](./docs/systems/scene-graph.md) — the backend port that mirrors actors into a renderer scene.
   - [Logger](./docs/systems/logger.md): leveled, namespaced logging and timed steps.
 - [Asset](./docs/asset.md) — lazy-loading asset pipeline with a
   registry of loaders, a queue, and a cache.
@@ -59,13 +64,14 @@ each frame.
 <summary>Code Example</summary>
 
 ```ts
-import { Systems, Actor } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/engine";
 
-const sceneManager = new Systems.SceneManager();
+const sceneManager = new Systems.SceneManager(new Systems.ThreeSceneGraph());
 const renderer = await Systems.ThreeRenderer.create(canvas);
 const game = new Systems.World(renderer, {
   enableOnExit: true,
-  sceneManager
+  sceneManager,
+  assetCoordinator
 });
 
 game.connect();
@@ -80,8 +86,8 @@ dictionary of Behaviors. The engine uses the name *Actor* (inspired by [Superpow
 
 - [Actor](./docs/actor/actor.md) — the entity itself, holding its
   transform, components, and behaviors.
-  - [Transform](./docs/actor/actor-transform.md) — built-in component
-    wrapping a Three.js Object3D and exposing a complete local/global
+  - [Transform](./docs/actor/actor-transform.md) — the actor's pose, owned by
+    the engine and pushed to its scene graph node, with a complete local/global
     transform API (position, orientation, scale, movement).
   - [ActorTree](./docs/actor/actor-tree.md) — tree structure that
   manages parent-child actor relationships and provides pattern-based

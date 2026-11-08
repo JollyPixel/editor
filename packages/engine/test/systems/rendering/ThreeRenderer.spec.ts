@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ThreeRenderer } from "../../../src/systems/rendering/ThreeRenderer.ts";
+import { ThreeRenderer } from "../../../src/three/rendering/ThreeRenderer.ts";
 import { createRendererSpy } from "./helpers.ts";
 
 describe("Systems.Rendering.ThreeRenderer", () => {

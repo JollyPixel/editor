@@ -189,10 +189,10 @@ interface ComponentAnchor {
 }
 ```
 
-- The actor stays a child of its parent in the actor tree. Its `object3D`
-  sits under a socket that `SceneInstance` keeps on the parent's `object3D`
-  at the anchor's pose, so its `transform` is relative to the anchor. The
-  socket goes away once no actor hangs from it.
+- The actor stays a child of its parent in the actor tree. Its transform is
+  [seated](../actor/actor-transform.md#hierarchy) on a socket at
+  the anchor's pose, so its local pose is relative to the anchor. Re-parenting
+  without an anchor drops the socket.
 - `subscribe` calls the listener when an anchor is added, removed or moved.
   Every socket of the component then takes the new pose.
 - When the parent's component does not list the anchor, or is not built, the
@@ -412,8 +412,7 @@ skipped at once.
 
 `actor(id)` and `component(id)` return the built actor or component, or
 `null`. An expanded actor or component goes by its path id.
-`actorId(object)` returns the file id of the actor whose `object3D` is
-`object`, or `null`; it does not search ancestors. `components()` iterates
+`actorId(actor)` returns the file id of a built actor, or `null`. `components()` iterates
 the built components.
 
 `SceneInstance` is a `SceneAnchorsReader`:
@@ -448,7 +447,7 @@ root. The parent may come from the same call or an earlier one.
   without a warning, with its subtree: the live actor is kept.
 - A component type without a definition is skipped, with a warning in play
   mode only. So is a `null` from `create`, without a warning.
-- Transforms are written to `actor.object3D` directly.
+- Transforms are written to `actor.transform`.
 - An actor with `prefab` gets its scene's actors built under it.
 - An actor with `anchor` is placed on that anchor of its parent.
 
@@ -520,26 +519,31 @@ Destroys every actor it built and forgets every id.
 
 ## Scene transforms
 
-### writeSceneTransform(object, transform): void
+### writeSceneTransform(transform, file): void
 
-Writes a `SceneTransformFile` (rotation in degrees) to a `THREE.Object3D`
-and updates its world matrix.
+Writes a `SceneTransformFile` (rotation in degrees) as the local pose of a
+[Transform](../actor/actor-transform.md).
+
+### localSceneTransform(transform): SceneTransformFile
+
+Reads the local pose of a `Transform` back into a `SceneTransformFile`.
 
 ### readSceneTransform(pose): SceneTransformFile
 
-Reads a `{ position, quaternion, scale }` pose, such as a `THREE.Object3D` or
-a decomposed matrix, into a `SceneTransformFile`, rotation in degrees. It is
-the inverse of `writeSceneTransform`.
+Reads a `{ position, quaternion, scale }` pose, such as a decomposed matrix,
+into a `SceneTransformFile`, rotation in degrees.
 
 ### composeSceneTransform(transform, target?): THREE.Matrix4
 
-Composes the local matrix `writeSceneTransform` would give an object, into
+Composes the local matrix `writeSceneTransform` would give a transform, into
 `target` or a new matrix.
 
-## SceneEnvironment
+## Scene environment
 
-`new SceneEnvironment(world)` writes a `SceneEnvironmentFile` to the world's
-`THREE.Scene`.
+`world.sceneManager.graph.createEnvironment(world)` returns the backend's
+`SceneEnvironment`, which `FileScene` uses for the file's `environment`. The
+headless graph ignores it. The three.js one, `ThreeSceneEnvironment`, writes
+to the graph's `THREE.Scene`:
 
 - `apply(file)` sets the background color, the fog and the environment
   intensity.

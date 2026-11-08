@@ -1,9 +1,13 @@
 // Import Third-party Dependencies
+import * as THREE from "three";
 import type { CameraComponent } from "@jolly-pixel/engine";
 import { CameraGizmo } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import type { ComponentHelper } from "./ComponentHelper.ts";
+
+// CONSTANTS
+const kActorMatrix = new THREE.Matrix4();
 
 export class CameraFrustum implements ComponentHelper {
   readonly root = new CameraGizmo();
@@ -33,7 +37,7 @@ export class CameraFrustum implements ComponentHelper {
         far,
         orthographicScale
       },
-      component.actor.object3D.matrixWorld
+      component.actor.transform.getGlobalMatrix(kActorMatrix)
     );
   }
 

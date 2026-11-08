@@ -24,7 +24,7 @@ class ModelsScene extends Systems.Scene {
   }
 
   override awake(): void {
-    const scene = this.world.sceneManager.getSource();
+    const scene = this.world.sceneManager.graph.scene;
     scene.background = null;
     scene.add(
       new THREE.GridHelper(
@@ -45,7 +45,7 @@ class ModelsScene extends Systems.Scene {
       .addComponent(ModelRenderer, {
         asset: kTinyWitchModel
       })
-      .object3D.position.set(-5, 0, 0);
+      .transform.setLocalPosition({ x: -5, y: 0, z: 0 });
 
     this.world.createActor("player")
       .addComponent(ModelRenderer, {

@@ -7,7 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { World } from "../../src/systems/World.ts";
+import type { World } from "../../src/core/systems/World.ts";
 import {
   createWorldHarness,
   type WorldHarness

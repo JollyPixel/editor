@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type * as THREE from "three";
+import * as THREE from "three";
 import {
   ActorComponent,
   type Actor,
@@ -17,6 +17,7 @@ import type { SelectionStore } from "../../state/SelectionStore.ts";
 import { AnchorMarker } from "./helpers/AnchorMarker.ts";
 
 // CONSTANTS
+const kOwnerMatrix = new THREE.Matrix4();
 const kMarkerColor = "#6bc4f5";
 const kHangingColor = "#f5c46b";
 const kPickRadius = 0.25;
@@ -67,7 +68,7 @@ export class AnchorMarkers extends ActorComponent {
       typeName: "AnchorMarkers"
     });
     this.#options = options;
-    this.#scene = actor.world.sceneManager.getSource();
+    this.#scene = actor.world.sceneManager.graph.scene;
 
     const { live, selection } = options;
     const subscriptions = [
@@ -120,8 +121,10 @@ export class AnchorMarkers extends ActorComponent {
     const owner = this.#options.live.actor(drawn.picked.ownerId);
     drawn.marker.root.visible = owner?.transform.visibleInHierarchy ?? false;
     if (owner !== null) {
-      owner.object3D.updateWorldMatrix(true, false);
-      drawn.marker.place(owner.object3D.matrixWorld, drawn.anchor.pose);
+      drawn.marker.place(
+        owner.transform.getGlobalMatrix(kOwnerMatrix),
+        drawn.anchor.pose
+      );
     }
   }
 

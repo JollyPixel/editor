@@ -185,7 +185,7 @@ describe("Actor", () => {
 
     actor.name = "renamed";
 
-    assert.strictEqual(actor.object3D.name, "renamed");
+    assert.strictEqual(actor.node.object3D.name, "renamed");
     assert.strictEqual(actor.name, "renamed");
   });
 });

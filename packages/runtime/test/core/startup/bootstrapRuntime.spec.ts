@@ -42,7 +42,7 @@ function createFakeRuntime() {
       load: () => Promise.withResolvers<string>().promise
     })
   });
-  const sceneManager = new Systems.SceneManager();
+  const sceneManager = new Systems.SceneManager(new Systems.HeadlessSceneGraph());
 
   const startCalls: string[] = [];
   const world = {

@@ -26,7 +26,7 @@ class RenderersScene extends Systems.Scene {
   }
 
   override awake(): void {
-    const scene = this.world.sceneManager.getSource();
+    const scene = this.world.sceneManager.graph.scene;
     scene.background = new THREE.Color("#000000");
     scene.add(
       new THREE.GridHelper(
@@ -50,7 +50,7 @@ class RenderersScene extends Systems.Scene {
         size: 2,
         depth: 2
       });
-    textActor.object3D.position.set(0, 5, 0);
+    textActor.transform.setLocalPosition({ x: 0, y: 5, z: 0 });
 
     const audioManager = GlobalAudioManager.fromWorld(this.world);
     this.audioBackground = new AudioBackground({

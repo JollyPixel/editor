@@ -21,8 +21,9 @@ type ViewHelperRenderer = Parameters<ViewHelper["render"]>[0];
 
 export interface ViewHelperHost extends Pick<
   Systems.Renderer<THREE.WebGPURenderer>,
-  "canvas" | "renderComponents" | "off"
+  "canvas" | "off"
 > {
+  readonly renderComponents: readonly Systems.ThreeRenderComponent[];
   on(
     type: "draw",
     handler: Systems.RendererEvents<THREE.WebGPURenderer>["draw"]
@@ -78,9 +79,9 @@ export function mountViewHelper(
 }
 
 function findViewHelperCamera(
-  components: Iterable<Systems.RenderComponent>
+  components: Iterable<Systems.ThreeRenderComponent>
 ): THREE.Camera | null {
-  let primary: Systems.RenderComponent | null = null;
+  let primary: Systems.ThreeRenderComponent | null = null;
   for (const component of components) {
     if (primary === null || component.depth < primary.depth) {
       primary = component;

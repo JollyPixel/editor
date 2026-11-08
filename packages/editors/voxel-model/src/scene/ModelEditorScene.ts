@@ -142,7 +142,7 @@ export class ModelEditorScene extends Systems.Scene {
       view
     } = this.#options;
 
-    const scene = this.world.sceneManager.getSource();
+    const scene = this.world.sceneManager.graph.scene;
     scene.add(createModelGrid());
 
     const camera = this.world

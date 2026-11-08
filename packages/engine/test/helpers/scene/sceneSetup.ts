@@ -2,10 +2,11 @@
 import { mock } from "node:test";
 
 // Import Internal Dependencies
-import { Logger } from "../../../src/systems/Logger.ts";
-import { Actor } from "../../../src/actor/index.ts";
-import { Scene } from "../../../src/systems/scene/Scene.ts";
-import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
+import { Logger } from "../../../src/core/systems/Logger.ts";
+import { Actor } from "../../../src/core/actor/index.ts";
+import { Scene } from "../../../src/core/systems/scene/Scene.ts";
+import { SceneManager } from "../../../src/core/systems/scene/SceneManager.ts";
+import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
 import {
   createSceneAssets,
   type SceneAssets
@@ -42,7 +43,7 @@ export function createSceneSetup(
   assets: SceneAssets = createSceneAssets(),
   logger = new Logger()
 ) {
-  const sm = new SceneManager();
+  const sm = new SceneManager(new ThreeSceneGraph());
   const world = {
     logger,
     sceneManager: sm,

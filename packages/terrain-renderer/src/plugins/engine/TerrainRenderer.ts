@@ -54,7 +54,7 @@ export class TerrainRenderer extends ActorComponent {
   }
 
   awake(): void {
-    this.actor.object3D.add(this.view.root);
+    this.actor.node.object3D.add(this.view.root);
   }
 
   update(): void {
@@ -65,7 +65,7 @@ export class TerrainRenderer extends ActorComponent {
   }
 
   override destroy(): void {
-    this.actor.object3D.remove(this.view.root);
+    this.actor.node.object3D.remove(this.view.root);
     this.view.dispose();
 
     super.destroy();

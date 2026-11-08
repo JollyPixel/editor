@@ -30,11 +30,11 @@ The constructor accepts an `ActorOptions` object:
 
 ```ts
 interface ActorOptions {
-  /** Display name used for tree lookups, kept in `object3D.name`. */
+  /** Display name used for tree lookups, mirrored on the scene graph node. */
   name: string;
   /** Parent actor; `null` adds to the scene root. @default null */
   parent?: Actor | null;
-  /** Initial visibility of the Three.js group. @default true */
+  /** Initial visibility of the actor node. @default true */
   visible?: boolean;
   /** Rendering layer(s) to enable. */
   layer?: number | number[];
@@ -128,18 +128,25 @@ returns `false` when there was nothing to remove.
 actor.removeComponent(ShieldBehavior);
 ```
 
-## Managing Three.js children
+## Scene graph node
 
-`addChildren` and `removeChildren` attach and detach Three.js objects to the
-actor's `object3D`. Removing a child disposes its GPU resources.
+`actor.node` is the [scene graph](../systems/scene-graph.md) node the
+backend made for the actor. The engine pushes the actor's name, visibility,
+layers, parent and local pose to it; never write the pose on the node itself.
+
+With the three.js backend, `actor.node.object3D` is the node's
+`THREE.Group`. Add meshes to it, and dispose them with `disposeObject3D`:
 
 ```ts
-actor.addChildren(new THREE.Mesh(geometry, material));
-actor.removeChildren(mesh);
+import { disposeObject3D } from "@jolly-pixel/engine";
+
+actor.node.object3D.add(mesh);
+disposeObject3D(mesh);
 ```
 
-On destruction, the actor disposes its remaining Three.js children. It stops
-at nested actors and leaves textures alone, since they are often shared.
+On destruction, the actor disposes its node and the Three.js children left
+on it. It stops at nested actors and leaves textures alone, since they are
+often shared.
 
 ## Scene tree hierarchy
 
@@ -178,12 +185,12 @@ hand.setParent(otherActor, true);
 ## Active state
 
 Setting `active` to `false` stops `update()` and `fixedUpdate()` for the
-actor and its subtree. It keeps rendering: hide it with `object3D.visible`. `activeInHierarchy` is `true` only when the actor and
+actor and its subtree. It keeps rendering: hide it with `transform.setVisible(false)`. `activeInHierarchy` is `true` only when the actor and
 all its ancestors are active.
 
 ```ts
 enemy.active = false;
-enemy.object3D.visible = false;
+enemy.transform.setVisible(false);
 ```
 
 A child keeps its own `active` value. Reactivating a parent does not

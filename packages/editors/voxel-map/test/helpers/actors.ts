@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
 import {
   ActorComponents,
   Systems,
@@ -7,21 +6,18 @@ import {
 } from "@jolly-pixel/engine";
 
 export function sceneActor(): Actor {
-  const object3D = new THREE.Group();
-
-  return {
+  const graph = new Systems.ThreeSceneGraph();
+  const actor: Record<string, unknown> = {
     components: new ActorComponents(),
-    object3D,
-    addChildren(...objects: THREE.Object3D[]) {
-      object3D.add(...objects);
-
-      return this;
-    },
     world: {
       invalidate: () => void 0,
       sceneManager: {
-        actors: new Systems.ActorRegistry(new THREE.Scene())
+        actors: new Systems.ActorRegistry(graph),
+        graph
       }
     }
-  } as unknown as Actor;
+  };
+  actor.node = graph.createNode(actor as unknown as Actor);
+
+  return actor as unknown as Actor;
 }

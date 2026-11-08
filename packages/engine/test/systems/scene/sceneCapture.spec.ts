@@ -3,22 +3,22 @@ import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
-import { Scene } from "../../../src/systems/scene/Scene.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
+import { ActorComponent } from "../../../src/core/actor/ActorComponent.ts";
+import { Scene } from "../../../src/core/systems/scene/Scene.ts";
 import {
   ComponentDefinitions,
   FileScene,
   type ComponentDefinition,
   type SceneFile
-} from "../../../src/systems/scene/file/index.ts";
+} from "../../../src/core/systems/scene/file/index.ts";
 import {
   Behavior,
   MeshDefinition,
   MeshRenderer,
   SceneProperty,
   ScriptDefinition
-} from "../../../src/components/index.ts";
+} from "../../../src/index.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
 import {
@@ -104,7 +104,7 @@ describe("Systems.FileScene capture", () => {
     const level = createLevel();
     const { sm, world, scene } = await load(level.file, level);
     const hero = sm.getActor("hero")!;
-    hero.object3D.position.set(4, 0, 0);
+    hero.transform.setLocalPosition({ x: 4, y: 0, z: 0 });
     hero.getComponent(Patrol)!.speed = 7;
     const coin = new Actor(world as any, { name: "coin", parent: hero });
     coin.addComponent(MeshRenderer);
@@ -198,7 +198,7 @@ describe("Systems.FileScene capture", () => {
     const level = createLevel();
     const first = await load(level.file, level);
     const hero = first.sm.getActor("hero")!;
-    hero.object3D.position.set(4, 0, 0);
+    hero.transform.setLocalPosition({ x: 4, y: 0, z: 0 });
     hero.getComponent(Patrol)!.speed = 7;
     first.world.createActor("coin").addComponent(MeshRenderer);
     const capture = first.scene.capture();
@@ -207,7 +207,7 @@ describe("Systems.FileScene capture", () => {
 
     const reloaded = sm.getActor("hero")!;
     const patrol = reloaded.getComponent(Patrol)!;
-    assert.strictEqual(reloaded.object3D.position.x, 4);
+    assert.strictEqual(reloaded.transform.getLocalPosition().x, 4);
     assert.strictEqual(patrol.speed, 7);
     assert.strictEqual(patrol.target, sm.getActor("door"));
     assert.strictEqual(reloaded.getComponent(ModelComponent)!.model, "knight");

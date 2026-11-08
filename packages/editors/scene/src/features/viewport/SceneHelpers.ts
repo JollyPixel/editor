@@ -82,7 +82,7 @@ export class SceneHelpers extends ActorComponent {
       typeName: "SceneHelpers"
     });
     this.#binding = options.binding;
-    this.#scene = actor.world.sceneManager.getSource();
+    this.#scene = actor.world.sceneManager.graph.scene;
     this.#preferences = options.preferences;
 
     for (const bound of this.#binding.components()) {

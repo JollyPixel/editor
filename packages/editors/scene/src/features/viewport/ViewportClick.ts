@@ -73,7 +73,7 @@ export class ViewportClick extends ActorComponent {
     }
 
     const { camera, targets } = this.#options;
-    const scene = this.actor.world.sceneManager.getSource();
+    const scene = this.actor.world.sceneManager.graph.scene;
     const aimed = this.#raycaster;
     aimed.setFromCamera(mouse.viewportPositionTo(this.#pointer), camera.camera);
     if (InputCombination.Alt.evaluate(input)) {

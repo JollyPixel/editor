@@ -6,8 +6,9 @@ The audio system is built on top of Three.js Audio and provides three layers:
 - **GlobalAudioManager** — load, configure, and destroy `Audio` / `PositionalAudio` instances
 - **AudioBackground** — playlist-based background music with auto-advance, loop, and chaining
 
-`GlobalAudio` is created automatically by `World` and exposed
-as `world.audio`. The manager and background player are built on top of it.
+`GlobalAudio` is the world's `audio` with the three.js backend: pass it in
+`WorldOptions` (the runtime does). The manager and background player are
+built on top of it.
 
 ## 🔇 Browser autoplay policy
 
@@ -35,7 +36,7 @@ type GlobalAudioEvents = {
 ```
 
 ```ts
-interface GlobalAudio {
+class GlobalAudio {
   readonly listener: THREE.AudioListener;
   /** Same object as `listener`. */
   readonly threeAudioListener: THREE.AudioListener;

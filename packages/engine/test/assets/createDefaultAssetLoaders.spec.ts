@@ -20,7 +20,7 @@ import {
   TEXTURE_ASSET,
   TextureAssetLoader,
   createDefaultAssetLoaders
-} from "../../src/assets/index.ts";
+} from "../../src/three/assets/index.ts";
 
 describe("createDefaultAssetLoaders", () => {
   test("registers a loader for every built-in asset type", () => {

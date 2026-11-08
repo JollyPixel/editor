@@ -7,7 +7,7 @@ import * as THREE from "three/webgpu";
 import { AssetRecord } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { ModelAssetLoader } from "../../src/assets/index.ts";
+import { ModelAssetLoader } from "../../src/three/assets/index.ts";
 
 // CONSTANTS
 const kMeshoptTriangle = "oAAAATwAAAD//wE8AAAAfn0AAAEMAAAA/wEMAAAAfg" +

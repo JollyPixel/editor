@@ -6,18 +6,19 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/index.ts";
+import { Actor } from "../../../src/core/actor/index.ts";
 import {
   TextRenderer,
   type TextRendererOptions
-} from "../../../src/components/renderers/text/TextRenderer.ts";
-import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
+} from "../../../src/three/components/renderers/text/TextRenderer.ts";
+import { SceneManager } from "../../../src/core/systems/scene/SceneManager.ts";
+import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
 import { blockFont } from "../../helpers/text/blockFont.ts";
 
 function createText(
   options: TextRendererOptions = {}
 ) {
-  const world = { sceneManager: new SceneManager() };
+  const world = { sceneManager: new SceneManager(new ThreeSceneGraph()) };
   const actor = new Actor(world as any, { name: "label" });
 
   return actor.addComponentAndGet(TextRenderer, options);

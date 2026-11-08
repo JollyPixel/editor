@@ -9,7 +9,7 @@ import {
 import { KeyBindings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import { bindOrbitFocus } from "../../../src/components/index.ts";
+import { bindOrbitFocus } from "../../../src/three/components/index.ts";
 
 function escapeKeydown(): KeyboardEvent {
   const event = Object.assign(

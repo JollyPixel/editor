@@ -8,6 +8,7 @@ import {
   InputListener,
   SignalEvent
 } from "@jolly-pixel/engine";
+import * as THREE from "three";
 
 export class PlayerBehavior extends Behavior {
   onPlayerPunch = new SignalEvent();
@@ -31,7 +32,9 @@ export class PlayerBehavior extends Behavior {
   }
 
   awake() {
-    this.actor.object3D.rotateX(-Math.PI / 2);
+    this.actor.transform.rotateLocalEulerAngles(
+      new THREE.Euler(-Math.PI / 2, 0, 0)
+    );
   }
 
   start() {
@@ -58,11 +61,11 @@ export class PlayerBehavior extends Behavior {
     }
 
     if (input.keyboard.isDown("ArrowUp")) {
-      this.actor.object3D.position.z += this.speed;
+      this.actor.transform.moveLocal({ x: 0, y: 0, z: this.speed });
       this.model.animation.play("walk_loop");
     }
     else if (input.keyboard.isDown("ArrowDown")) {
-      this.actor.object3D.position.z -= this.speed;
+      this.actor.transform.moveLocal({ x: 0, y: 0, z: -this.speed });
       this.model.animation.play("walk_loop");
     }
     else if (input.mouse.isDown("left")) {

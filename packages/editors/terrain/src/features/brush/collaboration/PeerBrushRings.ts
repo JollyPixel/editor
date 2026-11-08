@@ -129,7 +129,7 @@ export class PeerBrushRings extends ActorComponent {
       inner: color
     });
     this.#rings.set(clientId, ring);
-    this.actor.object3D.add(ring);
+    this.actor.node.object3D.add(ring);
 
     return ring;
   }
@@ -151,7 +151,7 @@ export class PeerBrushRings extends ActorComponent {
       return;
     }
 
-    this.actor.object3D.remove(ring);
+    this.actor.node.object3D.remove(ring);
     ring.dispose();
     this.#rings.delete(clientId);
   }

@@ -4,6 +4,13 @@
 and swaps scenes at frame boundaries. Any component can request a scene
 synchronously.
 
+It is built on a [scene graph](scene-graph.md), which receives a node for
+every actor:
+
+```ts
+const sceneManager = new Systems.SceneManager(new Systems.ThreeSceneGraph());
+```
+
 ## Loading a scene
 
 ```ts
@@ -127,6 +134,10 @@ interface SceneLoad<TContext> {
 }
 
 class SceneManager<TContext> {
+  constructor(graph: SceneGraph);
+
+  /** A `ThreeSceneGraph` with the root entry. */
+  readonly graph: SceneGraph;
   readonly actors: ActorRegistry<TContext>;
   readonly tree: ActorTree<TContext>;
   readonly currentScene: Scene<TContext> | null;

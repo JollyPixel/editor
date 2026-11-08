@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import type {
   SceneActorFile,
   ScenePrefabs
-} from "../../../src/systems/scene/file/index.ts";
+} from "../../../src/core/systems/scene/file/index.ts";
 import {
   createInstance,
   type TagComponent
@@ -57,7 +57,7 @@ describe("Systems.SceneInstance prefabs", () => {
     const a = instance.actor("a")!;
     assert.deepEqual(sm.tree.children, [a, instance.actor("b")]);
     assert.strictEqual(a.name, "Tree A");
-    assert.strictEqual(a.object3D.visible, false);
+    assert.strictEqual(a.transform.getVisible(), false);
     assert.strictEqual(instance.actor("a/trunk")!.parent, a);
     assert.strictEqual(instance.actor("a/crown")!.parent, instance.actor("a/trunk"));
     assert.strictEqual(instance.actor("b/crown")!.parent, instance.actor("b/trunk"));
@@ -137,8 +137,8 @@ describe("Systems.SceneInstance prefabs", () => {
 
     const trunk = instance.actor("a/trunk")!;
     assert.strictEqual(trunk.name, "Birch");
-    assert.strictEqual(trunk.object3D.visible, false);
-    assert.strictEqual(trunk.object3D.position.x, 2);
+    assert.strictEqual(trunk.transform.getVisible(), false);
+    assert.strictEqual(trunk.transform.getLocalPosition().x, 2);
     const leaf = instance.component("a/leaf") as TagComponent;
     assert.strictEqual(leaf.label, "birch");
     assert.strictEqual(leaf.componentContext.assets.resolve("map"), "value:bark");
@@ -161,7 +161,7 @@ describe("Systems.SceneInstance prefabs", () => {
 
     const trunk = instance.actor("g/t/trunk")!;
     assert.strictEqual(trunk.name, "Level trunk");
-    assert.strictEqual(trunk.object3D.visible, false);
+    assert.strictEqual(trunk.transform.getVisible(), false);
   });
 
   test("applies new overrides to a live instance and rebuilds only the components they change", () => {

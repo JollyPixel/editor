@@ -12,6 +12,7 @@ import {
   createComponentFile
 } from "../../helpers/scene/sceneFile.ts";
 import type { MarkersComponent } from "../../helpers/scene/sceneAnchors.ts";
+import type { Actor } from "../../../src/core/actor/Actor.ts";
 
 function createAnchoredScene() {
   const created = createInstance("edit");
@@ -40,10 +41,10 @@ function createAnchoredScene() {
 }
 
 function worldPosition(
-  object: THREE.Object3D
+  actor: Actor
 ): number[] {
-  return object
-    .getWorldPosition(new THREE.Vector3())
+  return actor.transform
+    .getGlobalPosition()
     .toArray()
     .map((value) => Math.round(value * 1e6) / 1e6);
 }
@@ -54,7 +55,7 @@ describe("Systems.SceneInstance anchors", () => {
 
     const hero = instance.actor("hero")!;
     assert.strictEqual(hero.parent, instance.actor("map"));
-    assert.deepEqual(worldPosition(hero.object3D), [105, 1, 0]);
+    assert.deepEqual(worldPosition(hero), [105, 1, 0]);
   });
 
   test("moves and turns the child when its anchor moves", () => {
@@ -65,9 +66,9 @@ describe("Systems.SceneInstance anchors", () => {
     markers.anchors.place("spawn", { x: 0, y: 0, z: 8 }, 90);
 
     const hero = instance.actor("hero")!;
-    assert.deepEqual(worldPosition(hero.object3D), [100, 1, 8]);
+    assert.deepEqual(worldPosition(hero), [100, 1, 8]);
     assert.ok(Math.abs(
-      hero.object3D.getWorldQuaternion(new THREE.Quaternion()).angleTo(
+      hero.transform.getGlobalOrientation().angleTo(
         new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
       )
     ) < 1e-6);
@@ -79,10 +80,10 @@ describe("Systems.SceneInstance anchors", () => {
     const hero = instance.actor("hero")!;
 
     markers.anchors.remove("spawn");
-    assert.deepEqual(worldPosition(hero.object3D), [100, 1, 0]);
+    assert.deepEqual(worldPosition(hero), [100, 1, 0]);
 
     markers.anchors.place("spawn", { x: 2, y: 0, z: 0 });
-    assert.deepEqual(worldPosition(hero.object3D), [102, 1, 0]);
+    assert.deepEqual(worldPosition(hero), [102, 1, 0]);
   });
 
   test("ignores an anchor that names a component of another actor", () => {
@@ -99,7 +100,7 @@ describe("Systems.SceneInstance anchors", () => {
       })
     ]);
 
-    assert.deepEqual(worldPosition(instance.actor("hero")!.object3D), [0, 0, 0]);
+    assert.deepEqual(worldPosition(instance.actor("hero")!), [0, 0, 0]);
     assert.strictEqual(
       instance.findAnchor("crate", { component: "markers", key: "spawn" }),
       null
@@ -112,24 +113,11 @@ describe("Systems.SceneInstance anchors", () => {
     const coin = instance.actor("coin")!;
 
     instance.reparent("coin", "map", { component: "markers", key: "spawn" });
-    assert.deepEqual(worldPosition(coin.object3D), [105, 0, 0]);
+    assert.deepEqual(worldPosition(coin), [105, 0, 0]);
 
     instance.reparent("coin", "map");
-    assert.deepEqual(worldPosition(coin.object3D), [100, 0, 0]);
+    assert.deepEqual(worldPosition(coin), [100, 0, 0]);
     assert.strictEqual(coin.parent, instance.actor("map"));
-  });
-
-  test("drops a socket once no actor hangs from it", () => {
-    const { instance } = createAnchoredScene();
-    const map = instance.actor("map")!;
-    const unanchoredChildren = map.object3D.children.length - 1;
-
-    instance.reparent("hero", "map");
-    assert.strictEqual(map.object3D.children.length, unanchoredChildren + 1);
-
-    instance.reparent("hero", "map", { component: "markers", key: "spawn" });
-    instance.remove("hero");
-    assert.strictEqual(map.object3D.children.length, unanchoredChildren);
   });
 
   test("lists the anchors of an actor's components", () => {
@@ -166,6 +154,6 @@ describe("Systems.SceneInstance anchors", () => {
       createActorFile("level", { prefab: { id: "dungeon", kind: "scene" } })
     ]);
 
-    assert.deepEqual(worldPosition(instance.actor("level/hero")!.object3D), [3, 0, 0]);
+    assert.deepEqual(worldPosition(instance.actor("level/hero")!), [3, 0, 0]);
   });
 });

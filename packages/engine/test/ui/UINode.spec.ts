@@ -3,13 +3,14 @@ import { describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../../src/actor/index.ts";
-import { UINode } from "../../src/ui/UINode.ts";
-import { SceneManager } from "../../src/systems/scene/SceneManager.ts";
+import { Actor } from "../../src/core/actor/index.ts";
+import { UINode } from "../../src/three/ui/UINode.ts";
+import { SceneManager } from "../../src/core/systems/scene/SceneManager.ts";
+import { ThreeSceneGraph } from "../../src/three/scene/ThreeSceneGraph.ts";
 
 function createWorld() {
   return {
-    sceneManager: new SceneManager(),
+    sceneManager: new SceneManager(new ThreeSceneGraph()),
     input: {
       screen: {
         bounds: { left: -1, right: 1, top: 1, bottom: -1 }

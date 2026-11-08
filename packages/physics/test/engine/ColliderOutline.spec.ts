@@ -52,8 +52,8 @@ function outlineActor(
 ) {
   const world = createEngineWorld();
   const actor = world.createActor("collider");
-  actor.object3D.position.set(3, 0, 0);
-  actor.object3D.scale.set(...scale);
+  actor.transform.setLocalPosition(new THREE.Vector3(3, 0, 0));
+  actor.transform.setLocalScale(new THREE.Vector3(...scale));
   const outline = actor.addComponentAndGet(ColliderOutline, {
     ...RIGID_BODY_DEFAULTS,
     colliders: [
@@ -94,17 +94,17 @@ describe("ColliderOutline", () => {
     it(`outlines a ${name} at the size the body gets on a stretched actor`, () => {
       const { actor } = outlineActor(shape, kStretchedY);
 
-      assertBounds(worldBounds(actor.object3D), [3, 2, 0], halfSize);
+      assertBounds(worldBounds(actor.node.object3D), [3, 2, 0], halfSize);
     });
   }
 
   it("redraws when the actor scale changes", () => {
     const { actor, outline } = outlineActor(kShapeCases.sphere.shape, [1, 1, 1]);
 
-    actor.object3D.scale.set(3, 1, 1);
+    actor.transform.setLocalScale(new THREE.Vector3(3, 1, 1));
     outline.update();
 
-    assertBounds(worldBounds(actor.object3D), [3, 1, 0], [1.5, 1.5, 1.5]);
+    assertBounds(worldBounds(actor.node.object3D), [3, 1, 0], [1.5, 1.5, 1.5]);
   });
 
   it("removes its lines from the actor when destroyed", () => {
@@ -112,6 +112,6 @@ describe("ColliderOutline", () => {
 
     outline.destroy();
 
-    assert.equal(worldBounds(actor.object3D).isEmpty(), true);
+    assert.equal(worldBounds(actor.node.object3D).isEmpty(), true);
   });
 });

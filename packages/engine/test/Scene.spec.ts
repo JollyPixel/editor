@@ -8,8 +8,8 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor, ActorComponent } from "../src/actor/index.ts";
-import { Scene } from "../src/systems/scene/Scene.ts";
+import { Actor, ActorComponent } from "../src/core/actor/index.ts";
+import { Scene } from "../src/core/systems/scene/Scene.ts";
 import {
   ConcreteScene,
   createSceneSetup,

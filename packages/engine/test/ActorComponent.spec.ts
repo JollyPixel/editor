@@ -13,7 +13,7 @@ import {
   Actor,
   ActorComponent
 } from "../src/index.ts";
-import { Timers } from "../src/systems/Timers.ts";
+import { Timers } from "../src/core/systems/Timers.ts";
 import { createWorld } from "./helpers/actor/mockWorld.ts";
 
 class AssetConsumer extends ActorComponent {

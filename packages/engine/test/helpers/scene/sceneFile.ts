@@ -5,19 +5,19 @@ import { mock } from "node:test";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Logger } from "../../../src/systems/Logger.ts";
+import { Logger } from "../../../src/core/systems/Logger.ts";
 import {
   ComponentAssets,
   type ComponentContext,
   type SceneMode
-} from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
+} from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
 import type {
   JSONObject,
   SceneActorFile,
   SceneComponentFile,
   SceneEnvironmentFile,
   SceneFile
-} from "../../../src/systems/scene/file/SceneFile.ts";
+} from "../../../src/core/systems/scene/file/SceneFile.ts";
 
 export function createActorFile(
   id: string,

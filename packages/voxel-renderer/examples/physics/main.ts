@@ -74,7 +74,7 @@ const { world } = runtime;
 world.logger.setLevel("debug");
 world.logger.enableNamespace("*");
 
-const scene = world.sceneManager.getSource();
+const scene = world.sceneManager.graph.scene;
 scene.background = new THREE.Color("#87ceeb");
 
 const dirLight = new THREE.DirectionalLight(new THREE.Color("#ffffff"), 1.5);
@@ -202,8 +202,8 @@ for (let x = 23; x <= 29; x += 3) {
 }
 
 const sphere = world.createActor("sphere");
-sphere.object3D.position.set(15.5, 9, 15.5);
-sphere.object3D.add(new THREE.Mesh(
+sphere.transform.setLocalPosition({ x: 15.5, y: 9, z: 15.5 });
+sphere.node.object3D.add(new THREE.Mesh(
   new THREE.SphereGeometry(kSphereRadius, 24, 16),
   new THREE.MeshLambertMaterial({ color: 0xff3333 })
 ));
@@ -224,7 +224,7 @@ sphere
 world.createActor("camera")
   .addComponent(CameraComponent)
   .addComponent(FollowCamera, {
-    target: sphere.object3D,
+    target: sphere.node.object3D,
     offset: { x: 0, y: 6, z: 9 }
   });
 

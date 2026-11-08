@@ -2,14 +2,15 @@
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Transform } from "../../../src/actor/Transform.ts";
-import { ActorComponents } from "../../../src/actor/ActorComponents.ts";
-import { ActorRegistry } from "../../../src/systems/scene/ActorRegistry.ts";
+import { Transform } from "../../../src/core/actor/Transform.ts";
+import { ActorComponents } from "../../../src/core/actor/ActorComponents.ts";
+import { ActorRegistry } from "../../../src/core/systems/scene/ActorRegistry.ts";
 import {
   OrbitFlyCamera,
   type OrbitFlyCameraOptions
-} from "../../../src/components/camera/orbit-fly/OrbitFlyCamera.ts";
-import type { Actor } from "../../../src/actor/Actor.ts";
+} from "../../../src/three/components/camera/orbit-fly/OrbitFlyCamera.ts";
+import type { Actor } from "../../../src/core/actor/Actor.ts";
+import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
 
 // CONSTANTS
 const kFrame = 1 / 60;
@@ -26,6 +27,8 @@ export function unusedPostProcessing(): never {
 
 export interface CameraHarness {
   camera: OrbitFlyCamera;
+  graph: ThreeSceneGraph;
+  transform: Transform;
   readonly offset: THREE.Vector3;
   object: THREE.Object3D;
   position: THREE.Vector3;
@@ -50,8 +53,10 @@ export function createHarness(
   options: OrbitFlyCameraOptions = {}
 ): CameraHarness {
   const held = new Set<string>();
-  const sceneRoot = new THREE.Object3D();
-  const body = new THREE.Object3D();
+  const graph = new ThreeSceneGraph();
+  const node = graph.createNode({} as Actor);
+  const transform = new Transform(node);
+  const body = node.object3D;
   const keepAlives: Array<() => boolean> = [];
 
   let invalidations = 0;
@@ -66,7 +71,7 @@ export function createHarness(
 
   const actorValue = {
     components: new ActorComponents(),
-    transform: new Transform(body),
+    transform,
     world: {
       time: {
         delta: kFrame,
@@ -118,8 +123,8 @@ export function createHarness(
         }
       },
       sceneManager: {
-        actors: new ActorRegistry(sceneRoot),
-        getSource: () => sceneRoot
+        actors: new ActorRegistry(graph),
+        graph
       }
     }
   };
@@ -129,13 +134,15 @@ export function createHarness(
 
   return {
     camera,
+    graph,
+    transform,
     get offset() {
       return body.position.clone().sub(start);
     },
     object: body,
     position: body.position,
     orientation: body.quaternion,
-    sceneChildren: sceneRoot.children,
+    sceneChildren: graph.scene.children,
     keepAlives,
     invalidations: () => invalidations,
     hold(...codes: string[]): void {

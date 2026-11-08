@@ -1,7 +1,20 @@
 # Renderer
 
 `Renderer` is the drawing interface [World](world.md) depends on: resize,
-draw, clear, dispose, and waiting for pipeline compiles.
+draw, clear, dispose, and waiting for pipeline compiles. Each frame, `World`
+calls `draw(graph)` with its [scene graph](scene-graph.md); a renderer only
+accepts the graph of its own backend.
+
+`RenderComponent` holds what every backend needs from a camera: `depth`,
+`viewport` and `prepareRender(canvas)`. The three.js backend extends it as
+`ThreeRenderComponent` with `threeCamera` and `postProcessing`.
+
+## HeadlessRenderer
+
+`new HeadlessRenderer(canvas)` draws nothing. It keeps the registered render
+components, emits `draw` with a `null` source, and its `compiled()` resolves
+at once. Pair it with `HeadlessSceneGraph` to run a world without a GPU, as
+in tests or a simulation.
 
 ## ThreeRenderer
 
@@ -142,7 +155,7 @@ is disposed.
 
 ## Cameras (render components)
 
-A render component implements `RenderComponent`; in practice it is a
+A render component implements `ThreeRenderComponent`; in practice it is a
 [`CameraComponent`](../components/camera.md), which registers itself in
 `awake()`:
 

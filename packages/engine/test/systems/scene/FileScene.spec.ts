@@ -6,15 +6,15 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
-import { Scene } from "../../../src/systems/scene/Scene.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
+import { ActorComponent } from "../../../src/core/actor/ActorComponent.ts";
+import { Scene } from "../../../src/core/systems/scene/Scene.ts";
 import {
   ComponentDefinitions,
   FileScene,
   type ComponentDefinition,
   type ScenePrefabFile
-} from "../../../src/systems/scene/file/index.ts";
+} from "../../../src/core/systems/scene/file/index.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
 import {
@@ -200,8 +200,9 @@ describe("Systems.FileScene", () => {
     await load.done;
     sm.beginFrame();
 
-    const background = sm.default.background;
-    const fog = sm.default.fog;
+    const { scene: threeScene } = sm.graph;
+    const background = threeScene.background;
+    const fog = threeScene.fog;
     assert.ok(background instanceof THREE.Color);
     assert.strictEqual(background.getHexString(), "ff0000");
     assert.ok(fog instanceof THREE.Fog);
@@ -209,7 +210,7 @@ describe("Systems.FileScene", () => {
 
     sm.unloadScene(scene);
 
-    assert.strictEqual(sm.default.background, null);
-    assert.strictEqual(sm.default.fog, null);
+    assert.strictEqual(threeScene.background, null);
+    assert.strictEqual(threeScene.fog, null);
   });
 });

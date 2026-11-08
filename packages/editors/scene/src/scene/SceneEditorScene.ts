@@ -111,7 +111,7 @@ export class SceneEditorScene extends Systems.Scene {
     } = this.#options;
     const { world } = this;
     const teardown = this.#teardown;
-    const scene = world.sceneManager.getSource();
+    const scene = world.sceneManager.graph.scene;
     const grid = new Grid({
       cell: { size: 1 },
       section: { size: 10 }
@@ -127,7 +127,7 @@ export class SceneEditorScene extends Systems.Scene {
       .addComponentAndGet(OrbitFlyCamera, kCameraPreset);
     const history = createSceneHistory(document);
     teardown.defer(() => history.dispose());
-    const environment = new Systems.SceneEnvironment(world);
+    const environment = world.sceneManager.graph.createEnvironment(world);
     teardown.defer(() => environment.dispose());
     const assets = new EditAssets(components, this.#options.session, {
       loaded: () => binding.rebuild()

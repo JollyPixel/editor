@@ -107,7 +107,7 @@ describe("VoxelModelDefinition", () => {
     probe.source.document.addBlock({ name: "Body" });
 
     assert.deepEqual(probe.attached, [renderer.view]);
-    assert.equal(renderer.view.root.parent, actor.object3D);
+    assert.equal(renderer.view.root.parent, actor.node.object3D);
     assert.equal(frames.invalidations, 1);
 
     renderer.destroy();

@@ -12,6 +12,7 @@ import {
   SceneActorComponent,
   SignalEvent
 } from "@jolly-pixel/engine";
+import * as THREE from "three";
 
 export class PlayerBehavior extends Behavior {
   onPlayerPunch = new SignalEvent();
@@ -23,7 +24,9 @@ export class PlayerBehavior extends Behavior {
   model: ModelRenderer;
 
   awake() {
-    this.actor.object3D.rotateX(-Math.PI / 2);
+    this.actor.transform.rotateLocalEulerAngles(
+      new THREE.Euler(-Math.PI / 2, 0, 0)
+    );
 
     this.model.animation.setClipNameRewriter(
       (name) => name.slice(name.indexOf("|") + 1).toLowerCase()

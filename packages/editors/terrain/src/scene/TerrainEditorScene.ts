@@ -142,7 +142,7 @@ export class TerrainEditorScene extends Systems.Scene {
   }
 
   override awake(): void {
-    const scene = this.world.sceneManager.getSource();
+    const scene = this.world.sceneManager.graph.scene;
     const sun = new THREE.DirectionalLight("#fff4e0", 2.4);
     sun.position.set(-0.6, 1, 0.35);
     scene.add(sun, new THREE.HemisphereLight("#b9d4ff", "#4a3f30", 0.9));

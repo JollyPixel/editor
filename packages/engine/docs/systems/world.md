@@ -7,13 +7,17 @@ runs the frame loop. A game has one world, reached as `actor.world`.
 ## Creating a game instance
 
 ```ts
-import { Systems } from "@jolly-pixel/engine";
+import { GlobalAudio, Systems } from "@jolly-pixel/engine";
 
 const canvas = document.querySelector("canvas")!;
-const sceneManager = new Systems.SceneManager();
+const sceneManager = new Systems.SceneManager(new Systems.ThreeSceneGraph());
 const renderer = await Systems.ThreeRenderer.create(canvas);
 
-const game = new Systems.World(renderer, { sceneManager, assetCoordinator });
+const game = new Systems.World(renderer, {
+  sceneManager,
+  assetCoordinator,
+  audio: new GlobalAudio()
+});
 ```
 
 The constructor accepts a [Renderer](renderer.md) and a
@@ -27,8 +31,8 @@ interface WorldOptions {
   assetCoordinator: AssetCoordinator;
   /** Input system for keyboard, mouse, gamepad, etc. @default auto-created from canvas */
   input?: Input;
-  /** Global audio manager. @default new GlobalAudio() */
-  audio?: GlobalAudio;
+  /** Master volume. @default sceneManager.graph.createAudio() */
+  audio?: WorldAudio;
   /** Read by components as `this.context`. @default {} */
   context?: TContext;
   /** Enable the exit mechanism on the input system. @default false */

@@ -32,6 +32,7 @@ import { scaleCollider } from "./shapes/scale.ts";
 const kPosition = new THREE.Vector3();
 const kRotation = new THREE.Quaternion();
 const kScale = new THREE.Vector3();
+const kMatrix = new THREE.Matrix4();
 
 export type ColliderSettings = Required<Omit<ColliderDesc, "rotation">>;
 
@@ -98,9 +99,7 @@ export class RigidBody extends ActorComponent {
     this.settings = settings;
 
     const system = PhysicsSystem.require(actor.world);
-    const { object3D } = actor;
-    object3D.updateWorldMatrix(true, false);
-    object3D.matrixWorld.decompose(
+    actor.transform.getGlobalMatrix(kMatrix).decompose(
       this.#current.position,
       this.#current.rotation,
       kScale
@@ -172,11 +171,10 @@ export class RigidBody extends ActorComponent {
   }
 
   #pushKinematicPose(): void {
-    const { object3D } = this.actor;
-    object3D.updateWorldMatrix(true, false);
+    const { transform } = this.actor;
     this.body.moveTo(
-      object3D.getWorldPosition(kPosition),
-      object3D.getWorldQuaternion(kRotation)
+      transform.getGlobalPosition(kPosition),
+      transform.getGlobalOrientation(kRotation)
     );
   }
 

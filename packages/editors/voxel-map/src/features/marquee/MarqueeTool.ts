@@ -119,7 +119,7 @@ export class MarqueeTool extends ActorComponent {
   }
 
   awake(): void {
-    this.actor.addChildren(this.#box);
+    this.actor.node.object3D.add(this.#box);
   }
 
   override destroy(): void {

@@ -28,14 +28,6 @@ const kDown = {
   maxDistance: 100
 };
 
-function worldPosition(
-  object3D: THREE.Object3D
-): THREE.Vector3 {
-  object3D.updateWorldMatrix(true, false);
-
-  return object3D.getWorldPosition(new THREE.Vector3());
-}
-
 describe("PhysicsSystem", () => {
   it("is required before a physics component can be added", () => {
     const world = createEngineWorld();
@@ -125,9 +117,9 @@ describe("RigidBody", () => {
   it("creates its body at the actor world pose with its settings", () => {
     const { world, physics } = createPhysicsHarness();
     const parent = world.createActor("parent");
-    parent.object3D.position.set(10, 0, 0);
+    parent.transform.setLocalPosition(new THREE.Vector3(10, 0, 0));
     const actor = world.createActor("box", { parent });
-    actor.object3D.position.set(0, 2, 0);
+    actor.transform.setLocalPosition(new THREE.Vector3(0, 2, 0));
 
     actor.addComponentAndGet(RigidBody, {
       kind: "dynamic",
@@ -150,7 +142,7 @@ describe("RigidBody", () => {
 
     tick({ steps: 1, alpha: 0.25 });
 
-    assert.equal(worldPosition(actor.object3D).y, -0.25);
+    assert.equal(actor.transform.getGlobalPosition().y, -0.25);
   });
 
   it("pushes a kinematic actor pose to its body before each step", () => {
@@ -158,7 +150,7 @@ describe("RigidBody", () => {
     const actor = world.createActor("platform");
     actor.addComponentAndGet(RigidBody, { kind: "kinematic" });
 
-    actor.object3D.position.set(4, 0, 0);
+    actor.transform.setLocalPosition(new THREE.Vector3(4, 0, 0));
     tick();
 
     assert.deepEqual(
@@ -175,7 +167,7 @@ describe("RigidBody", () => {
     rigidBody.teleport({ x: 0, y: 8, z: 0 });
     tick({ steps: 0, alpha: 0.5 });
 
-    assert.equal(worldPosition(actor.object3D).y, 8);
+    assert.equal(actor.transform.getGlobalPosition().y, 8);
   });
 
   it("attaches one unit box by default, or the colliders it is given", () => {
@@ -213,9 +205,9 @@ describe("RigidBody", () => {
   it("scales collider shapes and offsets by the actor's world scale", () => {
     const { world } = createPhysicsHarness();
     const parent = world.createActor("parent");
-    parent.object3D.scale.set(2, 2, 2);
+    parent.transform.setLocalScale(new THREE.Vector3(2, 2, 2));
     const actor = world.createActor("plank", { parent });
-    actor.object3D.scale.set(2, 0.5, 1);
+    actor.transform.setLocalScale(new THREE.Vector3(2, 0.5, 1));
 
     const rigidBody = actor.addComponentAndGet(RigidBody, {
       colliders: [

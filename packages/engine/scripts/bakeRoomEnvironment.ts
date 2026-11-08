@@ -14,7 +14,7 @@ const kPackageRoot = path.join(import.meta.dirname, "..");
 const kThreeRoot = path.join(kPackageRoot, "node_modules/three");
 const kOutput = path.join(
   kPackageRoot,
-  "src/systems/rendering/environment/roomEnvironment.bin"
+  "src/three/rendering/environment/roomEnvironment.bin"
 );
 const kContentTypes: Record<string, string> = {
   ".html": "text/html",
@@ -101,7 +101,7 @@ async function bakeInPage(
     "three/addons/environments/RoomEnvironment.js"
   );
   const { BakedRoomEnvironment } = await import(
-    "#src/systems/rendering/environment/BakedRoomEnvironment.ts"
+    "#src/three/rendering/environment/BakedRoomEnvironment.ts"
   );
 
   const renderer = new THREE.WebGPURenderer();

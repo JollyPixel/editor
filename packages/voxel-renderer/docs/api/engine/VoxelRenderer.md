@@ -8,7 +8,7 @@ disposes it on `destroy()`. Requires the optional peer `@jolly-pixel/engine`.
 import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";
 
 const renderer = actor.addComponentAndGet(VoxelRenderer, {
-  focus: cameraActor.object3D,
+  focus: cameraActor.node.object3D,
   blocksets,
   document: {
     blocks,

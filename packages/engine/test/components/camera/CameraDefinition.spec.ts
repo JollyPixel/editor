@@ -3,13 +3,13 @@ import { describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
-import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
-import { CameraDefinition } from "../../../src/components/camera/CameraDefinition.ts";
-import type { SceneMode } from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
+import { ActorComponent } from "../../../src/core/actor/ActorComponent.ts";
+import { CameraDefinition } from "../../../src/three/components/camera/CameraDefinition.ts";
+import type { SceneMode } from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createComponentContext } from "../../helpers/scene/sceneFile.ts";
-import { Viewport } from "../../../src/systems/rendering/Viewport.ts";
+import { Viewport } from "../../../src/core/systems/rendering/Viewport.ts";
 
 function createCamera(
   mode: SceneMode

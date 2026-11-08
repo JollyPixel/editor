@@ -1,7 +1,11 @@
 # Transform
 
 `actor.transform` reads and writes the actor's position, orientation and
-scale, in local (parent) or global (world) space.
+scale, in local (parent) or global (world) space. The engine owns these
+values: every change is pushed to the actor's
+[scene graph node](../systems/scene-graph.md), and world matrices are
+computed by the transform itself. The math types are three.js ones
+(`Vector3`, `Quaternion`, `Matrix4`, `Euler`).
 
 Setters and mutating methods return `this`. Getters write into the optional
 object they are given, or return a new one.
@@ -68,16 +72,51 @@ Returns the `Transform` behind a `TransformLike`.
 
 ### `getVisible(): boolean`
 
-Returns `true` if the underlying `THREE.Object3D` is visible.
+Returns the transform's own visibility.
 
 ### `setVisible(visible): Transform`
 
-Sets the visibility of the object.
+Sets the visibility and pushes it to the node.
 
 ### `visibleInHierarchy: boolean`
 
-`false` when the object or one of its ancestors is hidden. The same walk over
-any `THREE.Object3D` is exported as `isVisibleInHierarchy(object)`.
+`false` when the transform or one of its ancestors is hidden. The same walk
+over any `THREE.Object3D` is exported as `isVisibleInHierarchy(object)`.
+
+## Hierarchy
+
+The actor registry keeps the transform hierarchy in step with the actor
+tree. These members serve standalone transforms and tests.
+
+### `parent: Transform | null`
+
+The transform this one is attached to.
+
+### `attach(parent, keepWorld?): Transform`
+
+Attaches to `parent`, or to the root with `null`, and drops the socket.
+`keepWorld` keeps the global pose instead of the local one.
+@default `false`
+
+### `socket: TransformSocket | null`
+
+### `seat(socket): Transform`
+
+A socket is an extra matrix between the parent and the local pose: the global
+matrix is `parent × socket × local`. [Scene anchors](../systems/scene-file.md#anchors)
+seat anchored actors on one. The node receives the socket and the local
+pose separately, so a node's own pose is always the local one.
+
+```ts
+interface TransformSocket {
+  readonly matrix: Readonly<THREE.Matrix4>;
+}
+```
+
+### `detach(): void`
+
+Forgets the parent and socket without touching the node, and marks the
+global matrix stale. Destruction calls it.
 
 ## Local Space
 
@@ -113,6 +152,10 @@ Copies the local scale into `scale` and returns it.
 
 Sets the local scale directly from `scale`.
 
+### `place(position, quaternion, scale): Transform`
+
+Sets the local position, orientation and scale in one change.
+
 ### `moveLocal(offset): Transform`
 
 Translates the object by `offset` in local (parent) space.
@@ -139,8 +182,8 @@ Copies the world matrix into `matrix` and returns it.
 ### `setGlobalMatrix(matrix): Transform`
 
 Decomposes `matrix` into position, orientation, and scale, converting
-from world space to local space relative to the parent. No-op if the
-object has no parent.
+from world space to local space relative to the parent. A root transform
+takes it as its local matrix.
 
 ### `getGlobalPosition(position?): Vector3`
 
@@ -149,7 +192,7 @@ Extracts the world position into `position` and returns it.
 ### `setGlobalPosition(pos): Transform`
 
 Converts `pos` from world space to the parent's local space and
-applies it. No-op if the object has no parent.
+applies it.
 
 ### `getGlobalOrientation(orientation?): Quaternion`
 
@@ -167,7 +210,7 @@ Computes the world-space Euler angles into `angles` and returns them.
 ### `setGlobalEulerAngles(eulerAngles): Transform`
 
 Converts world-space Euler angles to a local quaternion relative to
-the parent and applies it. No-op if the object has no parent.
+the parent and applies it.
 
 ### `getParentGlobalOrientation(orientation?): Quaternion`
 

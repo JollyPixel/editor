@@ -96,8 +96,7 @@ export async function gizmoHandlePoints(
 
   const [grab, release] = await editor.evaluate(({ editing, runtime }, axisName) => {
     const kDragRatio = 3;
-    const helper = runtime.world.sceneManager
-      .getSource()
+    const helper = runtime.world.sceneManager.graph.scene
       .getObjectByName("transform-gizmo");
     if (helper === undefined) {
       throw new Error("The transform gizmo is missing.");

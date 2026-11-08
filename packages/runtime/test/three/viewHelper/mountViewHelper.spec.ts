@@ -62,7 +62,7 @@ const kLocations: Array<[ViewHelperPosition, HelperLocation]> = [
   ]
 ];
 
-type DrawHandler = Systems.RendererEvents["draw"];
+type DrawHandler = Systems.ThreeRendererEvents["draw"];
 
 interface HelperLocation {
   top: number | null;
@@ -206,7 +206,7 @@ class FakeSource {
 
 class FakeRenderer implements ViewHelperHost {
   readonly canvas = document.createElement("canvas");
-  readonly renderComponents: Systems.RenderComponent[] = [];
+  readonly renderComponents: Systems.ThreeRenderComponent[] = [];
   readonly handlers = new Set<DrawHandler>();
   readonly source = new FakeSource();
 
@@ -219,9 +219,9 @@ class FakeRenderer implements ViewHelperHost {
     return this;
   }
 
-  off<Key extends keyof Systems.RendererEvents>(
+  off<Key extends keyof Systems.ThreeRendererEvents>(
     _type: Key,
-    handler: Systems.RendererEvents[Key]
+    handler: Systems.ThreeRendererEvents[Key]
   ): void {
     this.handlers.delete(handler as DrawHandler);
   }
@@ -244,7 +244,7 @@ function createSettings(
 
 function createRenderComponent(
   depth: number
-): Systems.RenderComponent {
+): Systems.ThreeRenderComponent {
   return {
     threeCamera: new THREE.PerspectiveCamera(),
     depth,

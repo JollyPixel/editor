@@ -7,7 +7,8 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { Actor, Transform } from "../src/index.ts";
-import { SceneManager } from "../src/systems/scene/SceneManager.ts";
+import { SceneManager } from "../src/core/systems/scene/SceneManager.ts";
+import { ThreeSceneGraph } from "../src/three/scene/ThreeSceneGraph.ts";
 
 function assertQuaternionClose(
   actual: THREE.Quaternion,
@@ -30,27 +31,24 @@ function assertVectorClose(
 }
 
 function createChild() {
-  const parent = new THREE.Group();
-  parent.position.set(2, -1, 4);
-  parent.quaternion.setFromEuler(new THREE.Euler(0.3, 1.1, 0));
-  const object = new THREE.Group();
-  object.position.set(1, 2, 3);
-  parent.add(object);
-  parent.updateMatrixWorld();
+  const parent = new Transform()
+    .setLocalPosition({ x: 2, y: -1, z: 4 })
+    .setLocalEulerAngles(new THREE.Euler(0.3, 1.1, 0));
+  const transform = new Transform()
+    .attach(parent)
+    .setLocalPosition({ x: 1, y: 2, z: 3 });
 
   return {
     parent,
-    transform: new Transform(object)
+    transform
   };
 }
 
 describe("Transform", () => {
   test("should read back the global orientation it was given", () => {
-    const parent = new THREE.Group();
-    parent.quaternion.setFromEuler(new THREE.Euler(0.3, 1.1, 0));
-    const object = new THREE.Group();
-    parent.add(object);
-    const transform = new Transform(object);
+    const parent = new Transform()
+      .setLocalEulerAngles(new THREE.Euler(0.3, 1.1, 0));
+    const transform = new Transform().attach(parent);
     const target = new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.4, 0.2, 0.9));
 
     transform.setGlobalOrientation(target);
@@ -59,9 +57,7 @@ describe("Transform", () => {
   });
 
   test("should apply euler angles like the matching quaternion", () => {
-    const object = new THREE.Group();
-    new THREE.Group().add(object);
-    const transform = new Transform(object);
+    const transform = new Transform();
     const euler = new THREE.Euler(0.1, 0.2, 0.3);
 
     transform.rotateLocalEulerAngles(euler);
@@ -74,11 +70,9 @@ describe("Transform", () => {
 
   test("should face another transform under a rotated parent", () => {
     const { transform } = createChild();
-    const target = new THREE.Group();
-    target.position.set(5, 3, -2);
-    target.updateMatrixWorld();
+    const target = new Transform().setLocalPosition({ x: 5, y: 3, z: -2 });
 
-    transform.lookAt(new Transform(target));
+    transform.lookAt(target);
 
     const expected = new THREE.Vector3(5, 3, -2)
       .sub(transform.getGlobalPosition())
@@ -127,9 +121,7 @@ describe("Transform", () => {
   });
 
   test("should move along its own orientation", () => {
-    const object = new THREE.Group();
-    new THREE.Group().add(object);
-    const transform = new Transform(object);
+    const transform = new Transform();
     transform.setLocalEulerAngles(new THREE.Euler(0, Math.PI / 2, 0));
 
     transform.moveOriented({ x: 0, y: 0, z: -1 });
@@ -143,11 +135,7 @@ describe("Transform", () => {
     ["moveUp", new THREE.Vector3(10, 2, 0)]
   ] as const) {
     test(`should ${method} from its current position`, () => {
-      const object = new THREE.Group();
-      new THREE.Group().add(object);
-      object.position.set(10, 0, 0);
-      object.updateMatrixWorld();
-      const transform = new Transform(object);
+      const transform = new Transform().setLocalPosition({ x: 10, y: 0, z: 0 });
 
       transform[method](2);
 
@@ -159,23 +147,54 @@ describe("Transform", () => {
     const { parent, transform } = createChild();
 
     assert.strictEqual(transform.visibleInHierarchy, true);
-    parent.visible = false;
+    parent.setVisible(false);
     assert.strictEqual(transform.visibleInHierarchy, false);
   });
 
   test("should measure the distance to another transform", () => {
     const { transform } = createChild();
-    const other = new THREE.Group();
-    other.position.copy(transform.getGlobalPosition()).add(new THREE.Vector3(3, 4, 0));
-    other.updateMatrixWorld();
+    const other = new Transform().setLocalPosition(
+      transform.getGlobalPosition().add(new THREE.Vector3(3, 4, 0))
+    );
 
-    assert.ok(Math.abs(transform.distanceTo(new Transform(other)) - 5) < 1e-6);
+    assert.ok(Math.abs(transform.distanceTo(other) - 5) < 1e-6);
+  });
+
+  test("should follow an ancestor moved after its global position was read", () => {
+    const grandparent = new Transform();
+    const parent = new Transform().attach(grandparent);
+    const transform = new Transform()
+      .attach(parent)
+      .setLocalPosition({ x: 1, y: 0, z: 0 });
+    transform.getGlobalPosition();
+
+    grandparent.setLocalPosition({ x: 0, y: 5, z: 0 });
+    parent.getGlobalPosition();
+    grandparent.moveLocal({ x: 2, y: 0, z: 0 });
+
+    assertVectorClose(transform.getGlobalPosition(), new THREE.Vector3(3, 5, 0));
+  });
+
+  test("should offset its global pose by the socket it is seated on", () => {
+    const parent = new Transform().setLocalPosition({ x: 10, y: 0, z: 0 });
+    const socket = {
+      matrix: new THREE.Matrix4().makeTranslation(0, 3, 0)
+    };
+    const transform = new Transform()
+      .attach(parent)
+      .setLocalPosition({ x: 1, y: 0, z: 0 })
+      .seat(socket);
+
+    assertVectorClose(transform.getGlobalPosition(), new THREE.Vector3(11, 3, 0));
+
+    transform.setGlobalPosition({ x: 0, y: 0, z: 0 });
+    assertVectorClose(transform.getLocalPosition(), new THREE.Vector3(-10, -3, 0));
   });
 });
 
 describe("Actor.setParent", () => {
   test("should keep the world position when reparenting", () => {
-    const world = { sceneManager: new SceneManager() };
+    const world = { sceneManager: new SceneManager(new ThreeSceneGraph()) };
     const parent = new Actor(world as any, { name: "parent" });
     parent.transform.setLocalPosition({ x: 10, y: 0, z: 0 });
     const child = new Actor(world as any, { name: "child" });
@@ -186,12 +205,12 @@ describe("Actor.setParent", () => {
     assert.deepEqual(child.transform.getGlobalPosition().toArray(), [1, 2, 3]);
     assert.deepEqual(child.transform.getLocalPosition().toArray(), [-9, 2, 3]);
     assert.ok(parent.children.includes(child));
-    assert.strictEqual(child.object3D.parent, parent.object3D);
+    assert.strictEqual(child.node.object3D.parent, parent.node.object3D);
     assert.ok(!world.sceneManager.tree.children.includes(child));
   });
 
   test("should move an actor back to the scene root", () => {
-    const world = { sceneManager: new SceneManager() };
+    const world = { sceneManager: new SceneManager(new ThreeSceneGraph()) };
     const parent = new Actor(world as any, { name: "parent" });
     parent.transform.setLocalPosition({ x: 10, y: 0, z: 0 });
     const child = new Actor(world as any, { name: "child", parent });
@@ -199,7 +218,7 @@ describe("Actor.setParent", () => {
     child.setParent(null);
 
     assert.strictEqual(child.parent, null);
-    assert.strictEqual(child.object3D.parent, world.sceneManager.getSource());
+    assert.strictEqual(child.node.object3D.parent, (world as any).sceneManager.graph.scene);
     assert.ok(world.sceneManager.tree.children.includes(child));
     assert.deepEqual(child.transform.getGlobalPosition().toArray(), [10, 0, 0]);
   });

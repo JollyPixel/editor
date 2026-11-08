@@ -54,6 +54,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
   readonly #selectionColor: THREE.Color;
   readonly #style: RegionPreviewStyle;
   readonly #targetPosition: THREE.Vector3;
+  readonly #angles = new THREE.Euler();
   #selected = false;
 
   constructor(
@@ -92,15 +93,15 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
       faceRanges: this.#shape.faceRanges
     });
 
-    this.actor.addChildren(
+    this.actor.node.object3D.add(
       this.mesh,
       ...this.#shape.decorations
     );
-    this.#targetPosition = this.actor.object3D.position.clone();
+    this.#targetPosition = this.actor.transform.getLocalPosition();
   }
 
   get rotation(): THREE.Euler {
-    return this.actor.object3D.rotation;
+    return this.#angles;
   }
 
   follow(
@@ -130,7 +131,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
   rotateTo(
     rotation: THREE.Euler
   ): void {
-    this.actor.object3D.rotation.copy(rotation);
+    this.actor.transform.setLocalEulerAngles(this.#angles.copy(rotation));
   }
 
   dispose(): void {
@@ -140,14 +141,15 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
   update(
     deltaTime: number
   ): void {
-    const { object3D } = this.actor;
+    const { transform } = this.actor;
     if (this.#style.rotating) {
-      object3D.rotation.x += kRotationSpeedX * deltaTime;
-      object3D.rotation.y += kRotationSpeedY * deltaTime;
+      this.#angles.x += kRotationSpeedX * deltaTime;
+      this.#angles.y += kRotationSpeedY * deltaTime;
+      transform.setLocalEulerAngles(this.#angles);
     }
 
     const alpha = 1 - Math.exp(-kPositionLerpRate * deltaTime);
-    object3D.position.lerp(
+    transform.lerpPosition(
       this.#targetPosition,
       alpha
     );

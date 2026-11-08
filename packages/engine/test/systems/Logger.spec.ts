@@ -3,7 +3,7 @@ import { describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Logger } from "../../src/systems/Logger.ts";
+import { Logger } from "../../src/core/systems/Logger.ts";
 
 function createAdapter() {
   return {

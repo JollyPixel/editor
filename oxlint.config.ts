@@ -230,6 +230,27 @@ export default defineConfig(typescriptConfig({
       }
     },
     {
+      files: ["packages/engine/src/core/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error", {
+            patterns: [
+              {
+                group: ["three", "three/*", "**/three/**"],
+                message: "The engine core stays renderer-agnostic: three.js math comes from core/math.ts, the rest lives in src/three/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      files: ["packages/engine/src/core/math.ts"],
+      rules: {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
       files: [
         "packages/studio/server/**",
         "packages/studio/shared/**",

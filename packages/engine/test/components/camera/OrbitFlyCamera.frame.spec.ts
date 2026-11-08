@@ -9,7 +9,7 @@ import {
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { frameBounds } from "../../../src/components/camera/orbit-fly/cameraFraming.ts";
+import { frameBounds } from "../../../src/three/components/camera/orbit-fly/cameraFraming.ts";
 import { createHarness } from "../../helpers/camera/orbitFlyHarness.ts";
 
 function box(

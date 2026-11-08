@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import {
   Systems,
+  findActor,
   type Actor,
   type Component
 } from "@jolly-pixel/engine";
@@ -177,10 +178,10 @@ export class SceneBinding
   ): THREE.Box3 {
     const bounds = new THREE.Box3();
     for (const id of ids) {
-      const object = this.#instance.actor(id)?.object3D;
-      if (object !== undefined) {
-        bounds.expandByObject(object);
-        bounds.expandByPoint(object.getWorldPosition(kWorldPosition));
+      const actor = this.#instance.actor(id);
+      if (actor !== null) {
+        bounds.expandByObject(actor.node.object3D);
+        bounds.expandByPoint(actor.transform.getGlobalPosition(kWorldPosition));
       }
     }
 
@@ -192,9 +193,10 @@ export class SceneBinding
   ): string | null {
     let current: THREE.Object3D | null = object;
     while (current !== null) {
-      const id = this.#instance.actorId(current) ??
-        this.#pickTargets.get(current);
-      if (id !== undefined) {
+      const id = this.#nodeActorId(current) ??
+        this.#pickTargets.get(current) ??
+        null;
+      if (id !== null) {
         return this.#documentActorId(id);
       }
       current = current.parent;
@@ -258,7 +260,7 @@ export class SceneBinding
   #documentActorId(
     id: string
   ): string | null {
-    let current: THREE.Object3D | null = this.#instance.actor(id)?.object3D ?? null;
+    let current = this.#instance.actor(id);
     while (current !== null) {
       const actorId = this.#instance.actorId(current);
       if (actorId !== null && this.#document.tree.has(actorId)) {
@@ -268,6 +270,14 @@ export class SceneBinding
     }
 
     return null;
+  }
+
+  #nodeActorId(
+    object: THREE.Object3D
+  ): string | null {
+    const actor = findActor(object);
+
+    return actor?.node.object3D === object ? this.#instance.actorId(actor) : null;
   }
 
   #applyChange(

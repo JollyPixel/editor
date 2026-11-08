@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
+import { disposeObject3D, type Actor } from "@jolly-pixel/engine";
 import * as THREE from "three";
-import type { Actor } from "@jolly-pixel/engine";
 import { AreaBox } from "@jolly-pixel/three";
 import type {
   VoxelObjectJSON,
@@ -148,7 +148,7 @@ export class ObjectAreaScene {
         color: object.color,
         displayName: object.data.name
       });
-      this.#actor.addChildren(created);
+      this.#actor.node.object3D.add(created);
       this.#areas.set(key, created);
 
       return;
@@ -179,7 +179,7 @@ export class ObjectAreaScene {
     }
 
     this.#onRemoving(key);
-    this.#actor.removeChildren(area);
+    disposeObject3D(area);
     this.#areas.delete(key);
   }
 }

@@ -7,15 +7,15 @@ import * as THREE from "three/webgpu";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/Actor.ts";
+import { Actor } from "../../../src/core/actor/Actor.ts";
 import {
   shaderTextureSlot,
   type Shader,
   type ShaderUniformValues
-} from "../../../src/assets/shader.ts";
-import { MeshDefinition } from "../../../src/components/renderers/mesh/MeshDefinition.ts";
-import { ComponentAssets } from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
-import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
+} from "../../../src/three/assets/shader.ts";
+import { MeshDefinition } from "../../../src/three/components/renderers/mesh/MeshDefinition.ts";
+import { ComponentAssets } from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
+import type { JSONObject } from "../../../src/core/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 
 interface MeshAssetsFixture {
@@ -109,7 +109,7 @@ describe("Components.MeshDefinition", () => {
     });
 
     const mesh = component.threeMesh;
-    assert.strictEqual(mesh.parent, actor.object3D);
+    assert.strictEqual(mesh.parent, actor.node.object3D);
     assert.ok(mesh.geometry instanceof THREE.SphereGeometry);
     assert.strictEqual(mesh.geometry.parameters.radius, 2);
     const material = standardMaterial(mesh);

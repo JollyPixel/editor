@@ -7,7 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Timers } from "../../src/systems/Timers.ts";
+import { Timers } from "../../src/core/systems/Timers.ts";
 
 describe("Systems.Timers", () => {
   test("fires a timer once its delay has elapsed, then drops it", () => {

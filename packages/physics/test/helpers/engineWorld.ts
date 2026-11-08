@@ -15,7 +15,7 @@ export interface TickOptions {
 }
 
 export function createEngineWorld() {
-  const sceneManager = new Systems.SceneManager();
+  const sceneManager = new Systems.SceneManager(new Systems.ThreeSceneGraph());
   const world = new Systems.World(
     {
       canvas: {},

@@ -87,8 +87,8 @@ export class SceneGizmo {
     if (actor === null) {
       this.#controls.detach();
     }
-    else if (this.#controls.target !== actor.object3D) {
-      this.#controls.attach(actor.object3D);
+    else if (this.#controls.target !== actor.node.object3D) {
+      this.#controls.attach(actor.node.object3D);
     }
   };
 

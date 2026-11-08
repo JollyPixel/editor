@@ -7,16 +7,17 @@ import * as THREE from "three/webgpu";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { Actor } from "../../../src/actor/index.ts";
-import type { Model } from "../../../src/assets/model.ts";
-import type { Shader } from "../../../src/assets/shader.ts";
-import { ModelDefinition } from "../../../src/components/renderers/model/ModelDefinition.ts";
+import { Actor } from "../../../src/core/actor/index.ts";
+import type { Model } from "../../../src/three/assets/model.ts";
+import type { Shader } from "../../../src/three/assets/shader.ts";
+import { ModelDefinition } from "../../../src/three/components/renderers/model/ModelDefinition.ts";
 import {
   ComponentAssets,
   type SceneMode
-} from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
-import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
-import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
+} from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
+import type { JSONObject } from "../../../src/core/systems/scene/file/SceneFile.ts";
+import { SceneManager } from "../../../src/core/systems/scene/SceneManager.ts";
+import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
 
 // CONSTANTS
 const kModelReference: AssetReferenceData = {
@@ -44,7 +45,7 @@ function createModel(
   model: Model | null = spinningModel(),
   shader: Shader | null = null
 ) {
-  const actor = new Actor({ sceneManager: new SceneManager() } as any, {
+  const actor = new Actor({ sceneManager: new SceneManager(new ThreeSceneGraph()) } as any, {
     name: "model"
   });
   const definition = new ModelDefinition();

@@ -14,6 +14,7 @@ import type { RigidBodySettings } from "./RigidBody.ts";
 const kWorldPosition = new THREE.Vector3();
 const kWorldRotation = new THREE.Quaternion();
 const kWorldScale = new THREE.Vector3();
+const kWorldMatrix = new THREE.Matrix4();
 const kOutlineRenderOrder = 999;
 const kSolidColor = 0x4ade80;
 const kSensorColor = 0xfbbf24;
@@ -37,7 +38,7 @@ export class ColliderOutline extends ActorComponent {
     });
     this.#settings = settings;
     this.#root.name = "ColliderOutline";
-    actor.object3D.add(this.#root);
+    actor.node.object3D.add(this.#root);
     this.#rebuild(worldScale(actor));
   }
 
@@ -109,9 +110,7 @@ export class ColliderOutline extends ActorComponent {
 function worldScale(
   actor: Actor<any>
 ): THREE.Vector3 {
-  const { object3D } = actor;
-  object3D.updateWorldMatrix(true, false);
-  object3D.matrixWorld.decompose(
+  actor.transform.getGlobalMatrix(kWorldMatrix).decompose(
     kWorldPosition,
     kWorldRotation,
     kWorldScale

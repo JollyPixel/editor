@@ -8,9 +8,9 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import {
   CameraCompositor
-} from "../../../../src/systems/rendering/compositing/CameraCompositor.ts";
-import type { RenderComponent } from "../../../../src/systems/rendering/Renderer.ts";
-import { CanvasDimensions } from "../../../../src/systems/rendering/CanvasDimensions.ts";
+} from "../../../../src/three/rendering/compositing/CameraCompositor.ts";
+import type { ThreeRenderComponent } from "../../../../src/three/rendering/ThreeRenderComponent.ts";
+import { CanvasDimensions } from "../../../../src/core/systems/rendering/CanvasDimensions.ts";
 import {
   createRenderComponent,
   createRendererSpy
@@ -21,7 +21,7 @@ describe("Systems.Rendering.CameraCompositor", () => {
   const canvas = new CanvasDimensions(800, 600);
 
   function render(
-    components: RenderComponent[]
+    components: ThreeRenderComponent[]
   ) {
     const renderer = createRendererSpy();
     const compositor = new CameraCompositor(renderer as any);

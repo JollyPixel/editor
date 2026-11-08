@@ -2,7 +2,7 @@
 import {
   type Actor,
   ActorComponent
-} from "../../../src/actor/index.ts";
+} from "../../../src/core/actor/index.ts";
 
 export class UpdateProbe extends ActorComponent {
   updates = 0;

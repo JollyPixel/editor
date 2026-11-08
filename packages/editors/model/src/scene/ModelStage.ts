@@ -94,7 +94,7 @@ export class ModelStage extends ActorComponent {
       player.unload();
     }
     else {
-      this.actor.addChildren(model.object);
+      this.actor.node.object3D.add(model.object);
       player.load(model.object, model.animations);
     }
     const bounds = this.#bounds();
@@ -131,7 +131,7 @@ export class ModelStage extends ActorComponent {
     this.#grid?.removeFromParent();
     this.#grid?.dispose();
     this.#grid = createModelGrid(bounds);
-    this.actor.world.sceneManager.getSource().add(this.#grid);
+    this.actor.world.sceneManager.graph.scene.add(this.#grid);
   }
 
   protected override onDestroy(): void {

@@ -7,7 +7,8 @@ import {
   Actor,
   Behavior
 } from "../src/index.ts";
-import { SceneManager } from "../src/systems/scene/SceneManager.ts";
+import { SceneManager } from "../src/core/systems/scene/SceneManager.ts";
+import { HeadlessSceneGraph } from "../src/core/systems/scene/HeadlessSceneGraph.ts";
 
 class BehaviorOne extends Behavior {
   starts = 0;
@@ -19,7 +20,7 @@ class BehaviorOne extends Behavior {
 class BehaviorTwo extends Behavior {}
 
 function createActor() {
-  const sceneManager = new SceneManager();
+  const sceneManager = new SceneManager(new HeadlessSceneGraph());
   const actor = new Actor(
     { sceneManager } as any,
     { name: "owner" }

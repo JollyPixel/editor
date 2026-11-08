@@ -86,7 +86,7 @@ export class SculptBrush extends ActorComponent {
   }
 
   awake(): void {
-    this.actor.object3D.add(this.#cursor.ring, this.#guide);
+    this.actor.node.object3D.add(this.#cursor.ring, this.#guide);
     this.#keepAlive = this.actor.world.keepAlive(() => this.#stroke !== null);
   }
 
@@ -150,7 +150,7 @@ export class SculptBrush extends ActorComponent {
   override destroy(): void {
     this.interruptStroke();
     this.#keepAlive?.();
-    this.actor.object3D.remove(this.#cursor.ring, this.#guide);
+    this.actor.node.object3D.remove(this.#cursor.ring, this.#guide);
     this.#cursor.dispose();
     this.#guide.dispose();
 

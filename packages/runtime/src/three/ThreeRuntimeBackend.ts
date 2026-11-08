@@ -84,7 +84,9 @@ export class ThreeRuntimeBackend<
 
     const world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
       enableOnExit: true,
-      sceneManager: new Systems.SceneManager<TContext>(),
+      sceneManager: new Systems.SceneManager<TContext>(
+        new Systems.ThreeSceneGraph()
+      ),
       context: options.context,
       audio: options.audio,
       assetCoordinator: createRuntimeAssetCoordinator(
