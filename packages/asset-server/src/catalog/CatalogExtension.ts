@@ -31,6 +31,7 @@ import {
   CATALOG_IMPORT,
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
+  CATALOG_PREVIEW,
   CATALOG_READ,
   CATALOG_RENAME,
   CATALOG_REJECTED,
@@ -49,12 +50,14 @@ import {
   type CatalogImportCommand,
   type CatalogMessage,
   type CatalogPlanCommand,
+  type CatalogPreviewCommand,
   type CatalogReadCommand,
   type CatalogReplaceCommand,
   type CatalogRestoreCommand,
   type CatalogTagCommand
 } from "./client/protocol.ts";
 import type { CatalogFolders } from "./CatalogFolders.ts";
+import type { AssetPreviews } from "./AssetPreviews.ts";
 import { CatalogOutbox } from "./CatalogOutbox.ts";
 import { CatalogContentTooLargeError } from "./errors/CatalogContentTooLargeError.ts";
 import { CompanionReplacementError } from "./errors/CompanionReplacementError.ts";
@@ -83,6 +86,7 @@ const kCreatedAssetId = "created";
 export interface CatalogBackend extends ArchiveBackend {
   readonly folders: CatalogFolders;
   readonly tags: AssetTags;
+  readonly previews: AssetPreviews;
 }
 
 export interface CatalogPolicy {
@@ -118,7 +122,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   readonly id: string;
   readonly name = CATALOG_ROOM;
   readonly protocols: MessageProtocols = catalogProtocols;
-  override readonly queries = [CATALOG_READ];
+  override readonly queries = [CATALOG_READ, CATALOG_PREVIEW];
 
   #backend: CatalogBackend;
   #maxContentBytes: number;
@@ -306,7 +310,23 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       .with({ type: CATALOG_RESTORE }, (restore) => this.#restore(restore, actor))
       .with({ type: CATALOG_REPLACE }, (replace) => this.#replace(replace, actor))
       .with({ type: CATALOG_READ }, (read) => this.#read(read))
+      .with({ type: CATALOG_PREVIEW }, (preview) => this.#preview(preview))
       .exhaustive();
+  }
+
+  async #preview(
+    command: CatalogPreviewCommand
+  ): Promise<Result<CatalogApplied, Error>> {
+    const { assetId } = command;
+    const preview = await this.#backend.previews.preview(assetId);
+
+    return preview.map((value) => {
+      return {
+        command: command.type,
+        assetId,
+        preview: value
+      };
+    });
   }
 
   async #tag(

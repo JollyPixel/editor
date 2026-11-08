@@ -3,24 +3,28 @@ import {
   LitElement,
   css,
   html,
+  nothing,
   type TemplateResult
 } from "lit";
 import {
   customElement,
   property
 } from "lit/decorators.js";
+import type { IconName } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
-import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import {
   NO_ASSET_SUMMARY,
-  type AssetFileSummary,
-  type AssetIdentity,
   type AssetSummary
 } from "../../catalog/AssetSummary.ts";
 import { cardStyles } from "../cardStyles.ts";
 import { assetOpenEvent } from "./assetOpen.ts";
+import type { AssetPreviewCache } from "./AssetPreviewCache.ts";
+import "./AssetPreview.ts";
+
+// CONSTANTS
+const kSelectionIcon: IconName = "file";
 
 @customElement("asset-details")
 export class AssetDetails extends LitElement {
@@ -32,68 +36,35 @@ export class AssetDetails extends LitElement {
         flex-direction: column;
       }
 
-      .card-body {
-        display: flex;
-        flex-direction: column;
-        gap: var(--jolly-space-3);
-      }
-
-      .identity {
-        display: flex;
-        align-items: center;
-        gap: var(--jolly-space-3);
-
-        --jolly-icon-size: 32px;
-      }
-
-      .names {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        min-width: 0;
+      .card-head {
+        --jolly-control-height: 20px;
       }
 
       .title {
-        overflow: hidden;
-        font-weight: 600;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .muted,
-      .empty {
-        color: var(--jolly-text-muted);
-      }
-
-      .empty {
-        display: grid;
-        flex: 1;
-        margin: 0;
-        place-items: center;
-        text-align: center;
-      }
-
-      dl {
-        display: grid;
-        grid-template-columns: auto 1fr;
-        gap: var(--jolly-space-1) var(--jolly-space-3);
-        margin: 0;
-      }
-
-      dt {
-        color: var(--jolly-text-muted);
-      }
-
-      dd {
         min-width: 0;
-        margin: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
 
-      jolly-button {
+      .card-body {
         display: flex;
+        flex-direction: column;
+        gap: var(--jolly-space-2);
+        padding-block-start: 0;
+      }
+
+      asset-preview {
+        flex: 0 0 auto;
+      }
+
+      .meta {
+        min-height: 1lh;
+        margin: 0;
+        overflow: hidden;
+        color: var(--jolly-text-muted);
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     `
   ];
@@ -101,48 +72,70 @@ export class AssetDetails extends LitElement {
   @property({ attribute: false })
   declare summary: AssetSummary;
 
+  @property({ attribute: false })
+  declare previews: AssetPreviewCache | null;
+
   constructor() {
     super();
     this.summary = NO_ASSET_SUMMARY;
+    this.previews = null;
   }
 
   override render(): TemplateResult {
+    const heading = cardHeading(this.summary);
+
     return html`
       <div class="card-head">
-        <h2 class="card-title" id="asset-details-title">Details</h2>
+        <h2 class="card-title" id="asset-details-title">
+          <span class="title" title=${heading}>${heading}</span>
+        </h2>
+        ${this.#action()}
       </div>
       <section class="card-body" aria-labelledby="asset-details-title">
-        ${this.#body()}
+        ${this.#frame()}
+        ${renderMeta(this.summary)}
       </section>
     `;
   }
 
-  #body(): TemplateResult {
+  #frame(): TemplateResult {
     const { summary } = this;
     switch (summary.subject) {
       case "none":
-        return html`<p class="empty">Select an asset to see its details.</p>`;
+        return html`
+          <asset-preview icon=${kSelectionIcon}>
+            Select an asset to see its details.
+          </asset-preview>
+        `;
       case "many":
-        return html`<p class="empty">${summary.count} items selected</p>`;
+        return html`<asset-preview icon=${kSelectionIcon}></asset-preview>`;
       case "folder":
-        return renderIdentity(summary);
+        return html`<asset-preview icon=${summary.icon}></asset-preview>`;
       case "asset":
-        return html`${renderIdentity(summary)}${this.#action(summary)}`;
+        return html`
+          <asset-preview
+            .previews=${summary.preview === null ? null : this.previews}
+            .target=${summary.preview}
+            icon=${summary.icon}
+          ></asset-preview>
+        `;
     }
   }
 
-  #action(
-    summary: AssetFileSummary
-  ): TemplateResult {
-    const assetId = summary.editableAssetId;
+  #action(): TemplateResult | typeof nothing {
+    const { summary } = this;
+    const assetId = summary.subject === "asset" ?
+      summary.editableAssetId :
+      null;
 
     return assetId === null ?
-      html`<p class="muted">No editor opens this kind.</p>` :
+      nothing :
       html`
         <jolly-button
           variant="accent"
+          title="Open in editor"
           @click=${() => this.#open(assetId)}
-        >Open in editor</jolly-button>
+        >Open</jolly-button>
       `;
   }
 
@@ -153,22 +146,29 @@ export class AssetDetails extends LitElement {
   }
 }
 
-function renderIdentity(
-  identity: AssetIdentity
+function cardHeading(
+  summary: AssetSummary
+): string {
+  switch (summary.subject) {
+    case "none":
+      return "Details";
+    case "many":
+      return `${summary.count} items selected`;
+    default:
+      return summary.title;
+  }
+}
+
+function renderMeta(
+  summary: AssetSummary
 ): TemplateResult {
-  return html`
-    <div class="identity">
-      <jolly-icon name=${identity.icon}></jolly-icon>
-      <div class="names">
-        <span class="title" title=${identity.title}>${identity.title}</span>
-        <span class="muted">${identity.kindLabel}</span>
-      </div>
-    </div>
-    <dl>
-      <dt>Location</dt>
-      <dd title=${identity.location}>${identity.location}</dd>
-    </dl>
-  `;
+  if (summary.subject === "none" || summary.subject === "many") {
+    return html`<p class="meta"></p>`;
+  }
+
+  const meta = `${summary.kindLabel} · ${summary.location}`;
+
+  return html`<p class="meta" title=${meta}>${meta}</p>`;
 }
 
 declare global {

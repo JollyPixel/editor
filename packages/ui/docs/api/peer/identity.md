@@ -44,10 +44,11 @@ const identity = peerIdentity(account.username, account.id, account.avatar);
 
 From the `./network` subpath.
 
-### `toPeerProfileMetadata(identity): PeerProfileMetadata`
+### `toPeerProfileMetadata(identity, options?): PeerProfileMetadata`
 
 The `{ username, peerId }` profile for `new Client({ profile })`. It leaves
-`avatar` out: only the server can set one.
+`avatar` out: only the server can set one. `{ observer: true }` adds
+`observer: true`, so `PeerRoster` and `RoomPresenceSource` leave the peer out.
 
 ### `peerProfileColor(clientId, profile): string`
 

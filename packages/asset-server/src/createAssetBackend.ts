@@ -31,6 +31,7 @@ import {
 import { traceAppends } from "./storage/traceAppends.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogFolders } from "./catalog/CatalogFolders.ts";
+import { AssetPreviews } from "./catalog/AssetPreviews.ts";
 import {
   CatalogExtension,
   type CatalogBackend,
@@ -263,6 +264,12 @@ async function assembleAssetBackend(
     catalog,
     folders,
     tags,
+    previews: new AssetPreviews({
+      catalog,
+      kinds,
+      source,
+      states
+    }),
 
     flush,
     reconcile: () => sync.reconcile(),

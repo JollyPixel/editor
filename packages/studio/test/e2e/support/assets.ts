@@ -72,6 +72,7 @@ export class AssetBrowser {
   readonly rows: Locator;
   readonly kinds: Locator;
   readonly renameField: Locator;
+  readonly preview: Locator;
   readonly menu: AssetMenu;
   readonly deleteDialog: AssetDeleteDialog;
   readonly shareDialog: AssetShareDialog;
@@ -86,6 +87,7 @@ export class AssetBrowser {
     this.rows = this.tree.getByRole("treeitem");
     this.kinds = this.root.locator("jolly-button-group");
     this.renameField = this.root.getByRole("textbox", { name: "Rename" });
+    this.preview = this.root.locator("asset-preview");
     this.menu = new AssetMenu(page);
     this.deleteDialog = new AssetDeleteDialog(page);
     this.shareDialog = new AssetShareDialog(page);

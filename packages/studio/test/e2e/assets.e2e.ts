@@ -102,6 +102,16 @@ test("the asset menu exports the right-clicked asset", async({ studio, page }) =
   await expect(menu.root).toBeHidden();
 });
 
+test("the Details card shows a render of the selected voxel model", async({ studio }) => {
+  const { assets } = studio;
+  await studio.openOffline();
+
+  await assets.select(MODEL);
+
+  await expect(assets.preview.locator("img")).toBeVisible({ timeout: 20_000 });
+  await expect(assets.preview).toContainText("256 × 256");
+});
+
 test("the menu below the rows adds a folder at the root", async({ studio }) => {
   const { assets } = studio;
   await studio.openOffline();

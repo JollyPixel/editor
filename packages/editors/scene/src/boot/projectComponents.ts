@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import contributions from "virtual:jolly-pixel/contributions/scene";
+import { contributedScenePackages } from "@jolly-pixel/editor.host/scene";
 
 // Import Internal Dependencies
 import {
@@ -11,13 +12,5 @@ import { SceneComponents } from "../components/SceneComponents.ts";
 // CONSTANTS
 export const PROJECT_COMPONENTS = new SceneComponents([
   [BUILT_IN_PACKAGE, BUILT_IN_COMPONENTS],
-  ...contributions.map(({ name, module }) => {
-    if (module.SCENE_COMPONENTS === undefined) {
-      throw new TypeError(
-        `"${name}" declares "jollypixel.scene" but does not export "SCENE_COMPONENTS".`
-      );
-    }
-
-    return [name, module.SCENE_COMPONENTS] as const;
-  })
+  ...contributedScenePackages(contributions)
 ]);

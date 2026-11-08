@@ -27,12 +27,14 @@ export interface OfflineGuestOptions {
   onHostLost: () => void;
   onClose: () => void;
   onUnauthorized?: () => void;
+  observer?: boolean;
 }
 
 export class OfflineGuest implements OfflineBackend {
   readonly #transport: ChannelTransport;
   readonly #onClose: () => void;
   readonly #onUnauthorized: (() => void) | undefined;
+  readonly #observer: boolean;
   readonly #subscriptions = new AbortController();
   readonly #handoff = new ConnectionHandoff(() => this.#open());
   #closed = false;
@@ -43,6 +45,7 @@ export class OfflineGuest implements OfflineBackend {
     this.#transport = options.transport;
     this.#onClose = options.onClose;
     this.#onUnauthorized = options.onUnauthorized;
+    this.#observer = options.observer ?? false;
     globalThis.window?.addEventListener("pagehide", () => {
       void this.close();
     }, { signal: this.#subscriptions.signal });
@@ -102,7 +105,10 @@ export class OfflineGuest implements OfflineBackend {
       throw new Error("The offline host is unavailable.");
     }
     const { identity, client } = guestConnection(
-      () => this.#transport.connect()
+      () => this.#transport.connect(),
+      {
+        observer: this.#observer
+      }
     );
     if (this.#onUnauthorized !== undefined) {
       client.on("unauthorized", this.#onUnauthorized);

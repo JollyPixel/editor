@@ -13,6 +13,19 @@ export interface OfflineBackendOptions {
   name?: string;
 }
 
+export interface JoinOfflineBackendOptions {
+  /**
+   * @default DEFAULT_OFFLINE_NAME
+   */
+  name?: string;
+  /**
+   * Joins rooms with `observer: true` in the peer profile, so collaborator
+   * lists leave this page out.
+   * @default false
+   */
+  observer?: boolean;
+}
+
 export async function openOfflineBackend(
   options: OfflineBackendOptions
 ): Promise<OfflineBackend> {
@@ -54,4 +67,15 @@ export async function openOfflineBackend(
     databaseName,
     release
   });
+}
+
+export function joinOfflineBackend(
+  options: JoinOfflineBackendOptions = {}
+): Promise<OfflineBackend> {
+  const {
+    name = DEFAULT_OFFLINE_NAME,
+    observer = false
+  } = options;
+
+  return joinOfflineOwner(name, offlineDatabaseName(name), { observer });
 }

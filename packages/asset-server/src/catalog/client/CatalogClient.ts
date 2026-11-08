@@ -19,6 +19,7 @@ import {
   CATALOG_IMPORT,
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
+  CATALOG_PREVIEW,
   CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
@@ -38,6 +39,7 @@ import {
   type CatalogRequest
 } from "./protocol.ts";
 import type { PathConflictPolicy } from "../../model/PathConflictPolicy.ts";
+import type { AssetPreview } from "../../model/kinds/AssetKindHandler.ts";
 import type {
   ImportConflictPolicy,
   ImportPlan,
@@ -453,6 +455,17 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     });
 
     return reply.content;
+  }
+
+  async preview(
+    assetId: string
+  ): Promise<AssetPreview | null> {
+    const reply = await this.#request({
+      type: CATALOG_PREVIEW,
+      assetId
+    });
+
+    return reply.preview;
   }
 
   dispose(): void {

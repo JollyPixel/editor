@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { LoadedAssetKind } from "@jolly-pixel/asset-server";
 import { registerKindIcon } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
@@ -9,8 +8,10 @@ import {
 } from "../catalog/AssetKindSet.ts";
 import {
   EDITOR_PAGES_PATH,
+  PREVIEW_PAGE_PATH,
   type EditorDescriptor
 } from "../../shared/EditorDescriptor.ts";
+import type { ManifestKind } from "../../shared/ProjectManifest.ts";
 
 // CONSTANTS
 const kTargetParam = "target";
@@ -43,7 +44,7 @@ export class EditorRegistry {
   }
 
   registerKind(
-    descriptor: LoadedAssetKind
+    descriptor: ManifestKind
   ): this {
     const { kind } = descriptor;
     if (this.#kinds.has(kind)) {
@@ -58,7 +59,8 @@ export class EditorRegistry {
       creatable: descriptor.creatable,
       convertsFrom: descriptor.convertsFrom,
       extensions: descriptor.extensions,
-      maxContentBytes: descriptor.maxContentBytes
+      maxContentBytes: descriptor.maxContentBytes,
+      preview: descriptor.preview
     });
 
     return this;
@@ -111,5 +113,13 @@ export class EditorRegistry {
     });
 
     return `${this.#prefix}${editor}/?${query}`;
+  }
+
+  previewUrl(): string {
+    const query = new URLSearchParams(this.#query);
+
+    return query.size === 0 ?
+      PREVIEW_PAGE_PATH :
+      `${PREVIEW_PAGE_PATH}?${query}`;
   }
 }

@@ -1,10 +1,13 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import type { Systems } from "@jolly-pixel/engine";
+import {
+  ReadbackPixels,
+  renderToTarget
+} from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import { SceneLighting } from "../../scene/environment/SceneLighting.ts";
-import { PreviewPixels } from "./PreviewPixels.ts";
 
 // CONSTANTS
 const kCameraFov = 45;
@@ -37,7 +40,6 @@ export class PreviewStage {
   readonly #environmentMap: () => THREE.Texture | null;
   readonly #scene = new THREE.Scene();
   readonly #camera = new THREE.PerspectiveCamera(kCameraFov, 1, 0.1, 20);
-  readonly #clearColor = new THREE.Color();
 
   constructor(
     options: PreviewStageOptions
@@ -84,51 +86,17 @@ export class PreviewStage {
 
     mesh.rotation.set(angle.pitch, angle.yaw, 0);
     this.#scene.add(mesh);
+    const renderer = this.#renderer.getSource();
     try {
-      this.#render(target);
+      renderToTarget(renderer, this.#scene, this.#camera, target);
     }
     finally {
       this.#scene.remove(mesh);
     }
 
-    const renderer = this.#renderer.getSource();
-    const { width, height } = target;
-    const data = await renderer.readRenderTargetPixelsAsync(
-      target,
-      0,
-      0,
-      width,
-      height
-    );
+    const pixels = await ReadbackPixels.fromRenderTarget(renderer, target);
 
-    return PreviewPixels.fromReadback({
-      data,
-      width,
-      height,
-      bottomUp: renderer.coordinateSystem === THREE.WebGLCoordinateSystem
-    }).toImageData();
-  }
-
-  #render(
-    target: THREE.RenderTarget
-  ): void {
-    const renderer = this.#renderer.getSource();
-    const renderTarget = renderer.getRenderTarget();
-    const { autoClear } = renderer;
-    const clearAlpha = renderer.getClearAlpha();
-    renderer.getClearColor(this.#clearColor);
-
-    renderer.setRenderTarget(target);
-    renderer.autoClear = true;
-    renderer.setClearColor(0x000000, 0);
-    try {
-      renderer.render(this.#scene, this.#camera);
-    }
-    finally {
-      renderer.setClearColor(this.#clearColor, clearAlpha);
-      renderer.autoClear = autoClear;
-      renderer.setRenderTarget(renderTarget);
-    }
+    return pixels.toImageData();
   }
 }
 

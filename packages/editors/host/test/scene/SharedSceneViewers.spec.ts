@@ -9,6 +9,8 @@ interface FakeViewer {
   assetId: string;
   attached: number;
   released: boolean;
+  loaded: PromiseWithResolvers<void>;
+  ready: Promise<void>;
   attach(): () => void;
   release(): void;
 }
@@ -22,10 +24,13 @@ function createViewers() {
   const viewers: FakeViewer[] = [];
   const shared = new SharedSceneViewers({
     open: (assetId) => {
+      const loaded = Promise.withResolvers<void>();
       const viewer: FakeViewer = {
         assetId,
         attached: 0,
         released: false,
+        loaded,
+        ready: loaded.promise,
         attach: () => {
           viewer.attached++;
 
@@ -92,6 +97,22 @@ describe("SharedSceneViewers", () => {
     assert.equal(viewers[0].released, true);
     resolve(shared, "asset");
     assert.equal(viewers.length, 2);
+  });
+
+  it("settles ready once the viewer its components share is ready", async() => {
+    const { shared, viewers } = createViewers();
+    resolve(shared, "asset").attach();
+    let settled = false;
+    const ready = shared.ready({ id: "asset", kind: "voxelmap" })
+      .then(() => {
+        settled = true;
+      });
+
+    await Promise.resolve();
+    assert.equal(settled, false);
+    viewers[0].loaded.resolve();
+    await ready;
+    assert.equal(viewers.length, 1);
   });
 
   it("releases every open viewer on dispose", () => {

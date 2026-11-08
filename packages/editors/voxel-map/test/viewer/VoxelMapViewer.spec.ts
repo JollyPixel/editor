@@ -31,6 +31,15 @@ function setup() {
   voxels.addBlockset(TERRAIN_BLOCKSET);
   const sources = new FakeSources();
   const released: string[] = [];
+  const loads = new Map<string, PromiseWithResolvers<void>>();
+  function load(
+    assetId: string
+  ): Promise<void> {
+    const loaded = Promise.withResolvers<void>();
+    loads.set(assetId, loaded);
+
+    return loaded.promise;
+  }
   const assets = {
     open: (kind: AssetDocumentKind<unknown>, assetId: string) => {
       if (kind !== VOXEL_MAP_DOCUMENT_KIND) {
@@ -39,7 +48,7 @@ function setup() {
         return {
           document: opened,
           room: opened.room,
-          ready: opened.ready,
+          ready: load(assetId),
           release: () => {
             opened.release();
             released.push(assetId);
@@ -49,7 +58,7 @@ function setup() {
 
       return {
         document: { voxels },
-        ready: Promise.resolve(),
+        ready: load(assetId),
         release: () => released.push(assetId)
       };
     }
@@ -60,7 +69,7 @@ function setup() {
     mapId: "map-1"
   });
 
-  return { voxels, released, viewer };
+  return { voxels, released, loads, viewer };
 }
 
 describe("VoxelMapViewer", () => {
@@ -77,6 +86,22 @@ describe("VoxelMapViewer", () => {
     assert.equal(viewer.document, voxels);
     assert.equal(voxels.blocks.has(composeBlockId(1, 1)), true);
     assert.ok(view.atlases.get("terrain"));
+  });
+
+  it("is ready once the map and the blocksets it links are loaded", async() => {
+    const { viewer, loads } = setup();
+    let ready = false;
+    const settled = viewer.ready.then(() => {
+      ready = true;
+    });
+
+    loads.get("map-1")?.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(ready, false);
+    loads.get("asset-terrain")?.resolve();
+    await settled;
+    assert.equal(ready, true);
   });
 
   it("releases its blockset leases, then the map lease", () => {

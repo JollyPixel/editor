@@ -127,7 +127,7 @@ describe("@jolly-pixel/studio bundle", () => {
     const entries = [...chunks.values()].filter((chunk) => chunk.isEntry);
     assert.deepStrictEqual(
       entries.map((entry) => entry.name).sort(),
-      ["index", ...editorPages].sort()
+      ["index", "preview", ...editorPages].sort()
     );
     for (const [name, closure] of eager) {
       assert.deepStrictEqual(
@@ -139,7 +139,7 @@ describe("@jolly-pixel/studio bundle", () => {
       );
     }
     assert.strictEqual(chunksWith(eager.get("voxel-map")!, kThreeCore).length, 1);
-    for (const name of ["scene", "voxel-model"]) {
+    for (const name of ["scene", "voxel-model", "preview"]) {
       assert.deepStrictEqual(
         chunksWith(eager.get(name)!, kThreeCore),
         chunksWith(eager.get("voxel-map")!, kThreeCore)

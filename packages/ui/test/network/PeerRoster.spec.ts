@@ -185,6 +185,26 @@ describe("PeerRoster", () => {
     assert.deepStrictEqual(readMessages(harness.log), ["Alan has joined"]);
   });
 
+  test("leaves an observer out of the roster and never announces it", () => {
+    const harness = createHarness();
+    harness.addPeer("preview", {
+      profile: {
+        ...kLocalProfile,
+        observer: true
+      }
+    });
+
+    harness.emit("peer-joined", { clientId: "preview" });
+    assert.deepStrictEqual(
+      harness.peers().map(({ clientId }) => clientId),
+      ["local"]
+    );
+    harness.removePeer("preview");
+    harness.emit("peer-left", { clientId: "preview" });
+
+    assert.deepStrictEqual(readMessages(harness.log), []);
+  });
+
   test("announces a peer that left under its last known name", () => {
     const harness = createHarness();
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "a" } });

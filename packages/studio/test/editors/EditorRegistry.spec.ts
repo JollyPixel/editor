@@ -74,6 +74,19 @@ describe("EditorRegistry", () => {
     );
   });
 
+  test("opens the preview page on the same back-end as the editor pages", () => {
+    assert.equal(new EditorRegistry(kOptions).previewUrl(), "preview/index.html");
+    assert.equal(
+      new EditorRegistry({
+        query: {
+          offline: "studio"
+        },
+        maxContentBytes: 1024
+      }).previewUrl(),
+      "preview/index.html?offline=studio"
+    );
+  });
+
   test("snapshots the registered kinds in registration order", () => {
     const registry = new EditorRegistry(kOptions)
       .registerKind(kMapKind)
@@ -82,7 +95,8 @@ describe("EditorRegistry", () => {
         label: "Pixel art",
         extension: ".pixelart",
         convertsFrom: [".png"],
-        extensions: [".pixelart"]
+        extensions: [".pixelart"],
+        preview: "server"
       })
       .registerKind({
         kind: "font",
@@ -104,7 +118,8 @@ describe("EditorRegistry", () => {
         creatable: undefined,
         convertsFrom: [],
         extensions: [".voxelmap.json"],
-        maxContentBytes: undefined
+        maxContentBytes: undefined,
+        preview: undefined
       },
       {
         kind: "pixelart",
@@ -114,7 +129,8 @@ describe("EditorRegistry", () => {
         creatable: undefined,
         convertsFrom: [".png"],
         extensions: [".pixelart"],
-        maxContentBytes: undefined
+        maxContentBytes: undefined,
+        preview: "server"
       },
       {
         kind: "font",
@@ -124,7 +140,8 @@ describe("EditorRegistry", () => {
         creatable: false,
         convertsFrom: [".ttf"],
         extensions: [".typeface.json"],
-        maxContentBytes: 2048
+        maxContentBytes: 2048,
+        preview: undefined
       }
     ]);
   });

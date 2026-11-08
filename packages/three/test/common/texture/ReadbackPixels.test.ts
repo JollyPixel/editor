@@ -1,13 +1,16 @@
 // Import Node.js Dependencies
-import { describe, it } from "node:test";
+import {
+  describe,
+  test
+} from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { PreviewPixels } from "../../../src/features/preview/PreviewPixels.ts";
+import { ReadbackPixels } from "#src/common/texture/ReadbackPixels.ts";
 
-describe("PreviewPixels", () => {
-  it("drops the row padding of a padded readback", () => {
-    const pixels = PreviewPixels.fromReadback({
+describe("ReadbackPixels", () => {
+  test("drops the row padding of a padded readback", () => {
+    const pixels = ReadbackPixels.fromReadback({
       data: Uint8Array.from([
         10, 20, 30, 255, 0, 0, 0, 0,
         40, 50, 60, 255
@@ -20,8 +23,8 @@ describe("PreviewPixels", () => {
     assert.deepEqual([...pixels.data], [10, 20, 30, 255, 40, 50, 60, 255]);
   });
 
-  it("puts the top row first for a bottom-up readback", () => {
-    const pixels = PreviewPixels.fromReadback({
+  test("puts the top row first for a bottom-up readback", () => {
+    const pixels = ReadbackPixels.fromReadback({
       data: Uint8Array.from([
         10, 20, 30, 255,
         40, 50, 60, 255
@@ -34,8 +37,8 @@ describe("PreviewPixels", () => {
     assert.deepEqual([...pixels.data], [40, 50, 60, 255, 10, 20, 30, 255]);
   });
 
-  it("straightens a premultiplied edge pixel in linear light", () => {
-    const pixels = PreviewPixels.fromReadback({
+  test("straightens a premultiplied edge pixel in linear light", () => {
+    const pixels = ReadbackPixels.fromReadback({
       data: Uint8Array.from([
         93, 93, 93, 128,
         10, 20, 30, 255,

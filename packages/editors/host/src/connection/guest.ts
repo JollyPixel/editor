@@ -17,6 +17,7 @@ export interface GuestConnection {
 
 export interface GuestConnectionOptions {
   trustServer?: boolean;
+  observer?: boolean;
 }
 
 export function guestConnection(
@@ -28,7 +29,9 @@ export function guestConnection(
   return {
     identity,
     client: new Client({
-      profile: toPeerProfileMetadata(identity),
+      profile: toPeerProfileMetadata(identity, {
+        observer: options.observer
+      }),
       socket,
       trustServer: options.trustServer ?? false
     })

@@ -23,7 +23,7 @@ export class ManifestRoute {
   ) {
     this.source = JSON.stringify(new ProjectManifest({
       editors: project.editors.descriptors(),
-      kinds: project.kinds.descriptors(),
+      kinds: project.editors.framePreviews(project.kinds.descriptors()),
       kindPackages: project.kinds.packages.map((kindPackage) => {
         return {
           name: kindPackage.name,

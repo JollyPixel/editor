@@ -43,6 +43,7 @@ export const CATALOG_UNTAG = "catalog:untag";
 export const CATALOG_RESTORE = "catalog:restore";
 export const CATALOG_REPLACE = "catalog:replace";
 export const CATALOG_READ = "catalog:read";
+export const CATALOG_PREVIEW = "catalog:preview";
 
 export type CatalogCommand = InferMessage<typeof catalogCommandProtocol>;
 export type CatalogRequest = Without<CatalogCommand, "requestId">;
@@ -66,6 +67,7 @@ export type CatalogTagCommand = RequestOf<typeof CATALOG_TAG>;
 export type CatalogRestoreCommand = RequestOf<typeof CATALOG_RESTORE>;
 export type CatalogReplaceCommand = RequestOf<typeof CATALOG_REPLACE>;
 export type CatalogReadCommand = RequestOf<typeof CATALOG_READ>;
+export type CatalogPreviewCommand = RequestOf<typeof CATALOG_PREVIEW>;
 
 export type CatalogMessage = Immutable<
   InferMessage<typeof catalogMessageProtocol>

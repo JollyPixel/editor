@@ -6,5 +6,7 @@ export * from "./scene-gizmos/LightGizmo.ts";
 export * from "./mesh-highlight/index.ts";
 export * from "./transform-controls/index.ts";
 export * from "./common/texture/Canvas2D.ts";
+export * from "./common/texture/ReadbackPixels.ts";
+export * from "./common/texture/renderToTarget.ts";
 export * from "./common/screen/projectToClient.ts";
 export * from "./common/screen/clientToNdc.ts";

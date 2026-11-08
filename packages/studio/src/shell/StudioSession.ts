@@ -30,6 +30,7 @@ import {
   type TabStrip
 } from "../tabs/EditorTabs.ts";
 import { SavedTabs } from "../tabs/SavedTabs.ts";
+import { PreviewFrame } from "../preview/PreviewFrame.ts";
 
 // CONSTANTS
 export const SETTINGS_TAB_ID = "studio:settings";
@@ -112,6 +113,7 @@ export interface StudioSessionOptions extends Pick<
 export class StudioSession {
   readonly kinds: AssetKindSet;
   readonly tabs: EditorTabs;
+  readonly previews: PreviewFrame;
 
   #catalog: StudioCatalog;
   #frames: EditorFrames;
@@ -169,9 +171,17 @@ export class StudioSession {
       onChange: this.#onChange
     });
     this.#catalog.on("change", this.#syncTabs);
-    this.#stopRenewal = user.renewal?.onRenewed(
-      () => this.#frames.notifySessionRenewed()
-    );
+    this.previews = new PreviewFrame({
+      url: options.editors.previewUrl(),
+      share: options.share,
+      identity: () => user.identity,
+      launchOrigin: options.launchOrigin,
+      onRefused: () => void user.renewal?.renew()
+    });
+    this.#stopRenewal = user.renewal?.onRenewed(() => {
+      this.#frames.notifySessionRenewed();
+      this.previews.notifySessionRenewed();
+    });
     window.addEventListener("beforeunload", this.#onBeforeUnload, {
       signal: this.#listening.signal
     });
@@ -264,6 +274,7 @@ export class StudioSession {
     this.#stopRenewal?.();
     this.tabs.dispose();
     this.#frames.dispose();
+    this.previews.dispose();
   }
 
   #tabTitle(

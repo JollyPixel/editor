@@ -29,13 +29,15 @@ const kKinds = new AssetKindSet({
       label: "Voxel map",
       extension: ".voxelmap.json",
       extensions: [".voxelmap.json"],
-      icon: "voxel-map"
+      icon: "voxel-map",
+      preview: "frame"
     },
     {
       kind: "blockset",
       label: "Blockset",
       extension: ".blockset.json",
-      extensions: [".blockset.json"]
+      extensions: [".blockset.json"],
+      preview: "server"
     }
   ],
   editable: ["voxelmap"],
@@ -45,7 +47,11 @@ const kKinds = new AssetKindSet({
 function createSummary(
   ...nodeIds: string[]
 ): AssetSummary {
-  return summarizeSelection(new AssetSelection(kModel, nodeIds), kKinds);
+  return summarizeSelection(
+    new AssetSelection(kModel, nodeIds),
+    kKinds,
+    (assetId) => `${assetId}@r1`
+  );
 }
 
 describe("AssetSummary", () => {
@@ -56,7 +62,12 @@ describe("AssetSummary", () => {
       icon: "voxel-map",
       kindLabel: "Voxel map",
       location: "/maps",
-      editableAssetId: "map-cave"
+      editableAssetId: "map-cave",
+      preview: {
+        assetId: "map-cave",
+        revision: "map-cave@r1",
+        source: "frame"
+      }
     });
   });
 
@@ -64,6 +75,22 @@ describe("AssetSummary", () => {
     assert.partialDeepStrictEqual(createSummary(assetNodeId("blockset-overworld")), {
       kindLabel: "Blockset",
       editableAssetId: null
+    });
+  });
+
+  test("an asset of a kind with previews names the asset, revision and source to preview", () => {
+    assert.partialDeepStrictEqual(createSummary(assetNodeId("blockset-overworld")), {
+      preview: {
+        assetId: "blockset-overworld",
+        revision: "blockset-overworld@r1",
+        source: "server"
+      }
+    });
+  });
+
+  test("an asset of a kind without previews names nothing to preview", () => {
+    assert.partialDeepStrictEqual(createSummary(assetNodeId("notes-hero")), {
+      preview: null
     });
   });
 

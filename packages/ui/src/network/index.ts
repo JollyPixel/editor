@@ -4,7 +4,8 @@ export * from "./PeerRoster.ts";
 export {
   peerProfileColor,
   toPeerProfileMetadata,
-  toPresencePeer
+  toPresencePeer,
+  type PeerProfileOptions
 } from "./peerProfile.ts";
 export * from "./peerBadges.ts";
 export * from "./reconcilePeerMarks.ts";

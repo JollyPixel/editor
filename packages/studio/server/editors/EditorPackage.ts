@@ -24,8 +24,17 @@ const kPackageManifestSchema = z.object({
       dist: z.string().default("dist"),
       page: z.string().min(1).optional(),
       preferences: z.string().min(1).optional()
-    })
-  })
+    }),
+    scene: z.string().min(1).optional(),
+    preview: z.array(z.string().min(1)).optional()
+  }).refine(
+    (jollypixel) => jollypixel.preview === undefined ||
+      jollypixel.scene !== undefined,
+    {
+      message: "\"preview\" lists kinds of the \"scene\" contribution.",
+      path: ["preview"]
+    }
+  )
 });
 
 export type EditorPage =
@@ -63,6 +72,11 @@ export interface EditorPackageData extends EditorDescriptor {
    * editor and read by this one too.
    */
   sharedPreferences: readonly PreferenceScope[];
+  /**
+   * The kinds the preview frame renders with this package's scene
+   * contribution.
+   */
+  previewKinds: readonly string[];
 }
 
 type EditorPreferences = Pick<
@@ -78,6 +92,7 @@ export class EditorPackage implements EditorPackageData {
   readonly page: EditorPage;
   readonly preferences: readonly PreferenceScope[];
   readonly sharedPreferences: readonly PreferenceScope[];
+  readonly previewKinds: readonly string[];
 
   static async read(
     packageName: string,
@@ -94,7 +109,7 @@ export class EditorPackage implements EditorPackageData {
       const reason = z.prettifyError(manifest.error);
 
       throw new TypeError(
-        `"${packageName}" declares an invalid "jollypixel.editor" manifest:\n${reason}`
+        `"${packageName}" declares an invalid "jollypixel" manifest:\n${reason}`
       );
     }
 
@@ -105,6 +120,7 @@ export class EditorPackage implements EditorPackageData {
       page,
       preferences
     } = manifest.data.jollypixel.editor;
+    const { preview = [] } = manifest.data.jollypixel;
     const editorPage = resolvePage(packageName, root, page);
     const scopes = preferences === undefined ?
       kNoPreferences :
@@ -116,6 +132,7 @@ export class EditorPackage implements EditorPackageData {
       kinds,
       dist: path.resolve(root, dist),
       page: editorPage,
+      previewKinds: preview,
       ...scopes
     });
   }
@@ -130,6 +147,7 @@ export class EditorPackage implements EditorPackageData {
     this.page = data.page;
     this.preferences = [...data.preferences];
     this.sharedPreferences = [...data.sharedPreferences];
+    this.previewKinds = [...data.previewKinds];
   }
 
   toDescriptor(): EditorDescriptor {

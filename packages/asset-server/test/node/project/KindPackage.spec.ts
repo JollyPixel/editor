@@ -43,7 +43,7 @@ describe("KindPackage", () => {
     );
   });
 
-  test("describes the extensions each handler converts from and the content it accepts", async() => {
+  test("describes conversions, the accepted content and previews", async() => {
     const kinds = kindPackage(["alpha", "beta"]);
     const loaded = await KindPackage.load("kind-a", {}, packageLoader({
       "kind-a": {
@@ -58,7 +58,8 @@ describe("KindPackage", () => {
                   ".png": async(content: Uint8Array) => {
                     return { content };
                   }
-                }
+                },
+                preview: () => Promise.resolve(null)
               } :
               handler
           ))
@@ -69,7 +70,8 @@ describe("KindPackage", () => {
     assert.deepEqual(loaded.descriptors, [
       {
         ...loadedKind("alpha", [".png"]),
-        maxContentBytes: 2048
+        maxContentBytes: 2048,
+        preview: "server"
       },
       loadedKind("beta")
     ]);

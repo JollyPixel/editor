@@ -25,6 +25,8 @@ const roster = new PeerRoster({
 - `peers` lists the local peer first (`self: true`), then remote peers by
   `clientId`, each built by
   [`toPresencePeer`](./identity.md#profile-helpers).
+- A remote peer whose profile sets `observer: true` is left out, and its
+  joins and leaves are not announced.
 - The local peer is keyed by `room.clientId` (`""` until admitted) and read
   from `room.profile`.
 - Republishes on `sync`, `peer-joined`, `peer-left` and `peer-profile`.

@@ -161,7 +161,8 @@ asset parts to `@jolly-pixel/asset-server`:
 - The server keeps every part of an open terrain in memory; streaming applies
   to the wire and to storage.
 
-The [asset parts design][asset-parts] holds the server contract.
+The server contract is the `AssetParts` interface of
+`@jolly-pixel/asset-server`.
 
 The client side of `@jolly-pixel/network`, `CommandSync` and the pending
 ledger, does not change. `TerrainPartsRoom` sits between the room and the
@@ -271,6 +272,5 @@ tiers. A refused command is reported in the activity log.
 
 <!-- Reference-style links for DRYness -->
 
-[asset-parts]: ../../../asset-server/architecture/AssetParts.md
 [world]: ./design.md#world-and-chunks
 [poi]: ./design.md#points-of-interest

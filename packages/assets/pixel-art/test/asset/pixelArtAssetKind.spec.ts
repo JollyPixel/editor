@@ -13,6 +13,7 @@ import {
   type AssetEventData
 } from "@jolly-pixel/asset-server";
 import {
+  decodePngPixels,
   encodePixelArtFile,
   PixelBuffer,
   PixelDocumentState,
@@ -121,6 +122,29 @@ describe("pixelArtAssetKind", () => {
 
     assert.deepEqual(state.document.buffer.size(), { x: 4, y: 4 });
     assert.deepEqual(state.document.buffer.samplePixel(2, 2), kRedTuple);
+  });
+
+  test("previews the buffer as a PNG of the same size", async() => {
+    const handler = pixelArtAssetKind();
+    const state = handler.create("asset-1");
+    const size = { x: 4, y: 2 };
+    const source = new PixelBuffer({ size });
+    source.drawPixels([{ x: 3, y: 1 }], kRed);
+    foldAssetEvent(handler, state, fileEvent(source));
+
+    const preview = await handler.preview!(state);
+    assert.strictEqual(preview?.type, "image/png");
+
+    const pixels = await decodePngPixels(
+      {
+        format: "png",
+        data: preview.bytes
+      },
+      size
+    );
+    const red = (size.x + 3) * 4;
+    assert.deepEqual([...pixels.subarray(red, red + 4)], kRedTuple);
+    assert.deepEqual([...pixels.subarray(0, 4)], source.samplePixel(0, 0));
   });
 
   test("a domain command mutates the folded buffer", () => {

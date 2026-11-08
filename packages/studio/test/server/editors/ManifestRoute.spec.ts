@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ManifestRoute } from "../../../server/editors/ManifestRoute.ts";
+import { ProjectManifest } from "../../../shared/ProjectManifest.ts";
 import {
   listen,
   PASS_THROUGH_STATUS,
@@ -14,6 +15,24 @@ import {
 } from "../../helpers/editorPages.ts";
 
 describe("ManifestRoute", () => {
+  test("previews a listed kind in the frame unless its handler draws previews", () => {
+    const route = new ManifestRoute(voxelMapProject(
+      import.meta.dirname,
+      "/pkg/dist",
+      {
+        previewKinds: ["voxelmap", "texture"]
+      }
+    ));
+    const previews = new Map(
+      ProjectManifest.parse(JSON.parse(route.source)).kinds
+        .map(({ kind, preview }) => [kind, preview])
+    );
+
+    assert.equal(previews.get("voxelmap"), "frame");
+    assert.equal(previews.get("texture"), "server");
+    assert.equal(previews.get("blockset"), undefined);
+  });
+
   test("passes every other path to the next middleware", async() => {
     const route = new ManifestRoute(voxelMapProject(import.meta.dirname, "/pkg/dist"));
     await using server = await listen(route.middleware);

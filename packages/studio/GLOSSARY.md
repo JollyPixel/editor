@@ -40,6 +40,7 @@ create it when the project has none.
 
 The `<asset-browser>` element in the asset dock on Home: the kind filter, the
 asset actions, the tree of catalog records and the details of the selection.
+The details start with the asset's preview image when its kind has one.
 
 ### Folder
 
@@ -96,6 +97,12 @@ kind opens in at most one editor.
 
 An editor's built `index.html`, served at `editors/<name>/` beside the shell.
 Each one runs `editor.host` with its own client, session and runtime.
+
+### Preview frame
+
+The hidden `preview/index.html` frame that renders the 3D kinds listed in
+`jollypixel.preview` into PNG previews, one asset at a time, from the scene
+contributions. It joins asset rooms as an observer and never writes.
 
 ### Tab
 

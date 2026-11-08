@@ -15,6 +15,10 @@ import type {
 } from "../../model/kinds/AssetKindDescriptor.ts";
 import type { AnyAssetKindHandler } from "../../model/kinds/AssetKindHandler.ts";
 import type { AssetKindPackage } from "../../model/kinds/AssetKindPackage.ts";
+import {
+  BUILT_IN_ASSET_KINDS,
+  BUILT_IN_KINDS_PACKAGE
+} from "../../model/kinds/handlers/builtIn.ts";
 
 // CONSTANTS
 export const KINDS_EXPORT = "ASSET_KINDS";
@@ -66,6 +70,10 @@ export class KindPackage {
     }
 
     return KindPackage.#from(name, kinds, options);
+  }
+
+  static builtIn(): KindPackage {
+    return KindPackage.#from(BUILT_IN_KINDS_PACKAGE, BUILT_IN_ASSET_KINDS, {});
   }
 
   static #from(
@@ -120,14 +128,7 @@ export class KindPackage {
         );
       }
 
-      const { maxContentBytes } = handler;
-
-      return {
-        ...descriptor,
-        convertsFrom: Object.keys(handler.conversions ?? {}),
-        extensions: Object.keys(handler.extensions),
-        ...(maxContentBytes === undefined ? {} : { maxContentBytes })
-      };
+      return loadedKind(descriptor, handler);
     });
     this.name = data.name;
     this.options = structuredClone(data.options);
@@ -151,6 +152,21 @@ export class KindPackage {
 
     return next;
   }
+}
+
+function loadedKind(
+  descriptor: AssetKindDescriptor,
+  handler: AnyAssetKindHandler
+): LoadedAssetKind {
+  const { maxContentBytes } = handler;
+
+  return {
+    ...descriptor,
+    convertsFrom: Object.keys(handler.conversions ?? {}),
+    extensions: Object.keys(handler.extensions),
+    ...(maxContentBytes === undefined ? {} : { maxContentBytes }),
+    ...(handler.preview === undefined ? {} : { preview: "server" })
+  };
 }
 
 function handledKinds(

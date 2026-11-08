@@ -30,7 +30,8 @@ const kKinds = [
       tone: "green"
     },
     convertsFrom: [],
-    extensions: [".voxelmap.json"]
+    extensions: [".voxelmap.json"],
+    preview: "frame" as const
   },
   {
     kind: "blockset",
@@ -38,7 +39,8 @@ const kKinds = [
     extension: ".blockset.json",
     convertsFrom: [".png"],
     extensions: [".blockset.json"],
-    maxContentBytes: 2048
+    maxContentBytes: 2048,
+    preview: "server" as const
   }
 ];
 const kKindPackages = [

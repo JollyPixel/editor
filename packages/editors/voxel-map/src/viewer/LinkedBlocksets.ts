@@ -82,6 +82,12 @@ export class LinkedBlocksets extends Emitter<LinkedBlocksetsEvents> {
     };
   }
 
+  async ready(): Promise<void> {
+    await Promise.all(
+      Array.from(this.#linked.values(), (linked) => linked.opened.ready)
+    );
+  }
+
   readonly refresh = (): void => {
     const entries = BlocksetEntry.resolveAll(
       this.#document.blocksets,

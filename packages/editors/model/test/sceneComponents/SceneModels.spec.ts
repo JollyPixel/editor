@@ -18,9 +18,13 @@ const kReference = {
   id: "model-1"
 };
 
-function sceneModels() {
+function sceneModels(
+  bytes: Uint8Array | null = cubeModelGlb()
+) {
   const document = new ModelFileDocument();
-  document.load(cubeModelGlb());
+  if (bytes !== null) {
+    document.load(bytes);
+  }
   const release = mock.fn();
   const session = {
     assets: {
@@ -85,6 +89,29 @@ describe("SceneModels", () => {
       model?.animations.map((clip) => clip.name),
       ["spin", "bounce"]
     );
+  });
+
+  test("is ready once the model file is parsed", async() => {
+    const { models } = sceneModels();
+
+    await models.ready(kReference);
+
+    assert.ok(models.resolve(kReference) !== null);
+  });
+
+  test("rejects ready when the model file cannot be parsed", async() => {
+    const { models } = sceneModels(new Uint8Array([1, 2, 3, 4]));
+
+    await assert.rejects(models.ready(kReference));
+    assert.equal(models.resolve(kReference), null);
+  });
+
+  test("is ready with no model when the asset has no file yet", async() => {
+    const { models } = sceneModels(null);
+
+    await models.ready(kReference);
+
+    assert.equal(models.resolve(kReference), null);
   });
 
   test("replaces the model and disposes the old one when the file changes", async() => {

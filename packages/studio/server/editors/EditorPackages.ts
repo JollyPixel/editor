@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
+import type { LoadedAssetKind } from "@jolly-pixel/asset-server";
 import type { PackageResolver } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
 import type { EditorDescriptor } from "../../shared/EditorDescriptor.ts";
 import type { EditorPreferenceScopes } from "../../shared/PreferenceScopes.ts";
+import type { ManifestKind } from "../../shared/ProjectManifest.ts";
 import { EditorPackage } from "./EditorPackage.ts";
 
 export class EditorPackages implements Iterable<EditorPackage> {
@@ -49,6 +51,23 @@ export class EditorPackages implements Iterable<EditorPackage> {
     kind: string
   ): EditorPackage | undefined {
     return this.#editors.find((editor) => editor.kinds.includes(kind));
+  }
+
+  framePreviews(
+    kinds: Iterable<LoadedAssetKind>
+  ): ManifestKind[] {
+    const framed = new Set(
+      this.#editors.flatMap((editor) => editor.previewKinds)
+    );
+
+    return Array.from(kinds, (descriptor) => (
+      descriptor.preview === undefined && framed.has(descriptor.kind) ?
+        {
+          ...descriptor,
+          preview: "frame"
+        } :
+        descriptor
+    ));
   }
 
   editorScopes(): EditorPreferenceScopes[] {

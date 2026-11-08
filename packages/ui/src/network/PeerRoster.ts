@@ -10,6 +10,7 @@ import type { LogQueue } from "../feedback/LogQueue.ts";
 import { compareClientIds } from "../peer/peerOrder.ts";
 import type { PresencePeer } from "../peer/types.ts";
 import {
+  collaborators,
   localPresencePeer,
   toPresencePeer
 } from "./peerProfile.ts";
@@ -90,9 +91,10 @@ export class PeerRoster {
   }
 
   #snapshot(): PresencePeer[] {
-    const remote = [...this.#room.peers.values()]
-      .map(toPresencePeer)
-      .sort((left, right) => compareClientIds(left.clientId, right.clientId));
+    const remote = Array.from(
+      collaborators(this.#room.peers.values()),
+      toPresencePeer
+    ).sort((left, right) => compareClientIds(left.clientId, right.clientId));
 
     return [
       localPresencePeer(this.#room),

@@ -304,7 +304,8 @@ export class Studio extends LitElement {
       kindFilter: user.online ? user.project : null,
       shares: user.online ? user.shares : null,
       browserState: this.#browserState,
-      notifications: this.#notifications
+      notifications: this.#notifications,
+      previews: session.previews
     };
     await session.restoreTabs();
     this.#onTabsChange();

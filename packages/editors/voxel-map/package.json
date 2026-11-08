@@ -13,7 +13,8 @@
       "page": "index.html",
       "preferences": "src/preferences.ts"
     },
-    "scene": "./scene"
+    "scene": "./scene",
+    "preview": ["voxelmap"]
   },
   "exports": {
     ".": "./src/viewer/index.ts",

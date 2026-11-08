@@ -1,17 +1,16 @@
 // Import Third-party Dependencies
-import type {
-  AssetReferenceData,
-  AssetType
-} from "@jolly-pixel/asset";
+import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import type { SceneComponentView } from "@jolly-pixel/asset.scene/client";
 import type { AssetDocumentKind } from "@jolly-pixel/editor.host";
 import {
   registerKindIcon,
+  requiredAssetSlots,
+  type AssetSlots,
+  type NamedSceneComponentPackage,
   type SceneAssetSource,
   type SceneComponentKind,
   type SceneComponentOrigin,
-  type SceneComponentPackage,
   type SceneComponentSummary
 } from "@jolly-pixel/editor.host/scene";
 import { Systems } from "@jolly-pixel/engine";
@@ -23,8 +22,6 @@ const kNoSlots: KindSlots = {
   required: {},
   shown: {}
 };
-
-type AssetSlots = Readonly<Record<string, AssetType<unknown>>>;
 
 export type AssetChange = Record<string, AssetReferenceData | null>;
 
@@ -44,11 +41,6 @@ export type DescribedComponent = Pick<
   SceneComponentView,
   "type" | "data" | "assets"
 >;
-
-export type NamedSceneComponentPackage = readonly [
-  name: string,
-  components: SceneComponentPackage
-];
 
 export class SceneComponents {
   static #claim(
@@ -75,7 +67,7 @@ export class SceneComponents {
 
     return {
       optional,
-      required: Object.fromEntries(slots.filter(([name]) => !optional.has(name))),
+      required: requiredAssetSlots(kind),
       shown: Object.fromEntries(slots.filter(
         ([name, slot]) => !optional.has(name) || sources.has(slot.kind.value)
       ))

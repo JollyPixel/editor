@@ -136,6 +136,14 @@ export interface AssetParts<
   ): Promise<Uint8Array>;
 }
 
+export interface AssetPreview {
+  /**
+   * Media type of `bytes`, one a browser shows in an `<img>`.
+   */
+  readonly type: string;
+  readonly bytes: Uint8Array;
+}
+
 export interface AssetKindHandler<
   TState = unknown,
   TCommand extends AssetCommandHeader = AssetCommandHeader,
@@ -189,6 +197,10 @@ export interface AssetKindHandler<
     state: TState,
     idMap: ReadonlyMap<string, string>
   ): void;
+
+  preview?(
+    state: TState
+  ): Promise<AssetPreview | null>;
 }
 
 export type AnyAssetKindHandler = AssetKindHandler<

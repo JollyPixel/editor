@@ -86,5 +86,6 @@ flowchart TB
 
 - Both paths resolve the scene's `virtual:jolly-pixel/contributions/scene` against the studio's project.
 - A page without source HTML is served from its built folder; in dev, a rebuild of that folder reloads the editor's tabs.
+- The preview frame page, `preview/index.html` (`src/preview/`), is built with the shell and reads the same scene contributions to render 3D asset previews.
 - `test/vite/studio.bundle.spec.ts` guards the shared chunks.
 - Code: `server/editors/`, `vite/editorPages.ts`. See [hosting](./docs/hosting.md).

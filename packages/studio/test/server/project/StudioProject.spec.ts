@@ -169,7 +169,8 @@ describe("StudioProject", () => {
           "blockset",
           "voxelmap",
           "voxelmodel",
-          "voxelanimation"
+          "voxelanimation",
+          "texture"
         ]
       );
     });
