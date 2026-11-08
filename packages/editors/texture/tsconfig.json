@@ -1,0 +1,29 @@
+{
+  "extends": "../../../tsconfig/lib.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vite/client"
+    ]
+  },
+  "references": [
+    {
+      "path": "../host"
+    },
+    {
+      "path": "../../asset-server"
+    },
+    {
+      "path": "../../history"
+    },
+    {
+      "path": "../../network"
+    },
+    {
+      "path": "../../ui"
+    },
+    {
+      "path": "../../utils"
+    }
+  ]
+}

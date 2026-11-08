@@ -7,6 +7,7 @@ import {
   type ThemedToken
 } from "@shikijs/core";
 import { createJavaScriptRawEngine } from "@shikijs/engine-javascript/raw";
+import { fileExtension } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -54,11 +55,7 @@ export type ScriptLanguage = keyof typeof kGrammars;
 export function fileLanguage(
   path: string
 ): ScriptLanguage | null {
-  const dot = path.lastIndexOf(".");
-
-  return dot === -1 ?
-    null :
-    kLanguages.get(path.slice(dot).toLowerCase()) ?? null;
+  return kLanguages.get(fileExtension(path)) ?? null;
 }
 
 let highlighter: Promise<HighlighterCore> | null = null;

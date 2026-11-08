@@ -42,6 +42,7 @@ Each editor is an `editor.<name>` workspace, and the formats it owns (the asset 
 - [Scene](./packages/editors/scene) 🚧 - Actors, components and environment, saved as [`.scene.json` scenes](./packages/assets/scene)
 - [Sound](./packages/editors/sound) 🚧 - Plays and loops [`.ogg` sounds](./packages/assets/sound) converted from dropped audio files
 - [Model](./packages/editors/model) 🚧 - Read-only viewer that previews [`.glb`, `.gltf`, `.fbx` and `.obj` models](./packages/assets/model) and plays their animations
+- [Texture](./packages/editors/texture) 🚧 - Read-only viewer for `.png`, `.jpg`, `.webp`, `.gif` and `.bmp` images; shows the header of `.ktx2` textures
 - [Script](./packages/editors/script) 🚧 - Collaborative code editor for [`.ts` and `.js` scripts](./packages/assets/script), whose behaviors and scene properties feed the scene's Script component
 
 #### UI

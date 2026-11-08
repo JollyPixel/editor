@@ -1,0 +1,54 @@
+{
+  "name": "@jolly-pixel/editor.texture",
+  "description": "Read-only image viewer for JollyPixel texture assets",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "jollypixel": {
+    "editor": {
+      "name": "texture",
+      "kinds": [
+        "texture"
+      ],
+      "page": "index.html"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:watch": "vite build --watch",
+    "preview": "vite preview",
+    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json",
+    "lint": "oxlint src test vite.config.ts && pnpm run lint:css",
+    "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/editors/texture"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@jolly-pixel/e2e": "workspace:*"
+  },
+  "dependencies": {
+    "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/editor.host": "workspace:*",
+    "@jolly-pixel/history": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/ui": "workspace:*",
+    "@jolly-pixel/utils": "workspace:*",
+    "@openally/emitt": "1.1.0",
+    "lit": "3.3.3"
+  }
+}

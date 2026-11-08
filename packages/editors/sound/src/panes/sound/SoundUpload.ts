@@ -3,6 +3,7 @@ import {
   SOUND_EXTENSION,
   SOUND_SOURCE_EXTENSIONS
 } from "@jolly-pixel/asset.sound/client";
+import { fileExtension } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { SoundFileError } from "./errors/SoundFileError.ts";
@@ -25,8 +26,7 @@ export class SoundUpload {
   constructor(
     file: File
   ) {
-    const dot = file.name.lastIndexOf(".");
-    const extension = dot === -1 ? "" : file.name.slice(dot).toLowerCase();
+    const extension = fileExtension(file.name);
     if (!kExtensions.includes(extension)) {
       throw new SoundFileError(`"${file.name}" is not a sound file.`);
     }

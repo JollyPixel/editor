@@ -12,6 +12,15 @@ import {
 
 export const TEXTURE_KIND = "texture";
 export const TEXTURE_COMMAND = "texture.command";
+export const TEXTURE_EXTENSIONS: Readonly<Record<string, string>> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".bmp": "image/bmp",
+  ".ktx2": "image/ktx2"
+};
 
 // CONSTANTS
 const kMaxPreviewBytes = 2 * 1024 * 1024;
@@ -41,15 +50,6 @@ const kSignatures: readonly ImageSignature[] = [
     prefix: [0x42, 0x4D]
   }
 ];
-const kExtensions: Readonly<Record<string, string>> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".gif": "image/gif",
-  ".bmp": "image/bmp",
-  ".ktx2": "image/ktx2"
-};
 
 interface ImageSignature {
   readonly type: string;
@@ -83,7 +83,7 @@ export function textureAssetKind(
   return {
     ...binaryAssetKind,
     kind: TEXTURE_KIND,
-    extensions: kExtensions,
+    extensions: TEXTURE_EXTENSIONS,
     match: options.match,
     commands: binaryCommands(TEXTURE_COMMAND),
 
