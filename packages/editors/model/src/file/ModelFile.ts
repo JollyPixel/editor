@@ -4,9 +4,9 @@ import {
   MODEL_EXTENSIONS,
   type ModelFileDocument
 } from "@jolly-pixel/asset.model/client";
+import { fileExtension } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { fileExtension } from "./fileExtension.ts";
 import { ModelUpload } from "./ModelUpload.ts";
 
 export interface ModelFileSession {

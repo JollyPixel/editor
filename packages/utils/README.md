@@ -41,6 +41,7 @@ catch (error) {
 - [is](./docs/is.md): `is.object`, `is.plainObject`, `is.member`
 - [Errors](./docs/error.md): `asError`, `errorMessage`
 - [Numbers](./docs/number.md): `clamp`, `formatBytes`
+- [Paths](./docs/path.md): `fileExtension`
 - [Base64](./docs/base64.md): `encodeBase64`, `encodeBase64Url`, `decodeBase64`
 - [TaskChain](./docs/TaskChain.md): runs async tasks one at a time
 - [Teardown](./docs/Teardown.md): `Teardown`, `AsyncTeardown`, release steps run in reverse

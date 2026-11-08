@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import { fileExtension } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { fileExtension } from "../file/fileExtension.ts";
 import { MissingResourceError } from "./errors/MissingResourceError.ts";
 
 // CONSTANTS

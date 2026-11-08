@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Texture Viewer</title>
+  <link rel="stylesheet" href="./main.css">
+</head>
+
+<body>
+  <jolly-scope theme="dark" density="comfortable">
+    <jolly-dock-layout storage-key="texture:layout">
+      <jolly-dock
+        key="left"
+        side="left"
+        collapsible
+        size="280"
+        min-size="200"
+        max-size="480"
+      >
+        <jolly-pane key="texture" heading="Texture" icon="texture-image" locked>
+          <jolly-texture-file></jolly-texture-file>
+          <jolly-texture-details></jolly-texture-details>
+        </jolly-pane>
+      </jolly-dock>
+      <div class="texture-column">
+        <jolly-editor-toolbar></jolly-editor-toolbar>
+        <section id="texture-view">
+          <jolly-texture-stage></jolly-texture-stage>
+        </section>
+      </div>
+    </jolly-dock-layout>
+  </jolly-scope>
+  <script type="module" src="./src/index.ts"></script>
+</body>
+
+</html>

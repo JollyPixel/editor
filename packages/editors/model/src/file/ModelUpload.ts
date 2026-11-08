@@ -1,6 +1,8 @@
+// Import Third-party Dependencies
+import { fileExtension } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import { ModelFileError } from "./errors/ModelFileError.ts";
-import { fileExtension } from "./fileExtension.ts";
 
 export class ModelUpload {
   #file: File;

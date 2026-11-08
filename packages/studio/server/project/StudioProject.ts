@@ -42,6 +42,7 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
     "@jolly-pixel/editor.scene",
     "@jolly-pixel/editor.script",
     "@jolly-pixel/editor.sound",
+    "@jolly-pixel/editor.texture",
     "@jolly-pixel/editor.voxel-map",
     "@jolly-pixel/editor.voxel-model"
   ],

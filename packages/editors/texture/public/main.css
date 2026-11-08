@@ -1,0 +1,50 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--jolly-groove) transparent;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: row;
+  background: #0e1316;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+}
+
+jolly-scope {
+  display: contents;
+
+  --jolly-label-width: 12ch;
+}
+
+jolly-pane::part(content) {
+  padding: 0;
+}
+
+jolly-dock {
+  --jolly-dock-handle-size: 8px;
+  --jolly-dock-resize-bg: transparent;
+}
+
+.texture-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#texture-view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}

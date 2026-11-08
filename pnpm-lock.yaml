@@ -1122,6 +1122,37 @@ importers:
         specifier: workspace:*
         version: link:../../e2e
 
+  packages/editors/texture:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../../asset-server
+      '@jolly-pixel/editor.host':
+        specifier: workspace:*
+        version: link:../host
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../../ui
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../../utils
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      lit:
+        specifier: 3.3.3
+        version: 3.3.3
+    devDependencies:
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../../e2e
+
   packages/editors/voxel-map:
     dependencies:
       '@jolly-pixel/asset':

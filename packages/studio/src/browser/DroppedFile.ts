@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { fileExtension } from "@jolly-pixel/utils";
+
 export class DroppedFile {
   readonly blob: Blob;
   readonly name: string;
@@ -6,11 +9,9 @@ export class DroppedFile {
   constructor(
     file: File
   ) {
-    const dot = file.name.lastIndexOf(".");
-
     this.blob = file;
     this.name = file.name;
-    this.format = dot > 0 ? file.name.slice(dot).toLowerCase() : "";
+    this.format = fileExtension(file.name);
     Object.freeze(this);
   }
 
