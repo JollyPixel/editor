@@ -14,6 +14,7 @@ import {
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/folder";
 
 // Import Internal Dependencies
 import {
@@ -31,26 +32,13 @@ export class TrackBindings extends LitElement {
       display: block;
     }
 
-    section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
-      padding: var(--jolly-space-2, 8px);
-      border-top: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
-    }
-
-    h3 {
-      margin: 0;
-      font-size: inherit;
-      font-weight: 600;
-    }
-
     ul {
       display: flex;
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
       margin: 0;
-      padding: 0;
+      padding-block: 0;
+      padding-inline: var(--jolly-space-1, 4px) 0;
       list-style: none;
     }
 
@@ -99,10 +87,16 @@ export class TrackBindings extends LitElement {
     }
 
     return html`
-      <section aria-label="Tracks">
-        <h3>Tracks of ${state.setName}</h3>
+      <jolly-folder
+        flush
+        role="region"
+        aria-label="Tracks"
+        key="tracks"
+        label="Tracks of ${state.setName}"
+        storage-key="voxel-model:folder:tracks"
+      >
         <ul>${state.rows.map((row) => this.#renderRow(row, state.editable))}</ul>
-      </section>
+      </jolly-folder>
       <jolly-context-menu
         label="Blocks"
         @jolly-context-action=${this.#menu.onContextAction}

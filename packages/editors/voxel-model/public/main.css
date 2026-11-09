@@ -70,6 +70,12 @@ jolly-dock {
   --jolly-dock-resize-bg: transparent;
 }
 
+jolly-dock[side="left"],
+jolly-dock[side="right"] {
+  --jolly-folder-indent: 0;
+  --jolly-field-inset-end: 0px;
+}
+
 jolly-dock[side="left"] {
   grid-column: 1;
 }

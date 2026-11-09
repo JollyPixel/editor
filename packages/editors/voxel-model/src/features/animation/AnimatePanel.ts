@@ -25,6 +25,7 @@ import {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/context-menu";
+import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/text";
@@ -75,54 +76,35 @@ export class AnimatePanel extends LitElement {
     }
 
     .sets {
+      display: flex;
       flex: 1 1 auto;
+      flex-direction: column;
       min-height: 96px;
       overflow: auto;
     }
 
     jolly-tree {
-      padding-inline: var(--jolly-space-1, 4px);
+      padding-inline: var(--jolly-space-1, 4px) 0;
     }
 
     jolly-tree::part(grip) {
       display: none;
     }
 
-    section + section {
-      border-top: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
-    }
-
-    .heading {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-1, 4px);
-      margin: 0;
-      padding: var(--jolly-space-2, 8px) var(--jolly-space-2, 8px) var(--jolly-space-1, 4px);
-      font-size: inherit;
-      font-weight: 600;
-    }
-
-    .heading h3 {
-      flex: 1 1 auto;
-      margin: 0;
-      font-size: inherit;
-    }
-
-    .clip,
+    .fields,
     .transform {
-      flex: 0 0 auto;
       display: flex;
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
-      padding: var(--jolly-space-2, 8px);
     }
 
-    .clip {
-      border-top: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
+    .fields {
+      padding-inline: var(--jolly-space-1, 4px) 0;
     }
 
     .transform {
-      padding-inline: 0;
+      flex: 0 0 auto;
+      padding-block: var(--jolly-space-1, 4px);
     }
 
     .transform > jolly-button {
@@ -130,17 +112,22 @@ export class AnimatePanel extends LitElement {
     }
 
     .empty {
-      padding: var(--jolly-space-2, 8px);
+      margin: 0;
+      padding: var(--jolly-space-1, 4px);
       color: var(--jolly-text-muted, inherit);
     }
 
+    .error,
+    .notice {
+      margin-block: var(--jolly-space-1, 4px);
+      padding-inline: var(--jolly-space-1, 4px) 0;
+    }
+
     .error {
-      padding: 0 var(--jolly-space-2, 8px);
       color: var(--jolly-danger, inherit);
     }
 
     .notice {
-      padding: 0 var(--jolly-space-2, 8px);
       color: var(--jolly-text-muted, inherit);
     }
   `;
@@ -199,63 +186,77 @@ export class AnimatePanel extends LitElement {
       ${state.error === null ? nothing : html`<p class="error" role="alert">${state.error}</p>`}
       ${state.notice === null ? nothing : html`<p class="notice" role="status">${state.notice}</p>`}
       <div class="sets">
-        <section aria-label="Animations">
-          <div class="heading">
-            <h3>Animations</h3>
-            <jolly-button
-              icon="plus"
-              icon-only
-              label="New clip"
-              title="New clip in this model"
-              ?disabled=${!state.editable}
-              @click=${() => void this.#controller.actions?.newClip(null)}
-            ></jolly-button>
-            <jolly-button
-              icon="options"
-              icon-only
-              label="Animations options"
-              title="More"
-              @click=${(event: MouseEvent) => this.#openMenuBelow(event, "own")}
-            ></jolly-button>
-          </div>
+        <jolly-folder
+          flush
+          role="region"
+          aria-label="Animations"
+          key="animations"
+          label="Animations"
+          storage-key="voxel-model:folder:animations"
+        >
+          <jolly-button
+            slot="actions"
+            icon="plus"
+            icon-only
+            label="New clip"
+            title="New clip in this model"
+            ?disabled=${!state.editable}
+            @click=${() => void this.#controller.actions?.newClip(null)}
+          ></jolly-button>
+          <jolly-button
+            slot="actions"
+            icon="options"
+            icon-only
+            label="Animations options"
+            title="More"
+            @click=${(event: MouseEvent) => this.#openMenuBelow(event, "own")}
+          ></jolly-button>
           ${state.ownClips.length === 0 ?
             html`<p class="empty">This model has no clip yet. Click + to add one, like Idle or Walk.</p>` :
             this.#renderTree("own", state.ownClips, state)}
-        </section>
-        <section aria-label="Shared sets">
-          <div class="heading">
-            <h3>Shared sets</h3>
-            <jolly-button
-              icon="plus"
-              icon-only
-              label="New clip in a set"
-              title="New clip in a shared set"
-              ?disabled=${!state.editable || state.sharedSets.length === 0}
-              @click=${this.#onNewSharedClip}
-            ></jolly-button>
-            <jolly-button
-              label="New set"
-              title="New shared set"
-              ?disabled=${!state.editable}
-              @click=${() => void this.#controller.actions?.newSet()}
-            >New</jolly-button>
-            <jolly-button
-              label="Link set"
-              title="Link a set another model uses"
-              ?disabled=${!state.editable}
-              @click=${this.#onLinkSet}
-            >Link…</jolly-button>
-            <jolly-button
-              label="Import set"
-              title="Import a set from a .zip archive or a set file"
-              ?disabled=${!state.editable || !state.canImport}
-              @click=${() => void this.#controller.actions?.importSet()}
-            >Import…</jolly-button>
-          </div>
+        </jolly-folder>
+        <jolly-folder
+          flush
+          role="region"
+          aria-label="Shared sets"
+          key="shared-sets"
+          label="Shared sets"
+          storage-key="voxel-model:folder:shared-sets"
+        >
+          <jolly-button
+            slot="actions"
+            icon="plus"
+            icon-only
+            label="New clip in a set"
+            title="New clip in a shared set"
+            ?disabled=${!state.editable || state.sharedSets.length === 0}
+            @click=${this.#onNewSharedClip}
+          ></jolly-button>
+          <jolly-button
+            slot="actions"
+            label="New set"
+            title="New shared set"
+            ?disabled=${!state.editable}
+            @click=${() => void this.#controller.actions?.newSet()}
+          >New</jolly-button>
+          <jolly-button
+            slot="actions"
+            label="Link set"
+            title="Link a set another model uses"
+            ?disabled=${!state.editable}
+            @click=${this.#onLinkSet}
+          >Link…</jolly-button>
+          <jolly-button
+            slot="actions"
+            label="Import set"
+            title="Import a set from a .zip archive or a set file"
+            ?disabled=${!state.editable || !state.canImport}
+            @click=${() => void this.#controller.actions?.importSet()}
+          >Import…</jolly-button>
           ${state.sharedSets.length === 0 ?
             html`<p class="empty">Shared sets reuse clips across models with the same block names.</p>` :
             this.#renderTree("shared", state.sharedSets, state)}
-        </section>
+        </jolly-folder>
       </div>
       ${state.clip === null ? nothing : this.#renderClip(state.clip, state.editable)}
       <jolly-model-editor-track-bindings></jolly-model-editor-track-bindings>
@@ -312,43 +313,52 @@ export class AnimatePanel extends LitElement {
     const { clip, frames } = focused;
 
     return html`
-      <section class="clip" aria-label="Clip">
-        <jolly-text
-          label="Name"
-          ?readonly=${!editable}
-          .value=${clip.name}
-          @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => {
-            this.#controller.renameFocused(event.detail.value);
-          }}
-        ></jolly-text>
-        <jolly-number
-          label="Length (frames)"
-          min="1"
-          step="1"
-          ?readonly=${!editable}
-          .value=${frames}
-          @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
-            this.#controller.changeFrames(Math.round(event.detail.value));
-          }}
-        ></jolly-number>
-        <jolly-select
-          label="Frame rate"
-          .options=${kFpsOptions}
-          ?readonly=${!editable}
-          .value=${clip.fps}
-          @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
-            this.#controller.changeClip({ fps: event.detail.value });
-          }}
-        ></jolly-select>
-        <jolly-checkbox
-          label="Loop"
-          ?readonly=${!editable}
-          .value=${clip.loop}
-          @jolly-change=${(event: CustomEvent<JollyChangeDetail<boolean>>) => {
-            this.#controller.changeClip({ loop: event.detail.value });
-          }}
-        ></jolly-checkbox>
-      </section>
+      <jolly-folder
+        flush
+        role="region"
+        aria-label="Clip"
+        key="clip"
+        label="Clip"
+        storage-key="voxel-model:folder:clip"
+      >
+        <div class="fields">
+          <jolly-text
+            label="Name"
+            ?readonly=${!editable}
+            .value=${clip.name}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => {
+              this.#controller.renameFocused(event.detail.value);
+            }}
+          ></jolly-text>
+          <jolly-number
+            label="Length (frames)"
+            min="1"
+            step="1"
+            ?readonly=${!editable}
+            .value=${frames}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
+              this.#controller.changeFrames(Math.round(event.detail.value));
+            }}
+          ></jolly-number>
+          <jolly-select
+            label="Frame rate"
+            .options=${kFpsOptions}
+            ?readonly=${!editable}
+            .value=${clip.fps}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<number>>) => {
+              this.#controller.changeClip({ fps: event.detail.value });
+            }}
+          ></jolly-select>
+          <jolly-checkbox
+            label="Loop"
+            ?readonly=${!editable}
+            .value=${clip.loop}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<boolean>>) => {
+              this.#controller.changeClip({ loop: event.detail.value });
+            }}
+          ></jolly-checkbox>
+        </div>
+      </jolly-folder>
     `;
   }
 

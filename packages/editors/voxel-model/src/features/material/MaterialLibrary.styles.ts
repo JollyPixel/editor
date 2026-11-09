@@ -15,14 +15,15 @@ export const materialLibraryStyles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--jolly-space-2, 8px);
-    padding: var(--jolly-space-2, 8px);
+    padding-block: var(--jolly-space-1, 4px);
+    padding-inline: var(--jolly-space-1, 4px) 0;
     border-bottom: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
   }
 
   .footer {
     display: flex;
     justify-content: flex-end;
-    padding: var(--jolly-space-2, 8px);
+    padding-block-start: var(--jolly-space-1, 4px);
   }
 
   .editors {
@@ -77,7 +78,7 @@ export const materialLibraryStyles = css`
   jolly-tree {
     flex: 1 1 auto;
     overflow: auto;
-    padding-inline: var(--jolly-space-1, 4px);
+    padding-inline: 2px var(--jolly-space-1, 4px);
   }
 
   jolly-tree::part(grip) {
@@ -91,16 +92,20 @@ export const materialLibraryStyles = css`
   }
 
   .scroll {
+    display: flex;
     flex: 1 1 auto;
+    flex-direction: column;
+    gap: var(--jolly-row-gap, 4px);
     min-height: 0;
     overflow: auto;
+    padding-block: var(--jolly-space-1, 4px);
   }
 
   .fields {
     display: flex;
     flex-direction: column;
-    gap: var(--jolly-space-1, 4px);
-    padding: var(--jolly-space-1, 4px);
+    gap: var(--jolly-row-gap, 4px);
+    padding-inline: var(--jolly-space-1, 4px) 0;
   }
 
   .group-state {
@@ -109,7 +114,7 @@ export const materialLibraryStyles = css`
 
   .note {
     margin: 0;
-    padding: var(--jolly-space-1, 4px);
+    padding-inline: var(--jolly-space-1, 4px) 0;
     color: var(--jolly-text-muted, inherit);
     font-size: 0.9em;
   }
