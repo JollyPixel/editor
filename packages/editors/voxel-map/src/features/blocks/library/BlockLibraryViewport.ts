@@ -161,8 +161,13 @@ export class BlockLibraryViewport extends LitElement {
     this.#disconnectResizeHandle();
   }
 
-  override willUpdate(): void {
+  override willUpdate(
+    changed: Map<string, unknown>
+  ): void {
     this._laidOut = this.#reorder.arranged;
+    if (changed.has("layout") || changed.has("storage")) {
+      this.sized = this.layout === "compact" && this.#storedHeight() !== null;
+    }
   }
 
   override updated(
@@ -280,7 +285,6 @@ export class BlockLibraryViewport extends LitElement {
     const grip = this._grip;
     if (grip === null) {
       this._scroller?.style.removeProperty("height");
-      this.sized = false;
 
       return;
     }
@@ -295,11 +299,18 @@ export class BlockLibraryViewport extends LitElement {
     handle.addEventListener("dragEnd", this.#onResizeEnd);
     this.#resizeHandle = handle;
 
-    const stored = Number(this.storage.get(kHeightStorageKey));
-    if (Number.isFinite(stored) && stored >= kMinHeight) {
-      this._scroller.style.height = `${Math.min(stored, kMaxHeight)}px`;
-      this.sized = true;
+    const stored = this.#storedHeight();
+    if (stored !== null) {
+      this._scroller.style.height = `${stored}px`;
     }
+  }
+
+  #storedHeight(): number | null {
+    const stored = Number(this.storage.get(kHeightStorageKey));
+
+    return Number.isFinite(stored) && stored >= kMinHeight ?
+      Math.min(stored, kMaxHeight) :
+      null;
   }
 
   #disconnectResizeHandle(): void {

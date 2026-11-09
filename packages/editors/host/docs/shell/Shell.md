@@ -62,6 +62,9 @@ notifications.
 - The frame posts `jolly-ready` and waits one second for `jolly-launch` from
   an allowed origin. An invalid `reveal`, `appearance`, `identity`,
   `preferences` or `ports` field is dropped, not the whole launch.
+- The frame's page stays hidden while it waits, then shows in the launch
+  appearance, so it never paints its own theme or density first. It also
+  shows when no launch arrives in time.
 - With `identity`, the frame joins as that peer instead of prompting, so every
   frame shares the shell's name and presence color. `avatar` is the
   same-origin path of the peer's uploaded avatar.

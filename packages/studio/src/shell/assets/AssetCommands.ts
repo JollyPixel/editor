@@ -2,6 +2,7 @@
 import {
   ARCHIVE_MIME_TYPE,
   CATALOG_PLAN,
+  CATALOG_STAGES,
   CatalogRejectedError,
   type CatalogBatchReport,
   type CatalogClient,
@@ -94,7 +95,8 @@ export class AssetCommands {
   async add(
     path: AssetPath,
     file: DroppedFile,
-    convertTo: AssetKindEntry | null = null
+    convertTo: AssetKindEntry | null,
+    onProgress: (share: number) => void
   ): Promise<string> {
     return this.#catalog.create(
       path.toString(),
@@ -102,7 +104,10 @@ export class AssetCommands {
       {
         kind: convertTo?.kind,
         from: convertTo === null ? undefined : file.format,
-        onConflict: "suffix"
+        onConflict: "suffix",
+        onProgress: (stage) => onProgress(
+          (CATALOG_STAGES.indexOf(stage) + 1) / (CATALOG_STAGES.length + 1)
+        )
       }
     );
   }

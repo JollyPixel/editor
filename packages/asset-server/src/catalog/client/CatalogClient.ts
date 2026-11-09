@@ -20,6 +20,7 @@ import {
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
   CATALOG_PREVIEW,
+  CATALOG_PROGRESS,
   CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
@@ -36,6 +37,7 @@ import {
   type CatalogCommand,
   type CatalogCommandType,
   type CatalogMessage,
+  type CatalogProgress,
   type CatalogRequest
 } from "./protocol.ts";
 import type { PathConflictPolicy } from "../../model/PathConflictPolicy.ts";
@@ -96,6 +98,11 @@ export interface CatalogCreateOptions {
    * converts it before the asset is written.
    */
   from?: string;
+  /**
+   * Called with each stage the server enters before it replies: `converting`
+   * when `from` is set, then `writing`, which also fires without content.
+   */
+  onProgress?: CatalogProgress;
 }
 
 export interface CatalogReplaceOptions {
@@ -152,6 +159,11 @@ type SettledMessage = Extract<
 >;
 type Settle = (message: SettledMessage | null) => void;
 
+interface PendingRequest {
+  readonly settle: Settle;
+  readonly onProgress?: CatalogProgress;
+}
+
 export class CatalogClient extends Emitter<CatalogClientEvents> {
   static async connect(
     rooms: CatalogRoomSource,
@@ -178,7 +190,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   readonly #records = new Map<string, AssetRecordData>();
   #folders: readonly string[] = [];
   readonly #dependencies = new DependencyIndex();
-  readonly #pending = new Map<string, Settle>();
+  readonly #pending = new Map<string, PendingRequest>();
   readonly #ready = Promise.withResolvers<void>();
 
   constructor(
@@ -247,7 +259,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       onConflict: options.onConflict,
       content: content === null ? undefined : checkedKindContent(content),
       from: options.from
-    });
+    }, options.onProgress);
 
     return reply.assetId;
   }
@@ -471,17 +483,19 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   dispose(): void {
     this.#room.off("message", this.#onMessage);
     this.#room.leave();
-    for (const settle of this.#pending.values()) {
+    for (const { settle } of this.#pending.values()) {
       settle(null);
     }
     this.#pending.clear();
   }
 
   async #request<TRequest extends CatalogRequest>(
-    request: TRequest
+    request: TRequest,
+    onProgress?: CatalogProgress
   ): Promise<Reply<TRequest["type"]>>;
   async #request(
-    request: CatalogRequest
+    request: CatalogRequest,
+    onProgress?: CatalogProgress
   ): Promise<CatalogApplied> {
     await this.ready;
 
@@ -489,30 +503,33 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     const { promise, resolve, reject } = Promise.withResolvers<
       CatalogApplied
     >();
-    this.#pending.set(requestId, (message) => {
-      if (message === null) {
-        reject(new CatalogRejectedError(
-          "catalog client disposed",
-          request.type
-        ));
-      }
-      else if (message.type === CATALOG_REJECTED) {
-        reject(
-          new CatalogRejectedError(
-            message.reason,
-            message.command
-          )
-        );
-      }
-      else if (message.command === request.type) {
-        resolve(message);
-      }
-      else {
-        reject(new CatalogRejectedError(
-          `unexpected "${message.command}" reply`,
-          request.type
-        ));
-      }
+    this.#pending.set(requestId, {
+      settle: (message) => {
+        if (message === null) {
+          reject(new CatalogRejectedError(
+            "catalog client disposed",
+            request.type
+          ));
+        }
+        else if (message.type === CATALOG_REJECTED) {
+          reject(
+            new CatalogRejectedError(
+              message.reason,
+              message.command
+            )
+          );
+        }
+        else if (message.command === request.type) {
+          resolve(message);
+        }
+        else {
+          reject(new CatalogRejectedError(
+            `unexpected "${message.command}" reply`,
+            request.type
+          ));
+        }
+      },
+      onProgress
     });
     this.#room.send({
       ...request,
@@ -535,6 +552,9 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
         tags
       ))
       .with({ type: P.union(CATALOG_APPLIED, CATALOG_REJECTED) }, (reply) => this.#settle(reply))
+      .with({ type: CATALOG_PROGRESS }, ({ requestId, stage }) => {
+        this.#pending.get(requestId)?.onProgress?.(stage);
+      })
       .exhaustive();
   };
 
@@ -593,9 +613,9 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   #settle(
     reply: SettledMessage
   ): void {
-    const settle = this.#pending.get(reply.requestId);
+    const pending = this.#pending.get(reply.requestId);
     this.#pending.delete(reply.requestId);
-    settle?.(reply);
+    pending?.settle(reply);
   }
 
   #replaceDependencies(

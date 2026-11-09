@@ -5,6 +5,9 @@ import { Emitter } from "@openally/emitt";
 import { ChangeReceipts } from "./ChangeReceipts.ts";
 import { CommandChange } from "./CommandChange.ts";
 
+// CONSTANTS
+const kMaxListenersPerEvent = 32;
+
 export interface CommandState<TCommand, TSnapshot, TImage> {
   accepts(
     command: TCommand
@@ -47,7 +50,8 @@ export class CommandDocument<
 > {
   readonly receipts = new ChangeReceipts<CommandChange<TCommand, TImage>>();
 
-  #events = new Emitter<CommandDocumentEvents<TCommand, TImage>>();
+  #events = new Emitter<CommandDocumentEvents<TCommand, TImage>>()
+    .setMaxListeners(kMaxListenersPerEvent);
   #state: CommandState<TCommand, TSnapshot, TImage>;
 
   constructor(

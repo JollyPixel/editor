@@ -9,52 +9,12 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { ANY_SHELL_ORIGIN, HostMessageLaunchSource } from "#src/launch/sources/HostMessageLaunchSource.ts";
 import { captureLogs } from "../helpers/logs.ts";
-
-// CONSTANTS
-const kStudioOrigin = "http://studio.test";
-
-type FakeParent = MessagePort & {
-  posted: Array<{
-    message: unknown;
-    origin: string;
-  }>;
-};
-
-function fakeParent(): FakeParent {
-  const posted: FakeParent["posted"] = [];
-
-  return Object.assign(new MessageChannel().port1, {
-    posted,
-    postMessage(
-      message: unknown,
-      origin: string
-    ): void {
-      posted.push({
-        message,
-        origin
-      });
-    }
-  });
-}
-
-function frameIn(
-  parent: MessageEventSource
-): () => void {
-  const descriptor = Object.getOwnPropertyDescriptor(window, "parent");
-  Object.defineProperty(window, "parent", {
-    configurable: true,
-    get: () => parent
-  });
-
-  return () => {
-    if (descriptor === undefined) {
-      Reflect.deleteProperty(window, "parent");
-    }
-    else {
-      Object.defineProperty(window, "parent", descriptor);
-    }
-  };
-}
+import {
+  fakeParent,
+  frameIn,
+  postFromParent
+} from "../helpers/parentFrame.ts";
+import { SHELL_ORIGIN } from "../helpers/shell.ts";
 
 describe("HostMessageLaunchSource", () => {
   afterEach(() => {
@@ -68,19 +28,15 @@ describe("HostMessageLaunchSource", () => {
     const { logger, lines } = captureLogs();
 
     const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin],
+      origins: [SHELL_ORIGIN],
       logger
     }).read();
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: "http://evil.test",
-      data: { type: "jolly-launch", target: "hijacked" }
-    }));
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: kStudioOrigin,
-      data: { type: "jolly-launch", target: "from-host" }
-    }));
+    postFromParent(
+      parent,
+      { type: "jolly-launch", target: "hijacked" },
+      "http://evil.test"
+    );
+    postFromParent(parent, { type: "jolly-launch", target: "from-host" });
 
     const launch = await pending;
     assert.equal(launch?.target.value, "from-host");
@@ -98,11 +54,11 @@ describe("HostMessageLaunchSource", () => {
     const pending = new HostMessageLaunchSource({
       origins: [ANY_SHELL_ORIGIN]
     }).read();
-    window.dispatchEvent(new MessageEvent("message", {
-      source: parent,
-      origin: "http://anywhere.test",
-      data: { type: "jolly-launch", target: "from-host" }
-    }));
+    postFromParent(
+      parent,
+      { type: "jolly-launch", target: "from-host" },
+      "http://anywhere.test"
+    );
 
     const launch = await pending;
     assert.deepEqual(
@@ -112,13 +68,18 @@ describe("HostMessageLaunchSource", () => {
     assert.equal(launch?.shell?.origin, "http://anywhere.test");
   });
 
-  test("gives up after the timeout", async(context) => {
+  test("gives up after the timeout and shows the hidden page", async(context) => {
     context.after(frameIn(fakeParent()));
     context.mock.timers.enable({ apis: ["setTimeout"] });
 
     const pending = new HostMessageLaunchSource({ timeout: 50 }).read();
+    const waiting = document.documentElement.style.visibility;
     context.mock.timers.tick(50);
 
     assert.equal(await pending, undefined);
+    assert.deepEqual(
+      [waiting, document.documentElement.style.visibility],
+      ["hidden", ""]
+    );
   });
 });

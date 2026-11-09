@@ -32,11 +32,17 @@ describe("AssetCommands dropped files", () => {
     await commands.add(
       sprites.child("hero.pixelart"),
       droppedFile("hero.PNG", "png"),
-      kPixelArtKind
+      kPixelArtKind,
+      () => undefined
     );
-    await commands.add(sprites.child("hero.PNG"), droppedFile("hero.PNG", "png"));
+    await commands.add(
+      sprites.child("hero.PNG"),
+      droppedFile("hero.PNG", "png"),
+      null,
+      () => undefined
+    );
 
-    assert.deepEqual(created, [
+    assert.partialDeepStrictEqual(created, [
       [
         "sprites/hero.pixelart",
         new TextEncoder().encode("png"),

@@ -21,12 +21,14 @@ import {
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
   CATALOG_PREVIEW,
+  CATALOG_PROGRESS,
   CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
   CATALOG_REPLACE,
   CATALOG_RESTORE,
   CATALOG_SNAPSHOT,
+  CATALOG_STAGES,
   CATALOG_TAG,
   CATALOG_TAGS,
   CATALOG_TAGS_CHANGED,
@@ -283,6 +285,9 @@ export const catalogMessageProtocol = new MessageProtocol(
     requestVariant(CATALOG_REJECTED, {
       command: z.enum(kCommandTypes),
       reason: kString
+    }),
+    requestVariant(CATALOG_PROGRESS, {
+      stage: z.enum(CATALOG_STAGES)
     })
   ]),
   {

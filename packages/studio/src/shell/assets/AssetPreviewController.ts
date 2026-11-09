@@ -10,6 +10,7 @@ export class AssetPreviewController {
   #previews: AssetPreviewCache | null = null;
   #target: AssetPreviewTarget | null = null;
   #url: string | null = null;
+  #loading = false;
 
   constructor(
     host: Pick<ReactiveControllerHost, "requestUpdate">
@@ -19,6 +20,10 @@ export class AssetPreviewController {
 
   get url(): string | null {
     return this.#url;
+  }
+
+  get loading(): boolean {
+    return this.#loading;
   }
 
   show(
@@ -36,9 +41,13 @@ export class AssetPreviewController {
     }
     this.#previews = previews;
     this.#target = target;
-    if (previews !== null && target !== null) {
-      void this.#load(previews, target);
+    this.#loading = false;
+    if (previews === null || target === null) {
+      return;
     }
+
+    this.#loading = true;
+    void this.#load(previews, target);
   }
 
   async #load(
@@ -47,7 +56,9 @@ export class AssetPreviewController {
   ): Promise<void> {
     const url = await previews.load(target).catch(() => null);
     if (previews === this.#previews && target === this.#target) {
-      this.#display(url);
+      this.#loading = false;
+      this.#url = url;
+      this.#host.requestUpdate();
     }
   }
 

@@ -193,11 +193,15 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
     _content: Uint8Array | null,
     options: CatalogCreateOptions = {}
   ): Promise<string> {
+    if (options.from !== undefined) {
+      options.onProgress?.("converting");
+    }
     await this.#held;
     if (this.failure !== null) {
       throw new Error(this.failure);
     }
 
+    options.onProgress?.("writing");
     const id = `created-${++this.#created}`;
     this.#staged.push(() => this.byId.set(id, {
       id,

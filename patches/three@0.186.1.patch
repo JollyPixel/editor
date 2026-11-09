@@ -1,0 +1,14 @@
+diff --git a/examples/jsm/loaders/FBXLoader.js b/examples/jsm/loaders/FBXLoader.js
+index 23adc69e9faf639a076c7b68729fa4c5513b69b4..dd097d21484fffadac5373b6ebdf5bd87749826e 100644
+--- a/examples/jsm/loaders/FBXLoader.js
++++ b/examples/jsm/loaders/FBXLoader.js
+@@ -4073,7 +4073,8 @@ class BinaryParser {
+ 
+ 				}
+ 
+-				const data = unzlibSync( new Uint8Array( reader.getArrayBuffer( compressedLength ) ) );
++				const elementSize = ( type === 'b' || type === 'c' ) ? 1 : ( type === 'f' || type === 'i' ) ? 4 : 8;
++				const data = unzlibSync( new Uint8Array( reader.getArrayBuffer( compressedLength ) ), { out: new Uint8Array( arrayLength * elementSize ) } );
+ 				const reader2 = new BinaryReader( data.buffer );
+ 
+ 				switch ( type ) {

@@ -41,13 +41,15 @@ function showPreview(
 }
 
 describe("AssetPreviewController", () => {
-  test("shows no image until the preview arrives", async() => {
+  test("loads without an image until the preview arrives", async() => {
     using shown = showPreview("grass");
 
     assert.strictEqual(shown.controller.url, null);
+    assert.strictEqual(shown.controller.loading, true);
 
     await shown.catalog.reply("grass", pngPreview("grass"));
 
+    assert.strictEqual(shown.controller.loading, false);
     assert.strictEqual(
       shown.controller.url,
       await shown.cache.load(previewTarget("grass"))
@@ -60,6 +62,7 @@ describe("AssetPreviewController", () => {
     await shown.catalog.reply("grass", null);
 
     assert.strictEqual(shown.controller.url, null);
+    assert.strictEqual(shown.controller.loading, false);
   });
 
   test("drops a preview that arrives after the selection changed", async() => {

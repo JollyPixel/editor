@@ -27,6 +27,7 @@ export const CATALOG_FOLDERS = "catalog:folders";
 export const CATALOG_APPLIED = "catalog:applied";
 export const CATALOG_REJECTED = "catalog:rejected";
 export const CATALOG_TAGS_CHANGED = "catalog:tags-changed";
+export const CATALOG_PROGRESS = "catalog:progress";
 
 export const CATALOG_CREATE = "catalog:create";
 export const CATALOG_RENAME = "catalog:rename";
@@ -45,9 +46,13 @@ export const CATALOG_REPLACE = "catalog:replace";
 export const CATALOG_READ = "catalog:read";
 export const CATALOG_PREVIEW = "catalog:preview";
 
+export const CATALOG_STAGES = ["converting", "writing"] as const;
+
 export type CatalogCommand = InferMessage<typeof catalogCommandProtocol>;
 export type CatalogRequest = Without<CatalogCommand, "requestId">;
 export type CatalogCommandType = CatalogCommand["type"];
+export type CatalogStage = typeof CATALOG_STAGES[number];
+export type CatalogProgress = (stage: CatalogStage) => void;
 
 type RequestOf<TType extends CatalogCommandType> = Extract<
   CatalogRequest,

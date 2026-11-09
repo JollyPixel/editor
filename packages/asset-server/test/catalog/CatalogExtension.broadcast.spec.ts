@@ -21,6 +21,7 @@ import {
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
   CATALOG_PREVIEW,
+  CATALOG_PROGRESS,
   CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
@@ -162,7 +163,8 @@ describe("CatalogExtension — broadcast", () => {
         CATALOG_FOLDERS,
         CATALOG_TAGS_CHANGED,
         CATALOG_APPLIED,
-        CATALOG_REJECTED
+        CATALOG_REJECTED,
+        CATALOG_PROGRESS
       ]
     );
     extension.dispose();
