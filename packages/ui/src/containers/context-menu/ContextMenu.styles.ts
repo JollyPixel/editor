@@ -77,13 +77,34 @@ export const contextMenuStyles = css`
     height: 12px;
   }
 
-  .menu[data-opens="left"] > .branch > .item > .chevron {
-    order: -1;
-    transform: scaleX(-1);
+  .swatch {
+    --jolly-menu-swatch-checker: color-mix(in oklab, var(--jolly-ink) 18%, transparent);
+
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 12px;
+    height: 12px;
+    border: 1px solid color-mix(in oklab, var(--jolly-ink) 35%, transparent);
+    border-radius: 2px;
+    outline: 1.5px solid var(--jolly-menu-swatch-ring, transparent);
+    outline-offset: 1px;
+    background-color: var(--jolly-surface-raised, ${kFallback.controlBg});
+    background-image:
+      linear-gradient(
+        var(--jolly-menu-swatch-color),
+        var(--jolly-menu-swatch-color)
+      ),
+      conic-gradient(
+        var(--jolly-menu-swatch-checker) 25%,
+        transparent 0 50%,
+        var(--jolly-menu-swatch-checker) 0 75%,
+        transparent 0
+      );
+    background-size: auto, 4px 4px;
   }
 
-  .menu[data-opens="left"]:has(> .branch) > .item {
-    padding-inline-start: calc(var(--jolly-space-2, 8px) * 2 + 12px);
+  .menu[data-opens="left"] > .branch > .item > .chevron {
+    transform: scaleX(-1);
   }
 
   .label {

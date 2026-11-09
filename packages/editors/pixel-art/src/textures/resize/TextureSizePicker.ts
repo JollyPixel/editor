@@ -41,8 +41,6 @@ export class TextureSizePicker extends LitElement {
 
     jolly-select {
       width: 7ch;
-
-      --jolly-field-inset-end: 0px;
     }
 
     .separator {

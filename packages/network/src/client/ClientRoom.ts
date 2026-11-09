@@ -22,6 +22,7 @@ import type {
 
 // CONSTANTS
 const kNoRights: RoomRights = Object.freeze({});
+const kMaxListenersPerEvent = 32;
 
 type ClientRoomState = "idle" | "joined" | "left";
 
@@ -88,6 +89,7 @@ export class ClientRoom<
     options: ClientRoomOptions<TServerMessage>
   ) {
     super();
+    this.setMaxListeners(kMaxListenersPerEvent);
     this.id = options.id;
     this.#claimedProfile = options.profile;
     this.#parser = options.parser;

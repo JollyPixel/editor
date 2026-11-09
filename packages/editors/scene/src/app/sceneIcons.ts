@@ -263,14 +263,13 @@ registerIcon("gizmo-rotate", svg`
 
 registerIcon("gizmo-scale", svg`
   <rect
-    class="tone-fill"
+    class="tone-ink"
     x="4"
     y="12"
     width="8"
     height="8"
     rx="1.5"
-    stroke="currentColor"
-    stroke-width="1.75"
+    fill="currentColor"
   />
   <path
     d="M4 9V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"
@@ -292,7 +291,6 @@ registerIcon("gizmo-scale", svg`
 
 registerIcon("gizmo-space-local", svg`
   <rect
-    class="tone-fill"
     x="4"
     y="4"
     width="16"
@@ -302,10 +300,11 @@ registerIcon("gizmo-space-local", svg`
     stroke-width="1.75"
   />
   <path
+    class="tone-ink"
     d="M10 8v8h5"
     fill="none"
     stroke="currentColor"
-    stroke-width="1.75"
+    stroke-width="2.25"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
@@ -313,7 +312,6 @@ registerIcon("gizmo-space-local", svg`
 
 registerIcon("gizmo-space-world", svg`
   <rect
-    class="tone-fill"
     x="4"
     y="4"
     width="16"
@@ -323,10 +321,11 @@ registerIcon("gizmo-space-world", svg`
     stroke-width="1.75"
   />
   <path
+    class="tone-ink"
     d="M7.5 8l1.75 8L12 10.5 14.75 16 16.5 8"
     fill="none"
     stroke="currentColor"
-    stroke-width="1.75"
+    stroke-width="2.25"
     stroke-linecap="round"
     stroke-linejoin="round"
   />

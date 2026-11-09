@@ -8,8 +8,7 @@ const kFieldsStyle = {
   display: "flex",
   "flex-direction": "column",
   gap: "var(--jolly-row-gap, 4px)",
-  "--jolly-label-width": "8ch",
-  "--jolly-field-inset-end": "0"
+  "--jolly-label-width": "8ch"
 };
 
 export interface NewTag {

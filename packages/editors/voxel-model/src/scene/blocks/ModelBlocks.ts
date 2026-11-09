@@ -33,7 +33,7 @@ import {
 export type ModelBlocksEvents = {
   blockAdded: (block: ModelBlock) => void;
   blockRemoved: (uuid: string) => void;
-  blockVisibilityChanged: (uuids: readonly string[], visible: boolean) => void;
+  blockVisibilityChanged: (uuids: readonly string[]) => void;
   transformApplied: (uuid: string) => void;
   geometryReplaced: (uuid: string) => void;
 };
@@ -219,21 +219,51 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     return this.#byMesh.get(object);
   }
 
+  bounds(
+    uuids: Iterable<string>
+  ): THREE.Box3 {
+    this.#scene.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    for (const uuid of uuids) {
+      const block = this.#blocks.get(uuid);
+      if (block) {
+        box.expandByObject(block.mesh);
+      }
+    }
+
+    return box;
+  }
+
   changeVisibility(
     uuids: Iterable<string>,
     visible: boolean
   ): void {
+    this.#applyVisibility(uuids, () => visible);
+  }
+
+  showOnly(
+    uuids: Iterable<string>
+  ): void {
+    const shown = new Set(uuids);
+    this.#applyVisibility(this.#blocks.keys(), (uuid) => shown.has(uuid));
+  }
+
+  #applyVisibility(
+    uuids: Iterable<string>,
+    visible: (uuid: string) => boolean
+  ): void {
     const changed: string[] = [];
     for (const uuid of uuids) {
       const block = this.#blocks.get(uuid);
-      if (block && block.visible !== visible) {
-        block.visible = visible;
+      const next = visible(uuid);
+      if (block && block.visible !== next) {
+        block.visible = next;
         changed.push(uuid);
       }
     }
 
     if (changed.length > 0) {
-      this.emit("blockVisibilityChanged", changed, visible);
+      this.emit("blockVisibilityChanged", changed);
     }
   }
 

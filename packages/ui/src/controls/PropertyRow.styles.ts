@@ -24,9 +24,9 @@ export const propertyRowStyles = css`
      */
     padding-inline: calc(
         var(--jolly-gutter-width, 0px) +
-          var(--jolly-field-inset-end, var(--jolly-space-1, 4px))
+          var(--jolly-field-inset-end, 0px)
       )
-      var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
+      var(--jolly-field-inset-end, 0);
   }
 
   .row:has(.label-cell > *) {
@@ -104,7 +104,7 @@ export const propertyRowStyles = css`
 
   /* A nested field already carries its own trailing row inset. */
   :host([align="end"]) ::slotted(jolly-checkbox[align="end"]) {
-    margin-inline-end: calc(var(--jolly-space-1, 4px) * -1);
+    margin-inline-end: calc(var(--jolly-field-inset-end, 0px) * -1);
   }
 
   /* Let an opted-in checkbox carry its gradient across the whole value column. */
@@ -127,7 +127,7 @@ export const propertyRowStyles = css`
           var(--jolly-field-inset-start, var(--jolly-space-1, 4px)) +
           var(--jolly-space-1, 4px)
       )
-      var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
+      var(--jolly-field-inset-end, 0);
     color: var(--jolly-text-muted);
     font-size: 0.9em;
   }

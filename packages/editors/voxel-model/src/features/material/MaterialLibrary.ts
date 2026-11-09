@@ -13,7 +13,6 @@ import {
   type Tree,
   ContextMenuController,
   LazyTemplate,
-  MenuSession,
   menuPointBelow,
   type MenuPoint
 } from "@jolly-pixel/ui";
@@ -33,7 +32,8 @@ import {
 
 // Import Internal Dependencies
 import { materialLibraryStyles } from "./MaterialLibrary.styles.ts";
-import { presetIcon } from "./library/materialIcons.ts";
+import { presetMenuItems } from "./library/materialIcons.ts";
+import { MenuActions } from "../../shared/menu/MenuActions.ts";
 import "../../shared/actionIcons.ts";
 import type { MaterialAction } from "./library/materialMenu.ts";
 import {
@@ -46,10 +46,7 @@ import {
   MaterialSurfaceController,
   type MaterialSurfaceEditing
 } from "./surface/MaterialSurfaceController.ts";
-import {
-  MATERIAL_PRESETS,
-  type MaterialPreset
-} from "./library/materialPresets.ts";
+import type { MaterialPreset } from "./library/materialPresets.ts";
 import {
   SURFACE_GROUPS,
   UNLIT_NOTE,
@@ -316,24 +313,8 @@ export class MaterialLibrary extends LitElement {
     choose: (preset: MaterialPreset) => void,
     point: MenuPoint
   ): void {
-    const presets = new Map(MATERIAL_PRESETS.map((preset) => [preset.id, preset]));
-    const items = MATERIAL_PRESETS.map((preset) => {
-      return {
-        id: preset.id,
-        label: preset.label,
-        icon: presetIcon(preset)
-      };
-    });
-
-    this.#menu.open(
-      MenuSession.from(items, (presetId) => {
-        const preset = presets.get(presetId);
-        if (preset !== undefined) {
-          choose(preset);
-        }
-      }),
-      point
-    );
+    const menu = new MenuActions();
+    this.#menu.open(menu.session(presetMenuItems(menu, choose)), point);
   }
 
   async #beginRename(

@@ -76,12 +76,16 @@ commits a concrete value.
 
 ## Insets
 
-- `--jolly-field-inset-start` and `--jolly-field-inset-end` set the row insets,
-  default `--jolly-space-1`. The start inset also indents description and
-  error lines. `jolly-property-row` and a `jolly-separator` caption follow the
-  same insets, so they stay aligned with the labels.
-- Set both to `0` inside a padded container, such as a dialog body.
-- Set the end inset to `0` to align rows with a folder header edge.
+- `--jolly-field-inset-start` sets the space before the label, default
+  `--jolly-space-1`. It also indents description and error lines.
+- `--jolly-field-inset-end` sets the space after the value, default `0px`, so
+  a filled control ends flush with its container and the folder header edge.
+  An unlabeled field uses it on both sides. Raise it only when a row ends in
+  text.
+- `jolly-property-row` and a `jolly-separator` caption follow the same insets,
+  so they stay aligned with the labels.
+- Set the start inset to `0px` inside a padded container, such as a dialog
+  body.
 
 ## Collaboration
 

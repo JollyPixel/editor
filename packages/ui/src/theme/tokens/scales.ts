@@ -23,8 +23,8 @@ export const scaleTokens = css`
     /* Lock affordance space; collaborative containers opt their subtree in. */
     --jolly-gutter-width: 0px;
 
-    /* Set to 0 beside folder headers, whose bar paints past the value. */
-    --jolly-field-inset-end: var(--jolly-space-1);
+    /* Filled controls end flush; raise it only when a row ends in text. */
+    --jolly-field-inset-end: 0px;
     --jolly-duration-fast: 100ms;
     --jolly-duration-base: 160ms;
     --jolly-easing: cubic-bezier(0.2, 0, 0.2, 1);

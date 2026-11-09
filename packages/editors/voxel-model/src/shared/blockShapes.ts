@@ -67,12 +67,6 @@ export const BLOCK_SHAPE_OPTIONS: readonly JollyOption<BlockShapeEntryId>[] = BL
   }
 );
 
-export function isBlockShapeEntryId(
-  value: string
-): value is BlockShapeEntryId {
-  return BLOCK_SHAPES.some((entry) => entry.id === value);
-}
-
 export function blockShapeById(
   id: string | undefined
 ): KnownBlockShape {

@@ -45,13 +45,20 @@ interface ContextMenuItem {
   id: string;
   label: string;
   icon?: IconName;
+  swatch?: ContextMenuSwatch; // drawn instead of the icon
   disabled?: boolean;
   intent?: "danger"; // drawn in the danger colour
   items?: readonly ContextMenuEntry[]; // a submenu
 }
+
+interface ContextMenuSwatch {
+  color: string; // any CSS colour, over a checkerboard
+  ring?: string; // outline colour
+}
 ```
 
-When one item has an icon, every item keeps an icon column.
+When one item has an icon or a swatch, every item keeps an icon column. A
+swatch shows a colour choice, such as a material or a palette entry.
 
 ## Events
 

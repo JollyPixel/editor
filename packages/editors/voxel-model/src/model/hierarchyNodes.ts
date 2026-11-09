@@ -79,6 +79,26 @@ export function* blockIdsUnder(
   }
 }
 
+export function* ownBlockIds(
+  node: HierarchyNode
+): IterableIterator<string> {
+  if (node.kind === "block") {
+    yield node.id;
+  }
+  else {
+    yield* blockIdsUnder(node);
+  }
+}
+
+export function* subtreeBlockIds(
+  node: HierarchyNode
+): IterableIterator<string> {
+  if (node.kind === "block") {
+    yield node.id;
+  }
+  yield* blockIdsUnder(node);
+}
+
 export function findHierarchyNode(
   nodes: readonly HierarchyNode[],
   id: string

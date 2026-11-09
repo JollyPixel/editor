@@ -3,7 +3,10 @@ import {
   nothing,
   svg
 } from "lit";
-import { registerIcon } from "@jolly-pixel/ui";
+import {
+  registerIcon,
+  type MenuItem
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -11,11 +14,26 @@ import {
   type MaterialPreset
 } from "./materialPresets.ts";
 import { surfaceSwatch } from "../materialSwatch.ts";
+import type { MenuActions } from "../../../shared/menu/MenuActions.ts";
 
 export function presetIcon(
   preset: MaterialPreset
 ): string {
   return `material-preset-${preset.id}`;
+}
+
+export function presetMenuItems(
+  menu: MenuActions,
+  choose: (preset: MaterialPreset) => unknown
+): MenuItem<string>[] {
+  return MATERIAL_PRESETS.map((preset) => menu.item(
+    {
+      id: `preset:${preset.id}`,
+      label: preset.label,
+      icon: presetIcon(preset)
+    },
+    () => choose(preset)
+  ));
 }
 
 for (const preset of MATERIAL_PRESETS) {

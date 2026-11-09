@@ -145,21 +145,21 @@ test.describe("Folder", () => {
     expect((await measureBox(row)).x).toBe((await measureBox(outer)).x);
   });
 
-  test("holds a nested field short of the header bar it sits under", async({ page }) => {
+  test("ends a nested field flush with the header bar it sits under", async({ page }) => {
     await openExample(page, "scenarios/facade");
 
     const folder = page.locator("jolly-folder").first();
     const value = folder.locator("jolly-slider input[type=text]");
     const header = await measureBox(folder.locator(".header"));
     const headerRight = header.x + header.width;
-    const inset = await measureBox(value);
-    expect(headerRight - (inset.x + inset.width)).toBe(4);
-
-    await folder.evaluate(
-      (element: HTMLElement) => element.style.setProperty("--jolly-field-inset-end", "0px")
-    );
     const flush = await measureBox(value);
     expect(flush.x + flush.width).toBeCloseTo(headerRight, 0);
+
+    await folder.evaluate(
+      (element: HTMLElement) => element.style.setProperty("--jolly-field-inset-end", "4px")
+    );
+    const inset = await measureBox(value);
+    expect(headerRight - (inset.x + inset.width)).toBeCloseTo(4, 0);
   });
 
   test("distinguishes pane, folder, and control fills", async({ page }) => {

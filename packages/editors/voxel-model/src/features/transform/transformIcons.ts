@@ -34,14 +34,13 @@ registerIcon("transform-angle", svg`
 
 registerIcon("transform-size", svg`
   <rect
-    class="tone-fill"
+    class="tone-ink"
     x="4"
     y="10"
     width="10"
     height="10"
     rx="1.5"
-    stroke="currentColor"
-    stroke-width="1.75"
+    fill="currentColor"
   />
   <path
     d="M14 10l6-6M15 4h5v5"
@@ -55,12 +54,11 @@ registerIcon("transform-size", svg`
 
 registerIcon("transform-pivot", svg`
   <circle
-    class="tone-fill"
+    class="tone-ink"
     cx="12"
     cy="12"
-    r="6"
-    stroke="currentColor"
-    stroke-width="1.75"
+    r="6.5"
+    fill="currentColor"
   />
   <path
     d="M12 2.5v3.5M12 18v3.5M2.5 12H6M18 12h3.5"
@@ -69,24 +67,17 @@ registerIcon("transform-pivot", svg`
     stroke-width="1.75"
     stroke-linecap="round"
   />
-  <circle
-    cx="12"
-    cy="12"
-    r="1.75"
-    fill="currentColor"
-  />
 `, { tone: "pink" });
 
 registerIcon("transform-scale", svg`
   <rect
-    class="tone-fill"
+    class="tone-ink"
     x="4"
     y="12"
     width="8"
     height="8"
     rx="1.5"
-    stroke="currentColor"
-    stroke-width="1.75"
+    fill="currentColor"
   />
   <path
     d="M4 9V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"
@@ -108,7 +99,6 @@ registerIcon("transform-scale", svg`
 
 registerIcon("transform-local", svg`
   <rect
-    class="tone-fill"
     x="4"
     y="4"
     width="16"
@@ -118,10 +108,11 @@ registerIcon("transform-local", svg`
     stroke-width="1.75"
   />
   <path
+    class="tone-ink"
     d="M10 8v8h5"
     fill="none"
     stroke="currentColor"
-    stroke-width="1.75"
+    stroke-width="2.25"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
@@ -129,7 +120,6 @@ registerIcon("transform-local", svg`
 
 registerIcon("transform-global", svg`
   <rect
-    class="tone-fill"
     x="4"
     y="4"
     width="16"
@@ -139,10 +129,11 @@ registerIcon("transform-global", svg`
     stroke-width="1.75"
   />
   <path
+    class="tone-ink"
     d="M7.5 8l1.75 8L12 10.5 14.75 16 16.5 8"
     fill="none"
     stroke="currentColor"
-    stroke-width="1.75"
+    stroke-width="2.25"
     stroke-linecap="round"
     stroke-linejoin="round"
   />

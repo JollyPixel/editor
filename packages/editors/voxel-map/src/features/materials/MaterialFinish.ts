@@ -54,7 +54,7 @@ export class MaterialFinish extends LitElement {
     }
 
     jolly-separator > jolly-button {
-      margin-inline-end: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
+      margin-inline-end: var(--jolly-field-inset-end, 0);
     }
   `;
 

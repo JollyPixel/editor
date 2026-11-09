@@ -34,6 +34,19 @@ function setup(
 }
 
 describe("PresenceChannel", () => {
+  test("one room carries a channel per editor concern without a listener leak warning", (t) => {
+    const warn = t.mock.method(console, "warn", () => undefined);
+    const harness = new RoomHarness();
+    for (let index = 0; index < 16; index++) {
+      new PresenceChannel(harness.room, {
+        key: `concern-${index}`,
+        decode: decodeString
+      });
+    }
+
+    assert.strictEqual(warn.mock.callCount(), 0);
+  });
+
   test("replays the peers already in the room", () => {
     const harness = new RoomHarness();
     harness.peerJoined("B", { tool: "brush" });

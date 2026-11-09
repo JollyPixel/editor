@@ -195,7 +195,8 @@ test("an end-aligned editor checkbox spans its value column apart from the label
   ]);
   const inputRight = inputBox.x + inputBox.width;
 
-  expect((rowBox.x + rowBox.width) - inputRight).toBe(8);
+  expect(gradientBox.x + gradientBox.width).toBeCloseTo(rowBox.x + rowBox.width, 0);
+  expect((rowBox.x + rowBox.width) - inputRight).toBe(4);
   expect(labelBox.x + labelBox.width).toBeLessThan(inputRight);
   await expect(label).toHaveCSS("text-align", "start");
   expect(gradientBox.width).toBeGreaterThan(inputBox.width * 3);
