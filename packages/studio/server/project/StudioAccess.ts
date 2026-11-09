@@ -8,6 +8,7 @@ import {
 import { AccountRoles } from "@jolly-pixel/accounts/node";
 import { CATALOG_ROOM } from "@jolly-pixel/asset-server";
 import {
+  JOIN_EVENT,
   RightsTable,
   type Right,
   type RightsMap
@@ -147,6 +148,13 @@ export class StudioAccess {
       audit: this.#named(role, AUDIT_RIGHT) !== "void",
       manageAccess: role === ADMIN_ROLE
     });
+  }
+
+  opens(
+    role: string,
+    room: string
+  ): boolean {
+    return this.#table.check(role, `${room}.${JOIN_EVENT}`) === "write";
   }
 
   toJSON(): StudioAccessData {

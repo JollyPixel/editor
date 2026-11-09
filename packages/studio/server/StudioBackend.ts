@@ -40,6 +40,7 @@ import {
   AUDIT_STATE_IGNORES,
   AuditLog
 } from "./audit/AuditLog.ts";
+import { StudioGame } from "./game/StudioGame.ts";
 import { ProjectArchive } from "./project/ProjectArchive.ts";
 import { ProjectSettings } from "./project/ProjectSettings.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
@@ -186,6 +187,10 @@ export class StudioBackend implements AsyncDisposable {
         project,
         backend: assetServer.backend,
         name: project.name
+      }),
+      game: new StudioGame({
+        project,
+        backend: assetServer.backend
       }),
       preferences: PreferenceScopes.studio(project.editors.editorScopes()),
       requestsPerMinute: options.requestsPerMinute,

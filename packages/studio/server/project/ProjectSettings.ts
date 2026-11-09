@@ -11,19 +11,23 @@ import type { Server } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import { AccountsAccess } from "../AccountsAccess.ts";
 import type { StudioAccountsOptions } from "../accounts.ts";
+import type { SettingsChange } from "../audit/AuditEntry.ts";
 import type { AuditLog } from "../audit/AuditLog.ts";
 import { KindOptionSections } from "./KindOptionSections.ts";
 import { StudioAccess } from "./StudioAccess.ts";
 import type { StudioProject } from "./StudioProject.ts";
 import {
   ACCESS_SECTION,
+  GAME_SECTION,
   KIND_FILTER_SECTION,
   KINDS_SECTION,
   type AccessChange,
   type AccessSection,
+  type GameSection,
   type KindFilterSection,
   type KindOptions,
   type KindPackageSettings,
+  type ProjectSections,
   type ProjectSettingsReply
 } from "../../shared/api/project.ts";
 import { KindFilter } from "../../shared/KindFilter.ts";
@@ -83,7 +87,7 @@ export class ProjectSettings {
       kinds: this.#project.kinds.packages.map(
         (kindPackage) => this.#kindPackage(kindPackage)
       ),
-      kindFilter: this.kindFilter()
+      ...this.sections()
     };
     if (rights.allows("manageAccess")) {
       data.access = this.#project.access.toJSON();
@@ -112,8 +116,11 @@ export class ProjectSettings {
     });
   }
 
-  kindFilter(): KindFilterSection {
-    return this.#project.kindFilter.toJSON();
+  sections(): ProjectSections {
+    return {
+      kindFilter: this.#project.kindFilter.toJSON(),
+      game: this.#project.game
+    };
   }
 
   replaceKindFilter(
@@ -123,6 +130,25 @@ export class ProjectSettings {
     return this.#serialize(account, async() => {
       this.rights(account).require("editSettings");
       await this.#replaceKindFilter(account.id, KindFilter.from(kindFilter));
+    });
+  }
+
+  replaceGame(
+    account: Account,
+    game: GameSection
+  ): Promise<ProjectSettingsReply> {
+    return this.#serialize(account, async() => {
+      this.rights(account).require("editSettings");
+      const before = this.#project.game;
+      if (isDeepStrictEqual(before, game)) {
+        return;
+      }
+
+      await this.#commit(account.id, {
+        section: GAME_SECTION,
+        before,
+        after: game
+      }, () => this.#project.replaceGame(game));
     });
   }
 
@@ -144,13 +170,11 @@ export class ProjectSettings {
       return;
     }
 
-    await this.#project.file.replace(KIND_FILTER_SECTION, next.toJSON());
-    this.#project.replaceKindFilter(next);
-    await this.#audit.recordSettings(actorId, {
+    await this.#commit(actorId, {
       section: KIND_FILTER_SECTION,
       before: previous.toJSON(),
       after: next.toJSON()
-    });
+    }, () => this.#project.replaceKindFilter(next));
   }
 
   async #replaceKinds(
@@ -179,17 +203,17 @@ export class ProjectSettings {
     const after = Object.fromEntries(
       names.map((name) => [name, kinds[name]])
     );
-    await this.#project.file.replace(KINDS_SECTION, after);
-    for (const kindPackage of changed) {
-      this.#project.kinds.replace(kindPackage);
-      for (const handler of kindPackage.handlers) {
-        this.#registry.replace(handler);
-      }
-    }
-    await this.#audit.recordSettings(actorId, {
+    await this.#commit(actorId, {
       section: KINDS_SECTION,
       before,
       after
+    }, () => {
+      for (const kindPackage of changed) {
+        this.#project.kinds.replace(kindPackage);
+        for (const handler of kindPackage.handlers) {
+          this.#registry.replace(handler);
+        }
+      }
     });
   }
 
@@ -212,25 +236,25 @@ export class ProjectSettings {
       () => AccountsAccess.resolve(next, this.#accountsOptions, ACCESS_SECTION)
     );
 
-    await this.#project.file.replace(ACCESS_SECTION, after);
-    this.#project.replaceAccess(next);
-    this.#server.replaceRights(next.rights, accountsAccess.roles.defaultRole);
-    accountsAccess.applyTo(this.#accounts, renamed);
-    const moved = new Set(renamed.values());
-    for (const role of Object.keys(after.roles)) {
-      if (
-        !moved.has(role) &&
-        !isDeepStrictEqual(before.roles[role], after.roles[role])
-      ) {
-        for (const accountId of this.#accounts.holders(role)) {
-          this.#server.revoke(accountId);
-        }
-      }
-    }
-    await this.#audit.recordSettings(actorId, {
+    await this.#commit(actorId, {
       section: ACCESS_SECTION,
       before,
       after
+    }, () => {
+      this.#project.replaceAccess(next);
+      this.#server.replaceRights(next.rights, accountsAccess.roles.defaultRole);
+      accountsAccess.applyTo(this.#accounts, renamed);
+      const moved = new Set(renamed.values());
+      for (const role of Object.keys(after.roles)) {
+        if (
+          !moved.has(role) &&
+          !isDeepStrictEqual(before.roles[role], after.roles[role])
+        ) {
+          for (const accountId of this.#accounts.holders(role)) {
+            this.#server.revoke(accountId);
+          }
+        }
+      }
     });
   }
 
@@ -258,6 +282,16 @@ export class ProjectSettings {
         (kindPackage) => [kindPackage.name, structuredClone(kindPackage.options)]
       )
     );
+  }
+
+  async #commit(
+    actorId: string,
+    change: SettingsChange,
+    apply: () => void
+  ): Promise<void> {
+    await this.#project.file.replace(change.section, change.after);
+    apply();
+    await this.#audit.recordSettings(actorId, change);
   }
 
   async #serialize(

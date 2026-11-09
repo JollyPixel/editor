@@ -5,7 +5,8 @@ export type ApiFailureCode =
   | AccountsFailureCode
   | "refused"
   | "invalid-settings"
-  | "role-in-use";
+  | "role-in-use"
+  | "build-failed";
 
 export class ApiError extends Error {
   readonly status: number;

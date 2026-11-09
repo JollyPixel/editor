@@ -14,11 +14,13 @@
       "preferences": "src/preferences.ts"
     },
     "scene": "./scene",
+    "runtime": "./runtime",
     "preview": ["voxelmap"]
   },
   "exports": {
     ".": "./src/viewer/index.ts",
-    "./scene": "./src/sceneComponents/index.ts"
+    "./scene": "./src/sceneComponents/index.ts",
+    "./runtime": "./src/runtime/index.ts"
   },
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",

@@ -12,7 +12,12 @@
       ],
       "page": "index.html",
       "preferences": "src/preferences.ts"
-    }
+    },
+    "runtime": "./runtime"
+  },
+  "exports": {
+    ".": "./src/runtime/index.ts",
+    "./runtime": "./src/runtime/index.ts"
   },
   "scripts": {
     "dev": "vite",
@@ -56,6 +61,7 @@
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/physics": "workspace:*",
+    "@jolly-pixel/physics.rapier": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/three": "workspace:*",

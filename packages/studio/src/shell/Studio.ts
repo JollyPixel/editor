@@ -35,11 +35,14 @@ import {
 } from "./StudioSession.ts";
 import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { SettingsSections } from "./settings/SettingsSections.ts";
+import type { SettingsOpenEvent } from "./settings/SettingsOpenEvent.ts";
+import type { StudioPlay } from "../play/StudioPlay.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
 import "./home/StudioHome.ts";
 import "./account/AccountBadge.ts";
+import "./play/PlayButton.ts";
 
 export interface StudioOptions extends Pick<
   StudioSessionOptions,
@@ -233,6 +236,9 @@ export class Studio extends LitElement {
   @query("jolly-notifications")
   declare _notifications: HTMLElementTagNameMap["jolly-notifications"] | null;
 
+  @state()
+  declare _play: StudioPlay | null;
+
   #session: StudioSession | null = null;
   #scopes: PreferenceScopes | null = null;
   #browserState = new BrowserState();
@@ -252,6 +258,7 @@ export class Studio extends LitElement {
   constructor() {
     super();
     this._assets = null;
+    this._play = null;
     this._sections = SettingsSections.EMPTY;
   }
 
@@ -292,9 +299,16 @@ export class Studio extends LitElement {
       },
       browserState: this.#browserState,
       notifications: this.#notifications,
-      onTabsChange: this.#onTabsChange
+      onTabsChange: this.#onTabsChange,
+      play: user.online ?
+        {
+          project: user.project,
+          failed: (message) => this.#fail(`Game error: ${message}`)
+        } :
+        undefined
     });
     this.#session = session;
+    this._play = session.play;
     this.#scopes = options.scopes;
     this._sections = options.settings;
     this.#user.attach(user);
@@ -354,6 +368,10 @@ export class Studio extends LitElement {
       <header id="studio-header">
         <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
         <jolly-toolbar id="studio-actions" label="Studio actions">
+          <studio-play-button
+            .play=${this._play}
+            @settings-open=${this.#openSettings}
+          ></studio-play-button>
           <studio-account
             .account=${account}
             .avatar=${account?.avatar ?? ""}
@@ -437,8 +455,10 @@ export class Studio extends LitElement {
     this.#session?.toggleConsole();
   };
 
-  readonly #openSettings = (): void => {
-    this.openSettings();
+  readonly #openSettings = (
+    event: SettingsOpenEvent
+  ): void => {
+    this.openSettings(event.section);
   };
 
   readonly #onAssetOpen = (

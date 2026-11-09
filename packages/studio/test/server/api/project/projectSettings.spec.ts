@@ -126,7 +126,7 @@ describe("/api/project/settings", () => {
       hidden: ["voxelmodel"]
     });
 
-    assert.deepEqual((await member.kindFilter()).hidden, ["voxelmodel"]);
+    assert.deepEqual((await member.sections()).kindFilter.hidden, ["voxelmodel"]);
     await assert.rejects(member.replaceKindFilter({
       hidden: []
     }), {
@@ -138,6 +138,22 @@ describe("/api/project/settings", () => {
     }), {
       name: "ApiRequestError",
       status: 400
+    });
+  });
+
+  test("shows the default scene to every account but lets only studio.$settings edit it", async() => {
+    await using backend = await serveBackend();
+    const admin = await settingsClient(backend, "Alice");
+    const member = await settingsClient(backend, "Bob");
+
+    assert.deepEqual((await member.sections()).game, { start: null });
+    const reply = await admin.replaceGame({ start: "arena" });
+
+    assert.deepEqual(reply.game, { start: "arena" });
+    assert.deepEqual((await member.sections()).game, { start: "arena" });
+    await assert.rejects(member.replaceGame({ start: null }), {
+      name: "ApiRequestError",
+      status: 403
     });
   });
 

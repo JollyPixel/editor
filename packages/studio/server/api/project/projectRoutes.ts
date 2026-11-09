@@ -8,9 +8,11 @@ import { AttachmentDisposition } from "../../../shared/AttachmentDisposition.ts"
 import {
   PROJECT_ROUTES,
   accessChangeSchema,
+  gameSectionSchema,
   kindFilterSchema,
   kindOptionsSchema,
   type AccessChange,
+  type GameSection,
   type KindFilterSection,
   type KindOptions,
   type ProjectReply
@@ -34,6 +36,10 @@ interface ReplaceAccessRoute {
   Body: AccessChange;
 }
 
+interface ReplaceGameRoute {
+  Body: GameSection;
+}
+
 interface ReplaceKindFilterRoute {
   Body: KindFilterSection;
 }
@@ -49,8 +55,9 @@ export async function projectRoutes(
     settings: settingsRoute,
     replaceKinds,
     replaceAccess,
-    kindFilter,
-    replaceKindFilter
+    sections,
+    replaceKindFilter,
+    replaceGame
   } = PROJECT_ROUTES;
 
   app.route({
@@ -103,9 +110,9 @@ export async function projectRoutes(
     )
   });
   app.route({
-    method: kindFilter.method,
-    url: kindFilter.path,
-    handler: () => settings.kindFilter()
+    method: sections.method,
+    url: sections.path,
+    handler: () => settings.sections()
   });
   app.route<ReplaceKindFilterRoute>({
     method: replaceKindFilter.method,
@@ -115,6 +122,18 @@ export async function projectRoutes(
       body: kindFilterSchema
     },
     handler: (request) => settings.replaceKindFilter(
+      signedInAccount(request),
+      request.body
+    )
+  });
+  app.route<ReplaceGameRoute>({
+    method: replaceGame.method,
+    url: replaceGame.path,
+    bodyLimit: kMaxSettingsBytes,
+    schema: {
+      body: gameSectionSchema
+    },
+    handler: (request) => settings.replaceGame(
       signedInAccount(request),
       request.body
     )

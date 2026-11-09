@@ -19,6 +19,7 @@ import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import { accountMenu } from "./accountMenu.ts";
+import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
 
 @customElement("studio-account")
 export class AccountBadge extends LitElement {
@@ -112,10 +113,7 @@ export class AccountBadge extends LitElement {
   ): void => {
     switch (event.detail.id) {
       case "settings":
-        this.dispatchEvent(new Event("settings-open", {
-          bubbles: true,
-          composed: true
-        }));
+        this.dispatchEvent(new SettingsOpenEvent());
         break;
       case "sign-out":
         this.dispatchEvent(new CustomEvent("sign-out", {

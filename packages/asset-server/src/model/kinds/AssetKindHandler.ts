@@ -144,6 +144,19 @@ export interface AssetPreview {
   readonly bytes: Uint8Array;
 }
 
+export interface AssetBuild<TState = unknown> {
+  /**
+   * Bumped whenever the same content builds to different bytes, which
+   * invalidates every artifact built before.
+   */
+  readonly version: string;
+
+  build(
+    state: TState,
+    content: Uint8Array
+  ): Promise<Uint8Array>;
+}
+
 export interface AssetKindHandler<
   TState = unknown,
   TCommand extends AssetCommandHeader = AssetCommandHeader,
@@ -171,6 +184,11 @@ export interface AssetKindHandler<
    * @default the catalog's `maxContentBytes`
    */
   readonly maxContentBytes?: number;
+  /**
+   * Turns the asset into the content a game loads, under the same extension.
+   * A kind without one cannot be played.
+   */
+  readonly build?: AssetBuild<TState>;
 
   create(
     assetId: string

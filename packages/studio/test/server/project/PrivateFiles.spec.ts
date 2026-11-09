@@ -62,8 +62,13 @@ function voxelMapProject(
         handlers: ASSET_KINDS.handlers()
       })
     ], new PackageResolver(root)),
-    StudioAccess.read({}, "project.json"),
-    KindFilter.NONE
+    {
+      access: StudioAccess.read({}, "project.json"),
+      kindFilter: KindFilter.NONE,
+      game: {
+        start: null
+      }
+    }
   );
 }
 

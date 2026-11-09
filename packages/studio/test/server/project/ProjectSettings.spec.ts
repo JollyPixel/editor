@@ -164,7 +164,7 @@ describe("ProjectSettings", () => {
       }),
       InvalidSettingsError
     );
-    assert.deepEqual(harness.settings.kindFilter(), after);
+    assert.deepEqual(harness.settings.sections().kindFilter, after);
   });
 
   test("new access rules apply at once and reconnect only the holders of a changed role", async() => {

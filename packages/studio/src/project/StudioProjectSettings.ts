@@ -3,7 +3,9 @@ import { RemoteState } from "../api/RemoteState.ts";
 import type { ProjectSettingsClient } from "./ProjectSettingsClient.ts";
 import type {
   AccessChange,
+  GameSection,
   KindOptions,
+  ProjectSections,
   ProjectSettingsReply
 } from "../../shared/api/project.ts";
 import { KindFilter } from "../../shared/KindFilter.ts";
@@ -11,10 +13,11 @@ import type { ProjectRights } from "../../shared/ProjectRights.ts";
 
 // CONSTANTS
 export const KIND_FILTER_CHANGE = "kind-filter-change";
+export const GAME_CHANGE = "game-change";
 
 export type ProjectSettingsSource = Pick<
   ProjectSettingsClient,
-  "read" | "replaceKinds" | "replaceAccess" | "replaceKindFilter"
+  "read" | "replaceKinds" | "replaceAccess" | "replaceKindFilter" | "replaceGame"
 >;
 
 export class StudioProjectSettings extends RemoteState {
@@ -23,16 +26,18 @@ export class StudioProjectSettings extends RemoteState {
   #client: ProjectSettingsSource;
   #data: ProjectSettingsReply | null = null;
   #kindFilter: KindFilter;
+  #game: GameSection;
 
   constructor(
     client: ProjectSettingsSource,
     rights: ProjectRights,
-    kindFilter: KindFilter
+    sections: ProjectSections
   ) {
     super();
     this.#client = client;
     this.rights = rights;
-    this.#kindFilter = kindFilter;
+    this.#kindFilter = KindFilter.from(sections.kindFilter);
+    this.#game = sections.game;
   }
 
   get data(): ProjectSettingsReply | null {
@@ -41,6 +46,10 @@ export class StudioProjectSettings extends RemoteState {
 
   get kindFilter(): KindFilter {
     return this.#kindFilter;
+  }
+
+  get game(): GameSection {
+    return this.#game;
   }
 
   get canEdit(): boolean {
@@ -71,6 +80,12 @@ export class StudioProjectSettings extends RemoteState {
     );
   }
 
+  replaceGame(
+    game: GameSection
+  ): Promise<boolean> {
+    return this.#replace(() => this.#client.replaceGame(game));
+  }
+
   async #replace(
     request: () => Promise<ProjectSettingsReply>
   ): Promise<boolean> {
@@ -80,6 +95,10 @@ export class StudioProjectSettings extends RemoteState {
       if (!kindFilter.equals(this.#kindFilter)) {
         this.#kindFilter = kindFilter;
         this.dispatchEvent(new Event(KIND_FILTER_CHANGE));
+      }
+      if (reply.game.start !== this.#game.start) {
+        this.#game = reply.game;
+        this.dispatchEvent(new Event(GAME_CHANGE));
       }
     });
 

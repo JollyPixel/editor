@@ -18,7 +18,11 @@ import {
   DEFAULT_ACCESS,
   StudioAccess
 } from "./StudioAccess.ts";
-import { kindFilterSchema } from "../../shared/api/project.ts";
+import {
+  gameSectionSchema,
+  kindFilterSchema,
+  type GameSection
+} from "../../shared/api/project.ts";
 import { KindFilter } from "../../shared/KindFilter.ts";
 import { TEXTURE_SIZE } from "../../shared/seed.ts";
 
@@ -86,8 +90,17 @@ const kSectionsSchema = z.object({
   editors: z.array(z.string().min(1)).default([]),
   kindFilter: kindFilterSchema.default({
     hidden: []
+  }),
+  game: gameSectionSchema.default({
+    start: null
   })
 });
+
+export interface StudioProjectSections {
+  access: StudioAccess;
+  kindFilter: KindFilter;
+  game: GameSection;
+}
 
 export class StudioProject {
   readonly file: ProjectFile;
@@ -97,6 +110,7 @@ export class StudioProject {
 
   #access: StudioAccess;
   #kindFilter: KindFilter;
+  #game: GameSection;
 
   static resolveRoot(
     base: string,
@@ -152,29 +166,27 @@ export class StudioProject {
       kinds.descriptors().map((descriptor) => descriptor.kind)
     );
 
-    return new StudioProject(
-      file,
-      editors,
-      kinds,
-      StudioAccess.read(file.data, file.path),
-      new KindFilter(
+    return new StudioProject(file, editors, kinds, {
+      access: StudioAccess.read(file.data, file.path),
+      kindFilter: new KindFilter(
         sections.data.kindFilter.hidden.filter((kind) => known.has(kind))
-      )
-    );
+      ),
+      game: sections.data.game
+    });
   }
 
   constructor(
     file: ProjectFile,
     editors: EditorPackages,
     kinds: ProjectKinds,
-    access: StudioAccess,
-    kindFilter: KindFilter
+    sections: StudioProjectSections
   ) {
     this.file = file;
     this.editors = editors;
     this.kinds = kinds;
-    this.#access = access;
-    this.#kindFilter = kindFilter;
+    this.#access = sections.access;
+    this.#kindFilter = sections.kindFilter;
+    this.#game = { ...sections.game };
     this.privateFiles = new PrivateFiles(
       file.root,
       kinds.descriptors().map((descriptor) => descriptor.extension)
@@ -203,5 +215,15 @@ export class StudioProject {
     kindFilter: KindFilter
   ): void {
     this.#kindFilter = kindFilter;
+  }
+
+  get game(): GameSection {
+    return { ...this.#game };
+  }
+
+  replaceGame(
+    game: GameSection
+  ): void {
+    this.#game = { ...game };
   }
 }

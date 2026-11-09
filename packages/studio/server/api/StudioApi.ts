@@ -21,6 +21,7 @@ import {
 // Import Internal Dependencies
 import { accountsRoutes } from "./accounts/accountsRoutes.ts";
 import { auditRoutes } from "./audit/auditRoutes.ts";
+import { gameRoutes } from "./game/gameRoutes.ts";
 import { authenticate } from "./authentication.ts";
 import { ApiError } from "./errors/ApiError.ts";
 import { apiFailure } from "./errors/apiFailure.ts";
@@ -31,9 +32,11 @@ import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import type { ApiFailure } from "../../shared/api/common.ts";
 import { PREFERENCES_URL_PATH } from "../../shared/api/preferences.ts";
 import { AUDIT_URL_PATH } from "../../shared/api/audit.ts";
+import { GAME_URL_PATH } from "../../shared/api/game.ts";
 import { PROJECT_URL_PATH } from "../../shared/api/project.ts";
 import { SHARES_URL_PATH } from "../../shared/api/shares.ts";
 import type { AuditFeed } from "../audit/AuditFeed.ts";
+import type { StudioGame } from "../game/StudioGame.ts";
 import { StoredPreferences } from "../preferences/StoredPreferences.ts";
 import type { ProjectArchive } from "../project/ProjectArchive.ts";
 import type { ProjectSettings } from "../project/ProjectSettings.ts";
@@ -58,6 +61,7 @@ export interface StudioApiOptions {
   archive: ProjectArchive;
   settings: ProjectSettings;
   audit: AuditFeed;
+  game: StudioGame;
   preferences: PreferenceScopes;
   requestsPerMinute?: number;
   trustProxy?: TrustProxy;
@@ -142,6 +146,10 @@ export class StudioApi implements AsyncDisposable {
       await signedIn.register(auditRoutes, {
         prefix: AUDIT_URL_PATH,
         feed: options.audit
+      });
+      await signedIn.register(gameRoutes, {
+        prefix: GAME_URL_PATH,
+        game: options.game
       });
       await signedIn.register(preferencesRoutes, {
         prefix: PREFERENCES_URL_PATH,

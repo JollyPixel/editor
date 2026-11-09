@@ -13,11 +13,13 @@
       "page": "index.html"
     },
     "scene": "./scene",
+    "runtime": "./runtime",
     "preview": ["model"]
   },
   "exports": {
     ".": "./src/sceneComponents/index.ts",
-    "./scene": "./src/sceneComponents/index.ts"
+    "./scene": "./src/sceneComponents/index.ts",
+    "./runtime": "./src/runtime/index.ts"
   },
   "scripts": {
     "dev": "vite",

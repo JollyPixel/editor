@@ -12,6 +12,7 @@ export const EVENTS_DB_PATH = `${STATE_DIRECTORY}/events.db`;
 export const PROJECT_FILE_PATH = `${STATE_DIRECTORY}/project.json`;
 export const BACKUP_OBJECTS_PATH = `${STATE_DIRECTORY}/objects`;
 export const BACKUP_LEDGER_PATH = `${BACKUP_OBJECTS_PATH}/index.json`;
+export const BUILDS_PATH = `${STATE_DIRECTORY}/builds`;
 
 const kStateGitignoreEntries = [
   "state.json",
@@ -19,7 +20,8 @@ const kStateGitignoreEntries = [
   "events.db-journal",
   "events.db-wal",
   "events.db-shm",
-  "objects"
+  "objects",
+  "builds"
 ];
 
 export async function ensureStateGitignore(

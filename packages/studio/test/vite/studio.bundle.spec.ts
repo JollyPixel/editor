@@ -127,7 +127,7 @@ describe("@jolly-pixel/studio bundle", () => {
     const entries = [...chunks.values()].filter((chunk) => chunk.isEntry);
     assert.deepStrictEqual(
       entries.map((entry) => entry.name).sort(),
-      ["index", "preview", ...editorPages].sort()
+      ["index", "play", "preview", ...editorPages].sort()
     );
     for (const [name, closure] of eager) {
       assert.deepStrictEqual(

@@ -107,6 +107,8 @@ the build setup differs.
 - [`OverlayLayer`](./docs/api/OverlayLayer.md): HTML mounted over the canvas.
 - [Runtime asset options](./docs/api/runtime-assets.md): catalogs and platform
   loaders.
+- [Runtime components](./docs/api/RuntimeComponents.md): the component
+  definitions and loaders a package gives a game.
 - [`SceneManager`](../engine/docs/systems/scene-manager.md): scene-load state,
   progress, and activation gates.
 

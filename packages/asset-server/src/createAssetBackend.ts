@@ -31,6 +31,7 @@ import {
 import { traceAppends } from "./storage/traceAppends.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogFolders } from "./catalog/CatalogFolders.ts";
+import { AssetBuilds } from "./catalog/AssetBuilds.ts";
 import { AssetPreviews } from "./catalog/AssetPreviews.ts";
 import {
   CatalogExtension,
@@ -93,6 +94,7 @@ export interface AssetBackendOptions extends AssetBackendTuning {
 }
 
 export interface AssetBackend extends CatalogBackend, AsyncDisposable {
+  readonly builds: AssetBuilds;
   readonly eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
 
   reconcile(): Promise<Result<ReconcileReport, Error>>;
@@ -265,6 +267,12 @@ async function assembleAssetBackend(
     folders,
     tags,
     previews: new AssetPreviews({
+      catalog,
+      kinds,
+      source,
+      states
+    }),
+    builds: new AssetBuilds({
       catalog,
       kinds,
       source,

@@ -8,6 +8,7 @@ import type {
   AssetKindHandler
 } from "../AssetKindHandler.ts";
 import { contentRefSchema } from "../ContentRef.ts";
+import { PASS_THROUGH_BUILD } from "../passThroughBuild.ts";
 import { readOnlyCommands } from "../readOnlyCommands.ts";
 
 // CONSTANTS
@@ -24,6 +25,7 @@ export interface BinaryAssetState {
 
 export const binaryAssetKind: AssetKindHandler<BinaryAssetState> = {
   kind: BINARY_KIND,
+  build: PASS_THROUGH_BUILD,
   extensions: {},
 
   create(): BinaryAssetState {

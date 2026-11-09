@@ -5,6 +5,7 @@ import { InvalidPreferencesError } from "@jolly-pixel/preferences";
 // Import Internal Dependencies
 import { ApiError } from "./ApiError.ts";
 import { accountsFailure } from "./accountsFailure.ts";
+import { GameBuildError } from "../../game/errors/GameBuildError.ts";
 import { InvalidSettingsError } from "../../project/errors/InvalidSettingsError.ts";
 import { ProjectRightRefusedError } from "../../../shared/errors/ProjectRightRefusedError.ts";
 import { RoleInUseError } from "../../project/errors/RoleInUseError.ts";
@@ -41,6 +42,9 @@ export function apiFailure(
   }
   if (error instanceof RoleInUseError) {
     return new ApiError(409, "role-in-use", error.message);
+  }
+  if (error instanceof GameBuildError) {
+    return new ApiError(422, "build-failed", error.message);
   }
   if (error.statusCode === kPayloadTooLarge) {
     return new ApiError(

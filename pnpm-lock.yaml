@@ -949,6 +949,9 @@ importers:
       '@jolly-pixel/physics':
         specifier: workspace:*
         version: link:../../physics
+      '@jolly-pixel/physics.rapier':
+        specifier: workspace:*
+        version: link:../../physics-rapier
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
@@ -1599,6 +1602,9 @@ importers:
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../preferences
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../runtime
       '@jolly-pixel/three':
         specifier: workspace:*
         version: link:../three

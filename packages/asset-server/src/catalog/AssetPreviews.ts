@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { AssetSource } from "@jolly-pixel/asset-source";
+import type { AssetRecord } from "@jolly-pixel/asset";
 import {
   Err,
   Ok,
@@ -8,29 +8,21 @@ import {
 import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import type { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
+import { InFlight } from "../common/InFlight.ts";
 import type {
   AnyAssetKindHandler,
   AssetPreview
 } from "../model/kinds/AssetKindHandler.ts";
-import type { CatalogProjection } from "./CatalogProjection.ts";
-import { UnknownAssetError } from "../storage/writer/errors/UnknownAssetError.ts";
+import {
+  AssetStates,
+  revisionKey,
+  type AssetStatesOptions
+} from "./AssetStates.ts";
 
 // CONSTANTS
 const kMaxCachedBytes = 32 * 1024 * 1024;
 
-export interface LiveAssetStates {
-  get(
-    assetId: string
-  ): { readonly state: unknown; } | undefined;
-}
-
-export interface AssetPreviewsOptions {
-  catalog: CatalogProjection;
-  kinds: AssetKindRegistry;
-  source: AssetSource;
-  states: LiveAssetStates;
-}
+export type AssetPreviewsOptions = AssetStatesOptions;
 
 type PreviewHandler = AnyAssetKindHandler &
   Required<Pick<AnyAssetKindHandler, "preview">>;
@@ -41,35 +33,26 @@ interface CachedPreview {
 }
 
 export class AssetPreviews {
-  #catalog: CatalogProjection;
-  #kinds: AssetKindRegistry;
-  #source: AssetSource;
-  #states: LiveAssetStates;
+  #assets: AssetStates;
   #cached = new Map<string, CachedPreview>();
   #cachedBytes = 0;
-  #pending = new Map<string, Promise<Result<AssetPreview | null, Error>>>();
+  #pending = new InFlight<Result<AssetPreview | null, Error>>();
 
   constructor(
     options: AssetPreviewsOptions
   ) {
-    this.#catalog = options.catalog;
-    this.#kinds = options.kinds;
-    this.#source = options.source;
-    this.#states = options.states;
+    this.#assets = new AssetStates(options);
   }
 
   preview(
     assetId: string
   ): Promise<Result<AssetPreview | null, Error>> {
-    const record = this.#catalog.record(assetId);
-    if (record === undefined) {
-      const error = new UnknownAssetError(assetId);
-
-      return Promise.resolve(Err(error));
+    const found = this.#assets.find(assetId);
+    if (!found.ok) {
+      return Promise.resolve(found);
     }
 
-    const kind = record.kind.value;
-    const handler = this.#kinds.has(kind) ? this.#kinds.get(kind) : null;
+    const { record, handler } = found.val;
     if (handler === null || !drawsPreviews(handler)) {
       return Promise.resolve(Ok(null));
     }
@@ -82,51 +65,30 @@ export class AssetPreviews {
       return Promise.resolve(Ok(cached.preview));
     }
 
-    const key = `${assetId}@${revision ?? ""}`;
-    const pending = this.#pending.get(key);
-    if (pending !== undefined) {
-      return pending;
-    }
+    return this.#pending.run(revisionKey(record), async() => {
+      const result = await this.#draw(handler, record);
+      if (result.ok && this.#assets.isCurrent(record)) {
+        this.#store(assetId, {
+          revision,
+          preview: result.val
+        });
+      }
 
-    const drawn = this.#draw(handler, assetId, record.path.toString())
-      .then((result) => {
-        const current = this.#catalog.record(assetId)?.revision;
-        if (result.ok && current === revision) {
-          this.#store(assetId, {
-            revision,
-            preview: result.val
-          });
-        }
-
-        return result;
-      })
-      .finally(() => this.#pending.delete(key));
-    this.#pending.set(key, drawn);
-
-    return drawn;
+      return result;
+    });
   }
 
   async #draw(
     handler: PreviewHandler,
-    assetId: string,
-    path: string
+    record: AssetRecord
   ): Promise<Result<AssetPreview | null, Error>> {
     try {
-      const live = this.#states.get(assetId);
-      if (live !== undefined) {
-        return Ok(await handler.preview(live.state));
+      const state = await this.#assets.state(handler, record);
+      if (!state.ok) {
+        return state;
       }
 
-      const decoded = this.#kinds.decode(
-        handler.kind,
-        assetId,
-        await this.#source.read(path)
-      );
-      if (!decoded.ok) {
-        return decoded;
-      }
-
-      return Ok(await handler.preview(decoded.val.state));
+      return Ok(await handler.preview(state.val));
     }
     catch (error) {
       return Err(asError(error));
