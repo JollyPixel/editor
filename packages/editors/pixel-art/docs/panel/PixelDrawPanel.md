@@ -36,6 +36,7 @@ interface PixelDrawPanelProperties {
   allowUvCreateDelete: boolean; // allow-uv-create-delete, false
   uvResize: boolean; // uv-resize, false
   uvOverflow: number; // uv-overflow, 0
+  textureResizable: boolean; // texture-resizable, false
   normalMap: boolean; // normal-map, false
   colorDocked: boolean; // color-docked, false
   gridSizeLocked: boolean; // grid-size-locked, false
@@ -66,6 +67,10 @@ interface PixelDrawPanelProperties {
 - `allow-uv-create-delete` shows the UV Create/Delete buttons.
 - `uv-resize` and `uv-overflow` are forwarded to every canvas as `uvResizable`
   and `uvOverflow`.
+- `texture-resizable` adds a width × height picker to the bottom toolbar. It
+  offers powers of two from 16 to the canvas maximum, plus the current size.
+  Sizes that would cut off a UV region are disabled, and the picker is disabled
+  while the pixels are read-only. Each pick is one undo step.
 - `grid-size-locked` hides the grid cell size picker, for a host that sets the
   size itself, such as an atlas tile size.
 - `texture-tabs`: `auto` shows tabs from two textures, `always` shows them

@@ -31,7 +31,6 @@ import type { KeyBindingSettings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import "./BuildTab.ts";
-import "../features/texture/TextureSizeField.ts";
 import type { TexturePane } from "./texturePanes.ts";
 import type { BuildEditing } from "./BuildTab.ts";
 import { PeerRegionSelections } from "../features/texture/index.ts";
@@ -269,13 +268,9 @@ export class LeftPanel extends LitElement {
         ?hidden=${this.mode !== "build"}
         .editing=${this.editing}
       ></jolly-model-editor-build>
-      <jolly-model-editor-texture-size
-        ?hidden=${this.mode !== "build"}
-        .canvas=${this._canvas}
-        .model=${this.editing?.document ?? null}
-      ></jolly-model-editor-texture-size>
       <pixel-draw-panel
         uv-resize
+        texture-resizable
         uv-overflow="64"
         uv-access=${this.editing?.access.current.has("uv") === false ? "view" : "edit"}
       ></pixel-draw-panel>

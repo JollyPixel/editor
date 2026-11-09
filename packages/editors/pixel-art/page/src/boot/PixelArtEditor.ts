@@ -87,6 +87,7 @@ export class PixelArtEditor {
     panel.allowUvCreateDelete = features.uvCreateDelete;
     panel.uvResize = features.uvResize;
     panel.uvOverflow = kUvOverflow;
+    panel.textureResizable = true;
     panel.textureImportPolicy = features.importPolicy;
     const uvNets = new UvNetLibrary();
     panel.uvNets = uvNets;

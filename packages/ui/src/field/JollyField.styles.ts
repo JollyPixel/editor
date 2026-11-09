@@ -169,9 +169,14 @@ export const fieldStyles = css`
   }
 
   .value input:focus,
+  .value select:focus:not([data-pointer-focus]),
+  .value .trigger:focus:not([data-pointer-focus]) {
+    background: var(--jolly-control-bg-focus);
+  }
+
+  .value input:focus,
   .value select:focus,
   .value .trigger:focus {
-    background: var(--jolly-control-bg-focus);
     outline: none;
   }
 
