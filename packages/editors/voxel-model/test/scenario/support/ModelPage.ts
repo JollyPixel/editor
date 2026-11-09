@@ -274,7 +274,7 @@ export class ModelPage {
   textureSize(
     axis: "Width" | "Height"
   ): Locator {
-    return this.page.getByTitle(axis).getByRole("combobox");
+    return this.page.getByTitle(`Texture ${axis.toLowerCase()}`).getByRole("combobox");
   }
 
   async regionState(

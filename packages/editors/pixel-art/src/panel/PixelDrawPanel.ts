@@ -89,6 +89,7 @@ import type { PixelArtAction } from "../keybindings/PixelArtKeyBindings.ts";
 import "../color/ColorPickerRail.ts";
 import "../color/ColorDock.ts";
 import "../color/ColorPickerPopover.ts";
+import "../textures/resize/TextureSizePicker.ts";
 
 // CONSTANTS
 const kNoModes: ReadonlySet<Mode> = new Set();
@@ -144,6 +145,9 @@ export class PixelDrawPanel extends LitElement {
 
   @property({ type: Number, attribute: "uv-overflow" })
   declare uvOverflow: number;
+
+  @property({ type: Boolean, attribute: "texture-resizable" })
+  declare textureResizable: boolean;
 
   @property({
     type: String,
@@ -310,6 +314,7 @@ export class PixelDrawPanel extends LitElement {
     this.allowUvCreateDelete = false;
     this.uvResize = false;
     this.uvOverflow = 0;
+    this.textureResizable = false;
     this.uvAccess = "edit";
     this.theme = "auto";
     this.colorDocked = false;
@@ -718,6 +723,13 @@ export class PixelDrawPanel extends LitElement {
             clearDialog: () => this.#dialogs.query("clear-texture-dialog"),
             viewOnly: access.viewOnly,
             trailing: [
+              this.textureResizable && canvas ? html`
+                <texture-size-picker
+                  part="texture-size-picker"
+                  .canvas=${canvas}
+                  ?disabled=${canvas.pixelsReadOnly}
+                ></texture-size-picker>
+              ` : nothing,
               normalMaps?.renderViewSwitch() ?? nothing
             ]
           })}

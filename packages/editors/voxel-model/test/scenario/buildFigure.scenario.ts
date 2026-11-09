@@ -438,7 +438,6 @@ new Scenario<ModelPage, ModelExpectation>({
         const paint = model.page.getByRole("button", { name: "Paint", exact: true });
         await model.openTab("Paint");
         await expect(paint).toHaveAttribute("aria-pressed", "true");
-        await expect(model.page.getByTitle("Width")).toBeHidden();
         await model.openTab("Build");
       },
       expected: kTextured
