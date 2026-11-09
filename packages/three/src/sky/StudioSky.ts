@@ -8,10 +8,12 @@ import {
   positionLocal,
   smoothstep
 } from "three/tsl";
-import type { ResolvedThemeMode } from "@jolly-pixel/ui";
+
+// Import Internal Dependencies
+import type { SkyBackdrop } from "./SkyBackdrop.ts";
 
 // CONSTANTS
-const kPalettes: Record<ResolvedThemeMode, StudioPalette> = {
+const kPalettes: Record<SkyBackdrop, StudioPalette> = {
   dark: {
     horizon: "#393b3f",
     zenith: "#1c1d20",
@@ -34,9 +36,9 @@ export class StudioSky {
   readonly node: THREE.Node;
 
   constructor(
-    theme: ResolvedThemeMode
+    backdrop: SkyBackdrop
   ) {
-    const palette = kPalettes[theme];
+    const palette = kPalettes[backdrop];
     const up = normalize(positionLocal).y;
     const sky = mix(
       color(palette.horizon),

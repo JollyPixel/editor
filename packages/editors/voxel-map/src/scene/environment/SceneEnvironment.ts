@@ -3,10 +3,10 @@ import * as THREE from "three/webgpu";
 import type { Systems } from "@jolly-pixel/engine";
 import type { BlockLightFalloff } from "@jolly-pixel/voxel.renderer";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
+import { StudioSky } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import { ShadowTexelSnap } from "./ShadowTexelSnap.ts";
-import { StudioSky } from "./background/StudioSky.ts";
 import type { SceneLighting } from "./SceneLighting.ts";
 import type {
   LightingMode,

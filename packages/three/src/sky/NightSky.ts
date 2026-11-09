@@ -19,7 +19,9 @@ import {
   step,
   vec3
 } from "three/tsl";
-import type { ResolvedThemeMode } from "@jolly-pixel/ui";
+
+// Import Internal Dependencies
+import type { SkyBackdrop } from "./SkyBackdrop.ts";
 
 // CONSTANTS
 const kHorizon = "#1d2846";
@@ -41,7 +43,7 @@ const kGlowSharpness = 6;
 const kGlowStrength = 0.06;
 
 export class NightSky {
-  static readonly backdrop: ResolvedThemeMode = "dark";
+  static readonly backdrop: SkyBackdrop = "dark";
 
   readonly node: THREE.Node;
 

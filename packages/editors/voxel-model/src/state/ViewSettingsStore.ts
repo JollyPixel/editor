@@ -16,12 +16,6 @@ export const LIGHTING_MODES = Object.freeze(
 export const KEY_LIGHT_PRESETS = Object.freeze(
   kFields.keyLight.options.map((option) => option.value)
 );
-const kLightingBackgrounds: Readonly<Record<LightingMode, string>> = {
-  flat: "#262627",
-  studio: "#262627",
-  day: "#6f97c2",
-  night: "#0c0e14"
-};
 
 export type LightingMode = VoxelModelPreferences["lighting"];
 export type KeyLightPreset = VoxelModelPreferences["keyLight"];
@@ -35,12 +29,6 @@ export function isLit(
   settings: Pick<ViewSettings, "lighting">
 ): boolean {
   return settings.lighting !== "flat";
-}
-
-export function resolveBackground(
-  settings: Pick<ViewSettings, "lighting" | "background">
-): string {
-  return settings.background ?? kLightingBackgrounds[settings.lighting];
 }
 
 export type ViewSettingsEvents = {

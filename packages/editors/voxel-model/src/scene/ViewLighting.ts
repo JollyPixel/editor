@@ -1,9 +1,16 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
+import type { Node } from "three/webgpu";
+import type { ResolvedThemeMode } from "@jolly-pixel/ui";
+import {
+  DaySky,
+  NightSky,
+  StudioSky,
+  type SkyConstructor
+} from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import {
-  resolveBackground,
   isLit,
   type KeyLightPreset,
   type LightingMode,
@@ -24,6 +31,7 @@ const kKeyPositions: Record<KeyLightPreset, THREE.Vector3Tuple> = {
 const kReflectionIntensity = 0.5;
 
 interface LightingPreset {
+  backdrop: SkyConstructor | null;
   sky: THREE.ColorRepresentation;
   ground: THREE.ColorRepresentation;
   hemisphere: number;
@@ -34,6 +42,7 @@ interface LightingPreset {
 }
 
 const kStudio: LightingPreset = {
+  backdrop: null,
   sky: "#dceaff",
   ground: "#151820",
   hemisphere: 0.35,
@@ -46,6 +55,7 @@ const kPresets: Record<LightingMode, LightingPreset> = {
   flat: kStudio,
   studio: kStudio,
   day: {
+    backdrop: DaySky,
     sky: "#bcd6f2",
     ground: "#8a7454",
     hemisphere: 0.8,
@@ -55,6 +65,7 @@ const kPresets: Record<LightingMode, LightingPreset> = {
     fill: 0.15
   },
   night: {
+    backdrop: NightSky,
     sky: "#41507a",
     ground: "#06070b",
     hemisphere: 0.2,
@@ -70,17 +81,21 @@ export interface ViewLightingOptions {
   view: ViewSettingsStore;
   environment: THREE.RenderTarget | null;
   casters: () => Iterable<ShadowCaster>;
+  theme: ResolvedThemeMode;
 }
 
 export class ViewLighting {
   readonly hemisphere = new THREE.HemisphereLight();
   readonly key = new THREE.DirectionalLight();
   readonly fill = new THREE.DirectionalLight();
-  readonly background = new THREE.Color();
   readonly shadow: KeyLightShadow;
 
   #scene: THREE.Scene;
+  #view: ViewSettingsStore;
   #environment: THREE.RenderTarget | null;
+  #theme: ResolvedThemeMode;
+  #studioSkies = new Map<ResolvedThemeMode, Node>();
+  #outdoorSkies = new Map<`${LightingMode}:${KeyLightPreset}`, Node>();
   #unfollow: () => void;
 
   #apply = (
@@ -91,7 +106,7 @@ export class ViewLighting {
     this.shadow.aim([x, y, z]);
     this.fill.position.set(-x, y * 0.5, -z);
 
-    this.background.set(resolveBackground(settings));
+    this.#scene.backgroundNode = this.#sky(settings);
     this.hemisphere.color.set(preset.sky);
     this.hemisphere.groundColor.set(preset.ground);
     this.hemisphere.intensity = preset.hemisphere;
@@ -108,23 +123,60 @@ export class ViewLighting {
     options: ViewLightingOptions
   ) {
     this.#scene = options.scene;
+    this.#view = options.view;
     this.#environment = options.environment;
+    this.#theme = options.theme;
     this.shadow = new KeyLightShadow({
       light: this.key,
       casters: options.casters
     });
 
-    this.#scene.background = this.background;
     this.#scene.environment = this.#environment?.texture ?? null;
     this.#scene.add(this.hemisphere, this.key, this.fill);
-    this.#unfollow = options.view.follow(this.#apply);
+    this.#unfollow = this.#view.follow(this.#apply);
+  }
+
+  get theme(): ResolvedThemeMode {
+    return this.#theme;
+  }
+
+  set theme(
+    theme: ResolvedThemeMode
+  ) {
+    this.#theme = theme;
+    this.#scene.backgroundNode = this.#sky(this.#view.settings);
   }
 
   dispose(): void {
     this.#unfollow();
     this.#scene.remove(this.hemisphere, this.key, this.fill);
-    this.#scene.background = null;
+    this.#scene.backgroundNode = null;
     this.#scene.environment = null;
     this.#environment?.dispose();
+  }
+
+  #sky(
+    settings: ViewSettings
+  ): Node {
+    const { backdrop } = kPresets[settings.lighting];
+    if (backdrop === null) {
+      let studio = this.#studioSkies.get(this.#theme);
+      if (studio === undefined) {
+        studio = new StudioSky(this.#theme).node;
+        this.#studioSkies.set(this.#theme, studio);
+      }
+
+      return studio;
+    }
+
+    const key = `${settings.lighting}:${settings.keyLight}` as const;
+    let outdoor = this.#outdoorSkies.get(key);
+    if (outdoor === undefined) {
+      const direction = new THREE.Vector3(...kKeyPositions[settings.keyLight]);
+      outdoor = new backdrop(direction.normalize()).node;
+      this.#outdoorSkies.set(key, outdoor);
+    }
+
+    return outdoor;
   }
 }

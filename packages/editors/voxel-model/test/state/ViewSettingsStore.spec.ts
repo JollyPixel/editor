@@ -8,7 +8,6 @@ import { type PreferenceChange, Preferences } from "@jolly-pixel/preferences";
 // Import Internal Dependencies
 import {
   ViewSettingsStore,
-  resolveBackground,
   type ViewSettings
 } from "#src/state/index.ts";
 
@@ -19,7 +18,6 @@ describe("ViewSettingsStore", () => {
     assert.deepEqual(store.settings, {
       lighting: "studio",
       keyLight: "front-right",
-      background: null,
       reflections: true,
       shadows: false,
       glow: true
@@ -71,21 +69,5 @@ describe("ViewSettingsStore", () => {
     store.update({ lighting: "night" });
 
     assert.deepEqual(lightings, ["studio", "flat", "day"]);
-  });
-
-  test("shows the lighting's background until a custom colour is picked, then until it is reset", () => {
-    const store = new ViewSettingsStore(new Preferences());
-    const night = resolveBackground({ lighting: "night", background: null });
-    store.update({ lighting: "night" });
-    assert.equal(resolveBackground(store.settings), night);
-
-    store.update({ background: "#AA3300" });
-    assert.equal(resolveBackground(store.settings), "#aa3300");
-    store.update({ lighting: "day" });
-    assert.equal(resolveBackground(store.settings), "#aa3300");
-
-    store.update({ background: null });
-    assert.notEqual(resolveBackground(store.settings), "#aa3300");
-    assert.notEqual(resolveBackground(store.settings), night);
   });
 });

@@ -35,7 +35,7 @@ Brackets name the deleted e2e spec that covered each item.
 - Animation sets: copy a clip to a set and fork it back, a track left unbound
   by a deleted block and rebound, set clip length, frame rate and loop, unlink
   and link a set, timeline keyboard (`animate/library`, `animate/timeline`).
-- View: background reset, the Material tab's View panel, the glow pass and
-  runtime idle (`view`, `boot`).
+- View: the Material tab's View panel, the glow pass and runtime idle
+  (`view`, `boot`).
 - Rendering: the shirt and face tints are read back from the viewport, but the
   attached chapter screenshots are not compared.
