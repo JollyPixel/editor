@@ -162,6 +162,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  three@0.186.1: 5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9
+
 importers:
 
   .:
@@ -789,7 +792,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -841,7 +844,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -890,7 +893,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -969,7 +972,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -1024,7 +1027,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -1116,7 +1119,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -1226,7 +1229,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -1299,7 +1302,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -1321,7 +1324,7 @@ importers:
         version: 1.1.0
       three:
         specifier: ^0.186.0
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/bench':
         specifier: workspace:*
@@ -1458,7 +1461,7 @@ importers:
     dependencies:
       three:
         specifier: ^0.186.0
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/engine':
         specifier: workspace:*
@@ -1537,7 +1540,7 @@ importers:
         version: 6.0.28
       three:
         specifier: ^0.186.0
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*
@@ -1619,7 +1622,7 @@ importers:
         version: 3.3.3
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -1638,7 +1641,7 @@ importers:
     dependencies:
       three:
         specifier: 0.186.1
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/engine':
         specifier: workspace:*
@@ -1648,7 +1651,7 @@ importers:
     dependencies:
       three:
         specifier: ^0.186.0
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/color':
         specifier: workspace:*
@@ -1697,7 +1700,7 @@ importers:
         version: 1.1.0
       three:
         specifier: ^0.186.0
-        version: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*
@@ -9540,7 +9543,7 @@ snapshots:
     dependencies:
       real-require: 1.0.0
 
-  three@0.186.1: {}
+  three@0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9): {}
 
   thunky@1.1.0:
     optional: true

@@ -13,6 +13,7 @@ import {
 } from "lit/decorators.js";
 import type { IconName } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/spinner";
 
 // Import Internal Dependencies
 import type { AssetPreviewTarget } from "../../catalog/AssetSummary.ts";
@@ -47,6 +48,11 @@ export class AssetPreview extends LitElement {
       text-align: center;
 
       --jolly-icon-size: 48px;
+    }
+
+    jolly-spinner {
+      --jolly-spinner-size: 40px;
+      --jolly-spinner-thickness: 3px;
     }
 
     .frame.image {
@@ -108,11 +114,13 @@ export class AssetPreview extends LitElement {
   }
 
   override render(): TemplateResult {
-    const { url } = this.#preview;
+    const { url, loading } = this.#preview;
     if (url === null) {
       return html`
         <div class="frame">
-          <jolly-icon name=${this.icon}></jolly-icon>
+          ${loading ?
+            html`<jolly-spinner label="Loading preview"></jolly-spinner>` :
+            html`<jolly-icon name=${this.icon}></jolly-icon>`}
           <slot></slot>
         </div>
       `;
