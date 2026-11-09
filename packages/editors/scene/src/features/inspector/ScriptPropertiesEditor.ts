@@ -108,8 +108,6 @@ export class ScriptPropertiesEditor extends LitElement {
       align-items: center;
       gap: var(--jolly-row-gap, 4px) var(--jolly-space-1, 4px);
       padding-inline: var(--jolly-space-1, 4px);
-
-      --jolly-field-inset-end: 0px;
     }
 
     .property {

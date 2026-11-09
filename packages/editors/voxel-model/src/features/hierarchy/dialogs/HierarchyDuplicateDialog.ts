@@ -46,11 +46,10 @@ export class HierarchyDuplicateDialog extends EditorDialog<
       display: flex;
       flex-direction: column;
       gap: var(--jolly-space-1, 4px);
-      padding-inline: var(--jolly-field-inset-start, var(--jolly-space-1, 4px))
-        var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     }
 
     .mirror-title {
+      padding-inline-start: var(--jolly-field-inset-start, var(--jolly-space-1, 4px));
       color: var(--jolly-text-muted);
       user-select: none;
     }
@@ -59,11 +58,6 @@ export class HierarchyDuplicateDialog extends EditorDialog<
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: var(--jolly-space-1, 4px);
-    }
-
-    .mirror-axes jolly-toggle {
-      --jolly-field-inset-start: 0px;
-      --jolly-field-inset-end: 0px;
     }
   `;
 

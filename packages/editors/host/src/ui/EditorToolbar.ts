@@ -98,7 +98,6 @@ export class EditorToolbar extends LitElement {
       overflow: clip;
 
       --jolly-field-inset-start: 0px;
-      --jolly-field-inset-end: 0px;
     }
 
     .bar:has(> .group:last-child) {

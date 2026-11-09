@@ -40,8 +40,6 @@ export class MapConfigPanel extends LitElement {
     }
 
     jolly-button-group {
-      --jolly-field-inset-end: 0px;
-
       padding-inline-start: var(--jolly-space-1, 4px);
     }
 

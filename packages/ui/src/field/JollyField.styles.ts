@@ -39,7 +39,7 @@ export const fieldStyles = css`
     gap: var(--jolly-space-1, 4px);
     min-height: var(--jolly-row-height, 20px);
     padding-inline: var(--jolly-field-inset-start, var(--jolly-space-1, 4px))
-      var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
+      var(--jolly-field-inset-end, 0);
     border-radius: var(--jolly-radius-sm, 2px);
 
     ${fillTransition}
@@ -99,7 +99,7 @@ export const fieldStyles = css`
   }
 
   :host([unlabeled]) .row {
-    padding-inline-start: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
+    padding-inline-start: var(--jolly-field-inset-end, 0);
   }
 
   .label-cell {
@@ -356,7 +356,7 @@ export const fieldStyles = css`
           var(--jolly-field-inset-start, var(--jolly-space-1, 4px)) +
           var(--jolly-space-1, 4px)
       )
-      var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
+      var(--jolly-field-inset-end, 0);
     font-size: 0.9em;
 
     /* The reflected align attribute is a presentational hint on the host. */
@@ -367,7 +367,7 @@ export const fieldStyles = css`
   :host([unlabeled]) .error {
     margin-inline-start: calc(
       var(--jolly-gutter-width, 0px) +
-        var(--jolly-field-inset-end, var(--jolly-space-1, 4px))
+        var(--jolly-field-inset-end, 0px)
     );
   }
 

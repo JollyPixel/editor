@@ -58,7 +58,6 @@ export const blockDialogStyles = css`
 
     --jolly-label-width: 80px;
     --jolly-field-inset-start: 0px;
-    --jolly-field-inset-end: 0px;
   }
 `;
 

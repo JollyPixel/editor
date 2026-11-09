@@ -49,8 +49,6 @@ export const materialLibraryStyles = css`
   }
 
   .editor {
-    --jolly-field-inset-end: 0px;
-
     display: flex;
     flex-direction: column;
     gap: var(--jolly-row-gap, 4px);

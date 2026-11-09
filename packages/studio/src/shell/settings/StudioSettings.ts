@@ -167,7 +167,6 @@ export class StudioSettings extends LitElement {
       --studio-settings-column: 640px;
       --jolly-label-width: 22ch;
       --jolly-field-inset-start: 0px;
-      --jolly-field-inset-end: 0px;
     }
 
     .card-body.wide {

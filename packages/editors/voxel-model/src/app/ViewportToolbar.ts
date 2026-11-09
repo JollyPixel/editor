@@ -120,7 +120,6 @@ export class ViewportToolbar extends LitElement {
 
       jolly-vector3 {
         --jolly-field-inset-start: 0px;
-        --jolly-field-inset-end: 0px;
 
         width: 0;
         min-width: 100%;

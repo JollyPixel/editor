@@ -652,7 +652,6 @@ export const panelStyles = css`
   .view-options-menu .grid-size {
     --jolly-gutter-width: 0px;
     --jolly-field-inset-start: 0px;
-    --jolly-field-inset-end: 0px;
 
     display: block;
     padding: 4px 8px;
