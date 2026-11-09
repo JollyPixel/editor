@@ -53,7 +53,7 @@ export class DeleteDialog extends EditorDialog<
   protected get frame(): EditorDialogFrame {
     return {
       heading: this.context.heading,
-      icon: "action-delete",
+      icon: "trash",
       intent: "danger",
       confirmLabel: "Delete",
       confirmVariant: "danger"

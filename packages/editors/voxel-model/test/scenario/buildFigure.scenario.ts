@@ -322,9 +322,9 @@ new Scenario<ModelPage, ModelExpectation>({
         await model.transform("Head", "Pos", { y: 1.25 });
         await model.transform("Leg", "Size", { x: 0.5, y: 1.5, z: 0.5 });
         const space = model.page.getByRole("radiogroup", { name: "Transform space" });
-        await expect(space.getByRole("radio", { name: "Global" })).toBeDisabled();
+        await expect(space.getByRole("radio", { name: "World" })).toBeDisabled();
         await model.transform("Leg", "Pos", { x: 0.25, y: -1.5 });
-        await expect(space.getByRole("radio", { name: "Global" })).toBeEnabled();
+        await expect(space.getByRole("radio", { name: "World" })).toBeEnabled();
         await model.transform("Arm", "Size", { x: 0.5, y: 1.5, z: 0.5 });
         await model.transform("Arm", "Pos", { x: 0.75, y: 0 });
         await model.transform("Arm", "Pivot", { y: 0.75 });

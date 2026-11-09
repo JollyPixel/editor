@@ -168,7 +168,7 @@ export class MaterialLibrary extends LitElement {
           @click=${this.#tool(state.editedId, "duplicate")}
         ></jolly-button>
         <jolly-button
-          icon="action-delete"
+          icon="trash"
           icon-only
           label="Delete"
           title="Delete"

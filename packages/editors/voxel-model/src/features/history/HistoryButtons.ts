@@ -25,7 +25,6 @@ import {
 import type { ShortcutLabels } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import "./historyIcons.ts";
 import type { PresenceStore } from "../../state/index.ts";
 import type { HistoryAction } from "./historyShortcuts.ts";
 import { refusalWording } from "./refusalWording.ts";
@@ -211,7 +210,7 @@ export class HistoryButtons extends LitElement {
     return html`
       <span class="action">
         <jolly-button
-          icon=${`history-${action}`}
+          icon=${action}
           icon-only
           label=${verb}
           title=${title}

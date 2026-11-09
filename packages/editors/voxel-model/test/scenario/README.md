@@ -26,7 +26,7 @@ Brackets name the deleted e2e spec that covered each item.
 - Asset select: open another model and its texture in place (`switch`).
 - Import as copy: a second model and texture next to the original
   (`archive`).
-- Transform space: a child read and written in Global space, scale on one axis
+- Transform space: a child read and written in World space, scale on one axis
   for a block with children, a size handle drag (`transform`).
 - Hierarchy: rename refused against a sibling inside a block, a name clash left
   by a delete flagged until renamed, delete with children (`hierarchy`).

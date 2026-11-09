@@ -33,7 +33,6 @@ import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
-import "./animateIcons.ts";
 import "../transform/TransformPanel.ts";
 import "./tracks/TrackBindings.ts";
 import type { TrackBindings } from "./tracks/TrackBindings.ts";
@@ -205,7 +204,7 @@ export class AnimatePanel extends LitElement {
           ></jolly-button>
           <jolly-button
             slot="actions"
-            icon="options"
+            icon="more"
             icon-only
             label="Animations options"
             title="More"

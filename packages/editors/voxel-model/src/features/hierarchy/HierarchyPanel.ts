@@ -195,7 +195,7 @@ export class HierarchyPanel extends LitElement {
       ></jolly-button>
       <jolly-button
         slot="actions"
-        icon="action-delete"
+        icon="trash"
         icon-only
         label="Delete"
         title="Delete"

@@ -35,7 +35,7 @@ const kSpaceOptions: JollyOption<GizmoSpace>[] = [
   },
   {
     value: "world",
-    label: "Global",
+    label: "World",
     icon: "transform-global"
   }
 ];

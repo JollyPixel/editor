@@ -4,67 +4,54 @@ import { registerIcon } from "@jolly-pixel/ui";
 
 registerIcon("transform-position", svg`
   <path
-    d="M12 3v18M3 12h18"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-  />
-  <path
-    class="tone-ink"
-    d="m9 6 3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"
+    d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"
     fill="none"
     stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-`, { tone: "teal" });
-
-registerIcon("transform-angle", svg`
-  <path
-    class="tone-ink"
-    d="M20 12a8 8 0 1 1-2.34-5.66"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-  />
-  <path
-    d="M20 3v4h-4"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-  <circle
-    cx="12"
-    cy="12"
-    r="1.75"
-    fill="currentColor"
-  />
-`, { tone: "coral" });
-
-registerIcon("transform-size", svg`
-  <rect
-    class="tone-fill"
-    x="3"
-    y="9"
-    width="12"
-    height="12"
-    rx="1"
-    stroke="currentColor"
-    stroke-width="2"
-  />
-  <path
-    d="M13 11l8-8M15 3h6v6"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
 `, { tone: "sky" });
+
+registerIcon("transform-angle", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="12"
+    r="2.5"
+    stroke="currentColor"
+    stroke-width="1.75"
+  />
+  <path
+    d="M12 4a8 8 0 1 0 8 8M9.5 1.5 12 4l-2.5 2.5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "lime" });
+
+registerIcon("transform-size", svg`
+  <rect
+    class="tone-fill"
+    x="4"
+    y="10"
+    width="10"
+    height="10"
+    rx="1.5"
+    stroke="currentColor"
+    stroke-width="1.75"
+  />
+  <path
+    d="M14 10l6-6M15 4h5v5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "violet" });
 
 registerIcon("transform-pivot", svg`
   <circle
@@ -73,85 +60,90 @@ registerIcon("transform-pivot", svg`
     cy="12"
     r="6"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
   />
   <path
-    d="M12 2v4M12 18v4M2 12h4M18 12h4"
+    d="M12 2.5v3.5M12 18v3.5M2.5 12H6M18 12h3.5"
+    fill="none"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
     stroke-linecap="round"
   />
   <circle
     cx="12"
     cy="12"
-    r="2"
+    r="1.75"
     fill="currentColor"
   />
 `, { tone: "pink" });
 
 registerIcon("transform-scale", svg`
   <rect
-    x="3"
-    y="3"
-    width="18"
-    height="18"
-    rx="1.5"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-dasharray="3 3"
-  />
-  <rect
     class="tone-fill"
-    x="6"
-    y="11"
-    width="7"
-    height="7"
-    rx="1"
+    x="4"
+    y="12"
+    width="8"
+    height="8"
+    rx="1.5"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
   />
   <path
-    d="M12 12l6-6M14 6h4v4"
+    d="M4 9V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"
     fill="none"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
+    stroke-linecap="round"
+    stroke-dasharray="2.5 2.2"
+  />
+  <path
+    d="M12 12l5-5M13 7h4v4"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.75"
     stroke-linecap="round"
     stroke-linejoin="round"
   />
-`, { tone: "violet" });
+`, { tone: "coral" });
 
 registerIcon("transform-local", svg`
-  <path
+  <rect
     class="tone-fill"
-    d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"
+    x="4"
+    y="4"
+    width="16"
+    height="16"
+    rx="3"
     stroke="currentColor"
-    stroke-width="2"
-    stroke-linejoin="round"
+    stroke-width="1.75"
   />
   <path
-    d="M12 12v9M12 12l8-4.5M12 12 4 7.5"
+    d="M10 8v8h5"
     fill="none"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
     stroke-linecap="round"
+    stroke-linejoin="round"
   />
 `, { tone: "amber" });
 
 registerIcon("transform-global", svg`
-  <circle
+  <rect
     class="tone-fill"
-    cx="12"
-    cy="12"
-    r="9"
+    x="4"
+    y="4"
+    width="16"
+    height="16"
+    rx="3"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
   />
   <path
-    d="M3 12h18M12 3c2.5 2.6 3.75 5.6 3.75 9S14.5 18.4 12 21c-2.5-2.6-3.75-5.6-3.75-9S9.5 5.6 12 3Z"
+    d="M7.5 8l1.75 8L12 10.5 14.75 16 16.5 8"
     fill="none"
     stroke="currentColor"
-    stroke-width="2"
+    stroke-width="1.75"
+    stroke-linecap="round"
     stroke-linejoin="round"
   />
 `, { tone: "teal" });
