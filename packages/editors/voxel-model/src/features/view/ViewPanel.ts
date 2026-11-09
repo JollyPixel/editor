@@ -64,7 +64,6 @@ export class ViewPanel extends LitElement {
     :host {
       display: block;
       flex: 0 0 auto;
-      border-top: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
     }
 
     jolly-folder::part(header) {

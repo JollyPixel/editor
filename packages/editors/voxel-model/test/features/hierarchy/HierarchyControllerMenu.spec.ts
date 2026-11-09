@@ -2,9 +2,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type { ContextMenuEntry } from "@jolly-pixel/ui";
-
 // Import Internal Dependencies
 import {
   NO_MIRROR,
@@ -16,31 +13,15 @@ import {
   createHierarchyHarness,
   selectBlock
 } from "./hierarchyHarness.ts";
-
-function listLabels(
-  entries: readonly ContextMenuEntry[]
-): string[] {
-  return entries.map((entry) => (entry === "separator" ? "-" : entry.label));
-}
-
-function shapeItems(
-  entries: readonly ContextMenuEntry[]
-): readonly ContextMenuEntry[] {
-  const branch = entries.find((entry) => entry !== "separator" && entry.label === "Shape");
-
-  return branch === undefined || branch === "separator" ? [] : branch.items ?? [];
-}
-
-function listEnabledLabels(
-  entries: readonly ContextMenuEntry[]
-): string[] {
-  return entries.flatMap((entry) => (
-    entry === "separator" || entry.disabled === true ? [] : [entry.label]
-  ));
-}
+import {
+  listEnabledLabels,
+  listLabels,
+  materialItems,
+  shapeItems
+} from "./menuLabels.ts";
 
 describe("HierarchyController without hierarchy rights", () => {
-  test("keeps only Material… in the row menu, redrawing when rights change", () => {
+  test("keeps materials and view actions in the row menu, redrawing when rights change", () => {
     const harness = createHierarchyHarness();
     const block = harness.addBlock({ name: "Body" });
     const before = harness.updates();
@@ -48,16 +29,39 @@ describe("HierarchyController without hierarchy rights", () => {
     harness.access.grant("materials");
 
     assert.deepEqual([harness.controller.writable, harness.updates()], [false, before + 1]);
-    assert.deepEqual(listEnabledLabels(harness.controller.openMenu(block.uuid).items), ["Material…"]);
+    assert.deepEqual(
+      listEnabledLabels(harness.controller.openMenu(block.uuid).items),
+      ["Material", "Focus", "Isolate"]
+    );
     assert.deepEqual(listEnabledLabels(harness.controller.openMenu(null).items), []);
 
     harness.access.grant("hierarchy");
     assert.equal(harness.controller.writable, true);
+    assert.deepEqual(
+      listEnabledLabels(materialItems(harness.controller.openMenu(block.uuid).items)),
+      ["Edit Material…"]
+    );
+  });
+});
+
+describe("HierarchyController outside the Texture tab", () => {
+  test("keeps materials and view actions in the row menu", () => {
+    const harness = createHierarchyHarness();
+    const block = harness.addBlock({ name: "Body" });
+
+    harness.tab.activate("material");
+
+    assert.deepEqual(
+      listEnabledLabels(harness.controller.openMenu(block.uuid).items),
+      ["Material", "Focus", "Isolate"]
+    );
+    assert.deepEqual(listEnabledLabels(shapeItems(harness.controller.openMenu(block.uuid).items)), []);
+    assert.deepEqual(listEnabledLabels(harness.controller.openMenu(null).items), []);
   });
 });
 
 describe("HierarchyController.openMenu", () => {
-  test("offers a block its material and one child block", () => {
+  test("offers a block its material, view actions and one child block", () => {
     const harness = createHierarchyHarness();
     const block = harness.addBlock();
 
@@ -67,7 +71,11 @@ describe("HierarchyController.openMenu", () => {
       "Duplicate",
       "-",
       "Shape",
-      "Material…",
+      "Material",
+      "-",
+      "Focus",
+      "Isolate",
+      "Show All",
       "-",
       "Delete"
     ]);
@@ -90,7 +98,7 @@ describe("HierarchyController.openMenu", () => {
     );
   });
 
-  test("offers a folder both kinds of child and no material", () => {
+  test("offers a folder both kinds of child and a material for its blocks", () => {
     const harness = createHierarchyHarness();
     const folderId = harness.hierarchy.createFolder("Limbs", null)!;
 
@@ -99,6 +107,14 @@ describe("HierarchyController.openMenu", () => {
       "Add Folder",
       "Rename",
       "Duplicate",
+      "-",
+      "Apply Material",
+      "-",
+      "Focus",
+      "Isolate",
+      "Show All",
+      "Expand All",
+      "Collapse All",
       "-",
       "Delete"
     ]);
@@ -115,7 +131,11 @@ describe("HierarchyController.openMenu", () => {
 
     assert.deepEqual(listLabels(harness.controller.openMenu(null).items), [
       "Add Block",
-      "Add Folder"
+      "Add Folder",
+      "-",
+      "Show All",
+      "Expand All",
+      "Collapse All"
     ]);
   });
 });

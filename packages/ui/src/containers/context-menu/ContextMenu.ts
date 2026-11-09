@@ -10,6 +10,7 @@ import {
   property,
   query
 } from "lit/decorators.js";
+import { styleMap } from "lit/directives/style-map.js";
 
 // Import Internal Dependencies
 import { contextMenuStyles } from "./ContextMenu.styles.ts";
@@ -26,10 +27,22 @@ import "../../icon/Icon.ts";
 import type { IconName } from "../../icon/registry.ts";
 import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
 
+export interface ContextMenuSwatch {
+  /**
+   * Any CSS colour, drawn over a checkerboard.
+   */
+  color: string;
+  ring?: string;
+}
+
 export interface ContextMenuItem {
   id: string;
   label: string;
   icon?: IconName;
+  /**
+   * Drawn in the icon column instead of the icon.
+   */
+  swatch?: ContextMenuSwatch;
   disabled?: boolean;
   intent?: "danger";
   items?: readonly ContextMenuEntry[];
@@ -199,7 +212,8 @@ export class ContextMenu extends LitElement {
     path: string
   ): TemplateResult[] {
     const withIcons = entries.some(
-      (entry) => entry !== "separator" && entry.icon !== undefined
+      (entry) => entry !== "separator" &&
+        (entry.icon !== undefined || entry.swatch !== undefined)
     );
 
     return entries.map((entry, index) => {
@@ -283,13 +297,7 @@ export class ContextMenu extends LitElement {
     withIcons: boolean
   ): TemplateResult {
     return html`
-      ${withIcons ?
-        html`<jolly-icon
-          class="icon"
-          name=${item.icon ?? nothing}
-          aria-hidden="true"
-        ></jolly-icon>` :
-        nothing}
+      ${withIcons ? renderLead(item) : nothing}
       <span
         class="label"
         @pointerenter=${revealOverflowTitle}
@@ -401,6 +409,28 @@ export class ContextMenu extends LitElement {
       );
     }
   }
+}
+
+function renderLead(
+  item: ContextMenuItem
+): TemplateResult {
+  const { swatch } = item;
+  if (swatch === undefined) {
+    return html`<jolly-icon
+      class="icon"
+      name=${item.icon ?? nothing}
+      aria-hidden="true"
+    ></jolly-icon>`;
+  }
+
+  return html`<span
+    class="swatch"
+    aria-hidden="true"
+    style=${styleMap({
+      "--jolly-menu-swatch-color": swatch.color,
+      "--jolly-menu-swatch-ring": swatch.ring ?? null
+    })}
+  ></span>`;
 }
 
 function focusCurrentTarget(

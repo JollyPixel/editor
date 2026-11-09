@@ -200,7 +200,9 @@ describe("HierarchyController.attach", () => {
       selection,
       hierarchy: createHierarchy(fixture, harness.access),
       presence: new PresenceStore(),
-      tab: new TabStore()
+      tab: new TabStore(),
+      history: harness.history,
+      frameBlocks: () => undefined
     });
 
     const [folder] = harness.controller.nodes;

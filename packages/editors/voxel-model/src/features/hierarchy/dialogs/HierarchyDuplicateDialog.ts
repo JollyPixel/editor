@@ -9,6 +9,7 @@ import { state } from "lit/decorators.js";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/toggle";
 import type { MirrorAxes } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -41,14 +42,28 @@ export class HierarchyDuplicateDialog extends EditorDialog<
   HierarchyDuplicateResult
 > {
   static override styles = css`
+    .mirror {
+      display: flex;
+      flex-direction: column;
+      gap: var(--jolly-space-1, 4px);
+      padding-inline: var(--jolly-field-inset-start, var(--jolly-space-1, 4px))
+        var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
+    }
+
     .mirror-title {
       color: var(--jolly-text-muted);
-      font-size: 0.85em;
+      user-select: none;
     }
 
     .mirror-axes {
-      display: flex;
-      gap: var(--jolly-space-4, 16px);
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--jolly-space-1, 4px);
+    }
+
+    .mirror-axes jolly-toggle {
+      --jolly-field-inset-start: 0px;
+      --jolly-field-inset-end: 0px;
     }
   `;
 
@@ -133,17 +148,23 @@ export class HierarchyDuplicateDialog extends EditorDialog<
           @jolly-change=${this.#onIncludeChildren}
         ></jolly-checkbox>
       ` : nothing}
-      <div class="mirror-title">Mirror axis</div>
-      <div class="mirror-axes">
-        ${kAxes.map((axis) => html`
-          <jolly-checkbox
-            label=${axis.toUpperCase()}
-            .value=${this.mirrorAxes[axis]}
-            @jolly-change=${(event: CustomEvent<JollyChangeDetail<boolean>>) => {
-              this.#mirror(axis, event.detail.value);
-            }}
-          ></jolly-checkbox>
-        `)}
+      <div
+        class="mirror"
+        role="group"
+        aria-labelledby="mirror-title"
+      >
+        <span id="mirror-title" class="mirror-title">Mirror axis</span>
+        <div class="mirror-axes">
+          ${kAxes.map((axis) => html`
+            <jolly-toggle
+              label=${axis.toUpperCase()}
+              .value=${this.mirrorAxes[axis]}
+              @jolly-change=${(event: CustomEvent<JollyChangeDetail<boolean>>) => {
+                this.#mirror(axis, event.detail.value);
+              }}
+            ></jolly-toggle>
+          `)}
+        </div>
       </div>
     `;
   }

@@ -10,9 +10,11 @@ import {
   type JollySelectDetail,
   type JollyToggleExpandDetail,
   type JollyToggleVisibleDetail,
+  type MenuBranch,
+  type MenuEntry,
+  type MenuItem,
   type TreeNode,
-  MenuSession,
-  disableEntries
+  MenuSession
 } from "@jolly-pixel/ui";
 import {
   BlockShape,
@@ -23,10 +25,10 @@ import {
 
 // Import Internal Dependencies
 import {
-  blockIdsUnder,
   duplicateName,
   findHierarchyNode,
   kindLabel,
+  ownBlockIds,
   type HierarchyNode,
   type HierarchyNodeKind,
   type ModelHierarchy
@@ -41,14 +43,15 @@ import {
   collectExpandableIds,
   toTreeNodes
 } from "./hierarchyTreeNodes.ts";
+import { HierarchyMaterials } from "./HierarchyMaterials.ts";
+import { HierarchyViewMenu } from "./HierarchyViewMenu.ts";
+import { MenuActions } from "../../shared/menu/MenuActions.ts";
 import {
-  BLOCK_MENU,
-  FOLDER_MENU,
-  ROOT_MENU,
-  type HierarchyAction,
-  type RowAction,
-  type RootAction
-} from "./hierarchyMenu.ts";
+  DELETE_ITEM,
+  DUPLICATE_ITEM,
+  RENAME_ITEM
+} from "../../shared/menu/menuItems.ts";
+import type { ScopeRecorder } from "../history/index.ts";
 import type {
   NameDialogChoice,
   NameDialogContext,
@@ -66,12 +69,29 @@ import { ExpandedRows } from "../../shared/ExpandedRows.ts";
 import type { NameFieldOptions } from "../../shared/dialogs/NameDraft.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 import {
+  BLOCK_SHAPES,
   BLOCK_SHAPE_OPTIONS,
   blockShapeById,
-  isBlockShapeEntryId,
   matchBlockShapeEntry,
   type BlockShapeEntryId
 } from "../../shared/blockShapes.ts";
+
+// CONSTANTS
+const kAddBlock = {
+  id: "add-block",
+  label: "Add Block",
+  icon: "plus"
+};
+const kAddFolder = {
+  id: "add-folder",
+  label: "Add Folder",
+  icon: "folder-add"
+};
+const kShape = {
+  id: "shape",
+  label: "Shape",
+  icon: "block"
+};
 
 export interface HierarchyEditing {
   access: ModelAccessSignals;
@@ -81,6 +101,8 @@ export interface HierarchyEditing {
   hierarchy: ModelHierarchy;
   presence: PresenceStore;
   tab: TabStore;
+  history: ScopeRecorder<"material">;
+  frameBlocks(uuids: Iterable<string>): void;
 }
 
 export interface HierarchyView {
@@ -107,20 +129,8 @@ export class HierarchyController {
   #selected: string[] = [];
   #expanded = new ExpandedRows();
   #lastShape: BlockShapeEntryId = "box";
-
-  readonly #rowActions: Record<RowAction, (id: string) => Promise<void> | void> = {
-    rename: (id) => this.#view.beginRename(id),
-    material: (id) => this.editMaterial(id),
-    "add-block": (id) => this.#addBlock(id),
-    "add-folder": (id) => this.#addFolder(id),
-    duplicate: (id) => this.#duplicate(id),
-    delete: (id) => this.#remove(id)
-  };
-
-  readonly #rootActions: Record<RootAction, () => Promise<void>> = {
-    "add-block": () => this.#addBlock(null),
-    "add-folder": () => this.#addFolder(null)
-  };
+  #materials = new HierarchyMaterials();
+  #viewMenu: HierarchyViewMenu;
 
   #onChange = (
     change: ModelChange
@@ -151,6 +161,11 @@ export class HierarchyController {
   ) {
     this.#host = host;
     this.#view = view;
+    this.#viewMenu = new HierarchyViewMenu({
+      expanded: this.#expanded,
+      nodes: () => this.#nodes,
+      requestUpdate: () => host.requestUpdate()
+    });
     this.#connection = new SubscriptionController(
       host,
       (editing) => this.#subscribeTo(editing)
@@ -257,10 +272,7 @@ export class HierarchyController {
       return;
     }
 
-    this.#editing?.blocks.changeVisibility(
-      node.kind === "folder" ? blockIdsUnder(node) : [id],
-      visible
-    );
+    this.#editing?.blocks.changeVisibility(ownBlockIds(node), visible);
   };
 
   readonly handleReparent = (
@@ -298,44 +310,131 @@ export class HierarchyController {
   openMenu(
     id: string | null
   ): MenuSession {
-    const readOnly = !this.writable;
-    if (id === null) {
-      return MenuSession.from(
-        disableEntries(ROOT_MENU, () => readOnly),
-        (action) => this.#rootActions[action]()
-      );
-    }
-
-    const kind = this.#editing?.document.tree.get(id)?.kind;
-    if (kind === undefined) {
+    const editing = this.#editing;
+    if (editing === null) {
       return MenuSession.EMPTY;
     }
 
-    const reshapable = this.#editing?.hierarchy.canReshape(id) === true;
-    const current = this.#currentShape(id);
+    const menu = new MenuActions();
+    if (id === null) {
+      return menu.session(this.#rootEntries(menu, editing));
+    }
 
-    return MenuSession.forRow(
-      disableEntries(
-        kind === "block" ? BLOCK_MENU : FOLDER_MENU,
-        (action) => (isBlockShapeEntryId(action) ?
-          !reshapable || action === current :
-          readOnly && action !== "material")
-      ),
-      () => this.#editing?.document.tree.has(id) === true,
-      (action) => this.#run(id, action)
+    const node = this.#hierarchyNode(id);
+    if (node === null) {
+      return MenuSession.EMPTY;
+    }
+
+    return menu.session(
+      node.kind === "block" ?
+        this.#blockEntries(menu, editing, node) :
+        this.#folderEntries(menu, editing, node),
+      () => editing.document.tree.has(id)
     );
   }
 
-  async #run(
-    id: string,
-    action: HierarchyAction
-  ): Promise<void> {
-    if (isBlockShapeEntryId(action)) {
-      this.#editing?.hierarchy.reshape(id, blockShapeById(action).shape);
-    }
-    else {
-      await this.#rowActions[action](id);
-    }
+  #rootEntries(
+    menu: MenuActions,
+    editing: HierarchyEditing
+  ): MenuEntry<string>[] {
+    return [
+      this.#writeItem(menu, kAddBlock, () => this.#addBlock(null)),
+      this.#writeItem(menu, kAddFolder, () => this.#addFolder(null)),
+      "separator",
+      this.#viewMenu.showAllEntry(menu, editing),
+      ...this.#viewMenu.expansionEntries(menu, null)
+    ];
+  }
+
+  #blockEntries(
+    menu: MenuActions,
+    editing: HierarchyEditing,
+    node: HierarchyNode
+  ): MenuEntry<string>[] {
+    const { id } = node;
+
+    return [
+      this.#writeItem(
+        menu,
+        {
+          ...kAddBlock,
+          label: "Add Child Block"
+        },
+        () => this.#addBlock(id)
+      ),
+      this.#writeItem(menu, RENAME_ITEM, () => this.#view.beginRename(id)),
+      this.#writeItem(menu, DUPLICATE_ITEM, () => this.#duplicate(id)),
+      "separator",
+      this.#shapeBranch(menu, editing, id),
+      this.#materials.blockBranch(menu, editing, {
+        blockIds: [id],
+        reveal: () => this.editMaterial(id)
+      }),
+      "separator",
+      ...this.#viewMenu.focusEntries(menu, editing, node),
+      this.#viewMenu.showAllEntry(menu, editing),
+      "separator",
+      this.#writeItem(menu, DELETE_ITEM, () => this.#remove(id))
+    ];
+  }
+
+  #folderEntries(
+    menu: MenuActions,
+    editing: HierarchyEditing,
+    node: HierarchyNode
+  ): MenuEntry<string>[] {
+    const { id } = node;
+
+    return [
+      this.#writeItem(menu, kAddBlock, () => this.#addBlock(id)),
+      this.#writeItem(menu, kAddFolder, () => this.#addFolder(id)),
+      this.#writeItem(menu, RENAME_ITEM, () => this.#view.beginRename(id)),
+      this.#writeItem(menu, DUPLICATE_ITEM, () => this.#duplicate(id)),
+      "separator",
+      this.#materials.folderBranch(menu, editing, {
+        blockIds: [...ownBlockIds(node)],
+        reveal: () => this.#view.showMaterial()
+      }),
+      "separator",
+      ...this.#viewMenu.focusEntries(menu, editing, node),
+      this.#viewMenu.showAllEntry(menu, editing),
+      ...this.#viewMenu.expansionEntries(menu, id),
+      "separator",
+      this.#writeItem(menu, DELETE_ITEM, () => this.#remove(id))
+    ];
+  }
+
+  #writeItem(
+    menu: MenuActions,
+    entry: MenuItem<string>,
+    run: () => Promise<void> | void
+  ): MenuItem<string> {
+    return menu.item(
+      {
+        ...entry,
+        disabled: !this.editable || !this.writable
+      },
+      run
+    );
+  }
+
+  #shapeBranch(
+    menu: MenuActions,
+    editing: HierarchyEditing,
+    id: string
+  ): MenuBranch<string> {
+    const reshapable = this.editable && editing.hierarchy.canReshape(id);
+    const current = this.#currentShape(id);
+
+    return menu.branch(kShape, BLOCK_SHAPES.map((entry) => menu.item(
+      {
+        id: entry.id,
+        label: entry.label,
+        icon: entry.icon,
+        disabled: !reshapable || entry.id === current
+      },
+      () => editing.hierarchy.reshape(id, entry.shape)
+    )));
   }
 
   #currentShape(

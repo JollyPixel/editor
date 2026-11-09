@@ -241,6 +241,28 @@ describe("ModelBlocks selection", () => {
   });
 });
 
+describe("ModelBlocks visibility", () => {
+  test("showOnly hides every other block in a single visibility change", () => {
+    const fixture = createModelFixture();
+    const arm = fixture.addBlock({ name: "Arm" });
+    const hand = fixture.addBlock({ name: "Hand" });
+    const body = fixture.addBlock({ name: "Body" });
+    fixture.blocks.changeVisibility([hand.uuid], false);
+    const changes: (readonly string[])[] = [];
+    fixture.blocks.subscribe("blockVisibilityChanged", (uuids) => {
+      changes.push(uuids);
+    });
+
+    fixture.blocks.showOnly([hand.uuid]);
+
+    assert.deepEqual(
+      [arm, hand, body].map((block) => block.visible),
+      [false, true, false]
+    );
+    assert.deepEqual(changes, [[arm.uuid, hand.uuid, body.uuid]]);
+  });
+});
+
 describe("ModelBlocks textures", () => {
   test("applies the shared texture to existing and future blocks", () => {
     const fixture = createModelFixture();

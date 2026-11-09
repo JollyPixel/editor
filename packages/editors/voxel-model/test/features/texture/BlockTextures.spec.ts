@@ -41,6 +41,24 @@ describe("BlockTextures texture", () => {
     assert.equal(after.texture, before.texture);
   });
 
+  test("maps many blocks without a listener leak warning", (t) => {
+    const warn = t.mock.method(console, "warn", () => undefined);
+    const pixels = new PixelDocument({ size: TEXTURE_SIZE });
+    const { document, blocks, selection, addBlock } = createModelFixture();
+    for (let index = 0; index < 16; index++) {
+      addBlock();
+    }
+    new BlockTextures({
+      pixels,
+      document,
+      blocks,
+      selection,
+      access: modelAccess()
+    });
+
+    assert.equal(warn.mock.callCount(), 0);
+  });
+
   test("owns block regions while attached and gives them back on dispose", () => {
     const { pixels, textures } = createTextureHarness();
     const regionId = "block-a";

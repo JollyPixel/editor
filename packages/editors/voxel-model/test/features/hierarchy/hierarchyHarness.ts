@@ -11,6 +11,10 @@ import {
   HierarchyController,
   type HierarchyView
 } from "#src/features/hierarchy/HierarchyController.ts";
+import {
+  createEditorHistory,
+  type EditorHistory
+} from "#src/features/history/index.ts";
 import type {
   NameDialogContext,
   NameDialogResult
@@ -51,12 +55,14 @@ export interface DialogCalls {
   delete: DeleteContext[];
   renamed: string[];
   materialShown: number;
+  framed: string[][];
 }
 
 export interface HierarchyHarness extends ModelFixture {
   access: TestModelAccess;
   controller: HierarchyController;
   hierarchy: ModelHierarchy;
+  history: EditorHistory;
   calls: DialogCalls;
   tab: TabStore;
   updates(): number;
@@ -74,7 +80,8 @@ export function createHierarchyHarness(
     duplicate: [],
     delete: [],
     renamed: [],
-    materialShown: 0
+    materialShown: 0,
+    framed: []
   };
   const view: HierarchyView = {
     promptName(context) {
@@ -109,6 +116,7 @@ export function createHierarchyHarness(
     updateComplete: Promise.resolve(true)
   };
   const tab = new TabStore();
+  const history = createEditorHistory({ document });
   const controller = new HierarchyController(host, view);
   controller.attach({
     access,
@@ -117,7 +125,11 @@ export function createHierarchyHarness(
     selection,
     hierarchy,
     presence: new PresenceStore(),
-    tab
+    tab,
+    history,
+    frameBlocks(uuids) {
+      calls.framed.push([...uuids]);
+    }
   });
 
   return {
@@ -125,6 +137,7 @@ export function createHierarchyHarness(
     access,
     controller,
     hierarchy,
+    history,
     calls,
     tab,
     updates: () => updates

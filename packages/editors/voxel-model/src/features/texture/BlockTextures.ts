@@ -127,7 +127,7 @@ export class BlockTextures {
   #onRegionDeleted: UVMapListener<"region-deleted"> = ({ region }) => {
     const uuid = blockUuidFromRegion(region.id);
     if (uuid !== null) {
-      this.#unbind(uuid);
+      this.#bindings.delete(uuid);
     }
   };
 
@@ -135,7 +135,12 @@ export class BlockTextures {
     event: { region: UVRegion; }
   ): void => {
     const uuid = blockUuidFromRegion(event.region.id);
-    if (this.#restoring || uuid === null) {
+    if (uuid === null) {
+      return;
+    }
+
+    this.#bindings.get(uuid)?.bindRegion(event.region);
+    if (this.#restoring) {
       return;
     }
     if (this.#access.current.has("uv")) {
@@ -148,6 +153,10 @@ export class BlockTextures {
     if (block !== undefined) {
       this.#project(block);
     }
+  };
+
+  #onRegionDragging: UVMapListener<"region-dragging"> = ({ region }) => {
+    this.#findBinding(region)?.preview(region);
   };
 
   #onRegionSelected: UVMapListener<"selection-changed"> = ({ selectedRegionId }) => {
@@ -200,6 +209,7 @@ export class BlockTextures {
       uv.subscribe("region-moved", this.#onRegionEdited),
       uv.subscribe("region-reoriented", this.#onRegionEdited),
       uv.subscribe("region-state-changed", this.#onRegionEdited),
+      uv.subscribe("region-dragging", this.#onRegionDragging),
       uv.subscribe("selection-changed", this.#onRegionSelected),
       this.#document.subscribe("change", this.#onChange),
       this.#document.subscribe("reset", this.#rebuild),
@@ -213,18 +223,15 @@ export class BlockTextures {
   previewPeerDrag(
     region: UVRegion
   ): void {
-    const uuid = blockUuidFromRegion(region.id);
-    if (uuid !== null) {
-      this.#bindings.get(uuid)?.preview(region);
+    const binding = this.#findBinding(region);
+    if (binding) {
+      binding.preview(region);
       this.#requestFrame();
     }
   }
 
   dispose(): void {
-    for (const uuid of [...this.#bindings.keys()]) {
-      this.#unbind(uuid);
-    }
-
+    this.#bindings.clear();
     for (const unsubscribe of this.#subscriptions) {
       unsubscribe();
     }
@@ -254,6 +261,14 @@ export class BlockTextures {
     }
   }
 
+  #findBinding(
+    region: UVRegion
+  ): UVGeometryBinding | undefined {
+    const uuid = blockUuidFromRegion(region.id);
+
+    return uuid === null ? undefined : this.#bindings.get(uuid);
+  }
+
   #bindByUuid(
     uuid: string
   ): void {
@@ -273,8 +288,6 @@ export class BlockTextures {
       return;
     }
 
-    this.#unbind(block.uuid);
-
     block.restoreBaseUv();
     const binding = new UVGeometryBinding({
       geometry: block.mesh.geometry,
@@ -282,15 +295,7 @@ export class BlockTextures {
       textureSize: this.#pixels.size(),
       faceRanges: block.faces
     });
-    binding.follow(this.#pixels.uv);
     this.#bindings.set(block.uuid, binding);
-  }
-
-  #unbind(
-    uuid: string
-  ): void {
-    this.#bindings.get(uuid)?.unfollow();
-    this.#bindings.delete(uuid);
   }
 }
 

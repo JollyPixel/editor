@@ -36,6 +36,15 @@ async function chevronOffset(
   return chevron.x - label.x;
 }
 
+async function chevronMirrored(
+  page: Page,
+  name: string
+) {
+  return menuItem(page, name).locator(".chevron").evaluate(
+    (chevron) => new DOMMatrix(getComputedStyle(chevron).transform).a < 0
+  );
+}
+
 async function openOn(
   page: Page,
   name: string
@@ -63,6 +72,7 @@ test.describe("Context menu submenus", () => {
     const addBox = await settledBox(add);
     expect(addBox.x).toBeGreaterThanOrEqual(rootBox.x + rootBox.width - 1);
     expect(await chevronOffset(page, "Add")).toBeGreaterThan(0);
+    expect(await chevronMirrored(page, "Add")).toBe(false);
 
     await menuItem(page, "Shape").hover();
     await expect(page.getByRole("menu", { name: "Shape" })).toBeVisible();
@@ -111,7 +121,8 @@ test.describe("Context menu submenus", () => {
     await openOn(page, "Wing");
     const rootBox = await settledBox(page.getByRole("menu", { name: "Row actions" }));
 
-    expect(await chevronOffset(page, "Add")).toBeLessThan(0);
+    expect(await chevronOffset(page, "Add")).toBeGreaterThan(0);
+    expect(await chevronMirrored(page, "Add")).toBe(true);
     const addLabel = (await menuItem(page, "Add").locator(".label").boundingBox())!;
     const renameLabel = (await menuItem(page, "Rename").locator(".label").boundingBox())!;
     expect(Math.abs(addLabel.x - renameLabel.x)).toBeLessThanOrEqual(1);
@@ -122,7 +133,7 @@ test.describe("Context menu submenus", () => {
     const addBox = await settledBox(add);
     expect(addBox.x + addBox.width).toBeLessThanOrEqual(rootBox.x + 1);
 
-    expect(await chevronOffset(page, "Shape")).toBeLessThan(0);
+    expect(await chevronMirrored(page, "Shape")).toBe(true);
     await menuItem(page, "Shape").hover();
     const shape = page.getByRole("menu", { name: "Shape" });
     await expect(shape).toBeVisible();

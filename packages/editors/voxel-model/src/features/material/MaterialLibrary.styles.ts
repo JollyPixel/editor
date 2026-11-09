@@ -17,7 +17,7 @@ export const materialLibraryStyles = css`
     gap: var(--jolly-space-2, 8px);
     padding-block: var(--jolly-space-1, 4px);
     padding-inline: var(--jolly-space-1, 4px) 0;
-    border-bottom: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
+    border-bottom: 1px solid var(--jolly-separator-rule);
   }
 
   .footer {
@@ -54,7 +54,7 @@ export const materialLibraryStyles = css`
     display: flex;
     flex-direction: column;
     min-height: 0;
-    border-right: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
+    border-right: 1px solid var(--jolly-separator-rule);
   }
 
   @container (width < 480px) {
@@ -65,7 +65,7 @@ export const materialLibraryStyles = css`
 
     .library {
       border-right: 0;
-      border-bottom: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
+      border-bottom: 1px solid var(--jolly-separator-rule);
     }
   }
 

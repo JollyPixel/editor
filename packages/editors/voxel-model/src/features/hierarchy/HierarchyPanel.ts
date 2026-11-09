@@ -3,7 +3,6 @@ import {
   LitElement,
   css,
   html,
-  nothing,
   type TemplateResult
 } from "lit";
 import { query } from "lit/decorators.js";
@@ -151,7 +150,7 @@ export class HierarchyPanel extends LitElement {
           ?renamable=${editable}
           @jolly-activate=${this.#tree.handleActivate}
           @jolly-activate-swatch=${this.#tree.handleActivateSwatch}
-          @jolly-context-request=${this.#tree.editable ? this.#menu.onContextRequest : nothing}
+          @jolly-context-request=${this.#menu.onContextRequest}
           @jolly-select=${this.#tree.handleSelect}
           @jolly-toggle-expand=${this.#tree.handleToggleExpand}
           @jolly-toggle-visible=${this.#tree.handleToggleVisible}

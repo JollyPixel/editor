@@ -117,6 +117,7 @@ export interface ModelEditing {
   view: ViewSettingsStore;
   shortcuts: ShortcutLabels<ModelAction>;
   teleportToPeer(clientId: string): void;
+  frameBlocks(uuids: Iterable<string>): void;
 }
 
 export class ModelEditorScene extends Systems.Scene {
@@ -372,6 +373,12 @@ export class ModelEditorScene extends Systems.Scene {
         const pose = collaboration.frustums.peerPose(clientId);
         if (pose !== undefined) {
           camera.teleport(pose);
+        }
+      },
+      frameBlocks: (uuids) => {
+        const bounds = blocks.bounds(uuids);
+        if (!bounds.isEmpty()) {
+          camera.frame(bounds);
         }
       }
     });
