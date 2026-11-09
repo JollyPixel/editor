@@ -13,7 +13,7 @@ import type {
   FocusedHistory
 } from "../history/index.ts";
 import type { ModelBlocks } from "../../scene/index.ts";
-import type { BuildRecorder } from "../../model/index.ts";
+import type { HierarchyRecorder } from "../../model/index.ts";
 import type { LiveView } from "../transform/index.ts";
 import { AnimationHistories } from "./undo/AnimationHistories.ts";
 import { animateHistoryFocus } from "./undo/animateHistoryFocus.ts";
@@ -29,7 +29,7 @@ import { AnimationPlayer } from "./session/AnimationPlayer.ts";
 import { AnimationKeyer } from "./keys/AnimationKeyer.ts";
 import {
   AnimationFollow,
-  followingBuildEdits
+  followingHierarchyEdits
 } from "./library/AnimationFollow.ts";
 import { KeyEditor } from "./keys/KeyEditor.ts";
 import type { ModelAccessSource } from "../../access/ModelAccess.ts";
@@ -54,7 +54,7 @@ export interface EditorAnimation {
   keyEditor: KeyEditor;
   keyer: AnimationKeyer;
   liveView: LiveView;
-  buildEdits: BuildRecorder;
+  hierarchyEdits: HierarchyRecorder;
   dispose(): void;
 }
 
@@ -102,7 +102,7 @@ export function createAnimation(
       access
     }),
     liveView: animationLiveView(animationSession, poser),
-    buildEdits: followingBuildEdits(history, follow),
+    hierarchyEdits: followingHierarchyEdits(history, follow),
     dispose: () => {
       player.dispose();
       poser.dispose();

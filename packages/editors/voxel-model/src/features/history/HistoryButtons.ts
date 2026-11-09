@@ -15,7 +15,7 @@ import {
   PopoverController,
   SubscriptionController
 } from "@jolly-pixel/ui";
-import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/tool-button";
 import {
   describeRefusal,
   EMPTY_HISTORY_STATE,
@@ -30,6 +30,7 @@ import type { HistoryAction } from "./historyShortcuts.ts";
 import { refusalWording } from "./refusalWording.ts";
 import type { ActiveHistory } from "./ActiveHistory.ts";
 import type { ModelAction } from "../../keybindings/modelActions.ts";
+import { viewportToolbarStyles } from "../../shared/styles/viewportToolbar.styles.ts";
 
 export interface HistoryEditing {
   activeHistory: ActiveHistory;
@@ -38,38 +39,13 @@ export interface HistoryEditing {
 }
 
 export class HistoryButtons extends LitElement {
-  static override styles = css`
+  static override styles = [viewportToolbarStyles, css`
     :host {
       display: inline-flex;
-      gap: var(--jolly-space-1, 4px);
       align-items: center;
     }
 
-    .action {
-      position: relative;
-      display: inline-flex;
-    }
-
-    .count {
-      position: absolute;
-      right: -3px;
-      bottom: -3px;
-      box-sizing: border-box;
-      min-width: 12px;
-      height: 12px;
-      padding: 0 2px;
-      border-radius: 6px;
-      background: var(--jolly-accent, #ffad72);
-      color: var(--jolly-surface, #1e1f22);
-      font-size: 8px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      line-height: 12px;
-      text-align: center;
-      pointer-events: none;
-    }
-
-    .count.refused {
+    .refused::part(count) {
       background: var(--jolly-danger, #e5484d);
     }
 
@@ -108,7 +84,7 @@ export class HistoryButtons extends LitElement {
       font-size: var(--jolly-font-size, 11px);
       white-space: nowrap;
     }
-  `;
+  `];
 
   static override properties = {
     editing: { attribute: false },
@@ -208,17 +184,15 @@ export class HistoryButtons extends LitElement {
     ) ?? where;
 
     return html`
-      <span class="action">
-        <jolly-button
-          icon=${action}
-          icon-only
-          label=${verb}
-          title=${title}
-          ?disabled=${!enabled}
-          @click=${() => this.#run(action)}
-        ></jolly-button>
-        ${count > 0 ? html`<span class="count" aria-hidden="true">${count}</span>` : nothing}
-      </span>
+      <jolly-tool-button
+        data-tool=${action}
+        icon=${action}
+        flyout-side="above"
+        label=${title}
+        .count=${count}
+        ?disabled=${!enabled}
+        @click=${() => this.#run(action)}
+      ></jolly-tool-button>
     `;
   }
 
@@ -231,17 +205,16 @@ export class HistoryButtons extends LitElement {
       `${refused.length} steps can no longer be undone`;
 
     return html`
-      <span class="action">
-        <jolly-button
-          ${ref(this.#marker)}
-          icon="warning"
-          icon-only
-          label="Refused steps"
-          title=${title}
-          @click=${this.#toggleSteps}
-        ></jolly-button>
-        <span class="count refused" aria-hidden="true">${refused.length}</span>
-      </span>
+      <jolly-tool-button
+        ${ref(this.#marker)}
+        class="refused"
+        data-tool="refused"
+        icon="warning"
+        flyout-side="above"
+        label=${title}
+        .count=${refused.length}
+        @click=${this.#toggleSteps}
+      ></jolly-tool-button>
       <div
         ${ref(this.#steps)}
         class="steps"

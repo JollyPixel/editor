@@ -7,11 +7,13 @@ import {
 // Import Internal Dependencies
 import {
   ModelHierarchy,
+  type BlockLocks,
   type HierarchyNode
 } from "#src/model/index.ts";
 import { createEditorHistory } from "#src/features/history/index.ts";
 import {
-  recordBuildEdits,
+  NO_LOCKS,
+  recordHierarchyEdits,
   createModelFixture,
   type ModelFixture
 } from "./model.ts";
@@ -32,18 +34,22 @@ export interface HierarchyFixture extends ModelFixture {
 
 export function createHierarchy(
   fixture: ModelFixture,
-  access: TestModelAccess
+  access: TestModelAccess,
+  locks: BlockLocks = NO_LOCKS
 ): ModelHierarchy {
   return new ModelHierarchy({
     document: fixture.document,
-    edits: recordBuildEdits(createEditorHistory({ document: fixture.document })),
+    edits: recordHierarchyEdits(createEditorHistory({ document: fixture.document })),
     textureSize: () => kTextureSize,
     poses: fixture.blocks,
-    access
+    access,
+    locks
   });
 }
 
-export function createHierarchyFixture(): HierarchyFixture {
+export function createHierarchyFixture(
+  locks: BlockLocks = NO_LOCKS
+): HierarchyFixture {
   const fixture = createModelFixture();
   const commands: VoxelModelCommand[] = [];
   fixture.document.on("change", (change) => commands.push(change.command));
@@ -52,7 +58,7 @@ export function createHierarchyFixture(): HierarchyFixture {
   return {
     ...fixture,
     access,
-    hierarchy: createHierarchy(fixture, access),
+    hierarchy: createHierarchy(fixture, access, locks),
     commands
   };
 }

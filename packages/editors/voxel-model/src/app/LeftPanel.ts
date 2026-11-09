@@ -12,7 +12,6 @@ import {
   state
 } from "lit/decorators.js";
 import type {
-  Mode,
   PixelArtCanvas,
   PixelDocument,
   UVRegion
@@ -30,9 +29,6 @@ import {
 import type { KeyBindingSettings } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import "./BuildTab.ts";
-import type { TexturePane } from "./texturePanes.ts";
-import type { BuildEditing } from "./BuildTab.ts";
 import { PeerRegionSelections } from "../features/texture/index.ts";
 import type { PresenceStore } from "../state/index.ts";
 import type { EditorHistory } from "../features/history/index.ts";
@@ -46,7 +42,7 @@ const kDefaultZoom = {
   sensitivity: 0.6
 };
 
-export interface LeftPanelEditing extends BuildEditing {
+export interface LeftPanelEditing {
   access: ModelAccessSignals;
   presence: PresenceStore;
   history: EditorHistory;
@@ -63,9 +59,6 @@ interface CanvasSources {
 }
 
 export class LeftPanel extends LitElement {
-  @state()
-  declare mode: TexturePane;
-
   @state()
   private declare _canvas: PixelArtCanvas | null;
 
@@ -109,7 +102,6 @@ export class LeftPanel extends LitElement {
 
   constructor() {
     super();
-    this.mode = "build";
     this._canvas = null;
     this.editing = null;
     this.keyBindingSettings = null;
@@ -180,16 +172,15 @@ export class LeftPanel extends LitElement {
 
     const canvas = await this.panelElement.initialize({
       document: texture.document,
-      defaultMode: "move",
+      defaultMode: "uv",
       zoom: kDefaultZoom,
       brush: { size: 8 },
-      history: new SharedPixelHistory(editing.history, "build")
+      history: new SharedPixelHistory(editing.history, "texture")
     });
     this.#initialized = sources;
     canvas.uv.showAll = true;
     canvas.uv.showRegionLabels = true;
     canvas.uv.labelScope = "selected";
-    canvas.mode = canvasModeForTab(this.mode);
     this._canvas = canvas;
 
     const textureId = this.panelElement.activeTextureId;
@@ -208,12 +199,6 @@ export class LeftPanel extends LitElement {
   override updated(
     changedProperties: PropertyValues<this>
   ): void {
-    if (
-      changedProperties.has("mode") &&
-      this._canvas
-    ) {
-      this._canvas.mode = canvasModeForTab(this.mode);
-    }
     if (changedProperties.has("editing")) {
       this.#releaseModelAccess?.();
       this.#releaseModelAccess = this.editing?.access.subscribe(
@@ -264,10 +249,6 @@ export class LeftPanel extends LitElement {
 
   override render(): TemplateResult {
     return html`
-      <jolly-model-editor-build
-        ?hidden=${this.mode !== "build"}
-        .editing=${this.editing}
-      ></jolly-model-editor-build>
       <pixel-draw-panel
         uv-resize
         texture-resizable
@@ -276,12 +257,6 @@ export class LeftPanel extends LitElement {
       ></pixel-draw-panel>
     `;
   }
-}
-
-function canvasModeForTab(
-  mode: TexturePane
-): Mode {
-  return mode === "build" ? "uv" : "paint";
 }
 
 customElements.define("jolly-model-editor-left-panel", LeftPanel);

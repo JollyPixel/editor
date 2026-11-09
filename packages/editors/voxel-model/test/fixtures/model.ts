@@ -14,8 +14,16 @@ import {
   BlockSelectionStore,
   MaterialPreviews
 } from "#src/state/index.ts";
-import type { BuildRecorder } from "#src/model/index.ts";
+import type {
+  BlockLocks,
+  HierarchyRecorder
+} from "#src/model/index.ts";
 import type { EditorHistory } from "#src/features/history/index.ts";
+
+// CONSTANTS
+export const NO_LOCKS: BlockLocks = {
+  lockedBy: () => null
+};
 
 export interface ModelFixture {
   document: ModelDocument;
@@ -59,10 +67,10 @@ export function createModelFixture(): ModelFixture {
   };
 }
 
-export function recordBuildEdits(
+export function recordHierarchyEdits(
   history: Pick<EditorHistory, "record">
-): BuildRecorder {
+): HierarchyRecorder {
   return {
-    record: (label, edit) => history.record("build", label, edit)
+    record: (label, edit) => history.record("texture", label, edit)
   };
 }

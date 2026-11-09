@@ -18,14 +18,15 @@ import {
 } from "#src/features/history/index.ts";
 import { ModelHierarchy } from "#src/model/index.ts";
 import {
-  recordBuildEdits,
+  NO_LOCKS,
+  recordHierarchyEdits,
   createModelFixture
 } from "../../fixtures/model.ts";
 import { modelAccess } from "../../fixtures/modelAccess.ts";
 
 // CONSTANTS
 const kNoMirror = { x: false, y: false, z: false };
-const kScopes: readonly EditorHistoryScope[] = ["build", "material", ANIMATION_LIBRARY];
+const kScopes: readonly EditorHistoryScope[] = ["texture", "material", ANIMATION_LIBRARY];
 
 function recordChanges(
   document: ModelDocument,
@@ -76,12 +77,13 @@ describe("ModelHierarchy undo steps", () => {
     const history = createEditorHistory({ document: fixture.document });
     const hierarchy = new ModelHierarchy({
       document: fixture.document,
-      edits: recordBuildEdits(history),
+      edits: recordHierarchyEdits(history),
       textureSize: () => {
         return { x: 256, y: 256 };
       },
       poses: fixture.blocks,
-      access: modelAccess()
+      access: modelAccess(),
+      locks: NO_LOCKS
     });
 
     return { ...fixture, history, hierarchy };
@@ -99,10 +101,10 @@ describe("ModelHierarchy undo steps", () => {
       mirrorAxes: { ...kNoMirror, x: true }
     });
 
-    assert.equal(history.state("build").undoLabel, "Duplicate Body");
-    assert.equal(history.undo("build"), true);
+    assert.equal(history.state("texture").undoLabel, "Duplicate Body");
+    assert.equal(history.undo("texture"), true);
     assert.deepEqual([...document.tree.values()], before);
-    assert.equal(history.state("build").canUndo, true);
+    assert.equal(history.state("texture").canUndo, true);
   });
 
   test("undoes a delete that kept its children in one step", () => {
@@ -112,8 +114,8 @@ describe("ModelHierarchy undo steps", () => {
 
     hierarchy.remove(body.uuid, { withChildren: false });
 
-    assert.equal(history.state("build").undoLabel, "Delete Body");
-    assert.equal(history.undo("build"), true);
+    assert.equal(history.state("texture").undoLabel, "Delete Body");
+    assert.equal(history.undo("texture"), true);
     assert.equal(document.tree.get(arm.uuid)?.parentId, body.uuid);
     assert.equal(document.tree.listChildren(null).length, 1);
   });
@@ -127,9 +129,9 @@ describe("ModelHierarchy undo steps", () => {
     const metal = document.addMaterial({ name: "Metal" })!;
     document.transform(body.uuid, { ...rest, position: { x: 4, y: 0, z: 0 } });
 
-    assert.equal(history.state("build").undoLabel, "Transform Torso");
-    assert.equal(history.undo("build"), true);
-    assert.equal(history.undo("build"), true);
+    assert.equal(history.state("texture").undoLabel, "Transform Torso");
+    assert.equal(history.undo("texture"), true);
+    assert.equal(history.undo("texture"), true);
     assert.equal(document.tree.get(body.uuid)?.name, "Body");
     assert.notEqual(document.tree.materials.get(metal), undefined);
 
@@ -149,7 +151,7 @@ describe("ModelHierarchy undo steps", () => {
     document.updateUv(body.uuid, uv);
 
     assert.deepEqual(kScopes.map((scope) => history.state(scope).undoCount), steps);
-    assert.equal(history.undo("build"), true);
+    assert.equal(history.undo("texture"), true);
     assert.equal(document.tree.block(body.uuid)?.transform.position.x, rest.position.x);
     assert.deepEqual(document.tree.block(body.uuid)?.uv, uv);
   });

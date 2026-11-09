@@ -35,7 +35,7 @@ describe("scopeOfModelChange", () => {
 
     assert.deepEqual(
       commands.map((command) => scopeOfModelChange({ command }, { owned: { id: "own" } })),
-      ["set:walk", ANIMATION_LIBRARY, ANIMATION_LIBRARY, ANIMATION_LIBRARY, null, "build"]
+      ["set:walk", ANIMATION_LIBRARY, ANIMATION_LIBRARY, ANIMATION_LIBRARY, null, "texture"]
     );
   });
 
@@ -47,7 +47,7 @@ describe("scopeOfModelChange", () => {
     assert.equal(document.remapAnimationTrack("walk", "Body/Arm", null), true);
     assert.equal(history.state(animationKey("walk")).undoLabel, "Ignore Body/Arm");
     assert.deepEqual(
-      (["build", "material", ANIMATION_LIBRARY] as const).map((scope) => history.state(scope).undoLabel),
+      (["texture", "material", ANIMATION_LIBRARY] as const).map((scope) => history.state(scope).undoLabel),
       [null, null, "Link animation set"]
     );
   });

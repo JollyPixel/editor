@@ -3,6 +3,7 @@ import {
   LitElement,
   css,
   html,
+  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
@@ -16,9 +17,9 @@ import {
 } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
-import "./HistoryButtons.ts";
 import { refusalWording } from "./refusalWording.ts";
-import type { HistoryEditing } from "./HistoryButtons.ts";
+import type { ActiveHistory } from "./ActiveHistory.ts";
+import type { PresenceStore } from "../../state/index.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 import type { AnimationLibrary } from "../animation/index.ts";
 
@@ -26,43 +27,34 @@ import type { AnimationLibrary } from "../animation/index.ts";
 const kModelRefused = "You can only view this model, so the change was not saved";
 const kSetRefused = "You can only view this animation set, so the change was not saved";
 
-export interface HistoryBarEditing extends HistoryEditing {
+export interface HistoryLogEditing {
+  activeHistory: ActiveHistory;
+  presence: PresenceStore;
   access: Pick<ModelAccessSignals, "subscribe">;
   animations: Pick<AnimationLibrary, "subscribe">;
 }
 
-export class HistoryBar extends LitElement {
+export class HistoryLog extends LitElement {
   static override styles = css`
     :host {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-
-    jolly-model-editor-history-buttons {
-      position: absolute;
-      bottom: var(--jolly-space-2, 8px);
-      left: 50%;
-      padding: var(--jolly-space-1, 4px);
-      border-radius: 6px;
-      background: var(--jolly-surface-raised, #2b2d31);
-      pointer-events: auto;
-      transform: translateX(-50%);
+      display: contents;
     }
 
     jolly-log {
-      position: absolute;
-      bottom: 44px;
-      left: 50%;
       width: max-content;
-      max-width: min(360px, calc(100% - 16px));
-      transform: translateX(-50%);
+      max-width: 360px;
     }
   `;
 
+  static override properties = {
+    editing: { attribute: false }
+  };
+
+  declare editing: HistoryLogEditing | null;
+
   #log = new LogQueue();
   #releaseLog: (() => void) | null = null;
-  #editing = new SubscriptionController<HistoryBarEditing>(
+  #editing = new SubscriptionController<HistoryLogEditing>(
     this,
     ({ activeHistory, access, animations }) => {
       activeHistory.on("skipped", this.#onSkipped);
@@ -75,10 +67,17 @@ export class HistoryBar extends LitElement {
     }
   );
 
-  attach(
-    editing: HistoryBarEditing
+  constructor() {
+    super();
+    this.editing = null;
+  }
+
+  override willUpdate(
+    changedProperties: PropertyValues<this>
   ): void {
-    this.#editing.attach(editing);
+    if (changedProperties.has("editing") && this.editing !== null) {
+      this.#editing.attach(this.editing);
+    }
   }
 
   override connectedCallback(): void {
@@ -100,19 +99,14 @@ export class HistoryBar extends LitElement {
   };
 
   override render(): TemplateResult {
-    return html`
-      <jolly-model-editor-history-buttons
-        .editing=${this.#editing.current}
-      ></jolly-model-editor-history-buttons>
-      <jolly-log .entries=${this.#log.entries}></jolly-log>
-    `;
+    return html`<jolly-log .entries=${this.#log.entries}></jolly-log>`;
   }
 }
 
-customElements.define("jolly-model-editor-history", HistoryBar);
+customElements.define("jolly-model-editor-history-log", HistoryLog);
 
 declare global {
   interface HTMLElementTagNameMap {
-    "jolly-model-editor-history": HistoryBar;
+    "jolly-model-editor-history-log": HistoryLog;
   }
 }

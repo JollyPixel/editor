@@ -10,7 +10,7 @@ $ pnpm --filter @jolly-pixel/editor.voxel-model test:scenario
 $ SCENARIO_FROM=animate pnpm --filter @jolly-pixel/editor.voxel-model test:scenario
 ```
 
-A resumed chapter starts on the Build tab, so a chapter that works in another
+A resumed chapter starts on the Texture tab, so a chapter that works in another
 tab opens it first.
 
 ## Not covered yet

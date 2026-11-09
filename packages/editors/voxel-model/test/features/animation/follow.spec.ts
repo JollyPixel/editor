@@ -5,11 +5,12 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   AnimationFollow,
-  followingBuildEdits
+  followingHierarchyEdits
 } from "#src/features/animation/library/AnimationFollow.ts";
 import { ANIMATION_LIBRARY } from "#src/features/history/index.ts";
 import { ModelHierarchy } from "#src/model/index.ts";
 import { createAnimatedModel } from "./fixtures.ts";
+import { NO_LOCKS } from "../../fixtures/model.ts";
 
 function createFollowing(
   options: { own?: boolean; } = {}
@@ -18,7 +19,7 @@ function createFollowing(
   const { document, animations, history } = model;
   const hierarchy = new ModelHierarchy({
     document,
-    edits: followingBuildEdits(history, new AnimationFollow({ document, animations })),
+    edits: followingHierarchyEdits(history, new AnimationFollow({ document, animations })),
     textureSize: () => {
       return { x: 256, y: 256 };
     },
@@ -26,7 +27,8 @@ function createFollowing(
       under: (uuid) => document.tree.block(uuid)!.transform,
       mirror: () => []
     },
-    access: model.access
+    access: model.access,
+    locks: NO_LOCKS
   });
 
   return {
@@ -48,8 +50,8 @@ describe("AnimationFollow", () => {
     assert.equal(history.state(ANIMATION_LIBRARY).undoCount, librarySteps);
     assert.equal(history.state(setScope).undoCount, 0);
 
-    assert.equal(history.state("build").undoLabel, "Rename Body");
-    assert.equal(history.undo("build"), true);
+    assert.equal(history.state("texture").undoLabel, "Rename Body");
+    assert.equal(history.undo("texture"), true);
     assert.deepEqual(bindings(), []);
     assert.equal(
       history.state(setScope).undoCount,
@@ -67,7 +69,7 @@ describe("AnimationFollow", () => {
     assert.deepEqual(bindings(), []);
     assert.equal(history.state(following.clipScope).undoCount, 0);
 
-    assert.equal(history.undo("build"), true);
+    assert.equal(history.undo("texture"), true);
     assert.deepEqual(trackPaths(), ["Body/Arm"]);
   });
 

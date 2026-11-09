@@ -47,7 +47,7 @@ describe("AnimationPoser", () => {
     model.animationPlayback.seek(12000);
     assert.deepEqual(applied.at(-1), [model.ids.arm, 2]);
 
-    model.tab.activate("build");
+    model.tab.activate("texture");
     assert.deepEqual(applied.at(-1), [model.ids.arm, 1]);
     assert.ok(frames > 0);
 

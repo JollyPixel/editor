@@ -29,7 +29,7 @@ export interface TransformEditing {
   tool: TransformTool;
 }
 
-export class TransformPanelController {
+export class TransformController {
   #host: ReactiveControllerHost;
   #connection: SubscriptionController<TransformEditing>;
   #selected: ModelBlock | null = null;
@@ -119,6 +119,10 @@ export class TransformPanelController {
     this.#axisValues = value;
     this.#applyAxisValues();
     this.#host.requestUpdate();
+  }
+
+  get selected(): boolean {
+    return this.#selected !== null;
   }
 
   get disabled(): boolean {

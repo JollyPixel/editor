@@ -23,6 +23,14 @@ function listLabels(
   return entries.map((entry) => (entry === "separator" ? "-" : entry.label));
 }
 
+function shapeItems(
+  entries: readonly ContextMenuEntry[]
+): readonly ContextMenuEntry[] {
+  const branch = entries.find((entry) => entry !== "separator" && entry.label === "Shape");
+
+  return branch === undefined || branch === "separator" ? [] : branch.items ?? [];
+}
+
 function listEnabledLabels(
   entries: readonly ContextMenuEntry[]
 ): string[] {
@@ -58,10 +66,28 @@ describe("HierarchyController.openMenu", () => {
       "Rename",
       "Duplicate",
       "-",
+      "Shape",
       "Material…",
       "-",
       "Delete"
     ]);
+  });
+
+  test("offers every shape but the block's own, none without transform rights", () => {
+    const harness = createHierarchyHarness();
+    const block = harness.addBlock();
+
+    assert.deepEqual(
+      listEnabledLabels(shapeItems(harness.controller.openMenu(block.uuid).items)),
+      ["Plane", "Cylinder", "Cone", "Pyramid", "Torus"]
+    );
+
+    harness.access.grant("hierarchy");
+
+    assert.deepEqual(
+      listEnabledLabels(shapeItems(harness.controller.openMenu(block.uuid).items)),
+      []
+    );
   });
 
   test("offers a folder both kinds of child and no material", () => {
@@ -105,6 +131,15 @@ describe("HierarchyController.openMenu run", () => {
     assert.deepEqual(harness.calls.renamed, [block.uuid]);
     assert.equal(harness.calls.materialShown, 1);
     assert.equal(harness.selection.selected, block.uuid);
+  });
+
+  test("reshapes the row's block from the Shape submenu", async() => {
+    const harness = createHierarchyHarness();
+    const block = harness.addBlock({ name: "Hat" });
+
+    await chooseFromMenu(harness, block.uuid, "torus");
+
+    assert.equal(harness.hierarchy.nodes()[0].shape?.type, "torus");
   });
 
   test("adds a child under the row it was opened on", async() => {

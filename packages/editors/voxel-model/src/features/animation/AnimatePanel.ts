@@ -33,7 +33,6 @@ import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
-import "../transform/TransformPanel.ts";
 import "./tracks/TrackBindings.ts";
 import type { TrackBindings } from "./tracks/TrackBindings.ts";
 import type { TrackBindingsEditing } from "./tracks/TrackBindingsController.ts";
@@ -41,8 +40,6 @@ import "./keys/KeyInspector.ts";
 import type { KeyInspector } from "./keys/KeyInspector.ts";
 import type { KeyInspectorEditing } from "./keys/KeyInspectorController.ts";
 import "./timeline/timelineIcons.ts";
-import type { TransformPanel } from "../transform/TransformPanel.ts";
-import type { TransformEditing } from "../transform/TransformPanelController.ts";
 import {
   AnimatePanelController,
   CLIP_FRAME_RATES,
@@ -61,7 +58,6 @@ const kFpsOptions: JollyOption<number>[] = CLIP_FRAME_RATES.map((fps) => {
 });
 
 export type AnimatePanelEditing = AnimateEditing &
-  TransformEditing &
   TrackBindingsEditing &
   KeyInspectorEditing;
 
@@ -134,9 +130,6 @@ export class AnimatePanel extends LitElement {
   @query("jolly-context-menu")
   declare private menu: ContextMenu;
 
-  @query("jolly-model-editor-transform")
-  declare private transformElement: TransformPanel;
-
   @query("jolly-model-editor-track-bindings")
   declare private trackBindings: TrackBindings;
 
@@ -172,7 +165,6 @@ export class AnimatePanel extends LitElement {
   ): void {
     this.#controller.attach(editing);
     void this.updateComplete.then(() => {
-      this.transformElement.attach(editing);
       this.trackBindings.attach(editing);
       this.keyInspector.attach(editing);
     });
@@ -366,7 +358,6 @@ export class AnimatePanel extends LitElement {
   ): TemplateResult {
     return html`
       <section class="transform" aria-label="Transform">
-        <jolly-model-editor-transform></jolly-model-editor-transform>
         <jolly-button
           icon="timeline-key"
           label="Key"

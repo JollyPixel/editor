@@ -130,7 +130,7 @@ describe("AnimationKeyer", () => {
     assert.deepEqual([keys("scale"), keys("rotation")], [[], []]);
     assert.equal(model.history.state(model.clipScope).undoCount, steps);
 
-    model.tab.activate("build");
+    model.tab.activate("texture");
     assert.equal(keyer.keyBlock(model.ids.arm), false);
   });
 });

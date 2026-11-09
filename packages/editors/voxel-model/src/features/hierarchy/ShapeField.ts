@@ -13,7 +13,6 @@ import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/property-row";
 import "@jolly-pixel/ui/elements/select";
-import "@jolly-pixel/ui/elements/separator";
 import {
   BlockShape,
   type BlockNodeJSON,
@@ -32,7 +31,7 @@ import {
 } from "../../shared/blockShapes.ts";
 import type { ModelHierarchy } from "../../model/index.ts";
 import type { BlockSelectionStore } from "../../state/index.ts";
-import type { TransformLock } from "./index.ts";
+import type { TransformLock } from "../transform/index.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 
 // CONSTANTS
@@ -46,8 +45,8 @@ export interface ShapeFieldEditing {
   access: ModelAccessSignals;
   document: ModelDocument;
   selection: BlockSelectionStore;
-  hierarchy: Pick<ModelHierarchy, "reshape">;
-  lock: TransformLock;
+  hierarchy: Pick<ModelHierarchy, "reshape" | "canReshape">;
+  lock: Pick<TransformLock, "subscribe">;
 }
 
 export class ShapeField extends LitElement {
@@ -88,13 +87,9 @@ export class ShapeField extends LitElement {
   }
 
   get #disabled(): boolean {
-    const editing = this.#editing;
-    const block = this.#selectedBlock();
+    const id = this.#editing?.selection.selected ?? null;
 
-    return editing === null ||
-      block === undefined ||
-      !editing.access.current.has("transforms") ||
-      editing.lock.lockedBy(block.id) !== null;
+    return id === null || this.#editing?.hierarchy.canReshape(id) !== true;
   }
 
   attach(
@@ -108,7 +103,6 @@ export class ShapeField extends LitElement {
     const entry = matchBlockShapeEntry(shape);
 
     return html`
-      <jolly-separator label="Geometry"></jolly-separator>
       <jolly-property-row label="Shape">
         <jolly-icon
           class="shape-icon"

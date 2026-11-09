@@ -33,7 +33,7 @@ describe("ActiveHistory", () => {
     assert.equal(active.targetName, "Walk");
     assert.equal(active.state.undoLabel, "Add clip Run");
 
-    tab.activate("build");
+    tab.activate("texture");
     assert.equal(active.targetName, null);
     assert.equal(active.state.canUndo, false);
   });

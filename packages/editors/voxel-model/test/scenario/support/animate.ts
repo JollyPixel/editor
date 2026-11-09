@@ -72,13 +72,4 @@ export class AnimatePanel {
       box.y + (box.height / 2)
     );
   }
-
-  async typeAxis(
-    axis: "X" | "Y" | "Z",
-    value: number
-  ): Promise<void> {
-    const field = this.panel.getByRole("textbox", { name: axis });
-    await field.fill(String(value));
-    await field.press("Enter");
-  }
 }

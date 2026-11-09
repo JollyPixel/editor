@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
-import type { MenuEntry, MenuItem } from "@jolly-pixel/ui";
+import type {
+  MenuBranch,
+  MenuEntry,
+  MenuItem
+} from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
 import {
@@ -7,6 +11,10 @@ import {
   DUPLICATE_ITEM,
   RENAME_ITEM
 } from "../../shared/menu/menuItems.ts";
+import {
+  BLOCK_SHAPES,
+  type BlockShapeEntryId
+} from "../../shared/blockShapes.ts";
 
 // CONSTANTS
 const kAddBlock: MenuItem<"add-block"> = {
@@ -19,8 +27,20 @@ const kAddFolder: MenuItem<"add-folder"> = {
   label: "Add Folder",
   icon: "folder-add"
 };
+const kShapeMenu: MenuBranch<BlockShapeEntryId> = {
+  id: "shape",
+  label: "Shape",
+  icon: "block",
+  items: BLOCK_SHAPES.map(({ id, label, icon }) => {
+    return {
+      id,
+      label,
+      icon
+    };
+  })
+};
 
-export type HierarchyAction =
+export type RowAction =
   | "rename"
   | "material"
   | "add-block"
@@ -28,7 +48,9 @@ export type HierarchyAction =
   | "duplicate"
   | "delete";
 
-export type RootAction = Extract<HierarchyAction, "add-block" | "add-folder">;
+export type HierarchyAction = RowAction | BlockShapeEntryId;
+
+export type RootAction = Extract<RowAction, "add-block" | "add-folder">;
 
 export const ROOT_MENU: readonly MenuEntry<RootAction>[] = [
   kAddBlock,
@@ -43,6 +65,7 @@ export const BLOCK_MENU: readonly MenuEntry<HierarchyAction>[] = [
   RENAME_ITEM,
   DUPLICATE_ITEM,
   "separator",
+  kShapeMenu,
   {
     id: "material",
     label: "Material…",

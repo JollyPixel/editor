@@ -70,7 +70,7 @@ describe("AnimationSession playback", () => {
     assert.equal(model.animationSession.active, true);
     model.animationSession.togglePlay();
     model.tab.activate("material");
-    model.tab.activate("build");
+    model.tab.activate("texture");
 
     assert.equal(model.animationSession.active, false);
     assert.deepEqual(model.animationSession.playback, { tick: 0, playing: false, loop: true });

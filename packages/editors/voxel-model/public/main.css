@@ -34,8 +34,7 @@ jolly-pane::part(content) {
   padding: 0;
 }
 
-jolly-pane[key="build"]::part(content),
-jolly-pane[key="paint"]::part(content) {
+jolly-pane[key="texture"]::part(content) {
   overflow: hidden;
 }
 

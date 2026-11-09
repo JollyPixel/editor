@@ -274,7 +274,7 @@ new Scenario<ModelPage, ModelExpectation>({
       id: "blank",
       title: "the blank model has one block, which becomes the body",
       play: async(model) => {
-        await expect(model.transformField("X")).toBeDisabled();
+        await expect(model.transformField("X")).toBeHidden();
         await expect(model.action("Delete")).toBeDisabled();
 
         await model.row("Block").click();
@@ -321,10 +321,9 @@ new Scenario<ModelPage, ModelExpectation>({
       play: async(model) => {
         await model.transform("Head", "Pos", { y: 1.25 });
         await model.transform("Leg", "Size", { x: 0.5, y: 1.5, z: 0.5 });
-        const space = model.page.getByRole("radiogroup", { name: "Transform space" });
-        await expect(space.getByRole("radio", { name: "World" })).toBeDisabled();
+        await expect(model.spaceToggle()).toBeDisabled();
         await model.transform("Leg", "Pos", { x: 0.25, y: -1.5 });
-        await expect(space.getByRole("radio", { name: "World" })).toBeEnabled();
+        await expect(model.spaceToggle()).toBeEnabled();
         await model.transform("Arm", "Size", { x: 0.5, y: 1.5, z: 0.5 });
         await model.transform("Arm", "Pos", { x: 0.75, y: 0 });
         await model.transform("Arm", "Pivot", { y: 0.75 });
@@ -333,7 +332,7 @@ new Scenario<ModelPage, ModelExpectation>({
         await expect(model.row("Leg")).toHaveAttribute("aria-selected", "true");
         await model.pickEmpty();
         await expect(model.row("Leg")).toHaveAttribute("aria-selected", "false");
-        await expect(model.transformField("X")).toBeDisabled();
+        await expect(model.transformField("X")).toBeHidden();
 
         await model.select("Leg", "Pos");
         await model.dragGizmo("X");
@@ -379,7 +378,7 @@ new Scenario<ModelPage, ModelExpectation>({
         await sides.fill("12");
         await sides.press("Enter");
         await expect(model.history("Undo"))
-          .toHaveAttribute("title", "Undo Set shape of Hat (Ctrl+Z)");
+          .toHaveAttribute("label", "Undo Set shape of Hat (Ctrl+Z)");
         await model.undo();
         await expect(sides).toHaveValue("8");
         await model.redo();
@@ -397,7 +396,8 @@ new Scenario<ModelPage, ModelExpectation>({
         await model.transform("Brim", "Pos", { y: -0.3 });
 
         await model.row("Body").click();
-        await model.shapeSelect().selectOption({ label: "Plane" });
+        await model.reshape("Body", "Plane");
+        await expect(model.shapeSelect().locator("option:checked")).toHaveText("Plane");
         await expect(model.region("(Body)top")).toBeVisible();
         await expect(model.region("(Body)front")).toHaveCount(0);
         await model.page.keyboard.press("ControlOrMeta+z");
@@ -435,10 +435,13 @@ new Scenario<ModelPage, ModelExpectation>({
         await model.regionState("Stacked");
         await model.regionState("Unfolded");
 
+        const uv = model.page.getByRole("button", { name: "UV", exact: true });
         const paint = model.page.getByRole("button", { name: "Paint", exact: true });
-        await model.openTab("Paint");
+        await expect(uv).toHaveAttribute("aria-pressed", "true");
+        await paint.click();
         await expect(paint).toHaveAttribute("aria-pressed", "true");
-        await model.openTab("Build");
+        await uv.click();
+        await expect(uv).toHaveAttribute("aria-pressed", "true");
       },
       expected: kTextured
     },
@@ -470,7 +473,7 @@ new Scenario<ModelPage, ModelExpectation>({
         await material.applyTo("Leg R");
         await expect(material.row("Leg R")).toHaveAttribute("aria-selected", "true");
 
-        await model.openTab("Build");
+        await model.openTab("Texture");
         await expect.poll(() => model.tint("Body", kShirtFront)).toBe("green");
       },
       expected: kClothed
@@ -499,7 +502,7 @@ new Scenario<ModelPage, ModelExpectation>({
         await expect.poll(() => material.outline()).toEqual(["Skin", "Shirt", "Pants", "Metal"]);
 
         await expect(model.action("Add Block")).toHaveCount(0);
-        await model.action("Edit in Build").click();
+        await model.action("Edit hierarchy").click();
         await expect(model.action("Add Block")).toBeVisible();
 
         await expect.poll(() => model.tint("Head", kFaceFront)).toBe("red");
@@ -518,11 +521,10 @@ new Scenario<ModelPage, ModelExpectation>({
         await animate.addClip("Wave");
         await expect(model.row("Wave")).toHaveAttribute("aria-selected", "true");
 
-        await model.row("Arm").click();
-        await animate.panel.getByRole("radio", { name: "Angle" }).check();
+        await model.select("Arm", "Angle");
         await animate.tool("Key").click();
         await animate.scrubTo(0.99);
-        await animate.typeAxis("Z", 150);
+        await model.transform("Arm", "Angle", { z: 150 });
         await expect(animate.keys).toHaveCount(2);
         await animate.scrubTo(0.5);
         await expect(animate.playhead).toContainText("Frame 12 / 24");
@@ -546,7 +548,7 @@ new Scenario<ModelPage, ModelExpectation>({
         const shared = animate.panel.getByRole("region", { name: "Shared sets" });
         await expect(shared.getByRole("treeitem", { name: /Humanoid/ })).toBeVisible();
 
-        await model.openTab("Build");
+        await model.openTab("Texture");
         await expect(animate.timeline).toBeHidden();
         await expect.poll(async() => (await model.block("Arm")).rotation.z).toBe(0);
       },

@@ -20,7 +20,7 @@ export function scopeOfModelChange(
     case "node-moved":
     case "node-transformed":
     case "node-shape-changed":
-      return "build";
+      return "texture";
     case "node-material-changed":
     case "material-added":
     case "material-folder-added":

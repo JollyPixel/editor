@@ -170,7 +170,7 @@ export class ModelEditorScene extends Systems.Scene {
     const access = new RoomGrants(room, MODEL_CAPABILITIES)
       .setMaxListeners(kMaxAccessListeners);
     const history = createEditorHistory({ document });
-    const unregisterPixels = registerPixelHistory(history, pixels, { scope: "build" });
+    const unregisterPixels = registerPixelHistory(history, pixels, { scope: "texture" });
     const tab = new TabStore();
     const selection = new BlockSelectionStore();
     const materialFocus = new MaterialFocusStore();
@@ -227,13 +227,6 @@ export class ModelEditorScene extends Systems.Scene {
       access,
       requestFrame: () => this.world.invalidate()
     });
-    const hierarchy = new ModelHierarchy({
-      document,
-      edits: animation.buildEdits,
-      textureSize: () => pixels.size(),
-      poses: blocks,
-      access
-    });
     const collaboration = new ModelCollaboration({
       room,
       document,
@@ -249,6 +242,14 @@ export class ModelEditorScene extends Systems.Scene {
       },
       world: this.world,
       camera: camera.camera
+    });
+    const hierarchy = new ModelHierarchy({
+      document,
+      edits: animation.hierarchyEdits,
+      textureSize: () => pixels.size(),
+      poses: blocks,
+      access,
+      locks: collaboration.lock
     });
     const rest = restTarget({ blocks, lock: collaboration.lock, access });
     const tool = new TransformTool(rest);
