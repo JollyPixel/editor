@@ -554,21 +554,29 @@ export class AssetTreeView {
     const label = total === 1 ? `"${first.file.name}"` : `${total} files`;
     const adding = this.#notifications.notify({
       tone: "loading",
-      title: `Adding ${label}`,
-      progress: 0
+      title: `Adding ${label}`
     });
-    let settled = 0;
+    let done = 0;
     const failures: string[] = [];
-    await Promise.all(uploads.map(async({ file, convertTo }) => {
+    await Promise.all(uploads.map(async(upload) => {
+      let share = 0;
+      function advance(
+        next: number
+      ): void {
+        done += next - share;
+        share = next;
+        adding.update({ progress: done / total });
+      }
       try {
-        await this.#add(folder, file, convertTo, onShown);
+        await this.#add(folder, upload, onShown, advance);
       }
       catch (error) {
         const reason = errorMessage(error);
-        failures.push(total === 1 ? reason : `"${file.name}": ${reason}`);
+        failures.push(
+          total === 1 ? reason : `"${upload.file.name}": ${reason}`
+        );
       }
-      settled++;
-      adding.update({ progress: settled / total });
+      advance(1);
     }));
 
     const message = failures.join("\n");
@@ -599,9 +607,9 @@ export class AssetTreeView {
 
   async #add(
     folder: AssetPath,
-    file: DroppedFile,
-    convertTo: AssetKindEntry | null,
-    onShown: (nodeId: string) => void
+    { file, convertTo }: Upload,
+    onShown: (nodeId: string) => void,
+    onProgress: (share: number) => void
   ): Promise<void> {
     const path = folder.child(
       convertTo === null ? file.name : `${file.stem}${convertTo.extension}`
@@ -614,7 +622,7 @@ export class AssetTreeView {
 
     let assetId: string;
     try {
-      assetId = await this.#commands.add(path, file, convertTo);
+      assetId = await this.#commands.add(path, file, convertTo, onProgress);
     }
     catch (error) {
       this.#pendingAssets.remove(rowId);

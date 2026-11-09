@@ -32,6 +32,7 @@ import {
   CATALOG_MOVE_FOLDER,
   CATALOG_PLAN,
   CATALOG_PREVIEW,
+  CATALOG_PROGRESS,
   CATALOG_READ,
   CATALOG_RENAME,
   CATALOG_REJECTED,
@@ -50,10 +51,12 @@ import {
   type CatalogImportCommand,
   type CatalogMessage,
   type CatalogPlanCommand,
+  type CatalogProgress,
   type CatalogPreviewCommand,
   type CatalogReadCommand,
   type CatalogReplaceCommand,
   type CatalogRestoreCommand,
+  type CatalogStage,
   type CatalogTagCommand
 } from "./client/protocol.ts";
 import type { CatalogFolders } from "./CatalogFolders.ts";
@@ -206,7 +209,20 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     command: CatalogCommand,
     context: RoomContext
   ): Promise<void> {
-    const result = await this.#execute(command, toActor(context.identity))
+    function progress(
+      stage: CatalogStage
+    ): void {
+      context.room.sendTo(clientId, {
+        type: CATALOG_PROGRESS,
+        requestId: command.requestId,
+        stage
+      } satisfies CatalogMessage);
+    }
+    const result = await this.#execute(
+      command,
+      toActor(context.identity),
+      progress
+    )
       .catch((error: unknown) => Err(asError(error)));
 
     this.#outbox.flush();
@@ -256,12 +272,17 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
   async #execute(
     command: CatalogCommand,
-    actor: EventStore.Actor
+    actor: EventStore.Actor,
+    progress: CatalogProgress
   ): Promise<Result<CatalogApplied, Error>> {
     const { writer, folders, tags } = this.#backend;
 
     return match(command)
-      .with({ type: CATALOG_CREATE }, (create) => this.#create(create, actor))
+      .with({ type: CATALOG_CREATE }, (create) => this.#create(
+        create,
+        actor,
+        progress
+      ))
       .with({ type: CATALOG_RENAME }, ({ type, renames }) => this.#applyEach(
         type,
         renames,
@@ -451,13 +472,15 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
   async #create(
     command: CatalogCreateCommand,
-    actor: EventStore.Actor
+    actor: EventStore.Actor,
+    progress: CatalogProgress
   ): Promise<Result<CatalogApplied, Error>> {
-    const created = await this.#createdContent(command);
+    const created = await this.#createdContent(command, progress);
     if (!created.ok) {
       return created;
     }
 
+    progress("writing");
     const written = await this.#backend.writer.create({
       path: command.path,
       kind: command.kind,
@@ -475,7 +498,8 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   }
 
   async #createdContent(
-    command: CatalogCreateCommand
+    command: CatalogCreateCommand,
+    progress: CatalogProgress
   ): Promise<Result<CreatedContent, Error>> {
     const { content, from } = command;
     if (content === undefined) {
@@ -495,6 +519,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       });
     }
 
+    progress("converting");
     const converted = await kinds.convert(kind, from, checked.val);
 
     return converted.andThen((asset) => this.#loadable(kind, asset.content).map(() => {

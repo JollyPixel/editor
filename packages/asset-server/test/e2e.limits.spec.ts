@@ -12,6 +12,7 @@ import {
   createAssetBackend,
   CATALOG_APPLIED,
   CATALOG_CREATE,
+  CATALOG_PROGRESS,
   CATALOG_REJECTED,
   CATALOG_ROOM
 } from "#src/index.ts";
@@ -57,7 +58,10 @@ describe("asset-server — end to end", () => {
 
     const replies = author.received
       .map((message) => (message as { payload?: { type: string; requestId?: string; }; }).payload)
-      .filter((payload) => payload?.requestId !== undefined);
+      .filter((payload) => (
+        payload?.requestId !== undefined &&
+        payload.type !== CATALOG_PROGRESS
+      ));
     assert.deepEqual(
       replies.map((payload) => [payload?.requestId, payload?.type]),
       [
