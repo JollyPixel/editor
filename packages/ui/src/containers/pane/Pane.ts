@@ -335,8 +335,8 @@ export class PaneElement extends LitElement {
 
   refreshAreaTone(): void {
     applyAreaTone(this, this.areaTone);
-    if (this.grouped && this.parentElement instanceof LitElement) {
-      this.parentElement.requestUpdate();
+    if (this.grouped) {
+      this.closest("jolly-pane-group")?.refreshAreaTone?.();
     }
   }
 

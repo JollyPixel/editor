@@ -2,60 +2,16 @@
 import assert from "node:assert/strict";
 import { test, type TestContext } from "node:test";
 
-// Import Third-party Dependencies
-import type { ReactiveControllerHost } from "lit";
-
 // Import Internal Dependencies
 import {
-  PopoverController,
-  type PopoverControllerOptions
-} from "../../src/field/PopoverController.ts";
-
-function fixture(
-  options: Partial<PopoverControllerOptions> = {}
-) {
-  const anchor = document.createElement("button");
-  const popover = document.createElement("div");
-  popover.setAttribute("popover", "auto");
-  Object.defineProperties(popover, {
-    showPopover: {
-      value: () => undefined,
-      configurable: true
-    },
-    hidePopover: {
-      value: () => undefined,
-      configurable: true
-    }
-  });
-  document.body.append(anchor, popover);
-  const host: ReactiveControllerHost = {
-    addController: () => undefined,
-    removeController: () => undefined,
-    requestUpdate: () => undefined,
-    updateComplete: Promise.resolve(true)
-  };
-  const controller = new PopoverController(host, {
-    anchor: () => anchor,
-    popover: () => popover,
-    ...options
-  });
-
-  return {
-    anchor,
-    popover,
-    controller,
-    cleanup() {
-      controller.hostDisconnected();
-      anchor.remove();
-      popover.remove();
-    }
-  };
-}
+  popoverFixture,
+  type PopoverFixture
+} from "../helpers/field/popoverFixture.ts";
 
 test("hover opening is opt-in, ignores touch and disabled triggers", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   for (const scenario of ["disabled option", "touch", "disabled trigger"]) {
-    const f = fixture({
+    const f = popoverFixture({
       openOnHover: scenario === "disabled option" ? undefined : {}
     });
     t.after(() => f.cleanup());
@@ -74,7 +30,7 @@ for (const delay of [0, 200, 700]) {
     "hover opens after " + delay + "ms",
     (t) => {
       t.mock.timers.enable({ apis: ["setTimeout"] });
-      const f = fixture({
+      const f = popoverFixture({
         openOnHover: {
           delay: delay === 200 ? undefined : delay
         }
@@ -99,7 +55,7 @@ for (const cancellation of ["leave", "disconnect", "remove", "hide", "show"]) {
     cancellation + " cancels a pending hover open",
     (t) => {
       t.mock.timers.enable({ apis: ["setTimeout"] });
-      const f = fixture({ openOnHover: {} });
+      const f = popoverFixture({ openOnHover: {} });
       t.after(() => f.cleanup());
       const open = t.mock.method(f.popover, "showPopover", () => undefined);
       t.mock.method(f.popover, "hidePopover", () => undefined);
@@ -132,7 +88,7 @@ for (const cancellation of ["leave", "disconnect", "remove", "hide", "show"]) {
 for (const delay of [0, 200, 600]) {
   test("hover closes after " + delay + "ms", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
-    const f = fixture({
+    const f = popoverFixture({
       closeOnHoverLeave: {
         delay: delay === 200 ? undefined : delay
       }
@@ -159,7 +115,7 @@ for (const delay of [0, 200, 600]) {
 
 test("re-entering the popover cancels a pending close", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
-  const f = fixture({ closeOnHoverLeave: {} });
+  const f = popoverFixture({ closeOnHoverLeave: {} });
   t.after(() => f.cleanup());
   const matches = f.popover.matches.bind(f.popover);
   t.mock.method(
@@ -181,7 +137,7 @@ test("re-entering the popover cancels a pending close", (t) => {
 
 function hoverOpen(
   t: TestContext,
-  f: ReturnType<typeof fixture>
+  f: PopoverFixture
 ) {
   let open = false;
   const matches = f.popover.matches.bind(f.popover);
@@ -207,7 +163,7 @@ function hoverOpen(
 }
 
 function clickTrigger(
-  f: ReturnType<typeof fixture>
+  f: PopoverFixture
 ): boolean {
   return f.anchor.dispatchEvent(new PointerEvent("click", {
     bubbles: true,
@@ -218,7 +174,7 @@ function clickTrigger(
 
 test("a click on the trigger keeps a hover-opened popover open", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
-  const f = fixture({
+  const f = popoverFixture({
     openOnHover: {},
     closeOnHoverLeave: {}
   });
@@ -237,7 +193,7 @@ test("a click on the trigger keeps a hover-opened popover open", (t) => {
 test("clicks pass through when hover did not open the popover", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   for (const scenario of ["explicit show", "disconnected host"]) {
-    const f = fixture({ openOnHover: {} });
+    const f = popoverFixture({ openOnHover: {} });
     t.after(() => f.cleanup());
     if (scenario === "explicit show") {
       t.mock.method(
@@ -258,7 +214,7 @@ test("clicks pass through when hover did not open the popover", (t) => {
 
 test("clicks outside the trigger leave a hover-opened popover alone", (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
-  const f = fixture({ openOnHover: {} });
+  const f = popoverFixture({ openOnHover: {} });
   t.after(() => f.cleanup());
   hoverOpen(t, f);
 
@@ -273,7 +229,7 @@ test("placeAgainst replaces the anchor box, null falls back", (t) => {
   const toolbar = { top: 10, bottom: 40, left: 20, right: 120 };
   const trigger = { top: 100, bottom: 126, left: 50, right: 80 };
   for (const scenario of ["rect", "null"]) {
-    const f = fixture({
+    const f = popoverFixture({
       anchor: () => trigger,
       placeAgainst: () => (scenario === "rect" ? toolbar : null)
     });

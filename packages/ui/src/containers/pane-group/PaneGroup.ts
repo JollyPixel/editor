@@ -71,6 +71,7 @@ export class PaneGroup extends LitElement {
   declare _slot: HTMLSlotElement;
 
   #managed = false;
+  #renderedTone: IconTone | null = null;
   #resizeObserver = new ResizeObserver(() => this.#fitTabs());
 
   constructor() {
@@ -86,7 +87,7 @@ export class PaneGroup extends LitElement {
   override connectedCallback(): void {
     super.connectedCallback();
     this.#managed = this.closest("jolly-dock-layout") !== null;
-    this.#resizeObserver.observe(this);
+    this.#observeTabs();
   }
 
   override disconnectedCallback(): void {
@@ -95,9 +96,8 @@ export class PaneGroup extends LitElement {
   }
 
   override render(): TemplateResult {
-    const areaTone = this._panes
-      .find((pane) => pane.layoutKey === this.active)
-      ?.areaTone ?? null;
+    const areaTone = this.#areaTone();
+    this.#renderedTone = areaTone;
 
     return html`
       <div
@@ -150,7 +150,9 @@ export class PaneGroup extends LitElement {
   protected override updated(
     changed: Map<PropertyKey, unknown>
   ): void {
-    this.#fitTabs();
+    if (changed.has("_panes")) {
+      this.#observeTabs();
+    }
     for (const pane of this._panes) {
       if (pane.parentElement === this) {
         pane.inactive = pane.layoutKey !== this.active;
@@ -167,6 +169,12 @@ export class PaneGroup extends LitElement {
     }
 
     return this._slot.assignedElements({ flatten: true }).filter(isPane);
+  }
+
+  refreshAreaTone(): void {
+    if (this.#areaTone() !== this.#renderedTone) {
+      this.requestUpdate();
+    }
   }
 
   activePane(): PaneElement | null {
@@ -271,6 +279,20 @@ export class PaneGroup extends LitElement {
         aria-hidden="true"
       ></jolly-icon>
     `;
+  }
+
+  #areaTone(): IconTone | null {
+    return this._panes
+      .find((pane) => pane.layoutKey === this.active)
+      ?.areaTone ?? null;
+  }
+
+  #observeTabs(): void {
+    this.#resizeObserver.disconnect();
+    this.#resizeObserver.observe(this);
+    for (const button of this.#tabButtons()) {
+      this.#resizeObserver.observe(button);
+    }
   }
 
   #fitTabs(): void {

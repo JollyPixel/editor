@@ -114,4 +114,15 @@ describe("CommandDocument", () => {
     assert.deepEqual(document.resets, ["load", "rewind"]);
     assert.deepEqual(Object.fromEntries(document.values), { restored: 2 });
   });
+
+  test("an editor's panels subscribe to change without a leak warning", (t) => {
+    const warn = t.mock.method(console, "warn", () => undefined);
+    const document = new ValuesDocument();
+
+    for (let panel = 1; panel < 32; panel++) {
+      document.subscribe("change", () => undefined);
+    }
+
+    assert.equal(warn.mock.callCount(), 0);
+  });
 });

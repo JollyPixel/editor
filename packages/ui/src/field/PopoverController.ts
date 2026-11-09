@@ -304,6 +304,17 @@ export class PopoverController implements ReactiveController {
     this.#options.onReposition?.();
   }
 
+  hostUpdate(): void {
+    const popover = this.#activePopover;
+    if (popover === null || popover.matches(":popover-open")) {
+      return;
+    }
+
+    if (this.#forget()) {
+      this.#options.onClose?.();
+    }
+  }
+
   hostUpdated(): void {
     const popover = this.#activePopover;
     if (!popover || (
@@ -314,15 +325,7 @@ export class PopoverController implements ReactiveController {
       return;
     }
 
-    this.#cancelHover();
-    this.#cancelHoverClose();
-    this.#unlisten();
-    this.#endHoverOpen();
-    this.#activePopover = null;
-    this.#activeAnchor = null;
-    const wasOpen = this.#open;
-    this.#open = false;
-
+    const wasOpen = this.#forget();
     if (
       popover.isConnected &&
       popover.matches(":popover-open")
@@ -337,13 +340,20 @@ export class PopoverController implements ReactiveController {
   }
 
   hostDisconnected(): void {
+    this.#forget();
+  }
+
+  #forget(): boolean {
     this.#cancelHover();
     this.#cancelHoverClose();
     this.#unlisten();
     this.#endHoverOpen();
     this.#activePopover = null;
     this.#activeAnchor = null;
+    const wasOpen = this.#open;
     this.#open = false;
+
+    return wasOpen;
   }
 
   #cancelHover(): void {
