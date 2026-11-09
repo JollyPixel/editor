@@ -101,6 +101,7 @@ export const loadingStyles = css`
     animation-delay: 0.5s;
     padding: 0 2em;
     max-width: 100%;
+    box-sizing: border-box;
 
     ${truncate}
     transition: opacity 0.2s ease-out;

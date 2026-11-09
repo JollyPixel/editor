@@ -69,7 +69,7 @@ async function play(): Promise<void> {
   await runtime.load({
     scene: scenes.scene(
       game.start,
-      game.catalog.get(game.start).path.name,
+      decodeURIComponent(game.catalog.get(game.start).path.name),
       components
     )
   });

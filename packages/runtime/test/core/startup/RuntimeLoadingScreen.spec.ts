@@ -44,7 +44,7 @@ describe("RuntimeLoadingScreen", () => {
     assert.strictEqual(loading.errorMessage, "load failed");
   });
 
-  test("forwards asset progress as display state", () => {
+  test("forwards asset progress with the decoded file name as display state", () => {
     const canvas = document.createElement("canvas");
     const container = document.createElement("div");
     const screen = RuntimeLoadingScreen.mount(
@@ -61,13 +61,32 @@ describe("RuntimeLoadingScreen", () => {
       record: AssetRecord.parse({
         id: "texture:world",
         kind: "texture",
-        path: "textures/world-atlas.png"
+        path: "http://localhost:5173/api/game/builds/world/f00d/World%20Atlas.png"
       })
     });
 
-    assert.strictEqual(loading.assetName, "textures/world-atlas.png");
+    assert.strictEqual(loading.assetName, "World Atlas.png");
     assert.strictEqual(loading.progress, 3);
     assert.strictEqual(loading.maxProgress, 7);
+  });
+
+  test("shows a file name that is not percent-encoded as written", () => {
+    const canvas = document.createElement("canvas");
+    const container = document.createElement("div");
+    const screen = RuntimeLoadingScreen.mount(
+      canvas,
+      container
+    );
+    const loading = container.querySelector("jolly-loading");
+    assert.ok(loading instanceof Loading);
+
+    screen.showAsset(AssetRecord.parse({
+      id: "texture:sale",
+      kind: "texture",
+      path: "textures/100%.png"
+    }));
+
+    assert.strictEqual(loading.assetName, "100%.png");
   });
 
   test("shows the cause stack for a fatal error", () => {

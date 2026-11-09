@@ -239,8 +239,9 @@ render in the editor only, as `editor.scene`'s ROADMAP says.
 ### 6. Export
 
 - Eager build, then `GET /api/project/game.zip` behind `studio.$export`: the
-  built player, `game.json` with paths rewritten to `assets/<key>.<ext>`, and
-  the artifacts.
+  built player, `game.json` with paths rewritten to `assets/<key>/<file name>`,
+  and the artifacts. The file name stays last because the loading screen
+  shows it.
 
 ## Open questions
 
