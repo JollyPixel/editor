@@ -9,63 +9,12 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { ShellCatalog } from "#src/shell/catalog/ShellCatalog.ts";
 import { HostMessageLaunchSource } from "#src/launch/sources/HostMessageLaunchSource.ts";
-
-// CONSTANTS
-const kStudioOrigin = "http://studio.test";
-
-type FakeParent = MessagePort & {
-  posted: Array<{
-    message: unknown;
-    origin: string;
-  }>;
-};
-
-function fakeParent(): FakeParent {
-  const posted: FakeParent["posted"] = [];
-
-  return Object.assign(new MessageChannel().port1, {
-    posted,
-    postMessage(
-      message: unknown,
-      origin: string
-    ): void {
-      posted.push({
-        message,
-        origin
-      });
-    }
-  });
-}
-
-function frameIn(
-  parent: MessageEventSource
-): () => void {
-  const descriptor = Object.getOwnPropertyDescriptor(window, "parent");
-  Object.defineProperty(window, "parent", {
-    configurable: true,
-    get: () => parent
-  });
-
-  return () => {
-    if (descriptor === undefined) {
-      Reflect.deleteProperty(window, "parent");
-    }
-    else {
-      Object.defineProperty(window, "parent", descriptor);
-    }
-  };
-}
-
-function postFromStudio(
-  parent: MessageEventSource,
-  data: unknown
-): void {
-  window.dispatchEvent(new MessageEvent("message", {
-    source: parent,
-    origin: kStudioOrigin,
-    data
-  }));
-}
+import {
+  fakeParent,
+  frameIn,
+  postFromParent
+} from "../helpers/parentFrame.ts";
+import { SHELL_ORIGIN } from "../helpers/shell.ts";
 
 describe("HostMessageLaunchSource", () => {
   afterEach(() => {
@@ -85,12 +34,12 @@ describe("HostMessageLaunchSource", () => {
     context.after(frameIn(parent));
 
     const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin]
+      origins: [SHELL_ORIGIN]
     }).read();
     assert.deepEqual(parent.posted, [
       {
         message: { type: "jolly-ready" },
-        origin: kStudioOrigin
+        origin: SHELL_ORIGIN
       }
     ]);
 
@@ -106,11 +55,11 @@ describe("HostMessageLaunchSource", () => {
       source: parent,
       data: { type: "jolly-launch", target: 1 }
     }));
-    postFromStudio(parent, { type: "jolly-launch", target: "from-host" });
+    postFromParent(parent, { type: "jolly-launch", target: "from-host" });
 
     const launch = await pending;
     assert.equal(launch?.target.value, "from-host");
-    assert.equal(launch?.shell?.origin, kStudioOrigin);
+    assert.equal(launch?.shell?.origin, SHELL_ORIGIN);
     assert.equal(launch?.shell?.identity, null);
   });
 
@@ -119,9 +68,9 @@ describe("HostMessageLaunchSource", () => {
     context.after(frameIn(parent));
 
     const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin]
+      origins: [SHELL_ORIGIN]
     }).read();
-    postFromStudio(parent, {
+    postFromParent(parent, {
       type: "jolly-launch",
       target: "from-host",
       identity: {
@@ -140,9 +89,9 @@ describe("HostMessageLaunchSource", () => {
     context.after(frameIn(parent));
 
     const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin]
+      origins: [SHELL_ORIGIN]
     }).read();
-    postFromStudio(parent, { type: "jolly-launch", target: "from-host" });
+    postFromParent(parent, { type: "jolly-launch", target: "from-host" });
     const launch = await pending;
     parent.posted.length = 0;
 
@@ -155,13 +104,13 @@ describe("HostMessageLaunchSource", () => {
           type: "jolly-open-asset",
           target: "blockset-1"
         },
-        origin: kStudioOrigin
+        origin: SHELL_ORIGIN
       },
       {
         message: {
           type: "jolly-toggle-console"
         },
-        origin: kStudioOrigin
+        origin: SHELL_ORIGIN
       }
     ]);
   });
@@ -171,9 +120,9 @@ describe("HostMessageLaunchSource", () => {
     context.after(frameIn(parent));
 
     const pending = new HostMessageLaunchSource({
-      origins: [kStudioOrigin]
+      origins: [SHELL_ORIGIN]
     }).read();
-    postFromStudio(parent, {
+    postFromParent(parent, {
       type: "jolly-launch",
       target: "from-host",
       reveal: "object:spawn"
@@ -204,9 +153,9 @@ describe("HostMessageLaunchSource", () => {
 
     for (const ports of launches) {
       const pending = new HostMessageLaunchSource({
-        origins: [kStudioOrigin]
+        origins: [SHELL_ORIGIN]
       }).read();
-      postFromStudio(parent, { type: "jolly-launch", target: "from-host", ports });
+      postFromParent(parent, { type: "jolly-launch", target: "from-host", ports });
       const shell = (await pending)?.shell;
       received.push([
         shell?.catalog instanceof ShellCatalog,
@@ -233,9 +182,9 @@ describe("HostMessageLaunchSource", () => {
       undefined
     ]) {
       const pending = new HostMessageLaunchSource({
-        origins: [kStudioOrigin]
+        origins: [SHELL_ORIGIN]
       }).read();
-      postFromStudio(parent, { type: "jolly-launch", target: "from-host", appearance });
+      postFromParent(parent, { type: "jolly-launch", target: "from-host", appearance });
       const launch = await pending;
       assert.equal(launch?.target.value, "from-host");
       const received: unknown[] = [];
@@ -251,6 +200,37 @@ describe("HostMessageLaunchSource", () => {
       [],
       []
     ]);
+  });
+
+  test("hides the page until the launch shows it in the launch appearance", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+    const scope = document.createElement("jolly-scope");
+    scope.setAttribute("theme", "dark");
+    scope.setAttribute("density", "comfortable");
+    document.body.append(scope);
+    context.after(() => scope.remove());
+
+    const pending = new HostMessageLaunchSource({
+      origins: [SHELL_ORIGIN]
+    }).read();
+    const hidden = document.documentElement.style.visibility;
+    postFromParent(parent, {
+      type: "jolly-launch",
+      target: "from-host",
+      appearance: { theme: "light", density: "default" }
+    });
+    await pending;
+
+    assert.deepEqual(
+      [
+        hidden,
+        document.documentElement.style.visibility,
+        scope.getAttribute("theme"),
+        scope.getAttribute("density")
+      ],
+      ["hidden", "", "light", "default"]
+    );
   });
 
   test("posts ready to its own origin by default", async(context) => {
@@ -275,14 +255,14 @@ describe("HostMessageLaunchSource", () => {
 
     const pending = new HostMessageLaunchSource({
       timeout: 50,
-      origins: [kStudioOrigin, "http://other.test", kStudioOrigin]
+      origins: [SHELL_ORIGIN, "http://other.test", SHELL_ORIGIN]
     }).read();
     context.mock.timers.tick(50);
     await pending;
 
     assert.deepEqual(
       parent.posted.map(({ origin }) => origin),
-      [kStudioOrigin, "http://other.test"]
+      [SHELL_ORIGIN, "http://other.test"]
     );
   });
 });

@@ -1,5 +1,6 @@
 // Import Internal Dependencies
 import type { HostLogger } from "../../debug/readDebugLogger.ts";
+import { PageAppearance } from "../../preferences/appearance/PageAppearance.ts";
 import { EditorLaunch } from "../EditorLaunch.ts";
 import { ShellChannel } from "../../shell/ShellChannel.ts";
 import {
@@ -54,6 +55,7 @@ export class HostMessageLaunchSource implements LaunchSource {
       return Promise.resolve(undefined);
     }
 
+    const showPage = hidePage();
     const {
       promise,
       resolve
@@ -94,6 +96,9 @@ export class HostMessageLaunchSource implements LaunchSource {
         })
       );
       if (launch !== undefined) {
+        if (message.appearance !== undefined) {
+          new PageAppearance().apply(message.appearance);
+        }
         this.#logger?.debug("launch accepted", {
           origin: event.origin,
           target: launch.target.value
@@ -114,6 +119,17 @@ export class HostMessageLaunchSource implements LaunchSource {
     return promise.finally(() => {
       clearTimeout(timer);
       listening.abort();
+      showPage();
     });
   }
+}
+
+function hidePage(): () => void {
+  const { style } = document.documentElement;
+  const visibility = style.visibility;
+  style.visibility = "hidden";
+
+  return () => {
+    style.visibility = visibility;
+  };
 }
