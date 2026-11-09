@@ -79,27 +79,6 @@ describe("AnimatePanelController", () => {
     assert.equal(controller.state.notice, "Bob deleted the clip you had open.");
   });
 
-  test("keys the selected block, and nothing without a selection", () => {
-    const { controller, selection, keyed } = createPanelHarness();
-
-    controller.keySelected();
-    selection.select("arm");
-    controller.keySelected();
-
-    assert.deepEqual(keyed, ["arm"]);
-  });
-
-  test("titles the key button with the chord the user bound", () => {
-    const { controller, keyBindings } = createPanelHarness();
-    assert.equal(controller.state.keyTitle, "Key selected block (K)");
-
-    keyBindings.assign("animation.key", ["j"]);
-    assert.equal(controller.state.keyTitle, "Key selected block (J)");
-
-    keyBindings.assign("animation.key", []);
-    assert.equal(controller.state.keyTitle, "Key selected block");
-  });
-
   test("a new clip of the model goes to its own set, even with a shared set focused", async() => {
     const { controller, animations, pick, names } = createPanelHarness();
     controller.actions!.linkSet(MENU_POINT);

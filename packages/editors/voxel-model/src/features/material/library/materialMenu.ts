@@ -33,7 +33,7 @@ export const ROOT_MENU: readonly MenuEntry<RootAction>[] = [
   {
     id: "paste",
     label: "Paste",
-    icon: "material-paste"
+    icon: "paste"
   }
 ];
 
@@ -43,7 +43,7 @@ export const MATERIAL_MENU: readonly MenuEntry<MaterialRowAction>[] = [
   {
     id: "copy",
     label: "Copy",
-    icon: "material-copy"
+    icon: "copy"
   },
   "separator",
   DELETE_ITEM

@@ -11,7 +11,7 @@ import "@jolly-pixel/ui/elements/scope";
 import "./app/paneIcons.ts";
 import "./app/LeftPanel.ts";
 import "./features/hierarchy/HierarchyPanel.ts";
-import "./features/history/HistoryBar.ts";
+import "./app/ViewportToolbar.ts";
 import "./features/view/ViewPanel.ts";
 import "./features/view/LightingMenu.ts";
 import "./features/animation/timeline/TimelineTransport.ts";

@@ -18,7 +18,6 @@ import {
   type AnimationClipJSON,
   type AnimationClipPatchJSON
 } from "@jolly-pixel/asset.voxel-animation/client";
-import type { ShortcutLabels } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import type { LinkedAnimationSet } from "./library/AnimationLibrary.ts";
@@ -28,13 +27,8 @@ import {
   type AnimateActionsView,
   type AnimateActionsEditing
 } from "./library/AnimateActions.ts";
-import {
-  keySelectedBlock,
-  type KeySelectedOptions
-} from "./keys/animationShortcuts.ts";
 import { ExpandedRows } from "../../shared/ExpandedRows.ts";
 import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
-import type { ModelAction } from "../../keybindings/modelActions.ts";
 import {
   animationKey,
   type PresenceStore
@@ -60,7 +54,6 @@ import {
 
 // CONSTANTS
 export const CLIP_FRAME_RATES = [12, 15, 24, 25, 30, 48, 60] as const;
-const kKeyTitle = "Key selected block";
 const kEmptyState: AnimatePanelState = {
   ownClips: [],
   sharedSets: [],
@@ -71,16 +64,14 @@ const kEmptyState: AnimatePanelState = {
   canShare: false,
   canImport: false,
   editable: false,
-  keyTitle: kKeyTitle,
   error: null,
   notice: null
 };
 
-export interface AnimateEditing extends AnimateActionsEditing, KeySelectedOptions {
+export interface AnimateEditing extends AnimateActionsEditing {
   access: Pick<ModelAccessSignals, "subscribe">;
   presence: Pick<PresenceStore, "clipFocuses" | "subscribe">;
   clipRemoval: Pick<ClipRemovalFocus, "notice" | "dismiss" | "subscribe">;
-  shortcuts: Pick<ShortcutLabels<ModelAction>, "label" | "subscribe">;
 }
 
 export interface AnimatePanelView extends AnimateActionsView {
@@ -110,7 +101,6 @@ export interface AnimatePanelState {
   canShare: boolean;
   canImport: boolean;
   editable: boolean;
-  keyTitle: string;
   /**
    * Why the last action failed, until the next one succeeds.
    */
@@ -137,15 +127,14 @@ export class AnimatePanelController {
     this.#host = host;
     this.#view = view;
     this.#connection = new SubscriptionController(host, (editing) => {
-      const { access, animations, animationFocus, presence, clipRemoval, shortcuts } = editing;
+      const { access, animations, animationFocus, presence, clipRemoval } = editing;
 
       return [
         access.subscribe("change", this.#refresh),
         animations.subscribe("change", this.#refresh),
         animationFocus.subscribe("change", this.#refresh),
         presence.subscribe("clipFocusesChange", this.#refresh),
-        clipRemoval.subscribe("change", this.#refresh),
-        shortcuts.subscribe(this.#refresh)
+        clipRemoval.subscribe("change", this.#refresh)
       ];
     });
   }
@@ -286,13 +275,6 @@ export class AnimatePanelController {
         this.#writableEntries(sharedMenu(this.#state.canImport)),
         (action, point) => this.#runSharedAction(actions, action, point)
       );
-  }
-
-  keySelected(): void {
-    const editing = this.#connection.current;
-    if (editing !== null) {
-      keySelectedBlock(editing);
-    }
   }
 
   async deleteFocused(): Promise<void> {
@@ -452,7 +434,6 @@ export class AnimatePanelController {
       canShare: own !== undefined && own.document.set.size > 0,
       canImport: editing.archives.canImport,
       editable: editing.animations.editable,
-      keyTitle: editing.shortcuts.label(kKeyTitle, "animation.key"),
       error: this.#error,
       notice: editing.clipRemoval.notice
     };

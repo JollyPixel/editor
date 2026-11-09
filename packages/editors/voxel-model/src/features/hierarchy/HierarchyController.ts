@@ -14,10 +14,11 @@ import {
   MenuSession,
   disableEntries
 } from "@jolly-pixel/ui";
-import type {
-  ModelChange,
-  ModelDocument,
-  VoxelModelCommand
+import {
+  BlockShape,
+  type ModelChange,
+  type ModelDocument,
+  type VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -45,6 +46,7 @@ import {
   FOLDER_MENU,
   ROOT_MENU,
   type HierarchyAction,
+  type RowAction,
   type RootAction
 } from "./hierarchyMenu.ts";
 import type {
@@ -66,6 +68,8 @@ import type { ModelAccessSignals } from "../../access/ModelAccess.ts";
 import {
   BLOCK_SHAPE_OPTIONS,
   blockShapeById,
+  isBlockShapeEntryId,
+  matchBlockShapeEntry,
   type BlockShapeEntryId
 } from "../../shared/blockShapes.ts";
 
@@ -104,7 +108,7 @@ export class HierarchyController {
   #expanded = new ExpandedRows();
   #lastShape: BlockShapeEntryId = "box";
 
-  readonly #rowActions: Record<HierarchyAction, (id: string) => Promise<void> | void> = {
+  readonly #rowActions: Record<RowAction, (id: string) => Promise<void> | void> = {
     rename: (id) => this.#view.beginRename(id),
     material: (id) => this.editMaterial(id),
     "add-block": (id) => this.#addBlock(id),
@@ -174,11 +178,19 @@ export class HierarchyController {
   }
 
   get editable(): boolean {
-    return (this.#editing?.tab.active ?? "build") === "build";
+    return (this.#editing?.tab.active ?? "texture") === "texture";
   }
 
   get writable(): boolean {
     return this.#editing?.hierarchy.editable ?? false;
+  }
+
+  get showsGeometry(): boolean {
+    const id = this.#selected[0];
+
+    return this.editable &&
+      id !== undefined &&
+      this.#editing?.document.tree.block(id) !== undefined;
   }
 
   attach(
@@ -299,14 +311,41 @@ export class HierarchyController {
       return MenuSession.EMPTY;
     }
 
+    const reshapable = this.#editing?.hierarchy.canReshape(id) === true;
+    const current = this.#currentShape(id);
+
     return MenuSession.forRow(
       disableEntries(
         kind === "block" ? BLOCK_MENU : FOLDER_MENU,
-        (action) => readOnly && action !== "material"
+        (action) => (isBlockShapeEntryId(action) ?
+          !reshapable || action === current :
+          readOnly && action !== "material")
       ),
       () => this.#editing?.document.tree.has(id) === true,
-      (action) => this.#rowActions[action](id)
+      (action) => this.#run(id, action)
     );
+  }
+
+  async #run(
+    id: string,
+    action: HierarchyAction
+  ): Promise<void> {
+    if (isBlockShapeEntryId(action)) {
+      this.#editing?.hierarchy.reshape(id, blockShapeById(action).shape);
+    }
+    else {
+      await this.#rowActions[action](id);
+    }
+  }
+
+  #currentShape(
+    id: string
+  ): BlockShapeEntryId | null {
+    const block = this.#editing?.document.tree.block(id);
+
+    return block === undefined ?
+      null :
+      matchBlockShapeEntry(BlockShape.fromBlock(block)).id;
   }
 
   async #addBlock(

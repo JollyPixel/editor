@@ -24,32 +24,18 @@ registerIcon("material", svg`
     stroke-width="2"
     stroke-linecap="round"
   />
-`, { tone: "violet" });
+`, { tone: "lime" });
 
-registerIcon("model-build", svg`
-  <path
-    class="tone-fill"
-    d="m12 3 8 4.5-8 4.5-8-4.5L12 3Z"
-  />
-  <path
-    d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3ZM4 7.5l8 4.5 8-4.5M12 12v9"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-`, { tone: "amber" });
-
-registerIcon("model-paint", svg`
+registerIcon("pencil", svg`
+  <mask id="pencil-ferrule-cut">
+    <rect width="24" height="24" fill="#fff" />
+    <path d="M13.2 6.3l4.5 4.5" stroke="#000" stroke-width="1.6" />
+  </mask>
   <path
     class="tone-ink"
-    d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25Z"
+    d="M15.5 3.5a2.1 2.1 0 0 1 3 0l2 2a2.1 2.1 0 0 1 0 3L9 20l-5.5 1.5L5 16 15.5 3.5Z"
     fill="currentColor"
-  />
-  <path
-    d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z"
-    fill="currentColor"
+    mask="url(#pencil-ferrule-cut)"
   />
 `, { tone: "pink" });
 
@@ -73,7 +59,7 @@ registerIcon("model-animate", svg`
     stroke-width="2"
     stroke-linejoin="round"
   />
-`, { tone: "lime" });
+`, { tone: "violet" });
 
 registerIcon("model-hierarchy", svg`
   <path

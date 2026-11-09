@@ -4,6 +4,7 @@ export * from "./peer-frustum/PeerFrustum.ts";
 export * from "./scene-gizmos/CameraGizmo.ts";
 export * from "./scene-gizmos/LightGizmo.ts";
 export * from "./mesh-highlight/index.ts";
+export * from "./sky/index.ts";
 export * from "./transform-controls/index.ts";
 export * from "./common/texture/Canvas2D.ts";
 export * from "./common/texture/ReadbackPixels.ts";

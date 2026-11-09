@@ -25,10 +25,9 @@ import type {
   LeftPanel,
   LeftPanelTexture
 } from "../app/LeftPanel.ts";
-import { visibleTexturePane } from "../app/texturePanes.ts";
 import {
-  SHOW_BUILD_EVENT,
-  SHOW_MATERIAL_EVENT
+  SHOW_MATERIAL_EVENT,
+  SHOW_TEXTURE_EVENT
 } from "../features/hierarchy/HierarchyPanel.ts";
 import {
   EDITOR_TABS,
@@ -48,7 +47,7 @@ const kAttachedTags = [
   kHierarchySelector,
   "jolly-model-editor-material-library",
   "jolly-model-editor-view",
-  "jolly-model-editor-history",
+  "jolly-model-editor-viewport-toolbar",
   "jolly-model-editor-lighting-menu",
   kAnimatePanelSelector,
   "jolly-model-editor-timeline",
@@ -57,7 +56,7 @@ const kAttachedTags = [
 ] as const satisfies readonly (keyof HTMLElementTagNameMap)[];
 const kAnimatePane = "animate";
 const kMaterialPane = "material";
-const kBuildPane = "build";
+const kTexturePane = "texture";
 
 type AttachedElement = HTMLElementTagNameMap[typeof kAttachedTags[number]];
 
@@ -142,15 +141,15 @@ export class EditorShell {
     }
     void layout.updateComplete.then(this.#onLayoutChange);
     hierarchy.addEventListener(SHOW_MATERIAL_EVENT, this.#showMaterialPane);
-    hierarchy.addEventListener(SHOW_BUILD_EVENT, this.#showBuildPane);
+    hierarchy.addEventListener(SHOW_TEXTURE_EVENT, this.#showTexturePane);
     this.#disposables.push(
       () => hierarchy.removeEventListener(
         SHOW_MATERIAL_EVENT,
         this.#showMaterialPane
       ),
       () => hierarchy.removeEventListener(
-        SHOW_BUILD_EVENT,
-        this.#showBuildPane
+        SHOW_TEXTURE_EVENT,
+        this.#showTexturePane
       ),
       runtime.suspendKeyboardOnHover(
         this.#leftPanel,
@@ -184,8 +183,10 @@ export class EditorShell {
       editing.presence,
       (clientId) => editing.teleportToPeer(clientId)
     ));
+    this.#disposables.push(
+      editing.animationSession.subscribe("shown", this.#syncTimeline)
+    );
     this.#leftPanel.editing = editing;
-    this.#syncGizmo();
     this.#syncTab();
     this.#materialPane.fieldLocks = editing.fields;
     this.#leftPanel.onPeerUvDragging = (region) => {
@@ -197,14 +198,12 @@ export class EditorShell {
     this.#layout.showPane(kMaterialPane);
   };
 
-  readonly #showBuildPane = (): void => {
-    this.#layout.showPane(kBuildPane);
+  readonly #showTexturePane = (): void => {
+    this.#layout.showPane(kTexturePane);
   };
 
   readonly #onLayoutChange = (): void => {
     this.#loadVisiblePanels();
-    this.#placeLeftPanel();
-    this.#syncGizmo();
     this.#syncTab();
   };
 
@@ -226,35 +225,22 @@ export class EditorShell {
     });
   }
 
+  readonly #syncTimeline = (): void => {
+    const shownKey = this.#editing?.animationSession.shownKey ?? null;
+    this.#timelineDock.hidden = shownKey === null;
+  };
+
   #syncTab(): void {
-    this.#timelineDock.hidden = !this.#animating;
-    this.#editing?.tab.activate(parseEditorTab(this.#animateTabs.active));
+    if (this.#editing !== null) {
+      const { tab, gizmo } = this.#editing;
+      tab.activate(parseEditorTab(this.#animateTabs.active));
+      gizmo.enabled = tab.transforming;
+    }
+    this.#syncTimeline();
   }
 
   get #animating(): boolean {
     return this.#animateTabs.active === kAnimatePane;
-  }
-
-  #syncGizmo(): void {
-    if (this.#editing !== null) {
-      this.#editing.gizmo.enabled = this.#animating || this.#layout.paneVisible(kBuildPane);
-    }
-  }
-
-  #placeLeftPanel(): void {
-    const pane = visibleTexturePane(
-      (candidate) => this.#layout.paneVisible(candidate),
-      this.#leftPanel.mode
-    );
-    const host = this.#layout.querySelector(`jolly-pane[key="${pane}"]`);
-    if (host === null) {
-      return;
-    }
-
-    if (this.#leftPanel.parentElement !== host) {
-      host.append(this.#leftPanel);
-    }
-    this.#leftPanel.mode = pane;
   }
 
   dispose(): void {
@@ -279,5 +265,5 @@ function queryAttachedElement(
 function parseEditorTab(
   pane: string | null
 ): EditorTab {
-  return EDITOR_TABS.find((tab) => tab === pane) ?? "build";
+  return EDITOR_TABS.find((tab) => tab === pane) ?? "texture";
 }

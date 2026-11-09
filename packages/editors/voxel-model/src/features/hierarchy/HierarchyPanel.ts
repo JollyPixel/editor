@@ -21,14 +21,19 @@ import "@jolly-pixel/ui/elements/tree";
 // Import Internal Dependencies
 import "../../shared/actionIcons.ts";
 import "./hierarchyIcons.ts";
+import "./ShapeField.ts";
 import {
   HierarchyController,
   type HierarchyEditing
 } from "./HierarchyController.ts";
+import type {
+  ShapeField,
+  ShapeFieldEditing
+} from "./ShapeField.ts";
 
 // CONSTANTS
 export const SHOW_MATERIAL_EVENT = "show-material";
-export const SHOW_BUILD_EVENT = "show-build";
+export const SHOW_TEXTURE_EVENT = "show-texture";
 
 export class HierarchyPanel extends LitElement {
   #dialogs = new LazyTemplate(this, () => Promise.all([
@@ -66,6 +71,10 @@ export class HierarchyPanel extends LitElement {
 
   @query("jolly-context-menu")
   declare private rowMenu: ContextMenu;
+
+  @query("jolly-model-editor-shape")
+  declare private shapeField: ShapeField;
+
   static override styles = css`
     :host {
       display: flex;
@@ -74,7 +83,7 @@ export class HierarchyPanel extends LitElement {
       min-height: 0;
     }
 
-    jolly-folder {
+    .hierarchy {
       flex: 1 1 auto;
       min-height: 0;
     }
@@ -84,6 +93,9 @@ export class HierarchyPanel extends LitElement {
     }
 
     jolly-tree {
+      --jolly-tree-icon-size: 16px;
+      --jolly-icon-ink-strength: 100%;
+
       flex: 1 1 auto;
       overflow: auto;
       padding-inline: var(--jolly-space-1, 4px);
@@ -92,16 +104,25 @@ export class HierarchyPanel extends LitElement {
     jolly-tree::part(grip) {
       display: none;
     }
+
+    .geometry {
+      flex: 0 0 auto;
+    }
+
+    .geometry[hidden] {
+      display: none;
+    }
   `;
 
   attach(
-    editing: HierarchyEditing
+    editing: HierarchyEditing & ShapeFieldEditing
   ): void {
     this.#tree.attach(editing);
+    void this.updateComplete.then(() => this.shapeField.attach(editing));
   }
 
-  readonly #showBuild = (): void => {
-    this.dispatchEvent(new CustomEvent(SHOW_BUILD_EVENT, {
+  readonly #showTexture = (): void => {
+    this.dispatchEvent(new CustomEvent(SHOW_TEXTURE_EVENT, {
       bubbles: true,
       composed: true
     }));
@@ -112,6 +133,7 @@ export class HierarchyPanel extends LitElement {
 
     return html`
       <jolly-folder
+        class="hierarchy"
         key="hierarchy"
         label="Hierarchy"
         .collapsible=${false}
@@ -123,6 +145,7 @@ export class HierarchyPanel extends LitElement {
           .selected=${this.#tree.selected}
           .expanded=${this.#tree.expanded}
           .validateRename=${this.#tree.validateRename}
+          indent-guides
           ?reorderable=${editable}
           ?row-drag=${editable}
           ?renamable=${editable}
@@ -135,6 +158,14 @@ export class HierarchyPanel extends LitElement {
           @jolly-rename=${this.#tree.handleRename}
           @jolly-reparent=${this.#tree.handleReparent}
         ></jolly-tree>
+      </jolly-folder>
+      <jolly-folder
+        class="geometry"
+        key="geometry"
+        label="Geometry"
+        ?hidden=${!this.#tree.showsGeometry}
+      >
+        <jolly-model-editor-shape></jolly-model-editor-shape>
       </jolly-folder>
       ${this.#dialogs.render(() => html`
         <jolly-model-editor-name-dialog></jolly-model-editor-name-dialog>
@@ -154,9 +185,9 @@ export class HierarchyPanel extends LitElement {
         slot="actions"
         icon="lock"
         icon-only
-        label="Edit in Build"
-        title="Edit the hierarchy in the Build tab"
-        @click=${this.#showBuild}
+        label="Edit hierarchy"
+        title="Open Texture to edit the hierarchy"
+        @click=${this.#showTexture}
       ></jolly-button>
     `;
   }
@@ -195,7 +226,7 @@ export class HierarchyPanel extends LitElement {
       ></jolly-button>
       <jolly-button
         slot="actions"
-        icon="action-delete"
+        icon="trash"
         icon-only
         label="Delete"
         title="Delete"

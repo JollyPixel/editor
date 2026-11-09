@@ -33,14 +33,17 @@ function toggleVisible(
 }
 
 describe("HierarchyController.editable", () => {
-  test("edits only in Build, redrawing when the tab changes", () => {
+  test("edits only in Texture, redrawing when the tab changes", () => {
     const { controller, tab, updates } = createHierarchyHarness();
     const before = updates();
 
     tab.activate("animate");
     assert.deepEqual([controller.editable, updates()], [false, before + 1]);
 
-    tab.activate("build");
+    tab.activate("material");
+    assert.equal(controller.editable, false);
+
+    tab.activate("texture");
     assert.equal(controller.editable, true);
   });
 });

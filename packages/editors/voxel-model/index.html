@@ -18,11 +18,10 @@
         min-size="320"
         max-size="900"
       >
-        <jolly-pane-group active="build">
-          <jolly-pane key="build" heading="Build" icon="model-build" locked>
+        <jolly-pane-group active="texture">
+          <jolly-pane key="texture" heading="Texture" icon="pencil" locked>
             <jolly-model-editor-left-panel></jolly-model-editor-left-panel>
           </jolly-pane>
-          <jolly-pane key="paint" heading="Paint" icon="model-paint" locked></jolly-pane>
           <jolly-pane key="material" heading="Material" icon="material" locked>
             <jolly-model-editor-material-library></jolly-model-editor-material-library>
             <jolly-model-editor-view></jolly-model-editor-view>
@@ -37,7 +36,7 @@
         <section id="three-renderer">
           <canvas tabindex="-1"></canvas>
           <jolly-model-editor-animating-frame></jolly-model-editor-animating-frame>
-          <jolly-model-editor-history></jolly-model-editor-history>
+          <jolly-model-editor-viewport-toolbar></jolly-model-editor-viewport-toolbar>
           <jolly-model-editor-lighting-menu></jolly-model-editor-lighting-menu>
           <jolly-presence-stack selectable max="6" hidden></jolly-presence-stack>
         </section>

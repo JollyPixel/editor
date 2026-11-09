@@ -1,13 +1,14 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { Node } from "three/webgpu";
 import type { BlockLightFalloff } from "@jolly-pixel/voxel.renderer";
-import type { ResolvedThemeMode } from "@jolly-pixel/ui";
+import {
+  DaySky,
+  NightSky,
+  type SkyConstructor
+} from "@jolly-pixel/three";
 
 // Import Internal Dependencies
 import type { LightingMode } from "../../state/ViewSettings.ts";
-import { DaySky } from "./background/DaySky.ts";
-import { NightSky } from "./background/NightSky.ts";
 
 // CONSTANTS
 const kSunDistance = 24;
@@ -15,11 +16,6 @@ const kOrigin = new THREE.Vector3();
 const kDaySky = "#bcd6f2";
 const kDayGround = "#8a7454";
 const kEnvironmentIntensity = 0.6;
-
-interface Sky {
-  readonly backdrop: ResolvedThemeMode;
-  new (sunDirection: THREE.Vector3): { readonly node: Node; };
-}
 
 export interface LightingRig {
   ambient: number;
@@ -31,7 +27,7 @@ export interface LightingRig {
   sunDirection: THREE.Vector3;
   toneMapping: THREE.ToneMapping | null;
   exposure: number;
-  sky: Sky | null;
+  sky: SkyConstructor | null;
   environmentIntensity: number;
   blockLightFalloff: BlockLightFalloff;
   shadowFill: number;

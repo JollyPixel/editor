@@ -7,8 +7,6 @@ import {
   float,
   floor,
   int,
-  materialColor,
-  materialReference,
   max,
   texture,
   textureSize,
@@ -24,6 +22,7 @@ import {
   UV_EDGE_ATTRIBUTE,
   UV_REGION_ATTRIBUTE
 } from "./uvRegion.ts";
+import { MaterialTintNode } from "./MaterialTintNode.ts";
 
 export type UvRegionClampedMesh = THREE.Mesh<
   THREE.BufferGeometry,
@@ -34,6 +33,7 @@ export type UvRegionClampedMesh = THREE.Mesh<
 
 // CONSTANTS
 const kClampedMapColors = new WeakMap<THREE.Texture, Node<"vec4">>();
+const kTint = new MaterialTintNode();
 
 export function clampUvRegion(
   mesh: UvRegionClampedMesh,
@@ -49,7 +49,7 @@ function clampedMapColor(
   map: THREE.Texture | null
 ): Node<"vec3"> | Node<"vec4"> {
   if (map === null) {
-    return materialColor;
+    return kTint;
   }
 
   let colorNode = kClampedMapColors.get(map);
@@ -79,7 +79,5 @@ function sampleClamped(
   const wrapped = texel.sub(floor(texel.div(size)).mul(size));
   const sampled = texture(map, wrapped.div(size)).level(float(0));
 
-  const tint = materialReference("color", "color") as unknown as Node<"vec3">;
-
-  return vec4(tint, float(1)).mul(sampled);
+  return vec4(kTint, float(1)).mul(sampled);
 }

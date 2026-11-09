@@ -227,6 +227,25 @@ describe("ModelHierarchy.reshape", () => {
     access.grant("transforms");
     assert.equal(hierarchy.reshape(head, kPlane), true);
   });
+
+  test("refuses a block while a peer drags it", () => {
+    let dragged: string | null = null;
+    const { hierarchy, commands } = createHierarchyFixture({
+      lockedBy: (uuid) => (uuid === dragged ? { clientId: "bob" } : null)
+    });
+    const head = hierarchy.createBlock("Head", null)!;
+    commands.length = 0;
+    dragged = head;
+
+    assert.deepEqual(
+      [hierarchy.canReshape(head), hierarchy.reshape(head, kPlane)],
+      [false, false]
+    );
+    assert.deepEqual(commands, []);
+
+    dragged = null;
+    assert.equal(hierarchy.reshape(head, kPlane), true);
+  });
 });
 
 describe("ModelHierarchy access", () => {

@@ -4,7 +4,7 @@ import type { MenuItem } from "@jolly-pixel/ui";
 export const RENAME_ITEM: MenuItem<"rename"> = {
   id: "rename",
   label: "Rename",
-  icon: "action-rename"
+  icon: "pencil"
 };
 
 export const DUPLICATE_ITEM: MenuItem<"duplicate"> = {
@@ -16,5 +16,5 @@ export const DUPLICATE_ITEM: MenuItem<"duplicate"> = {
 export const DELETE_ITEM: MenuItem<"delete"> = {
   id: "delete",
   label: "Delete",
-  icon: "action-delete"
+  icon: "trash"
 };

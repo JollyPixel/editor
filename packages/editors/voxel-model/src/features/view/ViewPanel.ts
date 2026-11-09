@@ -11,17 +11,15 @@ import {
   type JollyChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
-import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
-import "@jolly-pixel/ui/elements/color";
+import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/folder";
-import "@jolly-pixel/ui/elements/toggle";
 
 // Import Internal Dependencies
 import {
-  resolveBackground,
   isLit,
   type KeyLightPreset,
+  type LightingMode,
   type ViewSettings,
   type ViewSettingsStore
 } from "../../state/index.ts";
@@ -31,8 +29,14 @@ import { LIGHTING_OPTIONS } from "./lightingOptions.ts";
 const kLightingHelp = "Flat shows plain colours, Studio a bright room, Day warm sunlight " +
   "under a blue sky, Night a dark scene where glow stands out. " +
   "Only you see these settings; the model doesn't change.";
-const kBackgroundHelp = "The viewport colour behind the model. " +
-  "It follows the lighting until you pick your own.";
+const kLightingOptions: JollyOption<LightingMode>[] = LIGHTING_OPTIONS.map(
+  ({ value, label }) => {
+    return {
+      value,
+      label
+    };
+  }
+);
 const kKeyLightOptions: JollyOption<KeyLightPreset>[] = [
   {
     value: "front-left",
@@ -74,22 +78,12 @@ export class ViewPanel extends LitElement {
       padding-block: var(--jolly-space-1, 4px);
     }
 
-    .background {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-1, 4px);
-    }
-
-    .background jolly-color {
-      flex: 1 1 0;
-      min-width: 0;
-    }
-
     .toggles {
+      --jolly-label-max-width: 70%;
+
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: var(--jolly-row-gap, 4px) var(--jolly-space-2, 8px);
-      padding-inline-start: var(--jolly-field-inset-start, var(--jolly-space-1, 4px));
+      row-gap: var(--jolly-row-gap, 4px);
     }
   `;
 
@@ -112,14 +106,19 @@ export class ViewPanel extends LitElement {
     const lit = isLit(settings);
 
     return html`
-      <jolly-folder key="view" label="View" flush .open=${false}>
+      <jolly-folder
+        flush
+        key="view"
+        label="View"
+        storage-key="voxel-model:folder:view"
+        .open=${false}
+      >
         <div class="fields">
           <jolly-button-group
             label="Lighting"
             description=${kLightingHelp}
             description-display="tooltip"
-            icon-only
-            .options=${LIGHTING_OPTIONS}
+            .options=${kLightingOptions}
             .value=${settings.lighting}
             @jolly-change=${this.#bind("lighting")}
           ></jolly-button-group>
@@ -127,64 +126,43 @@ export class ViewPanel extends LitElement {
             label="Key light"
             description="Direction of the main light"
             description-display="tooltip"
-            icon-only
             .options=${kKeyLightOptions}
             .value=${settings.keyLight}
             ?disabled=${!lit}
             @jolly-change=${this.#bind("keyLight")}
           ></jolly-button-group>
-          <div class="background">
-            <jolly-color
-              label="Background"
-              description=${kBackgroundHelp}
-              description-display="tooltip"
-              .value=${resolveBackground(settings)}
-              @jolly-input=${this.#bind("background")}
-              @jolly-change=${this.#bind("background")}
-            ></jolly-color>
-            ${settings.background === null ? nothing : html`
-              <jolly-button
-                icon="revert"
-                icon-only
-                label="Use the lighting's background"
-                title="Use the lighting's background"
-                @click=${this.#resetBackground}
-              ></jolly-button>
-            `}
-          </div>
           <div class="toggles">
-            <jolly-toggle
-              label="Reflections"
-              description="Metal and glossy materials reflect a studio room"
-              description-display="tooltip"
-              .value=${settings.reflections}
-              ?disabled=${!lit}
-              @jolly-change=${this.#bind("reflections")}
-            ></jolly-toggle>
-            <jolly-toggle
+            <jolly-checkbox
+              align="end"
               label="Shadows"
               description="The key light casts shadows across the model"
               description-display="tooltip"
               .value=${settings.shadows}
               ?disabled=${!lit}
               @jolly-change=${this.#bind("shadows")}
-            ></jolly-toggle>
-            <jolly-toggle
+            ></jolly-checkbox>
+            <jolly-checkbox
+              align="end"
               label="Glow"
               description="Glowing materials bloom on screen"
               description-display="tooltip"
               .value=${settings.glow}
               @jolly-change=${this.#bind("glow")}
-            ></jolly-toggle>
+            ></jolly-checkbox>
+            <jolly-checkbox
+              align="end"
+              label="Reflections"
+              description="Metal and glossy materials reflect a studio room"
+              description-display="tooltip"
+              .value=${settings.reflections}
+              ?disabled=${!lit}
+              @jolly-change=${this.#bind("reflections")}
+            ></jolly-checkbox>
           </div>
         </div>
       </jolly-folder>
     `;
   }
-
-  readonly #resetBackground = (): void => {
-    this.#editing.current?.view.update({ background: null });
-  };
 
   #bind<TKey extends keyof ViewSettings>(
     key: TKey

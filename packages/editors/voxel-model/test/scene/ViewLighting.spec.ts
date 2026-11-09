@@ -18,7 +18,8 @@ function createHarness() {
     scene,
     view,
     environment,
-    casters: () => []
+    casters: () => [],
+    theme: "dark"
   });
 
   return {
@@ -38,44 +39,48 @@ describe("ViewLighting", () => {
     });
 
     assert.ok(scene.children.includes(lighting.key));
-    assert.ok(scene.background === lighting.background);
+    assert.ok(scene.backgroundNode);
     assert.ok(scene.environment === environment.texture);
 
     lighting.dispose();
 
     assert.equal(scene.children.includes(lighting.key), false);
-    assert.ok(scene.background === null);
+    assert.ok(scene.backgroundNode === null);
     assert.ok(scene.environment === null);
     assert.ok(released);
   });
 
-  test("darkens the background and dims the key light at night", () => {
+  test("dims the key light at night", () => {
     const { view, lighting } = createHarness();
-    const litBackground = lighting.background.getHSL({ h: 0, s: 0, l: 0 }).l;
     const litKey = lighting.key.intensity;
 
     view.update({ lighting: "night" });
 
-    assert.ok(lighting.background.getHSL({ h: 0, s: 0, l: 0 }).l < litBackground);
     assert.ok(lighting.key.intensity < litKey);
   });
 
-  test("paints the scene with the custom background whatever the lighting", () => {
-    const { view, lighting } = createHarness();
+  test("paints a studio sky that follows the theme and an outdoor sky that follows the key light", () => {
+    const { scene, view, lighting } = createHarness();
+    const darkStudio = scene.backgroundNode;
 
-    view.update({ background: "#123456", lighting: "night" });
+    lighting.theme = "light";
+    assert.notEqual(scene.backgroundNode, darkStudio);
 
-    assert.equal(lighting.background.getHexString(), "123456");
+    view.update({ lighting: "day" });
+    const daySky = scene.backgroundNode;
+    lighting.theme = "dark";
+    assert.equal(scene.backgroundNode, daySky);
+
+    view.update({ keyLight: "top" });
+    assert.notEqual(scene.backgroundNode, daySky);
   });
 
-  test("warms the key light under a blue sky by day", () => {
+  test("warms the key light by day", () => {
     const { view, lighting } = createHarness();
 
     view.update({ lighting: "day" });
 
-    const { key, background } = lighting;
-    assert.ok(key.color.r > key.color.b);
-    assert.ok(background.b > background.r && background.b > background.g);
+    assert.ok(lighting.key.color.r > lighting.key.color.b);
   });
 
   test("enables key light shadows only while they are on and the view is lit", () => {

@@ -5,11 +5,6 @@ import assert from "node:assert/strict";
 import { AnimationDocument } from "@jolly-pixel/asset.voxel-animation/client";
 import { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 import { MenuSession } from "@jolly-pixel/ui";
-import {
-  KeyBindingSettings,
-  KeyboardLayoutStore,
-  ShortcutLabels
-} from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
 import {
@@ -20,14 +15,12 @@ import {
 import { AnimatePanelController } from "#src/features/animation/AnimatePanelController.ts";
 import {
   AnimationFocusStore,
-  BlockSelectionStore,
   PresenceStore
 } from "#src/state/index.ts";
 import { AnimationHistories } from "#src/features/animation/undo/AnimationHistories.ts";
 import { ClipRemovalFocus } from "#src/features/animation/library/ClipRemovalFocus.ts";
 import { createEditorHistory } from "#src/features/history/index.ts";
 import type { NameDialogContext } from "#src/shared/dialogs/NameDialog.ts";
-import { MODEL_KEY_BINDINGS } from "#src/keybindings/modelActions.ts";
 import { createHost } from "./fixtures.ts";
 import { modelAccess } from "../../fixtures/modelAccess.ts";
 
@@ -139,11 +132,6 @@ export function createPanelHarness(
     },
     beginRename: () => undefined
   });
-  const keyed: string[] = [];
-  const selection = new BlockSelectionStore();
-  const keyBindings = new KeyBindingSettings({
-    defaults: MODEL_KEY_BINDINGS
-  });
   const archiveCalls: string[] = [];
   controller.attach({
     access,
@@ -162,13 +150,8 @@ export function createPanelHarness(
         return Promise.resolve();
       }
     },
-    selection,
     presence,
-    clipRemoval,
-    keyer: {
-      keyBlock: (id) => keyed.push(id) > 0
-    },
-    shortcuts: new ShortcutLabels(new KeyboardLayoutStore(), keyBindings)
+    clipRemoval
   });
 
   async function pick(
@@ -209,10 +192,7 @@ export function createPanelHarness(
     history,
     animationFocus,
     deletes,
-    selection,
     presence,
-    keyed,
-    keyBindings,
     prompts,
     names,
     pick,

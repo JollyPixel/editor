@@ -13,6 +13,7 @@ export class AnimatePanel {
   readonly panel: Locator;
   readonly timeline: Locator;
   readonly keys: Locator;
+  readonly keyTool: Locator;
   readonly playback: Locator;
   readonly playhead: Locator;
 
@@ -25,6 +26,9 @@ export class AnimatePanel {
     this.panel = page.locator("jolly-model-editor-animate-panel");
     this.timeline = page.locator("jolly-model-editor-timeline");
     this.keys = this.timeline.locator(".row[data-block] .key");
+    this.keyTool = page
+      .locator("jolly-model-editor-viewport-toolbar jolly-tool-button[data-tool=\"key\"]")
+      .getByRole("button");
     this.playback = page
       .locator("jolly-model-editor-timeline-transport")
       .getByRole("toolbar", { name: "Playback" });
@@ -71,14 +75,5 @@ export class AnimatePanel {
       box.x + (box.width * fraction),
       box.y + (box.height / 2)
     );
-  }
-
-  async typeAxis(
-    axis: "X" | "Y" | "Z",
-    value: number
-  ): Promise<void> {
-    const field = this.panel.getByRole("textbox", { name: axis });
-    await field.fill(String(value));
-    await field.press("Enter");
   }
 }

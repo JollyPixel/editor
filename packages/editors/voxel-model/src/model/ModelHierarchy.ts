@@ -32,16 +32,21 @@ export interface BlockPoses {
   ): NodeTransformJSON[];
 }
 
-export interface BuildRecorder {
+export interface HierarchyRecorder {
   record<T>(label: string | null, edit: () => T): T;
+}
+
+export interface BlockLocks {
+  lockedBy(uuid: string): object | null;
 }
 
 export interface ModelHierarchyOptions {
   document: ModelDocument;
-  edits: BuildRecorder;
+  edits: HierarchyRecorder;
   textureSize(): Vec2;
   poses: BlockPoses;
   access: ModelAccessSource;
+  locks: BlockLocks;
 }
 
 export interface DuplicateOptions {
@@ -62,10 +67,11 @@ export interface RemoveOptions {
 
 export class ModelHierarchy {
   #document: ModelDocument;
-  #edits: BuildRecorder;
+  #edits: HierarchyRecorder;
   #textureSize: () => Vec2;
   #poses: BlockPoses;
   #access: ModelAccessSource;
+  #locks: BlockLocks;
 
   constructor(
     options: ModelHierarchyOptions
@@ -75,10 +81,19 @@ export class ModelHierarchy {
     this.#textureSize = options.textureSize;
     this.#poses = options.poses;
     this.#access = options.access;
+    this.#locks = options.locks;
   }
 
   get editable(): boolean {
     return this.#access.current.has("hierarchy");
+  }
+
+  canReshape(
+    id: string
+  ): boolean {
+    return this.#access.current.has("transforms") &&
+      this.#document.tree.block(id) !== undefined &&
+      this.#locks.lockedBy(id) === null;
   }
 
   nodes(): HierarchyNode[] {
@@ -140,7 +155,7 @@ export class ModelHierarchy {
     const { tree } = this.#document;
     const block = tree.block(id);
     if (
-      !this.#access.current.has("transforms") ||
+      !this.canReshape(id) ||
       block === undefined ||
       BlockShape.same(BlockShape.fromBlock(block), shape)
     ) {

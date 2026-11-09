@@ -9,19 +9,19 @@ import {
 // Import Internal Dependencies
 import type { AnimationLibrary } from "./AnimationLibrary.ts";
 import type { ScopeRecorder } from "../../history/index.ts";
-import type { BuildRecorder } from "../../../model/index.ts";
+import type { HierarchyRecorder } from "../../../model/index.ts";
 
 export interface AnimationFollowOptions {
   document: ModelDocument;
   animations: Pick<AnimationLibrary, "set" | "editable">;
 }
 
-export function followingBuildEdits(
-  history: ScopeRecorder<"build">,
+export function followingHierarchyEdits(
+  history: ScopeRecorder<"texture">,
   follow: AnimationFollow
-): BuildRecorder {
+): HierarchyRecorder {
   return {
-    record: (label, edit) => history.record("build", label, () => follow.carry(edit))
+    record: (label, edit) => history.record("texture", label, () => follow.carry(edit))
   };
 }
 

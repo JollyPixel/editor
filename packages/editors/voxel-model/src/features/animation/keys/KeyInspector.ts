@@ -10,6 +10,7 @@ import {
   Mixed,
   type JollyChangeDetail
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/select";
 import type { AnimationInterpolation } from "@jolly-pixel/asset.voxel-animation/client";
 
@@ -26,18 +27,8 @@ export class KeyInspector extends LitElement {
       display: block;
     }
 
-    section {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
-      padding: var(--jolly-space-2, 8px);
-      border-top: 1px solid var(--jolly-border, rgb(128 128 128 / 30%));
-    }
-
-    h3 {
-      margin: 0;
-      font-size: inherit;
-      font-weight: 600;
+    jolly-select {
+      margin-inline-start: var(--jolly-space-1, 4px);
     }
   `;
 
@@ -62,8 +53,14 @@ export class KeyInspector extends LitElement {
     }
 
     return html`
-      <section aria-label="Key">
-        <h3>Key (${state.title})</h3>
+      <jolly-folder
+        flush
+        role="region"
+        aria-label="Key"
+        key="key"
+        label="Key (${state.title})"
+        storage-key="voxel-model:folder:key"
+      >
         <jolly-select
           label="Interpolation"
           .options=${INTERPOLATION_OPTIONS}
@@ -71,7 +68,7 @@ export class KeyInspector extends LitElement {
           .value=${state.interpolation === "mixed" ? Mixed : state.interpolation}
           @jolly-change=${this.#onInterpolation}
         ></jolly-select>
-      </section>
+      </jolly-folder>
     `;
   }
 }

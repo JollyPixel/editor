@@ -2,7 +2,7 @@
 import { Emitter } from "@openally/emitt";
 
 // CONSTANTS
-export const EDITOR_TABS = ["build", "material", "animate"] as const;
+export const EDITOR_TABS = ["texture", "material", "animate"] as const;
 
 export type EditorTab = typeof EDITOR_TABS[number];
 
@@ -11,10 +11,14 @@ export type TabEvents = {
 };
 
 export class TabStore extends Emitter<TabEvents> {
-  #active: EditorTab = "build";
+  #active: EditorTab = "texture";
 
   get active(): EditorTab {
     return this.#active;
+  }
+
+  get transforming(): boolean {
+    return this.#active !== "material";
   }
 
   activate(

@@ -10,7 +10,7 @@ $ pnpm --filter @jolly-pixel/editor.voxel-model test:scenario
 $ SCENARIO_FROM=animate pnpm --filter @jolly-pixel/editor.voxel-model test:scenario
 ```
 
-A resumed chapter starts on the Build tab, so a chapter that works in another
+A resumed chapter starts on the Texture tab, so a chapter that works in another
 tab opens it first.
 
 ## Not covered yet
@@ -26,7 +26,7 @@ Brackets name the deleted e2e spec that covered each item.
 - Asset select: open another model and its texture in place (`switch`).
 - Import as copy: a second model and texture next to the original
   (`archive`).
-- Transform space: a child read and written in Global space, scale on one axis
+- Transform space: a child read and written in World space, scale on one axis
   for a block with children, a size handle drag (`transform`).
 - Hierarchy: rename refused against a sibling inside a block, a name clash left
   by a delete flagged until renamed, delete with children (`hierarchy`).
@@ -35,7 +35,7 @@ Brackets name the deleted e2e spec that covered each item.
 - Animation sets: copy a clip to a set and fork it back, a track left unbound
   by a deleted block and rebound, set clip length, frame rate and loop, unlink
   and link a set, timeline keyboard (`animate/library`, `animate/timeline`).
-- View: background reset, the Material tab's View panel, the glow pass and
-  runtime idle (`view`, `boot`).
+- View: the Material tab's View panel, the glow pass and runtime idle
+  (`view`, `boot`).
 - Rendering: the shirt and face tints are read back from the viewport, but the
   attached chapter screenshots are not compared.

@@ -64,6 +64,12 @@ export class AnimationKeyer implements TransformTarget {
     return this.#options.access.current.has("animations");
   }
 
+  get canKey(): boolean {
+    const { session } = this.#options;
+
+    return session.active && session.focused !== null && this.writable;
+  }
+
   end(
     block: PosedBlock
   ): void {
@@ -83,7 +89,7 @@ export class AnimationKeyer implements TransformTarget {
   ): boolean {
     const block = this.#options.blocks.get(blockId);
 
-    return this.#options.session.active &&
+    return this.canKey &&
       block !== undefined &&
       this.#key(blockId, block.transform, "all");
   }

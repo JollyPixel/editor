@@ -20,7 +20,7 @@ import {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/color";
 import "@jolly-pixel/ui/elements/context-menu";
-import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/slider";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/tree";
@@ -168,7 +168,7 @@ export class MaterialLibrary extends LitElement {
           @click=${this.#tool(state.editedId, "duplicate")}
         ></jolly-button>
         <jolly-button
-          icon="action-delete"
+          icon="trash"
           icon-only
           label="Delete"
           title="Delete"
@@ -219,13 +219,13 @@ export class MaterialLibrary extends LitElement {
     const unlit = group.id === "surface" && !this.#surface.lit;
 
     return html`
-      <jolly-folder label=${group.label} .collapsible=${false}>
+      <jolly-separator label=${group.label}>
         ${off ? html`<span slot="actions" class="group-state">Off</span>` : nothing}
-        ${unlit ? html`<p class="note">${UNLIT_NOTE}</p>` : nothing}
-        <div class="fields">
-          ${group.fields.map((field) => this.#renderField(field, edited))}
-        </div>
-      </jolly-folder>
+      </jolly-separator>
+      ${unlit ? html`<p class="note">${UNLIT_NOTE}</p>` : nothing}
+      <div class="fields">
+        ${group.fields.map((field) => this.#renderField(field, edited))}
+      </div>
     `;
   }
 

@@ -49,7 +49,7 @@ describe("AnimatePresence", () => {
       keys: []
     });
 
-    model.tab.activate("build");
+    model.tab.activate("texture");
     assert.equal(lastPublished(published, "animateCursor"), null);
     presence.dispose();
   });

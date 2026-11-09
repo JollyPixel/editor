@@ -9,7 +9,10 @@ import {
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import { registerPixelHistory } from "@jolly-pixel/asset.pixel-art/client";
 import type { Preferences } from "@jolly-pixel/preferences";
-import type { FieldLockSource } from "@jolly-pixel/ui";
+import {
+  DocumentTheme,
+  type FieldLockSource
+} from "@jolly-pixel/ui";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
 import type {
   ModelDocument,
@@ -167,7 +170,7 @@ export class ModelEditorScene extends Systems.Scene {
     const access = new RoomGrants(room, MODEL_CAPABILITIES)
       .setMaxListeners(kMaxAccessListeners);
     const history = createEditorHistory({ document });
-    const unregisterPixels = registerPixelHistory(history, pixels, { scope: "build" });
+    const unregisterPixels = registerPixelHistory(history, pixels, { scope: "texture" });
     const tab = new TabStore();
     const selection = new BlockSelectionStore();
     const materialFocus = new MaterialFocusStore();
@@ -203,12 +206,14 @@ export class ModelEditorScene extends Systems.Scene {
       access
     });
 
+    const pageTheme = new DocumentTheme();
     const lighting = new ViewLighting({
       scene,
       view,
       environment: this.#options.roomEnvironment
         ?.createRenderTarget(this.world.renderer.source) ?? null,
-      casters: () => blocks.visibleMeshes()
+      casters: () => blocks.visibleMeshes(),
+      theme: pageTheme.mode
     });
     const unfollowLit = view.follow((settings) => {
       blocks.lit = isLit(settings);
@@ -221,13 +226,6 @@ export class ModelEditorScene extends Systems.Scene {
       selection,
       access,
       requestFrame: () => this.world.invalidate()
-    });
-    const hierarchy = new ModelHierarchy({
-      document,
-      edits: animation.buildEdits,
-      textureSize: () => pixels.size(),
-      poses: blocks,
-      access
     });
     const collaboration = new ModelCollaboration({
       room,
@@ -244,6 +242,14 @@ export class ModelEditorScene extends Systems.Scene {
       },
       world: this.world,
       camera: camera.camera
+    });
+    const hierarchy = new ModelHierarchy({
+      document,
+      edits: animation.hierarchyEdits,
+      textureSize: () => pixels.size(),
+      poses: blocks,
+      access,
+      locks: collaboration.lock
     });
     const rest = restTarget({ blocks, lock: collaboration.lock, access });
     const tool = new TransformTool(rest);
@@ -302,6 +308,10 @@ export class ModelEditorScene extends Systems.Scene {
         tool.use(active ? keyer : rest);
       }),
       access.subscribe("change", () => tool.emit("change")),
+      pageTheme.follow((theme) => {
+        lighting.theme = theme;
+        this.world.invalidate();
+      }),
       this.#options.archives.acceptDependency(ANIMATION_SET_DEPENDENCY, ({ id }) => {
         if (animations.link(id)) {
           animationFocus.focusSet(id);

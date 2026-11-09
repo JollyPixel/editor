@@ -60,13 +60,6 @@ export const VOXEL_MODEL_PREFERENCES = definePreferences({
       ],
       default: "front-right"
     },
-    background: {
-      type: "color",
-      label: "Background",
-      group: "View",
-      description: "Empty follows the lighting",
-      default: null
-    },
     reflections: {
       type: "boolean",
       label: "Reflections",

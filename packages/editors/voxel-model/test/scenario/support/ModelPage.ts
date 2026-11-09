@@ -46,7 +46,7 @@ const kOfflineEditor = {
 };
 const kTintMargin = 24;
 
-export type ModelTab = "Build" | "Paint" | "Material" | "Animate";
+export type ModelTab = "Texture" | "Material" | "Animate";
 export type NodeKind = "Block" | "Folder";
 export type TransformMode = "Pos" | "Angle" | "Size" | "Pivot" | "Scale";
 export type RegionState = "Stacked" | "Unfolded" | "Free";
@@ -62,6 +62,7 @@ export class ModelPage {
   readonly archives: ArchiveConsole;
   readonly material: MaterialPanel;
   readonly animate: AnimatePanel;
+  readonly toolbar: Locator;
 
   constructor(
     page: Page
@@ -70,6 +71,7 @@ export class ModelPage {
     this.archives = new ArchiveConsole(page);
     this.material = new MaterialPanel(page);
     this.animate = new AnimatePanel(page);
+    this.toolbar = page.getByRole("toolbar", { name: "Model tools" });
   }
 
   async openOffline(): Promise<void> {
@@ -111,9 +113,8 @@ export class ModelPage {
   history(
     label: "Undo" | "Redo"
   ): Locator {
-    return this.page
-      .locator("jolly-model-editor-history jolly-model-editor-history-buttons")
-      .locator(`jolly-button[label="${label}"]`);
+    return this.toolbar
+      .locator(`jolly-tool-button[data-tool="${label.toLowerCase()}"]`);
   }
 
   async undo(): Promise<void> {
@@ -189,7 +190,7 @@ export class ModelPage {
   transformField(
     axis: "X" | "Y" | "Z"
   ): Locator {
-    return this.page.getByRole("textbox", { name: axis });
+    return this.toolbar.getByRole("textbox", { name: axis });
   }
 
   async select(
@@ -197,7 +198,9 @@ export class ModelPage {
     mode: TransformMode
   ): Promise<void> {
     await this.row(name).click();
-    await this.page.getByRole("radio", { name: mode }).check();
+    const button = this.toolbar.getByRole("button", { name: mode, exact: true });
+    await button.click();
+    await expect(button).toHaveAttribute("aria-pressed", "true");
   }
 
   async transform(
@@ -207,7 +210,7 @@ export class ModelPage {
   ): Promise<void> {
     await this.select(name, mode);
     for (const [axis, component] of Object.entries(value)) {
-      const field = this.page.getByRole("textbox", { name: axis.toUpperCase() });
+      const field = this.toolbar.getByRole("textbox", { name: axis.toUpperCase() });
       await field.fill(String(component));
       await field.press("Enter");
     }
@@ -256,6 +259,22 @@ export class ModelPage {
     }
 
     return blue > red + kTintMargin && blue > green + kTintMargin ? "blue" : "neutral";
+  }
+
+  spaceToggle(): Locator {
+    return this.toolbar
+      .locator("jolly-tool-button[data-tool=\"space\"]")
+      .getByRole("button");
+  }
+
+  async reshape(
+    name: string,
+    shape: string
+  ): Promise<void> {
+    await this.row(name).click({ button: "right" });
+    const menu = this.page.getByRole("menu", { name: "Hierarchy actions" });
+    await menu.getByRole("menuitem", { name: "Shape", exact: true }).hover();
+    await menu.getByRole("menuitem", { name: shape, exact: true }).click();
   }
 
   shapeSelect(): Locator {
