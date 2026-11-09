@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
-  AssetCatalog,
-  AssetRecord
+  AssetPath,
+  type AssetCatalog
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -12,12 +12,19 @@ import {
 import { GAME_ROUTES } from "../../shared/api/game.ts";
 import { gameManifestSchema } from "../../shared/GameManifest.ts";
 
+// CONSTANTS
+const kManifestPath = new AssetPath("game.json");
+
 export interface Game {
   readonly start: string;
   /**
-   * Records whose paths are absolute URLs, resolved against `game.json`.
+   * Records at their project paths.
    */
   readonly catalog: AssetCatalog;
+
+  resolveURL(
+    url: string
+  ): string;
 }
 
 export class GameManifestClient {
@@ -39,17 +46,29 @@ export class GameManifestClient {
         query: { start }
       }
     );
-    const records = Array.from(
-      manifest.assets,
-      (record) => new AssetRecord({
-        ...record.toJSON(),
-        path: new URL(record.path.toString(), this.#endpoint.url).href
-      })
-    );
+    const urls = new Map<string, string>();
+    for (const record of manifest.assets) {
+      const artifact = manifest.artifacts[record.id.value];
+      if (artifact !== undefined) {
+        urls.set(
+          projectPath(record.path.toString()),
+          new URL(artifact, this.#endpoint.url).href
+        );
+      }
+    }
 
     return {
       start: manifest.start,
-      catalog: new AssetCatalog(records)
+      catalog: manifest.assets,
+      resolveURL: (url) => urls.get(projectPath(url)) ?? url
     };
   }
+}
+
+function projectPath(
+  url: string
+): string {
+  return URL.canParse(url) ?
+    url :
+    kManifestPath.resolve(url).toString();
 }

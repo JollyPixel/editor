@@ -107,7 +107,7 @@ async function gameProject(): Promise<GameProject> {
 }
 
 describe("StudioGame", () => {
-  test("lists every asset the account opens, at its build path", async() => {
+  test("lists every asset the account opens, with the path of its build", async() => {
     await using project = await gameProject();
     const scene = await project.create("levels/arena.scene.json", "{}");
     const texture = await project.create("textures/grass.png", "png");
@@ -122,11 +122,16 @@ describe("StudioGame", () => {
       {
         id: texture,
         kind: "texture",
-        path: `builds/${texture}/${encodeURIComponent(revision!)}/grass.png`,
+        path: "textures/grass.png",
         revision
       }
     );
+    assert.equal(
+      player.artifacts[texture],
+      `builds/${texture}/${encodeURIComponent(revision!)}/grass.png`
+    );
     assert.deepEqual(tester.assets.assets.map(({ id }) => id), [scene]);
+    assert.deepEqual(Object.keys(tester.artifacts), [scene]);
   });
 
   test("starts only from a scene the account opens", async() => {

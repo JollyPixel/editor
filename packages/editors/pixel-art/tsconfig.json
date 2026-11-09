@@ -5,6 +5,12 @@
       "path": "../host"
     },
     {
+      "path": "../../asset"
+    },
+    {
+      "path": "../../runtime"
+    },
+    {
       "path": "../../assets/pixel-art"
     },
     {

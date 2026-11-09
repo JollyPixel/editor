@@ -264,3 +264,18 @@ describe("voxelModelAssetKind", () => {
     ]);
   });
 });
+
+describe("voxel model kind build", () => {
+  test("writes the model with the transform and UV fields its stored form omits", async() => {
+    const file = createVoxelModelFile({ texture: kTexture });
+    const stored = VOXEL_MODEL_FILE.encode(file);
+    const handler = voxelModelAssetKind();
+    const state = handler.create("model-1");
+    handler.load(state, stored);
+
+    const built = await handler.build!.build(state, stored);
+
+    assert.notDeepEqual(JSON.parse(new TextDecoder().decode(stored)), file);
+    assert.deepEqual(JSON.parse(new TextDecoder().decode(built)), file);
+  });
+});

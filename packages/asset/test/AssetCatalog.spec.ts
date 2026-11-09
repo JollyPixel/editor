@@ -179,6 +179,13 @@ describe("AssetCatalog", () => {
     );
   });
 
+  test("findByPath returns the record at a path, or undefined", () => {
+    const catalog = new AssetCatalog([heroRecord()]);
+
+    assert.equal(catalog.findByPath(kHeroRecord.path)?.id.value, "hero-model");
+    assert.equal(catalog.findByPath("project:/models/villain.glb"), undefined);
+  });
+
   test("removes a record and returns it", () => {
     const record = heroRecord();
     const catalog = new AssetCatalog([record]);

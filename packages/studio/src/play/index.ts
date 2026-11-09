@@ -60,6 +60,7 @@ async function play(): Promise<void> {
       loaders
     }
   });
+  runtime.manager.setURLModifier(game.resolveURL);
   await setup(runtime.world);
   const scenes = await GameScenes.load(
     runtime.world.assetCoordinator,
@@ -69,7 +70,7 @@ async function play(): Promise<void> {
   await runtime.load({
     scene: scenes.scene(
       game.start,
-      decodeURIComponent(game.catalog.get(game.start).path.name),
+      game.catalog.get(game.start).path.name,
       components
     )
   });

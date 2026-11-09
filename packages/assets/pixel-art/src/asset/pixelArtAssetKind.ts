@@ -3,6 +3,7 @@ import {
   arbitrated,
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
+  PASS_THROUGH_BUILD,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
@@ -122,6 +123,7 @@ export function pixelArtAssetKind(
     extensions: {
       [PIXEL_ART_EXTENSION]: JSON_CONTENT_TYPE
     },
+    build: PASS_THROUGH_BUILD,
     conversions: {
       ".png": async(png) => {
         return {

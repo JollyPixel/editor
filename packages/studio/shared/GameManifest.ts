@@ -2,8 +2,8 @@
 import * as z from "zod";
 import {
   AssetCatalog,
-  AssetRecord,
-  type AssetManifestData
+  type AssetManifestData,
+  type AssetRecord
 } from "@jolly-pixel/asset";
 
 // CONSTANTS
@@ -14,28 +14,37 @@ export const CURRENT_REVISION = "current";
 export interface GameManifestData {
   readonly version: typeof GAME_MANIFEST_VERSION;
   readonly start: string;
+  /**
+   * The project's records, at their project paths.
+   */
   readonly assets: AssetManifestData;
+  /**
+   * URL of each asset's build, relative to `game.json`, by asset ID.
+   */
+  readonly artifacts: Readonly<Record<string, string>>;
 }
 
 export const gameManifestSchema = z.object({
   version: z.literal(GAME_MANIFEST_VERSION),
   start: z.string().min(1),
-  assets: z.unknown().transform((assets) => AssetCatalog.parse(assets))
+  assets: z.unknown().transform((assets) => AssetCatalog.parse(assets)),
+  artifacts: z.record(z.string(), z.string())
 });
 
 export function gameManifest(
   start: string,
   records: Iterable<AssetRecord>
 ): GameManifestData {
-  const built = Array.from(records, (record) => new AssetRecord({
-    ...record.toJSON(),
-    path: artifactPath(record)
-  }));
+  const catalog = new AssetCatalog(records);
 
   return {
     version: GAME_MANIFEST_VERSION,
     start,
-    assets: new AssetCatalog(built).toJSON()
+    assets: catalog.toJSON(),
+    artifacts: Object.fromEntries(Array.from(
+      catalog,
+      (record) => [record.id.value, artifactPath(record)]
+    ))
   };
 }
 

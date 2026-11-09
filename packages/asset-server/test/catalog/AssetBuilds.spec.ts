@@ -24,12 +24,15 @@ interface BuiltLinks {
   builds: number;
 }
 
-function builtLinks(): BuiltLinks {
+function builtLinks(
+  type?: string
+): BuiltLinks {
   const links: BuiltLinks = {
     handler: {
       ...liveLinkHandler(),
       build: {
         version: "1",
+        type,
         build(state): Promise<Uint8Array> {
           links.builds++;
 
@@ -55,6 +58,16 @@ describe("AssetBuilds", () => {
 
     assert.strictEqual(text(built.bytes), "GRASS+SAND");
     assert.strictEqual(built.type, "text/plain; charset=utf-8");
+  });
+
+  test("serves a build under the media type its hook declares", async() => {
+    const links = builtLinks("text/javascript");
+    await using project = await archiveProject({ handlers: [links.handler] });
+    const map = await project.link("map.link", "grass");
+
+    const built = (await project.backend.builds.build(map)).unwrap();
+
+    assert.strictEqual(built.type, "text/javascript");
   });
 
   test("builds the live state of an open asset before it is saved", async() => {

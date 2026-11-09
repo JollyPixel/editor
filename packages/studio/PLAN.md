@@ -62,23 +62,31 @@ export const RUNTIME_COMPONENTS: RuntimeComponentPackage;
 
 ### Scripts compile one module per asset
 
-The `script` build hook strips types (SWC wasm in the browser,
-`node:module` in Node) and rewrites imports with es-module-lexer:
+The `script` build hook compiles with TypeScript's `transpileModule` (from
+ts-morph, Node only): `@SceneProperty` is a legacy decorator, which
+strip-only compilers leave as syntax no browser runs. It drops type-only
+imports and checks the others with es-module-lexer:
 
-- Another script, `./Enemy.ts`, becomes `jolly-script:<assetId>`. An import
-  names an asset ID, never content, so editing `Enemy.ts` leaves
-  `Player.ts` built.
+- Another script stays a relative import, `./Enemy.ts`. Resolving it to an
+  asset ID at build time would need the catalog and would put another asset's
+  path into the artifact, so the player resolves it against the importing
+  script's project path instead. Editing `Enemy.ts` leaves `Player.ts` built.
 - `@jolly-pixel/engine`, `three`, `three/webgpu` and `three/tsl` stay bare. The
-  player resolves them to its own copies, so scripts and components share one
-  engine and one three.js.
+  player links them to `data:` modules over its own copies (the registry
+  `ShaderModule` used), so scripts and components share one engine and one
+  three.js.
 - Any other import fails the build and names the specifier. npm dependencies
   in scripts are out of scope.
 
-The game's `script` loader imports the module and returns its exports.
-`ScriptDefinition.create` takes `exports[data.behavior]` from the slot value,
-so two scripts may both export `Player`. The editor keeps `ScriptOutline` as
-its slot value: the script package declares two `AssetType`s on the `script`
-kind, one per side.
+The game's `script` loader links and imports the module and returns its
+exports; an imported script is linked first, and every importer links the
+same `data:` URL, so it is evaluated once. Scripts that import each other are
+refused: a `data:` module
+needs its imports' URLs before it exists. `ScriptDefinition.create` takes
+`exports[data.behavior]` from the slot value, so two scripts may both export
+`Player`. The editor keeps `ScriptOutline` as its slot value: the script
+package declares two `AssetType`s on the `script` kind, one per side.
+Shaders build and load the same way, three.js imports only.
 
 ### Artifacts and their key
 
@@ -92,11 +100,12 @@ interface AssetBuild<TState> {
 
 - An artifact keeps the asset's extension, and its media type comes from the
   handler's `extensions`: the engine's model loader picks GLTF, FBX or OBJ by
-  extension. A kind whose artifact needs another extension (scripts, `.js`)
-  adds an output extension to the hook in step 4.
+  extension. A hook may declare its own media `type` (scripts and shaders,
+  `text/javascript`).
 - Key: `sha256(kind, build.version, contentHash(content))`.
-- Another asset never enters the artifact. A voxel map loader asks the
-  coordinator for its blockset; a prefab stays a scene `FileScene` expands.
+- Another asset never enters the artifact. A loader loads the assets its value
+  needs through `AssetLoadContext.assets` (a voxel map its blocksets, a voxel
+  model its texture); a prefab stays a scene `FileScene` expands.
 - A path never enters the key: renaming or moving an asset rebuilds nothing.
 - `AssetBuilds` keeps an in-memory revision index, catalog `revision` to key,
   so an unchanged asset is serialized and hashed once per process. An open
@@ -115,13 +124,16 @@ interface GameManifest {
   version: 1;
   start: string;
   assets: AssetManifestData;
+  artifacts: Record<string, string>;
 }
 ```
 
-- Every catalog record the account opens goes into `assets`, with `path` set
-  to `/api/game/builds/<id>/<revision>/<file name>` (`current` when a record
-  has no revision). Scripts load scenes by reference, so the start scene's
-  dependency closure does not cover the game.
+- Every catalog record the account opens goes into `assets` at its project
+  path, and `artifacts` maps its ID to `builds/<id>/<revision>/<file name>`
+  (`current` when a record has no revision). The player's `LoadingManager`
+  URL modifier turns each project path into its build URL. Scripts load
+  scenes by reference, so the start scene's dependency closure does not cover
+  the game.
 - Play builds lazily. `GET /api/game?start=<id>` builds nothing; the first
   request for an artifact builds it. It is cached as immutable while the
   requested revision is current, and served `no-store` otherwise, so a game
@@ -224,17 +236,36 @@ Each step ends with the touched workspaces' tests, `pnpm run typecheck` and
   game window, not the studio.
 - Not done: offline transport (see open questions).
 
-### 4. Scripts
+### 4. Scripts and shaders (done, online only)
 
-- The `script` build hook and loader, `ScriptDefinition` reading behaviors from
-  the slot.
-- The resolution of bare and `jolly-script:` specifiers in the player.
+- `AssetLoadContext.assets` (`@jolly-pixel/asset`): a loader loads the assets
+  it depends on into the same coordinator and reads the catalog
+  (`AssetCatalog.findByPath`, `AssetPath.resolve`).
+- `game.json` keeps project paths, with an `artifacts` map; the player's URL
+  modifier fetches builds.
+- `script` and `shader` build hooks in `asset.script` (`#compiler`, Node only),
+  `AssetBuild.type` in `asset-server`. One `ScriptImportPolicy` per kind
+  checks the build and refuses links in the player.
+- Engine `ScriptDefinition` reads `exports[behavior]` from its `script` slot
+  (`SCRIPT_MODULE_ASSET`), the constructor record staying the fallback.
+- `editor.script/runtime`: `ModuleRegistry` and `linkModule` shared with the
+  shader editor, `ScriptModuleLoader`, `ShaderModuleLoader`.
+- Checked in the dev studio: a decorated behavior importing a helper script
+  spins a mesh with its scene property value; console lines point at the `.ts`
+  source.
 
-### 5. Voxel and pixel-art kinds
+### 5. Voxel and pixel-art kinds (done for voxelmap, blockset, voxelmodel, pixelart)
 
-One kind per step, a build hook and a loader each: voxelmap, blockset,
-voxelmodel, voxelanimation, pixelart, terrain. Until then those components
-render in the editor only, as `editor.scene`'s ROADMAP says.
+- Builds: pass-through for pixelart, blockset and voxelmap; voxelmodel writes
+  its expanded file.
+- `editor.pixel-art/runtime` (`PIXEL_ART_DOCUMENT`, a `PixelDocument`),
+  `editor.voxel-model/runtime` (`GameVoxelModel`, texture through the
+  pixel-art loader), `editor.voxel-map/runtime` (`GameVoxelMap` reusing the
+  viewer's `BlocksetSurface` and `BlocksetAtlasBridge`, `GameBlockset`).
+- Checked in the dev studio: a map with its blockset atlas and a textured voxel
+  model play next to a scripted mesh.
+- Left out: voxelanimation, which the scene's voxel model does not play yet,
+  and terrain, which has no scene component; each needs its component first.
 
 ### 6. Export
 
@@ -245,24 +276,27 @@ render in the editor only, as `editor.scene`'s ROADMAP says.
 
 ## Open questions
 
-- **Script specifier resolution.** An import map generated from `game.json` is
-  the cleanest, but it must exist before the player's first module loads, and
-  Vite hashes chunk names. The fallback is the registry shim `ShaderModule`
-  already uses (`Symbol.for("jolly-pixel.shader.modules")` plus generated
-  modules). Spike at the start of step 4.
+- **Script import cycles.** Linking through `data:` modules refuses scripts
+  that import each other by value. An import map from `game.json`, injected
+  before the scripts load, would allow them with real URLs; it needs browsers
+  to merge an import map added after the page's first module.
 - **Offline transport.** Runtime loaders fetch URLs, and three.js's
   `LoadingManager.setURLModifier` is synchronous, so an artifact built on
   demand by the opener cannot be fetched as-is. Candidates: a service worker on
   `/play/` that asks the opener, or eager blob URLs for the start scene's
   closure. Step 3 shipped online only: `StudioPlay` exists for a signed-in
-  studio, so the offline and static studios show no Play button yet.
+  studio, so the offline and static studios show no Play button yet. Scripts
+  and shaders also build in Node only: an offline build needs a browser
+  TypeScript compiler that handles legacy decorators.
 - **Unknown kinds in a scene.** A scene that references a kind with no runtime
-  loader yet (a voxel map before step 5) fails its whole load. Skipping such
+  loader (a terrain, a voxel animation) fails its whole load. Skipping such
   components with a warning would let the rest of the scene play.
 - **Cache size.** No eviction in the first cut; deleting `.jollypixel/builds/`
   is the remedy. Add an LRU cap once a real project shows the size.
 - **Models with sibling files.** A `.gltf` with an external `.bin` or an
-  `.obj` with its `.mtl` loads the sibling by a relative URL, which a build
-  path does not serve. `.glb` and `.fbx` are self-contained.
+  `.obj` with its `.mtl` loads the sibling by a path relative to its own. Since
+  step 4 that path goes through the URL modifier, so a sibling that is an asset
+  of the project should load; not checked yet. `.glb` and `.fbx` are
+  self-contained.
 - **Physics setup.** Loading Rapier's wasm for every game is a cost; the setup
   hook could attach the physics world only when a scene holds a RigidBody.

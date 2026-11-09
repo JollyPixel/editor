@@ -5,6 +5,7 @@ import {
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
   JsonAssetFile,
+  PASS_THROUGH_BUILD,
   type AssetKindHandler,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
@@ -201,6 +202,7 @@ export function blocksetAssetKind(
       [BLOCKSET_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
+    build: PASS_THROUGH_BUILD,
 
     create(): BlocksetState {
       return new BlocksetState({

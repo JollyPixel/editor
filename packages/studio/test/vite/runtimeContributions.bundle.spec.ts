@@ -80,9 +80,13 @@ describe("runtime contributions bundle", () => {
   test("bundles a runtime entry from every contributing package", () => {
     assert.notEqual(packages.length, 0);
     for (const directory of packages) {
-      const runtime = path.join(directory, "src", "runtime");
+      const runtimes = ["src", "dist"].map(
+        (root) => path.join(directory, root, "runtime")
+      );
       assert.ok(
-        moduleIds.some((id) => path.normalize(id).startsWith(runtime)),
+        moduleIds.some((id) => runtimes.some(
+          (runtime) => path.normalize(id).startsWith(runtime)
+        )),
         `${directory} contributes no runtime module`
       );
     }

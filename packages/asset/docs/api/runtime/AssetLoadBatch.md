@@ -11,7 +11,7 @@ type AssetLoadBatchStatus =
   | "ready"
   | "failed";
 
-interface AssetLoadBatchOptions extends AssetLoadContext {
+interface AssetLoadBatchOptions extends AssetLoadOptions {
   onProgress?: (progress: AssetLoadProgress) => void;
 }
 

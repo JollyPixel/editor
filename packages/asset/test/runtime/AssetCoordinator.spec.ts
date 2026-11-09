@@ -76,6 +76,23 @@ describe("AssetCoordinator", () => {
     assert.equal(received, controller.signal);
   });
 
+  test("loads the assets a loader depends on into the same coordinator", async() => {
+    const coordinator = createCoordinator(async(record, context) => {
+      if (record.id.value === "farewell") {
+        return "bye";
+      }
+      const farewell = await context.assets.load(textReference("farewell"));
+      const found = context.assets.catalog.get("farewell").path.toString();
+
+      return `hello, ${farewell} from ${found}`;
+    });
+
+    const greeting = await coordinator.load(textReference("greeting"));
+
+    assert.equal(greeting, "hello, bye from memory:farewell");
+    assert.equal(coordinator.get(textReference("farewell")), "bye");
+  });
+
   test("keeps loaded values scoped to one coordinator", async() => {
     const reference = textReference("greeting");
     const first = createCoordinator(readSource);

@@ -159,9 +159,13 @@ async function artifactKey(
 }
 
 function contentType(
-  handler: AnyAssetKindHandler,
+  handler: BuildHandler,
   record: AssetRecord
 ): string {
+  if (handler.build.type !== undefined) {
+    return handler.build.type;
+  }
+
   const extension = record.path.matchExtension(
     Object.keys(handler.extensions)
   );

@@ -108,6 +108,26 @@ describe("AssetPath", () => {
     });
   });
 
+  describe("resolve", () => {
+    test("resolves a specifier like a relative URL, decoded", () => {
+      const cases: Array<[path: string, specifier: string, expected: string]> = [
+        ["scripts/Player.ts", "./tuning/speed.js", "scripts/tuning/speed.js"],
+        ["scripts/Player.ts", "../shared/my%20label", "shared/my label"],
+        ["scripts/Player.ts", "/Enemy.ts", "Enemy.ts"],
+        ["Player.ts", "./models/./ship.bin", "models/ship.bin"],
+        ["project:/models/hero.gltf", "./hero.bin", "project:/models/hero.bin"]
+      ];
+
+      for (const [path, specifier, expected] of cases) {
+        assert.strictEqual(
+          new AssetPath(path).resolve(specifier).toString(),
+          expected,
+          `${path} + ${specifier}`
+        );
+      }
+    });
+  });
+
   describe("equals", () => {
     test("compares the full path", () => {
       const path = new AssetPath("maps/world.voxelmap.json");

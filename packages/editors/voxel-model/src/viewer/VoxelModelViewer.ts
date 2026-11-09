@@ -8,7 +8,7 @@ import type {
   AssetLease,
   AssetLeases
 } from "@jolly-pixel/editor.host";
-import { PixelCanvasTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
+import type { PixelCanvasTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -21,6 +21,7 @@ import {
   linkedTextureId,
   type ModelDependencies
 } from "./linkedTexture.ts";
+import { pixelModelTexture } from "./pixelModelTexture.ts";
 
 // CONSTANTS
 export const VOXEL_MODEL_DOCUMENT_KIND = voxelModelDocumentKind();
@@ -72,19 +73,9 @@ export class VoxelModelViewer implements VoxelModelSource {
     this.ready.catch(() => undefined);
 
     const pixels = this.#pixels.document;
-    this.#canvas = new PixelCanvasTexture({
-      document: pixels,
-      get textureSize() {
-        return pixels.size();
-      },
-      textureCanvas: () => pixels.buffer.canvas()
-    }, {
-      flush: "immediate"
-    });
-    this.texture = {
-      map: this.#canvas.texture,
-      size: () => pixels.size()
-    };
+    const { canvas, texture } = pixelModelTexture(pixels);
+    this.#canvas = canvas;
+    this.texture = texture;
     this.#canvas.on("resized", this.#onTextureResized);
     pixels.on("changed", this.#onPixelsChanged);
   }

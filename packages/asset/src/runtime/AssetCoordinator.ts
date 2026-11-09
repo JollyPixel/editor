@@ -7,7 +7,10 @@ import {
   type AssetLoadBatchTask,
   startAssetLoadBatch
 } from "./AssetLoadBatch.ts";
-import type { AssetLoadContext } from "./AssetLoader.ts";
+import type {
+  AssetLoadContext,
+  AssetLoadOptions
+} from "./AssetLoader.ts";
 import type { AssetLoaderRegistry } from "./AssetLoaderRegistry.ts";
 import type { AssetRecord } from "../AssetRecord.ts";
 import type { AssetReference } from "../AssetReference.ts";
@@ -51,14 +54,14 @@ export class AssetCoordinator {
 
   async load<TValue>(
     reference: AssetReference<TValue>,
-    context: AssetLoadContext = {}
+    options: AssetLoadOptions = {}
   ): Promise<TValue> {
     const record = this.#catalog.resolve(reference);
 
     return this.#load(
       reference,
       record,
-      context
+      this.#context(options)
     );
   }
 
@@ -66,9 +69,9 @@ export class AssetCoordinator {
     references: Iterable<AssetReference<unknown>>,
     options: AssetLoadBatchOptions = {}
   ): AssetLoadBatch {
-    const context: AssetLoadContext = {
+    const context = this.#context({
       signal: options.signal
-    };
+    });
     const seen = new Set<string>();
     const pending: AssetLoadBatchTask[] = [];
 
@@ -104,6 +107,18 @@ export class AssetCoordinator {
     reference: AssetReference<TValue>
   ): TValue | undefined {
     return this.#store.evict(reference);
+  }
+
+  #context(
+    options: AssetLoadOptions
+  ): AssetLoadContext {
+    return {
+      signal: options.signal,
+      assets: {
+        catalog: this.#catalog,
+        load: (reference) => this.load(reference, options)
+      }
+    };
   }
 
   async #load<TValue>(

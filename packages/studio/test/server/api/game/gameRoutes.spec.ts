@@ -54,20 +54,24 @@ describe("game routes", () => {
     assert.equal(response.status, 404);
   });
 
-  test("names the asset whose build fails", async() => {
+  test("serves the build of an asset, never cached at a revision that is not current", async() => {
     await using backend = await serveBackend();
     const fetch = await signedIn(backend);
 
     const response = await fetch(
-      gameUrl(backend, `builds/${kSeededMap}/current/overworld.voxelmap.json`)
+      gameUrl(backend, `builds/${kSeededMap}/stale/overworld.voxelmap.json`)
     );
 
-    assert.equal(response.status, 422);
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get("content-type") ?? "", /^application\/json/);
     assert.equal(response.headers.get("cache-control"), "no-store");
-    assert.deepEqual(await response.json(), {
-      code: "build-failed",
-      message: "\"maps/overworld.voxelmap.json\" cannot be built: " +
-        `Asset "${kSeededMap}" of kind "voxelmap" has no game build.`
+    assert.partialDeepStrictEqual(await response.json(), {
+      blocksets: [{
+        asset: {
+          id: "blockset-overworld",
+          kind: "blockset"
+        }
+      }]
     });
   });
 
@@ -81,6 +85,6 @@ describe("game routes", () => {
       statuses.push((await fetch(artifact)).status);
     }
 
-    assert.deepEqual(statuses, [422, 422, 422, 422, 422, 422]);
+    assert.deepEqual(statuses, [200, 200, 200, 200, 200, 200]);
   });
 });

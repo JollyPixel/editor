@@ -7,6 +7,7 @@ import {
   arbitrated,
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
+  PASS_THROUGH_BUILD,
   SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
@@ -177,6 +178,7 @@ export function voxelMapAssetKind(
       [VOXEL_MAP_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
+    build: PASS_THROUGH_BUILD,
     companions: [
       {
         kind: BLOCKSET_KIND,

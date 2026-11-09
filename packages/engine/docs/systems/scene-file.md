@@ -564,4 +564,4 @@ captures the live component back to data.
 - `LightDefinition` (`Light`): a [light](../components/light.md).
 - `MeshDefinition` (`Mesh`): a [mesh renderer](../components/renderers.md#meshrenderer).
 - `ScriptDefinition` (`Script`): a [behavior](../components/behavior.md#scene-files)
-  found by name in the record it was given.
+  taken from its `script` asset, or found by name in the record it was given.

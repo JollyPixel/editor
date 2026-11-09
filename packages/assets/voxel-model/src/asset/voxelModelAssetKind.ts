@@ -38,6 +38,9 @@ import type {
   VoxelModelSnapshot
 } from "../network/types.ts";
 
+// CONSTANTS
+const kEncoder = new TextEncoder();
+
 export class VoxelModelState {
   #tree = new ModelTree();
   #texture: AssetReferenceData | null = null;
@@ -120,6 +123,12 @@ export function voxelModelAssetKind(
       [VOXEL_MODEL_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
+    build: {
+      version: "1",
+      build: (state) => Promise.resolve(
+        kEncoder.encode(JSON.stringify(state.toJSON()))
+      )
+    },
     conversions: {
       [CSMODEL_EXTENSION]: voxelModelFromCsModel
     },

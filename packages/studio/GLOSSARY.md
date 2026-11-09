@@ -192,10 +192,12 @@ layouts, expanded folders, the kind filter.
 
 ### Game manifest
 
-`game.json`, served by `GET /api/game?start=<scene id>`: the start scene and a
-catalog of every asset the account opens, each at a build path relative to
-`game.json`. An artifact is built on its first request and served for good
-while its revision is current.
+`game.json`, served by `GET /api/game?start=<scene id>`: the start scene, a
+catalog of every asset the account opens at its project path, and
+`artifacts`, the URL of each asset's build relative to `game.json`. The player
+turns every fetch of a project path into its build URL, so a loader that
+resolves a path, such as a script import, uses project paths. An artifact is
+built on its first request and served for good while its revision is current.
 
 ### Default scene
 

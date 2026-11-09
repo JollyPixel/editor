@@ -33,18 +33,17 @@ type ScriptAssets = {
 // CONSTANTS
 export const SCRIPT_OUTLINE_ASSET = new AssetType<ScriptOutline>(SCRIPT_KIND);
 
-class ScriptAssetDefinition extends ScriptDefinition {
-  readonly assets = {
-    script: SCRIPT_OUTLINE_ASSET
-  };
-
-  constructor() {
-    super({});
-  }
-}
+const kRuntimeScript = new ScriptDefinition();
 
 const kScript: SceneComponentKind<ScriptData, ScriptAssets> = {
-  definition: new ScriptAssetDefinition(),
+  definition: {
+    type: kRuntimeScript.type,
+    assets: {
+      script: SCRIPT_OUTLINE_ASSET
+    },
+    parse: (data) => kRuntimeScript.parse(data),
+    create: () => null
+  },
   label: "Script",
   category: "logic",
   form: (data, assets) => scriptForm(data, assets.resolve("script")),

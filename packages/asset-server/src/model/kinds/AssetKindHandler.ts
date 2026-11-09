@@ -150,6 +150,11 @@ export interface AssetBuild<TState = unknown> {
    * invalidates every artifact built before.
    */
   readonly version: string;
+  /**
+   * Media type of the built content.
+   * @default the type of the asset extension
+   */
+  readonly type?: string;
 
   build(
     state: TState,

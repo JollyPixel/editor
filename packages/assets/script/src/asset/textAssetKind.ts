@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   InvalidAssetFileError,
+  type AssetBuild,
   type AssetKindHandler,
   type AssetRelay,
   type AssetRelaySchemas,
@@ -35,6 +36,7 @@ export interface TextKindOptions<TRelay extends object> {
   template: string;
   snapshot?: SnapshotPolicy;
   relay?: TextKindRelay<TRelay>;
+  build?: AssetBuild<ScriptText>;
 }
 
 export interface TextAssetKindOptions {
@@ -67,6 +69,7 @@ export function textKindHandler<TRelay extends object = never>(
     kind,
     extensions: options.extensions,
     snapshot: options.snapshot,
+    build: options.build,
 
     create(): ScriptText {
       return new ScriptText(template);

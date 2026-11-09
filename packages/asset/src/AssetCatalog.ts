@@ -4,6 +4,7 @@ import * as z from "zod/mini";
 // Import Internal Dependencies
 import { AssetId } from "./AssetId.ts";
 import { AssetKind } from "./AssetKind.ts";
+import { AssetPath } from "./AssetPath.ts";
 import type { AssetReference } from "./AssetReference.ts";
 import {
   AssetRecord,
@@ -82,6 +83,19 @@ export class AssetCatalog implements Iterable<AssetRecord> {
     return this.#records.get(
       AssetId.from(id).value
     );
+  }
+
+  findByPath(
+    path: AssetPath | string
+  ): AssetRecord | undefined {
+    const expected = AssetPath.from(path);
+    for (const record of this.#records.values()) {
+      if (record.path.equals(expected)) {
+        return record;
+      }
+    }
+
+    return undefined;
   }
 
   get(
