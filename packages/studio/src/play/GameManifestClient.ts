@@ -3,17 +3,28 @@ import {
   AssetPath,
   type AssetCatalog
 } from "@jolly-pixel/asset";
+import type * as z from "zod";
 
 // Import Internal Dependencies
 import {
   ApiEndpoint,
   type ApiEndpointOptions
 } from "../api/ApiEndpoint.ts";
+import type { ApiRoute } from "../../shared/api/common.ts";
 import { GAME_ROUTES } from "../../shared/api/game.ts";
-import { gameManifestSchema } from "../../shared/GameManifest.ts";
+import {
+  GAME_MANIFEST_FILE,
+  gameManifestSchema
+} from "../../shared/GameManifest.ts";
 
 // CONSTANTS
 const kManifestPath = new AssetPath("game.json");
+const kExportedManifest = {
+  method: "GET",
+  path: GAME_MANIFEST_FILE
+} as const satisfies ApiRoute;
+
+type GameManifest = z.output<typeof gameManifestSchema>;
 
 export interface Game {
   readonly start: string;
@@ -39,13 +50,24 @@ export class GameManifestClient {
   async load(
     start: string
   ): Promise<Game> {
-    const manifest = await this.#endpoint.json(
+    return this.#game(await this.#endpoint.json(
       GAME_ROUTES.manifest,
       gameManifestSchema,
       {
         query: { start }
       }
+    ));
+  }
+
+  async loadExported(): Promise<Game> {
+    return this.#game(
+      await this.#endpoint.json(kExportedManifest, gameManifestSchema)
     );
+  }
+
+  #game(
+    manifest: GameManifest
+  ): Game {
     const urls = new Map<string, string>();
     for (const record of manifest.assets) {
       const artifact = manifest.artifacts[record.id.value];

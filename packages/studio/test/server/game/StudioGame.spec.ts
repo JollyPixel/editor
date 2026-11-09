@@ -5,105 +5,30 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
-import {
-  binaryAssetKind,
-  createAssetBackend,
-  textureAssetKind,
-  type AssetBackend
-} from "@jolly-pixel/asset-server";
-import { MemoryAssetSource } from "@jolly-pixel/asset-source";
-import * as EventStore from "@jolly-pixel/event-store";
-
 // Import Internal Dependencies
 import { GameBuildError } from "../../../server/game/errors/GameBuildError.ts";
 import { StudioGame } from "../../../server/game/StudioGame.ts";
-import { StudioAccess } from "../../../server/project/StudioAccess.ts";
 import { UnknownAssetError } from "../../../server/shares/errors/UnknownAssetError.ts";
+import {
+  GAME_ACCESS,
+  gameAccount as account,
+  gameProject as openGameProject,
+  type GameProject as OpenedProject
+} from "../../helpers/gameProject.ts";
 
-// CONSTANTS
-const kActor: EventStore.Actor = {
-  type: "user",
-  id: "alice"
-};
-const kAccess = StudioAccess.from({
-  defaultRole: "player",
-  roles: {
-    player: {
-      "*.$join": "write",
-      "*": "read"
-    },
-    tester: {
-      "texture:*": "void",
-      "*.$join": "write",
-      "*": "read"
-    }
-  },
-  accessRequests: false
-}, "project.json");
-
-function account(
-  role: string
-): Account {
-  return {
-    id: role,
-    username: role,
-    role,
-    owner: false
-  };
-}
-
-interface GameProject extends AsyncDisposable {
-  readonly backend: AssetBackend;
+interface GameProject extends OpenedProject {
   readonly game: StudioGame;
-  create(path: string, content: string): Promise<string>;
 }
 
 async function gameProject(): Promise<GameProject> {
-  const eventStore = EventStore.persistence.memory();
-  const backend = await createAssetBackend({
-    source: new MemoryAssetSource(),
-    eventStore,
-    handlers: [
-      textureAssetKind(),
-      {
-        ...binaryAssetKind,
-        kind: "scene",
-        extensions: { ".scene.json": "application/json" }
-      },
-      {
-        ...binaryAssetKind,
-        kind: "voxelmap",
-        extensions: { ".voxelmap.json": "application/json" },
-        build: undefined
-      }
-    ],
-    reconcile: {
-      watch: false
-    }
-  });
+  const project = await openGameProject();
 
-  return {
-    backend,
+  return Object.assign(project, {
     game: new StudioGame({
-      project: { access: kAccess },
-      backend
-    }),
-    async create(path, content) {
-      const created = await backend.writer.create({
-        path,
-        data: new TextEncoder().encode(content),
-        actor: kActor
-      });
-
-      return created.unwrap().assetId;
-    },
-    async [Symbol.asyncDispose]() {
-      await backend.close();
-      eventStore.close();
-    }
-  };
+      project: { access: GAME_ACCESS },
+      backend: project.backend
+    })
+  });
 }
 
 describe("StudioGame", () => {

@@ -1629,6 +1629,9 @@ importers:
       fastify:
         specifier: 5.12.7
         version: 5.12.7
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
       lit:
         specifier: 3.3.3
         version: 3.3.3

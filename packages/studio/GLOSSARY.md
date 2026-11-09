@@ -211,6 +211,16 @@ The `play/index.html` page that runs a game from its game manifest, in its own
 `jolly-play` window. The shell opens it, reuses it on the next Play, and shows
 its errors as notifications.
 
+### Game export
+
+`GET /api/project/game.zip`, offered as Export game in the Play menu to a role
+with `studio.$export`. It builds every asset whose kind has a build, fails on
+the first error, and zips the built player as `index.html`, a game manifest
+starting from the default scene, and each artifact at the `builds/` path Play
+serves it from. A `jolly-game` meta in the page tells the player to read `game.json`
+beside it instead of the studio API. The game runs from any static HTTP
+server, not from `file://`.
+
 ### Offline mode
 
 The asset back-end the shell runs in the browser when the catalog is

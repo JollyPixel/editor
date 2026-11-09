@@ -23,6 +23,10 @@ export const PROJECT_ROUTES = {
     method: "GET",
     path: "archive"
   },
+  game: {
+    method: "GET",
+    path: "game.zip"
+  },
   settings: {
     method: "GET",
     path: "settings"

@@ -66,4 +66,41 @@ describe("GameManifestClient", () => {
       ]
     );
   });
+
+  test("loads an exported game.json and resolves its artifacts beside it", async() => {
+    const requested: string[] = [];
+    const client = new GameManifestClient({
+      url: "http://localhost/quest/",
+      fetch: async(input) => {
+        requested.push(String(input));
+
+        return Response.json({
+          version: 1,
+          start: "arena",
+          assets: {
+            version: 1,
+            assets: [
+              {
+                id: "arena",
+                kind: "scene",
+                path: "levels/arena.scene.json"
+              }
+            ]
+          },
+          artifacts: {
+            arena: "builds/arena/current/arena.scene.json"
+          }
+        });
+      }
+    });
+
+    const game = await client.loadExported();
+
+    assert.deepEqual(requested, ["http://localhost/quest/game.json"]);
+    assert.strictEqual(game.start, "arena");
+    assert.strictEqual(
+      game.resolveURL("levels/arena.scene.json"),
+      "http://localhost/quest/builds/arena/current/arena.scene.json"
+    );
+  });
 });

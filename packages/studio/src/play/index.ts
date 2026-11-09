@@ -7,13 +7,17 @@ import {
 import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { GameManifestClient } from "./GameManifestClient.ts";
+import {
+  GameManifestClient,
+  type Game
+} from "./GameManifestClient.ts";
 import { GameScenes } from "./GameScenes.ts";
 import {
   PLAY_ERROR,
   type PlayError
 } from "./protocol.ts";
 import { GAME_URL_PATH } from "../../shared/api/game.ts";
+import { GAME_MANIFEST_META } from "../../shared/GameManifest.ts";
 
 // CONSTANTS
 const kCanvas = "#game-canvas";
@@ -41,16 +45,27 @@ function report(
   }
 }
 
-async function play(): Promise<void> {
+async function loadGame(): Promise<Game> {
+  if (document.querySelector(`meta[name="${GAME_MANIFEST_META}"]`) !== null) {
+    return new GameManifestClient({
+      url: new URL("./", document.baseURI)
+    }).loadExported();
+  }
+
   const start = new URLSearchParams(location.search).get(kStartParam);
   if (start === null || start === "") {
     throw new Error("No scene to play: press Play in the studio.");
   }
 
   const studioRoot = new URL("../", document.baseURI);
-  const game = await new GameManifestClient({
+
+  return new GameManifestClient({
     url: new URL(`.${GAME_URL_PATH}`, studioRoot)
   }).load(start);
+}
+
+async function play(): Promise<void> {
+  const game = await loadGame();
   const { components, loaders, setup } = contributedRuntimeComponents(
     contributions
   );

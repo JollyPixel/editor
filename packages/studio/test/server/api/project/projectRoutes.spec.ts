@@ -100,3 +100,19 @@ describe("GET /api/project/archive", () => {
     );
   });
 });
+
+describe("GET /api/project/game.zip", () => {
+  test("answers 409 while the project has no default scene", async() => {
+    await using backend = await serveBackend({ defaultRole: "spectator" });
+    const owner = archiveClient(backend, await signedIn(backend, "Alice"));
+
+    await assert.rejects(
+      owner.downloadGame(),
+      {
+        name: "ApiRequestError",
+        status: 409,
+        message: "the project has no default scene: set one before exporting the game"
+      }
+    );
+  });
+});

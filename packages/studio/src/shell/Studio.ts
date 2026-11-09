@@ -38,6 +38,7 @@ import { SettingsSections } from "./settings/SettingsSections.ts";
 import type { SettingsOpenEvent } from "./settings/SettingsOpenEvent.ts";
 import type { StudioPlay } from "../play/StudioPlay.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
+import type { FileDownload } from "../browser/FileDownload.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
 import "./home/StudioHome.ts";
@@ -239,6 +240,9 @@ export class Studio extends LitElement {
   @state()
   declare _play: StudioPlay | null;
 
+  @state()
+  declare _exportGame: (() => Promise<FileDownload>) | null;
+
   #session: StudioSession | null = null;
   #scopes: PreferenceScopes | null = null;
   #browserState = new BrowserState();
@@ -259,6 +263,7 @@ export class Studio extends LitElement {
     super();
     this._assets = null;
     this._play = null;
+    this._exportGame = null;
     this._sections = SettingsSections.EMPTY;
   }
 
@@ -309,6 +314,9 @@ export class Studio extends LitElement {
     });
     this.#session = session;
     this._play = session.play;
+    this._exportGame = user.online && user.rights.allows("export") ?
+      () => user.exportGame() :
+      null;
     this.#scopes = options.scopes;
     this._sections = options.settings;
     this.#user.attach(user);
@@ -370,7 +378,9 @@ export class Studio extends LitElement {
         <jolly-toolbar id="studio-actions" label="Studio actions">
           <studio-play-button
             .play=${this._play}
+            .exportGame=${this._exportGame}
             @settings-open=${this.#openSettings}
+            @studio-error=${this.#logError}
           ></studio-play-button>
           <studio-account
             .account=${account}

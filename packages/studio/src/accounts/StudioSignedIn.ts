@@ -147,6 +147,10 @@ export class StudioSignedIn extends EventTarget {
     return this.#api.archive.download();
   }
 
+  exportGame(): Promise<FileDownload> {
+    return this.#api.archive.downloadGame();
+  }
+
   auditPages(): AuditPages {
     return new AuditPages(this.#api.audit);
   }

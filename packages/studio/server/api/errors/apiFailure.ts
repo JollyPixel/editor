@@ -6,6 +6,7 @@ import { InvalidPreferencesError } from "@jolly-pixel/preferences";
 import { ApiError } from "./ApiError.ts";
 import { accountsFailure } from "./accountsFailure.ts";
 import { GameBuildError } from "../../game/errors/GameBuildError.ts";
+import { GameExportError } from "../../game/errors/GameExportError.ts";
 import { InvalidSettingsError } from "../../project/errors/InvalidSettingsError.ts";
 import { ProjectRightRefusedError } from "../../../shared/errors/ProjectRightRefusedError.ts";
 import { RoleInUseError } from "../../project/errors/RoleInUseError.ts";
@@ -45,6 +46,9 @@ export function apiFailure(
   }
   if (error instanceof GameBuildError) {
     return new ApiError(422, "build-failed", error.message);
+  }
+  if (error instanceof GameExportError) {
+    return new ApiError(409, "not-exportable", error.message);
   }
   if (error.statusCode === kPayloadTooLarge) {
     return new ApiError(

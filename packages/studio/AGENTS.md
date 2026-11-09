@@ -7,6 +7,9 @@
   editor.host, network, asset-server or an asset package, rebuild it, or run
   `pnpm run build:deps` to rebuild them all.
   `pnpm run dev:editors` watches ui, editor.host and the pixel-art lib.
+- Game export ships the player from `dist/`, in dev too: run
+  `pnpm run build:hosted` after changing `src/play/` or a runtime
+  contribution, or the zip holds a stale player.
 - Editors and kinds under `packages/editors` and `packages/assets` resolve by
   name from those folders (`StudioProject.resolver`). Add one to
   `package.json` only when studio code imports it, so the `^...` filter skips

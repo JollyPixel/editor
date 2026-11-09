@@ -36,6 +36,7 @@ import { GAME_URL_PATH } from "../../shared/api/game.ts";
 import { PROJECT_URL_PATH } from "../../shared/api/project.ts";
 import { SHARES_URL_PATH } from "../../shared/api/shares.ts";
 import type { AuditFeed } from "../audit/AuditFeed.ts";
+import type { GameExport } from "../game/GameExport.ts";
 import type { StudioGame } from "../game/StudioGame.ts";
 import { StoredPreferences } from "../preferences/StoredPreferences.ts";
 import type { ProjectArchive } from "../project/ProjectArchive.ts";
@@ -59,6 +60,7 @@ export interface StudioApiOptions {
   accounts: Accounts;
   shares: StudioShares;
   archive: ProjectArchive;
+  gameExport: GameExport;
   settings: ProjectSettings;
   audit: AuditFeed;
   game: StudioGame;
@@ -141,6 +143,7 @@ export class StudioApi implements AsyncDisposable {
       await signedIn.register(projectRoutes, {
         prefix: PROJECT_URL_PATH,
         archive: options.archive,
+        gameExport: options.gameExport,
         settings: options.settings
       });
       await signedIn.register(auditRoutes, {

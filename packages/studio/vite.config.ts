@@ -57,6 +57,9 @@ export default defineConfig(async(env): Promise<UserConfig> => {
 
   return {
     base: "./",
+    build: {
+      manifest: true
+    },
     server: {
       ...mode.server,
       fs: {

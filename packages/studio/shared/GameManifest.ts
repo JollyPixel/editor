@@ -10,6 +10,9 @@ import {
 export const GAME_MANIFEST_VERSION = 1;
 export const SCENE_KIND = "scene";
 export const CURRENT_REVISION = "current";
+export const GAME_MANIFEST_FILE = "game.json";
+export const GAME_MANIFEST_META = "jolly-game";
+const kBuildsDir = "builds";
 
 export interface GameManifestData {
   readonly version: typeof GAME_MANIFEST_VERSION;
@@ -48,15 +51,21 @@ export function gameManifest(
   };
 }
 
-function artifactPath(
+export function artifactSegments(
   record: AssetRecord
-): string {
+): string[] {
   const { name, extension } = record.path;
-  const segments = [
+
+  return [
+    kBuildsDir,
     record.id.value,
     record.revision ?? CURRENT_REVISION,
     `${name}${extension}`
-  ].map(encodeURIComponent);
+  ];
+}
 
-  return `builds/${segments.join("/")}`;
+function artifactPath(
+  record: AssetRecord
+): string {
+  return artifactSegments(record).map(encodeURIComponent).join("/");
 }
