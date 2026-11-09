@@ -57,7 +57,7 @@ describe("toTreeNodes", () => {
       id: "limbs",
       label: "limbs",
       renamable: true,
-      icon: "folder",
+      icon: "hierarchy-folder",
       visible: true,
       children: [
         {

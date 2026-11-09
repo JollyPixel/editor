@@ -93,6 +93,9 @@ export class HierarchyPanel extends LitElement {
     }
 
     jolly-tree {
+      --jolly-tree-icon-size: 16px;
+      --jolly-icon-ink-strength: 100%;
+
       flex: 1 1 auto;
       overflow: auto;
       padding-inline: var(--jolly-space-1, 4px);
@@ -142,6 +145,7 @@ export class HierarchyPanel extends LitElement {
           .selected=${this.#tree.selected}
           .expanded=${this.#tree.expanded}
           .validateRename=${this.#tree.validateRename}
+          indent-guides
           ?reorderable=${editable}
           ?row-drag=${editable}
           ?renamable=${editable}

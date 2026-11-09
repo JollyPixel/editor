@@ -44,7 +44,7 @@ function nodeIcon(
   node: HierarchyNode
 ): IconName {
   return node.shape === null ?
-    "folder" :
+    "hierarchy-folder" :
     matchBlockShapeEntry(node.shape).icon;
 }
 

@@ -39,7 +39,6 @@ import type { TrackBindingsEditing } from "./tracks/TrackBindingsController.ts";
 import "./keys/KeyInspector.ts";
 import type { KeyInspector } from "./keys/KeyInspector.ts";
 import type { KeyInspectorEditing } from "./keys/KeyInspectorController.ts";
-import "./timeline/timelineIcons.ts";
 import {
   AnimatePanelController,
   CLIP_FRAME_RATES,
@@ -86,24 +85,11 @@ export class AnimatePanel extends LitElement {
       display: none;
     }
 
-    .fields,
-    .transform {
+    .fields {
       display: flex;
       flex-direction: column;
       gap: var(--jolly-row-gap, 4px);
-    }
-
-    .fields {
       padding-inline: var(--jolly-space-1, 4px) 0;
-    }
-
-    .transform {
-      flex: 0 0 auto;
-      padding-block: var(--jolly-space-1, 4px);
-    }
-
-    .transform > jolly-button {
-      margin-inline: var(--jolly-field-inset-end, var(--jolly-space-1, 4px));
     }
 
     .empty {
@@ -252,7 +238,6 @@ export class AnimatePanel extends LitElement {
       ${state.clip === null ? nothing : this.#renderClip(state.clip, state.editable)}
       <jolly-model-editor-track-bindings></jolly-model-editor-track-bindings>
       <jolly-model-editor-key-inspector></jolly-model-editor-key-inspector>
-      ${this.#renderTransform(state)}
       <jolly-context-menu
         label="Animation actions"
         @jolly-context-action=${this.#menu.onContextAction}
@@ -350,22 +335,6 @@ export class AnimatePanel extends LitElement {
           ></jolly-checkbox>
         </div>
       </jolly-folder>
-    `;
-  }
-
-  #renderTransform(
-    state: AnimatePanelState
-  ): TemplateResult {
-    return html`
-      <section class="transform" aria-label="Transform">
-        <jolly-button
-          icon="timeline-key"
-          label="Key"
-          title=${state.keyTitle}
-          ?disabled=${!state.editable || state.clip === null}
-          @click=${() => this.#controller.keySelected()}
-        >Key</jolly-button>
-      </section>
     `;
   }
 

@@ -24,20 +24,15 @@ export class AnimatingFrame extends LitElement {
       pointer-events: none;
     }
 
-    .frame {
-      position: absolute;
-      inset: 0;
-      border: 2px solid var(--jolly-danger, #e5484d);
-    }
-
     .label {
       position: absolute;
       top: var(--jolly-space-2, 8px);
       left: 50%;
       padding: 2px var(--jolly-space-2, 8px);
-      border-radius: var(--jolly-radius, 4px);
-      background: var(--jolly-danger, #e5484d);
-      color: white;
+      border-radius: var(--jolly-radius-sm, 2px);
+      background: var(--jolly-surface-raised);
+      box-shadow: var(--jolly-shadow-floating);
+      color: var(--jolly-text);
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
       transform: translateX(-50%);
@@ -81,10 +76,7 @@ export class AnimatingFrame extends LitElement {
       return nothing;
     }
 
-    return html`
-      <div class="frame"></div>
-      <span class="label" role="status">${this._label}</span>
-    `;
+    return html`<span class="label" role="status">${this._label}</span>`;
   }
 }
 

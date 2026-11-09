@@ -7,7 +7,6 @@ import {
   type TemplateResult
 } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
-import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/tool-button";
 import {
   FrameRate,
@@ -37,14 +36,23 @@ export class TimelineTransport extends LitElement {
     }
 
     jolly-tool-button {
-      --jolly-tool-button-size: var(--jolly-icon-button-size, 32px);
+      --jolly-tool-button-size: 28px;
+      --jolly-icon-tone-strength: 100%;
     }
 
-    .clip {
-      max-width: 160px;
-      overflow: hidden;
-      font-weight: 600;
-      text-overflow: ellipsis;
+    jolly-tool-button::part(button) {
+      border-radius: var(--jolly-radius-sm, 2px);
+      background: rgb(0 0 0 / 22%);
+      color: var(--jolly-text-on-fill, white);
+    }
+
+    jolly-tool-button::part(button):hover {
+      background: rgb(0 0 0 / 36%);
+    }
+
+    jolly-tool-button[active]::part(button) {
+      background: var(--jolly-text-on-fill, white);
+      color: var(--jolly-pane-header-bg, black);
     }
   `;
 
@@ -72,16 +80,15 @@ export class TimelineTransport extends LitElement {
 
     return html`
       <div class="transport" role="toolbar" aria-label="Playback">
-        <span class="clip" title="Clip">${clip.name}</span>
-        <jolly-button
+        <jolly-tool-button
           icon=${playing ? "timeline-pause" : "timeline-play"}
-          icon-only
-          label=${label}
-          title=${`${label} (Space)`}
+          flyout-side="above"
+          label=${`${label} (Space)`}
           @click=${this.#onToggle}
-        ></jolly-button>
+        ></jolly-tool-button>
         <jolly-tool-button
           icon="timeline-loop"
+          flyout-side="above"
           label="Loop preview"
           ?active=${loop}
           @click=${this.#onToggleLoop}

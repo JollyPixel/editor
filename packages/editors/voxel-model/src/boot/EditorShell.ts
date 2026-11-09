@@ -183,6 +183,9 @@ export class EditorShell {
       editing.presence,
       (clientId) => editing.teleportToPeer(clientId)
     ));
+    this.#disposables.push(
+      editing.animationSession.subscribe("shown", this.#syncTimeline)
+    );
     this.#leftPanel.editing = editing;
     this.#syncTab();
     this.#materialPane.fieldLocks = editing.fields;
@@ -222,13 +225,18 @@ export class EditorShell {
     });
   }
 
+  readonly #syncTimeline = (): void => {
+    const shownKey = this.#editing?.animationSession.shownKey ?? null;
+    this.#timelineDock.hidden = shownKey === null;
+  };
+
   #syncTab(): void {
-    this.#timelineDock.hidden = !this.#animating;
     if (this.#editing !== null) {
       const { tab, gizmo } = this.#editing;
       tab.activate(parseEditorTab(this.#animateTabs.active));
       gizmo.enabled = tab.transforming;
     }
+    this.#syncTimeline();
   }
 
   get #animating(): boolean {

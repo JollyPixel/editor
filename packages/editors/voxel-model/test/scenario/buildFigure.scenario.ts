@@ -518,11 +518,12 @@ new Scenario<ModelPage, ModelExpectation>({
         await expect(animate.timeline).toBeHidden();
         await animate.open();
         await expect(animate.panel.getByText("This model has no clip yet.")).toBeVisible();
+        await expect(animate.timeline).toBeHidden();
         await animate.addClip("Wave");
         await expect(model.row("Wave")).toHaveAttribute("aria-selected", "true");
 
         await model.select("Arm", "Angle");
-        await animate.tool("Key").click();
+        await animate.keyTool.click();
         await animate.scrubTo(0.99);
         await model.transform("Arm", "Angle", { z: 150 });
         await expect(animate.keys).toHaveCount(2);

@@ -5,35 +5,20 @@ import { registerIcon } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import "../../shared/shapeIcons.ts";
 
-registerIcon("folder", svg`
-  <path
-    class="tone-fill"
-    d="M4 6a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6Z"
-    stroke="currentColor"
-    stroke-width="1.5"
-    stroke-linejoin="round"
-  />
-`, { tone: "amber" });
+// CONSTANTS
+const kViewBox = "0 0 64 64";
+const kFolder = svg`
+  <path d="M6 15 a3 3 0 0 1 3 -3 H23 L28 17 H55 a3 3 0 0 1 3 3 V52 a3 3 0 0 1 -3 3 H9 a3 3 0 0 1 -3 -3 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
+  <rect x="6" y="25" width="52" height="30" rx="3" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
+  <path d="M6 15 a3 3 0 0 1 3 -3 H23 L28 17 H55 a3 3 0 0 1 3 3 V52 a3 3 0 0 1 -3 3 H9 a3 3 0 0 1 -3 -3 Z" fill="#e39a1b" />
+  <rect x="6" y="25" width="52" height="30" rx="3" fill="#ffc93c" />
+`;
+
+registerIcon("hierarchy-folder", kFolder, { viewBox: kViewBox });
 
 registerIcon("folder-add", svg`
-  <mask id="folder-add-badge-cut">
-    <rect width="24" height="24" fill="#fff" />
-    <circle cx="18" cy="17.5" r="5.75" fill="#000" />
-  </mask>
-  <path
-    d="M2.5 6.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linejoin="round"
-    mask="url(#folder-add-badge-cut)"
-  />
-  <path
-    class="tone-ink"
-    d="M18 14v7M14.5 17.5h7"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.25"
-    stroke-linecap="round"
-  />
-`, { tone: "lime" });
+  <g transform="translate(1 1) scale(.8)">${kFolder}</g>
+  <circle cx="50" cy="50" r="11" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
+  <circle cx="50" cy="50" r="11" fill="#4cc35b" />
+  <path d="M50 44 V56 M44 50 H56" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" />
+`, { viewBox: kViewBox });

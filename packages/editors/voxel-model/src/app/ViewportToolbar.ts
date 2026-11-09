@@ -19,8 +19,13 @@ import "@jolly-pixel/ui/elements/vector3";
 import "../features/history/HistoryButtons.ts";
 import "../features/history/HistoryLog.ts";
 import "../features/transform/transformIcons.ts";
+import "../features/animation/timeline/timelineIcons.ts";
 import type { HistoryEditing } from "../features/history/HistoryButtons.ts";
 import type { HistoryLogEditing } from "../features/history/HistoryLog.ts";
+import {
+  KeyToolController,
+  type KeyToolEditing
+} from "../features/animation/keys/KeyToolController.ts";
 import {
   TransformController,
   type TransformEditing
@@ -29,12 +34,12 @@ import { TRANSFORM_MODES } from "../features/transform/transformModes.ts";
 import { viewportToolbarStyles } from "../shared/styles/viewportToolbar.styles.ts";
 import type { TabStore } from "../state/index.ts";
 
-export interface ViewportToolbarEditing extends
-  HistoryEditing,
-  HistoryLogEditing,
-  TransformEditing {
-  tab: Pick<TabStore, "transforming" | "subscribe">;
-}
+export type ViewportToolbarEditing = HistoryEditing &
+  HistoryLogEditing &
+  KeyToolEditing &
+  TransformEditing & {
+    tab: Pick<TabStore, "transforming" | "subscribe">;
+  };
 
 export class ViewportToolbar extends LitElement {
   static override styles = [
@@ -125,6 +130,7 @@ export class ViewportToolbar extends LitElement {
   ];
 
   #transform = new TransformController(this);
+  #key = new KeyToolController(this);
   #axisValues = new FieldBinding<Vector3Like>(this, {
     read: () => {
       const { x, y, z } = this.#transform.axisValues;
@@ -146,6 +152,7 @@ export class ViewportToolbar extends LitElement {
   ): void {
     this.#editing.attach(editing);
     this.#transform.attach(editing);
+    this.#key.attach(editing);
   }
 
   override render(): TemplateResult {
@@ -172,6 +179,7 @@ export class ViewportToolbar extends LitElement {
                 .editing=${editing}
               ></jolly-model-editor-history-buttons>
               ${transforming ? this.#renderTools() : nothing}
+              ${this.#key.shown ? this.#renderKey() : nothing}
             </div>
             ${this.#renderValues(transforming && this.#transform.selected)}
           </div>
@@ -209,6 +217,21 @@ export class ViewportToolbar extends LitElement {
           @click=${() => {
             this.#transform.space = local ? "world" : "local";
           }}
+        ></jolly-tool-button>
+      </div>
+    `;
+  }
+
+  #renderKey(): TemplateResult {
+    return html`
+      <div class="group divided" role="group" aria-label="Animation">
+        <jolly-tool-button
+          data-tool="key"
+          icon="timeline-key"
+          flyout-side="above"
+          label=${this.#key.title}
+          ?disabled=${!this.#key.enabled}
+          @click=${() => this.#key.key()}
         ></jolly-tool-button>
       </div>
     `;
