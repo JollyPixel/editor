@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { SHADER_IMPORTS } from "@jolly-pixel/asset.script/client";
 import {
   isShaderUniformValue,
   type ShadedMaterial,
@@ -7,16 +8,20 @@ import {
   type ShaderUniformValues
 } from "@jolly-pixel/engine";
 import { is } from "@jolly-pixel/utils";
-import {
-  init as initLexer,
-  parse
-} from "es-module-lexer";
 import * as TSL from "three/tsl";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { stripTypes } from "#stripper";
 import { ShaderError } from "./errors/ShaderError.ts";
+import {
+  importModule,
+  linkModule,
+  moduleUrl
+} from "../modules/linkModule.ts";
+import {
+  ModuleRegistry,
+  THREE_NAMESPACES
+} from "../modules/ModuleRegistry.ts";
 
 type MaterialFactory = (inputs: Record<string, unknown>) => unknown;
 type UniformInput = THREE.UniformNode<unknown, ShaderUniformValue>;
@@ -27,24 +32,16 @@ interface ShaderExports {
 }
 
 // CONSTANTS
-const kRegistry = Symbol.for("jolly-pixel.shader.modules");
-const kModules = new Map<string, object>([
-  ["three", THREE],
-  ["three/webgpu", THREE],
-  ["three/tsl", TSL]
-]);
-const kModuleUrls = new Map<string, string>();
-
-Reflect.set(globalThis, kRegistry, kModules);
+const kModules = new ModuleRegistry(SHADER_IMPORTS, THREE_NAMESPACES);
 
 export class ShaderModule implements Shader {
-  static async compile(
-    source: string,
+  static async load(
+    code: string,
     name: string
   ): Promise<ShaderModule> {
     const sourceUrl = encodeURI(name);
-    const code = await linkImports(await stripTypes(source, name));
-    const shader = new ShaderModule(await evaluate(code, sourceUrl), sourceUrl);
+    const linked = await linkImports(code);
+    const shader = new ShaderModule(await evaluate(linked, sourceUrl), sourceUrl);
     shader.createMaterial().material.dispose();
 
     return shader;
@@ -115,55 +112,12 @@ export class ShaderModuleMaterial implements ShadedMaterial {
 async function linkImports(
   code: string
 ): Promise<string> {
-  await initLexer();
-  let imports: ReturnType<typeof parse>[0];
   try {
-    [imports] = parse(code);
+    return await linkModule(code, (specifier) => kModules.url(specifier));
   }
   catch (cause) {
     throw ShaderError.thrown(cause, null);
   }
-
-  let linked = code;
-  for (const entry of [...imports].reverse()) {
-    if (entry.type === "import-meta") {
-      continue;
-    }
-    if (entry.type === "dynamic") {
-      throw new ShaderError("A shader cannot import modules dynamically.");
-    }
-    linked = linked.slice(0, entry.start) +
-      moduleUrl(entry.specifier) +
-      linked.slice(entry.end);
-  }
-
-  return linked;
-}
-
-function moduleUrl(
-  specifier: string
-): string {
-  const module = kModules.get(specifier);
-  if (module === undefined) {
-    const allowed = [...kModules.keys()].map((key) => `"${key}"`).join(", ");
-    throw new ShaderError(
-      `A shader can only import ${allowed}, not "${specifier}".`
-    );
-  }
-
-  let url = kModuleUrls.get(specifier);
-  if (url === undefined) {
-    const names = Object.keys(module).filter((name) => name !== "default");
-    const source = [
-      `const module = globalThis[Symbol.for("${kRegistry.description}")].get(${JSON.stringify(specifier)});`,
-      `const { ${names.map((name, index) => `${JSON.stringify(name)}: _${index}`).join(", ")} } = module;`,
-      `export { ${names.map((name, index) => `_${index} as ${JSON.stringify(name)}`).join(", ")} };`
-    ].join("\n");
-    url = javascriptUrl(source);
-    kModuleUrls.set(specifier, url);
-  }
-
-  return url;
 }
 
 async function evaluate(
@@ -172,10 +126,7 @@ async function evaluate(
 ): Promise<ShaderExports> {
   let exports: Record<string, unknown>;
   try {
-    exports = await import(
-      /* @vite-ignore */
-      javascriptUrl(`${code}\n//# sourceURL=${sourceUrl}`)
-    );
+    exports = await importModule(moduleUrl(code, sourceUrl));
   }
   catch (cause) {
     throw ShaderError.thrown(cause, sourceUrl);
@@ -237,10 +188,4 @@ function ownedValue(
   return typeof value === "number" || value instanceof THREE.Texture ?
     value :
     value.clone();
-}
-
-function javascriptUrl(
-  source: string
-): string {
-  return `data:text/javascript;charset=utf-8,${encodeURIComponent(source)}`;
 }

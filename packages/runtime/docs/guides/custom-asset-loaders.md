@@ -1,6 +1,6 @@
 # Custom asset loaders
 
-Runtime already registers loaders for the engine's model, font, audio, and
+Runtime already registers loaders for the engine's model, font, audio, scene file, and
 texture asset types. Add a loader definition when a project has another asset
 kind.
 

@@ -201,3 +201,8 @@ registerIcon("settings", `
     fill="none"
   />
 `);
+
+registerIcon("play", `
+  <path d="M20 12 L52 32 L20 52 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="7" stroke-linejoin="round" />
+  <path d="M20 12 L52 32 L20 52 Z" fill="#4cc35b" />
+`, { viewBox: "0 0 64 64" });

@@ -2,6 +2,7 @@
 import {
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
+  PASS_THROUGH_BUILD,
   readOnlyCommands,
   type AssetKindHandler,
   type AssetKindPackage
@@ -38,6 +39,7 @@ export function fontAssetKind(): AssetKindHandler<FontAssetState, never> {
     extensions: {
       [FONT_EXTENSION]: JSON_CONTENT_TYPE
     },
+    build: PASS_THROUGH_BUILD,
     conversions: Object.fromEntries(
       FONT_SOURCE_EXTENSIONS.map((extension) => [
         extension,

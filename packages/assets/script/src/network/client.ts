@@ -21,3 +21,7 @@ export * from "../text/errors/TextEditMismatchError.ts";
 export * from "./textDocumentKind.ts";
 export * from "./ScriptOutlineFeed.ts";
 export * from "./types.ts";
+export * from "../imports/ScriptImportPolicy.ts";
+export * from "../imports/importPolicies.ts";
+export * from "../imports/staticImports.ts";
+export * from "../imports/errors/ScriptImportError.ts";

@@ -6,9 +6,11 @@ import {
 import { FileDownload } from "../browser/FileDownload.ts";
 import { AttachmentDisposition } from "../../shared/AttachmentDisposition.ts";
 import { PROJECT_ROUTES } from "../../shared/api/project.ts";
+import type { ApiRoute } from "../../shared/api/common.ts";
 
 // CONSTANTS
 const kFallbackFileName = "project.zip";
+const kFallbackGameFileName = "game.zip";
 
 export class ProjectArchiveClient {
   #endpoint: ApiEndpoint;
@@ -19,15 +21,26 @@ export class ProjectArchiveClient {
     this.#endpoint = new ApiEndpoint(options);
   }
 
-  async download(): Promise<FileDownload> {
-    const response = await this.#endpoint.send(PROJECT_ROUTES.archive);
+  download(): Promise<FileDownload> {
+    return this.#download(PROJECT_ROUTES.archive, kFallbackFileName);
+  }
+
+  downloadGame(): Promise<FileDownload> {
+    return this.#download(PROJECT_ROUTES.game, kFallbackGameFileName);
+  }
+
+  async #download(
+    route: ApiRoute,
+    fallbackFileName: string
+  ): Promise<FileDownload> {
+    const response = await this.#endpoint.send(route);
     const disposition = AttachmentDisposition.parse(
       response.headers.get("content-disposition")
     );
 
     return new FileDownload(
       await response.blob(),
-      disposition?.fileName ?? kFallbackFileName
+      disposition?.fileName ?? fallbackFileName
     );
   }
 }

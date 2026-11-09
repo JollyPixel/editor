@@ -24,7 +24,7 @@ class AssetCoordinator {
 
   load<TValue>(
     reference: AssetReference<TValue>,
-    context?: AssetLoadContext
+    options?: AssetLoadOptions
   ): Promise<TValue>;
 
   loadBatch(
@@ -53,10 +53,10 @@ Resolves the reference and returns its prepared value synchronously. It throws
 Use this method after startup or another asynchronous boundary has prepared
 the reference.
 
-## `load(reference, context?)`
+## `load(reference, options?)`
 
 Loads one reference through the loader registered with its `AssetType`. The
-returned promise resolves to the loaded value. `context.signal` is passed to
+returned promise resolves to the loaded value. `options.signal` is passed to
 the loader, which decides how to use it.
 
 Concurrent calls share one in-flight promise. A call after failure starts a

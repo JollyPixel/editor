@@ -7,7 +7,7 @@ import { SHADER_TEMPLATE } from "@jolly-pixel/asset.script";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { ShaderModule } from "../../src/shader/ShaderModule.ts";
+import { compileShader } from "../../src/shader/compileShader.ts";
 import { ShaderError } from "../../src/shader/errors/ShaderError.ts";
 
 // CONSTANTS
@@ -35,9 +35,9 @@ export default function material(inputs) {
 }
 `;
 
-describe("ShaderModule", () => {
+describe("compileShader", () => {
   test("builds a new node material from a TypeScript TSL module on each call", async() => {
-    const shader = await ShaderModule.compile(kWater, kName);
+    const shader = await compileShader(kWater, kName);
 
     const first = shader.createMaterial().material;
     const second = shader.createMaterial().material;
@@ -48,7 +48,7 @@ describe("ShaderModule", () => {
   });
 
   test("gives each material its own uniform nodes, set from the values or the declared defaults", async() => {
-    const shader = await ShaderModule.compile(kInputs, kName);
+    const shader = await compileShader(kInputs, kName);
 
     const first = shader.createMaterial({ speed: 3 }).material.userData.inputs;
     const second = shader.createMaterial().material.userData.inputs;
@@ -61,7 +61,7 @@ describe("ShaderModule", () => {
   });
 
   test("assigns new uniform values to a live material, leaving the others", async() => {
-    const shader = await ShaderModule.compile(kInputs, kName);
+    const shader = await compileShader(kInputs, kName);
     const shaded = shader.createMaterial({ speed: 3 });
     const { inputs } = shaded.material.userData;
     const tint = new THREE.Color("#ff0000");
@@ -74,7 +74,7 @@ describe("ShaderModule", () => {
   });
 
   test("compiles the template of a new shader", async() => {
-    const shader = await ShaderModule.compile(SHADER_TEMPLATE, kName);
+    const shader = await compileShader(SHADER_TEMPLATE, kName);
 
     assert.ok(shader.createMaterial().material instanceof THREE.MeshStandardNodeMaterial);
   });
@@ -89,7 +89,7 @@ describe("ShaderModule", () => {
       [
         "import { pass } from \"three/addons/tsl/display/PassNode.js\";\n" +
         "export default () => pass;\n",
-        /can only import "three", "three\/webgpu", "three\/tsl", not "three\/addons\//,
+        /^"three\/addons\/.+" cannot be imported: allowed imports are "three", "three\/webgpu"/,
         null
       ],
       [
@@ -119,7 +119,7 @@ describe("ShaderModule", () => {
 
     for (const [source, message, line] of cases) {
       await assert.rejects(
-        ShaderModule.compile(source, kName),
+        compileShader(source, kName),
         (error) => error instanceof ShaderError &&
           message.test(error.message) &&
           (error.position?.line ?? null) === line,

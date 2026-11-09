@@ -1,3 +1,6 @@
+// CONSTANTS
+const kRelativeBase = "asset:/";
+
 export class AssetPath {
   static from(
     path: string | AssetPath
@@ -66,6 +69,21 @@ export class AssetPath {
     }
 
     return matched;
+  }
+
+  resolve(
+    specifier: string
+  ): AssetPath {
+    const url = new URL(
+      specifier,
+      new URL(this.toString(), kRelativeBase)
+    );
+
+    return new AssetPath(
+      url.href.startsWith(kRelativeBase) ?
+        decodeURIComponent(url.pathname.slice(1)) :
+        url.href
+    );
   }
 
   equals(

@@ -5,15 +5,16 @@ import {
 } from "../api/ApiEndpoint.ts";
 import {
   PROJECT_ROUTES,
-  kindFilterSchema,
   projectReplySchema,
+  projectSectionsSchema,
   projectSettingsReplySchema,
   type AccessChange,
+  type GameSection,
   type KindFilterSection,
   type KindOptions,
+  type ProjectSections,
   type ProjectSettingsReply
 } from "../../shared/api/project.ts";
-import { KindFilter } from "../../shared/KindFilter.ts";
 import { ProjectRights } from "../../shared/ProjectRights.ts";
 
 export class ProjectSettingsClient {
@@ -62,10 +63,8 @@ export class ProjectSettingsClient {
     );
   }
 
-  async kindFilter(): Promise<KindFilter> {
-    return KindFilter.from(
-      await this.#endpoint.json(PROJECT_ROUTES.kindFilter, kindFilterSchema)
-    );
+  sections(): Promise<ProjectSections> {
+    return this.#endpoint.json(PROJECT_ROUTES.sections, projectSectionsSchema);
   }
 
   replaceKindFilter(
@@ -76,6 +75,18 @@ export class ProjectSettingsClient {
       projectSettingsReplySchema,
       {
         body: kindFilter
+      }
+    );
+  }
+
+  replaceGame(
+    game: GameSection
+  ): Promise<ProjectSettingsReply> {
+    return this.#endpoint.json(
+      PROJECT_ROUTES.replaceGame,
+      projectSettingsReplySchema,
+      {
+        body: game
       }
     );
   }

@@ -12,4 +12,5 @@ export * from "./KindLimits.ts";
 export * from "./errors/UnknownAssetKindError.ts";
 export * from "./errors/UnsupportedAssetConversionError.ts";
 export * from "./foldAssetEvent.ts";
+export * from "./passThroughBuild.ts";
 export * from "./handlers/index.ts";

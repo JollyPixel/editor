@@ -9,7 +9,4 @@ Note:
 
 ## Play from studio
 
-Building a game from a project, the static asset catalog export, and the
-game-side loaders for `voxelmap`, `voxelmodel`, `blockset` and `pixelart`.
-Until those loaders exist, `VoxelMap` and `VoxelModel` components render only
-in the editor.
+The game export (the studio's `PLAN.md`, step 6).

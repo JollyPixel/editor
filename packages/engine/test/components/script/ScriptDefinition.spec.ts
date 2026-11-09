@@ -4,22 +4,30 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
+import { AssetReference } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import { Actor } from "../../../src/core/actor/Actor.ts";
 import {
   Behavior,
   SceneProperty,
-  ScriptDefinition
+  SCRIPT_MODULE_ASSET,
+  ScriptDefinition,
+  type ScriptAssets,
+  type ScriptModule
 } from "../../../src/index.ts";
-import type { SceneMode } from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
+import {
+  ComponentAssets,
+  type ComponentContext,
+  type SceneMode
+} from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../../src/core/systems/scene/file/SceneFile.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
-import {
-  createComponentContext,
-  createWarningLogger
-} from "../../helpers/scene/sceneFile.ts";
+import { createWarningLogger } from "../../helpers/scene/sceneFile.ts";
+
+// CONSTANTS
+const kScriptReference = new AssetReference("player-script", SCRIPT_MODULE_ASSET);
 
 class Mover extends Behavior {
   speed = 5;
@@ -42,6 +50,23 @@ class Follower extends Behavior {
 }
 SceneProperty({ type: "Actor" })(Follower.prototype, "target");
 
+function scriptContext(
+  definition: ScriptDefinition,
+  mode: SceneMode,
+  module: ScriptModule | null = null
+): ComponentContext<ScriptAssets> {
+  return {
+    mode,
+    assets: new ComponentAssets(
+      definition.assets,
+      module === null ? {} : { script: kScriptReference.toJSON() },
+      {
+        resolve: <TValue>() => module as TValue
+      }
+    )
+  };
+}
+
 function createScript(
   mode: SceneMode,
   data: JSONObject
@@ -53,11 +78,28 @@ function createScript(
   const component = definition.create(
     actor,
     definition.parse(data),
-    createComponentContext(mode)
+    scriptContext(definition, mode)
   );
   actor.awake();
 
   return { actor, component, warnings };
+}
+
+function createModuleScript(
+  module: ScriptModule,
+  behavior: string
+) {
+  const { logger, warnings } = createWarningLogger();
+  const { world } = createSceneSetup(createSceneAssets(), logger);
+  const actor = new Actor(world as any, { name: "player" });
+  const definition = new ScriptDefinition();
+  const component = definition.create(
+    actor,
+    definition.parse({ behavior }),
+    scriptContext(definition, "play", module)
+  );
+
+  return { actor, component, definition, warnings };
 }
 
 describe("Components.ScriptDefinition", () => {
@@ -100,6 +142,31 @@ describe("Components.ScriptDefinition", () => {
     const { actor, component, warnings } = createScript("play", {
       behavior: "Jumper"
     });
+
+    assert.strictEqual(component, null);
+    assert.deepEqual([...actor.components], []);
+    assert.strictEqual(warnings().length, 1);
+  });
+
+  test("builds the behavior its script asset exports under the stored name", () => {
+    const { component, definition } = createModuleScript({
+      Mover,
+      Follower
+    }, "Follower");
+
+    assert.ok(component instanceof Follower);
+    assert.strictEqual(definition.owns(component), true);
+    assert.deepEqual(definition.capture(component), {
+      behavior: "Follower",
+      properties: { target: null }
+    });
+  });
+
+  test("builds nothing, with a warning, when the script asset exports no behavior under the name", () => {
+    const { actor, component, warnings } = createModuleScript({
+      Mover,
+      speed: 3
+    }, "speed");
 
     assert.strictEqual(component, null);
     assert.deepEqual([...actor.components], []);
@@ -175,7 +242,7 @@ describe("Components.ScriptDefinition", () => {
     const door = new Actor(world as any, { name: "door", persistentId: "door-1" });
     const guard = new Actor(world as any, { name: "guard" });
     const definition = new ScriptDefinition({ Follower });
-    const context = createComponentContext("play");
+    const context = scriptContext(definition, "play");
 
     const follower = definition.create(guard, definition.parse({
       behavior: "Follower",

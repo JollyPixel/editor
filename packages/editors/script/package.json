@@ -14,11 +14,13 @@
       ],
       "page": "index.html"
     },
-    "scene": "./scene"
+    "scene": "./scene",
+    "runtime": "./runtime"
   },
   "exports": {
     ".": "./src/scene/index.ts",
-    "./scene": "./src/scene/index.ts"
+    "./scene": "./src/scene/index.ts",
+    "./runtime": "./src/runtime/index.ts"
   },
   "scripts": {
     "dev": "vite",
@@ -61,6 +63,7 @@
     "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0",

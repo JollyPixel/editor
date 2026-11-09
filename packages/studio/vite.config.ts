@@ -29,6 +29,8 @@ import { backend } from "./vite/backend.ts";
 import { editorPages } from "./vite/editorPages.ts";
 import { projectManifest } from "./vite/projectManifest.ts";
 import {
+  PLAY_PAGE_DIR,
+  PLAY_PAGE_PATH,
   PREVIEW_PAGE_DIR,
   PREVIEW_PAGE_PATH
 } from "./shared/EditorDescriptor.ts";
@@ -55,6 +57,9 @@ export default defineConfig(async(env): Promise<UserConfig> => {
 
   return {
     base: "./",
+    build: {
+      manifest: true
+    },
     server: {
       ...mode.server,
       fs: {
@@ -82,7 +87,8 @@ export default defineConfig(async(env): Promise<UserConfig> => {
         {
           shellPages: {
             index: "index.html",
-            [PREVIEW_PAGE_DIR]: PREVIEW_PAGE_PATH
+            [PREVIEW_PAGE_DIR]: PREVIEW_PAGE_PATH,
+            [PLAY_PAGE_DIR]: PLAY_PAGE_PATH
           }
         }
       ),

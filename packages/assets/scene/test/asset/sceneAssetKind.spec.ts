@@ -136,6 +136,37 @@ describe("scene kind assets", () => {
   });
 });
 
+describe("scene kind build", () => {
+  test("expands the compact file into the scene file a game reads", async() => {
+    const { environment } = sceneFile([]);
+    const stored = encodeJSON({
+      version: 1,
+      environment,
+      actors: [{ id: "A", name: "A", parentId: null, components: [] }]
+    });
+    const handler = sceneAssetKind();
+
+    const built = await handler.build!.build(loadInto(stored), stored);
+
+    assert.deepEqual(JSON.parse(new TextDecoder().decode(built)), {
+      version: 1,
+      environment,
+      actors: [{
+        id: "A",
+        name: "A",
+        parentId: null,
+        visible: true,
+        transform: {
+          position: { x: 0, y: 0, z: 0 },
+          rotation: { x: 0, y: 0, z: 0 },
+          scale: { x: 1, y: 1, z: 1 }
+        },
+        components: []
+      }]
+    });
+  });
+});
+
 describe("scene kind create", () => {
   test("starts a new scene from the seed", async() => {
     const handler = sceneAssetKind();

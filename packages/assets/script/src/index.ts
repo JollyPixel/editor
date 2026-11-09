@@ -8,3 +8,7 @@ export * from "./asset/textAssetKind.ts";
 export * from "./network/types.ts";
 export * from "./outline/ScriptOutline.schema.ts";
 export * from "./text/TextEdit.ts";
+export * from "./imports/ScriptImportPolicy.ts";
+export * from "./imports/importPolicies.ts";
+export * from "./imports/staticImports.ts";
+export * from "./imports/errors/ScriptImportError.ts";

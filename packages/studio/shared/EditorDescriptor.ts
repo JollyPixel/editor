@@ -6,6 +6,8 @@ export const EDITOR_PAGE_FILE = "index.html";
 export const EDITOR_PAGE_REBUILT_EVENT = "studio:editor-page-rebuilt";
 export const PREVIEW_PAGE_DIR = "preview";
 export const PREVIEW_PAGE_PATH = `${PREVIEW_PAGE_DIR}/${EDITOR_PAGE_FILE}`;
+export const PLAY_PAGE_DIR = "play";
+export const PLAY_PAGE_PATH = `${PLAY_PAGE_DIR}/${EDITOR_PAGE_FILE}`;
 
 export interface EditorDescriptor {
   name: string;

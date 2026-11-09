@@ -26,6 +26,7 @@ import {
 import { BrowserState } from "../../browser/BrowserState.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
+import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
 import "../assets/AssetBrowser.ts";
 import "./ProjectReadme.ts";
@@ -263,10 +264,7 @@ export class StudioHome extends LitElement {
   }
 
   readonly #openSettings = (): void => {
-    this.dispatchEvent(new Event("settings-open", {
-      bubbles: true,
-      composed: true
-    }));
+    this.dispatchEvent(new SettingsOpenEvent());
   };
 
   readonly #export = async(): Promise<void> => {
@@ -305,6 +303,5 @@ declare global {
 
   interface HTMLElementEventMap {
     "console-toggle": Event;
-    "settings-open": Event;
   }
 }

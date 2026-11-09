@@ -190,6 +190,37 @@ You shows them.
 What one browser remembers and Settings never shows: open tabs, dock
 layouts, expanded folders, the kind filter.
 
+### Game manifest
+
+`game.json`, served by `GET /api/game?start=<scene id>`: the start scene, a
+catalog of every asset the account opens at its project path, and
+`artifacts`, the URL of each asset's build relative to `game.json`. The player
+turns every fetch of a project path into its build URL, so a loader that
+resolves a path, such as a script import, uses project paths. An artifact is
+built on its first request and served for good while its revision is current.
+
+### Default scene
+
+The scene the game starts from, the `game.start` asset ID of the project file,
+set in Settings › Project › General. Play and F5 run it; without one, they run
+the scene of the active tab.
+
+### Player
+
+The `play/index.html` page that runs a game from its game manifest, in its own
+`jolly-play` window. The shell opens it, reuses it on the next Play, and shows
+its errors as notifications.
+
+### Game export
+
+`GET /api/project/game.zip`, offered as Export game in the Play menu to a role
+with `studio.$export`. It builds every asset whose kind has a build, fails on
+the first error, and zips the built player as `index.html`, a game manifest
+starting from the default scene, and each artifact at the `builds/` path Play
+serves it from. A `jolly-game` meta in the page tells the player to read `game.json`
+beside it instead of the studio API. The game runs from any static HTTP
+server, not from `file://`.
+
 ### Offline mode
 
 The asset back-end the shell runs in the browser when the catalog is

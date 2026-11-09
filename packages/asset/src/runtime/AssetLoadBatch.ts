@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import type { AssetRecord } from "../AssetRecord.ts";
 import { AssetBatchLoadError } from "../errors/AssetBatchLoadError.ts";
-import type { AssetLoadContext } from "./AssetLoader.ts";
+import type { AssetLoadOptions } from "./AssetLoader.ts";
 
 export type AssetLoadBatchStatus =
   | "loading"
@@ -32,7 +32,7 @@ export type AssetLoadProgress = (
   | FailedAssetLoadOutcome
 ) & AssetLoadCounts;
 
-export interface AssetLoadBatchOptions extends AssetLoadContext {
+export interface AssetLoadBatchOptions extends AssetLoadOptions {
   onProgress?: (
     progress: AssetLoadProgress
   ) => void;

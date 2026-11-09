@@ -31,6 +31,10 @@ import {
 } from "../tabs/EditorTabs.ts";
 import { SavedTabs } from "../tabs/SavedTabs.ts";
 import { PreviewFrame } from "../preview/PreviewFrame.ts";
+import {
+  StudioPlay,
+  type StudioPlayOptions
+} from "../play/StudioPlay.ts";
 
 // CONSTANTS
 export const SETTINGS_TAB_ID = "studio:settings";
@@ -80,6 +84,8 @@ export interface StudioSessionConsole {
   readonly commands?: FrameConsolesOptions["commands"];
 }
 
+export type StudioSessionPlay = Pick<StudioPlayOptions, "project" | "failed">;
+
 export interface StudioSessionSlots {
   strip: TabStrip;
   frames: HTMLElement;
@@ -100,6 +106,7 @@ export interface StudioSessionOptions extends Pick<
   slots: StudioSessionSlots;
   console?: StudioSessionConsole;
   onTabsChange?: () => void;
+  play?: StudioSessionPlay;
   /**
    * @default new BrowserState()
    */
@@ -114,6 +121,7 @@ export class StudioSession {
   readonly kinds: AssetKindSet;
   readonly tabs: EditorTabs;
   readonly previews: PreviewFrame;
+  readonly play: StudioPlay | null;
 
   #catalog: StudioCatalog;
   #frames: EditorFrames;
@@ -170,6 +178,13 @@ export class StudioSession {
       frames: this.#frames,
       onChange: this.#onChange
     });
+    this.play = options.play === undefined ?
+      null :
+      new StudioPlay({
+        ...options.play,
+        catalog: this.#catalog,
+        activeAsset: () => this.tabs.active
+      });
     this.#catalog.on("change", this.#syncTabs);
     this.previews = new PreviewFrame({
       url: options.editors.previewUrl(),
@@ -275,6 +290,12 @@ export class StudioSession {
     this.tabs.dispose();
     this.#frames.dispose();
     this.previews.dispose();
+    this.play?.dispose();
+  }
+
+  #tabsChanged(): void {
+    this.play?.changed();
+    this.#onTabsChange?.();
   }
 
   #tabTitle(
@@ -301,6 +322,9 @@ export class StudioSession {
         break;
       case "jolly-toggle-console":
         this.toggleConsole();
+        break;
+      case "jolly-play":
+        this.play?.play(command.scope);
         break;
       case "jolly-session-refused":
         void this.#user.renewal?.renew();
@@ -353,7 +377,7 @@ export class StudioSession {
 
   readonly #onChange = (): void => {
     this.#saveTabs();
-    this.#onTabsChange?.();
+    this.#tabsChanged();
   };
 
   readonly #saveTabs = (): void => {
@@ -381,6 +405,6 @@ export class StudioSession {
         );
       }
     }
-    this.#onTabsChange?.();
+    this.#tabsChanged();
   };
 }

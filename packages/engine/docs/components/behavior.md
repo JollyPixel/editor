@@ -141,8 +141,13 @@ interface ScriptData {
   `@SceneProperty` type: `[0, 1, 0]` becomes a `Vector3` and `"#ff0000"` a
   `Color`. A value that does not fit the type is dropped, so the field keeps
   its initializer. A key without a `@SceneProperty` field is ignored.
-- An unregistered name logs a warning and builds no behavior. Edit mode
-  builds none either.
+- The `script` asset slot holds a loaded script module, `ScriptModule`, the
+  record of its exports (`SCRIPT_MODULE_ASSET`, kind `script`). When a component
+  references one, the behavior is the module's export named `behavior`, and
+  the record given to the constructor is not read. The constructor record
+  defaults to `{}`.
+- An unregistered name, or a module export that is not a `Behavior` subclass,
+  logs a warning and builds no behavior. Edit mode builds none either.
 - `capture(behavior)` writes each `@SceneProperty` field back in its stored
   form. `owns(component)` accepts instances of a registered class, not of a
   subclass.

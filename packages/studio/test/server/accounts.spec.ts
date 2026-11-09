@@ -43,8 +43,13 @@ function project(
     }),
     new EditorPackages([]),
     new ProjectKinds([], new PackageResolver(root)),
-    StudioAccess.read(document, "project.json"),
-    KindFilter.NONE
+    {
+      access: StudioAccess.read(document, "project.json"),
+      kindFilter: KindFilter.NONE,
+      game: {
+        start: null
+      }
+    }
   );
 }
 

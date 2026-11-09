@@ -19,6 +19,7 @@ class AssetPath {
   withExtension(extension: string): AssetPath;
   withoutExtension(): AssetPath;
   matchExtension(extensions: Iterable<string>): string | null;
+  resolve(specifier: string): AssetPath;
   equals(other: AssetPath): boolean;
   toJSON(): string;
   toString(): string;
@@ -50,6 +51,17 @@ can move the split points. `withExtension()` throws `TypeError` unless
 with, or `null` when none does. The first one wins a tie. It compares the end
 of the path string, so `.json` matches `forest.vmap.json` even though
 `extension` is `.vmap.json`.
+
+`resolve()` resolves `specifier` against the path the way a relative URL
+resolves against its base: `./` and `../` segments apply and a leading `/`
+starts from the root. A path without a scheme gives a percent-decoded path
+without one; a path with a scheme, such as `project:/`, keeps it. It throws
+`TypeError` when the result is empty.
+
+```ts
+new AssetPath("scripts/Player.ts").resolve("../shared/label.ts").toString();
+// "shared/label.ts"
+```
 
 `from()` constructs a path from a string and returns an existing `AssetPath`
 unchanged. `equals()` compares full path strings. `toJSON()` and `toString()`

@@ -67,10 +67,14 @@ flowchart TB
     Handler -->|"load · serialize"| Projector["Projection<br/>bytes on disk"]
     Handler -->|"commands"| Room["Asset room<br/>live editing"]
     Handler -->|"preview"| Preview["catalog:preview<br/>image"]
+    Handler -->|"build"| Build["AssetBuilds<br/>game content"]
 ```
 
 - The backend knows no kind by name. A kind without `commands` is stored and
   listed, but never opens a room.
+- Builds are a cache: `.jollypixel/builds/` is gitignored and safe to delete.
+  A key depends on one asset's content only, never on its path or on another
+  asset.
 - A project loads extra kinds from packages named in its project file.
 - Code: `model/kinds/`, `node/project/`.
 

@@ -5,23 +5,23 @@ import type {
   SceneComponentKind,
   SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
-import {
-  CameraDefinition,
-  LightDefinition,
-  MeshDefinition,
-  type MeshAssets,
-  type MeshData,
-  TextDefinition,
-  type CameraData,
-  type LightSettings,
-  type TextSettings
+import type {
+  CameraData,
+  LightSettings,
+  MeshAssets,
+  MeshData,
+  TextSettings
 } from "@jolly-pixel/engine";
-import {
-  RigidBodyDefinition,
-  type SceneRigidBodySettings
-} from "@jolly-pixel/physics/engine";
+import type { SceneRigidBodySettings } from "@jolly-pixel/physics/engine";
 
 // Import Internal Dependencies
+import {
+  CAMERA_DEFINITION,
+  LIGHT_DEFINITION,
+  MESH_DEFINITION,
+  RIGID_BODY_DEFINITION,
+  TEXT_DEFINITION
+} from "../runtime/index.ts";
 import {
   cameraForm,
   lightForm,
@@ -49,7 +49,7 @@ import {
 export const BUILT_IN_PACKAGE = "@jolly-pixel/editor.scene";
 
 const kCamera: SceneComponentKind<CameraData> = {
-  definition: new CameraDefinition(),
+  definition: CAMERA_DEFINITION,
   label: "Camera",
   category: "camera",
   icon: "actor-camera",
@@ -57,7 +57,7 @@ const kCamera: SceneComponentKind<CameraData> = {
   describe: describeCamera
 };
 const kLight: SceneComponentKind<LightSettings> = {
-  definition: new LightDefinition(),
+  definition: LIGHT_DEFINITION,
   label: "Light",
   category: "light",
   initialData: {
@@ -68,7 +68,7 @@ const kLight: SceneComponentKind<LightSettings> = {
   describe: describeLight
 };
 const kMesh: SceneComponentKind<MeshData, MeshAssets> = {
-  definition: new MeshDefinition(),
+  definition: MESH_DEFINITION,
   label: "Mesh",
   category: "3d",
   initialData: {
@@ -81,7 +81,7 @@ const kMesh: SceneComponentKind<MeshData, MeshAssets> = {
   describe: describeMesh
 };
 const kText: SceneComponentKind<TextSettings> = {
-  definition: new TextDefinition(),
+  definition: TEXT_DEFINITION,
   label: "Text",
   category: "3d",
   initialData: {
@@ -91,7 +91,7 @@ const kText: SceneComponentKind<TextSettings> = {
   describe: describeText
 };
 const kRigidBody: SceneComponentKind<SceneRigidBodySettings> = {
-  definition: new RigidBodyDefinition(),
+  definition: RIGID_BODY_DEFINITION,
   label: "Rigid body",
   category: "physics",
   icon: "actor-rigid-body",

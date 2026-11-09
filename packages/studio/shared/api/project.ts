@@ -13,6 +13,7 @@ export const PROJECT_URL_PATH = "/api/project/";
 export const KINDS_SECTION = "kinds";
 export const ACCESS_SECTION = "access";
 export const KIND_FILTER_SECTION = "kindFilter";
+export const GAME_SECTION = "game";
 export const PROJECT_ROUTES = {
   rights: {
     method: "GET",
@@ -22,9 +23,17 @@ export const PROJECT_ROUTES = {
     method: "GET",
     path: "archive"
   },
+  game: {
+    method: "GET",
+    path: "game.zip"
+  },
   settings: {
     method: "GET",
     path: "settings"
+  },
+  sections: {
+    method: "GET",
+    path: "sections"
   },
   replaceKinds: {
     method: "PUT",
@@ -34,13 +43,13 @@ export const PROJECT_ROUTES = {
     method: "PUT",
     path: `settings/${ACCESS_SECTION}`
   },
-  kindFilter: {
-    method: "GET",
-    path: KIND_FILTER_SECTION
-  },
   replaceKindFilter: {
     method: "PUT",
     path: `settings/${KIND_FILTER_SECTION}`
+  },
+  replaceGame: {
+    method: "PUT",
+    path: `settings/${GAME_SECTION}`
   }
 } as const satisfies Record<string, ApiRoute>;
 export const SHARE_RIGHT = "studio.$share";
@@ -131,18 +140,28 @@ export const kindFilterSchema = z.object({
   hidden: z.array(z.string().min(1))
 });
 
+export const gameSectionSchema = z.object({
+  start: z.string().min(1).nullable()
+});
+
+export const projectSectionsSchema = z.object({
+  kindFilter: kindFilterSchema,
+  game: gameSectionSchema
+});
+
 export const projectSettingsReplySchema = z.object({
+  ...projectSectionsSchema.shape,
   name: z.string(),
   editors: z.array(z.string()),
   kinds: z.array(kindPackageSchema),
-  kindFilter: kindFilterSchema,
   access: accessSectionSchema.optional()
 });
 
 export const settingsSectionSchema = z.enum([
   KINDS_SECTION,
   ACCESS_SECTION,
-  KIND_FILTER_SECTION
+  KIND_FILTER_SECTION,
+  GAME_SECTION
 ]);
 
 export type ProjectReply = z.infer<typeof projectReplySchema>;
@@ -158,6 +177,8 @@ export type KindPackageSettings = z.infer<typeof kindPackageSchema>;
 export type AccessSection = z.infer<typeof accessSectionSchema>;
 export type AccessChange = z.infer<typeof accessChangeSchema>;
 export type KindFilterSection = z.infer<typeof kindFilterSchema>;
+export type GameSection = z.infer<typeof gameSectionSchema>;
+export type ProjectSections = z.infer<typeof projectSectionsSchema>;
 export type ProjectSettingsReply = z.infer<typeof projectSettingsReplySchema>;
 export type SettingsSectionName = z.infer<typeof settingsSectionSchema>;
 export type Right = z.infer<typeof rightSchema>;

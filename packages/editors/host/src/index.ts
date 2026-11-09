@@ -7,6 +7,7 @@ export type { LaunchNavigator } from "./launch/LaunchNavigator.ts";
 export * from "./launch/errors/LaunchNotFoundError.ts";
 export * from "./shell/ShellChannel.ts";
 export * from "./shell/protocol.ts";
+export * from "./shell/playShortcut.ts";
 export * from "./shell/catalog/CatalogShare.ts";
 export * from "./shell/catalog/ShellCatalog.ts";
 export * from "./shell/FrameConsoles.ts";

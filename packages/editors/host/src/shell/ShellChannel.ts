@@ -14,6 +14,7 @@ import { Emitter } from "@openally/emitt";
 import type { EditorState } from "../mount/EditorState.ts";
 import type { Appearance } from "../preferences/appearance/PageAppearance.ts";
 import { ShellCatalog } from "./catalog/ShellCatalog.ts";
+import type { PlayScope } from "./playShortcut.ts";
 import {
   parseShellMessage,
   type FrameMessage,
@@ -105,6 +106,15 @@ export class ShellChannel implements Notifier {
   toggleConsole(): void {
     this.#post({
       type: "jolly-toggle-console"
+    });
+  }
+
+  play(
+    scope: PlayScope
+  ): void {
+    this.#post({
+      type: "jolly-play",
+      scope
     });
   }
 

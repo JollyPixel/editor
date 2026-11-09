@@ -2,6 +2,8 @@
 import type { AssetKindHandler } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
+import { scriptBuild } from "../build/scriptBuild.ts";
+import { SHADER_IMPORTS } from "../imports/importPolicies.ts";
 import {
   SHADER_COMMAND,
   SHADER_CONTENT_TYPES,
@@ -23,6 +25,7 @@ export function shaderAssetKind(
     eventType: SHADER_COMMAND,
     extensions: SHADER_CONTENT_TYPES,
     template: SHADER_TEMPLATE,
-    snapshot: options.snapshot
+    snapshot: options.snapshot,
+    build: scriptBuild(SHADER_IMPORTS)
   });
 }

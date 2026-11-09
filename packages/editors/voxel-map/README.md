@@ -6,7 +6,7 @@
 
 Private editor workspace built on [`@jolly-pixel/voxel.renderer`][voxel-renderer] and booted through [`@jolly-pixel/editor.host`][editor-host].
 
-The package exports a read-only map viewer from `src/viewer/` and the `VoxelMap` scene component from `src/sceneComponents/` (`@jolly-pixel/editor.voxel-map/scene`).
+The package exports a read-only map viewer from `src/viewer/` and the `VoxelMap` scene component from `src/sceneComponents/` (`@jolly-pixel/editor.voxel-map/scene`). Its runtime entry (`./runtime`) adds the component to a game with a `voxelmap` and a `blockset` loader. A map loads each blockset it links, copies the blockset's blocks into the blockset's slot and draws its pixels as the atlas, with the viewer's `BlocksetAtlasBridge`. Both builds are the stored content.
 
 ## 🚀 Running the editor
 

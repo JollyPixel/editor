@@ -9,6 +9,7 @@ import {
 } from "./font.ts";
 
 export * from "./audio.ts";
+export * from "./sceneFile.ts";
 export * from "./texture.ts";
 export * from "./createDefaultAssetLoaders.ts";
 export {

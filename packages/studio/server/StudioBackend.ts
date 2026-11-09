@@ -40,9 +40,18 @@ import {
   AUDIT_STATE_IGNORES,
   AuditLog
 } from "./audit/AuditLog.ts";
+import {
+  BuiltPlayer,
+  type GamePlayer
+} from "./game/BuiltPlayer.ts";
+import { GameExport } from "./game/GameExport.ts";
+import { StudioGame } from "./game/StudioGame.ts";
 import { ProjectArchive } from "./project/ProjectArchive.ts";
 import { ProjectSettings } from "./project/ProjectSettings.ts";
-import type { StudioProject } from "./project/StudioProject.ts";
+import {
+  STUDIO_ROOT,
+  type StudioProject
+} from "./project/StudioProject.ts";
 import { SharePage } from "./shares/SharePage.ts";
 import { StudioShares } from "./shares/StudioShares.ts";
 import { PreferenceScopes } from "../shared/PreferenceScopes.ts";
@@ -56,6 +65,7 @@ const kBlocksetFile = path.join(
   "textures",
   "blockset.png"
 );
+const kShellDir = path.join(STUDIO_ROOT, "dist");
 const kRoomGraceMs = 5 * 60_000;
 const kSocketCompression = {
   threshold: 1024
@@ -96,6 +106,11 @@ export interface StudioBackendOptions {
    * @default false
    */
   compression?: boolean;
+  /**
+   * The built player that game exports ship.
+   * @default the player in the studio's `dist/`
+   */
+  player?: GamePlayer;
 }
 
 export interface StudioBackendAttachOptions {
@@ -185,6 +200,16 @@ export class StudioBackend implements AsyncDisposable {
       archive: new ProjectArchive({
         project,
         backend: assetServer.backend,
+        name: project.name
+      }),
+      game: new StudioGame({
+        project,
+        backend: assetServer.backend
+      }),
+      gameExport: new GameExport({
+        project,
+        backend: assetServer.backend,
+        player: options.player ?? new BuiltPlayer(kShellDir),
         name: project.name
       }),
       preferences: PreferenceScopes.studio(project.editors.editorScopes()),

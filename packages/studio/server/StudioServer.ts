@@ -9,6 +9,7 @@ import { compose } from "@openally/servo";
 // Import Internal Dependencies
 import { EditorPageFolders } from "./editors/EditorPageFolders.ts";
 import { ManifestRoute } from "./editors/ManifestRoute.ts";
+import { BuiltPlayer } from "./game/BuiltPlayer.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
 import { serveBuild } from "./serveBuild.ts";
 import {
@@ -23,7 +24,7 @@ export interface StudioServerOptions {
    * of every project editor under `editors/<name>/`.
    */
   shell: string;
-  backend?: Omit<StudioBackendOptions, "editorPages" | "compression">;
+  backend?: Omit<StudioBackendOptions, "editorPages" | "compression" | "player">;
   /**
    * Host header values accepted on the WebSocket upgrade, besides localhost
    * and IP addresses.
@@ -57,6 +58,7 @@ export class StudioServer implements AsyncDisposable {
       await StudioBackend.open(options.project, {
         ...options.backend,
         editorPages,
+        player: new BuiltPlayer(options.shell),
         compression: options.socketCompression
       })
     );

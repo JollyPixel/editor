@@ -124,6 +124,12 @@ export function sceneAssetKind(
       [SCENE_EXTENSION]: JSON_CONTENT_TYPE
     },
     snapshot,
+    build: {
+      version: "1",
+      build: (state) => Promise.resolve(
+        new TextEncoder().encode(JSON.stringify(state.toJSON()))
+      )
+    },
 
     create(
       assetId: string

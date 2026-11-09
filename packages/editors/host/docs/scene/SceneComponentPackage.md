@@ -149,8 +149,10 @@ type SceneComponentCategory =
   "camera" | "light" | "3d" | "2d" | "physics" | "audio" | "logic" | "ui";
 ```
 
-`definition` is the engine definition a game registers too. Its `assets`
-slots decide which asset pickers open when the component is added.
+`definition` is the engine definition a game registers too. Import it from
+the package's `jollypixel.runtime` entry (`RuntimeComponentPackage` in
+`@jolly-pixel/runtime`), so the editor and the game share one object. Its
+`assets` slots decide which asset pickers open when the component is added.
 
 The component shows the asset kind icon of its first `definition.assets` slot
 whose kind an `assets` source declares with an icon, so a voxel map component

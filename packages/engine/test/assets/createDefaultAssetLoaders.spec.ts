@@ -17,6 +17,8 @@ import {
   FontAssetType,
   ModelAssetLoader,
   ModelAssetType,
+  SceneFileAssetLoader,
+  SceneFileAssetType,
   TEXTURE_ASSET,
   TextureAssetLoader,
   createDefaultAssetLoaders
@@ -26,11 +28,12 @@ describe("createDefaultAssetLoaders", () => {
   test("registers a loader for every built-in asset type", () => {
     const loaders = createDefaultAssetLoaders(new THREE.LoadingManager());
 
-    assert.strictEqual(loaders.size, 4);
+    assert.strictEqual(loaders.size, 5);
     assert.ok(loaders.get(ModelAssetType) instanceof ModelAssetLoader);
     assert.ok(loaders.get(FontAssetType) instanceof FontAssetLoader);
     assert.ok(loaders.get(AUDIO_ASSET) instanceof AudioAssetLoader);
     assert.ok(loaders.get(TEXTURE_ASSET) instanceof TextureAssetLoader);
+    assert.ok(loaders.get(SceneFileAssetType) instanceof SceneFileAssetLoader);
   });
 
   test("returns a registry that accepts further kinds only", () => {

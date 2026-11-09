@@ -16,6 +16,7 @@ class AssetCatalog implements Iterable<AssetRecord> {
   set(record: AssetRecord): this;
   has(id: AssetId | string): boolean;
   find(id: AssetId | string): AssetRecord | undefined;
+  findByPath(path: AssetPath | string): AssetRecord | undefined;
   get(id: AssetId | string): AssetRecord;
   remove(id: AssetId | string): AssetRecord;
   byKind(kind: AssetKind | string): IterableIterator<AssetRecord>;
@@ -34,6 +35,7 @@ Initial records pass through the same duplicate-ID check as `add()`.
 | `set(record)` | Inserts the record, or replaces the one with its ID, and returns the catalog | None |
 | `has(id)` | Reports whether the ID exists | None |
 | `find(id)` | Returns the record, or `undefined` | None |
+| `findByPath(path)` | Returns the first record whose path equals `path`, or `undefined` | None |
 | `get(id)` | Returns the record | `AssetNotFoundError` |
 | `remove(id)` | Removes and returns the record | `AssetNotFoundError` |
 | `byKind(kind)` | Iterates the records of one kind, in insertion order | None |

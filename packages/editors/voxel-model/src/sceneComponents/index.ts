@@ -8,18 +8,16 @@ import {
 } from "@jolly-pixel/editor.host/scene";
 
 // Import Internal Dependencies
+import { VOXEL_MODEL_DEFINITION } from "../runtime/index.ts";
 import { VoxelModelViewer } from "../viewer/VoxelModelViewer.ts";
 import type { VoxelModelSource } from "../viewer/VoxelModelSource.ts";
-import {
-  VoxelModelDefinition,
-  type VoxelModelSettings
-} from "./VoxelModelDefinition.ts";
+import type { VoxelModelSettings } from "./VoxelModelDefinition.ts";
 
 // CONSTANTS
 const kRows = new FormRows<VoxelModelSettings>();
 
 const kVoxelModel: SceneComponentKind<VoxelModelSettings> = {
-  definition: new VoxelModelDefinition(),
+  definition: VOXEL_MODEL_DEFINITION,
   label: "Voxel model",
   category: "3d",
   form: () => [

@@ -5,13 +5,13 @@ import {
   type SceneComponentKind,
   type SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
-import {
-  ModelDefinition,
-  type ModelAssets,
-  type ModelData
+import type {
+  ModelAssets,
+  ModelData
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
+import { MODEL_DEFINITION } from "../runtime/index.ts";
 import { modelForm } from "./modelForm.ts";
 import {
   MODEL_FILE_DOCUMENT_KIND,
@@ -20,7 +20,7 @@ import {
 
 // CONSTANTS
 const kModel: SceneComponentKind<ModelData, ModelAssets> = {
-  definition: new ModelDefinition(),
+  definition: MODEL_DEFINITION,
   label: "3D model",
   category: "3d",
   optionalAssets: ["shader"],

@@ -12,6 +12,7 @@ import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { forwardConsole } from "../console/forwardConsole.ts";
+import { forwardPlayShortcut } from "../shell/playShortcut.ts";
 import {
   mountConsole,
   type PageConsole
@@ -115,6 +116,9 @@ export class Placement {
         }) :
         forwardConsole(shell);
       teardown.defer(() => pageConsole.dispose());
+      if (shell !== null) {
+        teardown.defer(forwardPlayShortcut((scope) => shell.play(scope)));
+      }
       this.#console = pageConsole;
       this.#preferences = this.#openPreferences();
       this.#notifications = this.#openNotifications();

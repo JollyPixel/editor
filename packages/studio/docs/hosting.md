@@ -35,4 +35,6 @@ The proxy must forward WebSocket upgrades on `/ws-sync`, with messages of up to 
 
 Rooms live in process memory, events go to `node:sqlite` and clients keep WebSockets open, so the server needs a long-running Node 24 process with a persistent disk. Serverless platforms do not fit. Hosting several projects takes one process each and a router in front.
 
+A game export (`GET /api/project/game.zip`) ships the player that `build:hosted` wrote to `dist/`, found through `dist/.vite/manifest.json`. Rebuild the studio after changing the player or a runtime contribution.
+
 Back up through `GET /api/project/archive` with an account allowed to export, or copy the project folder while the process is stopped. A copy taken while it runs can catch the SQLite WAL files halfway through a write.

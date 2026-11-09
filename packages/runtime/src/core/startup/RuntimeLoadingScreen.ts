@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type {
   AssetLoadProgress,
+  AssetPath,
   AssetRecord
 } from "@jolly-pixel/asset";
 import { Loading } from "@jolly-pixel/ui/elements/loading";
@@ -54,7 +55,7 @@ export class RuntimeLoadingScreen {
   showAsset(
     asset: AssetRecord
   ): void {
-    this.#loading.showAsset(asset.path.toString());
+    this.#loading.showAsset(fileName(asset.path));
   }
 
   updateProgress(
@@ -76,6 +77,18 @@ export class RuntimeLoadingScreen {
     error: Error
   ): void {
     this.#loading.error(error);
+  }
+}
+
+function fileName(
+  path: AssetPath
+): string {
+  const name = `${path.name}${path.extension}`;
+  try {
+    return decodeURIComponent(name);
+  }
+  catch {
+    return name;
   }
 }
 

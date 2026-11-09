@@ -6,20 +6,20 @@ import {
   type SceneComponentKind,
   type SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
-import {
-  VoxelMapDefinition,
-  type VoxelMapSettings,
-  type VoxelMapSource
+import type {
+  VoxelMapSettings,
+  VoxelMapSource
 } from "@jolly-pixel/voxel.renderer/engine";
 
 // Import Internal Dependencies
+import { VOXEL_MAP_DEFINITION } from "../runtime/index.ts";
 import { VoxelMapViewer } from "../viewer/VoxelMapViewer.ts";
 
 // CONSTANTS
 const kRows = new FormRows<VoxelMapSettings>();
 
 const kVoxelMap: SceneComponentKind<VoxelMapSettings> = {
-  definition: new VoxelMapDefinition(),
+  definition: VOXEL_MAP_DEFINITION,
   label: "Voxel map",
   category: "3d",
   form: () => [

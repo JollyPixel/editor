@@ -16,6 +16,10 @@ import {
   ModelAssetType
 } from "./model.ts";
 import {
+  SceneFileAssetLoader,
+  SceneFileAssetType
+} from "./sceneFile.ts";
+import {
   TEXTURE_ASSET,
   TextureAssetLoader,
   type CompressedTextureLoader
@@ -34,6 +38,7 @@ export function createDefaultAssetLoaders(
 ): AssetLoaderRegistry {
   return new AssetLoaderRegistry()
     .register(ModelAssetType, new ModelAssetLoader(manager))
+    .register(SceneFileAssetType, new SceneFileAssetLoader(manager))
     .register(FontAssetType, new FontAssetLoader(manager))
     .register(AUDIO_ASSET, new AudioAssetLoader(manager))
     .register(TEXTURE_ASSET, new TextureAssetLoader(manager, {

@@ -4,7 +4,26 @@ import { Window } from "happy-dom";
 // CONSTANTS
 const kEmulatedBrowserWindow = new Window();
 
-const kCanvas2DStub = new Proxy({}, {
+function createImageData(
+  width: number,
+  height: number
+) {
+  return {
+    width,
+    height,
+    data: new Uint8ClampedArray(width * height * 4)
+  };
+}
+
+const kCanvas2DStub = new Proxy<Record<string, unknown>>({
+  createImageData,
+  getImageData: (
+    _x: number,
+    _y: number,
+    width: number,
+    height: number
+  ) => createImageData(width, height)
+}, {
   get(target: Record<string, unknown>, property: string) {
     if (!(property in target)) {
       target[property] = () => void 0;

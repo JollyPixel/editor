@@ -8,6 +8,7 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { EDITOR_STATES } from "../mount/EditorState.ts";
+import { PLAY_SCOPES } from "./playShortcut.ts";
 
 // CONSTANTS
 const kOverridesSchema = z.record(z.string(), z.unknown());
@@ -43,6 +44,10 @@ const kFrameMessageSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("jolly-toggle-console")
+  }),
+  z.object({
+    type: z.literal("jolly-play"),
+    scope: z.enum(PLAY_SCOPES)
   }),
   z.object({
     type: z.literal("jolly-session-refused")

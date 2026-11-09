@@ -68,6 +68,7 @@ A value not loaded yet throws `AssetNotReadyError`; it never starts a load.
 | `AssetTypes.font` | `font` | `AssetLoaders.font` | Three.js typeface JSON |
 | `AUDIO_ASSET` | `audio` | `AudioAssetLoader` | Formats supported by `THREE.AudioLoader` |
 | `TEXTURE_ASSET` | `texture` | `TextureAssetLoader` | Formats supported by `THREE.TextureLoader`, plus KTX2 (see below) |
+| `SceneFileAssetType` | `scene` | `SceneFileAssetLoader` | A `SceneFile` as JSON, read by [`FileScene`](./systems/scene-file.md) |
 
 `createDefaultAssetLoaders(manager, options?)` returns an `AssetLoaderRegistry`
 holding these loaders, sharing one Three.js `LoadingManager`. The model loader

@@ -8,6 +8,8 @@ import {
 
 // Import Internal Dependencies
 import { readScriptOutline } from "#outliner";
+import { scriptBuild } from "../build/scriptBuild.ts";
+import { SCRIPT_IMPORTS } from "../imports/importPolicies.ts";
 import {
   SCRIPT_ASSET,
   SCRIPT_COMMAND,
@@ -52,6 +54,7 @@ export function scriptAssetKind(
     extensions: SCRIPT_CONTENT_TYPES,
     template: SCRIPT_TEMPLATE,
     snapshot,
+    build: scriptBuild(SCRIPT_IMPORTS),
     relay: {
       schemas: SCRIPT_RELAY_SCHEMAS,
       open: (state) => new ScriptOutlineRelay(state, readOutline)

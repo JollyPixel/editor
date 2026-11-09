@@ -1,5 +1,6 @@
 export * from "./CatalogProjection.ts";
 export * from "./CatalogFolders.ts";
+export * from "./AssetBuilds.ts";
 export * from "./AssetPreviews.ts";
 export * from "./CatalogExtension.ts";
 export * from "./CatalogViewExtension.ts";
@@ -9,3 +10,4 @@ export * from "./errors/CatalogContentTooLargeError.ts";
 export * from "./errors/AssetHasDependentsError.ts";
 export * from "./errors/CompanionReplacementError.ts";
 export * from "./errors/FolderMovedIntoItselfError.ts";
+export * from "./errors/UnbuildableAssetError.ts";
