@@ -31,13 +31,13 @@ import {
 import { traceAppends } from "./storage/traceAppends.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
 import { CatalogFolders } from "./catalog/CatalogFolders.ts";
-import { AssetBuilds } from "./catalog/AssetBuilds.ts";
-import { AssetPreviews } from "./catalog/AssetPreviews.ts";
+import { AssetBuilds } from "./catalog/derived/AssetBuilds.ts";
+import { AssetPreviews } from "./catalog/derived/AssetPreviews.ts";
 import {
   CatalogExtension,
   type CatalogBackend,
   type CatalogPolicy
-} from "./catalog/CatalogExtension.ts";
+} from "./catalog/room/CatalogExtension.ts";
 import { backfillDependencies } from "./catalog/backfillDependencies.ts";
 import { registerAssetRooms } from "./live/registerAssetRooms.ts";
 import type { ContentRefs } from "./live/ContentRefs.ts";

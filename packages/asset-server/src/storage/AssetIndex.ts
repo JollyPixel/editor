@@ -7,12 +7,9 @@ import {
   writeJsonFile,
   type AssetSource
 } from "@jolly-pixel/asset-source";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import {
-  indexedAssetSchema,
-  assetIndexSchema
-} from "./AssetIndex.schema.ts";
 import {
   silentLogger,
   type Logger
@@ -27,10 +24,17 @@ import {
 // CONSTANTS
 const kIndexVersion = 1;
 const kPathCollator = new Intl.Collator();
-const kEntryParser = new SchemaParser(indexedAssetSchema);
-const kIndexParser = new SchemaParser(assetIndexSchema);
+const kIndexedAssetSchema = z.object({
+  id: z.string(),
+  path: z.string(),
+  kind: z.string()
+});
+const kEntryParser = new SchemaParser(kIndexedAssetSchema);
+const kIndexParser = new SchemaParser(z.object({
+  assets: z.array(z.unknown())
+}));
 
-export type IndexedAsset = Readonly<Infer<typeof indexedAssetSchema>>;
+export type IndexedAsset = Readonly<Infer<typeof kIndexedAssetSchema>>;
 
 export interface AssetIndexData {
   readonly version: 1;

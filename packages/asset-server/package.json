@@ -13,8 +13,8 @@
       "default": "./dist/index.js"
     },
     "./client": {
-      "types": "./dist/catalog/client/index.d.ts",
-      "default": "./dist/catalog/client/index.js"
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
     },
     "./node": {
       "types": "./dist/node.d.ts",

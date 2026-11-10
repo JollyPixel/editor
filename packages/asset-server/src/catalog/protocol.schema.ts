@@ -33,7 +33,7 @@ import {
   CATALOG_TAGS,
   CATALOG_TAGS_CHANGED,
   CATALOG_UNTAG
-} from "./client/protocol.ts";
+} from "./protocol.ts";
 import { assetReferenceSchema } from "../model/events/AssetEvents.schema.ts";
 import {
   ASSET_CREATED,

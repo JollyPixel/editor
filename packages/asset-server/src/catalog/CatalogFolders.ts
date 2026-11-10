@@ -10,7 +10,7 @@ import { Emitter } from "@openally/emitt";
 import { TaskChain } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import type { CatalogChange } from "./client/protocol.ts";
+import type { CatalogChange } from "./protocol.ts";
 import type { CatalogProjection } from "./CatalogProjection.ts";
 import { FolderMovedIntoItselfError } from "./errors/FolderMovedIntoItselfError.ts";
 import { AssetPartFiles } from "../storage/AssetPartFiles.ts";

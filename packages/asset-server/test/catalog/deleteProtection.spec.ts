@@ -17,7 +17,7 @@ import {
 import type {
   CatalogClient,
   CatalogRejectedError
-} from "#src/catalog/client/index.ts";
+} from "#src/client/index.ts";
 import {
   linkContent,
   linkHandler

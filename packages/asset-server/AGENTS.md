@@ -20,6 +20,13 @@
 - Content refs need a `ContentRefs` at attach time. Without one, as in the
   in-page offline server, every snapshot is sent inline.
 
+## Schemas
+
+- Keep a zod schema in the module that parses it. Split it into
+  `<Module>.schema.ts` only when other modules import it as a message or
+  stored format, or when `./client` needs the module's constants without
+  building its schemas.
+
 ## State directory
 
 - `.jollypixel/state.json` can be rebuilt from the event store; `events.db`

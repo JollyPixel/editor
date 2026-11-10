@@ -18,13 +18,7 @@ import {
   type AssetWriteData
 } from "../events/AssetEvents.ts";
 import { decodeContent } from "../events/inlineContent.ts";
-import {
-  AssetPartContents,
-  type AssetPartReader
-} from "../events/AssetPartContents.ts";
-
-export type AssetHeldParts = ReadonlyMap<string, Uint8Array>;
-export type AssetHeldPartRefs = ReadonlyMap<string, number>;
+import type { AssetHeldParts } from "../events/AssetPartContents.ts";
 
 export function foldAssetEvent<
   TState,
@@ -68,53 +62,6 @@ export function storedCommand(
   return commands.upcast === undefined ?
     event.eventData :
     commands.upcast(event.eventData);
-}
-
-export function heldPartRefs(
-  event: EventStore.Event
-): AssetHeldPartRefs {
-  const refs = new Map<string, number>();
-  const data = parseWriteData(event);
-  for (const [partId, entry] of Object.entries(data?.parts ?? {})) {
-    if (!("content" in entry)) {
-      refs.set(partId, entry.at);
-    }
-  }
-
-  return refs;
-}
-
-export async function loadHeldParts(
-  assetId: string,
-  refs: AssetHeldPartRefs,
-  reader: AssetPartReader
-): Promise<AssetHeldParts> {
-  const held = new Map<string, Uint8Array>();
-  const contents = new AssetPartContents(reader, assetId);
-  for (const [partId, at] of refs) {
-    held.set(partId, await contents.read(partId, at));
-  }
-
-  return held;
-}
-
-function parseWriteData(
-  event: EventStore.Event
-): AssetWriteData | null {
-  if (event.eventType !== ASSET_CREATED && event.eventType !== ASSET_UPDATED) {
-    return null;
-  }
-
-  const parsed = parseAssetEvent(event);
-  if (
-    !parsed.ok ||
-    (parsed.val.eventType !== ASSET_CREATED &&
-      parsed.val.eventType !== ASSET_UPDATED)
-  ) {
-    return null;
-  }
-
-  return parsed.val.eventData;
 }
 
 function foldLifecycleEvent(

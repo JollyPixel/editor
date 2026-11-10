@@ -11,13 +11,13 @@ import { asError } from "@jolly-pixel/utils";
 // Import Internal Dependencies
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
-  ASSET_CREATED,
-  ASSET_UPDATED,
-  parseAssetEvent,
   partRefs,
-  type AssetEvent,
   type AssetEventDataMap
 } from "../../model/events/AssetEvents.ts";
+import {
+  parseWriteEvent,
+  type AssetWriteEvent
+} from "../../model/events/parseWriteEvent.ts";
 import { decodeContent } from "../../model/events/inlineContent.ts";
 import { AssetPartContents } from "../../model/events/AssetPartContents.ts";
 import type { AssetProjector } from "../../storage/projection/AssetProjector.ts";
@@ -94,11 +94,6 @@ export interface AssetTagsOptions {
   kinds: AssetKindRegistry;
   logger?: Logger;
 }
-
-type AssetWriteEvent = Extract<
-  AssetEvent,
-  { eventType: typeof ASSET_CREATED | typeof ASSET_UPDATED; }
->;
 
 interface TaggedContent {
   path: string;
@@ -511,25 +506,6 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
 
     return content;
   }
-}
-
-function parseWriteEvent(
-  event: EventStore.Event | undefined
-): AssetWriteEvent | null {
-  if (event === undefined) {
-    return null;
-  }
-
-  const parsed = parseAssetEvent(event);
-  if (!parsed.ok) {
-    return null;
-  }
-
-  const { val } = parsed;
-
-  return val.eventType === ASSET_CREATED || val.eventType === ASSET_UPDATED ?
-    val :
-    null;
 }
 
 function sameContent(

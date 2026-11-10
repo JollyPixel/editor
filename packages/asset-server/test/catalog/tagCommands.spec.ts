@@ -18,7 +18,7 @@ import {
   createAssetBackend,
   type AssetBackend
 } from "#src/index.ts";
-import { CatalogRejectedError } from "#src/catalog/client/index.ts";
+import { CatalogRejectedError } from "#src/client/index.ts";
 import {
   bytes,
   text
