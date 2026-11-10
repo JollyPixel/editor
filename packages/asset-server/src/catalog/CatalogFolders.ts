@@ -2,7 +2,6 @@
 import {
   FolderSet,
   isWithinFolder,
-  normalizeAssetPath,
   writableAssetPath,
   type AssetSource
 } from "@jolly-pixel/asset-source";
@@ -85,7 +84,7 @@ export class CatalogFolders extends Emitter<
   async delete(
     path: string
   ): Promise<string> {
-    const folder = normalizeAssetPath(path);
+    const folder = writableAssetPath(this.#source, path).unwrap();
 
     return this.#queue.run(async() => {
       await this.#flush();
@@ -100,7 +99,7 @@ export class CatalogFolders extends Emitter<
     from: string,
     to: string
   ): Promise<string> {
-    const origin = normalizeAssetPath(from);
+    const origin = writableAssetPath(this.#source, from).unwrap();
     const target = writableAssetPath(this.#source, to).unwrap();
     if (isWithinFolder(target, origin)) {
       throw new FolderMovedIntoItselfError(

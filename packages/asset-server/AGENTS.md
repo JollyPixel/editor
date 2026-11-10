@@ -34,3 +34,11 @@
   event log.
 - A manifest renamed or deleted outside the backend leaves its `.parts/`
   folder behind.
+
+## Project packages
+
+- Any room writer can write a file anywhere the source does not ignore. Pass
+  `resolver.ignoreGlobs(...)` as `AssetServer`'s `ignore`, as studio's
+  `StudioProject.assetIgnores()` does: it reserves the root `package.json`,
+  whose name a Node or Vite self-reference would resolve as a kind, and every
+  local package (`./kinds/foo`) inside the project.

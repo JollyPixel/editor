@@ -263,22 +263,22 @@ export async function writeData(
 async function partEntries(
   parts: AssetPartsWrite
 ): Promise<Record<string, AssetPartEntry>> {
-  const entries: Record<string, AssetPartEntry> = {};
+  const entries: Array<[string, AssetPartEntry]> = [];
   for (const [partId, ref] of parts.kept ?? []) {
-    entries[partId] = {
+    entries.push([partId, {
       hash: ref.hash,
       size: ref.size,
       at: ref.at
-    };
+    }]);
   }
   for (const [partId, data] of parts.written) {
-    entries[partId] = {
+    entries.push([partId, {
       hash: await contentHash(data),
       size: data.byteLength,
       content: encodeContent(data)
-    };
+    }]);
   }
 
-  return entries;
+  return Object.fromEntries(entries);
 }
 

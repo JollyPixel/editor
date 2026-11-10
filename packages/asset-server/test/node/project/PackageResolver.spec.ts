@@ -8,7 +8,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 // Import Internal Dependencies
-import { PackageResolver } from "#src/node.ts";
+import {
+  AssetServer,
+  PackageResolver
+} from "#src/node.ts";
 import {
   writeKindPackage,
   writePackage
@@ -171,6 +174,43 @@ describe("PackageResolver", () => {
         message: `Cannot locate the package "./kinds/local" in "${project}".`
       }
     );
+  });
+
+  test("keeps the project manifest and local packages out of the asset source", async() => {
+    await using temporary = await tempDirectory();
+    const project = path.join(temporary.root, "project");
+    await writeKindPackage(path.join(project, "kinds", "local"), "local");
+    await writeKindPackage(path.join(temporary.root, "shared"), "shared");
+    await writeKindPackage(
+      path.join(project, "node_modules", "kind-a"),
+      "kind-a"
+    );
+    const resolver = new PackageResolver(project);
+    const ignore = resolver.ignoreGlobs([
+      "./kinds/local",
+      "../shared",
+      "kind-a"
+    ]);
+    await using assetServer = await AssetServer.open({
+      root: project,
+      ignore
+    });
+
+    assert.deepEqual(ignore, ["package.json", "kinds/local/**"]);
+    assert.ok(assetServer.source.isIgnored("package.json"));
+    assert.ok(assetServer.source.isIgnored("kinds/local/index.js"));
+    assert.ok(!assetServer.source.isIgnored("kinds/package.json"));
+  });
+
+  test("refuses a local package at the project root", async() => {
+    await using temporary = await tempDirectory();
+    await writeKindPackage(temporary.root, "root");
+    const resolver = new PackageResolver(temporary.root);
+
+    assert.throws(() => resolver.ignoreGlobs(["./"]), {
+      name: "TypeError",
+      message: "The package \"./\" cannot be the project root."
+    });
   });
 
   test("names a package it cannot find", async() => {

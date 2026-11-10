@@ -151,6 +151,7 @@ export class StudioBackend implements AsyncDisposable {
 
     const assetServer = await AssetServer.open({
       root: project.file.root,
+      ignore: project.assetIgnores(),
       inMemory: options.inMemory,
       handlers: project.kinds.handlers(),
       seed: await createStudioSeed(

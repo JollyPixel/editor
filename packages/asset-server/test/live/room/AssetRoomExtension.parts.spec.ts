@@ -116,6 +116,19 @@ describe("AssetRoomExtension — parts", () => {
     });
   });
 
+  test("a subscription naming __proto__ is refused", async() => {
+    await using harness = await tilesRoom();
+    await joined(harness, "A");
+    const count = payloads(harness, "A").length;
+
+    await harness.send("A", {
+      action: "subscribe-parts",
+      parts: ["a", "__proto__"]
+    });
+
+    assert.deepEqual(since(harness, "A", count), []);
+  });
+
   test("a command reaches its author and its subscribers, others get its outside form", async() => {
     await using harness = await tilesRoom();
     await joined(harness, "A", "B", "C");

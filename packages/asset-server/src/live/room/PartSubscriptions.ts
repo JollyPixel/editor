@@ -140,15 +140,13 @@ export class PartSubscriptions<
   #message(
     partIds: Iterable<string>
   ): AssetRoomPartsMessage {
-    const parts: Record<string, unknown> = {};
-    for (const partId of partIds) {
-      parts[partId] = this.#live.part(partId) ?? null;
-    }
-
     return {
       type: ASSET_ROOM_PARTS,
       version: this.#version() ?? 0,
-      parts
+      parts: Object.fromEntries(Array.from(
+        partIds,
+        (partId) => [partId, this.#live.part(partId) ?? null]
+      ))
     };
   }
 }
