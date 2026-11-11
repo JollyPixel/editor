@@ -14,7 +14,8 @@ import type {
 } from "../studio/BenchEditors.ts";
 import {
   DEFAULT_SETTLE_MS,
-  NETWORK_FLAG
+  NETWORK_FLAG,
+  fileIn
 } from "../common/flags.ts";
 import type {
   OpenPlan,
@@ -252,13 +253,6 @@ export class OpenRun {
 
     return measurement;
   }
-}
-
-function fileIn(
-  dir: string | null,
-  name: string
-): string | undefined {
-  return dir === null ? undefined : path.join(dir, name);
 }
 
 function shuffled<T>(

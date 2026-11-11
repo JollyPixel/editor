@@ -8,7 +8,6 @@ import {
   type TemplateResult
 } from "lit";
 import { styleMap } from "lit/directives/style-map.js";
-import type { ParsedLine } from "sugar-high/core";
 import {
   TextEdit,
   type ScriptChange,
@@ -27,6 +26,7 @@ import {
   type KeyEdit
 } from "../../text/EditingKeys.ts";
 import { LineRange } from "../../text/LineRange.ts";
+import { changedSpan } from "../../text/changedSpan.ts";
 import { ScriptCaret } from "../../text/ScriptCaret.ts";
 import { TextLines } from "../../text/TextLines.ts";
 import {
@@ -34,10 +34,8 @@ import {
   tokenSpan
 } from "../../syntax/tokens.ts";
 import { CodeViewport } from "./CodeViewport.ts";
-import {
-  highlight,
-  type ScriptLanguage
-} from "../../syntax/highlight.ts";
+import { CodeTokens } from "../../syntax/CodeTokens.ts";
+import type { ScriptLanguage } from "../../syntax/highlight.ts";
 
 export interface ScriptCodeOptions {
   document: ScriptDocument;
@@ -166,10 +164,9 @@ export class ScriptCode extends LitElement {
 
   #document: ScriptDocument | null = null;
   #collaboration: ScriptCollaboration | null = null;
-  #language: ScriptLanguage = "plaintext";
   #readOnly = true;
   #lines = new TextLines("");
-  #tokens: readonly ParsedLine[] = [];
+  #tokens = new CodeTokens(() => this.requestUpdate());
   #carets: readonly PeerCaret[] = [];
   #release: Array<() => void> = [];
   #viewport = new CodeViewport(this, {
@@ -196,8 +193,8 @@ export class ScriptCode extends LitElement {
     this.#document = document;
     this.#collaboration = collaboration;
     this.#readOnly = readOnly;
-    this.#language = language;
-    this.#readText(document.text);
+    this.#lines = new TextLines(document.text);
+    this.#tokens.reset(this.#lines, language);
     this.#carets = collaboration.carets;
     const page = this.ownerDocument;
     page.addEventListener("selectionchange", this.#onSelectionChange);
@@ -285,7 +282,7 @@ export class ScriptCode extends LitElement {
   #renderTokens(
     line: number
   ): TemplateResult {
-    return html`${(this.#tokens[line]?.tokens ?? []).map(tokenSpan)}`;
+    return html`${(this.#tokens.line(line)?.tokens ?? []).map(tokenSpan)}`;
   }
 
   #renderCaret(
@@ -344,7 +341,8 @@ export class ScriptCode extends LitElement {
       return;
     }
 
-    this.#readText(document.text);
+    this.#lines = new TextLines(document.text);
+    this.#tokens.read(this.#lines);
     const textarea = this.#textarea;
     if (origin !== "input" && textarea !== null) {
       this.#syncTextarea(
@@ -352,13 +350,6 @@ export class ScriptCode extends LitElement {
       );
     }
     this.requestUpdate();
-  }
-
-  #readText(
-    text: string
-  ): void {
-    this.#lines = new TextLines(text);
-    this.#tokens = highlight(text, this.#language);
   }
 
   #syncTextarea(
@@ -370,9 +361,20 @@ export class ScriptCode extends LitElement {
       return;
     }
     if (textarea.value !== text) {
-      textarea.value = text;
+      this.#replaceText(textarea, text);
     }
     caret.selectIn(textarea);
+  }
+
+  #replaceText(
+    textarea: HTMLTextAreaElement,
+    text: string
+  ): void {
+    const scroller = this.renderRoot.querySelector(".scroller");
+    const top = scroller?.scrollTop ?? 0;
+    const left = scroller?.scrollLeft ?? 0;
+    replaceText(textarea, text);
+    scroller?.scrollTo(left, top);
   }
 
   #onInput(): void {
@@ -382,7 +384,11 @@ export class ScriptCode extends LitElement {
       return;
     }
 
-    document.edit(TextEdit.between(document.text, textarea.value, textarea.selectionEnd));
+    const edit = TextEdit.between(document.text, textarea.value, textarea.selectionEnd);
+    if (edit.empty) {
+      return;
+    }
+    document.edit(edit);
     this.#revealCaret();
   }
 
@@ -446,22 +452,42 @@ export class ScriptCode extends LitElement {
   }
 
   #revealCaret(): void {
-    const textarea = this.#textarea;
-    if (textarea === null) {
-      return;
-    }
+    void this.updateComplete.then(() => {
+      const textarea = this.#textarea;
+      if (textarea === null) {
+        return;
+      }
 
-    const { head } = ScriptCaret.from(textarea);
-    this.#viewport.reveal(this.#lines.position(head), this.#lines);
+      const { head } = ScriptCaret.from(textarea);
+      this.#viewport.reveal(this.#lines.position(head), this.#lines);
+    });
   }
 
   #detach(): void {
+    this.#tokens.dispose();
     for (const release of this.#release.splice(0)) {
       release();
     }
     this.#document = null;
     this.#collaboration = null;
   }
+}
+
+function replaceText(
+  textarea: HTMLTextAreaElement,
+  text: string
+): void {
+  const root = textarea.getRootNode();
+  if (root instanceof ShadowRoot && root.activeElement === textarea) {
+    const { start, beforeEnd, afterEnd } = changedSpan(textarea.value, text);
+    textarea.setSelectionRange(start, beforeEnd);
+    textarea.ownerDocument.execCommand("insertText", false, text.slice(start, afterEnd));
+    if (textarea.value === text) {
+      return;
+    }
+  }
+
+  textarea.value = text;
 }
 
 function caretAfter(

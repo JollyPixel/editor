@@ -41,6 +41,22 @@ export class MeasurementGroup<T> {
       (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
+  versus(
+    control: MeasurementGroup<T> | undefined,
+    pick: MeasurementPick<T>,
+    fractionDigits = 0
+  ): string | number {
+    const scale = 10 ** fractionDigits;
+    const value = Math.round(this.median(pick) * scale) / scale;
+    if (control === undefined) {
+      return value;
+    }
+    const controlValue = Math.round(control.median(pick) * scale) / scale;
+    const difference = Math.round((value - controlValue) * scale) / scale;
+
+    return `${value} (${difference >= 0 ? "+" : ""}${difference})`;
+  }
+
   percentile(
     pick: MeasurementPick<T>,
     rank: number

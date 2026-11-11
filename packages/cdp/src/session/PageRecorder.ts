@@ -52,6 +52,7 @@ export interface MemoryRecording {
 export interface PageRecording {
   metrics: MetricsDelta;
   socketBytes: number;
+  socketSentBytes: number;
   cpuProfileFile?: string;
   memory?: MemoryRecording;
 }
@@ -107,7 +108,8 @@ export class PageRecorder {
     action: () => Promise<T>
   ): Promise<Recorded<T>> {
     const metricsBefore = await this.#metrics();
-    const socketsBefore = this.#traffic.received;
+    const receivedBefore = this.#traffic.received;
+    const sentBefore = this.#traffic.sent;
     const stopMemory = plan.heapProfile === undefined ?
       null :
       await this.#startMemory(plan.heapProfile);
@@ -130,7 +132,8 @@ export class PageRecorder {
       result,
       recording: {
         metrics: new MetricsDelta(metricsBefore, await this.#metrics()),
-        socketBytes: this.#traffic.received - socketsBefore,
+        socketBytes: this.#traffic.received - receivedBefore,
+        socketSentBytes: this.#traffic.sent - sentBefore,
         cpuProfileFile,
         memory
       }

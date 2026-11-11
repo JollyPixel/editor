@@ -32,8 +32,9 @@
     "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json",
-    "lint": "oxlint src test vite.config.ts playwright.config.ts && pnpm run lint:css",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json",
+    "lint": "oxlint src test bench vite.config.ts playwright.config.ts && pnpm run lint:css",
+    "bench": "jolly-bench",
     "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
   },
   "repository": {
@@ -51,6 +52,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@jolly-pixel/bench": "workspace:*",
     "@jolly-pixel/e2e": "workspace:*"
   },
   "dependencies": {

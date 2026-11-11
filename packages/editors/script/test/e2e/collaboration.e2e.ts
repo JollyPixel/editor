@@ -56,3 +56,26 @@ test("a peer follows the caret that Tab and undo move", async({ page, peer }) =>
   await page.keyboard.press("Control+z");
   await expect(caret).toHaveAttribute("style", /left: ?0ch/);
 });
+
+test("an edit above a reading peer keeps that peer's scroll position and caret", async({ page, peer }) => {
+  const lines = Array.from({ length: 200 }, (_, index) => `const value${index} = ${index};`);
+  const typed = "// peer\n";
+  await placeCaretAtEnd(page);
+  await page.keyboard.insertText(`${lines.join("\n")}\n`);
+  await expect.poll(() => scriptText(peer)).toContain("value199");
+
+  const scroller = page.locator("jolly-script-code .scroller");
+  const source = page.getByRole("textbox", { name: "Script source" });
+  const scrollTop = await scroller.evaluate((element) => element.scrollTop);
+  const caret = await source.evaluate((element: HTMLTextAreaElement) => element.selectionStart);
+  expect(scrollTop).toBeGreaterThan(0);
+
+  await peer.getByRole("textbox", { name: "Script source" }).focus();
+  await peer.keyboard.press("Control+Home");
+  await peer.keyboard.type(typed);
+
+  await expect.poll(() => scriptText(page)).toContain(typed);
+  expect(await scroller.evaluate((element) => element.scrollTop)).toBe(scrollTop);
+  const caretAfter = await source.evaluate((element: HTMLTextAreaElement) => element.selectionStart);
+  expect(caretAfter).toBe(caret + typed.length);
+});

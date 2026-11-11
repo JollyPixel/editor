@@ -1,6 +1,6 @@
 # Benchmarking editor opens
 
-How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, on top of the CDP recorder, page scripts and profile readers of `@jolly-pixel/cdp`, starting with [`perf/open/measure.ts`](../../perf/open/measure.ts); the latest results, for the scene and sound editors, are in [Scene and sound editors, 3 November 2026](./editor-open-2026-11-03.md).
+How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, on top of the CDP recorder, page scripts and profile readers of `@jolly-pixel/cdp`, starting with [`perf/open/measure.ts`](../../perf/open/measure.ts); the latest results are in [Scene and sound editors, 3 November 2026](./editor-open-2026-11-03.md) and [Script editor, 11 November 2026](./script-editor-2026-11-11.md).
 
 ## What is measured
 
@@ -34,6 +34,8 @@ Server rooms stay open for `roomGraceMs` (5 min) after the last peer leaves, so 
 
 The seed project has no scene, sound, model or script. Before the first scene or script open, the harness creates `New scene.scene.json` or `New script.ts` from the New asset menu; before the first model open, it drops `packages/runtime/examples/public/models/ToyCar.glb` (5.4 MB) on the Asset Browser; before the first sound open, it drops `packages/editors/sound/assets/sounds/chime.ogg` on the Asset Browser. That path is gitignored: the sound dev server seeds a generated chime of about 1.6 s there, and a longer file put at the same path measures a longer decode. Online, the asset stays on the server for the next accounts; offline, every new context creates it again.
 
+The script editor opens several kinds of file, so it has more targets than one per editor. `script` is the `New script.ts` template and `shader` the `New shader.tsl.ts` template, both from the New asset menu. The others are dropped files that [`perf/studio/fixtures.ts`](../../perf/studio/fixtures.ts) builds from the repository at run time, so they only change when the sources they copy change: `script-ts-l` (`typed.ts`, 100 KB of `editors/script`, `assets/script` and `scripting` sources), `script-js-l` (`plain.js`, the same sources with their types stripped), `text-md` (`notes.md`, 20 KB of package READMEs and docs), `text-md-l` (`guide.md`, 100 KB of the same) and `text-json-l` (`data.json`, 100 KB of workspace `package.json` files).
+
 ## Running the matrix
 
 Build every workspace and the studio shell, then serve the build with the in-memory back-end and accounts of `dev:e2e` on port 3004:
@@ -58,7 +60,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 
 `perf:open` options:
 
-- `--editors voxel-map,voxel-model,pixel-art,scene,sound,model,script` and `--modes online,offline`: what to open. Online registers a new account per context; offline opens `/?offline`.
+- `--editors voxel-map,voxel-model,pixel-art,scene,sound,model,script` and `--modes online,offline`: what to open. The script editor's other targets (`shader`, `script-ts-l`, `script-js-l`, `text-md`, `text-md-l`, `text-json-l`) are listed by name too. Online registers a new account per context; offline opens `/?offline`.
 - `--phases reopen,reload,cold,restart`: the phases measured after `first`, which always runs.
 - `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor. A measurement's `run` is its repetition, and profile files end with it.
 - `--label`: tags every measurement, for summaries that mix files.
@@ -130,6 +132,31 @@ $ node perf/serve/throttle.ts --listen 3024 --target 3004
 Unlike `--network`, it treats compressed and uncompressed frames alike. It throttles from the first request, so `first` and `cold` include the shell and editor downloads; read `reopen` and `reload` for room timings.
 
 Seed each server before a throttled run, by one round of an unthrottled variant against it: the first model or sound open on a server uploads its asset, and through the proxy that upload alone can exceed the harness's 30 s timeout.
+
+## Editing a file
+
+[`perf/edit/measure.ts`](../../perf/edit/measure.ts) measures what typing costs in the script editor, once the editor has opened and settled. It runs on the same build and server as `perf:open`:
+
+```bash
+$ node perf/edit/measure.ts --rounds 3 --out perf-results/edit.json
+$ node perf/edit/measure.ts --plan docs/performance/script-editor-2026-11-11.json --rounds 3 --control control
+$ node perf/edit/summarize.ts perf-results/edit.json --control control
+```
+
+Each editor of a round gets a new browser. The caret goes to the end of the line in the middle of the file, then these scenarios run in order on the same document:
+
+- `type`: Enter, then `--keys` characters of a code comment at 35 ms intervals.
+- `enter`: `--keys` presses of Enter, 60 ms apart. Enter goes through the editor's own key handling (auto-indent), not the textarea's.
+- `paste`: five pastes of the file's first 4 KB, 400 ms apart. A paste is one `insertFromPaste` input event, the way Ctrl+V delivers it; Playwright's `insertText` would fire one event per line.
+- `undo`: `--keys` presses of Ctrl+Z. History groups typing, so most presses of a 60-key run undo nothing; read the p95 and max columns.
+- `caret`: `--keys` presses of the down arrow.
+- `scroll`: `--keys` mouse wheel steps of 240 px over the code.
+
+A scenario's latency is the time from each input event's `timeStamp` to a task queued after the next animation frame, so it covers the handlers, the render and the paint that the key caused (`startInputLatency` of `@jolly-pixel/cdp`, installed in the editor frame). The summary gives the p50, p95 and max of those latencies, how many went over 50 ms, main-thread, script, layout and style time per input from the CDP metrics, long animation frames, and WebSocket bytes sent. Every User Timing measure the page records during a scenario is totalled in a second table, so an experiment patch can wrap the costs it wants to see in `performance.measure`. Online, the harness puts the original text back at the end, so later rounds start from the same document.
+
+Options: `--editors` (default every script editor target), `--modes` (default `offline`), `--scenarios`, `--keys 60`, `--rounds 3`, `--cpu`, `--profile <dir>` (a V8 CPU profile per scenario, read with `analyze/profile.ts`), `--memory <dir>` (heap profile and GC per scenario, adds MB and GC columns), `--label`, `--storage` and `--base` for a one-variant run, or `--plan` for an A/B. An edit plan lists `editors`, `modes`, `scenarios` and `variants`; a variant has a `label`, `storage` and `base`. Rounds alternate the variant order, as `perf:ab` does.
+
+`packages/editors/script/bench/keystroke.bench.ts` times the same per-keystroke work in Node for 12 and 100 KB of TypeScript, Markdown and JSON: highlighting, line splitting, `TextEdit.between` and `marked`. Run it with `node bench/keystroke.bench.ts` from the script editor's folder.
 
 ## Finding where the time goes
 

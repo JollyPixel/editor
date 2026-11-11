@@ -71,7 +71,8 @@ throughput (bytes per second), usually one of `NETWORK_PRESETS` (`fast-4g`,
 - `metrics`: a `MetricsDelta` over `Performance.getMetrics`. `change(name)`
   takes a `MetricName` and returns after minus before, or 0 when Chrome did
   not report it. Durations are in seconds.
-- `socketBytes`: the WebSocket bytes the page received.
+- `socketBytes` and `socketSentBytes`: the WebSocket bytes the page received
+  and sent.
 - `cpuProfileFile`: set when `plan.cpuProfile` names a file. Sampled every
   `CPU_SAMPLING_INTERVAL_US` (200 µs).
 - `memory`: set when `plan.heapProfile` names a file. Holds the sampled heap
@@ -94,6 +95,10 @@ page.
   `renderGapMs` to the previous one counts as the same render; a gap over
   `wakeGapMs` counts as a wake and adds to `idleMs`. `FRAME_PACING_THRESHOLDS`
   holds the defaults (4 ms, 100 ms). Throws when WebGPU is unavailable.
+- `startInputLatency(types)` and `stopInputLatency()` time each event of the
+  listed types, such as `keydown` or `wheel`, from its `timeStamp` to a task
+  queued after the next animation frame: the handlers, the render and the
+  paint it caused. Call them in the frame that receives the input.
 
 ### Session helpers
 

@@ -14,6 +14,7 @@ export class TextLines {
   readonly lines: readonly string[];
 
   #starts: number[];
+  #widest: number | undefined;
 
   constructor(
     text: string
@@ -37,12 +38,14 @@ export class TextLines {
   }
 
   get widest(): number {
-    let widest = 0;
-    for (let line = 0; line < this.lines.length; line++) {
-      widest = Math.max(widest, this.visualWidth(line));
+    if (this.#widest === undefined) {
+      this.#widest = 0;
+      for (let line = 0; line < this.lines.length; line++) {
+        this.#widest = Math.max(this.#widest, this.visualWidth(line));
+      }
     }
 
-    return widest;
+    return this.#widest;
   }
 
   line(

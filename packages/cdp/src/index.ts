@@ -9,6 +9,7 @@ export * from "./analysis/Trace.ts";
 export * from "./analysis/TraceThread.ts";
 export * from "./network/ThrottleProxy.ts";
 export * from "./page/framePacing.ts";
+export * from "./page/inputLatency.ts";
 export * from "./page/prewarmGpuAdapter.ts";
 export * from "./page/storage.ts";
 export * from "./session/emulation.ts";

@@ -11,7 +11,7 @@ import {
 import { sourcePackage } from "./sourcePackage.ts";
 
 export interface ServedEditors {
-  servingUrl(url: string): { dist: string; } | null;
+  distServing(url: string): string | null;
 }
 
 export interface FrameLocation {
@@ -74,20 +74,20 @@ export class FrameLocator {
       return "(node)";
     }
 
-    return this.#editors.servingUrl(url) === null ? "(studio shell)" : "(editor, unmapped)";
+    return this.#editors.distServing(url) === null ? "(studio shell)" : "(editor, unmapped)";
   }
 
   #loadSourceMap(
     url: string
   ): SourceMapFile | null {
     if (!this.#maps.has(url)) {
-      const editor = this.#editors.servingUrl(url);
+      const dist = this.#editors.distServing(url);
       const asset = /\/editors\/[\w-]+\/(assets\/[^?]+)/.exec(url)?.[1];
       this.#maps.set(
         url,
-        editor === null || asset === undefined ?
+        dist === null || asset === undefined ?
           null :
-          SourceMapFile.load(path.join(editor.dist, asset))
+          SourceMapFile.load(path.join(dist, asset))
       );
     }
 
