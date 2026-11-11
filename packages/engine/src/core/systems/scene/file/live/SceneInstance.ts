@@ -495,6 +495,19 @@ export class SceneInstance<
       return;
     }
 
+    const missing = this.#mode === "play" ?
+      this.#definitions.missingAsset(entry, this.#world.assetCoordinator) :
+      null;
+    if (missing !== null) {
+      this.#logger.warn("Missing asset skipped", {
+        actor: actor.name,
+        type: entry.type,
+        assetId: missing.reference.id
+      });
+
+      return;
+    }
+
     const component = this.#definitions.create(actor, entry, {
       mode: this.#mode,
       resolver: this.#assets

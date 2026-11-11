@@ -16,6 +16,8 @@ interface AssetCoordinatorOptions {
 class AssetCoordinator {
   constructor(options: AssetCoordinatorOptions);
 
+  canLoad(reference: AssetReference<unknown>): boolean;
+
   request<TValue>(
     reference: AssetReference<TValue>
   ): AssetHandle<TValue>;
@@ -38,6 +40,12 @@ class AssetCoordinator {
 
 Each coordinator keeps its own loaded values. Two coordinators never share
 them. The catalog and the loader registry stay private to the coordinator.
+
+## `canLoad(reference)`
+
+Reports whether `load(reference)` would reach a loader: the catalog holds the
+asset with the reference's kind, and the reference's `AssetType` is the token
+registered with a loader. It throws nothing and loads nothing.
 
 ## `request(reference)`
 

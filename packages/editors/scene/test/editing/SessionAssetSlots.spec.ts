@@ -3,7 +3,11 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { AssetReferenceData } from "@jolly-pixel/asset";
+import {
+  AssetReference,
+  AssetType,
+  type AssetReferenceData
+} from "@jolly-pixel/asset";
 import { DependencyIndex } from "@jolly-pixel/asset-server/client";
 import type { AssetPickOptions, EditorSession } from "@jolly-pixel/editor.host";
 
@@ -49,6 +53,31 @@ describe("SessionAssetSlots.pickScene", () => {
     assert.deepEqual(
       ["level", "house", "room", "tree", "empty"].filter((id) => accepts!(scene(id))),
       ["tree", "empty"]
+    );
+  });
+});
+
+describe("SessionAssetSlots.canLoad", () => {
+  test("loads a reference only when the catalog has its asset with its kind", () => {
+    const records = new Map([["serif", { id: "serif", kind: "font", path: "serif.ttf" }]]);
+    const session = {
+      catalog: { record: (id: string) => records.get(id) }
+    } as unknown as Pick<EditorSession, "catalog" | "pickAsset">;
+    const slots = new SessionAssetSlots({
+      session,
+      sceneId: "level",
+      descriptors: [],
+      open: null
+    });
+
+    const font = new AssetType("font");
+    assert.deepEqual(
+      [
+        new AssetReference("serif", font),
+        new AssetReference("serif", new AssetType("texture")),
+        new AssetReference("gone", font)
+      ].map((reference) => slots.canLoad(reference)),
+      [true, false, false]
     );
   });
 });

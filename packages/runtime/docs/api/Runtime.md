@@ -34,6 +34,7 @@ fails to initialize.
 | `renderer` | engine defaults | Forwarded to [`ThreeRenderer.create()`](../../../engine/docs/systems/renderer.md). An explicit `output.pixelRatio` or `output.maxPixelRatio` survives `load()`. |
 | `loop` | scheduler defaults | [`FrameSchedulerOptions`](../../../loop/docs/framescheduler.md) of `runtime.loop`, plus its [`idleDelay`](../../../loop/docs/gameloop.md#options), `2000` by default. |
 | `logger` | every namespace disabled | Receives the [startup steps](#startup-tracing) and a lost GPU device. |
+| `worldLogger` | world defaults | Engine `LoggerOptions` of `world.logger`, such as a `listener` that forwards scene warnings. |
 | `overlay.container` | tracks the canvas | Element or selector hosting [`runtime.overlay`](./OverlayLayer.md). |
 | `includePerformanceStats` | `false` | `true` or an object mounts the corner HUD. |
 | `includePerformanceStats.mount` | `true` | `false` leaves the HUD unmounted. |

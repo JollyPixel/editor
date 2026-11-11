@@ -3,7 +3,10 @@ import { describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { Logger } from "../../src/core/systems/Logger.ts";
+import {
+  Logger,
+  type LogEntry
+} from "../../src/core/systems/Logger.ts";
 
 function createAdapter() {
   return {
@@ -37,6 +40,27 @@ describe("Systems.Logger", () => {
 
     assert.strictEqual(adapter.log.mock.callCount(), 0);
     assert.strictEqual(adapter.error.mock.callCount(), 1);
+  });
+
+  test("should hand each written message to its listener as an entry", () => {
+    const entries: LogEntry[] = [];
+    const logger = new Logger({
+      level: "warn",
+      namespaces: ["systems.*"],
+      adapter: createAdapter(),
+      listener: (entry) => entries.push(entry)
+    });
+
+    logger.child({ namespace: "systems" }).warn("warn", { reason: "test" });
+    logger.child({ namespace: "systems" }).info("info");
+    logger.child({ namespace: "editor" }).error("error");
+
+    assert.deepEqual(entries, [{
+      level: "warn",
+      namespace: "systems",
+      message: "warn",
+      meta: { reason: "test" }
+    }]);
   });
 
   test("should silence every level with void", () => {

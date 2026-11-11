@@ -308,7 +308,12 @@ export class Studio extends LitElement {
       play: user.online ?
         {
           project: user.project,
-          failed: (message) => this.#fail(`Game error: ${message}`)
+          failed: (message) => this.#fail(`Game error: ${message}`),
+          warned: (message) => this.#notifications.notify({
+            tone: "warning",
+            source: "Game",
+            title: message
+          })
         } :
         undefined
     });

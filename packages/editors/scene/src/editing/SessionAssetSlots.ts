@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   AssetPath,
+  type AssetReference,
   type AssetReferenceData,
   type AssetType
 } from "@jolly-pixel/asset";
@@ -53,6 +54,14 @@ export class SessionAssetSlots implements SceneAssetSlots {
     return record === undefined ?
       kMissingName :
       new AssetPath(record.path).name;
+  }
+
+  canLoad(
+    reference: AssetReference<unknown>
+  ): boolean {
+    return this.#session.catalog.record(
+      reference.id.value
+    )?.kind === reference.kind.value;
   }
 
   async pick(

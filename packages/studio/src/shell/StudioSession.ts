@@ -84,7 +84,10 @@ export interface StudioSessionConsole {
   readonly commands?: FrameConsolesOptions["commands"];
 }
 
-export type StudioSessionPlay = Pick<StudioPlayOptions, "project" | "failed">;
+export type StudioSessionPlay = Pick<
+  StudioPlayOptions,
+  "project" | "failed" | "warned"
+>;
 
 export interface StudioSessionSlots {
   strip: TabStrip;

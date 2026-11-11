@@ -9,33 +9,7 @@ effort: S is a day, M a few days, L a week, XL several weeks. Each step ends
 with the touched workspaces' tests, `pnpm run typecheck` and `pnpm run lint`
 green.
 
-## 1. Missing assets in a scene (S)
-
-**Spec.** A component whose asset the game cannot load is skipped with a
-warning, and the rest of the scene plays. Causes: the asset is missing from
-the game manifest (deleted, or the account cannot open it), its kind does not
-match the slot, or no runtime loader handles its kind. The player sends the
-warning to the studio, which shows it as a notification without closing the
-game.
-
-What already holds: a component type with no definition is skipped with a
-warning in play mode (`SceneInstance`), and adds no asset to the scene's
-preload (`ComponentDefinitions.assets`). A missing asset still fails the
-whole load: `AssetCatalog.resolve` or `AssetLoaderRegistry.get` throws inside
-the scene's `loadBatch`.
-
-**Plan.**
-
-1. Engine: `FileScene` collects its preload references in play mode only
-   from slots whose asset resolves in the catalog and whose kind has a loader.
-   `SceneInstance` skips a component with such a slot and logs
-   `Missing asset skipped` with the actor, component type and asset ID.
-2. Player: forward the engine's warnings to the opener as a `jolly-play-warning`
-   message next to `jolly-play-error` (`src/play/protocol.ts`); `StudioPlay`
-   shows them as warning notifications.
-3. Engine unit tests for each cause; a `StudioPlay` test for the warning.
-
-## 2. Build cache size (M)
+## 1. Build cache size (M)
 
 **Spec.** `.jollypixel/builds/` holds only the builds of current asset
 revisions, plus orphans left by a restart until the next export. Deleting the
@@ -55,7 +29,7 @@ Builds are keyed by content, and two assets with equal content share a key.
 3. asset-server unit tests on an in-memory source: rebuild drops the old key,
    a shared key survives, the sweep keeps exactly the current keys.
 
-## 3. Physics only when used (M)
+## 2. Physics only when used (M)
 
 **Spec.** A game loads Rapier's wasm only when a scene it loaded at start
 (the start scene and its prefabs) holds a RigidBody. A RigidBody a script
@@ -75,7 +49,7 @@ Today `RUNTIME_COMPONENTS.setup` in `editor.scene` imports
 3. `editor.scene`: attach Rapier only when `game.uses("RigidBody")`.
 4. Runtime unit test for the forwarded `game`; a `GameScenes.uses` test.
 
-## 4. Export in dev (M)
+## 3. Export in dev (M)
 
 **Spec.** Under `pnpm dev`, Export game zips a player built from the current
 sources, so the `build:hosted` step and its gotcha in `AGENTS.md` go away.
@@ -94,7 +68,7 @@ The server takes the player through the `GamePlayer` seam
 3. Drop the export line from the studio `AGENTS.md`.
 4. A `DevPlayer` test that the files hold the `index.html` and its chunks.
 
-## 5. Switch scenes from a script (M)
+## 4. Switch scenes from a script (M)
 
 **Spec.** A script can load another scene asset by ID: the game fetches the
 scene and its prefabs, then calls `sceneManager.loadScene`. Today the player's
@@ -110,7 +84,7 @@ level.
    loaded.
 3. Unit test: load a second scene that shares a prefab with the first.
 
-## 6. Export size (M, then L)
+## 5. Export size (M, then L)
 
 **Spec.** Step 1: the export streams, so memory holds about one artifact at a
 time instead of the whole zip. Step 2: the export holds only the assets the
@@ -125,12 +99,12 @@ Today `GameExport` builds every buildable asset and zips them in memory with
 1. Stream with fflate's `Zip` into the reply as each asset builds. A build
    error after the first bytes are sent aborts the response, so the export
    checks the default scene and the player before it starts streaming.
-2. After topic 5: compute the closure from the default scene, every scene a
+2. After topic 4: compute the closure from the default scene, every scene a
    script can switch to, prefabs, component slots and script imports. Until
    scripts declare the scenes they load, "every scene" is the only safe
    answer, so the closure drops unused non-scene assets only.
 
-## 7. Script import cycles (L)
+## 6. Script import cycles (L)
 
 **Spec.** Scripts that import each other by value play, online and in an
 export. Each script loads from a real URL instead of a `data:` module, so its
@@ -158,7 +132,7 @@ in Firefox, and the page route avoids depending on a polyfill.
 6. Tests: the map for a catalog, and a unit test of the HTML injection. Two scripts importing each other need a real browser: one e2e
    in the player suite.
 
-## 8. Offline Play and export (XL, after 7)
+## 7. Offline Play and export (XL, after 6)
 
 **Spec.** The offline and static studios show Play and Export game. The game
 runs from the in-browser back-end with the same player code as online.
@@ -170,7 +144,7 @@ build in Node only. Shaders already build in the browser (SWC strip-only).
 **Plan.**
 
 1. A service worker scoped to `/play/` answers the player page (with the
-   import map of topic 7), `game.json` and `builds/*` by asking the opener
+   import map of topic 6), `game.json` and `builds/*` by asking the opener
    window through the clients API and a `MessageChannel`. The opener's
    offline back-end builds the artifact. The first load is not controlled by
    the worker, so the player reloads once after it activates. Service workers

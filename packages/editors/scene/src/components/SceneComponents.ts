@@ -95,6 +95,7 @@ export class SceneComponents {
   #assetSources = new Map<string, SceneAssetSource>();
   #slots: ReadonlyMap<string, KindSlots>;
   #icons: ReadonlyMap<string, string>;
+  #definitions: Systems.ComponentDefinitions;
 
   constructor(
     packages: Iterable<NamedSceneComponentPackage>
@@ -124,6 +125,7 @@ export class SceneComponents {
       kind.definition.type,
       SceneComponents.#icon(kind, this.#findSlots(kind.definition.type), assetIcons)
     ]));
+    this.#definitions = this.createDefinitions();
   }
 
   get descriptors(): AssetKindDescriptor[] {
@@ -187,6 +189,13 @@ export class SceneComponents {
         label: kind.label,
         detail
       };
+  }
+
+  missingAsset(
+    component: Pick<DescribedComponent, "type" | "assets">,
+    loadable: Systems.LoadableAssets
+  ): string | null {
+    return this.#definitions.missingAsset(component, loadable)?.slot ?? null;
   }
 
   actorOrigin(

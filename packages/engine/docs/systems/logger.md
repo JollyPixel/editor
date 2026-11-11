@@ -29,6 +29,14 @@ interface LoggerOptions {
   namespaces?: string[];
   /** @default console */
   adapter?: ConsoleAdapter;
+  listener?: (entry: LogEntry) => void;
+}
+
+interface LogEntry {
+  readonly level: Exclude<LogLevel, "void">;
+  readonly namespace: string;
+  readonly message: string;
+  readonly meta: Record<string, unknown> | undefined;
 }
 ```
 
@@ -38,7 +46,9 @@ namespace matches one of `namespaces`. With no namespaces, nothing is written;
 and everything below it, `"*"` matches every namespace. Elsewhere a `*`
 segment matches one level (`"boot.*.assets"`), `**` any number of levels, and
 `*` or `?` inside a segment any characters or one. `adapter` is described
-in [Adapters](../internals/adapters.md#console).
+in [Adapters](../internals/adapters.md#console). `listener` receives each
+written message after the adapter, unformatted, with the namespace of the
+logger that wrote it.
 
 ## Children
 
