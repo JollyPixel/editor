@@ -4,21 +4,26 @@ import {
   ActorComponent,
   type Actor
 } from "@jolly-pixel/engine";
+import type { Preferences } from "@jolly-pixel/preferences";
 import {
   MeshHighlight,
   ObjectOverlayRenderer,
   PeerHighlights,
-  createListedColorAllocator
+  createListedColorAllocator,
+  type HighlightTechnique
 } from "@jolly-pixel/three";
 import { PeerMarkSync } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import { SCENE_PREFERENCES } from "../../preferences.ts";
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
 import type { PresenceStore } from "../../state/PresenceStore.ts";
 import type { SelectionStore } from "../../state/SelectionStore.ts";
 
 // CONSTANTS
 const kSelectionColor = "#f5c46b";
+const kOutlineThickness = 0.04;
+const kOccludedOpacityScale = 0.25;
 
 export interface SelectionHighlightOptions {
   renderer: THREE.WebGPURenderer;
@@ -26,12 +31,14 @@ export interface SelectionHighlightOptions {
   binding: Pick<SceneBinding, "actor" | "subscribe">;
   selection: SelectionStore;
   presence: PresenceStore;
+  preferences: Preferences;
 }
 
 export class SelectionHighlight extends ActorComponent {
   #options: SelectionHighlightOptions;
   #highlight: MeshHighlight;
   #targets = new Map<string, THREE.Object3D>();
+  #technique: HighlightTechnique;
   #peerTargets: PeerMarkSync<string>;
 
   #sync = (): void => {
@@ -45,7 +52,7 @@ export class SelectionHighlight extends ActorComponent {
     }
     for (const [id, object] of targets) {
       if (this.#targets.get(id) !== object) {
-        highlight.register(id, object);
+        highlight.register(id, object, { technique: this.#technique });
       }
     }
     this.#targets = targets;
@@ -71,7 +78,8 @@ export class SelectionHighlight extends ActorComponent {
     });
     this.#options = options;
 
-    const { binding, selection, presence } = options;
+    const { binding, selection, presence, preferences } = options;
+    this.#technique = selectionTechnique(preferences.values(SCENE_PREFERENCES).bounds);
     this.#highlight = new MeshHighlight({
       renderer: options.renderer,
       scene: actor.world.sceneManager.graph.scene,
@@ -84,8 +92,11 @@ export class SelectionHighlight extends ActorComponent {
       chips: true,
       appearance: {
         xray: true,
+        xrayDepthWrite: true,
         selected: { color: kSelectionColor },
-        hovered: { color: kSelectionColor }
+        hovered: { color: kSelectionColor },
+        outline: { linewidth: kOutlineThickness },
+        occludedOpacityScale: kOccludedOpacityScale
       },
       peers: new PeerHighlights({
         colorAllocator: createListedColorAllocator(() => presence.peers)
@@ -100,7 +111,17 @@ export class SelectionHighlight extends ActorComponent {
     const subscriptions = [
       selection.subscribe("change", this.#sync),
       presence.subscribe("selectionsChange", this.#sync),
-      binding.subscribe("actorsChange", this.#sync)
+      binding.subscribe("actorsChange", this.#sync),
+      preferences.watch(SCENE_PREFERENCES, (values) => {
+        const technique = selectionTechnique(values.bounds);
+        if (technique !== this.#technique) {
+          this.#technique = technique;
+          for (const [id, object] of this.#targets) {
+            this.#highlight.register(id, object, { technique });
+          }
+          actor.world.invalidate();
+        }
+      })
     ];
     this.addTeardown(() => {
       for (const unsubscribe of subscriptions) {
@@ -128,4 +149,10 @@ export class SelectionHighlight extends ActorComponent {
 
     return targets;
   }
+}
+
+function selectionTechnique(
+  bounds: boolean
+): HighlightTechnique {
+  return bounds ? "boundingBox" : "silhouette";
 }

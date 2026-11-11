@@ -171,7 +171,8 @@ export class SceneEditorScene extends Systems.Scene {
       .createActor("scene-helpers")
       .addComponent(SceneHelpers, {
         binding,
-        preferences: this.#options.preferences
+        preferences: this.#options.preferences,
+        selection
       });
     world
       .createActor("selection-highlight")
@@ -180,7 +181,8 @@ export class SceneEditorScene extends Systems.Scene {
         camera: camera.camera,
         binding,
         selection,
-        presence
+        presence,
+        preferences: this.#options.preferences
       });
     const sceneGizmo = new SceneGizmo({
       camera,

@@ -13,7 +13,44 @@ import {
   readLastColor
 } from "./helpers.ts";
 
+// CONSTANTS
+const kSideCamera = new THREE.Vector3(100, 0, 0);
+
+function outerHalfHeight(
+  overlay: HighlightBoxSilhouette
+): number {
+  overlay.update(kSideCamera);
+  overlay.geometry.computeBoundingBox();
+
+  return overlay.geometry.boundingBox!.max.y;
+}
+
+function unscaledHalfHeight(
+  linewidth: number
+): number {
+  return outerHalfHeight(new HighlightBoxSilhouette({
+    target: createBoxMesh(),
+    linewidth,
+    innerThickness: 0
+  }));
+}
+
 describe("update", () => {
+  test("keeps its line width in world units as the target's scale changes", () => {
+    const target = createBoxMesh();
+    target.scale.setScalar(4);
+    const overlay = new HighlightBoxSilhouette({
+      target,
+      linewidth: 0.08,
+      innerThickness: 0
+    });
+
+    assert.ok(Math.abs(outerHalfHeight(overlay) - unscaledHalfHeight(0.02)) < 1e-6);
+
+    target.scale.setScalar(2);
+    assert.ok(Math.abs(outerHalfHeight(overlay) - unscaledHalfHeight(0.04)) < 1e-6);
+  });
+
   test("keeps only the 4 edges and their corner joints for a single camera-facing side", () => {
     const overlay = new HighlightBoxSilhouette({ target: createBoxMesh(), innerThickness: 0 });
 

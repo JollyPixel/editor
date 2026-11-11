@@ -78,12 +78,13 @@ silhouette.dispose();
 ```
 
 Options are `target`, `color` (`"#ffffff"`), `opacity` (`1`), `linewidth`
-(`0.05`, in the target's local units), `innerThickness` (`0.02`, `0` drops the
-inner bar), `innerColor` (`"#000000"`), `xray` (`false`), `occludedOpacity`
-(`opacity`), `xrayDepthWrite` (`false`), `peer` (`false`) and `renderOrder`.
-Under xray, the part hidden behind other geometry draws at `occludedOpacity`.
-Call `update(cameraWorldPosition)` every frame: it rebuilds the bars only when
-the outline changes. `HighlightMeshSilhouette` also follows a replaced or
+(`0.05`), `innerThickness` (`0.02`, `0` drops the inner bar), `innerColor`
+(`"#000000"`), `xray` (`false`), `occludedOpacity` (`opacity`),
+`xrayDepthWrite` (`false`), `peer` (`false`) and `renderOrder`. `linewidth`
+and `innerThickness` are in world units: the bars are divided by the target's
+largest world scale. Under xray, the part hidden behind other geometry draws
+at `occludedOpacity`. Call `update(cameraWorldPosition)` every frame: it
+rebuilds the bars only when the outline or the target's world scale changes. `HighlightMeshSilhouette` also follows a replaced or
 edited target geometry, switching between box bars and contour as needed. `color`, `opacity`, `linewidth`, `xray` and
 `occludedOpacity` are writable properties; a new `linewidth` applies at the
 next rebuild. Both extend the abstract `HighlightSilhouette`, which other
@@ -91,6 +92,30 @@ code can use for type checks but cannot construct.
 
 `MeshHighlight` uses them for the `"boxSilhouette"` and `"silhouette"`
 techniques. `"boxSilhouette"` only accepts a `BoxGeometry` mesh.
+
+### HighlightGroupSilhouette
+
+`"silhouette"` on a target that is not a mesh creates a
+`HighlightGroupSilhouette`: one `HighlightMeshSilhouette` per visible mesh
+under the target, the target included. An `InstancedMesh` and the objects of
+other highlight overlays are skipped.
+
+```ts
+const silhouette = new HighlightGroupSilhouette({
+  target: actorGroup,
+  color: "#f5c46b",
+  linewidth: 0.04,
+  xray: true
+});
+
+silhouette.update(camera.getWorldPosition(new THREE.Vector3()));
+silhouette.dispose();
+```
+
+It takes the `HighlightSilhouette` options with any `Object3D` as `target`.
+`update(cameraWorldPosition)` also outlines meshes added or shown since the
+last call and drops removed or hidden ones. `color`, `opacity`, `linewidth`,
+`xray` and `occludedOpacity` are writable properties.
 
 ### MergedHighlightOverlay
 

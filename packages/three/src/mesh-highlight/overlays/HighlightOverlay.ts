@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 
+// CONSTANTS
+const kOverlayObjects = new WeakSet<THREE.Object3D>();
+
 export interface HighlightOverlay {
   color: THREE.ColorRepresentation;
   opacity: number;
@@ -15,4 +18,16 @@ export interface HighlightOverlay {
   occludedOpacity?: number;
   update?(cameraWorldPosition: THREE.Vector3): void;
   dispose(): void;
+}
+
+export function markHighlightOverlay(
+  object: THREE.Object3D
+): void {
+  kOverlayObjects.add(object);
+}
+
+export function isHighlightOverlay(
+  object: THREE.Object3D
+): boolean {
+  return kOverlayObjects.has(object);
 }

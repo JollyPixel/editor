@@ -30,6 +30,20 @@ export const SCENE_PREFERENCES = definePreferences({
       group: "View",
       default: true
     },
+    helpers: {
+      type: "boolean",
+      label: "Helpers",
+      group: "View",
+      description: "Camera and light icons, frustums and ranges",
+      default: true
+    },
+    bounds: {
+      type: "boolean",
+      label: "Selection bounds",
+      group: "View",
+      description: "Box selected actors instead of outlining them",
+      default: false
+    },
     snap: {
       type: "boolean",
       label: "Snap",

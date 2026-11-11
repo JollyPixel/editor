@@ -2,6 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import { markHighlightOverlay } from "./HighlightOverlay.ts";
 import {
   writeOuterColor,
   type SilhouetteGeometry,
@@ -9,8 +10,10 @@ import {
 } from "./silhouetteGeometry.ts";
 
 // CONSTANTS
+export const SILHOUETTE_LINEWIDTH = 0.05;
 const kXrayRenderOrder = 999;
 const kInitialCameraPosition = new THREE.Vector3(1e6, 1e6, 1e6);
+const kWorldScale = new THREE.Vector3();
 
 export interface SilhouetteView {
   key: string;
@@ -113,6 +116,37 @@ function createBackPass(
   return mesh;
 }
 
+function largestWorldScale(
+  target: THREE.Object3D
+): number {
+  target.getWorldScale(kWorldScale);
+  const scale = Math.max(
+    Math.abs(kWorldScale.x),
+    Math.abs(kWorldScale.y),
+    Math.abs(kWorldScale.z)
+  );
+
+  return scale > 0 ? scale : 1;
+}
+
+function localRings(
+  rings: SilhouetteRings,
+  scale: number
+): SilhouetteRings {
+  return {
+    ...rings,
+    innerThickness: rings.innerThickness / scale,
+    linewidth: rings.linewidth / scale
+  };
+}
+
+function scaledViewKey(
+  view: SilhouetteView,
+  scale: number
+): string {
+  return `${scale}:${view.key}`;
+}
+
 export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> {
   #target: THREE.Mesh;
   #shape: SilhouetteShape;
@@ -133,7 +167,7 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
       target,
       color = "#ffffff",
       opacity = 1,
-      linewidth = 0.05,
+      linewidth = SILHOUETTE_LINEWIDTH,
       xray = false,
       peer = false,
       renderOrder = defaultRenderOrder(xray, peer),
@@ -149,8 +183,9 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
       innerColor: new THREE.Color(innerColor),
       color: new THREE.Color(color)
     };
+    const scale = largestWorldScale(target);
     const view = shape.viewFrom(kInitialCameraPosition);
-    const built = view.build(rings);
+    const built = view.build(localRings(rings, scale));
 
     super(
       built.geometry,
@@ -164,7 +199,7 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
 
     this.#target = target;
     this.#shape = shape;
-    this.#viewKey = view.key;
+    this.#viewKey = scaledViewKey(view, scale);
     this.#rings = rings;
     this.#renderOrder = renderOrder;
     this.#xray = xray;
@@ -173,6 +208,7 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
     this.#outerColorStart = built.outerColorStart;
     this.renderOrder = renderOrder;
     this.frustumCulled = false;
+    markHighlightOverlay(this);
     target.add(this);
 
     this.#applyXray();
@@ -236,14 +272,16 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
   update(
     cameraWorldPosition: THREE.Vector3
   ): void {
+    const scale = largestWorldScale(this.#target);
     const localCameraPosition = this.#target.worldToLocal(cameraWorldPosition.clone());
     const view = this.#shape.viewFrom(localCameraPosition);
-    if (view.key === this.#viewKey) {
+    const viewKey = scaledViewKey(view, scale);
+    if (viewKey === this.#viewKey) {
       return;
     }
 
-    const built = view.build(this.#rings);
-    this.#viewKey = view.key;
+    const built = view.build(localRings(this.#rings, scale));
+    this.#viewKey = viewKey;
     this.geometry.dispose();
     this.geometry = built.geometry;
     this.#outerColorStart = built.outerColorStart;

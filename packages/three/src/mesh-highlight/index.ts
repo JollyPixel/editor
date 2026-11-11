@@ -71,6 +71,10 @@ export {
   type HighlightMeshSilhouetteOptions
 } from "./overlays/HighlightMeshSilhouette.ts";
 export {
+  HighlightGroupSilhouette,
+  type HighlightGroupSilhouetteOptions
+} from "./overlays/HighlightGroupSilhouette.ts";
+export {
   MergedHighlightOverlay,
   type MergedHighlightOverlayOptions
 } from "./overlays/MergedHighlightOverlay.ts";

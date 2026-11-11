@@ -6,6 +6,7 @@ import { HighlightOutline } from "./HighlightOutline.ts";
 import { HighlightBoundingBox } from "./HighlightBoundingBox.ts";
 import { HighlightBoxSilhouette } from "./HighlightBoxSilhouette.ts";
 import { HighlightMeshSilhouette } from "./HighlightMeshSilhouette.ts";
+import { HighlightGroupSilhouette } from "./HighlightGroupSilhouette.ts";
 import type { HighlightSilhouetteOptions } from "./HighlightSilhouette.ts";
 import type {
   HighlightOverlayCreateOptions,
@@ -27,11 +28,9 @@ export const outlineOverlayFactory: HighlightOverlayFactory = {
 };
 
 function silhouetteOptions(
-  target: THREE.Object3D,
   options: HighlightOverlayCreateOptions
-): HighlightSilhouetteOptions {
+): Omit<HighlightSilhouetteOptions, "target"> {
   return {
-    target: target as THREE.Mesh,
     color: options.color,
     opacity: options.opacity,
     linewidth: options.linewidth,
@@ -48,13 +47,26 @@ function silhouetteOptions(
 export const boxSilhouetteOverlayFactory: HighlightOverlayFactory = {
   id: "boxSilhouette",
   supports: (target) => target instanceof THREE.Mesh && target.geometry instanceof THREE.BoxGeometry,
-  create: (target, options) => new HighlightBoxSilhouette(silhouetteOptions(target, options))
+  create: (target, options) => new HighlightBoxSilhouette({
+    ...silhouetteOptions(options),
+    target: target as THREE.Mesh
+  })
 };
 
 export const silhouetteOverlayFactory: HighlightOverlayFactory = {
   id: "silhouette",
-  supports: (target) => target instanceof THREE.Mesh,
-  create: (target, options) => new HighlightMeshSilhouette(silhouetteOptions(target, options))
+  supports: () => true,
+  create: (target, options) => (
+    target instanceof THREE.Mesh ?
+      new HighlightMeshSilhouette({
+        ...silhouetteOptions(options),
+        target
+      }) :
+      new HighlightGroupSilhouette({
+        ...silhouetteOptions(options),
+        target
+      })
+  )
 };
 
 export const boundingBoxOverlayFactory: HighlightOverlayFactory = {

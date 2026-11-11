@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type * as THREE from "three";
+import * as THREE from "three";
 import {
   ActorComponent,
   CameraComponent,
@@ -16,6 +16,7 @@ import type {
   BoundComponent,
   SceneBinding
 } from "../../scene/SceneBinding.ts";
+import type { SelectionStore } from "../../state/SelectionStore.ts";
 import { CameraFrustum } from "./helpers/CameraFrustum.ts";
 import type { ComponentHelper } from "./helpers/ComponentHelper.ts";
 import { LightMarker } from "./helpers/LightMarker.ts";
@@ -23,18 +24,21 @@ import { LightMarker } from "./helpers/LightMarker.ts";
 export interface SceneHelpersOptions {
   binding: SceneBinding;
   preferences: Preferences;
+  selection: Pick<SelectionStore, "has" | "subscribe">;
 }
 
 interface DrawnHelper {
   helper: ComponentHelper;
+  actorId: string;
   releasePick: () => void;
 }
 
 export class SceneHelpers extends ActorComponent {
   #binding: SceneBinding;
-  #scene: THREE.Scene;
+  #root = new THREE.Group();
   #helpers = new Map<Component, DrawnHelper>();
   #preferences: Preferences;
+  #selection: SceneHelpersOptions["selection"];
 
   #add = (
     bound: BoundComponent
@@ -52,11 +56,13 @@ export class SceneHelpers extends ActorComponent {
       return;
     }
 
+    helper.root.selected = this.#selection.has(bound.actorId);
     this.#helpers.set(bound.component, {
       helper,
+      actorId: bound.actorId,
       releasePick: this.#binding.addPickTarget(helper.root, bound.actorId)
     });
-    this.#scene.add(helper.root);
+    this.#root.add(helper.root);
   };
 
   #drop = (
@@ -69,8 +75,15 @@ export class SceneHelpers extends ActorComponent {
 
     this.#helpers.delete(component);
     drawn.releasePick();
-    this.#scene.remove(drawn.helper.root);
+    this.#root.remove(drawn.helper.root);
     drawn.helper.dispose();
+  };
+
+  #select = (): void => {
+    for (const { helper, actorId } of this.#helpers.values()) {
+      helper.root.selected = this.#selection.has(actorId);
+    }
+    this.actor.world.invalidate();
   };
 
   constructor(
@@ -82,15 +95,19 @@ export class SceneHelpers extends ActorComponent {
       typeName: "SceneHelpers"
     });
     this.#binding = options.binding;
-    this.#scene = actor.world.sceneManager.graph.scene;
     this.#preferences = options.preferences;
+    this.#selection = options.selection;
+    this.#root.visible = this.#preferences.values(SCENE_PREFERENCES).helpers;
+    actor.world.sceneManager.graph.scene.add(this.#root);
 
     for (const bound of this.#binding.components()) {
       this.#add(bound);
     }
     this.#binding.on("componentBuilt", this.#add);
     this.#binding.on("componentDropped", this.#drop);
+    this.addTeardown(this.#selection.subscribe("change", this.#select));
     this.addTeardown(this.#preferences.watch(SCENE_PREFERENCES, (values) => {
+      this.#root.visible = values.helpers;
       for (const { component } of this.#binding.components()) {
         if (component instanceof ColliderOutline) {
           component.shown = values.colliders;
@@ -104,6 +121,7 @@ export class SceneHelpers extends ActorComponent {
       for (const component of [...this.#helpers.keys()]) {
         this.#drop(component);
       }
+      this.#root.removeFromParent();
     });
   }
 

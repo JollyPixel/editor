@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { inflateEdgesGeometry } from "./inflateEdgesGeometry.ts";
+import { markHighlightOverlay } from "./HighlightOverlay.ts";
 
 // CONSTANTS
 const kOffsetFactor = 0.006;
@@ -89,6 +90,7 @@ export class HighlightOutline extends THREE.LineSegments<THREE.BufferGeometry, T
     }
 
     this.renderOrder = xray ? kXrayRenderOrder : 1;
+    markHighlightOverlay(this);
     target.add(this);
   }
 

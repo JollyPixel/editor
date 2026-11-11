@@ -1,6 +1,13 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
+// Import Internal Dependencies
+import {
+  frustumLinePoints,
+  type FrustumLens
+} from "../common/geometry/frustumLines.ts";
+import { GizmoIcon } from "./GizmoIcon.ts";
+
 export interface CameraGizmoLens {
   projection: "perspective" | "orthographic";
   /**
@@ -17,9 +24,13 @@ export interface CameraGizmoLens {
 
 export interface CameraGizmoOptions {
   /**
-   * @default "#f5c46b"
+   * @default "#aab4c3"
    */
   color?: THREE.ColorRepresentation;
+  /**
+   * @default "#f5c46b"
+   */
+  selectedColor?: THREE.ColorRepresentation;
   /**
    * Width-to-height ratio of the drawn frustum.
    * @default 16 / 9
@@ -33,17 +44,24 @@ export interface CameraGizmoOptions {
 }
 
 // CONSTANTS
-const kDefaultColor = "#f5c46b";
+const kDefaultColor = "#aab4c3";
+const kDefaultSelectedColor = "#f5c46b";
 const kDefaultAspect = 16 / 9;
 const kDefaultDepth = 3;
+const kIdleIconColor = "#ffffff";
+const kScale = new THREE.Vector3();
 
 export class CameraGizmo extends THREE.Group {
   readonly #aspect: number;
   readonly #depth: number;
-  readonly #perspective = new THREE.PerspectiveCamera();
-  readonly #orthographic = new THREE.OrthographicCamera();
-  readonly #body: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
-  #frustum: THREE.CameraHelper | null = null;
+  readonly #color: THREE.Color;
+  readonly #selectedColor: THREE.Color;
+  readonly #icon = new GizmoIcon("camera");
+  readonly #frustum: THREE.LineSegments<
+    THREE.BufferGeometry, THREE.LineBasicMaterial
+  >;
+  #lensKey = "";
+  #selected = false;
 
   constructor(
     options: CameraGizmoOptions = {}
@@ -51,67 +69,91 @@ export class CameraGizmo extends THREE.Group {
     super();
     const {
       color = kDefaultColor,
+      selectedColor = kDefaultSelectedColor,
       aspect = kDefaultAspect,
       depth = kDefaultDepth
     } = options;
 
     this.#aspect = aspect;
     this.#depth = depth;
-    this.#body = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 0.2, 0.4),
-      new THREE.MeshBasicMaterial({
-        color,
-        wireframe: true
-      })
+    this.#color = new THREE.Color(color);
+    this.#selectedColor = new THREE.Color(selectedColor);
+    this.#frustum = new THREE.LineSegments(
+      new THREE.BufferGeometry(),
+      new THREE.LineBasicMaterial({ color })
     );
-    this.matrixAutoUpdate = false;
-    this.add(this.#body);
+    this.#icon.color = kIdleIconColor;
+    this.add(this.#frustum, this.#icon);
+  }
+
+  get selected(): boolean {
+    return this.#selected;
+  }
+
+  set selected(
+    selected: boolean
+  ) {
+    this.#selected = selected;
+    this.#frustum.material.color.copy(
+      selected ? this.#selectedColor : this.#color
+    );
+    this.#icon.color = selected ? this.#selectedColor : kIdleIconColor;
   }
 
   update(
     lens: CameraGizmoLens,
     matrixWorld: THREE.Matrix4
   ): void {
-    const camera = lens.projection === "orthographic" ?
-      this.#orthographic :
-      this.#perspective;
-    if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = lens.fov;
-      camera.aspect = this.#aspect;
-    }
-    else {
-      const halfHeight = lens.orthographicScale / 2;
-      camera.top = halfHeight;
-      camera.bottom = -halfHeight;
-      camera.left = -halfHeight * this.#aspect;
-      camera.right = halfHeight * this.#aspect;
-    }
-    camera.near = lens.near;
-    camera.far = Math.min(lens.far, lens.near + this.#depth);
-    camera.updateProjectionMatrix();
-
-    if (this.#frustum?.camera !== camera) {
-      this.#disposeFrustum();
-      this.#frustum = new THREE.CameraHelper(camera);
-      this.add(this.#frustum);
+    const far = Math.min(lens.far, lens.near + this.#depth);
+    const key = [
+      lens.projection,
+      lens.fov,
+      lens.orthographicScale,
+      lens.near,
+      far
+    ].join(":");
+    if (key !== this.#lensKey) {
+      this.#lensKey = key;
+      this.#frustum.geometry.dispose();
+      this.#frustum.geometry = new THREE.BufferGeometry().setFromPoints(
+        frustumLinePoints(this.#frustumLens(lens, far), {
+          apex: true,
+          up: true
+        })
+      );
     }
 
-    this.matrix.copy(matrixWorld);
-    this.matrixWorldNeedsUpdate = true;
-    this.#frustum.update();
+    matrixWorld.decompose(this.position, this.quaternion, kScale);
   }
 
   override dispose(): void {
-    this.#disposeFrustum();
-    this.#body.geometry.dispose();
-    this.#body.material.dispose();
+    this.#frustum.geometry.dispose();
+    this.#frustum.material.dispose();
+    this.#icon.dispose();
   }
 
-  #disposeFrustum(): void {
-    if (this.#frustum !== null) {
-      this.remove(this.#frustum);
-      this.#frustum.dispose();
-      this.#frustum = null;
+  #frustumLens(
+    lens: CameraGizmoLens,
+    far: number
+  ): FrustumLens {
+    const { near } = lens;
+
+    if (lens.projection === "orthographic") {
+      return {
+        projection: "orthographic",
+        height: lens.orthographicScale,
+        aspect: this.#aspect,
+        near,
+        far
+      };
     }
+
+    return {
+      projection: "perspective",
+      fov: lens.fov,
+      aspect: this.#aspect,
+      near,
+      far
+    };
   }
 }
