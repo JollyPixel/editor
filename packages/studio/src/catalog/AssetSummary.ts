@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import type { IconName } from "@jolly-pixel/ui";
+import type { KindPreview } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { AssetKindSet } from "./AssetKindSet.ts";
 import type { AssetPath } from "./AssetPath.ts";
 import type { AssetSelection } from "./AssetSelection.ts";
-import type { KindPreview } from "../../shared/ProjectManifest.ts";
 
 // CONSTANTS
 const kFolderIcon: IconName = "folder";

@@ -3,18 +3,15 @@ import type {
   Connect,
   ViteDevServer
 } from "vite";
-
-// Import Internal Dependencies
+import { EDITOR_PAGE_FILE, EDITOR_PAGES_PREFIX } from "@jolly-pixel/server";
 import {
   EditorPageFolders,
   type EditorPageSource,
-  type PageEditor
-} from "../server/editors/EditorPageFolders.ts";
-import { readPathname } from "../server/requestPathname.ts";
-import {
-  EDITOR_PAGE_FILE,
-  EDITOR_PAGES_PREFIX
-} from "../shared/EditorDescriptor.ts";
+  type PageEditor,
+  readPathname
+} from "@jolly-pixel/server/node";
+
+// Import Internal Dependencies
 import type { EditorPageInput } from "./EditorPageInput.ts";
 
 export class ServedEditorPages implements EditorPageSource {

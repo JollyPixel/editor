@@ -7,13 +7,13 @@ import {
 } from "lit";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/toolbar";
+import type { ProjectSettingsReply } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import { ProjectSettingsController } from "./ProjectSettingsController.ts";
 import type {
   StudioProjectSettings
 } from "../../../project/StudioProjectSettings.ts";
-import type { ProjectSettingsReply } from "../../../../shared/api/project.ts";
 
 export interface SettingsDraft {
   toJSON(): unknown;

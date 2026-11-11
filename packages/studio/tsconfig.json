@@ -58,6 +58,9 @@
       "path": "../preferences"
     },
     {
+      "path": "../server"
+    },
+    {
       "path": "../utils"
     }
   ]

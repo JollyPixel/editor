@@ -20,13 +20,10 @@ import type {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/dialog";
+import { ShareLifetime, type ShareLifetimeName } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { AssetLeafData } from "../../../catalog/AssetTreeModel.ts";
-import {
-  ShareLifetime,
-  type ShareLifetimeName
-} from "../../../../shared/ShareLifetime.ts";
 import type { StudioShareLinks } from "../../../shares/StudioShareLinks.ts";
 import { RemoteStateController } from "../../RemoteStateController.ts";
 import type { ShareLinkList } from "../../shares/ShareLinkList.ts";

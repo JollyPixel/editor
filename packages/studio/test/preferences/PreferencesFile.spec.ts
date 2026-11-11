@@ -11,12 +11,12 @@ import {
   defineKeyBindings,
   Preferences
 } from "@jolly-pixel/preferences";
+import { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
+import { STUDIO_PREFERENCES } from "../../shared/preferences.ts";
 import { PreferencesFile } from "../../src/preferences/PreferencesFile.ts";
 import { InvalidPreferencesFileError } from "../../src/preferences/errors/InvalidPreferencesFileError.ts";
-import { STUDIO_PREFERENCES } from "../../shared/studioScope.ts";
 
 // CONSTANTS
 const kKeys = defineKeyBindings({
@@ -37,7 +37,10 @@ const kKeys = defineKeyBindings({
     }
   }
 });
-const kScopes = new PreferenceScopes([STUDIO_PREFERENCES, kKeys], []);
+const kScopes = new PreferenceScopes({
+  scopes: [STUDIO_PREFERENCES, kKeys],
+  common: []
+}, []);
 
 function jsonFile(
   value: unknown

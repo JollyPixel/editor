@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import type { GameSection } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
@@ -15,7 +16,6 @@ import {
   type StudioPlayOptions
 } from "../../src/play/StudioPlay.ts";
 import { GAME_CHANGE } from "../../src/project/StudioProjectSettings.ts";
-import type { GameSection } from "../../shared/api/project.ts";
 
 // CONSTANTS
 const kRecords = new Map<string, AssetRecordData>([

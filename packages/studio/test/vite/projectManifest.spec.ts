@@ -22,14 +22,14 @@ import {
   DEFAULT_CATALOG_MAX_CONTENT_BYTES,
   TEXTURE_ASSET
 } from "@jolly-pixel/asset-server";
-
-// Import Internal Dependencies
-import { PROJECT_MANIFEST_FILE } from "../../shared/ProjectManifest.ts";
-import { projectManifest } from "../../vite/projectManifest.ts";
+import { PROJECT_MANIFEST_FILE } from "@jolly-pixel/server";
 import {
   listen,
   voxelMapProject
-} from "../helpers/editorPages.ts";
+} from "@jolly-pixel/server/testing";
+
+// Import Internal Dependencies
+import { projectManifest } from "../../vite/projectManifest.ts";
 import {
   createTempDir,
   removeTempDir

@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
 import type { Preferences } from "@jolly-pixel/preferences";
-
-// Import Internal Dependencies
-import { ProjectRights } from "../../shared/ProjectRights.ts";
+import { ProjectRights } from "@jolly-pixel/server";
 
 export class OfflineUser extends EventTarget {
   readonly online = false;

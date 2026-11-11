@@ -104,6 +104,9 @@
       "path": "./packages/editors/scene"
     },
     {
+      "path": "./packages/server"
+    },
+    {
       "path": "./packages/studio"
     }
   ]

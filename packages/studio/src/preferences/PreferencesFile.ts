@@ -5,11 +5,11 @@ import type {
   PreferenceScope
 } from "@jolly-pixel/preferences";
 import * as z from "zod";
+import type { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import { FileDownload } from "../browser/FileDownload.ts";
 import { InvalidPreferencesFileError } from "./errors/InvalidPreferencesFileError.ts";
-import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 
 // CONSTANTS
 export const PREFERENCES_FILE_NAME = "jollypixel-preferences.json";

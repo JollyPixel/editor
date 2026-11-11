@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { KindFilter } from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import { assetNodeId } from "../../../src/catalog/AssetTreeModel.ts";
 import type {
@@ -12,7 +15,6 @@ import type {
   KindFilterSource
 } from "../../../src/shell/assets/AssetTreeView.ts";
 import { KIND_FILTER_CHANGE } from "../../../src/project/StudioProjectSettings.ts";
-import { KindFilter } from "../../../shared/KindFilter.ts";
 import { FakeTreeCatalog } from "../../helpers/assetTree.ts";
 import {
   MAP_RECORD,

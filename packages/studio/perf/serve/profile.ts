@@ -11,13 +11,15 @@ import {
   HEAP_SAMPLING
 } from "@jolly-pixel/cdp";
 import { PORTS } from "@jolly-pixel/e2e";
+import { StudioServer } from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
 import {
-  STUDIO_ROOT,
-  StudioProject
-} from "../../server/project/StudioProject.ts";
-import { StudioServer } from "../../server/StudioServer.ts";
+  openStudioProject,
+  STUDIO_SHELL_DIR,
+  studioSeed
+} from "../../node/studioFiles.ts";
+import { SHELL_PREFERENCES } from "../../shared/preferences.ts";
 import { E2E_BACKEND_OPTIONS } from "../../vite/e2eBackend.ts";
 
 const { values: args } = parseArgs({
@@ -28,15 +30,16 @@ const { values: args } = parseArgs({
   }
 });
 
-const project = await StudioProject.open(
-  StudioProject.resolveRoot(STUDIO_ROOT),
-  { inMemory: true }
-);
+const project = await openStudioProject({
+  inMemory: true
+});
 const server = await StudioServer.open({
   project,
-  shell: path.join(STUDIO_ROOT, "dist"),
+  shell: STUDIO_SHELL_DIR,
   backend: {
     inMemory: true,
+    seed: await studioSeed(),
+    preferences: SHELL_PREFERENCES,
     ...E2E_BACKEND_OPTIONS
   }
 });

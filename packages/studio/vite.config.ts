@@ -21,19 +21,20 @@ import {
   PORTS,
   RunMode
 } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
-import { EditorPages } from "./server/editors/EditorPages.ts";
-import { StudioProject } from "./server/project/StudioProject.ts";
-import { backend } from "./vite/backend.ts";
-import { editorPages } from "./vite/editorPages.ts";
-import { projectManifest } from "./vite/projectManifest.ts";
 import {
   PLAY_PAGE_DIR,
   PLAY_PAGE_PATH,
   PREVIEW_PAGE_DIR,
   PREVIEW_PAGE_PATH
-} from "./shared/EditorDescriptor.ts";
+} from "@jolly-pixel/server";
+import { StudioServerSettings } from "@jolly-pixel/server/node";
+
+// Import Internal Dependencies
+import { openStudioProject } from "./node/studioFiles.ts";
+import { backend } from "./vite/backend.ts";
+import { EditorPageFiles } from "./vite/EditorPageFiles.ts";
+import { editorPages } from "./vite/editorPages.ts";
+import { projectManifest } from "./vite/projectManifest.ts";
 
 // CONSTANTS
 const kViteDefaultDeny = [
@@ -50,10 +51,11 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     env,
     { port: PORTS.studio }
   );
-  const project = await StudioProject.open(
-    StudioProject.resolveRoot(import.meta.dirname),
-    mode.assetServer
-  );
+  const settings = StudioServerSettings.parse(process.env);
+  const project = await openStudioProject({
+    inMemory: mode.assetServer.inMemory,
+    settings
+  });
 
   return {
     base: "./",
@@ -83,7 +85,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),
       editorPages(
-        new EditorPages(project.editors),
+        new EditorPageFiles(project.editors),
         {
           shellPages: {
             index: "index.html",
@@ -92,7 +94,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
           }
         }
       ),
-      mode.serve && backend(project, mode)
+      mode.serve && backend(project, mode, settings)
     ]
   };
 });

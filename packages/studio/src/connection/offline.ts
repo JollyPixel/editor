@@ -10,8 +10,8 @@ import createHandlers from "virtual:jolly-pixel/handlers";
 
 // Import Internal Dependencies
 import { OfflineUser } from "../accounts/OfflineUser.ts";
-import type { StudioConnection } from "./StudioConnection.ts";
 import { createStudioSeed } from "../../shared/seed.ts";
+import type { StudioConnection } from "./StudioConnection.ts";
 
 // CONSTANTS
 const kOfflineName = "studio";

@@ -12,6 +12,7 @@ import {
   type PeerIdentity
 } from "@jolly-pixel/ui";
 import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
+import type { ProjectSections, ProjectRights } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { StudioClients } from "../api/StudioClients.ts";
@@ -20,8 +21,6 @@ import type { FileDownload } from "../browser/FileDownload.ts";
 import { AccountPreferences } from "../preferences/AccountPreferences.ts";
 import { StudioProjectSettings } from "../project/StudioProjectSettings.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
-import type { ProjectSections } from "../../shared/api/project.ts";
-import type { ProjectRights } from "../../shared/ProjectRights.ts";
 import { SessionRenewal } from "./SessionRenewal.ts";
 import { STUDIO_USER_CHANGE } from "./StudioUser.ts";
 

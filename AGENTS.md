@@ -45,7 +45,8 @@
   concept.
 - These workspaces have an `AGENTS.md`; read it before changing them:
   `packages/asset-server`, `packages/cdp`, `packages/e2e`,
-  `packages/pixel-draw-renderer`, `packages/studio`, `packages/three`,
+  `packages/pixel-draw-renderer`, `packages/server`, `packages/studio`,
+  `packages/three`,
   `packages/ui`,
   `packages/voxel-renderer`, `packages/editors/host`,
   `packages/editors/scene`, `packages/editors/voxel-map`.

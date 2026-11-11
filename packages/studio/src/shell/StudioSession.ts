@@ -11,12 +11,12 @@ import {
   type PreferenceOverrides,
   type Preferences
 } from "@jolly-pixel/preferences";
+import type { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { AssetKindSet } from "../catalog/AssetKindSet.ts";
 import { AssetPath } from "../catalog/AssetPath.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
-import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
 import {
   EditorFrames,

@@ -1,0 +1,115 @@
+// Import Node.js Dependencies
+import type {
+  IncomingMessage,
+  ServerResponse
+} from "node:http";
+
+// Import Third-party Dependencies
+import { launchElement } from "@jolly-pixel/asset-server";
+
+// Import Internal Dependencies
+import { EDITOR_PAGES_PATH } from "../../editors/EditorDescriptor.ts";
+import type { Middleware } from "../http/Middleware.ts";
+import { VIEW_PAGES_PREFIX } from "../../shares/api.ts";
+import type { EditorPageSource } from "../editors/EditorPageFolders.ts";
+import type { EditorPackages } from "../editors/EditorPackages.ts";
+import { readPathname } from "../http/requestPathname.ts";
+import type { StudioShares } from "./StudioShares.ts";
+
+// CONSTANTS
+const kInjectAfter = [
+  /<head(?:\s[^>]*)?>/i,
+  /<!doctype[^>]*>/i
+];
+const kSecurityHeaders = {
+  "cache-control": "no-store",
+  "referrer-policy": "no-referrer",
+  "x-content-type-options": "nosniff"
+};
+const kNotFoundPage = "<!doctype html><html lang=\"en\"><head>" +
+  "<meta charset=\"utf-8\"><title>Link unavailable</title></head>" +
+  "<body><p>This share link has expired or was revoked.</p></body></html>";
+
+export interface SharePageOptions {
+  shares: StudioShares;
+  editors: EditorPackages;
+  pages: EditorPageSource;
+}
+
+export class SharePage {
+  readonly middleware: Middleware;
+
+  #shares: StudioShares;
+  #editors: EditorPackages;
+  #pages: EditorPageSource;
+
+  constructor(
+    options: SharePageOptions
+  ) {
+    this.#shares = options.shares;
+    this.#editors = options.editors;
+    this.#pages = options.pages;
+    this.middleware = (request, response, next) => {
+      const token = this.#tokenIn(request);
+      if (token === null) {
+        next();
+
+        return;
+      }
+
+      this.render(token).then(
+        (html) => send(response, html === null ? 404 : 200, html ?? kNotFoundPage),
+        () => send(response, 500, kNotFoundPage)
+      );
+    };
+  }
+
+  async render(
+    token: string
+  ): Promise<string | null> {
+    const shared = this.#shares.opened(token);
+    if (shared === null) {
+      return null;
+    }
+    const editor = this.#editors.forKind(shared.kind);
+    if (editor === undefined) {
+      return null;
+    }
+
+    const page = await this.#pages.html(editor);
+    const injected = `<base href="../${EDITOR_PAGES_PATH}${editor.name}/">` +
+      launchElement({
+        target: shared.assetId,
+        credential: token
+      });
+
+    const anchor = kInjectAfter.find((pattern) => pattern.test(page));
+
+    return anchor === undefined ?
+      injected + page :
+      page.replace(anchor, (tag) => tag + injected);
+  }
+
+  #tokenIn(
+    request: IncomingMessage
+  ): string | null {
+    const pathname = readPathname(request);
+
+    return pathname?.startsWith(VIEW_PAGES_PREFIX) ?
+      pathname.slice(VIEW_PAGES_PREFIX.length) :
+      null;
+  }
+}
+
+function send(
+  response: ServerResponse,
+  status: number,
+  html: string
+): void {
+  response.statusCode = status;
+  response.setHeader("content-type", "text/html; charset=utf-8");
+  for (const [name, value] of Object.entries(kSecurityHeaders)) {
+    response.setHeader(name, value);
+  }
+  response.end(html);
+}

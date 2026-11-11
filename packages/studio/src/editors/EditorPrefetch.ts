@@ -1,8 +1,5 @@
-// Import Internal Dependencies
-import {
-  EDITOR_PAGES_PATH,
-  type EditorDescriptor
-} from "../../shared/EditorDescriptor.ts";
+// Import Third-party Dependencies
+import { EDITOR_PAGES_PATH, type EditorDescriptor } from "@jolly-pixel/server";
 
 // CONSTANTS
 const kEagerFiles = [

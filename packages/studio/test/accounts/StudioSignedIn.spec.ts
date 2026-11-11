@@ -15,6 +15,7 @@ import {
   type ClientSocketEvent,
   type ClientSocketEventType
 } from "@jolly-pixel/network/client";
+import { ProjectRights } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
@@ -24,7 +25,6 @@ import {
 import { STUDIO_USER_CHANGE } from "../../src/accounts/StudioUser.ts";
 import { StudioClients } from "../../src/api/StudioClients.ts";
 import { AccountPreferences } from "../../src/preferences/AccountPreferences.ts";
-import { ProjectRights } from "../../shared/ProjectRights.ts";
 
 // CONSTANTS
 const kAlice: Account = {

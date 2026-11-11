@@ -6,11 +6,12 @@ import {
   NotificationQueue,
   type StorageAdapter
 } from "@jolly-pixel/ui";
+import { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
+import { SHELL_PREFERENCES } from "../../shared/preferences.ts";
 import { EditorRegistry } from "../../src/editors/EditorRegistry.ts";
 import { BrowserState } from "../../src/browser/BrowserState.ts";
-import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import {
   StudioSession,
   type StudioCatalog,
@@ -107,7 +108,7 @@ export function session(
       preferences: new Preferences(),
       renewal: null
     },
-    scopes: new PreferenceScopes([], []),
+    scopes: new PreferenceScopes(SHELL_PREFERENCES, []),
     launchOrigin: "http://localhost",
     slots: {
       strip,

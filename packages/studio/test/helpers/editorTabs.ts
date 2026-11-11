@@ -4,10 +4,11 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { Preferences } from "@jolly-pixel/preferences";
 import { NotificationQueue } from "@jolly-pixel/ui";
+import { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
+import { SHELL_PREFERENCES } from "../../shared/preferences.ts";
 import { EditorFrames } from "../../src/tabs/EditorFrames.ts";
-import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { idleShare } from "./catalogShare.ts";
 import {
   EditorTabs,
@@ -66,7 +67,7 @@ export function harness(
     share: idleShare(),
     notifications: new NotificationQueue(),
     preferences: new Preferences(),
-    scopes: new PreferenceScopes([], [])
+    scopes: new PreferenceScopes(SHELL_PREFERENCES, [])
   });
   const tabs = new EditorTabs({
     strip,

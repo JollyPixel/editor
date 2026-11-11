@@ -4,10 +4,10 @@ import type {
   IconName,
   JollyOption
 } from "@jolly-pixel/ui";
+import type { KindPreview } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { AssetKindPresenter } from "./AssetTreeModel.ts";
-import type { KindPreview } from "../../shared/ProjectManifest.ts";
 
 // CONSTANTS
 const kFallbackIcon: IconName = "file";

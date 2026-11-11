@@ -13,10 +13,10 @@ import {
 } from "@jolly-pixel/editor.host";
 import type { PreferenceOverrides, Preferences } from "@jolly-pixel/preferences";
 import type { Notifier } from "@jolly-pixel/ui";
+import type { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { EditorTab } from "./EditorTabs.ts";
-import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { EditorFrame } from "./EditorFrame.ts";
 import { FrameNotifications } from "./FrameNotifications.ts";
 

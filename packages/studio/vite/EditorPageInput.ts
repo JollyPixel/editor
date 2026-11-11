@@ -5,13 +5,8 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import { normalizePath } from "vite";
-
-// Import Internal Dependencies
-import type { EditorPackage } from "../server/editors/EditorPackage.ts";
-import {
-  EDITOR_PAGE_FILE,
-  EDITOR_PAGES_DIR
-} from "../shared/EditorDescriptor.ts";
+import { EDITOR_PAGE_FILE, EDITOR_PAGES_DIR } from "@jolly-pixel/server";
+import type { EditorPackage } from "@jolly-pixel/server/node";
 
 // CONSTANTS
 const kPageUrl = /(<(?:script|link)\b[^>]*?\b(?:src|href)=)(["'])([^"']+)\2/g;

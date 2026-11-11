@@ -1,15 +1,17 @@
+// Import Third-party Dependencies
+import {
+  type AccessChange,
+  type GameSection,
+  type KindOptions,
+  type ProjectSections,
+  type ProjectSettingsReply,
+  KindFilter,
+  type ProjectRights
+} from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import { RemoteState } from "../api/RemoteState.ts";
 import type { ProjectSettingsClient } from "./ProjectSettingsClient.ts";
-import type {
-  AccessChange,
-  GameSection,
-  KindOptions,
-  ProjectSections,
-  ProjectSettingsReply
-} from "../../shared/api/project.ts";
-import { KindFilter } from "../../shared/KindFilter.ts";
-import type { ProjectRights } from "../../shared/ProjectRights.ts";
 
 // CONSTANTS
 export const KIND_FILTER_CHANGE = "kind-filter-change";
@@ -17,7 +19,7 @@ export const GAME_CHANGE = "game-change";
 
 export type ProjectSettingsSource = Pick<
   ProjectSettingsClient,
-  "read" | "replaceKinds" | "replaceAccess" | "replaceKindFilter" | "replaceGame"
+  "read" | "replace"
 >;
 
 export class StudioProjectSettings extends RemoteState {
@@ -63,27 +65,27 @@ export class StudioProjectSettings extends RemoteState {
   replaceKinds(
     kinds: KindOptions
   ): Promise<boolean> {
-    return this.#replace(() => this.#client.replaceKinds(kinds));
+    return this.#replace(() => this.#client.replace("kinds", kinds));
   }
 
   replaceAccess(
     change: AccessChange
   ): Promise<boolean> {
-    return this.#replace(() => this.#client.replaceAccess(change));
+    return this.#replace(() => this.#client.replace("access", change));
   }
 
   replaceKindFilter(
     kindFilter: KindFilter
   ): Promise<boolean> {
     return this.#replace(
-      () => this.#client.replaceKindFilter(kindFilter.toJSON())
+      () => this.#client.replace("kindFilter", kindFilter.toJSON())
     );
   }
 
   replaceGame(
     game: GameSection
   ): Promise<boolean> {
-    return this.#replace(() => this.#client.replaceGame(game));
+    return this.#replace(() => this.#client.replace("game", game));
   }
 
   async #replace(

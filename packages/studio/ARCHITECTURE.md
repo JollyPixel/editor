@@ -17,7 +17,8 @@ flowchart TB
 
 - The project file lists the editors and kinds. Only the server writes it.
 - `vite/backend` mounts the back-end in dev, `StudioServer` when hosted. The static build has none and starts offline.
-- Code: `server/`, `vite/`.
+- The back-end lives in `@jolly-pixel/server`. The studio passes it the shell, the project template, the seed and the package folders from `node/studioFiles.ts`.
+- Code: `node/`, `vite/`.
 
 ## Data in the shell, code in the frames
 
@@ -29,7 +30,7 @@ flowchart TB
 ```
 
 - The shell never loads kind handler or editor code, and shares no objects with the frames.
-- `shared/` holds what the browser and the server both need. `server/` never imports `src/`.
+- `@jolly-pixel/server` exports the API contract from its root. `shared/` holds the seed, the shell's preference scopes and the editor page rebuild event: the only studio code that runs in both the browser and Node.js. `node/` and `vite/` never import `src/`.
 - Code: `src/shell/`, `shared/`.
 
 ## Opening an asset
@@ -61,7 +62,7 @@ flowchart TB
 
 - Assets reach the browser through the rooms only. Vite never serves the asset files.
 - Offline there are no accounts, and every project right is false.
-- Code: `server/accounts.ts`, `server/project/`, `server/shares/`, `src/accounts/`. See [accounts](./docs/accounts.md).
+- Code: `src/accounts/`, and `@jolly-pixel/server` for the server side. See [accounts](./docs/accounts.md).
 
 ## Preferences follow the account
 
@@ -73,7 +74,7 @@ flowchart TB
 ```
 
 - The scopes come from the shell, the host and each editor package. The server drops unknown scopes and fields.
-- Code: `shared/PreferenceScopes.ts`, `server/preferences/`, `src/preferences/`.
+- Code: `src/preferences/`, and `@jolly-pixel/server` for the scopes and their storage.
 
 ## Editor pages
 
@@ -88,4 +89,4 @@ flowchart TB
 - A page without source HTML is served from its built folder; in dev, a rebuild of that folder reloads the editor's tabs.
 - The preview frame page, `preview/index.html` (`src/preview/`), is built with the shell and reads the same scene contributions to render 3D asset previews.
 - `test/vite/studio.bundle.spec.ts` guards the shared chunks.
-- Code: `server/editors/`, `vite/editorPages.ts`. See [hosting](./docs/hosting.md).
+- Code: `vite/editorPages.ts`, and `@jolly-pixel/server` for the editor packages. See [hosting](./docs/hosting.md).

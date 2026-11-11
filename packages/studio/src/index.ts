@@ -6,6 +6,10 @@ import {
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/scope";
+import {
+  ProjectManifest,
+  PreferenceScopes
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import { usersConsole } from "./accounts/usersConsole.ts";
@@ -13,17 +17,15 @@ import { connectStudio } from "./connection/StudioConnection.ts";
 import {
   EDITOR_PAGE_REBUILT_EVENT,
   type EditorPageRebuilt
-} from "../shared/EditorDescriptor.ts";
-import { ProjectManifest } from "../shared/ProjectManifest.ts";
+} from "../shared/editorPageRebuilt.ts";
+import {
+  SHELL_PREFERENCES,
+  STUDIO_PREFERENCES
+} from "../shared/preferences.ts";
 import { EditorRegistry } from "./editors/EditorRegistry.ts";
 import { EditorPrefetch } from "./editors/EditorPrefetch.ts";
 import "./icons.ts";
-import {
-  PreferenceScopes,
-  SHELL_PREFERENCES
-} from "../shared/PreferenceScopes.ts";
 import { StudioAppearance } from "./preferences/StudioAppearance.ts";
-import { STUDIO_PREFERENCES } from "../shared/studioScope.ts";
 import { SettingsSections } from "./shell/settings/SettingsSections.ts";
 import { settingsConsole } from "./shell/settings/settingsConsole.ts";
 import type { Studio } from "./shell/Studio.ts";
@@ -78,11 +80,14 @@ async function boot(): Promise<void> {
   const { user } = connection;
   const { preferences } = user;
   appearance.follow(preferences);
-  const scopes = PreferenceScopes.studio(manifest.editorScopes());
+  const scopes = new PreferenceScopes(
+    SHELL_PREFERENCES,
+    manifest.editorScopes()
+  );
   const editors = createEditorRegistry(manifest, connection.editorQuery);
   const settings = new SettingsSections({
     user,
-    shellScopes: SHELL_PREFERENCES,
+    shellScopes: [...SHELL_PREFERENCES.scopes, ...SHELL_PREFERENCES.common],
     editors: manifest.editorScopes(),
     kindPackages: manifest.kindPackages,
     kinds: editors.kindSet()

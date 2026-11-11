@@ -1,0 +1,35 @@
+{
+  "extends": "../../tsconfig/lib.json",
+  "references": [
+    {
+      "path": "../accounts"
+    },
+    {
+      "path": "../asset"
+    },
+    {
+      "path": "../asset-server"
+    },
+    {
+      "path": "../asset-source"
+    },
+    {
+      "path": "../assets/voxel-map"
+    },
+    {
+      "path": "../assets/voxel-model"
+    },
+    {
+      "path": "../event-store"
+    },
+    {
+      "path": "../network"
+    },
+    {
+      "path": "../preferences"
+    },
+    {
+      "path": "../voxel-renderer"
+    }
+  ]
+}

@@ -1585,7 +1585,7 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
 
-  packages/studio:
+  packages/server:
     dependencies:
       '@fastify/rate-limit':
         specifier: 11.2.1
@@ -1602,6 +1602,52 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../asset-source
+      '@jolly-pixel/asset.voxel-map':
+        specifier: workspace:*
+        version: link:../assets/voxel-map
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../event-store
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../network
+      '@jolly-pixel/preferences':
+        specifier: workspace:*
+        version: link:../preferences
+      '@openally/servo':
+        specifier: 1.1.0
+        version: 1.1.0
+      cookie:
+        specifier: 2.0.1
+        version: 2.0.1
+      fastify:
+        specifier: 5.12.7
+        version: 5.12.7
+      fflate:
+        specifier: 0.8.3
+        version: 0.8.3
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@jolly-pixel/asset.voxel-model':
+        specifier: workspace:*
+        version: link:../assets/voxel-model
+      '@jolly-pixel/voxel.renderer':
+        specifier: workspace:*
+        version: link:../voxel-renderer
+
+  packages/studio:
+    dependencies:
+      '@jolly-pixel/accounts':
+        specifier: workspace:*
+        version: link:../accounts
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../asset-server
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art
@@ -1623,9 +1669,6 @@ importers:
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../engine
-      '@jolly-pixel/event-store':
-        specifier: workspace:*
-        version: link:../event-store
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
@@ -1638,6 +1681,9 @@ importers:
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../runtime
+      '@jolly-pixel/server':
+        specifier: workspace:*
+        version: link:../server
       '@jolly-pixel/three':
         specifier: workspace:*
         version: link:../three
@@ -1650,15 +1696,6 @@ importers:
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../voxel-renderer
-      '@openally/servo':
-        specifier: 1.1.0
-        version: 1.1.0
-      fastify:
-        specifier: 5.12.7
-        version: 5.12.7
-      fflate:
-        specifier: 0.8.3
-        version: 0.8.3
       lit:
         specifier: 3.3.3
         version: 3.3.3
@@ -1675,9 +1712,9 @@ importers:
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../e2e
-      cookie:
-        specifier: 2.0.1
-        version: 2.0.1
+      '@openally/servo':
+        specifier: 1.1.0
+        version: 1.1.0
 
   packages/terrain-renderer:
     dependencies:

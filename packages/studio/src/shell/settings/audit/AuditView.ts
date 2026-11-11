@@ -14,17 +14,17 @@ import {
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/select";
+import {
+  ACCOUNTS_CATEGORY,
+  type AuditCategory,
+  type AuditRow
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../../accounts/StudioSignedIn.ts";
 import type { AuditPages } from "../../../audit/AuditPages.ts";
 import { RemoteStateController } from "../../RemoteStateController.ts";
 import { AuditRowText } from "../../../audit/AuditRowText.ts";
-import {
-  ACCOUNTS_CATEGORY,
-  type AuditCategory,
-  type AuditRow
-} from "../../../../shared/api/audit.ts";
 
 // CONSTANTS
 const kAny = "";

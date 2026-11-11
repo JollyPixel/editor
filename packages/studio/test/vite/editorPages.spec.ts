@@ -14,16 +14,18 @@ import {
   build,
   createServer
 } from "vite";
-
-// Import Internal Dependencies
-import type { EditorPages } from "../../server/editors/EditorPages.ts";
-import { editorPages } from "../../vite/editorPages.ts";
 import {
   BUNDLE,
   createDist,
-  EDITOR_CSS,
   INDEX_HTML,
-  listen,
+  listen
+} from "@jolly-pixel/server/testing";
+
+// Import Internal Dependencies
+import type { EditorPageFiles } from "../../vite/EditorPageFiles.ts";
+import { editorPages } from "../../vite/editorPages.ts";
+import {
+  EDITOR_CSS,
   voxelMapPages,
   writeEditorPage
 } from "../helpers/editorPages.ts";
@@ -145,7 +147,7 @@ describe("editorPages", () => {
   });
 
   function buildStudio(
-    pages: EditorPages,
+    pages: EditorPageFiles,
     outDir: string
   ) {
     return build({

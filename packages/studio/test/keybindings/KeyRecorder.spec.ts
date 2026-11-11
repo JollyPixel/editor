@@ -6,11 +6,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { STUDIO_PREFERENCES } from "../../shared/preferences.ts";
 import {
   KeyRecorder,
   type KeyRecording
 } from "../../src/keybindings/KeyRecorder.ts";
-import { STUDIO_PREFERENCES } from "../../shared/studioScope.ts";
 
 interface RecorderProbe {
   recorder: KeyRecorder;

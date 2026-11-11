@@ -28,6 +28,7 @@ Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provi
 #### Shell
 
 - [studio](./packages/studio) - One project, its assets and one editor per tab
+- [server](./packages/server) - A project's assets, accounts and HTTP API, served to the studio
 - [editor.host](./packages/editors/host) - Shared launch, session and runtime boot for the editors
 - [preferences](./packages/preferences) - Preference scopes, validation and overrides for the studio and the editors
 

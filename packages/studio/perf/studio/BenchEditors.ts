@@ -3,9 +3,9 @@ import path from "node:path";
 
 // Import Internal Dependencies
 import {
-  STUDIO_ROOT,
-  StudioProject
-} from "../../server/project/StudioProject.ts";
+  openStudioProject,
+  STUDIO_ROOT
+} from "../../node/studioFiles.ts";
 import {
   MAP,
   MODEL,
@@ -104,10 +104,9 @@ export class BenchEditors implements Iterable<BenchEditor> {
   readonly #byName: ReadonlyMap<string, BenchEditor>;
 
   static async read(): Promise<BenchEditors> {
-    const project = await StudioProject.open(
-      StudioProject.resolveRoot(STUDIO_ROOT),
-      { inMemory: true }
-    );
+    const project = await openStudioProject({
+      inMemory: true
+    });
     const editors: BenchEditor[] = [];
     for (const { name, dist } of project.editors) {
       const target = kOpenTargets.get(name);

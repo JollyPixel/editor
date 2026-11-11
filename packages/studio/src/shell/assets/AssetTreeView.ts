@@ -9,6 +9,7 @@ import {
   errorMessage,
   formatBytes
 } from "@jolly-pixel/utils";
+import { KindFilter } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
@@ -40,7 +41,6 @@ import { PendingAssets } from "../../catalog/PendingAssets.ts";
 import { DroppedFile } from "../../browser/DroppedFile.ts";
 import type { BrowserState } from "../../browser/BrowserState.ts";
 import { KIND_FILTER_CHANGE } from "../../project/StudioProjectSettings.ts";
-import { KindFilter } from "../../../shared/KindFilter.ts";
 import {
   AssetCommands,
   type AssetCommandCatalog,

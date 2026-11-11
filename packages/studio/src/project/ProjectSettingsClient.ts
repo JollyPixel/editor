@@ -1,21 +1,21 @@
-// Import Internal Dependencies
-import {
-  ApiEndpoint,
-  type ApiEndpointOptions
-} from "../api/ApiEndpoint.ts";
+// Import Third-party Dependencies
 import {
   PROJECT_ROUTES,
   projectReplySchema,
   projectSectionsSchema,
   projectSettingsReplySchema,
-  type AccessChange,
-  type GameSection,
-  type KindFilterSection,
-  type KindOptions,
   type ProjectSections,
-  type ProjectSettingsReply
-} from "../../shared/api/project.ts";
-import { ProjectRights } from "../../shared/ProjectRights.ts";
+  type ProjectSettingsReply,
+  type SettingsSectionBody,
+  type SettingsSectionName,
+  ProjectRights
+} from "@jolly-pixel/server";
+
+// Import Internal Dependencies
+import {
+  ApiEndpoint,
+  type ApiEndpointOptions
+} from "../api/ApiEndpoint.ts";
 
 export class ProjectSettingsClient {
   #endpoint: ApiEndpoint;
@@ -39,54 +39,22 @@ export class ProjectSettingsClient {
     );
   }
 
-  replaceKinds(
-    kinds: KindOptions
-  ): Promise<ProjectSettingsReply> {
-    return this.#endpoint.json(
-      PROJECT_ROUTES.replaceKinds,
-      projectSettingsReplySchema,
-      {
-        body: kinds
-      }
-    );
-  }
-
-  replaceAccess(
-    change: AccessChange
-  ): Promise<ProjectSettingsReply> {
-    return this.#endpoint.json(
-      PROJECT_ROUTES.replaceAccess,
-      projectSettingsReplySchema,
-      {
-        body: change
-      }
-    );
-  }
-
   sections(): Promise<ProjectSections> {
     return this.#endpoint.json(PROJECT_ROUTES.sections, projectSectionsSchema);
   }
 
-  replaceKindFilter(
-    kindFilter: KindFilterSection
+  replace<TName extends SettingsSectionName>(
+    section: TName,
+    body: SettingsSectionBody<TName>
   ): Promise<ProjectSettingsReply> {
     return this.#endpoint.json(
-      PROJECT_ROUTES.replaceKindFilter,
+      PROJECT_ROUTES.replaceSection,
       projectSettingsReplySchema,
       {
-        body: kindFilter
-      }
-    );
-  }
-
-  replaceGame(
-    game: GameSection
-  ): Promise<ProjectSettingsReply> {
-    return this.#endpoint.json(
-      PROJECT_ROUTES.replaceGame,
-      projectSettingsReplySchema,
-      {
-        body: game
+        params: {
+          section
+        },
+        body
       }
     );
   }

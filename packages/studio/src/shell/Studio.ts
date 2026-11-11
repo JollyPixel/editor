@@ -19,6 +19,7 @@ import "@jolly-pixel/ui/elements/notifications";
 import "@jolly-pixel/ui/elements/tabs";
 import "@jolly-pixel/ui/elements/toolbar";
 import { errorMessage } from "@jolly-pixel/utils";
+import type { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { AssetBrowserOptions } from "./assets/AssetBrowser.ts";
@@ -33,7 +34,6 @@ import {
   StudioSession,
   type StudioSessionOptions
 } from "./StudioSession.ts";
-import type { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import { SettingsSections } from "./settings/SettingsSections.ts";
 import type { SettingsOpenEvent } from "./settings/SettingsOpenEvent.ts";
 import type { StudioPlay } from "../play/StudioPlay.ts";

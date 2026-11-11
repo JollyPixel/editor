@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
 import type { ShareLink } from "@jolly-pixel/accounts";
-
-// Import Internal Dependencies
-import { VIEW_PAGES_PATH } from "../../shared/api/shares.ts";
+import { VIEW_PAGES_PATH } from "@jolly-pixel/server";
 
 // CONSTANTS
 const kDate = new Intl.DateTimeFormat("en", {

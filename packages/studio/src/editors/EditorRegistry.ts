@@ -1,17 +1,17 @@
 // Import Third-party Dependencies
 import { registerKindIcon } from "@jolly-pixel/editor.host";
+import {
+  EDITOR_PAGES_PATH,
+  PREVIEW_PAGE_PATH,
+  type EditorDescriptor,
+  type ManifestKind
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
   AssetKindSet,
   type AssetKindEntry
 } from "../catalog/AssetKindSet.ts";
-import {
-  EDITOR_PAGES_PATH,
-  PREVIEW_PAGE_PATH,
-  type EditorDescriptor
-} from "../../shared/EditorDescriptor.ts";
-import type { ManifestKind } from "../../shared/ProjectManifest.ts";
 
 // CONSTANTS
 const kTargetParam = "target";

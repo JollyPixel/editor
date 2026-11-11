@@ -12,11 +12,10 @@ import {
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/separator";
+import { type GameSection, SCENE_KIND } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
-import type { GameSection } from "../../../../shared/api/project.ts";
-import { SCENE_KIND } from "../../../../shared/GameManifest.ts";
 import { settingsStyles } from "../settingsStyles.ts";
 import { SettingsDraftController } from "./SettingsDraftController.ts";
 

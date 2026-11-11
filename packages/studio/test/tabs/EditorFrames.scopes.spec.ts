@@ -12,9 +12,10 @@ import {
   type ShellCommand
 } from "@jolly-pixel/editor.host";
 import { definePreferences, Preferences } from "@jolly-pixel/preferences";
+import { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
+import { SHELL_PREFERENCES } from "../../shared/preferences.ts";
 import {
   disposeFrames,
   editorFrames,
@@ -61,7 +62,7 @@ const kPixelArtScope = definePreferences({
     }
   }
 });
-const kScopes = PreferenceScopes.studio([
+const kScopes = new PreferenceScopes(SHELL_PREFERENCES, [
   {
     name: "voxel-map",
     scopes: [kMapScope],

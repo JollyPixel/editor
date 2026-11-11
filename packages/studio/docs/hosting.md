@@ -18,7 +18,7 @@ $ pnpm --filter @jolly-pixel/studio build:hosted
 $ pnpm --filter @jolly-pixel/studio start
 ```
 
-To run it outside the workspace, `pnpm --filter @jolly-pixel/studio deploy --prod <dir>` after `build:hosted` writes a folder that starts with `node server/start.ts`.
+To run it outside the workspace, `pnpm --filter @jolly-pixel/studio deploy --prod <dir>` after `build:hosted` writes a folder that starts with `node node/start.ts`.
 
 `start` loads `.env` when the file exists and reads:
 

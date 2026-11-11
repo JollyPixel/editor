@@ -11,11 +11,11 @@ import { setImmediate } from "node:timers/promises";
 import type { PreferenceOverrides } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
+import { STUDIO_PREFERENCES } from "../../shared/preferences.ts";
 import {
   AccountPreferences,
   type AccountPreferencesClient
 } from "../../src/preferences/AccountPreferences.ts";
-import { STUDIO_PREFERENCES } from "../../shared/studioScope.ts";
 
 class RecordingClient implements AccountPreferencesClient {
   readonly sent: PreferenceOverrides[] = [];

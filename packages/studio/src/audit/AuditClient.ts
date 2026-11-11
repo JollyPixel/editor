@@ -1,14 +1,16 @@
-// Import Internal Dependencies
-import {
-  ApiEndpoint,
-  type ApiEndpointOptions
-} from "../api/ApiEndpoint.ts";
+// Import Third-party Dependencies
 import {
   AUDIT_ROUTES,
   auditPageSchema,
   type AuditPage,
   type AuditQuery
-} from "../../shared/api/audit.ts";
+} from "@jolly-pixel/server";
+
+// Import Internal Dependencies
+import {
+  ApiEndpoint,
+  type ApiEndpointOptions
+} from "../api/ApiEndpoint.ts";
 
 export class AuditClient {
   #endpoint: ApiEndpoint;

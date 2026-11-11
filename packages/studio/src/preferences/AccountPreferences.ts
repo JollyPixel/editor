@@ -6,10 +6,10 @@ import {
 } from "@jolly-pixel/preferences";
 import * as z from "zod";
 import { errorMessage } from "@jolly-pixel/utils";
+import { preferenceOverridesSchema } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { PreferencesClient } from "./PreferencesClient.ts";
-import { preferenceOverridesSchema } from "../../shared/api/preferences.ts";
 
 // CONSTANTS
 export const PREFERENCES_CHANNEL = "jolly-pixel:preferences";

@@ -1,14 +1,12 @@
 // Import Third-party Dependencies
 import { is } from "@jolly-pixel/utils";
-
-// Import Internal Dependencies
 import {
   kindOptionVector2Schema,
   type KindOptionField,
   type KindOptions,
   type KindOptionValue,
   type KindPackageSettings
-} from "../../shared/api/project.ts";
+} from "@jolly-pixel/server";
 
 type OptionRecord = Record<string, unknown>;
 

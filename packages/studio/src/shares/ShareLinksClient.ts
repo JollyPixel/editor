@@ -1,16 +1,18 @@
-// Import Internal Dependencies
-import {
-  ApiEndpoint,
-  type ApiEndpointOptions
-} from "../api/ApiEndpoint.ts";
+// Import Third-party Dependencies
 import {
   SHARES_ROUTES,
   createdShareReplySchema,
   shareLinksReplySchema,
   type CreatedShareReply,
-  type ShareLinksReply
-} from "../../shared/api/shares.ts";
-import type { ShareLifetimeName } from "../../shared/ShareLifetime.ts";
+  type ShareLinksReply,
+  type ShareLifetimeName
+} from "@jolly-pixel/server";
+
+// Import Internal Dependencies
+import {
+  ApiEndpoint,
+  type ApiEndpointOptions
+} from "../api/ApiEndpoint.ts";
 
 export class ShareLinksClient {
   #endpoint: ApiEndpoint;

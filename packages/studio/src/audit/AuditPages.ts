@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { AuditRow } from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import { RemoteState } from "../api/RemoteState.ts";
 import type { AuditClient } from "./AuditClient.ts";
@@ -5,7 +8,6 @@ import {
   AuditFilters,
   type AuditFiltersData
 } from "./AuditFilters.ts";
-import type { AuditRow } from "../../shared/api/audit.ts";
 
 export type AuditPageSource = Pick<AuditClient, "page">;
 

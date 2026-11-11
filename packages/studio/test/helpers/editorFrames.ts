@@ -4,14 +4,15 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { Preferences } from "@jolly-pixel/preferences";
 import { NotificationQueue } from "@jolly-pixel/ui";
+import { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
+import { SHELL_PREFERENCES } from "../../shared/preferences.ts";
 import {
   EditorFrames,
   type EditorFramesOptions
 } from "../../src/tabs/EditorFrames.ts";
 import { idleShare } from "./catalogShare.ts";
-import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 
 // CONSTANTS
 export const FRAME_ORIGIN = "http://localhost";
@@ -30,7 +31,7 @@ export function editorFrames(
     notifications: new NotificationQueue(),
     ...options,
     preferences: options.preferences ?? new Preferences(),
-    scopes: options.scopes ?? new PreferenceScopes([], [])
+    scopes: options.scopes ?? new PreferenceScopes(SHELL_PREFERENCES, [])
   });
 
   return current;

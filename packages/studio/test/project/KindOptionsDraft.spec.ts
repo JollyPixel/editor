@@ -5,9 +5,11 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { KindOptionField } from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import { KindOptionsDraft } from "../../src/project/KindOptionsDraft.ts";
-import type { KindOptionField } from "../../shared/api/project.ts";
 
 // CONSTANTS
 const kVoxelMap = "@jolly-pixel/asset.voxel-map";
