@@ -39,5 +39,10 @@ use boxes, the other [built-in shapes](../api/blocks/BlockShape.md#built-in-shap
 use triangle meshes. Set `collidable: false` on a block definition, or
 `collisionHint: "none"` on a custom shape, for decoration.
 
+In a scene file, set `collision: true` on the `VoxelMap` component and give
+[`VoxelMapDefinition`](../api/engine/VoxelMapDefinition.md#collision) a
+`collider` option; the world still needs its `PhysicsSystem` before the scene
+loads.
+
 The [`VoxelCollider` reference](../api/collision/VoxelCollider.md) documents the
 contract for writing a collider of your own.

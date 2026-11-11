@@ -5,10 +5,7 @@ import {
   MeshDefinition,
   TextDefinition
 } from "@jolly-pixel/engine";
-import {
-  PhysicsSystem,
-  RigidBodyDefinition
-} from "@jolly-pixel/physics/engine";
+import { RigidBodyDefinition } from "@jolly-pixel/physics/engine";
 import type { RuntimeComponentPackage } from "@jolly-pixel/runtime";
 
 // CONSTANTS
@@ -26,8 +23,7 @@ export const RUNTIME_COMPONENTS: RuntimeComponentPackage = {
     TEXT_DEFINITION,
     RIGID_BODY_DEFINITION
   ],
-  async setup(world) {
-    const { RapierBackend } = await import("@jolly-pixel/physics.rapier");
-    PhysicsSystem.attach(world, await RapierBackend.load());
+  usesPhysics: {
+    [RIGID_BODY_DEFINITION.type]: () => true
   }
 };

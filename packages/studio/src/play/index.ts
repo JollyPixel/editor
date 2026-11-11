@@ -12,6 +12,7 @@ import {
   GameManifestClient,
   type Game
 } from "./GameManifestClient.ts";
+import { attachPhysics } from "./gamePhysics.ts";
 import { GameScenes } from "./GameScenes.ts";
 import { playLoggerOptions } from "./playLogger.ts";
 import {
@@ -77,7 +78,7 @@ async function loadGame(): Promise<Game> {
 
 async function play(): Promise<void> {
   const game = await loadGame();
-  const { components, loaders, setup } = contributedRuntimeComponents(
+  const { components, loaders, usesPhysics } = contributedRuntimeComponents(
     contributions
   );
   const runtime = await Runtime.create(kCanvas, {
@@ -88,11 +89,13 @@ async function play(): Promise<void> {
     worldLogger: playLoggerOptions(warn)
   });
   runtime.manager.setURLModifier(game.resolveURL);
-  await setup(runtime.world);
   const scenes = await GameScenes.load(
     runtime.world.assetCoordinator,
     game.start
   );
+  if (scenes.uses(game.start, usesPhysics)) {
+    await attachPhysics(runtime.world, game.physics);
+  }
 
   await runtime.load({
     scene: scenes.scene(

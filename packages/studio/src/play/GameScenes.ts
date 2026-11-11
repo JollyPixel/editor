@@ -58,20 +58,44 @@ export class GameScenes implements Systems.ScenePrefabs {
     return this.#files.get(sceneId) ?? null;
   }
 
+  uses(
+    sceneId: string,
+    predicate: (component: Readonly<Systems.SceneComponentFile>) => boolean
+  ): boolean {
+    const actors = Systems.expandedSceneActors(
+      this.#loaded(sceneId).actors,
+      this,
+      sceneId
+    );
+    for (const actor of actors) {
+      if (actor.components.some(predicate)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   scene(
     sceneId: string,
     name: string,
     components: Systems.ComponentDefinitions
   ): Systems.FileScene {
+    return new Systems.FileScene(name, this.#loaded(sceneId), {
+      components,
+      prefabs: this,
+      sceneId
+    });
+  }
+
+  #loaded(
+    sceneId: string
+  ): Systems.SceneFile {
     const file = this.find(sceneId);
     if (file === null) {
       throw new Error(`Scene "${sceneId}" was not loaded.`);
     }
 
-    return new Systems.FileScene(name, file, {
-      components,
-      prefabs: this,
-      sceneId
-    });
+    return file;
   }
 }

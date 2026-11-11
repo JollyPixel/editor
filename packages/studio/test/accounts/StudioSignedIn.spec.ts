@@ -15,7 +15,10 @@ import {
   type ClientSocketEvent,
   type ClientSocketEventType
 } from "@jolly-pixel/network/client";
-import { ProjectRights } from "@jolly-pixel/server";
+import {
+  DEFAULT_PHYSICS,
+  ProjectRights
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
@@ -100,7 +103,8 @@ function signedInAs(
         },
         game: {
           start: null
-        }
+        },
+        physics: DEFAULT_PHYSICS
       },
       preferences: new AccountPreferences([], {
         accountId: kAlice.id,

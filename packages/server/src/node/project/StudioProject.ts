@@ -20,9 +20,12 @@ import {
   StudioAccess
 } from "./StudioAccess.ts";
 import {
+  DEFAULT_PHYSICS,
   gameSectionSchema,
   kindFilterSchema,
-  type GameSection
+  physicsSectionSchema,
+  type GameSection,
+  type PhysicsSection
 } from "../../project/api.ts";
 import { KindFilter } from "../../project/KindFilter.ts";
 
@@ -38,7 +41,8 @@ const kSectionsSchema = z.object({
   }),
   game: gameSectionSchema.default({
     start: null
-  })
+  }),
+  physics: physicsSectionSchema.default(DEFAULT_PHYSICS)
 });
 
 export interface StudioProjectOpenOptions extends ProjectFileOpenOptions {
@@ -59,6 +63,7 @@ export interface StudioProjectSections {
   access: StudioAccess;
   kindFilter: KindFilter;
   game: GameSection;
+  physics: PhysicsSection;
 }
 
 export class StudioProject {
@@ -70,6 +75,7 @@ export class StudioProject {
   #access: StudioAccess;
   #kindFilter: KindFilter;
   #game: GameSection;
+  #physics: PhysicsSection;
 
   static resolver(
     root: string,
@@ -119,7 +125,8 @@ export class StudioProject {
       kindFilter: new KindFilter(
         sections.data.kindFilter.hidden.filter((kind) => known.has(kind))
       ),
-      game: sections.data.game
+      game: sections.data.game,
+      physics: sections.data.physics
     });
   }
 
@@ -134,7 +141,8 @@ export class StudioProject {
     this.kinds = kinds;
     this.#access = sections.access;
     this.#kindFilter = sections.kindFilter;
-    this.#game = { ...sections.game };
+    this.#game = structuredClone(sections.game);
+    this.#physics = structuredClone(sections.physics);
     this.privateFiles = new PrivateFiles(
       file.root,
       kinds.descriptors().map((descriptor) => descriptor.extension)
@@ -173,12 +181,22 @@ export class StudioProject {
   }
 
   get game(): GameSection {
-    return { ...this.#game };
+    return structuredClone(this.#game);
   }
 
   replaceGame(
     game: GameSection
   ): void {
-    this.#game = { ...game };
+    this.#game = structuredClone(game);
+  }
+
+  get physics(): PhysicsSection {
+    return structuredClone(this.#physics);
+  }
+
+  replacePhysics(
+    physics: PhysicsSection
+  ): void {
+    this.#physics = structuredClone(physics);
   }
 }

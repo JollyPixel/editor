@@ -14,8 +14,27 @@ import {
   type SceneFileSource
 } from "../../src/play/GameScenes.ts";
 
-function sceneFile(
-  ...prefabs: { id: string; kind: string; }[]
+function actor(
+  id: string,
+  fields: Partial<Systems.SceneActorFile>
+): Systems.SceneActorFile {
+  return {
+    id,
+    name: id,
+    parentId: null,
+    visible: true,
+    transform: {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 }
+    },
+    components: [],
+    ...fields
+  };
+}
+
+function sceneWithActors(
+  actors: Systems.SceneActorFile[]
 ): Systems.SceneFile {
   return {
     version: 1,
@@ -29,22 +48,16 @@ function sceneFile(
         kind: "none"
       }
     },
-    actors: prefabs.map((prefab, index) => {
-      return {
-        id: `actor-${index}`,
-        name: `Actor ${index}`,
-        parentId: null,
-        visible: true,
-        transform: {
-          position: { x: 0, y: 0, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 }
-        },
-        components: [],
-        prefab
-      };
-    })
+    actors
   };
+}
+
+function sceneFile(
+  ...prefabs: { id: string; kind: string; }[]
+): Systems.SceneFile {
+  return sceneWithActors(
+    prefabs.map((prefab, index) => actor(`actor-${index}`, { prefab }))
+  );
 }
 
 function scene(
@@ -78,6 +91,56 @@ describe("GameScenes", () => {
     assert.deepStrictEqual(loaded.sort(), ["arena", "door", "house", "tree"]);
     assert.strictEqual(scenes.find("door"), files.get("door"));
     assert.strictEqual(scenes.find("map"), null);
+  });
+
+  test("finds a component that passes a check in a scene's expanded actors, prefab overrides applied", () => {
+    function solidMap(
+      component: Readonly<Systems.SceneComponentFile>
+    ): boolean {
+      return component.type === "VoxelMap" && component.data.collision === true;
+    }
+    const ground: Systems.SceneComponentFile = {
+      id: "ground",
+      type: "VoxelMap",
+      data: {
+        collision: false
+      },
+      assets: {}
+    };
+    function scenes(
+      overrides: Systems.SceneOverridesFile["components"]
+    ): GameScenes {
+      return new GameScenes(new Map([
+        ["arena", sceneWithActors([
+          actor("island", {
+            prefab: scene("terrain"),
+            overrides: { components: overrides }
+          })
+        ])],
+        ["terrain", sceneWithActors([
+          actor("map", { components: [ground] }),
+          actor("cliff", { prefab: scene("rock") })
+        ])],
+        ["rock", sceneWithActors([actor("map", { components: [ground] })])]
+      ]));
+    }
+    const solid = {
+      data: {
+        collision: true
+      }
+    };
+
+    assert.deepStrictEqual(
+      [
+        scenes({}).uses("arena", solidMap),
+        scenes({}).uses("arena", (component) => component.type === "VoxelMap"),
+        scenes({ ground: solid }).uses("arena", solidMap),
+        scenes({ "cliff/ground": solid }).uses("arena", solidMap),
+        scenes({ "cave/ground": solid }).uses("arena", solidMap),
+        scenes({ ground: { assets: {} } }).uses("arena", solidMap)
+      ],
+      [false, true, true, true, false, false]
+    );
   });
 
   test("rejects when a scene fails to load", async() => {

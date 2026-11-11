@@ -12,7 +12,6 @@ import type { Systems } from "@jolly-pixel/engine";
 // Import Internal Dependencies
 import {
   contributedRuntimeComponents,
-  type RuntimeComponentWorld,
   type RuntimeContribution
 } from "../../../src/three/contributions/RuntimeComponents.ts";
 import type {
@@ -39,6 +38,18 @@ function loader(
     create: (): AssetLoader<unknown> => {
       throw new Error("not loaded in this test");
     }
+  };
+}
+
+function component(
+  type: string,
+  data: Systems.JSONObject
+): Systems.SceneComponentFile {
+  return {
+    id: type,
+    type,
+    data,
+    assets: {}
   };
 }
 
@@ -74,47 +85,72 @@ describe("contributedRuntimeComponents", () => {
     assert.deepEqual(loaders, [voxelLoader]);
   });
 
-  test("sets the world up one package after another, in package order", async() => {
-    const world = {} as RuntimeComponentWorld;
-    const steps: string[] = [];
-    const { setup } = contributedRuntimeComponents([
+  test("a component uses physics when its package's check for its type says so", () => {
+    const { usesPhysics } = contributedRuntimeComponents([
       {
-        name: "physics",
+        name: "@jolly-pixel/editor.scene",
         module: {
           RUNTIME_COMPONENTS: {
-            definitions: [],
-            async setup(received) {
-              assert.strictEqual(received, world);
-              await Promise.resolve();
-              steps.push("physics");
+            definitions: [definition("RigidBody"), definition("Camera")],
+            usesPhysics: {
+              RigidBody: () => true
             }
           }
         }
       },
       {
-        name: "no setup",
+        name: "@jolly-pixel/editor.voxel-map",
         module: {
           RUNTIME_COMPONENTS: {
-            definitions: []
-          }
-        }
-      },
-      {
-        name: "audio",
-        module: {
-          RUNTIME_COMPONENTS: {
-            definitions: [],
-            setup: () => {
-              steps.push("audio");
+            definitions: [definition("VoxelMap")],
+            usesPhysics: {
+              VoxelMap: (data) => data.collision === true
             }
           }
         }
       }
     ]);
 
-    await setup(world);
+    assert.deepEqual(
+      [
+        component("RigidBody", {}),
+        component("VoxelMap", { collision: true }),
+        component("VoxelMap", { collision: false }),
+        component("Camera", {})
+      ].map(usesPhysics),
+      [true, true, false, false]
+    );
+  });
 
-    assert.deepEqual(steps, ["physics", "audio"]);
+  test("refuses a physics check for a component type the package does not declare", () => {
+    assert.throws(
+      () => contributedRuntimeComponents([
+        {
+          name: "@jolly-pixel/editor.scene",
+          module: {
+            RUNTIME_COMPONENTS: {
+              definitions: [definition("VoxelMap")]
+            }
+          }
+        },
+        {
+          name: "@jolly-pixel/editor.voxel-map",
+          module: {
+            RUNTIME_COMPONENTS: {
+              definitions: [],
+              usesPhysics: {
+                VoxelMap: () => true
+              }
+            }
+          }
+        }
+      ]),
+      {
+        name: "TypeError",
+        message: "\"@jolly-pixel/editor.voxel-map\" checks physics for " +
+          "component type \"VoxelMap\", which it does not declare."
+      }
+    );
   });
 
   test("names the package that declares the field without the export", () => {

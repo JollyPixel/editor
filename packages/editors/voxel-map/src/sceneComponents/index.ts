@@ -24,7 +24,8 @@ const kVoxelMap: SceneComponentKind<VoxelMapSettings> = {
   category: "3d",
   form: () => [
     kRows.boolean(["castShadow"], "Cast shadow"),
-    kRows.boolean(["receiveShadow"], "Receive shadow")
+    kRows.boolean(["receiveShadow"], "Receive shadow"),
+    kRows.boolean(["collision"], "Collision")
   ],
   anchorAsset: "map",
   origin: "corner"

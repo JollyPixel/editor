@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { GameBuildError } from "#src/node/game/errors/GameBuildError.ts";
 import { StudioGame } from "#src/node/game/StudioGame.ts";
+import { DEFAULT_PHYSICS } from "#src/project/api.ts";
 import { UnknownAssetError } from "#src/node/project/errors/UnknownAssetError.ts";
 import {
   GAME_ACCESS,
@@ -25,7 +26,10 @@ async function gameProject(): Promise<GameProject> {
 
   return Object.assign(project, {
     game: new StudioGame({
-      project: { access: GAME_ACCESS },
+      project: {
+        access: GAME_ACCESS,
+        physics: DEFAULT_PHYSICS
+      },
       backend: project.backend
     })
   });

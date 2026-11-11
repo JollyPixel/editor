@@ -128,9 +128,30 @@ export const gameSectionSchema = z.object({
   start: z.string().min(1).nullable()
 });
 
+export const PHYSICS_ENGINES = ["rapier"] as const;
+
+export const physicsSectionSchema = z.object({
+  engine: z.enum(PHYSICS_ENGINES),
+  gravity: z.object({
+    x: z.number(),
+    y: z.number(),
+    z: z.number()
+  })
+});
+
+export const DEFAULT_PHYSICS: Readonly<PhysicsSection> = Object.freeze({
+  engine: "rapier",
+  gravity: Object.freeze({
+    x: 0,
+    y: -9.81,
+    z: 0
+  })
+});
+
 export const projectSectionsSchema = z.object({
   kindFilter: kindFilterSchema,
-  game: gameSectionSchema
+  game: gameSectionSchema,
+  physics: physicsSectionSchema
 });
 
 export const projectSettingsReplySchema = z.object({
@@ -145,7 +166,8 @@ export const SETTINGS_SECTIONS = {
   kinds: kindOptionsSchema,
   access: accessChangeSchema,
   kindFilter: kindFilterSchema,
-  game: gameSectionSchema
+  game: gameSectionSchema,
+  physics: physicsSectionSchema
 } as const;
 
 export const settingsSectionSchema = z.keyof(z.object(SETTINGS_SECTIONS));
@@ -164,6 +186,8 @@ export type AccessSection = z.infer<typeof accessSectionSchema>;
 export type AccessChange = z.infer<typeof accessChangeSchema>;
 export type KindFilterSection = z.infer<typeof kindFilterSchema>;
 export type GameSection = z.infer<typeof gameSectionSchema>;
+export type PhysicsEngine = typeof PHYSICS_ENGINES[number];
+export type PhysicsSection = z.infer<typeof physicsSectionSchema>;
 export type ProjectSections = z.infer<typeof projectSectionsSchema>;
 export type ProjectSettingsReply = z.infer<typeof projectSettingsReplySchema>;
 export type SettingsSectionName = z.infer<typeof settingsSectionSchema>;

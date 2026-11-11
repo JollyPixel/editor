@@ -19,6 +19,7 @@ import {
   SETTINGS_CHANGED
 } from "#src/node/audit/AuditLog.ts";
 import { ProjectSettings } from "#src/node/project/ProjectSettings.ts";
+import { DEFAULT_PHYSICS } from "#src/project/api.ts";
 import type { StudioProject } from "#src/node/project/StudioProject.ts";
 import { InvalidSettingsError } from "#src/node/project/errors/InvalidSettingsError.ts";
 import { openTestProject } from "../../helpers/testProject.ts";
@@ -161,6 +162,22 @@ describe("ProjectSettings", () => {
       InvalidSettingsError
     );
     assert.deepEqual(harness.settings.sections().kindFilter, after);
+  });
+
+  test("new physics settings replace the default in the project file and the audit log", async() => {
+    await using harness = await settingsHarness();
+    const admin = await harness.register("Alice");
+    const after = { ...DEFAULT_PHYSICS, gravity: { x: 0, y: -1.62, z: 0 } };
+
+    await harness.settings.replace(admin, "physics", after);
+
+    assert.deepEqual(harness.project.file.data.physics, after);
+    const [event] = await harness.audit.store.reader.listAll();
+    assert.deepEqual(event.eventData, {
+      section: "physics",
+      before: DEFAULT_PHYSICS,
+      after
+    });
   });
 
   test("new access rules apply at once and reconnect only the holders of a changed role", async() => {

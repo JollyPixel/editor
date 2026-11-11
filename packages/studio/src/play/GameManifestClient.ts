@@ -8,7 +8,8 @@ import {
   type ApiRoute,
   GAME_ROUTES,
   GAME_MANIFEST_FILE,
-  gameManifestSchema
+  gameManifestSchema,
+  type PhysicsSection
 } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
@@ -32,6 +33,7 @@ export interface Game {
    * Records at their project paths.
    */
   readonly catalog: AssetCatalog;
+  readonly physics: PhysicsSection;
 
   resolveURL(
     url: string
@@ -82,6 +84,7 @@ export class GameManifestClient {
     return {
       start: manifest.start,
       catalog: manifest.assets,
+      physics: manifest.physics,
       resolveURL: (url) => urls.get(projectPath(url)) ?? url
     };
   }

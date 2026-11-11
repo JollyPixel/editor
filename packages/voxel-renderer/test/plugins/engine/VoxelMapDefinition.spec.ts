@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine";
+import {
+  Systems,
+  type Actor
+} from "@jolly-pixel/engine";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -45,15 +48,16 @@ function makeMapSource(): MapSourceProbe {
 
 function createMap(
   map: VoxelMapSource | null,
-  data: Systems.JSONObject = {}
+  data: Systems.JSONObject = {},
+  mode: Systems.SceneMode = "edit",
+  definition = new VoxelMapDefinition()
 ) {
-  const definition = new VoxelMapDefinition();
   const resolved: AssetReferenceData[] = [];
   const renderer = definition.create(
     makeActor(),
     definition.parse(data),
     {
-      mode: "edit",
+      mode,
       assets: new Systems.ComponentAssets(
         definition.assets,
         { map: map === null ? null : kMapReference },
@@ -83,6 +87,7 @@ describe("VoxelMapDefinition", () => {
       {
         castShadow: false,
         receiveShadow: false,
+        collision: false,
         layers: {}
       }
     );
@@ -120,6 +125,34 @@ describe("VoxelMapDefinition", () => {
     renderer.destroy();
 
     assert.deepStrictEqual(probe.detached, [renderer.view]);
+  });
+
+  it("builds the colliders of a map whose collision is on, in play mode only", () => {
+    const colliding: Actor<any>[] = [];
+    const definition = new VoxelMapDefinition({
+      collider: (actor) => () => {
+        colliding.push(actor);
+
+        return {
+          rebuildChunk: () => undefined,
+          removeChunk: () => undefined,
+          dispose: () => undefined
+        };
+      }
+    });
+    const cases = [
+      [{ collision: true }, "play"],
+      [{ collision: true }, "edit"],
+      [{ collision: false }, "play"]
+    ] as const;
+
+    const actors = cases.map(([data, mode]) => {
+      const { renderer } = createMap(makeMapSource().source, data, mode, definition);
+
+      return renderer?.actor;
+    });
+
+    assert.deepStrictEqual(colliding, [actors[0]]);
   });
 
   it("apply replaces the layer overrides and shadow flags", () => {

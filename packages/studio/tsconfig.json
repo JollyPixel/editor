@@ -52,6 +52,12 @@
       "path": "../network"
     },
     {
+      "path": "../physics"
+    },
+    {
+      "path": "../physics-rapier"
+    },
+    {
       "path": "../ui"
     },
     {

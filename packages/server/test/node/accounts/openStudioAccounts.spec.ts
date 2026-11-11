@@ -18,6 +18,7 @@ import { EditorPackages } from "#src/node/editors/EditorPackages.ts";
 import { StudioAccess } from "#src/node/project/StudioAccess.ts";
 import { openStudioAccounts } from "#src/node/accounts/openStudioAccounts.ts";
 import { StudioProject } from "#src/node/project/StudioProject.ts";
+import { DEFAULT_PHYSICS } from "#src/project/api.ts";
 import { KindFilter } from "#src/project/KindFilter.ts";
 
 // CONSTANTS
@@ -48,7 +49,8 @@ function project(
       kindFilter: KindFilter.NONE,
       game: {
         start: null
-      }
+      },
+      physics: DEFAULT_PHYSICS
     }
   );
 }

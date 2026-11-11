@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  DEFAULT_PHYSICS,
   type ProjectSettingsReply,
   ProjectRights,
   accessChangeSchema
@@ -33,6 +34,7 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
     game: {
       start: null
     },
+    physics: DEFAULT_PHYSICS,
     kindFilter: {
       hidden: []
     },
@@ -71,7 +73,8 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
     },
     game: {
       start: null
-    }
+    },
+    physics: DEFAULT_PHYSICS
   });
   await project.load();
   const controller = new SettingsDraftController(kHost, {

@@ -29,7 +29,7 @@ export interface GameBackend {
 }
 
 export interface StudioGameOptions {
-  project: Pick<StudioProject, "access">;
+  project: Pick<StudioProject, "access" | "physics">;
   backend: GameBackend;
 }
 
@@ -40,7 +40,7 @@ export interface GameArtifact {
 }
 
 export class StudioGame {
-  #project: Pick<StudioProject, "access">;
+  #project: Pick<StudioProject, "access" | "physics">;
   #backend: GameBackend;
 
   constructor(
@@ -62,7 +62,8 @@ export class StudioGame {
     return gameManifest(
       start,
       Array.from(this.#backend.catalog.catalog)
-        .filter((record) => this.#opens(account, record))
+        .filter((record) => this.#opens(account, record)),
+      this.#project.physics
     );
   }
 

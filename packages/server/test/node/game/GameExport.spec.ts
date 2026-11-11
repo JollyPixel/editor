@@ -13,6 +13,7 @@ import { GameBuildError } from "#src/node/game/errors/GameBuildError.ts";
 import { GameExportError } from "#src/node/game/errors/GameExportError.ts";
 import { GameExport } from "#src/node/game/GameExport.ts";
 import { StudioGame } from "#src/node/game/StudioGame.ts";
+import type { PhysicsSection } from "#src/project/api.ts";
 import { ProjectRightRefusedError } from "#src/project/errors/ProjectRightRefusedError.ts";
 import {
   GAME_ACCESS,
@@ -23,6 +24,14 @@ import {
 
 // CONSTANTS
 const kPlayerPage = "<html><script src=\"./assets/play.js\"></script></html>";
+const kMoonPhysics: PhysicsSection = {
+  engine: "rapier",
+  gravity: {
+    x: 0,
+    y: -1.62,
+    z: 0
+  }
+};
 
 function gameExport(
   project: GameProject,
@@ -32,7 +41,8 @@ function gameExport(
     project: {
       access: GAME_ACCESS,
       game: { start },
-      name: "Quest"
+      name: "Quest",
+      physics: kMoonPhysics
     },
     backend: project.backend,
     player: {
@@ -58,7 +68,10 @@ describe("GameExport", () => {
     await project.create("maps/overworld.voxelmap.json", "{}");
     const exporter = gameExport(project, scene);
     const played = new StudioGame({
-      project: { access: GAME_ACCESS },
+      project: {
+        access: GAME_ACCESS,
+        physics: kMoonPhysics
+      },
       backend: project.backend
     }).manifest(gameAccount("publisher"), scene);
 
@@ -73,6 +86,8 @@ describe("GameExport", () => {
       ["levels/arena.scene.json", "textures/my grass.png"]
     );
     assert.equal(grass, played.artifacts[texture]);
+    assert.deepEqual(manifest.physics, kMoonPhysics);
+    assert.deepEqual(played.physics, kMoonPhysics);
     assert.equal(text(files[decodeURIComponent(grass)]), "png");
     assert.equal(text(files["index.html"]), kPlayerPage);
     assert.equal(text(files["assets/play.js"]), "play()");

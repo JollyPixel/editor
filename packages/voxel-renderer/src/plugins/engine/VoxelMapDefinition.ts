@@ -5,6 +5,7 @@ import {
 } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
+import type { VoxelColliderFactory } from "../../view/collision/VoxelCollider.ts";
 import { VoxelRenderer } from "./VoxelRenderer.ts";
 import { VoxelMapAnchors } from "./VoxelMapAnchors.ts";
 import {
@@ -15,7 +16,12 @@ import {
 export interface VoxelMapSettings {
   castShadow: boolean;
   receiveShadow: boolean;
+  collision: boolean;
   layers: Readonly<Record<string, boolean>>;
+}
+
+export interface VoxelMapDefinitionOptions {
+  collider?: (actor: Actor<any>) => VoxelColliderFactory;
 }
 
 export type VoxelMapAssets = {
@@ -26,6 +32,7 @@ export type VoxelMapAssets = {
 export const VOXEL_MAP_DEFAULTS = {
   castShadow: false,
   receiveShadow: false,
+  collision: false,
   layers: {}
 } as const satisfies VoxelMapSettings;
 
@@ -38,6 +45,14 @@ export class VoxelMapDefinition implements Systems.ComponentDefinition<
   readonly assets = {
     map: VOXEL_MAP_ASSET
   };
+
+  #collider: VoxelMapDefinitionOptions["collider"];
+
+  constructor(
+    options: VoxelMapDefinitionOptions = {}
+  ) {
+    this.#collider = options.collider;
+  }
 
   parse(
     data: Readonly<Systems.JSONObject>
@@ -53,6 +68,10 @@ export class VoxelMapDefinition implements Systems.ComponentDefinition<
         "receiveShadow",
         VOXEL_MAP_DEFAULTS.receiveShadow
       ),
+      collision: fields.boolean(
+        "collision",
+        VOXEL_MAP_DEFAULTS.collision
+      ),
       layers: parseLayers(data.layers)
     };
   }
@@ -67,8 +86,10 @@ export class VoxelMapDefinition implements Systems.ComponentDefinition<
       return null;
     }
 
+    const collides = data.collision && context.mode === "play";
     const renderer = actor.addComponentAndGet(VoxelRenderer, {
-      document: map.document
+      document: map.document,
+      collider: collides ? this.#collider?.(actor) : undefined
     });
     renderer.addTeardown(
       map.attach(renderer.view)
