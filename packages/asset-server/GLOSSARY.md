@@ -48,10 +48,10 @@ query. A kind without the hook has no preview.
 
 The content a game loads for an asset, made by the optional `build` hook of
 its kind handler from the asset's content, under the same extension.
-`AssetBuilds` stores each build in `.jollypixel/builds/` under a key hashed
-from the kind, the hook's `version` and the content, so equal content builds
-once. `PASS_THROUGH_BUILD` serves the content as it is. A kind without the
-hook cannot be played.
+`AssetBuilds` keeps the build of each asset's latest revision in memory, up
+to 64 MiB, and drops the least recently used past that. `PASS_THROUGH_BUILD`
+serves the content as it is and is never kept, since reading the content
+again costs no more. A kind without the hook cannot be played.
 
 ### Part
 

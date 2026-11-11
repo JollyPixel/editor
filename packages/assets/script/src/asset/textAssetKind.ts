@@ -23,7 +23,6 @@ import type { ScriptNetworkCommand } from "../network/types.ts";
 // CONSTANTS
 const kDecoder = new TextDecoder("utf-8", { fatal: true });
 const kEncoder = new TextEncoder();
-const kBuildVersion = "2";
 
 export interface TextKindRelay<TRelay extends object> {
   schemas: AssetRelaySchemas<TRelay>;
@@ -135,7 +134,6 @@ function compiledBuild(
   compile: (source: string) => Promise<string>
 ): AssetBuild<ScriptText> {
   return {
-    version: kBuildVersion,
     type: "text/javascript",
     async build(state) {
       return kEncoder.encode(await compile(state.text));

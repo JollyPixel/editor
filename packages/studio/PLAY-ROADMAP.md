@@ -9,27 +9,7 @@ effort: S is a day, M a few days, L a week, XL several weeks. Each step ends
 with the touched workspaces' tests, `pnpm run typecheck` and `pnpm run lint`
 green.
 
-## 1. Build cache size (M)
-
-**Spec.** `.jollypixel/builds/` holds only the builds of current asset
-revisions, plus orphans left by a restart until the next export. Deleting the
-folder by hand stays safe.
-
-`AssetSource` has no `stat`, and `AssetBuilds` keeps the asset to build key
-map in memory only, so a size or age based LRU would need a new storage API.
-Builds are keyed by content, and two assets with equal content share a key.
-
-**Plan.**
-
-1. `AssetBuilds`: when an asset builds a new key, delete its previous key
-   unless another asset's current revision still uses it (a count per key).
-2. `AssetBuilds.sweep(keys)`: delete every file under `builds/` not in
-   `keys`. `GameExport` calls it after a successful export, since it has
-   just built every asset.
-3. asset-server unit tests on an in-memory source: rebuild drops the old key,
-   a shared key survives, the sweep keeps exactly the current keys.
-
-## 2. Physics only when used (M)
+## 1. Physics only when used (M)
 
 **Spec.** A game loads Rapier's wasm only when a scene it loaded at start
 (the start scene and its prefabs) holds a RigidBody. A RigidBody a script
@@ -49,7 +29,7 @@ Today `RUNTIME_COMPONENTS.setup` in `editor.scene` imports
 3. `editor.scene`: attach Rapier only when `game.uses("RigidBody")`.
 4. Runtime unit test for the forwarded `game`; a `GameScenes.uses` test.
 
-## 3. Export in dev (M)
+## 2. Export in dev (M)
 
 **Spec.** Under `pnpm dev`, Export game zips a player built from the current
 sources, so the `build:hosted` step and its gotcha in `AGENTS.md` go away.
@@ -68,7 +48,7 @@ The server takes the player through the `GamePlayer` seam
 3. Drop the export line from the studio `AGENTS.md`.
 4. A `DevPlayer` test that the files hold the `index.html` and its chunks.
 
-## 4. Switch scenes from a script (M)
+## 3. Switch scenes from a script (M)
 
 **Spec.** A script can load another scene asset by ID: the game fetches the
 scene and its prefabs, then calls `sceneManager.loadScene`. Today the player's
@@ -84,7 +64,7 @@ level.
    loaded.
 3. Unit test: load a second scene that shares a prefab with the first.
 
-## 5. Export size (M, then L)
+## 4. Export size (M, then L)
 
 **Spec.** Step 1: the export streams, so memory holds about one artifact at a
 time instead of the whole zip. Step 2: the export holds only the assets the
@@ -99,12 +79,12 @@ Today `GameExport` builds every buildable asset and zips them in memory with
 1. Stream with fflate's `Zip` into the reply as each asset builds. A build
    error after the first bytes are sent aborts the response, so the export
    checks the default scene and the player before it starts streaming.
-2. After topic 4: compute the closure from the default scene, every scene a
+2. After topic 3: compute the closure from the default scene, every scene a
    script can switch to, prefabs, component slots and script imports. Until
    scripts declare the scenes they load, "every scene" is the only safe
    answer, so the closure drops unused non-scene assets only.
 
-## 6. Script import cycles (L)
+## 5. Script import cycles (L)
 
 **Spec.** Scripts that import each other by value play, online and in an
 export. Each script loads from a real URL instead of a `data:` module, so its
@@ -132,7 +112,7 @@ in Firefox, and the page route avoids depending on a polyfill.
 6. Tests: the map for a catalog, and a unit test of the HTML injection. Two scripts importing each other need a real browser: one e2e
    in the player suite.
 
-## 7. Offline Play and export (XL, after 6)
+## 6. Offline Play and export (XL, after 5)
 
 **Spec.** The offline and static studios show Play and Export game. The game
 runs from the in-browser back-end with the same player code as online.
@@ -144,7 +124,7 @@ build in Node only. Shaders already build in the browser (SWC strip-only).
 **Plan.**
 
 1. A service worker scoped to `/play/` answers the player page (with the
-   import map of topic 6), `game.json` and `builds/*` by asking the opener
+   import map of topic 5), `game.json` and `builds/*` by asking the opener
    window through the clients API and a `MessageChannel`. The opener's
    offline back-end builds the artifact. The first load is not controlled by
    the worker, so the player reloads once after it activates. Service workers

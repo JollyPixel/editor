@@ -26,7 +26,7 @@ describe("ensureStateGitignore", () => {
 
     assert.strictEqual(
       text(await source.read(STATE_GITIGNORE_PATH)),
-      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\nbuilds\n"
+      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\n"
     );
   });
 
@@ -37,7 +37,7 @@ describe("ensureStateGitignore", () => {
 
     assert.strictEqual(
       text(await source.read(STATE_GITIGNORE_PATH)),
-      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\nbuilds\naccounts.db\n"
+      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\naccounts.db\n"
     );
   });
 
@@ -53,7 +53,7 @@ describe("ensureStateGitignore", () => {
     assert.strictEqual(
       text(await source.read(STATE_GITIGNORE_PATH)),
       "state.json\r\nevents.db\r\nevents.db-journal\r\nevents.db-wal\r\nmine\n" +
-      "events.db-shm\nobjects\nbuilds\n"
+      "events.db-shm\nobjects\n"
     );
   });
 
@@ -65,7 +65,7 @@ describe("ensureStateGitignore", () => {
 
     assert.strictEqual(
       text(await source.read(STATE_GITIGNORE_PATH)),
-      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\nbuilds\naccounts.db\n"
+      "state.json\nevents.db\nevents.db-journal\nevents.db-wal\nevents.db-shm\nobjects\naccounts.db\n"
     );
   });
 

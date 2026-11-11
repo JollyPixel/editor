@@ -122,9 +122,3 @@ export class AssetStates {
     return decoded.ok ? Ok(decoded.val.state) : decoded;
   }
 }
-
-export function revisionKey(
-  record: AssetRecord
-): string {
-  return `${record.id.value}@${record.revision ?? ""}`;
-}

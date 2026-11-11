@@ -124,7 +124,6 @@ export function voxelModelAssetKind(
     },
     snapshot,
     build: {
-      version: "1",
       build: (state) => Promise.resolve(
         kEncoder.encode(JSON.stringify(state.toJSON()))
       )
