@@ -20,14 +20,13 @@ import {
   tokenSpan
 } from "../code/codeTokens.ts";
 import { ScriptHighlighter } from "../code/ScriptHighlighter.ts";
-import type { ShaderErrorPosition } from "../../shader/errors/ShaderError.ts";
 
 export type ShaderStage = "fragment" | "vertex";
 
 export type ShaderOutputState =
   | { kind: "compiling"; }
   | { kind: "built"; fragment: string; vertex: string; }
-  | { kind: "failed"; message: string; position: ShaderErrorPosition | null; };
+  | { kind: "failed"; message: string; };
 
 // CONSTANTS
 const kStages: JollyOption<ShaderStage>[] = [
@@ -150,11 +149,7 @@ export class ShaderOutput extends LitElement {
       return nothing;
     }
     if (state.kind === "failed") {
-      const at = state.position === null ?
-        "" :
-        `Line ${state.position.line}, column ${state.position.column}: `;
-
-      return html`<pre class="error" role="alert">${at}${state.message}</pre>`;
+      return html`<pre class="error" role="alert">${state.message}</pre>`;
     }
 
     return html`<pre>${this.#lines.map((line, index) => {

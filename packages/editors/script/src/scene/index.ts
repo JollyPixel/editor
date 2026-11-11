@@ -3,8 +3,7 @@ import { AssetType } from "@jolly-pixel/asset";
 import {
   SCRIPT_ASSET,
   SHADER_ASSET,
-  SCRIPT_KIND,
-  type ScriptOutline
+  SCRIPT_KIND
 } from "@jolly-pixel/asset.script/client";
 import type {
   SceneComponentKind,
@@ -14,6 +13,7 @@ import {
   ScriptDefinition,
   type ScriptData
 } from "@jolly-pixel/engine";
+import type { ScriptOutline } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
 import {

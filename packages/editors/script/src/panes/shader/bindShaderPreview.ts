@@ -20,7 +20,6 @@ import {
 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { ShaderError } from "../../shader/errors/ShaderError.ts";
 import { ShaderCompilation } from "../../shader/ShaderCompilation.ts";
 import "./ShaderOutput.ts";
 import { ShaderPreviewScene } from "./ShaderPreviewScene.ts";
@@ -111,8 +110,7 @@ export async function bindShaderPreview(
       failed: (error) => {
         output.state = {
           kind: "failed",
-          message: errorMessage(error),
-          position: error instanceof ShaderError ? error.position : null
+          message: errorMessage(error)
         };
       }
     });

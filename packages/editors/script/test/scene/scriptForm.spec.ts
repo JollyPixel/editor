@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { ScriptOutline } from "@jolly-pixel/asset.script/client";
+import type { ScriptOutline } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
 import { scriptForm } from "#src/scene/scriptForm.ts";

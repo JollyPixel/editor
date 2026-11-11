@@ -473,21 +473,12 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/scripting':
+        specifier: workspace:*
+        version: link:../../scripting
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
-      dompurify:
-        specifier: 3.4.17
-        version: 3.4.17
-      es-module-lexer:
-        specifier: 3.0.4
-        version: 3.0.4
-      marked:
-        specifier: 16.4.2
-        version: 16.4.2
-      ts-morph:
-        specifier: 28.0.0
-        version: 28.0.0
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -498,6 +489,9 @@ importers:
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
+      es-module-lexer:
+        specifier: 3.0.4
+        version: 3.0.4
       fast-check:
         specifier: 4.10.2
         version: 4.10.2
@@ -1007,6 +1001,9 @@ importers:
       '@jolly-pixel/runtime':
         specifier: workspace:*
         version: link:../../runtime
+      '@jolly-pixel/scripting':
+        specifier: workspace:*
+        version: link:../../scripting
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
@@ -1025,15 +1022,15 @@ importers:
       '@shikijs/langs-precompiled':
         specifier: 4.5.0
         version: 4.5.0
-      '@swc/wasm-typescript-esm':
-        specifier: 1.16.18
-        version: 1.16.18
-      es-module-lexer:
-        specifier: 3.0.4
-        version: 3.0.4
+      dompurify:
+        specifier: 3.4.17
+        version: 3.4.17
       lit:
         specifier: 3.3.3
         version: 3.3.3
+      marked:
+        specifier: 16.4.2
+        version: 16.4.2
       three:
         specifier: 0.186.1
         version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
@@ -1558,6 +1555,36 @@ importers:
         specifier: 45.1.0
         version: 45.1.0(supports-color@10.2.2)
 
+  packages/scripting:
+    dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../asset
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../engine
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../network
+      '@jolly-pixel/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@swc/wasm-typescript-esm':
+        specifier: 1.16.18
+        version: 1.16.18
+      es-module-lexer:
+        specifier: 3.0.4
+        version: 3.0.4
+      three:
+        specifier: 0.186.1
+        version: 0.186.1(patch_hash=5ab87479a681c719e784d899597301cc8d0f6b5ac1e8585415dd213cdd2271f9)
+      ts-morph:
+        specifier: 28.0.0
+        version: 28.0.0
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
   packages/studio:
     dependencies:
       '@fastify/rate-limit':
@@ -1578,9 +1605,6 @@ importers:
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art
-      '@jolly-pixel/asset.script':
-        specifier: workspace:*
-        version: link:../assets/script
       '@jolly-pixel/asset.voxel-map':
         specifier: workspace:*
         version: link:../assets/voxel-map
@@ -1593,6 +1617,9 @@ importers:
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../editors/host
+      '@jolly-pixel/editor.script':
+        specifier: workspace:*
+        version: link:../editors/script
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../engine

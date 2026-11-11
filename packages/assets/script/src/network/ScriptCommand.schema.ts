@@ -6,10 +6,8 @@ import {
   withCommandHeader,
   type Infer
 } from "@jolly-pixel/network";
+import { scriptOutlineSchema } from "@jolly-pixel/scripting";
 import * as z from "zod/mini";
-
-// Import Internal Dependencies
-import { scriptOutlineSchema } from "../outline/ScriptOutline.schema.ts";
 
 // CONSTANTS
 export const SCRIPT_OUTLINE_REQUESTED = "outline-requested";

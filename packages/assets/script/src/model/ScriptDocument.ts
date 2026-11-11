@@ -2,7 +2,7 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { TextEdit } from "../text/TextEdit.ts";
+import { TextEdit } from "./TextEdit.ts";
 import { ScriptHistory } from "./ScriptHistory.ts";
 
 export type ScriptChangeOrigin = "input" | "history" | "remote" | "load";

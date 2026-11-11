@@ -71,6 +71,7 @@ Planned. It will turn a project's assets into the catalog manifest the runtime l
 - [engine](./packages/engine) - Minimal ECS framework on top of Three.js
 - [loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
 - [controls](./packages/controls) - Input controls (screen, mouse, touchpad, keyboard, gamepad)
+- [scripting](./packages/scripting) - Compiles, outlines and loads the game's TypeScript scripts and TSL shaders
 
 #### Physics
 

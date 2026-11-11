@@ -1,16 +1,22 @@
 ## 📌 About
 
-Private asset workspace for scripts (kind `script`), TSL shaders (kind `shader`) and other text files (kind `text`). A script asset is a plain `.ts` or `.js` file; new scripts start from a `Behavior` template. A shader asset is a `.tsl.ts` file, which wins over `.ts` because the longest matching extension picks the kind; new shaders start from a template whose default export returns a `MeshStandardNodeMaterial`. A text asset is a `.md`, `.txt`, `.json`, `.jsonc`, `.yml`, `.yaml`, `.toml`, `.xml`, `.html` or `.css` file and starts empty. All three load as UTF-8, their line endings become LF, and they share the edit protocol below; only scripts have an outline.
+Private asset workspace for three text kinds:
 
-- Edits are text changes (`{ at, insert }` or `{ at, delete }`, in UTF-16 offsets). The room orders them: it rebases each edit over the edits committed since its `basis` version, using operational transform (`TextEdit.rebaseOnto`), and appends the result. A client keeps one edit in flight and folds the next keystrokes into it until the room acknowledges it.
-- A room keeps the last 1,000 committed edits. An edit based on an older version, or one whose deleted text no longer matches, is refused and its author resyncs from the snapshot.
-- `ScriptDocument` holds the text and an undo history of the local edits, rebased over peer edits so an undo never reverts someone else's work.
-- The outline lists each `Behavior` class with its `@SceneProperty` fields (type, label, description, default). A client asks for it with `ScriptOutlineFeed.request()`; the room parses the text with [ts-morph](https://github.com/dsherret/ts-morph) and sends it to every member. ts-morph loads on the first request, in Node only: the browser build of the kind answers no outline.
-- Scripts and shaders have a game build (`text/javascript`). TypeScript's `transpileModule`, loaded from ts-morph, compiles the text with `experimentalDecorators`, because `@SceneProperty` is a legacy property decorator, and an inline source map. It drops imports used only as types. [es-module-lexer](https://github.com/guybedford/es-module-lexer) then checks the remaining imports against `SCRIPT_IMPORTS` or `SHADER_IMPORTS` (`ScriptImportPolicy`, also exported from `./client` for the game's linker): a script may import `@jolly-pixel/engine`, `three`, `three/webgpu`, `three/tsl` and other scripts by a `./` or `../` path, a shader the three.js modules only. Anything else, a dynamic import or a syntax error fails the build with the specifier or the line. Like the outline, this runs in Node only: the browser build of the kind refuses to build.
+- `script`: a `.ts` or `.js` file, created from a `Behavior` template.
+- `shader`: a `.tsl.ts` file (it wins over `.ts`), created from a template that returns a `MeshStandardNodeMaterial`.
+- `text`: a `.md`, `.txt`, `.json`, `.jsonc`, `.yml`, `.yaml`, `.toml`, `.xml`, `.html` or `.css` file, created empty.
 
-Browser code imports `@jolly-pixel/asset.script/client`. The package root pulls in server dependencies.
+All three load as UTF-8 with LF line endings and share one edit protocol:
 
-`@jolly-pixel/asset.script/markdown` registers `<jolly-markdown>`. Set its `markdown` property and it renders that text as HTML with [marked](https://github.com/markedjs/marked), sanitized by [DOMPurify](https://github.com/cure53/DOMPurify). Links open in a new tab. The script editor uses it for its preview, and the studio home for the project README.
+- An edit is `{ at, insert }` or `{ at, delete }` in UTF-16 offsets. The room rebases it over the edits committed since its `basis` version and keeps the last 1,000.
+- An edit based on an older version, or whose deleted text no longer matches, is refused; its author resyncs from the snapshot.
+- `ScriptDocument` holds the text and a local undo history that never reverts a peer's edit.
+
+Scripts have an outline: each `Behavior` class with its `@SceneProperty` fields. Request it with `ScriptOutlineFeed.request()`; only a Node server answers.
+
+Scripts and shaders build to `text/javascript` with `buildScript` or `buildShader` from `@jolly-pixel/scripting`. A refused import, a dynamic import or a syntax error fails the build. Scripts build in Node only.
+
+Browser code imports `@jolly-pixel/asset.script/client`; the package root pulls in server dependencies.
 
 ## 🚀 Building
 
@@ -19,7 +25,7 @@ $ pnpm install
 $ pnpm --filter @jolly-pixel/asset.script build
 ```
 
-The kind loads its outline reader from `dist/`, so tests and editors need a build first.
+Tests and editors load this package and `@jolly-pixel/scripting` from `dist/`, so build both first: `pnpm --filter "@jolly-pixel/asset.script..." build`.
 
 ## 🧪 Tests and checks
 

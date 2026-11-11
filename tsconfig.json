@@ -53,6 +53,9 @@
       "path": "./packages/runtime"
     },
     {
+      "path": "./packages/scripting"
+    },
+    {
       "path": "./packages/asset-server"
     },
     {

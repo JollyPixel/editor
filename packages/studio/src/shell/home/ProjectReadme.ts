@@ -196,7 +196,7 @@ export class ProjectReadme extends LitElement {
     try {
       const [content] = await Promise.all([
         catalog.read(record.id),
-        import("@jolly-pixel/asset.script/markdown")
+        import("@jolly-pixel/editor.script/markdown")
       ]);
       view = {
         state: "ready",

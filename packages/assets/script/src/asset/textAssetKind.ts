@@ -9,13 +9,13 @@ import {
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { ScriptText } from "./ScriptText.ts";
 import {
   TEXT_COMMAND,
   TEXT_CONTENT_TYPES,
   TEXT_KIND
 } from "./text.ts";
-import { TextEdit } from "../text/TextEdit.ts";
+import { ScriptText } from "../model/ScriptText.ts";
+import { TextEdit } from "../model/TextEdit.ts";
 import { scriptCommandProtocol } from "../network/ScriptCommand.schema.ts";
 import { ScriptLive } from "../network/ScriptLive.ts";
 import type { ScriptNetworkCommand } from "../network/types.ts";
@@ -23,6 +23,7 @@ import type { ScriptNetworkCommand } from "../network/types.ts";
 // CONSTANTS
 const kDecoder = new TextDecoder("utf-8", { fatal: true });
 const kEncoder = new TextEncoder();
+const kBuildVersion = "2";
 
 export interface TextKindRelay<TRelay extends object> {
   schemas: AssetRelaySchemas<TRelay>;
@@ -36,7 +37,7 @@ export interface TextKindOptions<TRelay extends object> {
   template: string;
   snapshot?: SnapshotPolicy;
   relay?: TextKindRelay<TRelay>;
-  build?: AssetBuild<ScriptText>;
+  compile?: (source: string) => Promise<string>;
 }
 
 export interface TextAssetKindOptions {
@@ -62,14 +63,15 @@ export function textKindHandler<TRelay extends object = never>(
     kind,
     eventType,
     template,
-    relay
+    relay,
+    compile
   } = options;
 
   return {
     kind,
     extensions: options.extensions,
     snapshot: options.snapshot,
-    build: options.build,
+    build: compile === undefined ? undefined : compiledBuild(compile),
 
     create(): ScriptText {
       return new ScriptText(template);
@@ -125,6 +127,18 @@ export function textKindHandler<TRelay extends object = never>(
           relay: relay?.open(binding.state)
         });
       }
+    }
+  };
+}
+
+function compiledBuild(
+  compile: (source: string) => Promise<string>
+): AssetBuild<ScriptText> {
+  return {
+    version: kBuildVersion,
+    type: "text/javascript",
+    async build(state) {
+      return kEncoder.encode(await compile(state.text));
     }
   };
 }

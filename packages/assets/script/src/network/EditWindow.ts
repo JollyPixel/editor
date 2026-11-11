@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { TextEdit } from "../text/TextEdit.ts";
+import type { TextEdit } from "../model/TextEdit.ts";
 
 interface CommittedEdit {
   readonly version: number;

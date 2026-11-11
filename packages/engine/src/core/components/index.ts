@@ -4,6 +4,8 @@ export {
   SceneProperty,
   SceneActorComponent,
   InputListener,
+  type BehaviorFieldDecorator,
+  type BehaviorMethodDecorator,
   type ScenePropertyOptions
 } from "./script/BehaviorDecorators.ts";
 export {

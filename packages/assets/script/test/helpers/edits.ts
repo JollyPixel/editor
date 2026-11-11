@@ -5,7 +5,7 @@ import fc from "fast-check";
 import {
   TextEdit,
   type TextChange
-} from "#src/text/TextEdit.ts";
+} from "#src/model/TextEdit.ts";
 
 export interface EditStep {
   insert: boolean;

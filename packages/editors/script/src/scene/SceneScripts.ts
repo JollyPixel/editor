@@ -4,8 +4,7 @@ import {
   ScriptOutlineFeed,
   SCRIPT_KIND,
   textDocumentKind,
-  type ScriptDocument,
-  type ScriptOutline
+  type ScriptDocument
 } from "@jolly-pixel/asset.script/client";
 import type { AssetLease } from "@jolly-pixel/editor.host";
 import type {
@@ -13,6 +12,7 @@ import type {
   SceneAssetResolver,
   SceneAssetUpdates
 } from "@jolly-pixel/editor.host/scene";
+import type { ScriptOutline } from "@jolly-pixel/scripting";
 
 // CONSTANTS
 export const SCRIPT_DOCUMENT_KIND = textDocumentKind(SCRIPT_KIND);

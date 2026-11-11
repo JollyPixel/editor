@@ -11,7 +11,7 @@ import {
   type ScriptAssetKindOptions
 } from "#src/asset/scriptAssetKind.ts";
 import { SCRIPT_KIND } from "#src/asset/script.ts";
-import type { ScriptText } from "#src/asset/ScriptText.ts";
+import type { ScriptText } from "#src/model/ScriptText.ts";
 import type { ScriptOutlineRequest } from "#src/network/ScriptCommand.schema.ts";
 import {
   textDocumentKind,

@@ -5,11 +5,12 @@ import {
   type AssetKindPackage,
   type SnapshotPolicy
 } from "@jolly-pixel/asset-server";
+import {
+  buildScript,
+  readScriptOutline
+} from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
-import { readScriptOutline } from "#outliner";
-import { scriptBuild } from "../build/scriptBuild.ts";
-import { SCRIPT_IMPORTS } from "../imports/importPolicies.ts";
 import {
   SCRIPT_ASSET,
   SCRIPT_COMMAND,
@@ -17,7 +18,6 @@ import {
   SCRIPT_KIND,
   SCRIPT_TEMPLATE
 } from "./script.ts";
-import type { ScriptText } from "./ScriptText.ts";
 import { SHADER_ASSET } from "./shader.ts";
 import { shaderAssetKind } from "./shaderAssetKind.ts";
 import { TEXT_ASSET } from "./text.ts";
@@ -25,6 +25,7 @@ import {
   textAssetKind,
   textKindHandler
 } from "./textAssetKind.ts";
+import type { ScriptText } from "../model/ScriptText.ts";
 import {
   SCRIPT_RELAY_SCHEMAS,
   type ScriptOutlineRequest
@@ -33,7 +34,7 @@ import type { ScriptNetworkCommand } from "../network/types.ts";
 import {
   ScriptOutlineRelay,
   type ScriptOutlineReader
-} from "../outline/ScriptOutlineRelay.ts";
+} from "../network/ScriptOutlineRelay.ts";
 
 export interface ScriptAssetKindOptions {
   snapshot?: SnapshotPolicy;
@@ -54,7 +55,7 @@ export function scriptAssetKind(
     extensions: SCRIPT_CONTENT_TYPES,
     template: SCRIPT_TEMPLATE,
     snapshot,
-    build: scriptBuild(SCRIPT_IMPORTS),
+    compile: buildScript,
     relay: {
       schemas: SCRIPT_RELAY_SCHEMAS,
       open: (state) => new ScriptOutlineRelay(state, readOutline)
