@@ -2,7 +2,7 @@
 
 Private editor for `@jolly-pixel/asset.script` scripts, shaders and text files, booted through `@jolly-pixel/editor.host`.
 
-- **Code**: a transparent `<textarea>` over lines highlighted by Shiki, with the grammar of the file extension loaded on demand (TypeScript, JavaScript, JSON, YAML, TOML, XML, HTML, CSS, Markdown). `.txt` stays plain. An edit retokenizes from its line until the tokenizer state matches again, and only visible lines render.
+- **Code**: a transparent `<textarea>` over lines highlighted by [sugar-high](https://github.com/huozhi/sugar-high) for the file extension (TypeScript, JavaScript, JSON, YAML, TOML, XML, HTML, CSS, Markdown). `.txt` stays plain. An edit retokenizes the whole file, and only visible lines render. The generated shader code uses the editor's own WGSL syntax.
 - **Collaboration**: peers see each other's carets and selections. Tab / Shift+Tab indent, Enter keeps the indentation, Ctrl+Z / Ctrl+Y undo and redo local edits only.
 - **Markdown**: a rendered preview beside the code, refreshed 150 ms after the last edit. A member who cannot edit sees the preview only.
 - **Shader** (`.tsl.ts`): a WebGPU preview beside the code on a sphere, box, plane, torus, cylinder or capsule, rebuilt 300 ms after the last edit. Fragment and Vertex tabs show the generated WGSL, or the error with its line and column. A broken edit keeps the last working material.

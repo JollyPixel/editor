@@ -16,7 +16,7 @@ import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
-import { fileLanguage } from "./panes/code/ScriptHighlighter.ts";
+import { fileLanguage } from "./syntax/highlight.ts";
 import { bindMarkdownPreview } from "./panes/preview/bindMarkdownPreview.ts";
 
 // CONSTANTS

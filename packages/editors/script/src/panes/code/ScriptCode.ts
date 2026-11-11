@@ -8,6 +8,7 @@ import {
   type TemplateResult
 } from "lit";
 import { styleMap } from "lit/directives/style-map.js";
+import type { ParsedLine } from "sugar-high/core";
 import {
   TextEdit,
   type ScriptChange,
@@ -31,17 +32,17 @@ import { TextLines } from "../../text/TextLines.ts";
 import {
   CODE_TOKEN_COLORS,
   tokenSpan
-} from "./codeTokens.ts";
+} from "../../syntax/tokens.ts";
 import { CodeViewport } from "./CodeViewport.ts";
 import {
-  ScriptHighlighter,
+  highlight,
   type ScriptLanguage
-} from "./ScriptHighlighter.ts";
+} from "../../syntax/highlight.ts";
 
 export interface ScriptCodeOptions {
   document: ScriptDocument;
   collaboration: ScriptCollaboration;
-  language: ScriptLanguage | null;
+  language: ScriptLanguage;
   readOnly: boolean;
 }
 
@@ -51,7 +52,7 @@ export class ScriptCode extends LitElement {
       display: block;
       position: relative;
       min-height: 0;
-      color: var(--shiki-foreground);
+      color: var(--code-foreground);
       background: var(--jolly-surface-sunken);
       font-family: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
       font-size: 13px;
@@ -165,9 +166,10 @@ export class ScriptCode extends LitElement {
 
   #document: ScriptDocument | null = null;
   #collaboration: ScriptCollaboration | null = null;
-  #highlighter: ScriptHighlighter | null = null;
+  #language: ScriptLanguage = "plaintext";
   #readOnly = true;
   #lines = new TextLines("");
+  #tokens: readonly ParsedLine[] = [];
   #carets: readonly PeerCaret[] = [];
   #release: Array<() => void> = [];
   #viewport = new CodeViewport(this, {
@@ -194,7 +196,8 @@ export class ScriptCode extends LitElement {
     this.#document = document;
     this.#collaboration = collaboration;
     this.#readOnly = readOnly;
-    this.#lines = new TextLines(document.text);
+    this.#language = language;
+    this.#readText(document.text);
     this.#carets = collaboration.carets;
     const page = this.ownerDocument;
     page.addEventListener("selectionchange", this.#onSelectionChange);
@@ -206,16 +209,6 @@ export class ScriptCode extends LitElement {
       }),
       () => page.removeEventListener("selectionchange", this.#onSelectionChange)
     ];
-    if (language !== null) {
-      void ScriptHighlighter.create(language).then((highlighter) => {
-        if (this.#document !== document) {
-          return;
-        }
-        this.#highlighter = highlighter;
-        highlighter.update(this.#lines.lines);
-        this.requestUpdate();
-      });
-    }
     this.#syncTextarea(ScriptCaret.collapsed(0));
     this.requestUpdate();
 
@@ -291,13 +284,8 @@ export class ScriptCode extends LitElement {
 
   #renderTokens(
     line: number
-  ): TemplateResult | string {
-    const tokens = this.#highlighter?.tokens(line) ?? null;
-    if (tokens === null) {
-      return this.#lines.line(line);
-    }
-
-    return html`${tokens.map(tokenSpan)}`;
+  ): TemplateResult {
+    return html`${(this.#tokens[line]?.tokens ?? []).map(tokenSpan)}`;
   }
 
   #renderCaret(
@@ -356,8 +344,7 @@ export class ScriptCode extends LitElement {
       return;
     }
 
-    this.#lines = new TextLines(document.text);
-    this.#highlighter?.update(this.#lines.lines);
+    this.#readText(document.text);
     const textarea = this.#textarea;
     if (origin !== "input" && textarea !== null) {
       this.#syncTextarea(
@@ -365,6 +352,13 @@ export class ScriptCode extends LitElement {
       );
     }
     this.requestUpdate();
+  }
+
+  #readText(
+    text: string
+  ): void {
+    this.#lines = new TextLines(text);
+    this.#tokens = highlight(text, this.#language);
   }
 
   #syncTextarea(
@@ -467,7 +461,6 @@ export class ScriptCode extends LitElement {
     }
     this.#document = null;
     this.#collaboration = null;
-    this.#highlighter = null;
   }
 }
 
