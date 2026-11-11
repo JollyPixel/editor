@@ -202,6 +202,21 @@ describe("AssetCoordinator", () => {
     );
   });
 
+  test("can load only a cataloged asset of the reference's kind through its registered token", () => {
+    const coordinator = createCoordinator(readSource);
+
+    assert.equal(coordinator.canLoad(textReference("greeting")), true);
+    assert.equal(coordinator.canLoad(textReference("deleted")), false);
+    assert.equal(
+      coordinator.canLoad(new AssetReference("greeting", new AssetType("model"))),
+      false
+    );
+    assert.equal(
+      coordinator.canLoad(new AssetReference("greeting", kForeignTextAsset)),
+      false
+    );
+  });
+
   test("loads only through the registered token", async() => {
     const coordinator = createCoordinator(readSource);
 

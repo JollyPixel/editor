@@ -218,6 +218,7 @@ export class HierarchyController {
         marks: editing.presence.selections,
         components: editing.components,
         naming: editing.assetSlots,
+        loadable: editing.assetSlots,
         live: editing.live
       });
     }

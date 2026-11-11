@@ -115,6 +115,8 @@ describe("AssetPath", () => {
         ["scripts/Player.ts", "../shared/my%20label", "shared/my label"],
         ["scripts/Player.ts", "/Enemy.ts", "Enemy.ts"],
         ["Player.ts", "./models/./ship.bin", "models/ship.bin"],
+        ["models/sale.obj", "50% off%20tag.png", "models/50% off tag.png"],
+        ["models/hero.fbx", "..\\textures\\skin.png", "textures/skin.png"],
         ["project:/models/hero.gltf", "./hero.bin", "project:/models/hero.bin"]
       ];
 

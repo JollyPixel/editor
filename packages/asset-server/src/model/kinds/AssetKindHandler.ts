@@ -146,11 +146,6 @@ export interface AssetPreview {
 
 export interface AssetBuild<TState = unknown> {
   /**
-   * Bumped whenever the same content builds to different bytes, which
-   * invalidates every artifact built before.
-   */
-  readonly version: string;
-  /**
    * Media type of the built content.
    * @default the type of the asset extension
    */

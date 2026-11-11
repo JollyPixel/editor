@@ -33,6 +33,13 @@ export class AssetCoordinator {
     this.#loaders = options.loaders;
   }
 
+  canLoad(
+    reference: AssetReference<unknown>
+  ): boolean {
+    return this.#catalog.find(reference.id)?.hasKind(reference.kind) === true &&
+      this.#loaders.has(reference.type);
+  }
+
   request<TValue>(
     reference: AssetReference<TValue>
   ): AssetHandle<TValue> {

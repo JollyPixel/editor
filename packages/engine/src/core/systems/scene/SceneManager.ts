@@ -167,8 +167,9 @@ export class SceneManager<
     load: ManagedSceneLoad<TContext>
   ): void {
     try {
-      const batch = this.#world!.assetCoordinator.loadBatch(
-        load.scene.assets,
+      const coordinator = this.#world!.assetCoordinator;
+      const batch = coordinator.loadBatch(
+        load.scene.assetsToLoad(coordinator),
         {
           onProgress: (progress) => load.report(progress)
         }

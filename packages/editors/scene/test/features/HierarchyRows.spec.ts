@@ -124,6 +124,31 @@ describe("HierarchyRows", () => {
     );
   });
 
+  test("warns on a component whose asset is gone or of another kind than its slot", () => {
+    const document = new SceneDocument();
+    document.addActor({
+      name: "Sign",
+      components: [
+        { id: "kept", type: "Text", data: {}, assets: { font: { id: "serif", kind: "font" } } },
+        { id: "deleted", type: "Text", data: {}, assets: { font: { id: "gone", kind: "font" } } },
+        { id: "swapped", type: "Text", data: {}, assets: { font: { id: "serif", kind: "texture" } } }
+      ]
+    });
+
+    const [sign] = readRows(document.tree, kNoAnchors, {
+      loadable: { canLoad: ({ id }) => id.value === "serif" }
+    }).roots;
+
+    assert.deepEqual(
+      sign.children?.map(({ warning }) => warning),
+      [
+        undefined,
+        "Its \"font\" asset is gone or of another kind. The game skips this component.",
+        "Its \"font\" asset is gone or of another kind. The game skips this component."
+      ]
+    );
+  });
+
   test("marks a prefab instance with the prefab icon", () => {
     const document = new SceneDocument();
     document.addActor({ name: "House", prefab: { id: "house", kind: "scene" } });

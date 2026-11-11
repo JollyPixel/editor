@@ -4,18 +4,19 @@ import * as z from "zod/mini";
 // CONSTANTS
 export const PLAY_WINDOW = "jolly-play";
 export const PLAY_ERROR = "jolly-play-error";
+export const PLAY_WARNING = "jolly-play-warning";
 
-const kPlayErrorSchema = z.object({
-  type: z.literal(PLAY_ERROR),
+const kPlayReportSchema = z.object({
+  type: z.enum([PLAY_ERROR, PLAY_WARNING]),
   message: z.string()
 });
 
-export type PlayError = z.output<typeof kPlayErrorSchema>;
+export type PlayReport = z.output<typeof kPlayReportSchema>;
 
-export function parsePlayError(
+export function parsePlayReport(
   data: unknown
-): PlayError | undefined {
-  const parsed = kPlayErrorSchema.safeParse(data);
+): PlayReport | undefined {
+  const parsed = kPlayReportSchema.safeParse(data);
 
   return parsed.success ? parsed.data : undefined;
 }

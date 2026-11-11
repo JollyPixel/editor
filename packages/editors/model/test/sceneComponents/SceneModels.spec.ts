@@ -11,6 +11,7 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import { SceneModels } from "#src/sceneComponents/SceneModels.ts";
 import { cubeModelGlb } from "#src/seed/cubeModel.ts";
+import { FakeModelCatalog } from "../helpers/file/FakeModelCatalog.ts";
 
 // CONSTANTS
 const kReference = {
@@ -36,13 +37,8 @@ function sceneModels(
         };
       }
     },
-    catalog: {
-      record: () => {
-        return {
-          path: "models/cube.glb"
-        };
-      }
-    }
+    catalog: new FakeModelCatalog()
+      .add("models/cube.glb", new Uint8Array(), kReference.id)
   } as unknown as SceneAssetContext;
   let loaded = Promise.withResolvers<void>();
   const models = new SceneModels(session, {

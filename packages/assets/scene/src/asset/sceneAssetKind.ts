@@ -125,7 +125,6 @@ export function sceneAssetKind(
     },
     snapshot,
     build: {
-      version: "1",
       build: (state) => Promise.resolve(
         new TextEncoder().encode(JSON.stringify(state.toJSON()))
       )

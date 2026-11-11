@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import type { AssetRecord } from "@jolly-pixel/asset";
-import type { AssetSource } from "@jolly-pixel/asset-source";
 import {
   Err,
   Ok,
@@ -9,32 +8,25 @@ import {
 import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { contentHash } from "../../common/contentHash.ts";
-import { InFlight } from "../../common/InFlight.ts";
 import type {
   AnyAssetKindHandler,
   AssetBuild
 } from "../../model/kinds/AssetKindHandler.ts";
-import { BUILDS_PATH } from "../../storage/stateDirectory.ts";
+import { PASS_THROUGH_BUILD } from "../../model/kinds/authoring/passThroughBuild.ts";
 import {
   AssetStates,
-  revisionKey,
-  type AssetStatesOptions,
-  type LoadedAsset
+  type AssetStatesOptions
 } from "./AssetStates.ts";
+import { RevisionCache } from "./RevisionCache.ts";
 import { UnbuildableAssetError } from "./errors/UnbuildableAssetError.ts";
 
 // CONSTANTS
 const kDefaultContentType = "application/octet-stream";
+const kMaxCachedBytes = 64 * 1024 * 1024;
 
 export type AssetBuildsOptions = AssetStatesOptions;
 
 export interface BuiltAsset {
-  /**
-   * Hash of the kind, its build version and the asset content: equal keys
-   * hold equal bytes.
-   */
-  readonly key: string;
   readonly type: string;
   readonly bytes: Uint8Array;
 }
@@ -45,15 +37,17 @@ type BuildHandler = AnyAssetKindHandler & {
 
 export class AssetBuilds {
   #assets: AssetStates;
-  #source: AssetSource;
-  #keys = new Map<string, string>();
-  #pending = new InFlight<Result<BuiltAsset, Error>>();
+  #builds: RevisionCache<BuiltAsset>;
 
   constructor(
     options: AssetBuildsOptions
   ) {
     this.#assets = new AssetStates(options);
-    this.#source = options.source;
+    this.#builds = new RevisionCache({
+      assets: this.#assets,
+      maxBytes: kMaxCachedBytes,
+      measure: (built) => built.bytes.byteLength
+    });
   }
 
   build(
@@ -71,67 +65,32 @@ export class AssetBuilds {
       return Promise.resolve(Err(error));
     }
 
-    return this.#pending.run(
-      revisionKey(record),
-      () => this.#build(handler, record)
-    );
+    const build = () => this.#build(handler, record);
+
+    return handler.build === PASS_THROUGH_BUILD ?
+      build() :
+      this.#builds.resolve(record, build);
   }
 
   async #build(
     handler: BuildHandler,
     record: AssetRecord
   ): Promise<Result<BuiltAsset, Error>> {
-    const type = contentType(handler, record);
     try {
-      const known = this.#keys.get(revisionKey(record));
-      if (known !== undefined && await this.#source.exists(artifactPath(known))) {
-        return Ok({
-          key: known,
-          type,
-          bytes: await this.#source.read(artifactPath(known))
-        });
-      }
-
       const loaded = await this.#assets.load(handler, record);
-      const key = await artifactKey(handler, loaded.content);
-      const bytes = await this.#artifact(handler, key, loaded);
-      if (!bytes.ok) {
-        return bytes;
-      }
-      if (this.#assets.isCurrent(record)) {
-        this.#keys.set(revisionKey(record), key);
+      const state = loaded.state();
+      if (!state.ok) {
+        return state;
       }
 
       return Ok({
-        key,
-        type,
-        bytes: bytes.val
+        type: contentType(handler, record),
+        bytes: await handler.build.build(state.val, loaded.content)
       });
     }
     catch (error) {
       return Err(asError(error));
     }
-  }
-
-  async #artifact(
-    handler: BuildHandler,
-    key: string,
-    loaded: LoadedAsset
-  ): Promise<Result<Uint8Array, Error>> {
-    const path = artifactPath(key);
-    if (await this.#source.exists(path)) {
-      return Ok(await this.#source.read(path));
-    }
-
-    const state = loaded.state();
-    if (!state.ok) {
-      return state;
-    }
-
-    const bytes = await handler.build.build(state.val, loaded.content);
-    await this.#source.write(path, bytes);
-
-    return Ok(bytes);
   }
 }
 
@@ -139,23 +98,6 @@ function builds(
   handler: AnyAssetKindHandler
 ): handler is BuildHandler {
   return handler.build !== undefined;
-}
-
-function artifactPath(
-  key: string
-): string {
-  return `${BUILDS_PATH}/${key}`;
-}
-
-async function artifactKey(
-  handler: BuildHandler,
-  content: Uint8Array
-): Promise<string> {
-  const hashed = await contentHash(content);
-
-  return contentHash(new TextEncoder().encode(
-    `${handler.kind}\n${handler.build.version}\n${hashed}`
-  ));
 }
 
 function contentType(

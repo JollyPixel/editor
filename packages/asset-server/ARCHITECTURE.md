@@ -72,9 +72,8 @@ flowchart TB
 
 - The backend knows no kind by name. A kind without `commands` is stored and
   listed, but never opens a room.
-- Builds are a cache: `.jollypixel/builds/` is gitignored and safe to delete.
-  A key depends on one asset's content only, never on its path or on another
-  asset.
+- Builds live in memory only, so a restart builds them again. A build depends
+  on one asset's content only, never on its path or on another asset.
 - A project loads extra kinds from packages named in its project file.
 - Code: `model/kinds/`, `node/project/`.
 

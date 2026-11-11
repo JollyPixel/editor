@@ -94,7 +94,7 @@ export class ModelEditor {
       const { runtime } = editorRuntime;
       const player = new AnimationPlayer(() => runtime.world.invalidate());
       const file = new ModelFile(session, target.document);
-      const preview = new ModelPreview(file);
+      const preview = new ModelPreview(file, session.catalog);
       fileFolder.attach(file, context.notifications);
       animate.attach(player);
       details.attach(preview);

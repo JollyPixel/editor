@@ -8,8 +8,10 @@ import { PLAY_PAGE_DIR, SCENE_KIND } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
+  PLAY_ERROR,
+  PLAY_WARNING,
   PLAY_WINDOW,
-  parsePlayError
+  parsePlayReport
 } from "./protocol.ts";
 import {
   GAME_CHANGE,
@@ -33,6 +35,7 @@ export interface StudioPlayOptions {
    */
   activeAsset: () => string | null;
   failed: (message: string) => void;
+  warned: (message: string) => void;
   /**
    * @default document.baseURI
    */
@@ -62,9 +65,12 @@ export class StudioPlay extends EventTarget {
         return;
       }
 
-      const error = parsePlayError(event.data);
-      if (error !== undefined) {
-        this.#options.failed(error.message);
+      const report = parsePlayReport(event.data);
+      if (report?.type === PLAY_ERROR) {
+        this.#options.failed(report.message);
+      }
+      else if (report?.type === PLAY_WARNING) {
+        this.#options.warned(report.message);
       }
     }, { signal });
   }

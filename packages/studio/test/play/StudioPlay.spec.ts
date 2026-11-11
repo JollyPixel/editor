@@ -40,6 +40,7 @@ interface PlayProbe {
   readonly project: FakeProject;
   readonly opened: string[];
   readonly failures: string[];
+  readonly warnings: string[];
 }
 
 function studioPlay(
@@ -50,6 +51,7 @@ function studioPlay(
 ): PlayProbe {
   const opened: string[] = [];
   const failures: string[] = [];
+  const warnings: string[] = [];
   const project = new FakeProject(options.start ?? null);
   const play = new StudioPlay({
     catalog: {
@@ -58,6 +60,7 @@ function studioPlay(
     project,
     activeAsset: () => options.active ?? null,
     failed: (message) => failures.push(message),
+    warned: (message) => warnings.push(message),
     baseUrl: "http://localhost/studio/",
     open: (url, target) => {
       opened.push(`${target} ${url.href}`);
@@ -70,7 +73,8 @@ function studioPlay(
     play,
     project,
     opened,
-    failures
+    failures,
+    warnings
   };
 }
 
@@ -172,6 +176,31 @@ describe("StudioPlay", () => {
       source: window
     }));
 
+    assert.deepStrictEqual(failures, ["boom"]);
+  });
+
+  test("reports the warnings of its game window apart from its errors", (t) => {
+    const { play, failures, warnings } = studioPlay({
+      start: "arena",
+      open: () => window
+    });
+    t.after(() => play.dispose());
+    play.play("game");
+
+    for (const [type, message] of [
+      ["jolly-play-warning", "Missing asset skipped"],
+      ["jolly-play-error", "boom"]
+    ]) {
+      window.dispatchEvent(new MessageEvent("message", {
+        data: {
+          type,
+          message
+        },
+        source: window
+      }));
+    }
+
+    assert.deepStrictEqual(warnings, ["Missing asset skipped"]);
     assert.deepStrictEqual(failures, ["boom"]);
   });
 });

@@ -78,7 +78,6 @@ export async function gameProject(): Promise<GameProject> {
         kind: "script",
         extensions: { ".ts": "text/plain" },
         build: {
-          version: "1",
           type: "text/javascript",
           build: () => Promise.reject(new Error("\"lodash\" cannot be imported"))
         }

@@ -1,8 +1,12 @@
 // Import Third-party Dependencies
-import { AssetReference } from "@jolly-pixel/asset";
+import {
+  AssetReference,
+  type AssetReferenceData
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type { Actor } from "../../../../actor/Actor.ts";
+import type { LoadableAssets } from "../../Scene.ts";
 import type { Component } from "../../../../components/types.ts";
 import { randomPersistentId } from "../../../generators/randomPersistentId.ts";
 import {
@@ -19,6 +23,17 @@ import type {
 } from "../SceneFile.ts";
 
 export type AnyComponentDefinition = ComponentDefinition<any, any, any>;
+
+export interface MissingComponentAsset {
+  readonly slot: string;
+  readonly reference: AssetReferenceData;
+}
+
+interface FilledSlot {
+  readonly slot: string;
+  readonly data: AssetReferenceData;
+  readonly reference: AssetReference<unknown> | null;
+}
 
 export interface ComponentBuildOptions {
   readonly mode: SceneMode;
@@ -155,16 +170,45 @@ export class ComponentDefinitions {
   ): IterableIterator<AssetReference<unknown>> {
     for (const actor of file.actors) {
       for (const entry of actor.components) {
-        const slots = this.#definitions.get(
-          entry.type
-        )?.assets ?? {};
-
-        for (const [slot, type] of Object.entries(slots)) {
-          const reference = entry.assets[slot] ?? null;
+        for (const { reference } of this.#slots(entry)) {
           if (reference !== null) {
-            yield AssetReference.parse(reference, type);
+            yield reference;
           }
         }
+      }
+    }
+  }
+
+  missingAsset(
+    entry: Readonly<Pick<SceneComponentFile, "type" | "assets">>,
+    loadable: LoadableAssets
+  ): MissingComponentAsset | null {
+    for (const { slot, data, reference } of this.#slots(entry)) {
+      if (reference === null || !loadable.canLoad(reference)) {
+        return {
+          slot,
+          reference: data
+        };
+      }
+    }
+
+    return null;
+  }
+
+  * #slots(
+    entry: Readonly<Pick<SceneComponentFile, "type" | "assets">>
+  ): IterableIterator<FilledSlot> {
+    const slots = this.#definitions.get(entry.type)?.assets ?? {};
+    for (const [slot, type] of Object.entries(slots)) {
+      const data = entry.assets[slot] ?? null;
+      if (data !== null) {
+        yield {
+          slot,
+          data,
+          reference: data.kind === type.kind.value ?
+            AssetReference.parse(data, type) :
+            null
+        };
       }
     }
   }

@@ -35,12 +35,16 @@ const kMissingComponent = "No package of this project provides this component. I
 
 type ActorAnchors = Pick<Systems.SceneAnchorsReader, "anchors">;
 type LiveActors = ActorAnchors & Pick<SceneLiveView, "expandedActors">;
-type RowComponents = Pick<SceneComponents, "find" | "icon" | "summary">;
+type RowComponents = Pick<
+  SceneComponents,
+  "find" | "icon" | "summary" | "missingAsset"
+>;
 
 export interface RowSources {
   marks: PeerMarks<string>;
   components: RowComponents;
   naming: AssetNaming;
+  loadable: Systems.LoadableAssets;
   live: LiveActors;
 }
 
@@ -312,19 +316,18 @@ export class HierarchyRows {
   #componentNode(
     ownerId: string,
     component: SceneComponentView,
-    { components, naming }: RowSources
+    { components, naming, loadable }: RowSources
   ): TreeNode {
     const id = HierarchyRows.componentRowId(component.id);
     const { label, detail } = components.summary(component, naming);
+    const warning = componentWarning(component, components, loadable);
     const node: TreeNode = {
       id,
       label,
       icon: components.icon(component.type),
       renamable: false,
       ...detail === undefined ? {} : { detail },
-      ...components.find(component.type) === undefined ?
-        { warning: kMissingComponent } :
-        {}
+      ...warning === null ? {} : { warning }
     };
     this.#nodes.set(id, node);
     this.#parents.set(id, ownerId);
@@ -385,6 +388,22 @@ function numberTwins(
       node.detail = node.detail === undefined ? rank : `${node.detail} ${rank}`;
     }
   }
+}
+
+function componentWarning(
+  component: SceneComponentView,
+  components: RowComponents,
+  loadable: Systems.LoadableAssets
+): string | null {
+  if (components.find(component.type) === undefined) {
+    return kMissingComponent;
+  }
+
+  const slot = components.missingAsset(component, loadable);
+
+  return slot === null ?
+    null :
+    `Its "${slot}" asset is gone or of another kind. The game skips this component.`;
 }
 
 function anchorNode(

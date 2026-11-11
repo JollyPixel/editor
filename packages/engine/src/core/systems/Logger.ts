@@ -47,6 +47,17 @@ export interface LoggerOptions {
    * Output adapter. Defaults to the global `console`.
    */
   adapter?: ConsoleAdapter;
+  /**
+   * Receives each written message, after the adapter.
+   */
+  listener?: (entry: LogEntry) => void;
+}
+
+export interface LogEntry {
+  readonly level: Exclude<LogLevel, "void">;
+  readonly namespace: string;
+  readonly message: string;
+  readonly meta: Record<string, unknown> | undefined;
 }
 
 export interface LoggerChildOptions {
@@ -63,6 +74,7 @@ class LoggerState {
   level: LogLevel;
   namespaces: string[];
   adapter: ConsoleAdapter;
+  listener: ((entry: LogEntry) => void) | null;
 
   #matchers: Map<string, PathMatcher> = new Map();
 
@@ -72,12 +84,14 @@ class LoggerState {
     const {
       level = "info",
       namespaces = [],
-      adapter = console
+      adapter = console,
+      listener = null
     } = options;
 
     this.level = level;
     this.namespaces = structuredClone(namespaces);
     this.adapter = adapter;
+    this.listener = listener;
   }
 
   invalidateMatchers(): void {
@@ -279,6 +293,12 @@ export class Logger {
     const args = meta === undefined ? [formatted] : [formatted, meta];
 
     this.#root.adapter[kAdapterMethod[level]](...args);
+    this.#root.listener?.({
+      level,
+      namespace: this.namespace,
+      message: msg,
+      meta
+    });
   }
 }
 

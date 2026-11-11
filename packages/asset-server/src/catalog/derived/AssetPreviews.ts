@@ -8,16 +8,15 @@ import {
 import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { InFlight } from "../../common/InFlight.ts";
 import type {
   AnyAssetKindHandler,
   AssetPreview
 } from "../../model/kinds/AssetKindHandler.ts";
 import {
   AssetStates,
-  revisionKey,
   type AssetStatesOptions
 } from "./AssetStates.ts";
+import { RevisionCache } from "./RevisionCache.ts";
 
 // CONSTANTS
 const kMaxCachedBytes = 32 * 1024 * 1024;
@@ -27,21 +26,19 @@ export type AssetPreviewsOptions = AssetStatesOptions;
 type PreviewHandler = AnyAssetKindHandler &
   Required<Pick<AnyAssetKindHandler, "preview">>;
 
-interface CachedPreview {
-  readonly revision: string | undefined;
-  readonly preview: AssetPreview | null;
-}
-
 export class AssetPreviews {
   #assets: AssetStates;
-  #cached = new Map<string, CachedPreview>();
-  #cachedBytes = 0;
-  #pending = new InFlight<Result<AssetPreview | null, Error>>();
+  #previews: RevisionCache<AssetPreview | null>;
 
   constructor(
     options: AssetPreviewsOptions
   ) {
     this.#assets = new AssetStates(options);
+    this.#previews = new RevisionCache({
+      assets: this.#assets,
+      maxBytes: kMaxCachedBytes,
+      measure: (preview) => preview?.bytes.byteLength ?? 0
+    });
   }
 
   preview(
@@ -57,25 +54,7 @@ export class AssetPreviews {
       return Promise.resolve(Ok(null));
     }
 
-    const { revision } = record;
-    const cached = this.#cached.get(assetId);
-    if (cached !== undefined && cached.revision === revision) {
-      this.#touch(assetId, cached);
-
-      return Promise.resolve(Ok(cached.preview));
-    }
-
-    return this.#pending.run(revisionKey(record), async() => {
-      const result = await this.#draw(handler, record);
-      if (result.ok && this.#assets.isCurrent(record)) {
-        this.#store(assetId, {
-          revision,
-          preview: result.val
-        });
-      }
-
-      return result;
-    });
+    return this.#previews.resolve(record, () => this.#draw(handler, record));
   }
 
   async #draw(
@@ -94,46 +73,6 @@ export class AssetPreviews {
       return Err(asError(error));
     }
   }
-
-  #touch(
-    assetId: string,
-    cached: CachedPreview
-  ): void {
-    this.#cached.delete(assetId);
-    this.#cached.set(assetId, cached);
-  }
-
-  #store(
-    assetId: string,
-    cached: CachedPreview
-  ): void {
-    const previous = this.#cached.get(assetId);
-    if (previous !== undefined) {
-      this.#cached.delete(assetId);
-      this.#cachedBytes -= previewBytes(previous);
-    }
-
-    const bytes = previewBytes(cached);
-    if (bytes > kMaxCachedBytes) {
-      return;
-    }
-
-    this.#cached.set(assetId, cached);
-    this.#cachedBytes += bytes;
-    for (const [oldest, entry] of this.#cached) {
-      if (this.#cachedBytes <= kMaxCachedBytes) {
-        break;
-      }
-      this.#cached.delete(oldest);
-      this.#cachedBytes -= previewBytes(entry);
-    }
-  }
-}
-
-function previewBytes(
-  cached: CachedPreview
-): number {
-  return cached.preview?.bytes.byteLength ?? 0;
 }
 
 function drawsPreviews(

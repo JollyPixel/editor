@@ -1,5 +1,11 @@
+// Import Third-party Dependencies
+import type { AssetReference } from "@jolly-pixel/asset";
+
 // Import Internal Dependencies
-import { Scene } from "../Scene.ts";
+import {
+  Scene,
+  type LoadableAssets
+} from "../Scene.ts";
 import type { WorldDefaultContext } from "../../World.ts";
 import type { ComponentDefinitions } from "./definitions/ComponentDefinitions.ts";
 import { CoordinatorAssetResolver } from "./definitions/CoordinatorAssetResolver.ts";
@@ -55,6 +61,12 @@ export class FileScene<
     this.#components = components;
     this.#prefabs = prefabs;
     this.#sceneId = sceneId;
+  }
+
+  override assetsToLoad(
+    loadable: LoadableAssets
+  ): Iterable<AssetReference<unknown>> {
+    return this.assets.filter((reference) => loadable.canLoad(reference));
   }
 
   override awake(): void {

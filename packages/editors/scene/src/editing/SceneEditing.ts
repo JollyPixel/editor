@@ -28,7 +28,7 @@ import type { PresenceStore } from "../state/PresenceStore.ts";
 import type { SceneDraft } from "../state/SceneDraft.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
 
-export interface SceneAssetSlots extends AssetNaming {
+export interface SceneAssetSlots extends AssetNaming, Systems.LoadableAssets {
   pick(
     type: AssetType<unknown>,
     current: AssetReferenceData | null

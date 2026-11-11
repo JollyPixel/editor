@@ -2,6 +2,7 @@
 // Import Third-party Dependencies
 import {
   AssetReference,
+  type AssetCoordinator,
   type AssetReferenceGroup
 } from "@jolly-pixel/asset";
 import { Emitter } from "@openally/emitt";
@@ -14,6 +15,8 @@ import type { Logger } from "../Logger.ts";
 export type SceneAssetDeclaration =
   | AssetReference<unknown>
   | AssetReferenceGroup;
+
+export type LoadableAssets = Pick<AssetCoordinator, "canLoad">;
 
 export interface SceneOptions {
   assets?: Iterable<SceneAssetDeclaration>;
@@ -54,6 +57,12 @@ export abstract class Scene<
     });
 
     return this.#logger;
+  }
+
+  assetsToLoad(
+    _loadable: LoadableAssets
+  ): Iterable<AssetReference<unknown>> {
+    return this.assets;
   }
 
   awake(): void { }

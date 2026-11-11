@@ -18,6 +18,7 @@ export function readRows(
     marks: new PeerMarks(),
     components: createSceneComponents(),
     naming: { name: () => "Overworld" },
+    loadable: { canLoad: () => true },
     live,
     ...sources
   });

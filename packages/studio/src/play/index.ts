@@ -13,9 +13,11 @@ import {
   type Game
 } from "./GameManifestClient.ts";
 import { GameScenes } from "./GameScenes.ts";
+import { playLoggerOptions } from "./playLogger.ts";
 import {
   PLAY_ERROR,
-  type PlayError
+  PLAY_WARNING,
+  type PlayReport
 } from "./protocol.ts";
 
 // CONSTANTS
@@ -32,16 +34,26 @@ function report(
     failure.textContent = message;
     failure.hidden = false;
   }
+  tellOpener({
+    type: PLAY_ERROR,
+    message
+  });
+}
+
+function warn(
+  message: string
+): void {
+  tellOpener({
+    type: PLAY_WARNING,
+    message
+  });
+}
+
+function tellOpener(
+  data: PlayReport
+): void {
   const opener: WindowProxy | null = window.opener;
-  if (opener !== null) {
-    opener.postMessage(
-      {
-        type: PLAY_ERROR,
-        message
-      } satisfies PlayError,
-      location.origin
-    );
-  }
+  opener?.postMessage(data, location.origin);
 }
 
 async function loadGame(): Promise<Game> {
@@ -72,7 +84,8 @@ async function play(): Promise<void> {
     assets: {
       catalog: game.catalog,
       loaders
-    }
+    },
+    worldLogger: playLoggerOptions(warn)
   });
   runtime.manager.setURLModifier(game.resolveURL);
   await setup(runtime.world);

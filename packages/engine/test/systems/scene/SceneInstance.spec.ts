@@ -114,7 +114,7 @@ describe("Systems.SceneInstance", () => {
   });
 
   test("resolves a component's asset slots through the resolver", () => {
-    const { instance, resolved } = createInstance("play");
+    const { instance, resolved } = createInstance("edit");
     const map = { id: "map-1", kind: "texture" };
 
     instance.add([

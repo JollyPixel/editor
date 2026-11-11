@@ -304,7 +304,20 @@ uniform.
   back as a file entry. See
   [Saving a running scene](#saving-a-running-scene).
 - `assets(file)` yields the asset references of every known component in the
-  file. It reads only `file.actors`.
+  file, except a reference that names another kind than its slot. It reads
+  only `file.actors`.
+- `missingAsset(entry, loadable): MissingComponentAsset | null` returns the
+  first filled slot of the entry whose reference names another kind than the
+  slot or that `loadable` cannot load. Returns `null` when every slot can load.
+
+```ts
+type LoadableAssets = Pick<AssetCoordinator, "canLoad">;
+
+interface MissingComponentAsset {
+  readonly slot: string;
+  readonly reference: AssetReferenceData;
+}
+```
 
 ## FileScene
 
@@ -326,11 +339,14 @@ class FileScene<TContext> extends Scene<TContext> {
 }
 ```
 
-- Its `assets` are the definitions' assets, loaded by
-  [`SceneManager`](scene-manager.md) like any scene. With `prefabs`, they
+- Its `assets` are the definitions' assets. With `prefabs`, they
   include the assets of every actor its instances expand, overridden slots
   included, so `prefabs` must find each of those scenes when the `FileScene`
   is constructed.
+- Its `assetsToLoad` keeps the `assets` the world's `assetCoordinator` can
+  load, so [`SceneManager`](scene-manager.md) loads only those. A component
+  whose asset is missing from the catalog, of another kind than its slot, or
+  without a loader is skipped with a warning instead of failing the load.
 - `sceneId` is the asset id of `file`. Pass it so a prefab cycle back to this
   scene stops at once, as in the editor, instead of one level down.
 - `awake()` builds the actors in play mode and applies the environment.
@@ -447,6 +463,10 @@ root. The parent may come from the same call or an earlier one.
   without a warning, with its subtree: the live actor is kept.
 - A component type without a definition is skipped, with a warning in play
   mode only. So is a `null` from `create`, without a warning.
+- In play mode, a component with a slot asset that `missingAsset` reports
+  against the world's `assetCoordinator` is skipped with a
+  `Missing asset skipped` warning naming the actor, component type and asset
+  ID. Edit mode builds it anyway.
 - Transforms are written to `actor.transform`.
 - An actor with `prefab` gets its scene's actors built under it.
 - An actor with `anchor` is placed on that anchor of its parent.

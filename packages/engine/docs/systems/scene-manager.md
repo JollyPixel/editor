@@ -19,8 +19,11 @@ const load = this.actor.world.sceneManager.loadScene(
 );
 ```
 
-`loadScene()` returns a `SceneLoad` at once and loads `scene.assets` as one
-batch of `world.assetCoordinator`. A scene with nothing left to load is
+`loadScene()` returns a `SceneLoad` at once and loads
+`scene.assetsToLoad(world.assetCoordinator)` as one batch of that
+coordinator. `assetsToLoad` returns `scene.assets` unless a subclass
+overrides it, as [`FileScene`](scene-file.md#filescene) does to skip what the
+coordinator cannot load. A scene with nothing left to load is
 `ready` before `loadScene()` returns. A ready scene replaces the current one
 at the next frame boundary.
 

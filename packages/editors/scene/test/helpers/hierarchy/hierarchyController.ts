@@ -63,6 +63,7 @@ export function createHierarchy(
   const catalog = new Set<() => void>();
   const assetSlots: SceneAssetSlots = {
     name: () => assetName,
+    canLoad: () => true,
     pick: () => Promise.resolve(null),
     pickScene: () => Promise.resolve(null),
     open,

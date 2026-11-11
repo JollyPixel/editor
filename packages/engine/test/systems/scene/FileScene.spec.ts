@@ -8,6 +8,7 @@ import * as THREE from "three/webgpu";
 // Import Internal Dependencies
 import { Actor } from "../../../src/core/actor/Actor.ts";
 import { ActorComponent } from "../../../src/core/actor/ActorComponent.ts";
+import type { Logger } from "../../../src/core/systems/Logger.ts";
 import { Scene } from "../../../src/core/systems/scene/Scene.ts";
 import {
   ComponentDefinitions,
@@ -20,7 +21,8 @@ import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
 import {
   createActorFile,
   createComponentFile,
-  createSceneFile
+  createSceneFile,
+  createWarningLogger
 } from "../../helpers/scene/sceneFile.ts";
 
 class ModelComponent extends ActorComponent {
@@ -35,7 +37,9 @@ class ModelComponent extends ActorComponent {
   }
 }
 
-function createModelSetup() {
+function createModelSetup(
+  logger?: Logger
+) {
   const assets = createSceneAssets(["knight", "mage"]);
   const { type } = assets.reference("knight");
   const definition: ComponentDefinition<null, ModelComponent, { model: string; }> = {
@@ -61,7 +65,7 @@ function createModelSetup() {
     }
   );
 
-  return { ...createSceneSetup(assets), assets, components, file };
+  return { ...createSceneSetup(assets, logger), assets, components, file };
 }
 
 async function loadKeepInstance() {
@@ -191,6 +195,36 @@ describe("Systems.FileScene", () => {
     assert.strictEqual(model.actor, hero);
     assert.strictEqual(model.model, "knight");
   });
+
+  for (const [cause, missing] of [
+    ["is gone from the catalog", { id: "ghost", kind: "scene-asset" }],
+    ["is of another kind than its slot", { id: "mage", kind: "texture" }]
+  ] as const) {
+    test(`skips a component whose asset ${cause} and builds the rest`, async() => {
+      const { logger, warnings } = createWarningLogger();
+      const { sm, assets, components, file } = createModelSetup(logger);
+      const scene = new FileScene("level", createSceneFile([
+        ...file.actors,
+        createActorFile("ghost", {
+          components: [createComponentFile("broken", "Model", {}, { model: missing })]
+        })
+      ]), { components });
+
+      const load = sm.loadScene(scene);
+      assets.loader.resolve("knight");
+      await load.done;
+      sm.beginFrame();
+
+      const [hero, ghost] = sm.tree.children;
+      assert.strictEqual(hero.findComponent(ModelComponent)!.model, "knight");
+      assert.strictEqual(ghost.findComponent(ModelComponent), null);
+      assert.deepEqual(warnings().map(([, meta]) => meta), [{
+        actor: "ghost",
+        type: "Model",
+        assetId: missing.id
+      }]);
+    });
+  }
 
   test("applies its environment and resets it when unloaded", async() => {
     const { sm, assets, components, file } = createModelSetup();

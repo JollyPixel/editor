@@ -8,8 +8,16 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { ModelFile } from "../file/ModelFile.ts";
-import { MissingResources } from "./MissingResources.ts";
+import {
+  ModelResources,
+  type ModelCatalog
+} from "./ModelResources.ts";
 import { ModelStats } from "./ModelStats.ts";
+
+// CONSTANTS
+const kEmptyView: ModelView = {
+  status: "empty"
+};
 
 export type ModelView =
   | {
@@ -35,19 +43,40 @@ type ModelPreviewEvents = {
   change: () => void;
 };
 
+class ModelRead {
+  readonly view: ModelView;
+
+  #resources: ModelResources;
+
+  constructor(
+    view: ModelView,
+    resources: ModelResources
+  ) {
+    this.view = view;
+    this.#resources = resources;
+  }
+
+  dispose(): void {
+    disposeView(this.view);
+    this.#resources.dispose();
+  }
+}
+
 export class ModelPreview {
   readonly file: ModelFile;
 
+  #catalog: ModelCatalog;
   #events = new Emitter<ModelPreviewEvents>();
   #loads = 0;
-  #view: ModelView = {
-    status: "empty"
-  };
+  #view: ModelView = kEmptyView;
+  #current: ModelRead | null = null;
 
   constructor(
-    file: ModelFile
+    file: ModelFile,
+    catalog: ModelCatalog
   ) {
     this.file = file;
+    this.#catalog = catalog;
   }
 
   get view(): ModelView {
@@ -74,9 +103,7 @@ export class ModelPreview {
     return () => {
       unsubscribe();
       this.#loads++;
-      this.#show({
-        status: "empty"
-      });
+      this.#settle(null);
     };
   }
 
@@ -84,9 +111,7 @@ export class ModelPreview {
     const load = ++this.#loads;
     const { bytes } = this.file;
     if (bytes === null) {
-      this.#show({
-        status: "empty"
-      });
+      this.#settle(null);
 
       return;
     }
@@ -95,22 +120,41 @@ export class ModelPreview {
       status: "loading",
       model: this.model
     });
-    const view = await this.#read(bytes);
+    const read = await this.#load(bytes, load);
     if (load === this.#loads) {
-      this.#show(view);
+      this.#settle(read);
     }
-    else if (view.status === "ready") {
-      disposeObject3D(view.model.object, { textures: true });
+    else {
+      read.dispose();
     }
   }
 
-  async #read(
-    bytes: Uint8Array
+  async #load(
+    bytes: Uint8Array,
+    load: number
+  ): Promise<ModelRead> {
+    const resources = new ModelResources(this.#catalog, this.file.path, () => {
+      if (load === this.#loads) {
+        void this.reload();
+      }
+    });
+    for (;;) {
+      const view = await this.#parse(bytes, resources);
+      if (!await resources.fetched() || load !== this.#loads) {
+        return new ModelRead(view, resources);
+      }
+      disposeView(view);
+    }
+  }
+
+  async #parse(
+    bytes: Uint8Array,
+    resources: ModelResources
   ): Promise<ModelView> {
-    const resources = new MissingResources();
     try {
       const model = await parseModel(bytes, this.file.name, {
-        manager: resources.manager
+        manager: resources.manager,
+        texture: resources.findTexture()
       });
 
       return {
@@ -129,15 +173,28 @@ export class ModelPreview {
     }
   }
 
+  #settle(
+    read: ModelRead | null
+  ): void {
+    const previous = this.#current;
+    this.#current = read;
+    this.#show(read?.view ?? kEmptyView);
+    previous?.dispose();
+  }
+
   #show(
     view: ModelView
   ): void {
-    const previous = this.model;
     this.#view = view;
-    if (previous !== null && previous !== this.model) {
-      disposeObject3D(previous.object, { textures: true });
-    }
     this.#events.emit("change");
+  }
+}
+
+function disposeView(
+  view: ModelView
+): void {
+  if (view.status === "ready") {
+    disposeObject3D(view.model.object, { textures: true });
   }
 }
 

@@ -31,7 +31,6 @@ function builtLinks(
     handler: {
       ...liveLinkHandler(),
       build: {
-        version: "1",
         type,
         build(state): Promise<Uint8Array> {
           links.builds++;
@@ -81,13 +80,13 @@ describe("AssetBuilds", () => {
     assert.strictEqual(text(built.bytes), "STONE");
   });
 
-  test("builds each content once, even when an edit comes back to it", async() => {
+  test("builds each revision once and keeps only the latest", async() => {
     const links = builtLinks();
     await using project = await archiveProject({ handlers: [links.handler] });
     const map = await project.link("map.link", "grass");
     const { builds } = project.backend;
 
-    const [first, second] = await Promise.all([
+    await Promise.all([
       builds.build(map),
       builds.build(map)
     ]);
@@ -103,10 +102,8 @@ describe("AssetBuilds", () => {
     await project.editLive(map, "grass");
     await project.backend.flush(map);
     const reverted = (await builds.build(map)).unwrap();
-    assert.strictEqual(links.builds, 2);
-    assert.strictEqual(reverted.key, first.unwrap().key);
-    assert.strictEqual(second.unwrap().key, first.unwrap().key);
-    assert.notStrictEqual(edited.key, first.unwrap().key);
+    assert.strictEqual(text(reverted.bytes), "GRASS");
+    assert.strictEqual(links.builds, 3);
   });
 
   test("refuses a kind without a build", async() => {
