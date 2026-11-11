@@ -29,6 +29,7 @@ import {
   createTempDir,
   removeTempDir
 } from "../../helpers/tempDir.ts";
+import { DEFAULT_PHYSICS } from "#src/project/api.ts";
 import { KindFilter } from "#src/project/KindFilter.ts";
 
 // CONSTANTS
@@ -67,7 +68,8 @@ function voxelMapProject(
       kindFilter: KindFilter.NONE,
       game: {
         start: null
-      }
+      },
+      physics: DEFAULT_PHYSICS
     }
   );
 }

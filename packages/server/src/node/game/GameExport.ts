@@ -24,7 +24,7 @@ import {
 const kFileNameSuffix = "-game.zip";
 
 export interface GameExportOptions {
-  project: Pick<StudioProject, "access" | "game" | "name">;
+  project: Pick<StudioProject, "access" | "game" | "name" | "physics">;
   backend: GameBackend;
   player: GamePlayer;
 }
@@ -32,7 +32,7 @@ export interface GameExportOptions {
 export class GameExport {
   readonly fileName: string;
 
-  #project: Pick<StudioProject, "access" | "game" | "name">;
+  #project: Pick<StudioProject, "access" | "game" | "name" | "physics">;
   #backend: GameBackend;
   #player: GamePlayer;
 
@@ -67,7 +67,7 @@ export class GameExport {
       records.push(record);
     }
     files[GAME_MANIFEST_FILE] = new TextEncoder().encode(
-      JSON.stringify(gameManifest(start, records))
+      JSON.stringify(gameManifest(start, records, this.#project.physics))
     );
 
     return zipSync(files);

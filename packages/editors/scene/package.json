@@ -61,7 +61,6 @@
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/physics": "workspace:*",
-    "@jolly-pixel/physics.rapier": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/three": "workspace:*",

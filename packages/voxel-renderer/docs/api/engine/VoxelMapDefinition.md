@@ -19,17 +19,48 @@ const components = new Systems.ComponentDefinitions().register(
 interface VoxelMapSettings {
   castShadow: boolean;
   receiveShadow: boolean;
+  collision: boolean;
   layers: Readonly<Record<string, boolean>>;
 }
 ```
 
 `castShadow` and `receiveShadow` default to `false` and set the same flags on
-`view.lighting`. `layers` maps a layer name to a visibility that overrides the
+`view.lighting`. `collision` defaults to `false`, see [collision](#collision). `layers` maps a layer name to a visibility that overrides the
 map's own; a layer left out keeps the map's value. A missing or mistyped field
 falls back to its default, and a non-boolean layer entry is dropped.
 
 `apply()` patches a live component: it sets both shadow flags and replaces the
 layer overrides.
+
+## Collision
+
+```ts
+interface VoxelMapDefinitionOptions {
+  collider?: (actor: Actor<any>) => VoxelColliderFactory;
+}
+
+new VoxelMapDefinition(options?: VoxelMapDefinitionOptions);
+```
+
+In play mode, `create()` passes `collider(actor)` to the view of a map whose
+`collision` is on. A map gets no collider in edit mode, when `collision` is
+off, or when the definition has no `collider`. Changing `collision` on a live
+component has no effect.
+
+```ts
+import { PhysicsSystem } from "@jolly-pixel/physics/engine";
+import { PhysicsVoxelCollider } from "@jolly-pixel/voxel.renderer";
+
+const definition = new VoxelMapDefinition({
+  collider: (actor) => (context) => new PhysicsVoxelCollider({
+    world: PhysicsSystem.require(actor.world).ownedBodies(actor),
+    ...context
+  })
+});
+```
+
+See [adding physics](../../guides/adding-physics.md) and
+[`VoxelCollider`](../collision/VoxelCollider.md).
 
 ## Map slot
 

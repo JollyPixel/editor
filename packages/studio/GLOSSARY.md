@@ -194,10 +194,20 @@ layouts, expanded folders, the kind filter.
 
 `game.json`, served by `GET /api/game?start=<scene id>`: the start scene, a
 catalog of every asset the account opens at its project path, and
-`artifacts`, the URL of each asset's build relative to `game.json`. The player
+`artifacts`, the URL of each asset's build relative to `game.json`, and the
+project's physics settings. The player
 turns every fetch of a project path into its build URL, so a loader that
 resolves a path, such as a script import, uses project paths. An artifact is
 built on its first request and served for good while its revision is current.
+
+### Physics settings
+
+The `physics` section of the project file, set in Settings › Project ›
+General: the physics engine (Rapier, the only one for now) and the gravity,
+`y = -9.81` by default. The player loads the engine only when a scene it loads
+at start, prefabs included, holds a component that uses physics: a RigidBody,
+or a voxel map with Collision on. A RigidBody a script adds to a game without
+physics throws.
 
 ### Default scene
 

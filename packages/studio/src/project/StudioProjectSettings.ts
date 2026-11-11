@@ -3,6 +3,7 @@ import {
   type AccessChange,
   type GameSection,
   type KindOptions,
+  type PhysicsSection,
   type ProjectSections,
   type ProjectSettingsReply,
   KindFilter,
@@ -86,6 +87,12 @@ export class StudioProjectSettings extends RemoteState {
     game: GameSection
   ): Promise<boolean> {
     return this.#replace(() => this.#client.replace("game", game));
+  }
+
+  replacePhysics(
+    physics: PhysicsSection
+  ): Promise<boolean> {
+    return this.#replace(() => this.#client.replace("physics", physics));
   }
 
   async #replace(

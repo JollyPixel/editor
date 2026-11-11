@@ -55,6 +55,8 @@
     "@jolly-pixel/editor.script": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/physics": "workspace:*",
+    "@jolly-pixel/physics.rapier": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",

@@ -5,11 +5,25 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import {
+  DEFAULT_PHYSICS,
+  type PhysicsSection
+} from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import { GameManifestClient } from "../../src/play/GameManifestClient.ts";
 
 // CONSTANTS
 const kGameUrl = "http://localhost/studio/api/game/";
+const kMoonPhysics: PhysicsSection = {
+  engine: "rapier",
+  gravity: {
+    x: 0,
+    y: -1.62,
+    z: 0
+  }
+};
 
 describe("GameManifestClient", () => {
   test("loads the game of a start scene and resolves project paths to absolute build URLs", async() => {
@@ -41,7 +55,8 @@ describe("GameManifestClient", () => {
           artifacts: {
             arena: "builds/arena/abc%40v3/arena.scene.json",
             ship: "builds/ship/current/my%20ship.bin"
-          }
+          },
+          physics: kMoonPhysics
         });
       }
     });
@@ -51,6 +66,7 @@ describe("GameManifestClient", () => {
     assert.deepEqual(requested, [`${kGameUrl}?start=arena`]);
     assert.strictEqual(game.start, "arena");
     assert.strictEqual(game.catalog.get("arena").path.toString(), "levels/arena.scene.json");
+    assert.deepEqual(game.physics, kMoonPhysics);
     assert.deepEqual(
       [
         "levels/arena.scene.json",
@@ -91,7 +107,8 @@ describe("GameManifestClient", () => {
           },
           artifacts: {
             arena: "builds/arena/current/arena.scene.json"
-          }
+          },
+          physics: DEFAULT_PHYSICS
         });
       }
     });

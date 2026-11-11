@@ -949,9 +949,6 @@ importers:
       '@jolly-pixel/physics':
         specifier: workspace:*
         version: link:../../physics
-      '@jolly-pixel/physics.rapier':
-        specifier: workspace:*
-        version: link:../../physics-rapier
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
@@ -1203,6 +1200,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../../physics
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
@@ -1672,6 +1672,12 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../physics
+      '@jolly-pixel/physics.rapier':
+        specifier: workspace:*
+        version: link:../physics-rapier
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../pixel-draw-renderer

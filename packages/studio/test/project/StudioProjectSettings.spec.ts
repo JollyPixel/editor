@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  DEFAULT_PHYSICS,
   type ProjectSettingsReply,
   KindFilter,
   ProjectRights,
@@ -30,7 +31,8 @@ function settings(): StudioProjectSettings {
     },
     game: {
       start: null
-    }
+    },
+    physics: DEFAULT_PHYSICS
   };
 
   return new StudioProjectSettings(
@@ -54,7 +56,8 @@ function settings(): StudioProjectSettings {
       },
       game: {
         start: null
-      }
+      },
+      physics: DEFAULT_PHYSICS
     }
   );
 }

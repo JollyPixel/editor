@@ -21,7 +21,6 @@ import type { StudioProject } from "./StudioProject.ts";
 import type {
   AccessChange,
   AccessSection,
-  GameSection,
   KindOptions,
   KindPackageSettings,
   ProjectRight,
@@ -81,10 +80,14 @@ export class ProjectSettings {
         KindFilter.from(kindFilter)
       )
     },
-    game: {
-      right: "editSettings",
-      replace: (actorId, game) => this.#replaceGame(actorId, game)
-    }
+    game: this.#valueSection(
+      "game",
+      (game) => this.#project.replaceGame(game)
+    ),
+    physics: this.#valueSection(
+      "physics",
+      (physics) => this.#project.replacePhysics(physics)
+    )
   };
 
   constructor(
@@ -128,7 +131,8 @@ export class ProjectSettings {
   sections(): ProjectSections {
     return {
       kindFilter: this.#project.kindFilter.toJSON(),
-      game: this.#project.game
+      game: this.#project.game,
+      physics: this.#project.physics
     };
   }
 
@@ -145,20 +149,25 @@ export class ProjectSettings {
     });
   }
 
-  async #replaceGame(
-    actorId: string,
-    game: GameSection
-  ): Promise<void> {
-    const before = this.#project.game;
-    if (isDeepStrictEqual(before, game)) {
-      return;
-    }
+  #valueSection<TName extends "game" | "physics">(
+    section: TName,
+    apply: (value: SettingsSectionBody<TName>) => void
+  ): SectionHandler<TName> {
+    return {
+      right: "editSettings",
+      replace: async(actorId, after) => {
+        const before = this.#project[section];
+        if (isDeepStrictEqual(before, after)) {
+          return;
+        }
 
-    await this.#commit(actorId, {
-      section: "game",
-      before,
-      after: game
-    }, () => this.#project.replaceGame(game));
+        await this.#commit(actorId, {
+          section,
+          before,
+          after
+        }, () => apply(after));
+      }
+    };
   }
 
   async #replaceKindFilter(

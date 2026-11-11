@@ -6,6 +6,12 @@ import {
   type AssetRecord
 } from "@jolly-pixel/asset";
 
+// Import Internal Dependencies
+import {
+  physicsSectionSchema,
+  type PhysicsSection
+} from "../project/api.ts";
+
 // CONSTANTS
 export const GAME_MANIFEST_VERSION = 1;
 export const SCENE_KIND = "scene";
@@ -25,18 +31,21 @@ export interface GameManifestData {
    * URL of each asset's build, relative to `game.json`, by asset ID.
    */
   readonly artifacts: Readonly<Record<string, string>>;
+  readonly physics: PhysicsSection;
 }
 
 export const gameManifestSchema = z.object({
   version: z.literal(GAME_MANIFEST_VERSION),
   start: z.string().min(1),
   assets: z.unknown().transform((assets) => AssetCatalog.parse(assets)),
-  artifacts: z.record(z.string(), z.string())
+  artifacts: z.record(z.string(), z.string()),
+  physics: physicsSectionSchema
 });
 
 export function gameManifest(
   start: string,
-  records: Iterable<AssetRecord>
+  records: Iterable<AssetRecord>,
+  physics: PhysicsSection
 ): GameManifestData {
   const catalog = new AssetCatalog(records);
 
@@ -47,7 +56,8 @@ export function gameManifest(
     artifacts: Object.fromEntries(Array.from(
       catalog,
       (record) => [record.id.value, artifactPath(record)]
-    ))
+    )),
+    physics
   };
 }
 

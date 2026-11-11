@@ -37,6 +37,7 @@ import "./ProfileSettings.ts";
 import "./access/AccessSettings.ts";
 import "./audit/AuditView.ts";
 import "./project/ProjectGame.ts";
+import "./project/ProjectPhysics.ts";
 import "./project/ProjectGeneral.ts";
 import "./project/ProjectKindPackage.ts";
 
@@ -344,6 +345,9 @@ export class StudioSettings extends LitElement {
             .project=${project}
             .catalog=${this.catalog}
           ></studio-project-game>
+          <studio-project-physics
+            .project=${project}
+          ></studio-project-physics>
         `;
       case "kind-package":
         return html`${keyed(section.id, html`

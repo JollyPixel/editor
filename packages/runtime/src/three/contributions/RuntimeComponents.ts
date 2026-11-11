@@ -6,15 +6,14 @@ import type {
   RuntimeAssetLoaderDefinition
 } from "../assets/RuntimeAssetOptions.ts";
 
-export type RuntimeComponentWorld = Systems.World<any, any>;
+export type RuntimePhysicsCheck = (
+  data: Readonly<Systems.JSONObject>
+) => boolean;
 
 export interface RuntimeComponentPackage {
   readonly definitions: readonly Systems.AnyComponentDefinition[];
   readonly loaders?: readonly RuntimeAssetLoaderDefinition[];
-
-  setup?(
-    world: RuntimeComponentWorld
-  ): Promise<void> | void;
+  readonly usesPhysics?: Readonly<Record<string, RuntimePhysicsCheck>>;
 }
 
 export interface RuntimeContribution {
@@ -28,9 +27,9 @@ export interface RuntimeComponents {
   readonly components: Systems.ComponentDefinitions;
   readonly loaders: readonly RuntimeAssetLoaderDefinition[];
 
-  setup(
-    world: RuntimeComponentWorld
-  ): Promise<void>;
+  usesPhysics(
+    component: Readonly<Systems.SceneComponentFile>
+  ): boolean;
 }
 
 export function contributedRuntimeComponents(
@@ -38,7 +37,7 @@ export function contributedRuntimeComponents(
 ): RuntimeComponents {
   const components = new Systems.ComponentDefinitions();
   const loaders: RuntimeAssetLoaderDefinition[] = [];
-  const packages: RuntimeComponentPackage[] = [];
+  const physicsChecks = new Map<string, RuntimePhysicsCheck>();
   const owners = new Map<string, string>();
 
   for (const { name, module } of contributions) {
@@ -50,25 +49,36 @@ export function contributedRuntimeComponents(
     }
 
     for (const definition of contributed.definitions) {
-      claim(owners, `Component type "${definition.type}"`, name);
+      claim(owners, componentType(definition.type), name);
       components.register(definition);
     }
     for (const loader of contributed.loaders ?? []) {
       claim(owners, `Asset kind "${loader.type.kind.value}"`, name);
       loaders.push(loader);
     }
-    packages.push(contributed);
+    for (const [type, check] of Object.entries(contributed.usesPhysics ?? {})) {
+      if (owners.get(componentType(type)) !== name) {
+        throw new TypeError(
+          `"${name}" checks physics for component type "${type}", which it does not declare.`
+        );
+      }
+      physicsChecks.set(type, check);
+    }
   }
 
   return {
     components,
     loaders,
-    async setup(world) {
-      for (const contributed of packages) {
-        await contributed.setup?.(world);
-      }
-    }
+    usesPhysics: (component) => (
+      physicsChecks.get(component.type)?.(component.data) ?? false
+    )
   };
+}
+
+function componentType(
+  type: string
+): string {
+  return `Component type "${type}"`;
 }
 
 function claim(
