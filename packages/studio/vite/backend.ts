@@ -4,20 +4,23 @@ import {
   type Plugin
 } from "vite";
 import type { RunMode } from "@jolly-pixel/e2e";
-
-// Import Internal Dependencies
-import type { StudioProject } from "../server/project/StudioProject.ts";
 import {
   StudioBackend,
-  type StudioBackendOptions
-} from "../server/StudioBackend.ts";
+  type StudioBackendOptions,
+  type StudioProject,
+  type StudioServerSettings
+} from "@jolly-pixel/server/node";
+
+// Import Internal Dependencies
+import { studioBackendFiles } from "../node/studioFiles.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
 import { EditorPageInput } from "./EditorPageInput.ts";
 import { ServedEditorPages } from "./ServedEditorPages.ts";
 
 export function backend(
   project: StudioProject,
-  mode: RunMode
+  mode: RunMode,
+  settings: StudioServerSettings
 ): Plugin {
   let opened: StudioBackend | null = null;
 
@@ -28,7 +31,8 @@ export function backend(
       opened = await StudioBackend.open(
         project,
         {
-          ...backendOptions(mode),
+          ...backendOptions(mode, settings),
+          ...await studioBackendFiles(),
           editorPages: new ServedEditorPages(
             server,
             EditorPageInput.compiled(server.config.root, project.editors)
@@ -55,8 +59,9 @@ export function backend(
 }
 
 function backendOptions(
-  mode: RunMode
-): StudioBackendOptions {
+  mode: RunMode,
+  settings: StudioServerSettings
+): Omit<StudioBackendOptions, "player" | "preferences"> {
   const { inMemory } = mode.assetServer;
   if (mode.e2e) {
     return {
@@ -68,7 +73,7 @@ function backendOptions(
   return {
     inMemory,
     accounts: {
-      env: process.env,
+      masterPassword: settings.masterPassword,
       logger: createLogger()
     }
   };

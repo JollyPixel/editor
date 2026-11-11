@@ -18,7 +18,7 @@ import {
 } from "vite";
 
 // Import Internal Dependencies
-import { StudioProject } from "../../server/project/StudioProject.ts";
+import { openStudioProject } from "../../node/studioFiles.ts";
 
 // CONSTANTS
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
@@ -76,9 +76,7 @@ describe("@jolly-pixel/studio bundle", () => {
   let editorPages: string[];
 
   before(async() => {
-    const project = await StudioProject.open(
-      StudioProject.resolveRoot(kStudioRoot)
-    );
+    const project = await openStudioProject();
     editorPages = Array.from(project.editors)
       .filter((editor) => editor.page.kind === "source")
       .map((editor) => editor.name);

@@ -13,11 +13,11 @@ import {
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/toggle";
+import { KindFilter } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../../catalog/AssetKindSet.ts";
 import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
-import { KindFilter } from "../../../../shared/KindFilter.ts";
 import { settingsStyles } from "../settingsStyles.ts";
 import { SettingsDraftController } from "./SettingsDraftController.ts";
 

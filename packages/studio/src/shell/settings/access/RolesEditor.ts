@@ -21,15 +21,15 @@ import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/toolbar";
 import { errorMessage } from "@jolly-pixel/utils";
-
-// Import Internal Dependencies
-import type { AccessDraft } from "../../../project/AccessDraft.ts";
-import type { RoleRules } from "../../../project/RoleRules.ts";
 import {
   AUDIT_RIGHT,
   BUILT_IN_ROLES,
   SETTINGS_RIGHT
-} from "../../../../shared/api/project.ts";
+} from "@jolly-pixel/server";
+
+// Import Internal Dependencies
+import type { AccessDraft } from "../../../project/AccessDraft.ts";
+import type { RoleRules } from "../../../project/RoleRules.ts";
 
 // CONSTANTS
 const kNewPattern = "room.*";

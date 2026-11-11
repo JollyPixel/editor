@@ -10,9 +10,9 @@ import assert from "node:assert/strict";
 import { RUNTIME_PREFERENCES } from "@jolly-pixel/editor.host/preferences";
 import { Preferences } from "@jolly-pixel/preferences";
 import { MemoryStorageAdapter } from "@jolly-pixel/ui";
+import { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import { PreferenceScopes } from "../../shared/PreferenceScopes.ts";
 import {
   frame,
   FRAME_ORIGIN,
@@ -41,7 +41,10 @@ describe("StudioSession preferences", () => {
           preferences,
           renewal: null
         },
-        scopes: new PreferenceScopes([RUNTIME_PREFERENCES], [])
+        scopes: new PreferenceScopes({
+          scopes: [],
+          common: [RUNTIME_PREFERENCES]
+        }, [])
       }
     );
     await studio.openAsset("map-1");

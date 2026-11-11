@@ -8,9 +8,9 @@ import {
 } from "vite";
 
 // Import Internal Dependencies
-import type { EditorPages } from "../server/editors/EditorPages.ts";
-import type { EditorPagesWatcher } from "../server/editors/EditorPagesWatcher.ts";
 import { EditorPageInput } from "./EditorPageInput.ts";
+import type { EditorPageFiles } from "./EditorPageFiles.ts";
+import type { EditorPagesWatcher } from "./EditorPagesWatcher.ts";
 import { ServedEditorPages } from "./ServedEditorPages.ts";
 
 // CONSTANTS
@@ -30,7 +30,7 @@ export interface EditorPagesPluginOptions {
 }
 
 export function editorPages(
-  pages: EditorPages,
+  pages: EditorPageFiles,
   options: EditorPagesPluginOptions = {}
 ): Plugin {
   const { shellPages = kShellPages } = options;

@@ -5,16 +5,18 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type {
+  AuditPage,
+  AuditQuery,
+  AuditRow
+} from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import {
   AuditPages,
   type AuditPageSource
 } from "../../src/audit/AuditPages.ts";
-import type {
-  AuditPage,
-  AuditQuery,
-  AuditRow
-} from "../../shared/api/audit.ts";
 
 function settingsRow(
   at: number

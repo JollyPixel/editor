@@ -5,15 +5,20 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import {
+  type ProjectSettingsReply,
+  KindFilter,
+  ProjectRights,
+  projectSectionsSchema
+} from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import {
   GAME_CHANGE,
   KIND_FILTER_CHANGE,
   StudioProjectSettings
 } from "../../src/project/StudioProjectSettings.ts";
-import type { ProjectSettingsReply } from "../../shared/api/project.ts";
-import { KindFilter } from "../../shared/KindFilter.ts";
-import { ProjectRights } from "../../shared/ProjectRights.ts";
 
 function settings(): StudioProjectSettings {
   let reply: ProjectSettingsReply = {
@@ -31,20 +36,12 @@ function settings(): StudioProjectSettings {
   return new StudioProjectSettings(
     {
       read: async() => reply,
-      replaceKinds: async() => reply,
-      replaceAccess: async() => reply,
-      replaceKindFilter: async(kindFilter) => {
+      replace: async(section, body) => {
         reply = {
           ...reply,
-          kindFilter
-        };
-
-        return reply;
-      },
-      replaceGame: async(game) => {
-        reply = {
-          ...reply,
-          game
+          ...projectSectionsSchema.partial().parse({
+            [section]: body
+          })
         };
 
         return reply;

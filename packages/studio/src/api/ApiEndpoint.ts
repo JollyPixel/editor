@@ -1,13 +1,10 @@
 // Import Third-party Dependencies
 import type * as z from "zod";
+import { apiFailureSchema, type ApiRoute } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import { ApiRequestError } from "./errors/ApiRequestError.ts";
 import { MissingRouteParamError } from "./errors/MissingRouteParamError.ts";
-import {
-  apiFailureSchema,
-  type ApiRoute
-} from "../../shared/api/common.ts";
 
 export interface ApiEndpointOptions {
   /**

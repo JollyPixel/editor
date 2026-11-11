@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { StudioBackendOptions } from "../server/StudioBackend.ts";
+// Import Third-party Dependencies
+import type { StudioBackendOptions } from "@jolly-pixel/server/node";
 
 // CONSTANTS
 export const E2E_BACKEND_OPTIONS = {
@@ -10,4 +10,4 @@ export const E2E_BACKEND_OPTIONS = {
       registrations: 1_000
     }
   }
-} as const satisfies StudioBackendOptions;
+} as const satisfies Partial<StudioBackendOptions>;

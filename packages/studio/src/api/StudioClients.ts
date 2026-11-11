@@ -1,13 +1,17 @@
+// Import Third-party Dependencies
+import {
+  AUDIT_URL_PATH,
+  PREFERENCES_URL_PATH,
+  PROJECT_URL_PATH,
+  SHARES_URL_PATH
+} from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import { AuditClient } from "../audit/AuditClient.ts";
 import { PreferencesClient } from "../preferences/PreferencesClient.ts";
 import { ProjectArchiveClient } from "../project/ProjectArchiveClient.ts";
 import { ProjectSettingsClient } from "../project/ProjectSettingsClient.ts";
 import { ShareLinksClient } from "../shares/ShareLinksClient.ts";
-import { AUDIT_URL_PATH } from "../../shared/api/audit.ts";
-import { PREFERENCES_URL_PATH } from "../../shared/api/preferences.ts";
-import { PROJECT_URL_PATH } from "../../shared/api/project.ts";
-import { SHARES_URL_PATH } from "../../shared/api/shares.ts";
 
 export class StudioClients {
   static at(

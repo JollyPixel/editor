@@ -4,6 +4,7 @@ import {
   forwardPlayShortcut,
   type PlayScope
 } from "@jolly-pixel/editor.host";
+import { PLAY_PAGE_DIR, SCENE_KIND } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
@@ -15,8 +16,6 @@ import {
   type StudioProjectSettings
 } from "../project/StudioProjectSettings.ts";
 import type { StudioCatalog } from "../shell/StudioSession.ts";
-import { PLAY_PAGE_DIR } from "../../shared/EditorDescriptor.ts";
-import { SCENE_KIND } from "../../shared/GameManifest.ts";
 
 // CONSTANTS
 export const PLAY_CHANGE = "play-change";

@@ -5,6 +5,7 @@ import {
   contributedRuntimeComponents
 } from "@jolly-pixel/runtime";
 import { errorMessage } from "@jolly-pixel/utils";
+import { GAME_URL_PATH, GAME_MANIFEST_META } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
@@ -16,8 +17,6 @@ import {
   PLAY_ERROR,
   type PlayError
 } from "./protocol.ts";
-import { GAME_URL_PATH } from "../../shared/api/game.ts";
-import { GAME_MANIFEST_META } from "../../shared/GameManifest.ts";
 
 // CONSTANTS
 const kCanvas = "#game-canvas";

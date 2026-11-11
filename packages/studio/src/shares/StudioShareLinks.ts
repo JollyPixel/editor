@@ -4,12 +4,12 @@ import type {
   ShareLink
 } from "@jolly-pixel/accounts";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import type { ShareLifetimeName } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import { RemoteState } from "../api/RemoteState.ts";
 import { ShareLinkRow } from "./ShareLinkRow.ts";
 import type { ShareLinksClient } from "./ShareLinksClient.ts";
-import type { ShareLifetimeName } from "../../shared/ShareLifetime.ts";
 
 export type ShareLinksSource = Pick<ShareLinksClient, "list" | "create" | "revoke">;
 

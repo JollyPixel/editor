@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
 import type { Right } from "@jolly-pixel/network";
-
-// Import Internal Dependencies
-import { RoleRules } from "./RoleRules.ts";
 import {
   BUILT_IN_ROLES,
   type AccessChange,
   type AccessSection
-} from "../../shared/api/project.ts";
+} from "@jolly-pixel/server";
+
+// Import Internal Dependencies
+import { RoleRules } from "./RoleRules.ts";
 
 // CONSTANTS
 const kNewRoleRules: Readonly<Record<string, Right>> = {

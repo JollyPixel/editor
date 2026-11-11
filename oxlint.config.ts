@@ -153,6 +153,24 @@ export default defineConfig(typescriptConfig({
       }
     },
     {
+      files: [
+        "packages/server/src/index.ts",
+        "packages/server/src/{audit,editors,game,http,preferences,project,shares}/**"
+      ],
+      rules: {
+        "no-restricted-imports": [
+          "error", {
+            patterns: [
+              {
+                group: ["node:*", "@jolly-pixel/*/node", "**/node/**", "**/testing/**"],
+                message: "The server root entry is browser-safe: Node.js code lives in src/node/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       files: ["packages/engine/src/core/math.ts"],
       rules: {
         "no-restricted-imports": "off"
@@ -160,7 +178,7 @@ export default defineConfig(typescriptConfig({
     },
     {
       files: [
-        "packages/studio/server/**",
+        "packages/studio/node/**",
         "packages/studio/shared/**",
         "packages/studio/vite/**"
       ],

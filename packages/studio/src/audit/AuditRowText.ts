@@ -1,10 +1,10 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import type {
   AuditAccountActivity,
   AuditAsset,
-  AuditRow
-} from "../../shared/api/audit.ts";
-import type { SettingsSectionName } from "../../shared/api/project.ts";
+  AuditRow,
+  SettingsSectionName
+} from "@jolly-pixel/server";
 
 // CONSTANTS
 const kSectionLabels: Readonly<Record<SettingsSectionName, string>> = {

@@ -15,7 +15,7 @@ import {
 } from "@jolly-pixel/asset-server/node";
 
 // Import Internal Dependencies
-import { StudioProject } from "../../server/project/StudioProject.ts";
+import { openStudioProject } from "../../node/studioFiles.ts";
 
 // CONSTANTS
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
@@ -42,9 +42,7 @@ describe("runtime contributions bundle", () => {
   let moduleIds: string[];
 
   before(async() => {
-    const project = await StudioProject.open(
-      StudioProject.resolveRoot(kStudioRoot)
-    );
+    const project = await openStudioProject();
     const editors = Array.from(project.editors, (editor) => editor.package);
     packages = findProjectContributions(
       [

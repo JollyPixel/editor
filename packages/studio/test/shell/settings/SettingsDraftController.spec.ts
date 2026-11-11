@@ -5,14 +5,16 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import {
+  type ProjectSettingsReply,
+  ProjectRights,
+  accessChangeSchema
+} from "@jolly-pixel/server";
+
 // Import Internal Dependencies
 import { AccessDraft } from "../../../src/project/AccessDraft.ts";
 import { StudioProjectSettings } from "../../../src/project/StudioProjectSettings.ts";
-import type {
-  AccessChange,
-  ProjectSettingsReply
-} from "../../../shared/api/project.ts";
-import { ProjectRights } from "../../../shared/ProjectRights.ts";
 import { SettingsDraftController } from "../../../src/shell/settings/project/SettingsDraftController.ts";
 
 // CONSTANTS
@@ -46,14 +48,13 @@ async function accessDraft(): Promise<SettingsDraftController<AccessDraft>> {
   };
   const project = new StudioProjectSettings({
     read: async() => reply,
-    replaceKinds: async() => reply,
-    replaceKindFilter: async() => reply,
-    replaceGame: async() => reply,
-    replaceAccess: async({ access }: AccessChange) => {
-      reply = {
-        ...reply,
-        access
-      };
+    replace: async(section, body) => {
+      if (section === "access") {
+        reply = {
+          ...reply,
+          access: accessChangeSchema.parse(body).access
+        };
+      }
 
       return reply;
     }

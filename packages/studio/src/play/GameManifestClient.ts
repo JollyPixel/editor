@@ -4,18 +4,18 @@ import {
   type AssetCatalog
 } from "@jolly-pixel/asset";
 import type * as z from "zod";
+import {
+  type ApiRoute,
+  GAME_ROUTES,
+  GAME_MANIFEST_FILE,
+  gameManifestSchema
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
   ApiEndpoint,
   type ApiEndpointOptions
 } from "../api/ApiEndpoint.ts";
-import type { ApiRoute } from "../../shared/api/common.ts";
-import { GAME_ROUTES } from "../../shared/api/game.ts";
-import {
-  GAME_MANIFEST_FILE,
-  gameManifestSchema
-} from "../../shared/GameManifest.ts";
 
 // CONSTANTS
 const kManifestPath = new AssetPath("game.json");

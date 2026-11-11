@@ -14,17 +14,17 @@ import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/vector2";
-
-// Import Internal Dependencies
-import { KindOptionsDraft } from "../../../project/KindOptionsDraft.ts";
-import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
 import type {
   KindOptionField,
   KindOptionGroup,
   KindOptionSection,
   KindOptionValue,
   KindOptionVector2
-} from "../../../../shared/api/project.ts";
+} from "@jolly-pixel/server";
+
+// Import Internal Dependencies
+import { KindOptionsDraft } from "../../../project/KindOptionsDraft.ts";
+import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
 import { settingsStyles } from "../settingsStyles.ts";
 import { SettingsDraftController } from "./SettingsDraftController.ts";
 

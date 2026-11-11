@@ -1,0 +1,281 @@
+// Import Node.js Dependencies
+import {
+  after,
+  describe,
+  test
+} from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import path from "node:path";
+
+// Import Third-party Dependencies
+import { PROJECT_FILE_PATH } from "@jolly-pixel/asset-server";
+
+// Import Internal Dependencies
+import {
+  DEFAULT_PROJECT_FILE,
+  StudioProject
+} from "#src/node/project/StudioProject.ts";
+import {
+  FIRST_PARTY_PACKAGES,
+  TEST_PROJECT_FILE
+} from "../../helpers/testProject.ts";
+import {
+  createTempDir,
+  removeTempDir
+} from "../../helpers/tempDir.ts";
+
+// CONSTANTS
+const kZodModule = import.meta.resolve("zod/mini");
+const kRoots: string[] = [];
+
+async function createRoot(): Promise<string> {
+  const root = await createTempDir("studio-project-");
+  kRoots.push(root);
+
+  return root;
+}
+
+async function writeProjectFile(
+  root: string,
+  content: unknown
+): Promise<string> {
+  const file = path.join(root, PROJECT_FILE_PATH);
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  await fs.writeFile(file, JSON.stringify(content));
+
+  return file;
+}
+
+async function installEditorPackage(
+  root: string,
+  name: string
+): Promise<string> {
+  const directory = path.join(root, "node_modules", name);
+  await fs.mkdir(path.join(directory, "dist"), { recursive: true });
+  await fs.writeFile(
+    path.join(directory, "package.json"),
+    JSON.stringify({
+      name,
+      jollypixel: {
+        editor: {
+          name,
+          kinds: [name]
+        }
+      }
+    })
+  );
+
+  return directory;
+}
+
+describe("StudioProject", () => {
+  after(async() => {
+    await Promise.all(kRoots.map((root) => removeTempDir(root)));
+  });
+
+  describe("open", () => {
+    test("resolves packages from the project before its folders and reserves the local ones", async() => {
+      const root = await createRoot();
+      const installed = await installEditorPackage(root, "editor-a");
+      const local = path.join(root, "editors", "local");
+      await fs.mkdir(local, { recursive: true });
+      await fs.writeFile(
+        path.join(local, "package.json"),
+        JSON.stringify({
+          jollypixel: {
+            editor: {
+              name: "local",
+              kinds: ["local-kind"]
+            }
+          }
+        })
+      );
+      const kind = path.join(root, "kinds", "local");
+      await fs.mkdir(kind, { recursive: true });
+      await fs.writeFile(
+        path.join(kind, "package.json"),
+        JSON.stringify({
+          type: "module",
+          main: "./index.js"
+        })
+      );
+      await fs.writeFile(
+        path.join(kind, "index.js"),
+        `import * as z from ${JSON.stringify(kZodModule)};\n` +
+        "export const ASSET_KINDS = {\n" +
+        "  descriptors: [],\n" +
+        "  optionsSchema: z.record(z.string(), z.unknown()),\n" +
+        "  handlers: () => [{ kind: \"local-kind\" }]\n" +
+        "};\n"
+      );
+      await writeProjectFile(root, {
+        version: 1,
+        editors: ["editor-a", "./editors/local"],
+        kinds: {
+          "./kinds/local": {},
+          "@jolly-pixel/asset.voxel-model": {}
+        }
+      });
+
+      const project = await StudioProject.open(root, {
+        packages: FIRST_PARTY_PACKAGES
+      });
+      const [editorA, localEditor] = project.editors;
+
+      assert.strictEqual(
+        editorA.dist,
+        path.join(await fs.realpath(installed), "dist")
+      );
+      assert.deepEqual(editorA.page, { kind: "prebuilt" });
+      assert.deepEqual(localEditor.page, { kind: "built" });
+      assert.strictEqual(
+        localEditor.dist,
+        path.join(await fs.realpath(local), "dist")
+      );
+      assert.deepEqual(
+        project.kinds.handlers().map((handler) => handler.kind),
+        ["local-kind", "voxelmodel", "texture"]
+      );
+      assert.deepEqual(project.assetIgnores(), [
+        "package.json",
+        "editors/local/**",
+        "kinds/local/**"
+      ]);
+    });
+
+    test("writes and opens the template when the project file is missing", async() => {
+      const root = await createRoot();
+      const project = await StudioProject.open(root, {
+        packages: FIRST_PARTY_PACKAGES,
+        template: TEST_PROJECT_FILE
+      });
+
+      assert.deepEqual(
+        JSON.parse(
+          await fs.readFile(path.join(root, PROJECT_FILE_PATH), "utf8")
+        ),
+        TEST_PROJECT_FILE
+      );
+      assert.deepEqual(
+        project.editors.descriptors().map((editor) => editor.name),
+        ["voxel-map", "voxel-model"]
+      );
+      assert.deepEqual(
+        project.kinds.descriptors().map((descriptor) => descriptor.kind),
+        ["blockset", "voxelmap", "voxelmodel", "texture"]
+      );
+    });
+
+    test("opens the default project in memory without touching the root", async() => {
+      const root = await createRoot();
+      const project = await StudioProject.open(root, {
+        inMemory: true,
+        packages: FIRST_PARTY_PACKAGES
+      });
+
+      assert.deepEqual(project.file.data, DEFAULT_PROJECT_FILE);
+      assert.deepEqual(await fs.readdir(root), []);
+    });
+
+    test("never overwrites an existing project file", async() => {
+      const root = await createRoot();
+      const file = await writeProjectFile(root, {
+        version: 1
+      });
+
+      const project = await StudioProject.open(root);
+
+      assert.deepEqual([...project.editors], []);
+      assert.deepEqual(project.kinds.packages, []);
+      assert.strictEqual(await fs.readFile(file, "utf8"), "{\"version\":1}");
+    });
+
+    test("names a missing editor package", async() => {
+      const root = await createRoot();
+      await writeProjectFile(root, {
+        version: 1,
+        editors: ["@jolly-pixel/missing-editor"]
+      });
+
+      await assert.rejects(
+        StudioProject.open(root),
+        {
+          name: "TypeError",
+          message: "Cannot locate the package \"@jolly-pixel/missing-editor\"."
+        }
+      );
+    });
+
+    test("names a missing kind package", async() => {
+      const root = await createRoot();
+      await writeProjectFile(root, {
+        version: 1,
+        kinds: {
+          "@jolly-pixel/missing-kind": {}
+        }
+      });
+
+      await assert.rejects(
+        StudioProject.open(root),
+        {
+          name: "TypeError",
+          message: "Cannot load the kind package \"@jolly-pixel/missing-kind\"."
+        }
+      );
+    });
+
+    test("names a kind package receiving invalid options", async() => {
+      const root = await createRoot();
+      await writeProjectFile(root, {
+        version: 1,
+        kinds: {
+          "@jolly-pixel/asset.pixel-art": {
+            defaultSize: 64
+          }
+        }
+      });
+
+      await assert.rejects(
+        StudioProject.open(root, {
+          packages: FIRST_PARTY_PACKAGES
+        }),
+        (error) => error instanceof TypeError && error.message.startsWith(
+          "\"@jolly-pixel/asset.pixel-art\" received invalid options:"
+        )
+      );
+    });
+
+    test("reads the kind filter, dropping kinds the project no longer has", async() => {
+      const root = await createRoot();
+      await writeProjectFile(root, {
+        version: 1,
+        kinds: {
+          "@jolly-pixel/asset.voxel-model": {}
+        },
+        kindFilter: {
+          hidden: ["voxelanimation", "voxelmodel"]
+        }
+      });
+
+      const { kindFilter } = await StudioProject.open(root, {
+        packages: FIRST_PARTY_PACKAGES
+      });
+      assert.deepEqual(kindFilter.hidden, ["voxelmodel"]);
+    });
+
+    test("names the project file when its editors are invalid", async() => {
+      const root = await createRoot();
+      const file = await writeProjectFile(root, {
+        version: 1,
+        editors: [""]
+      });
+
+      await assert.rejects(
+        StudioProject.open(root),
+        (error) => error instanceof TypeError &&
+          error.message.startsWith(`"${file}" is invalid:`)
+      );
+    });
+  });
+});

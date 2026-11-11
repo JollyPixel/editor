@@ -13,6 +13,7 @@ import {
 import { keyed } from "lit/directives/keyed.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import "@jolly-pixel/ui/elements/icon";
+import type { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
@@ -24,7 +25,6 @@ import { BrowserState } from "../../browser/BrowserState.ts";
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { cardStyles } from "../cardStyles.ts";
-import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
 import {
   SettingsSections,
   type SettingsGroup,

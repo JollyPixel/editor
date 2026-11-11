@@ -4,7 +4,7 @@
 
 ## 📌 About
 
-Private app that serves one asset back-end ([`@jolly-pixel/asset-server`][asset-server]) for every editor and opens each asset in its editor page. Design notes live in [ARCHITECTURE.md](./ARCHITECTURE.md) and the [ADRs](./docs/adr/README.md).
+Private app that opens each asset of one project in its editor page. Its back-end, `@jolly-pixel/server`, runs one asset back-end ([`@jolly-pixel/asset-server`][asset-server]) for every editor, with the accounts and the HTTP API. Design notes live in [ARCHITECTURE.md](./ARCHITECTURE.md) and the [ADRs](./docs/adr/README.md).
 
 ## 🚀 Running the studio
 

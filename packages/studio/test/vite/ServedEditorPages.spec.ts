@@ -8,16 +8,16 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import { createServer } from "vite";
+import {
+  createDist,
+  INDEX_HTML,
+  voxelMapEditor
+} from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
 import { EditorPageInput } from "../../vite/EditorPageInput.ts";
 import { ServedEditorPages } from "../../vite/ServedEditorPages.ts";
-import {
-  createDist,
-  INDEX_HTML,
-  voxelMapEditor,
-  writeEditorPage
-} from "../helpers/editorPages.ts";
+import { writeEditorPage } from "../helpers/editorPages.ts";
 import {
   createTempDir,
   removeTempDir

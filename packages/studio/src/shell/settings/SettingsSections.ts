@@ -5,15 +5,15 @@ import {
   LANTERN_PREFERENCES,
   RUNTIME_PREFERENCES
 } from "@jolly-pixel/editor.host/preferences";
+import {
+  type EditorScopes,
+  type KindPackageDescriptor,
+  ProjectRights
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
+import { STUDIO_PREFERENCES } from "../../../shared/preferences.ts";
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
-import type {
-  EditorScopes,
-  KindPackageDescriptor
-} from "../../../shared/ProjectManifest.ts";
-import { STUDIO_PREFERENCES } from "../../../shared/studioScope.ts";
-import { ProjectRights } from "../../../shared/ProjectRights.ts";
 import type { StudioUser } from "../../accounts/StudioUser.ts";
 
 // CONSTANTS

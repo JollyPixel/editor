@@ -7,13 +7,17 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { definePreferences } from "@jolly-pixel/preferences";
+import {
+  type EditorScopes,
+  ProjectRights
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
+import {
+  SHELL_PREFERENCES,
+  STUDIO_PREFERENCES
+} from "../../../shared/preferences.ts";
 import { AssetKindSet } from "../../../src/catalog/AssetKindSet.ts";
-import type { EditorScopes } from "../../../shared/ProjectManifest.ts";
-import { SHELL_PREFERENCES } from "../../../shared/PreferenceScopes.ts";
-import { STUDIO_PREFERENCES } from "../../../shared/studioScope.ts";
-import { ProjectRights } from "../../../shared/ProjectRights.ts";
 import { SettingsSections } from "../../../src/shell/settings/SettingsSections.ts";
 
 // CONSTANTS
@@ -114,7 +118,7 @@ function sections(
       online: true,
       rights
     },
-    shellScopes: SHELL_PREFERENCES,
+    shellScopes: [...SHELL_PREFERENCES.scopes, ...SHELL_PREFERENCES.common],
     editors,
     kindPackages: [
       {

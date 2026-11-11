@@ -15,9 +15,9 @@ import {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/toolbar";
 import { errorMessage } from "@jolly-pixel/utils";
+import type { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import type { PreferenceScopes } from "../../../shared/PreferenceScopes.ts";
 import { PreferencesFile } from "../../preferences/PreferencesFile.ts";
 import { settingsStyles } from "./settingsStyles.ts";
 

@@ -3,11 +3,8 @@ import type {
   Logger,
   Plugin
 } from "vite";
-
-// Import Internal Dependencies
-import { PROJECT_MANIFEST_FILE } from "../shared/ProjectManifest.ts";
-import { ManifestRoute } from "../server/editors/ManifestRoute.ts";
-import type { StudioProject } from "../server/project/StudioProject.ts";
+import { PROJECT_MANIFEST_FILE } from "@jolly-pixel/server";
+import { ManifestRoute, type StudioProject } from "@jolly-pixel/server/node";
 
 export function projectManifest(
   project: StudioProject

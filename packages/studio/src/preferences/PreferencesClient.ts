@@ -1,16 +1,16 @@
 // Import Third-party Dependencies
 import type { PreferenceOverrides } from "@jolly-pixel/preferences";
+import {
+  PREFERENCES_ROUTES,
+  preferencesReplySchema,
+  scopePreferencesReplySchema
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import {
   ApiEndpoint,
   type ApiEndpointOptions
 } from "../api/ApiEndpoint.ts";
-import {
-  PREFERENCES_ROUTES,
-  preferencesReplySchema,
-  scopePreferencesReplySchema
-} from "../../shared/api/preferences.ts";
 
 export class PreferencesClient {
   #endpoint: ApiEndpoint;

@@ -1,8 +1,5 @@
-// Import Internal Dependencies
-import type {
-  AuditCategory,
-  AuditQuery
-} from "../../shared/api/audit.ts";
+// Import Third-party Dependencies
+import type { AuditCategory, AuditQuery } from "@jolly-pixel/server";
 
 export interface AuditFiltersData {
   actor?: string;

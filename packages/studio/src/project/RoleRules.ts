@@ -3,12 +3,7 @@ import {
   RightsPattern,
   type Right
 } from "@jolly-pixel/network";
-
-// Import Internal Dependencies
-import {
-  namedRight,
-  type NamedRight
-} from "../../shared/api/project.ts";
+import { namedRight, type NamedRight } from "@jolly-pixel/server";
 
 export interface RoleRule {
   readonly pattern: string;
