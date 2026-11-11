@@ -37,7 +37,7 @@
   "author": "MALAJ Alexandre <alexandre.malaj@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "three": "0.186.1"
+    "three": "0.187.0"
   },
   "peerDependencies": {
     "@jolly-pixel/engine": "workspace:*"
