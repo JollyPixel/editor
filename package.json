@@ -44,7 +44,7 @@
     "@openally/mutex": "4.0.0",
     "@playwright/test": "1.64.1",
     "@types/node": "26.6.6",
-    "@types/three": "^0.186.0",
+    "@types/three": "^0.187.0",
     "c8": "^12.0.0",
     "esbuild": "0.28.2",
     "happy-dom": "^21.0.3",

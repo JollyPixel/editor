@@ -64,7 +64,7 @@
     "@jolly-pixel/utils": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
     "lit": "3.3.3",
-    "three": "0.186.1",
+    "three": "0.187.0",
     "zod": "4.6.7"
   }
 }
