@@ -20,6 +20,13 @@
 - Content refs need a `ContentRefs` at attach time. Without one, as in the
   in-page offline server, every snapshot is sent inline.
 
+## Schemas
+
+- Keep a zod schema in the module that parses it. Split it into
+  `<Module>.schema.ts` only when other modules import it as a message or
+  stored format, or when `./client` needs the module's constants without
+  building its schemas.
+
 ## State directory
 
 - `.jollypixel/state.json` can be rebuilt from the event store; `events.db`
@@ -27,3 +34,11 @@
   event log.
 - A manifest renamed or deleted outside the backend leaves its `.parts/`
   folder behind.
+
+## Project packages
+
+- Any room writer can write a file anywhere the source does not ignore. Pass
+  `resolver.ignoreGlobs(...)` as `AssetServer`'s `ignore`, as studio's
+  `StudioProject.assetIgnores()` does: it reserves the root `package.json`,
+  whose name a Node or Vite self-reference would resolve as a kind, and every
+  local package (`./kinds/foo`) inside the project.

@@ -16,13 +16,13 @@ import {
   ASSET_UPDATED,
   isStateNeutral
 } from "../model/events/AssetEvents.ts";
+import { foldAssetEvent } from "../model/kinds/foldAssetEvent.ts";
 import {
-  foldAssetEvent,
   heldPartRefs,
   loadHeldParts,
   type AssetHeldPartRefs,
   type AssetHeldParts
-} from "../model/kinds/foldAssetEvent.ts";
+} from "../model/events/AssetPartContents.ts";
 import { InvalidAssetFileError } from "../model/kinds/errors/InvalidAssetFileError.ts";
 import {
   silentLogger,
@@ -226,7 +226,7 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
     open: OpenAsset,
     event: EventStore.Event
   ): void {
-    const refs = skipsFold(open, event) ? kNoHeldPartRefs : heldPartRefs(event);
+    const refs = holdsParts(open, event) ? heldPartRefs(event) : kNoHeldPartRefs;
     if (open.folds.idle && refs.size === 0) {
       this.#apply(open, event, this.#fold(open, event, kNoHeldParts));
 
@@ -339,6 +339,13 @@ export class AssetStateStore extends Emitter<AssetStateStoreEventMap> {
       log.error("asset event not folded");
     }
   }
+}
+
+function holdsParts(
+  open: OpenAsset,
+  event: EventStore.Event
+): boolean {
+  return open.entry.handler.parts !== undefined && !skipsFold(open, event);
 }
 
 function skipsFold(

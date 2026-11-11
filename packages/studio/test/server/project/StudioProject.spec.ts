@@ -71,7 +71,7 @@ describe("StudioProject", () => {
   });
 
   describe("open", () => {
-    test("resolves packages from the project before the studio", async() => {
+    test("resolves packages from the project before the studio and reserves the local ones", async() => {
       const root = await createRoot();
       const installed = await installEditorPackage(root, "editor-a");
       const local = path.join(root, "editors", "local");
@@ -131,6 +131,11 @@ describe("StudioProject", () => {
         project.kinds.handlers().map((handler) => handler.kind),
         ["local-kind", "voxelmodel", "texture"]
       );
+      assert.deepEqual(project.assetIgnores(), [
+        "package.json",
+        "editors/local/**",
+        "kinds/local/**"
+      ]);
     });
 
     test("writes and opens the default project file when it is missing", async() => {

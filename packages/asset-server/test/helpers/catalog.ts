@@ -18,7 +18,7 @@ import {
   type AssetBackend,
   type CatalogCommand
 } from "#src/index.ts";
-import { CatalogClient } from "#src/catalog/client/index.ts";
+import { CatalogClient } from "#src/client/index.ts";
 import { createCatalogHandler } from "#src/node.ts";
 import {
   catalogBackend,

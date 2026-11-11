@@ -10,7 +10,7 @@ import type {
   AssetKindHandler,
   AssetPreview
 } from "#src/index.ts";
-import { CatalogRejectedError } from "#src/catalog/client/index.ts";
+import { CatalogRejectedError } from "#src/client/index.ts";
 import { archiveProject } from "../helpers/archive.ts";
 import { text } from "../helpers/bytes.ts";
 import { connectCatalog } from "../helpers/catalog.ts";

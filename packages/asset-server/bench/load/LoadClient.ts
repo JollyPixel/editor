@@ -11,7 +11,7 @@ import {
   CATALOG_REJECTED,
   CATALOG_SNAPSHOT,
   type CatalogCommand
-} from "../../src/catalog/client/protocol.ts";
+} from "../../src/catalog/protocol.ts";
 
 interface IncomingEnvelope {
   room: string;

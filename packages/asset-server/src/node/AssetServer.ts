@@ -63,6 +63,11 @@ export interface AssetServerOptions {
    */
   source?: AssetSource;
   /**
+   * Extra globs the default filesystem source ignores, matched against
+   * root-relative POSIX paths, such as `PackageResolver.ignoreGlobs`.
+   */
+  ignore?: readonly string[];
+  /**
    * @default sqlite log inside the project state directory, or an
    * in-memory log when `inMemory`
    */
@@ -121,7 +126,11 @@ export class AssetServer implements AsyncDisposable {
     } = options;
 
     const source = options.source ?? (
-      inMemory ? new MemoryAssetSource() : new FilesystemAssetSource(root)
+      inMemory ?
+        new MemoryAssetSource() :
+        new FilesystemAssetSource(root, {
+          ignore: options.ignore
+        })
     );
     if (seed) {
       await seedAssetSource(source, seed, { handlers });

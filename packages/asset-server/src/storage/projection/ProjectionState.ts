@@ -8,13 +8,9 @@ import {
   writeJsonFile,
   type AssetSource
 } from "@jolly-pixel/asset-source";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import {
-  projectionCheckpointSchema,
-  projectionFailureSchema,
-  projectionRecordSchema
-} from "./ProjectionState.schema.ts";
 import {
   silentLogger,
   type Logger
@@ -29,9 +25,13 @@ import {
 
 // CONSTANTS
 const kStateVersion = 1;
-const kRecordParser = new SchemaParser(projectionRecordSchema);
-const kCheckpointParser = new SchemaParser(projectionCheckpointSchema);
-const kFailureParser = new SchemaParser(projectionFailureSchema);
+const kRecordParser = new SchemaParser(z.record(z.string(), z.unknown()));
+const kCheckpointParser = new SchemaParser(z.int());
+const kFailureParser = new SchemaParser(z.object({
+  eventId: z.int(),
+  attempts: z.int(),
+  reason: z.string()
+}));
 
 export interface ProjectionFailure {
   readonly eventId: number;

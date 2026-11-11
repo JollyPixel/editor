@@ -124,11 +124,22 @@ describe("catalog folder commands", () => {
     assert.deepEqual(await commands.sync.source.folders(), []);
   });
 
-  test("rejects creating or moving a folder into a reserved path", async() => {
+  test("rejects a folder command touching a reserved path", async() => {
     await using commands = await catalogCommands();
     await commands.sync.source.createFolder("maps");
 
     for (const command of [
+      {
+        type: CATALOG_DELETE_FOLDER,
+        requestId: "r7",
+        path: ".jollypixel"
+      },
+      {
+        type: CATALOG_MOVE_FOLDER,
+        requestId: "r8",
+        from: ".jollypixel/objects",
+        to: "history"
+      },
       {
         type: CATALOG_CREATE_FOLDER,
         requestId: "r5",

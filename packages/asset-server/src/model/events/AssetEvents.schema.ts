@@ -24,7 +24,7 @@ export const assetReferenceSchema = z.object({
   kind: z.string()
 });
 
-export const ASSET_PART_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+export const ASSET_PART_ID_PATTERN = /^(?!__proto__$)[A-Za-z0-9_-]+$/;
 
 export const assetPartSchema = z.union([
   z.strictObject({

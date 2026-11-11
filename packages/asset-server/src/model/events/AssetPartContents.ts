@@ -2,13 +2,13 @@
 import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import {
-  parseAssetEvent,
-  type AssetPartEntry
-} from "./AssetEvents.ts";
+import type { AssetPartEntry } from "./AssetEvents.ts";
 import { decodeContent } from "./inlineContent.ts";
+import { parseWriteEvent } from "./parseWriteEvent.ts";
 
 export type AssetPartReader = Pick<EventStore.EventReader, "get">;
+export type AssetHeldParts = ReadonlyMap<string, Uint8Array>;
+export type AssetHeldPartRefs = ReadonlyMap<string, number>;
 
 type HeldParts = ReadonlyMap<string, AssetPartEntry>;
 
@@ -54,12 +54,36 @@ export class AssetPartContents {
   async #load(
     at: number
   ): Promise<HeldParts> {
-    const event = await this.#reader.get(this.#assetId, at);
-    const parsed = event === undefined ? null : parseAssetEvent(event);
-    const data = parsed?.ok === true ? parsed.val.eventData : null;
+    const event = parseWriteEvent(await this.#reader.get(this.#assetId, at));
 
-    return new Map(
-      data !== null && "parts" in data ? Object.entries(data.parts ?? {}) : []
-    );
+    return new Map(Object.entries(event?.eventData.parts ?? {}));
   }
+}
+
+export function heldPartRefs(
+  event: EventStore.Event
+): AssetHeldPartRefs {
+  const refs = new Map<string, number>();
+  const parts = parseWriteEvent(event)?.eventData.parts ?? {};
+  for (const [partId, entry] of Object.entries(parts)) {
+    if (!("content" in entry)) {
+      refs.set(partId, entry.at);
+    }
+  }
+
+  return refs;
+}
+
+export async function loadHeldParts(
+  assetId: string,
+  refs: AssetHeldPartRefs,
+  reader: AssetPartReader
+): Promise<AssetHeldParts> {
+  const held = new Map<string, Uint8Array>();
+  const contents = new AssetPartContents(reader, assetId);
+  for (const [partId, at] of refs) {
+    held.set(partId, await contents.read(partId, at));
+  }
+
+  return held;
 }

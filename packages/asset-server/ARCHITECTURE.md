@@ -57,7 +57,7 @@ flowchart TB
 - A tag room shows one tagged content and accepts no command.
 - Large binary snapshots go out as content refs, fetched over HTTP and kept by
   the browser cache.
-- Code: `live/`.
+- Code: `live/`, `live/room/`.
 
 ## Kinds plug in
 
@@ -91,11 +91,13 @@ world.terrain.parts/
   is sent the commands that touch them.
 - A generation stores the changed parts inline and points to older
   checkpoints for the rest.
-- Code: `storage/AssetPartFiles.ts`, `live/PartSubscriptions.ts`.
+- Code: `storage/AssetPartFiles.ts`, `live/room/PartSubscriptions.ts`.
 
 ## Layers
 
-`common` → `model` → `storage` → `catalog` → `live` → `node`. Each folder
-imports only from the ones before it, and `createAssetBackend.ts` wires them.
+`common` → `model` → `storage` → `catalog` → `live` → `client` → `node`.
+Each folder imports only from the ones before it, and `createAssetBackend.ts`
+wires them. `client/` is the browser entry (`./client`), so nothing it imports
+may reach a Node.js builtin.
 `AssetServer` (`./node`) adds the network server and the SQLite event store at
 `.jollypixel/events.db`.

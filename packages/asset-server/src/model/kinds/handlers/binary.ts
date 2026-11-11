@@ -8,8 +8,8 @@ import type {
   AssetKindHandler
 } from "../AssetKindHandler.ts";
 import { contentRefSchema } from "../ContentRef.ts";
-import { PASS_THROUGH_BUILD } from "../passThroughBuild.ts";
-import { readOnlyCommands } from "../readOnlyCommands.ts";
+import { PASS_THROUGH_BUILD } from "../authoring/passThroughBuild.ts";
+import { readOnlyCommands } from "../authoring/readOnlyCommands.ts";
 
 // CONSTANTS
 const kBytesOrRefSchema = z.union([

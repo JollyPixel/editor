@@ -4,12 +4,10 @@ import type * as EventStore from "@jolly-pixel/event-store";
 // Import Internal Dependencies
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
-  ASSET_CREATED,
   ASSET_EVENT_PREFIX,
-  ASSET_UPDATED,
-  parseAssetEvent,
   partRefs
 } from "./AssetEvents.ts";
+import { parseWriteEvent } from "./parseWriteEvent.ts";
 
 export async function retainedPartEvents(
   eventStore: Pick<EventStore.EventStore, "reader" | "tags">,
@@ -27,24 +25,14 @@ export async function retainedPartEvents(
 
   const kept: EventStore.EventPosition[] = [];
   for (const event of [...checkpoints, ...tagged]) {
-    if (event === undefined) {
+    const written = parseWriteEvent(event);
+    if (written === null) {
       continue;
     }
 
-    const parsed = parseAssetEvent(event);
-    if (
-      !parsed.ok ||
-      (
-        parsed.val.eventType !== ASSET_CREATED &&
-        parsed.val.eventType !== ASSET_UPDATED
-      )
-    ) {
-      continue;
-    }
-
-    for (const { at } of partRefs(parsed.val.eventData, event.eventVersion).values()) {
+    for (const { at } of partRefs(written.eventData, written.eventVersion).values()) {
       kept.push({
-        assetId: event.assetId,
+        assetId: written.assetId,
         eventVersion: at
       });
     }

@@ -10,13 +10,13 @@ import { AssetRoom } from "@jolly-pixel/asset";
 import {
   AssetRoomExtension,
   type AssetRoomExtensionOptions
-} from "./AssetRoomExtension.ts";
-import { AssetRoomProtocols } from "./AssetRoomProtocols.ts";
+} from "./room/AssetRoomExtension.ts";
+import { AssetRoomProtocols } from "./room/AssetRoomProtocols.ts";
 import type { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
 import type { AnyAssetKindHandler } from "../model/kinds/AssetKindHandler.ts";
 import type { AssetCommandHeader } from "../model/kinds/AssetLiveProtocol.ts";
 import type { CatalogProjection } from "../catalog/CatalogProjection.ts";
-import type { CatalogChange } from "../catalog/client/protocol.ts";
+import type { CatalogChange } from "../catalog/protocol.ts";
 import type { AssetStateStore } from "./AssetStateStore.ts";
 import type { ContentRefs } from "./ContentRefs.ts";
 import type { ContentRefOptions } from "../model/kinds/ContentRef.ts";

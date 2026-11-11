@@ -14,8 +14,8 @@ import type {
 } from "../model/kinds/AssetKindHandler.ts";
 import type { AssetCommandHeader } from "../model/kinds/AssetLiveProtocol.ts";
 import { foldAssetEvent } from "../model/kinds/foldAssetEvent.ts";
-import { AssetRoomExtension } from "../live/AssetRoomExtension.ts";
-import { AssetRoomProtocols } from "../live/AssetRoomProtocols.ts";
+import { AssetRoomExtension } from "../live/room/AssetRoomExtension.ts";
+import { AssetRoomProtocols } from "../live/room/AssetRoomProtocols.ts";
 import type { AssetServerMessage } from "./MockAssetRoom.ts";
 
 // CONSTANTS

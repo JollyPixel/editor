@@ -197,6 +197,13 @@ export class StudioProject {
     return path.basename(this.file.root);
   }
 
+  assetIgnores(): string[] {
+    return this.kinds.resolver.ignoreGlobs([
+      ...Array.from(this.editors, (editor) => editor.package),
+      ...this.kinds.packages.map((kindPackage) => kindPackage.name)
+    ]);
+  }
+
   get access(): StudioAccess {
     return this.#access;
   }

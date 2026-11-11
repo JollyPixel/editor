@@ -130,6 +130,33 @@ export class PackageResolver {
       [...importers, path.join(searched, kManifestFile)];
   }
 
+  ignoreGlobs(
+    specifiers: Iterable<string>
+  ): string[] {
+    const globs = [kManifestFile];
+    for (const specifier of specifiers) {
+      if (!PackageResolver.isLocal(specifier)) {
+        continue;
+      }
+
+      const relative = path.relative(
+        fs.realpathSync(this.root),
+        this.locate(specifier)
+      );
+      if (relative === "") {
+        throw new TypeError(
+          `The package "${specifier}" cannot be the project root.`
+        );
+      }
+      const segments = relative.split(path.sep);
+      if (!path.isAbsolute(relative) && segments[0] !== "..") {
+        globs.push(`${segments.join("/")}/**`);
+      }
+    }
+
+    return globs;
+  }
+
   #importers(
     specifier: string
   ): string[] {

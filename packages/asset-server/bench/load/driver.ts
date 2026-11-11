@@ -23,7 +23,7 @@ import {
 import {
   CATALOG_RENAME,
   CATALOG_ROOM
-} from "../../src/catalog/client/protocol.ts";
+} from "../../src/catalog/protocol.ts";
 
 interface DriverClient {
   client: LoadClient;

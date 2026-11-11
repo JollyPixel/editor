@@ -8,11 +8,11 @@ import {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import type { CatalogChange } from "./client/protocol.ts";
+import type { CatalogChange } from "./protocol.ts";
 import {
   DependencyIndex,
   type ReadonlyDependencyIndex
-} from "./client/DependencyIndex.ts";
+} from "./DependencyIndex.ts";
 import type {
   AssetProjectionChange,
   AssetProjector

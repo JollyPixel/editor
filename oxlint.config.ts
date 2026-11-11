@@ -11,7 +11,7 @@ import { typescriptConfig } from "@openally/config.oxlint";
 // CONSTANTS
 const kUiElements = readdirSync(new URL("./packages/ui/src/elements", import.meta.url))
   .map((file) => file.replace(/\.ts$/, ""));
-const kAssetServerLayers = ["common", "model", "storage", "catalog", "live", "node"];
+const kAssetServerLayers = ["common", "model", "storage", "catalog", "live", "client", "node"];
 
 function assetServerLayer(
   layer: string,

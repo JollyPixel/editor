@@ -16,7 +16,7 @@ import {
 import {
   ContentUnavailableError,
   resolveBinarySnapshot
-} from "#src/catalog/client/index.ts";
+} from "#src/client/index.ts";
 import { sha256Hex } from "../helpers/hash.ts";
 import { ROOM_ACTOR } from "../helpers/live/roomHarness.ts";
 import {
