@@ -62,6 +62,11 @@ Decorators are resolved right before `awake()`, so a component referenced
 with `@SceneActorComponent` may be added to the actor in any order before it
 awakes. Input listeners are removed when the behavior is destroyed.
 
+The decorators work with standard decorators and with TypeScript's
+`experimentalDecorators`. Standard decorators store their declarations in
+`Symbol.metadata`, which the engine defines as `Symbol.for("Symbol.metadata")`
+when the runtime lacks it.
+
 ### `@SceneProperty`
 
 Exposes a field as a configurable property in the scene editor.

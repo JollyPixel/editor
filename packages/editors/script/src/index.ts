@@ -2,10 +2,10 @@
 import { bootStandalone } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/ui/elements/presence-stack";
 import "@jolly-pixel/ui/elements/scope";
-import "@jolly-pixel/asset.script/markdown";
 
 // Import Internal Dependencies
 import "./icons.ts";
+import "./markdown/MarkdownView.ts";
 import "./panes/code/ScriptCode.ts";
 import { ScriptEditor } from "./ScriptEditor.ts";
 

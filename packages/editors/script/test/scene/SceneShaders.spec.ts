@@ -66,7 +66,7 @@ function replaceText(
   document: ScriptDocument,
   text: string
 ): void {
-  document.edit(TextEdit.between(document.text, text)!);
+  document.edit(TextEdit.between(document.text, text));
 }
 
 describe("SceneShaders", () => {

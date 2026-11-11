@@ -7,7 +7,7 @@ import fc from "fast-check";
 
 // Import Internal Dependencies
 import type { ScriptNetworkCommand } from "#src/network/types.ts";
-import { TextEdit } from "#src/text/TextEdit.ts";
+import { TextEdit } from "#src/model/TextEdit.ts";
 import {
   editFromSteps,
   editStepsArbitrary,

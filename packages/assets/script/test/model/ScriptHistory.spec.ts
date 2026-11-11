@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ScriptDocument } from "#src/model/ScriptDocument.ts";
-import { TextEdit } from "#src/text/TextEdit.ts";
+import { TextEdit } from "#src/model/TextEdit.ts";
 
 describe("ScriptDocument history", () => {
   test("keystrokes typed in a burst undo together, a pause starts a new step", (t) => {

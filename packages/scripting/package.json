@@ -1,0 +1,65 @@
+{
+  "name": "@jolly-pixel/scripting",
+  "description": "Compiles, checks, outlines, links and loads JollyPixel scripts and shaders",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./three": {
+      "types": "./dist/three.d.ts",
+      "default": "./dist/three.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*",
+    "#compiler": {
+      "browser": "./dist/compiler/browser.js",
+      "default": "./dist/compiler/node.js"
+    },
+    "#outliner": {
+      "browser": "./dist/outline/outliner/browser.js",
+      "default": "./dist/outline/outliner/node.js"
+    },
+    "#stripper": {
+      "browser": "./dist/compiler/stripper/browser.js",
+      "default": "./dist/compiler/stripper/node.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/scripting"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/utils": "workspace:*",
+    "@swc/wasm-typescript-esm": "1.16.18",
+    "es-module-lexer": "3.0.4",
+    "three": "0.186.1",
+    "ts-morph": "28.0.0",
+    "zod": "4.6.7"
+  }
+}

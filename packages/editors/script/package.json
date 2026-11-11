@@ -20,7 +20,8 @@
   "exports": {
     ".": "./src/scene/index.ts",
     "./scene": "./src/scene/index.ts",
-    "./runtime": "./src/runtime/index.ts"
+    "./runtime": "./src/runtime/index.ts",
+    "./markdown": "./src/markdown/MarkdownView.ts"
   },
   "scripts": {
     "dev": "vite",
@@ -45,11 +46,7 @@
     "dist"
   ],
   "imports": {
-    "#src/*": "./src/*",
-    "#stripper": {
-      "browser": "./src/shader/stripper/browser.ts",
-      "default": "./src/shader/stripper/node.ts"
-    }
+    "#src/*": "./src/*"
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
@@ -64,15 +61,16 @@
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/runtime": "workspace:*",
+    "@jolly-pixel/scripting": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0",
     "@shikijs/core": "4.5.0",
     "@shikijs/engine-javascript": "4.5.0",
     "@shikijs/langs-precompiled": "4.5.0",
-    "@swc/wasm-typescript-esm": "1.16.18",
-    "es-module-lexer": "3.0.4",
+    "dompurify": "3.4.17",
     "lit": "3.3.3",
+    "marked": "16.4.2",
     "three": "0.186.1",
     "zod": "4.6.7"
   }

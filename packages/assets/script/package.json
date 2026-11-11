@@ -3,9 +3,7 @@
   "description": "Script assets",
   "version": "0.1.0",
   "type": "module",
-  "sideEffects": [
-    "./dist/markdown/*.js"
-  ],
+  "sideEffects": false,
   "private": true,
   "exports": {
     ".": {
@@ -15,22 +13,10 @@
     "./client": {
       "types": "./dist/network/client.d.ts",
       "default": "./dist/network/client.js"
-    },
-    "./markdown": {
-      "types": "./dist/markdown/MarkdownView.d.ts",
-      "default": "./dist/markdown/MarkdownView.js"
     }
   },
   "imports": {
-    "#src/*": "./src/*",
-    "#compiler": {
-      "browser": "./dist/build/compiler/browser.js",
-      "default": "./dist/build/compiler/node.js"
-    },
-    "#outliner": {
-      "browser": "./dist/outline/outliner/browser.js",
-      "default": "./dist/outline/outliner/node.js"
-    }
+    "#src/*": "./src/*"
   },
   "scripts": {
     "build": "tsc -b",
@@ -56,16 +42,14 @@
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/scripting": "workspace:*",
     "@openally/emitt": "1.1.0",
-    "dompurify": "3.4.17",
-    "es-module-lexer": "3.0.4",
-    "marked": "16.4.2",
-    "ts-morph": "28.0.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
+    "es-module-lexer": "3.0.4",
     "fast-check": "4.10.2"
   }
 }

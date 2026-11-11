@@ -43,7 +43,29 @@ export type BehaviorMetadata = {
   inputListeners: BehaviorInputListenerMetadata[];
 };
 
+export type BehaviorDecoratorContext =
+  | ClassFieldDecoratorContext
+  | ClassMethodDecoratorContext;
+
+export interface BehaviorFieldDecorator {
+  (target: object, propertyName: BehaviorKey): void;
+  (value: undefined, context: ClassFieldDecoratorContext): void;
+}
+
+export interface BehaviorMethodDecorator {
+  (target: object, methodName: BehaviorKey, descriptor?: PropertyDescriptor): void;
+  (value: (...args: any[]) => unknown, context: ClassMethodDecoratorContext): void;
+}
+
+interface DeclaredMember {
+  metadata: BehaviorMetadata;
+  name: BehaviorKey;
+}
+
 export const BehaviorMetadataKey = Symbol.for("BehaviorMetadata");
+
+// CONSTANTS
+const kSymbolMetadata = installSymbolMetadata();
 
 export const INPUT_LISTENER_TARGETS: Readonly<
   Record<InputListenerDevice, (input: Input) => InputEventTarget>
@@ -58,19 +80,20 @@ export const INPUT_LISTENER_TARGETS: Readonly<
 
 export function SceneProperty(
   options: ScenePropertyOptions
-): PropertyDecorator {
+): BehaviorFieldDecorator {
   const { type } = options;
 
   return function fn(
-    object: Object,
-    propertyName: BehaviorKey
+    target: object | undefined,
+    key: BehaviorKey | ClassFieldDecoratorContext
   ): void {
+    const { metadata, name } = declareMember(target, key);
     const {
-      label = propertyName.toString(),
+      label = name.toString(),
       description = ""
     } = options;
 
-    getOrCreateBehaviorMetadata(object).properties.set(propertyName, {
+    metadata.properties.set(name, {
       type,
       label,
       description
@@ -82,24 +105,22 @@ export type SceneActorComponentType = abstract new (...args: any[]) => Component
 
 export function SceneActorComponent(
   classObject: SceneActorComponentType
-) {
+): BehaviorFieldDecorator {
   return function fn(
-    object: Object,
-    propertyName: BehaviorKey
+    target: object | undefined,
+    key: BehaviorKey | ClassFieldDecoratorContext
   ): void {
-    getOrCreateBehaviorMetadata(object).components.set(
-      propertyName,
-      classObject
-    );
+    const { metadata, name } = declareMember(target, key);
+    metadata.components.set(name, classObject);
   };
 }
 
 export function InputListener(
   type: InputListenerType
-) {
+): BehaviorMethodDecorator {
   return function fn(
-    object: Object,
-    methodName: BehaviorKey
+    target: object,
+    key: BehaviorKey | ClassMethodDecoratorContext
   ): void {
     const separator = type.indexOf(".");
     const device = type.slice(0, separator);
@@ -107,24 +128,58 @@ export function InputListener(
       throw new Error(`Unknown input listener "${type}".`);
     }
 
-    getOrCreateBehaviorMetadata(object).inputListeners.push({
+    const { metadata, name } = declareMember(target, key);
+    metadata.inputListeners.push({
       device: device as InputListenerDevice,
       event: type.slice(separator + 1),
-      methodName
+      methodName: name
     });
   };
 }
 
 export function getBehaviorMetadata(
-  object: Object
+  object: object
 ): BehaviorMetadata | undefined {
-  return Reflect.get(object, BehaviorMetadataKey);
+  return Reflect.get(object, BehaviorMetadataKey) ??
+    Reflect.get(object.constructor, kSymbolMetadata)?.[BehaviorMetadataKey];
+}
+
+function declareMember(
+  target: object | undefined,
+  key: BehaviorKey | BehaviorDecoratorContext
+): DeclaredMember {
+  const holder = typeof key === "object" ? key.metadata : target;
+  if (holder === undefined) {
+    throw new TypeError("A behavior decorator must decorate a class member.");
+  }
+
+  return {
+    metadata: getOrCreateBehaviorMetadata(holder),
+    name: typeof key === "object" ? key.name : key
+  };
+}
+
+function installSymbolMetadata(): symbol {
+  const native: unknown = Reflect.get(Symbol, "metadata");
+  if (typeof native === "symbol") {
+    return native;
+  }
+
+  const metadata = Symbol.for("Symbol.metadata");
+  Reflect.defineProperty(Symbol, "metadata", {
+    value: metadata
+  });
+
+  return metadata;
 }
 
 function getOrCreateBehaviorMetadata(
-  object: Object
+  object: object
 ): BehaviorMetadata {
-  const current = getBehaviorMetadata(object);
+  const current: BehaviorMetadata | undefined = Reflect.get(
+    object,
+    BehaviorMetadataKey
+  );
   if (current !== undefined && Object.hasOwn(object, BehaviorMetadataKey)) {
     return current;
   }

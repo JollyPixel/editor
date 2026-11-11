@@ -7,8 +7,8 @@ import type {
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import type { ScriptText } from "../asset/ScriptText.ts";
-import { TextEdit } from "../text/TextEdit.ts";
+import type { ScriptText } from "../model/ScriptText.ts";
+import { TextEdit } from "../model/TextEdit.ts";
 import { EditWindow } from "./EditWindow.ts";
 import { scriptSnapshotSchema } from "./ScriptCommand.schema.ts";
 import type {

@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import type { ScriptDocument } from "@jolly-pixel/asset.script/client";
-import type { MarkdownView } from "@jolly-pixel/asset.script/markdown";
+
+// Import Internal Dependencies
+import type { MarkdownView } from "../../markdown/MarkdownView.ts";
 
 // CONSTANTS
 const kRenderDelayMs = 150;

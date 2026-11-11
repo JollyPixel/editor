@@ -2,7 +2,7 @@
 import type { CommandReconciler } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { TextEdit } from "../text/TextEdit.ts";
+import { TextEdit } from "../model/TextEdit.ts";
 import type { ScriptNetworkCommand } from "./types.ts";
 
 interface InflightEdit {

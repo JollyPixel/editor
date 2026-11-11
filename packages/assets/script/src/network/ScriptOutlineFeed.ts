@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import type { Room } from "@jolly-pixel/network/client";
+import type { ScriptOutline } from "@jolly-pixel/scripting";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import type { ScriptOutline } from "../outline/ScriptOutline.schema.ts";
 import {
   outlineMessageSchema,
   SCRIPT_OUTLINE_REQUESTED,

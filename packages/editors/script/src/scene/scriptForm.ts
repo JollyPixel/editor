@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { ScriptOutline } from "@jolly-pixel/asset.script/client";
 import type {
   ChoiceOption,
   DeclaredProperty,
@@ -9,6 +8,7 @@ import {
   SCENE_PROPERTY_TYPES,
   type ScriptData
 } from "@jolly-pixel/engine";
+import type { ScriptOutline } from "@jolly-pixel/scripting";
 
 // CONSTANTS
 const kNoBehavior: ChoiceOption = {

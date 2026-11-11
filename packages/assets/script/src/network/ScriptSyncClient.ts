@@ -6,7 +6,7 @@ import type {
   ScriptChange,
   ScriptDocument
 } from "../model/ScriptDocument.ts";
-import { TextEdit } from "../text/TextEdit.ts";
+import { TextEdit } from "../model/TextEdit.ts";
 import type {
   ScriptNetworkCommand,
   ScriptNotice,

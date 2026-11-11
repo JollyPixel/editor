@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { TextEdit } from "../text/TextEdit.ts";
+import { TextEdit } from "./TextEdit.ts";
 
 interface HistoryStep {
   readonly revert: TextEdit;

@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import type { ScriptDocument } from "@jolly-pixel/asset.script/client";
-
-// Import Internal Dependencies
-import { compileShader } from "./compileShader.ts";
-import type { ShaderModule } from "./ShaderModule.ts";
+import {
+  loadShader,
+  type ShaderModule
+} from "@jolly-pixel/scripting/three";
 
 export interface ShaderCompilationOptions {
   document: Pick<ScriptDocument, "text" | "subscribe">;
@@ -47,7 +47,7 @@ export class ShaderCompilation {
     this.#run = run;
     const { document, name, compiled, failed } = this.#options;
     try {
-      const shader = await compileShader(document.text, name());
+      const shader = await loadShader(document.text, name());
       if (!run.signal.aborted) {
         await compiled(shader, run.signal);
       }

@@ -5,10 +5,10 @@ import {
   ShaderAssetType
 } from "@jolly-pixel/engine";
 import type { RuntimeComponentPackage } from "@jolly-pixel/runtime";
-
-// Import Internal Dependencies
-import { ScriptModuleLoader } from "./ScriptModuleLoader.ts";
-import { ShaderModuleLoader } from "./ShaderModuleLoader.ts";
+import {
+  ScriptModuleLoader,
+  ShaderModuleLoader
+} from "@jolly-pixel/scripting/three";
 
 // CONSTANTS
 export const SCRIPT_DEFINITION = new ScriptDefinition();

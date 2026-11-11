@@ -15,13 +15,8 @@ export {
 } from "../asset/text.ts";
 export * from "../model/ScriptDocument.ts";
 export * from "../model/ScriptHistory.ts";
-export * from "../outline/ScriptOutline.schema.ts";
-export * from "../text/TextEdit.ts";
-export * from "../text/errors/TextEditMismatchError.ts";
+export * from "../model/TextEdit.ts";
+export * from "../model/errors/TextEditMismatchError.ts";
 export * from "./textDocumentKind.ts";
 export * from "./ScriptOutlineFeed.ts";
 export * from "./types.ts";
-export * from "../imports/ScriptImportPolicy.ts";
-export * from "../imports/importPolicies.ts";
-export * from "../imports/staticImports.ts";
-export * from "../imports/errors/ScriptImportError.ts";
