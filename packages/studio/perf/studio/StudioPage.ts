@@ -1,7 +1,3 @@
-// Import Node.js Dependencies
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-
 // Import Third-party Dependencies
 import {
   PORTS,
@@ -65,14 +61,15 @@ export class StudioPage {
   ): Promise<void> {
     const row = this.shell.assets.row(editor.row);
     if (editor.seed !== undefined && await row.count() === 0) {
-      await this.#seed(editor.seed);
+      await this.#seed(editor.seed, editor.row);
     }
     await row.waitFor({ timeout: kShellTimeoutMs });
     await this.page.waitForTimeout(kIdleBeforeOpenMs);
   }
 
   async #seed(
-    seed: BenchAssetSeed
+    seed: BenchAssetSeed,
+    row: string
   ): Promise<void> {
     const { assets } = this.shell;
     if (seed.kind === "new") {
@@ -82,7 +79,7 @@ export class StudioPage {
       return;
     }
 
-    const content = await readFile(seed.file);
+    const content = await seed.content();
     const transfer = await this.page.evaluateHandle(
       ({ name, base64 }) => {
         const bytes = Uint8Array.from(
@@ -95,8 +92,8 @@ export class StudioPage {
         return dataTransfer;
       },
       {
-        name: path.basename(seed.file),
-        base64: content.toString("base64")
+        name: row,
+        base64: Buffer.from(content).toString("base64")
       }
     );
     const card = assets.root.locator(".card.browser");
@@ -109,7 +106,7 @@ export class StudioPage {
     editor: BenchEditor
   ): Promise<Frame> {
     await this.shell.assets.open(editor.row);
-    const frameLocator = this.shell.frames.locate(editor.name);
+    const frameLocator = this.shell.frames.locate(editor.page);
     const element = await frameLocator.owner().elementHandle({
       timeout: kShellTimeoutMs
     });
@@ -126,7 +123,7 @@ export class StudioPage {
     editor: BenchEditor
   ): Promise<void> {
     await this.shell.tabs.close(editor.tab);
-    await this.shell.frames.locate(editor.name).owner().waitFor({
+    await this.shell.frames.locate(editor.page).owner().waitFor({
       state: "detached"
     });
     await this.shell.tabs.home.click();

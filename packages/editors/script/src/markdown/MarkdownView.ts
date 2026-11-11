@@ -1,6 +1,13 @@
 // Import Third-party Dependencies
 import DOMPurify from "dompurify";
-import { marked } from "marked";
+import {
+  marked,
+  type TokensList
+} from "marked";
+
+// Import Internal Dependencies
+import { changedSpan } from "../text/changedSpan.ts";
+import { leavesElementsOpen } from "./rawHtml.ts";
 
 // CONSTANTS
 const kStyles = `
@@ -82,9 +89,16 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   }
 });
 
+interface MarkdownBlock {
+  raw: string;
+  nodes: ChildNode[];
+}
+
 export class MarkdownView extends HTMLElement {
   #article: HTMLElement;
   #markdown = "";
+  #blocks: MarkdownBlock[] | null = null;
+  #links = "{}";
 
   constructor() {
     super();
@@ -102,10 +116,72 @@ export class MarkdownView extends HTMLElement {
     value: string
   ) {
     this.#markdown = value;
-    this.#article.innerHTML = DOMPurify.sanitize(
-      marked.parse(value, { async: false })
-    );
+    const tokens = marked.lexer(value);
+    if (tokens.some(leavesElementsOpen)) {
+      this.#blocks = null;
+      this.#article.replaceChildren(sanitize(marked.parser(tokens)));
+
+      return;
+    }
+
+    const links = JSON.stringify(tokens.links);
+    if (this.#blocks === null || links !== this.#links) {
+      this.#blocks = [];
+      this.#links = links;
+      this.#article.replaceChildren();
+    }
+    this.#patch(this.#blocks, tokens);
   }
+
+  #patch(
+    previous: MarkdownBlock[],
+    tokens: TokensList
+  ): void {
+    const { start, beforeEnd: previousEnd, afterEnd: end } = changedSpan(
+      previous,
+      tokens,
+      (block, token) => block.raw === token.raw
+    );
+    for (const block of previous.slice(start, previousEnd)) {
+      for (const node of block.nodes) {
+        node.remove();
+      }
+    }
+    const following = previous
+      .slice(previousEnd)
+      .find((block) => block.nodes.length > 0)?.nodes[0] ?? null;
+    const fragment = sanitize(tokens.slice(start, end).map((token) => {
+      const html = marked.parser(Object.assign([token], {
+        links: tokens.links
+      }));
+
+      return `<div>${html}</div>`;
+    }).join(""));
+    const changed = Array.from(fragment.children).map((wrapper, index) => {
+      const nodes = Array.from(wrapper.childNodes);
+      wrapper.replaceWith(...nodes);
+
+      return {
+        raw: tokens[start + index].raw,
+        nodes
+      };
+    });
+    this.#article.insertBefore(fragment, following);
+
+    this.#blocks = [
+      ...previous.slice(0, start),
+      ...changed,
+      ...previous.slice(previousEnd)
+    ];
+  }
+}
+
+function sanitize(
+  html: string
+): DocumentFragment {
+  return DOMPurify.sanitize(html, {
+    RETURN_DOM_FRAGMENT: true
+  });
 }
 
 customElements.define("jolly-markdown", MarkdownView);

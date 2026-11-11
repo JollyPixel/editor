@@ -12,6 +12,7 @@ import {
   longFramesWithin,
   type ProbeSnapshot
 } from "../studio/pageProbe.ts";
+import { round1 } from "../report/round1.ts";
 import type { StudioMode } from "../studio/StudioPage.ts";
 
 export interface SteadyMeasurement {
@@ -92,10 +93,4 @@ export class SteadySample {
       heapProfileFile
     };
   }
-}
-
-function round1(
-  value: number
-): number {
-  return Math.round(value * 10) / 10;
 }

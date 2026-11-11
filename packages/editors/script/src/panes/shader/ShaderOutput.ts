@@ -4,7 +4,6 @@ import {
   css,
   html,
   nothing,
-  type PropertyValues,
   type TemplateResult
 } from "lit";
 import {
@@ -18,8 +17,8 @@ import "@jolly-pixel/ui/elements/button-group";
 import {
   CODE_TOKEN_COLORS,
   tokenSpan
-} from "../code/codeTokens.ts";
-import { ScriptHighlighter } from "../code/ScriptHighlighter.ts";
+} from "../../syntax/tokens.ts";
+import { highlight } from "../../syntax/highlight.ts";
 
 export type ShaderStage = "fragment" | "vertex";
 
@@ -51,7 +50,7 @@ export class ShaderOutput extends LitElement {
       display: flex;
       flex-direction: column;
       min-height: 0;
-      color: var(--shiki-foreground);
+      color: var(--code-foreground);
       background: var(--jolly-surface-sunken);
     }
 
@@ -89,31 +88,10 @@ export class ShaderOutput extends LitElement {
   declare state: ShaderOutputState;
   declare stage: ShaderStage;
 
-  #highlighter: ScriptHighlighter | null = null;
-  #lines: string[] = [];
-
   constructor() {
     super();
     this.state = { kind: "compiling" };
     this.stage = "fragment";
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    void ScriptHighlighter.create("wgsl").then((highlighter) => {
-      this.#highlighter = highlighter;
-      this.requestUpdate();
-    });
-  }
-
-  protected override willUpdate(
-    _changed: PropertyValues<this>
-  ): void {
-    const { state } = this;
-    this.#lines = state.kind === "built" ?
-      (this.stage === "fragment" ? state.fragment : state.vertex).split("\n") :
-      [];
-    this.#highlighter?.update(this.#lines);
   }
 
   #onStage = (
@@ -152,11 +130,10 @@ export class ShaderOutput extends LitElement {
       return html`<pre class="error" role="alert">${state.message}</pre>`;
     }
 
-    return html`<pre>${this.#lines.map((line, index) => {
-      const tokens = this.#highlighter?.tokens(index) ?? null;
+    const wgsl = this.stage === "fragment" ? state.fragment : state.vertex;
 
-      return html`${tokens === null ? line : tokens.map(tokenSpan)}\n`;
-    })}</pre>`;
+    return html`<pre>${highlight(wgsl, "wgsl")
+      .map((line) => html`${line.tokens.map(tokenSpan)}\n`)}</pre>`;
   }
 }
 

@@ -12,7 +12,7 @@ import path from "node:path";
 import * as z from "zod";
 
 // CONSTANTS
-const kResultKinds = ["open", "steady"] as const;
+const kResultKinds = ["open", "steady", "edit"] as const;
 const kEnvelopeSchema = z.object({
   kind: z.enum(kResultKinds),
   measurements: z.array(z.unknown())

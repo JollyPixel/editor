@@ -1,3 +1,6 @@
+// Import Node.js Dependencies
+import path from "node:path";
+
 // Import Third-party Dependencies
 import {
   NETWORK_PRESETS,
@@ -17,6 +20,13 @@ export const MODE_FLAG = z.enum(STUDIO_MODES);
 export const STORAGE_FLAG = z.string()
   .transform((json): unknown => JSON.parse(json))
   .pipe(STORAGE_SCHEMA);
+
+export function fileIn(
+  dir: string | null,
+  name: string
+): string | undefined {
+  return dir === null ? undefined : path.join(dir, name);
+}
 
 export function splitList(
   value: string

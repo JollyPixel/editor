@@ -16,8 +16,7 @@ import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
-import { fileLanguage } from "./panes/code/ScriptHighlighter.ts";
-import { bindMarkdownPreview } from "./panes/preview/bindMarkdownPreview.ts";
+import { fileLanguage } from "./syntax/highlight.ts";
 
 // CONSTANTS
 const kScriptKind = textDocumentKind(SCRIPT_KIND);
@@ -51,6 +50,12 @@ export class ScriptEditor {
     const target = session.targetLease(kScriptKind, kTextKind, kShaderKind);
     const language = fileLanguage(path);
     const teardown = new Teardown();
+    const markdownPreview = language === "markdown" ?
+      import("./panes/preview/bindMarkdownPreview.ts") :
+      null;
+    const shaderPreview = kind === SHADER_KIND ?
+      import("./panes/shader/bindShaderPreview.ts") :
+      null;
 
     try {
       const editorToolbar = document.querySelector("jolly-editor-toolbar");
@@ -87,23 +92,25 @@ export class ScriptEditor {
           language,
           readOnly
         }));
-        if (language === "markdown") {
+        if (markdownPreview !== null) {
           code.hidden = readOnly;
+          const { bindMarkdownPreview } = await markdownPreview;
           teardown.defer(bindMarkdownPreview(preview, target.document));
         }
-        if (kind === SHADER_KIND) {
-          try {
-            const { bindShaderPreview } = await import("./panes/shader/bindShaderPreview.ts");
-            teardown.defer(await bindShaderPreview({
+        if (shaderPreview !== null) {
+          shaderView.hidden = false;
+          void shaderPreview
+            .then(({ bindShaderPreview }) => bindShaderPreview({
               view: shaderView,
               document: target.document,
               name: path,
               context
-            }));
-          }
-          catch (error) {
-            context.logger.error("shader preview failed", { error });
-          }
+            }))
+            .then((release) => teardown.defer(release))
+            .catch((error: unknown) => {
+              shaderView.hidden = true;
+              context.logger.error("shader preview failed", { error });
+            });
         }
       });
 

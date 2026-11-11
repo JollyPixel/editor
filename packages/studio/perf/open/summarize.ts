@@ -3,10 +3,7 @@ import { parseArgs } from "node:util";
 
 // Import Internal Dependencies
 import { MarkdownTable } from "../report/MarkdownTable.ts";
-import {
-  MeasurementGroup,
-  type MeasurementPick
-} from "../report/MeasurementGroup.ts";
+import { MeasurementGroup } from "../report/MeasurementGroup.ts";
 import {
   PHASES,
   type OpenMeasurement
@@ -14,7 +11,6 @@ import {
 import { ResultsFile } from "../report/ResultsFile.ts";
 
 type OpenGroup = MeasurementGroup<OpenMeasurement>;
-type OpenPick = MeasurementPick<OpenMeasurement>;
 
 interface Column {
   title: string;
@@ -28,9 +24,9 @@ const kColumns: Column[] = [
   { title: "phase", cell: (group) => group.sample.phase },
   { title: "variant", cell: (group) => group.sample.label },
   { title: "n", cell: (group) => group.items.length },
-  { title: "ready", cell: (group, control) => versus(group, control, (item) => item.clickToReady) },
+  { title: "ready", cell: (group, control) => group.versus(control, (item) => item.clickToReady) },
   { title: "ready p90", cell: (group) => group.percentile((item) => item.clickToReady, 0.9) },
-  { title: "settled", cell: (group, control) => versus(group, control, (item) => item.clickToSettled) },
+  { title: "settled", cell: (group, control) => group.versus(control, (item) => item.clickToSettled) },
   { title: "busy before ready", cell: (group) => group.median((item) => item.framesBeforeReady.total) },
   { title: "busy after ready", cell: (group) => group.median((item) => item.framesAfterReady.total) },
   { title: "longest frame after", cell: (group) => group.median((item) => item.framesAfterReady.longest) },
@@ -124,20 +120,6 @@ function sharesCell(
   return left.editor === right.editor &&
     left.mode === right.mode &&
     left.phase === right.phase;
-}
-
-function versus(
-  group: OpenGroup,
-  control: OpenGroup | undefined,
-  pick: OpenPick
-): string {
-  const value = Math.round(group.median(pick));
-  if (control === undefined) {
-    return String(value);
-  }
-  const difference = value - Math.round(control.median(pick));
-
-  return `${value} (${difference >= 0 ? "+" : ""}${difference})`;
 }
 
 function compareGroups(

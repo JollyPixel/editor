@@ -5,7 +5,6 @@ import "@jolly-pixel/ui/elements/scope";
 
 // Import Internal Dependencies
 import "./icons.ts";
-import "./markdown/MarkdownView.ts";
 import "./panes/code/ScriptCode.ts";
 import { ScriptEditor } from "./ScriptEditor.ts";
 

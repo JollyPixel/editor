@@ -32,8 +32,9 @@
     "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json",
-    "lint": "oxlint src test vite.config.ts playwright.config.ts && pnpm run lint:css",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p bench/tsconfig.json",
+    "lint": "oxlint src test bench vite.config.ts playwright.config.ts && pnpm run lint:css",
+    "bench": "jolly-bench",
     "lint:css": "stylelint \"src/**/*.ts\" \"public/**/*.css\" --cache"
   },
   "repository": {
@@ -51,6 +52,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@jolly-pixel/bench": "workspace:*",
     "@jolly-pixel/e2e": "workspace:*"
   },
   "dependencies": {
@@ -65,12 +67,10 @@
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0",
-    "@shikijs/core": "4.5.0",
-    "@shikijs/engine-javascript": "4.5.0",
-    "@shikijs/langs-precompiled": "4.5.0",
     "dompurify": "3.4.17",
     "lit": "3.3.3",
     "marked": "16.4.2",
+    "sugar-high": "2.6.4",
     "three": "0.186.1",
     "zod": "4.6.7"
   }

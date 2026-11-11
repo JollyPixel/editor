@@ -2,6 +2,7 @@
 import type { ScriptDocument } from "@jolly-pixel/asset.script/client";
 
 // Import Internal Dependencies
+import "../../markdown/MarkdownView.ts";
 import type { MarkdownView } from "../../markdown/MarkdownView.ts";
 
 // CONSTANTS
