@@ -32,8 +32,8 @@ describe("TextEdit", () => {
     assert.throws(() => edit.applyTo("hello"), TextEditMismatchError);
   });
 
-  test("between() inserts at the caret when the typed character repeats", () => {
-    const edit = TextEdit.between("aa", "aaa", 1);
+  test("between() ends a repeated typed character at the caret", () => {
+    const edit = TextEdit.between("aa", "aaa", 2);
 
     assert.deepEqual(edit.toJSON(), [{ at: 1, insert: "a" }]);
   });

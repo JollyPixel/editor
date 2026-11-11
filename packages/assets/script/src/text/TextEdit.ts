@@ -47,7 +47,11 @@ export class TextEdit {
     after: string,
     caret = after.length
   ): TextEdit {
-    const prefixLimit = Math.min(before.length, after.length, caret);
+    const prefixLimit = Math.min(
+      before.length,
+      after.length,
+      caret - Math.max(0, after.length - before.length)
+    );
     let start = 0;
     while (start < prefixLimit && before[start] === after[start]) {
       start++;
