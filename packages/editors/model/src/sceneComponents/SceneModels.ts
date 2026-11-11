@@ -100,7 +100,8 @@ export class SceneModels implements SceneAssetResolver<Model> {
     }
 
     const preview = new ModelPreview(
-      new ModelFile({ targetRecord, catalog }, document)
+      new ModelFile({ targetRecord, catalog }, document),
+      catalog
     );
     let model = preview.model;
     const unsubscribe = preview.subscribe("change", () => {

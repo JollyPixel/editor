@@ -55,11 +55,13 @@ describe("GameManifestClient", () => {
       [
         "levels/arena.scene.json",
         "models/./my ship.bin",
+        "models/my%20ship.bin",
         "models/missing.png",
         "data:text/plain,hi"
       ].map(game.resolveURL),
       [
         `${kGameUrl}builds/arena/abc%40v3/arena.scene.json`,
+        `${kGameUrl}builds/ship/current/my%20ship.bin`,
         `${kGameUrl}builds/ship/current/my%20ship.bin`,
         "models/missing.png",
         "data:text/plain,hi"

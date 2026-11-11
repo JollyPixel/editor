@@ -15,6 +15,7 @@ export * from "./createDefaultAssetLoaders.ts";
 export {
   ModelAssetLoader,
   ModelAssetType,
+  modelTextureNames,
   parseModel,
   type Model,
   type ModelParseOptions

@@ -42,10 +42,12 @@ export class ModelFile {
     return this.#document.bytes?.byteLength ?? 0;
   }
 
-  get name(): string {
-    const { path } = this.#session.targetRecord;
+  get path(): string {
+    return this.#session.targetRecord.path;
+  }
 
-    return path.slice(path.lastIndexOf("/") + 1);
+  get name(): string {
+    return this.path.slice(this.path.lastIndexOf("/") + 1);
   }
 
   get extension(): string {

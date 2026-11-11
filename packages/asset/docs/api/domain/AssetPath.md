@@ -53,10 +53,11 @@ of the path string, so `.json` matches `forest.vmap.json` even though
 `extension` is `.vmap.json`.
 
 `resolve()` resolves `specifier` against the path the way a relative URL
-resolves against its base: `./` and `../` segments apply and a leading `/`
-starts from the root. A path without a scheme gives a percent-decoded path
-without one; a path with a scheme, such as `project:/`, keeps it. It throws
-`TypeError` when the result is empty.
+resolves against its base: `./` and `../` segments apply, a leading `/`
+starts from the root, and a `\` separates segments like `/`. A path without a
+scheme gives a percent-decoded path without one, where a `%` that starts no
+valid escape stays as written; a path with a scheme, such as `project:/`,
+keeps it. It throws `TypeError` when the result is empty.
 
 ```ts
 new AssetPath("scripts/Player.ts").resolve("../shared/label.ts").toString();

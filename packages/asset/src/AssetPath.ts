@@ -1,5 +1,6 @@
 // CONSTANTS
 const kRelativeBase = "asset:/";
+const kEscapes = /(?:%[\dA-Fa-f]{2})+/g;
 
 export class AssetPath {
   static from(
@@ -75,13 +76,13 @@ export class AssetPath {
     specifier: string
   ): AssetPath {
     const url = new URL(
-      specifier,
+      specifier.replaceAll("\\", "/"),
       new URL(this.toString(), kRelativeBase)
     );
 
     return new AssetPath(
       url.href.startsWith(kRelativeBase) ?
-        decodeURIComponent(url.pathname.slice(1)) :
+        decodeEscapes(url.pathname.slice(1)) :
         url.href
     );
   }
@@ -99,4 +100,17 @@ export class AssetPath {
   toString(): string {
     return `${this.directory}${this.name}${this.extension}`;
   }
+}
+
+function decodeEscapes(
+  path: string
+): string {
+  return path.replaceAll(kEscapes, (escapes) => {
+    try {
+      return decodeURIComponent(escapes);
+    }
+    catch {
+      return escapes;
+    }
+  });
 }

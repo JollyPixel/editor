@@ -95,9 +95,16 @@ const model = await parseModel(bytes, "knight.glb", {
 });
 ```
 
-- `resourcePath` (default `""`) is the folder external textures and buffers resolve against.
-- An `.obj` file read this way has no `.mtl` materials.
+- `resourcePath` (default `""`) is the folder external files resolve against: textures, `.bin` buffers and `.mtl` libraries. They load through `manager`, so its URL modifier can map them.
+- An `.obj` file loads each `.mtl` library its `mtllib` lines name. A library that fails to load is skipped, and the faces it would color keep OBJLoader's default material.
+- `texture` names an image, relative to `resourcePath`, that an `.obj` file with no `usemtl` line takes as the map of its default materials (sRGB, nearest magnification). An `.obj` file that uses a material, and the other formats, ignore it.
 - An unknown extension rejects with `Unsupported model type`.
+
+`modelTextureNames(fileName)` lists the image names an `.obj` file looks for
+beside it, in lookup order: its own name with `.png`, `.jpg`, `.jpeg`, then
+`.webp`. Other formats get an empty list. The model loader passes the first
+one its catalog holds in the model's folder as `texture`, so `Sphere.obj`
+next to `Sphere.png` loads textured.
 
 ### KTX2 textures
 
