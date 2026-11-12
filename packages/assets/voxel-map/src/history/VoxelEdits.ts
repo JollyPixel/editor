@@ -51,6 +51,7 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
   };
   #recording = false;
   #stepping: VoxelChange | null = null;
+  #captured: VoxelChange[] | null = null;
   #onCommand = (
     command: VoxelCommand,
     context: VoxelCommandContext
@@ -105,6 +106,21 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
     command: VoxelWorldCommand
   ): VoxelChange | undefined {
     return this.#changes.get(command);
+  }
+
+  captureLocal(
+    apply: () => unknown
+  ): VoxelChange | null {
+    const captured: VoxelChange[] = [];
+    this.#captured = captured;
+    try {
+      apply();
+    }
+    finally {
+      this.#captured = null;
+    }
+
+    return captured[0] ?? null;
   }
 
   applyStep(
@@ -184,6 +200,7 @@ export class VoxelEdits implements HistorySource<VoxelWorldCommand, null> {
       revertingCommands(recorded)
     );
     this.#changes.set(command, change);
+    this.#captured?.push(change);
     this.#events.emit("change", change);
   }
 

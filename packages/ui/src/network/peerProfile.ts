@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import {
+  parsePeerActivity,
   parsePeerProfile,
+  type PeerActivity,
   type PeerMetadata,
   type PeerProfile,
   type PeerProfileMetadata,
@@ -17,6 +19,7 @@ import type { PresencePeer } from "../peer/PresencePeer.ts";
 interface RoomMember {
   clientId: string;
   profile?: PeerMetadata;
+  presence?: PeerMetadata;
 }
 
 export interface PeerProfileOptions {
@@ -51,10 +54,27 @@ export function peerProfileColor(
   return profileColor(clientId, parsePeerProfile(profile));
 }
 
+export function formatPeerActivity(
+  activity: PeerActivity
+): string {
+  return activity.progress === undefined ?
+    activity.label :
+    `${activity.label} · ${Math.round(activity.progress * 100)}%`;
+}
+
+export function peerActivityLabel(
+  presence: PeerMetadata | undefined
+): string | undefined {
+  const activity = parsePeerActivity(presence);
+
+  return activity === null ? undefined : formatPeerActivity(activity);
+}
+
 export function toPresencePeer(
   member: RoomMember
 ): PresencePeer {
   const profile = parsePeerProfile(member.profile);
+  const activity = peerActivityLabel(member.presence);
 
   return {
     clientId: member.clientId,
@@ -62,7 +82,8 @@ export function toPresencePeer(
     color: profileColor(member.clientId, profile),
     peerId: profile.peerId,
     avatar: profile.avatar,
-    ...(profile.via === undefined ? {} : { badge: `via ${profile.via}` })
+    ...(profile.via === undefined ? {} : { badge: `via ${profile.via}` }),
+    ...(activity === undefined ? {} : { activity })
   };
 }
 

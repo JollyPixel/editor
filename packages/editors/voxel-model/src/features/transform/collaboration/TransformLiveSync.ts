@@ -5,6 +5,7 @@ import {
 } from "@jolly-pixel/network/client";
 import {
   BlockTransform,
+  VOXEL_MODEL_PRESENCE_KEYS,
   type BlockTransformJSON,
   type VoxelModelRoom
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -12,7 +13,6 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { ModelBlocks } from "../../../scene/index.ts";
-import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 import { LatestFrameThrottle } from "../../../collaboration/LatestFrameThrottle.ts";
 import { combineReleases } from "../../../shared/combineReleases.ts";
 
@@ -82,7 +82,7 @@ export class TransformLiveSync {
     this.#view = options.view;
     this.#requestFrame = options.requestFrame ?? (() => undefined);
     this.#channel = new PresenceChannel<TransformLivePayload | null>(options.room, {
-      key: PRESENCE_KEYS.transformLive,
+      key: VOXEL_MODEL_PRESENCE_KEYS.transformLive,
       decode: decodeLivePayload,
       equals: () => false
     });

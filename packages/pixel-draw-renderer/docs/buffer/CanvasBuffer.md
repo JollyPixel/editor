@@ -2,7 +2,7 @@
 
 Internal DOM adapter around [`PixelBuffer`](./PixelBuffer.md). `PixelArtCanvas` uses it to keep raw pixels and an `HTMLCanvasElement` in sync. It is not exported from the package root.
 
-`canvas()` returns the working canvas, and `loadTexture()` replaces its contents from a canvas or image.
+`canvas()` returns the working canvas, creating it on the first call, and `loadTexture()` replaces its contents from a canvas or image. Until one of them runs, the buffer touches no DOM.
 
 ## Events
 

@@ -83,6 +83,52 @@ describe("SyncedVoxelMap", () => {
     map.dispose();
   });
 
+  it("applies a world command as a step answered by the room's echo", () => {
+    const room = createMockRoom();
+    const map = new SyncedVoxelMap(room);
+    room.simulateSnapshot(kSnapshot);
+    map.voxels.world.addLayer("Ground");
+    room.simulateCommand(room.sentCommands[0]);
+    const layerId = map.voxels.world.findLayer("Ground")!.id;
+    const confirmed: string[] = [];
+    map.receipts.subscribe("confirmed", (change) => confirmed.push(change.command.action));
+
+    const step = map.applyStep({
+      action: "voxel-set",
+      layerId,
+      metadata: {
+        position: { x: 1, y: 2, z: 3 },
+        blockId: 1,
+        rotation: 0,
+        flipX: false,
+        flipY: false,
+        flipZ: false
+      }
+    });
+    room.simulateCommand(room.sentCommands.at(-1)!);
+
+    assert.equal(step?.command.action, "voxel-set");
+    assert.equal(map.voxels.world.voxelAt({ x: 1, y: 2, z: 3 })?.blockId, 1);
+    assert.deepEqual(confirmed, ["voxel-set"]);
+    map.dispose();
+  });
+
+  it("applies no step for a layer the map does not have", () => {
+    const room = createMockRoom();
+    const map = new SyncedVoxelMap(room);
+    room.simulateSnapshot(kSnapshot);
+
+    const step = map.applyStep({
+      action: "voxel-removed",
+      layerId: "nowhere",
+      metadata: { position: { x: 0, y: 0, z: 0 } }
+    });
+
+    assert.equal(step, null);
+    assert.equal(room.sentCommands.length, 0);
+    map.dispose();
+  });
+
   it("broadcasts a replacement world without applying it locally", () => {
     const room = createMockRoom();
     const map = new SyncedVoxelMap(room);

@@ -28,6 +28,8 @@ interface ClientOptions {
 
 `new Client(options?)` enables reconnect by default.
 
+- `logger` defaults to `consoleLogger()`. `consoleLogger(target?)` sends every level to a `Console`, the global `console` by default. A Node process that keeps stdout for a protocol passes `new Console({ stdout: process.stderr })`.
+
 - `trustServer`, off by default, parses server messages with plain
   `JSON.parse` and checks only their `room` and `kind`. Prototype keys such as
   `__proto__` are kept, and the envelope schema is skipped. Enable it only for

@@ -28,6 +28,7 @@ import "./icons.ts";
 import { StudioAppearance } from "./preferences/StudioAppearance.ts";
 import { SettingsSections } from "./shell/settings/SettingsSections.ts";
 import { settingsConsole } from "./shell/settings/settingsConsole.ts";
+import { golemConsole } from "./shell/golem/golemConsole.ts";
 import type { Studio } from "./shell/Studio.ts";
 import "./shell/Studio.ts";
 import type { EditorTab } from "./tabs/EditorTabs.ts";
@@ -119,6 +120,9 @@ async function boot(): Promise<void> {
   settingsConsole(editorConsole.commands, studio, settings);
   if (user.online && user.rights.allows("manageAccess")) {
     usersConsole(editorConsole.commands, user.roster);
+  }
+  if (user.online) {
+    golemConsole(editorConsole.commands, studio);
   }
 
   if (

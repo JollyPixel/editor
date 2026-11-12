@@ -8,7 +8,10 @@ export * from "./grants/Grants.ts";
 export * from "./grants/RoomGrants.ts";
 export * from "./PresenceChannel.ts";
 export * from "./Room.ts";
-export type { Logger } from "../logger.ts";
+export {
+  consoleLogger,
+  type Logger
+} from "./logger.ts";
 
 export * from "../protocol/index.ts";
 export * from "../sync/types.ts";

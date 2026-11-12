@@ -16,6 +16,7 @@ import {
 import { accountsRoutes } from "../accounts/routes.ts";
 import { auditRoutes } from "../audit/routes.ts";
 import { gameRoutes } from "../game/routes.ts";
+import { golemRoutes } from "../golem/routes.ts";
 import { authenticate } from "./authentication.ts";
 import { ApiError } from "./errors/ApiError.ts";
 import { apiFailure } from "./apiFailure.ts";
@@ -28,6 +29,7 @@ import type { ApiFailure } from "../../http/api.ts";
 import { PREFERENCES_URL_PATH } from "../../preferences/api.ts";
 import { AUDIT_URL_PATH } from "../../audit/api.ts";
 import { GAME_URL_PATH } from "../../game/api.ts";
+import { GOLEM_TOKENS_URL_PATH } from "../../golem/api.ts";
 import { PROJECT_URL_PATH } from "../../project/api.ts";
 import { SHARES_URL_PATH } from "../../shares/api.ts";
 import type { AuditFeed } from "../audit/AuditFeed.ts";
@@ -128,6 +130,10 @@ export class StudioApi implements AsyncDisposable {
       await signedIn.register(sharesRoutes, {
         prefix: SHARES_URL_PATH,
         shares: options.shares
+      });
+      await signedIn.register(golemRoutes, {
+        prefix: GOLEM_TOKENS_URL_PATH,
+        accounts: options.accounts
       });
       await signedIn.register(projectRoutes, {
         prefix: PROJECT_URL_PATH,

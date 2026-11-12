@@ -473,6 +473,9 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
@@ -1357,6 +1360,61 @@ importers:
       fake-indexeddb:
         specifier: 6.2.7
         version: 6.2.7
+
+  packages/golem:
+    dependencies:
+      '@jolly-pixel/accounts':
+        specifier: workspace:*
+        version: link:../accounts
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../asset
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../asset-server
+      '@jolly-pixel/asset.pixel-art':
+        specifier: workspace:*
+        version: link:../assets/pixel-art
+      '@jolly-pixel/asset.scene':
+        specifier: workspace:*
+        version: link:../assets/scene
+      '@jolly-pixel/asset.script':
+        specifier: workspace:*
+        version: link:../assets/script
+      '@jolly-pixel/asset.voxel-map':
+        specifier: workspace:*
+        version: link:../assets/voxel-map
+      '@jolly-pixel/asset.voxel-model':
+        specifier: workspace:*
+        version: link:../assets/voxel-model
+      '@jolly-pixel/color':
+        specifier: workspace:*
+        version: link:../color
+      '@jolly-pixel/history':
+        specifier: workspace:*
+        version: link:../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../network
+      '@jolly-pixel/pixel-draw.renderer':
+        specifier: workspace:*
+        version: link:../pixel-draw-renderer
+      '@jolly-pixel/server':
+        specifier: workspace:*
+        version: link:../server
+      '@jolly-pixel/voxel.renderer':
+        specifier: workspace:*
+        version: link:../voxel-renderer
+      '@modelcontextprotocol/server':
+        specifier: 2.4.0
+        version: 2.4.0
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@modelcontextprotocol/client':
+        specifier: 2.4.0
+        version: 2.4.0
 
   packages/history:
     dependencies:
@@ -2804,6 +2862,18 @@ packages:
 
   '@minhducsun2002/leb128@1.0.0':
     resolution: {integrity: sha512-eFrYUPDVHeuwWHluTG1kwNQUEUcFjVKYwPkU8z9DR1JH3AW7JtJsG9cRVGmwz809kKtGfwGJj58juCZxEvnI/g==}
+
+  '@modelcontextprotocol/client@2.4.0':
+    resolution: {integrity: sha512-LgrD2OphHuG12vfKFKz6SOnq7bKHQmhGJIAYdD+MZBn2npHEyry6uD8zvktodtl5CQM85MO0anUyD9JwmUmxww==}
+    engines: {node: '>=20'}
+
+  '@modelcontextprotocol/core@2.4.0':
+    resolution: {integrity: sha512-z8QBKqdfXLPzkLQuG4xp8hrVEMm1PZ1IgxMN2sMbJiFiAKOWXnAzogXn2W4aqIBlP1ea6U5yiqVquvUNM1Cj6Q==}
+    engines: {node: '>=20'}
+
+  '@modelcontextprotocol/server@2.4.0':
+    resolution: {integrity: sha512-rgR9yxSaAJ+bcsi/XroT/S2AfPiIWloXAnrdfYSCms9ivVju0ishu/wW0J21Ho6+ZOR1r7RyeRbjiRuF87ix5Q==}
+    engines: {node: '>=20'}
 
   '@noble/curves@1.9.7':
     resolution: {integrity: sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==}
@@ -4405,6 +4475,14 @@ packages:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
 
+  eventsource-parser@3.1.1:
+    resolution: {integrity: sha512-EKN1vKAMcZ8MlYMpaNuxN6R9yakzH6uajHcHVTqWJzvu5pWw9DyhbP35HH8MVBQ+dZjAfDxk+A8NiR9KWaXiyQ==}
+    engines: {node: '>=18.0.0'}
+
+  eventsource@3.0.7:
+    resolution: {integrity: sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==}
+    engines: {node: '>=18.0.0'}
+
   fake-indexeddb@6.2.7:
     resolution: {integrity: sha512-g0ghQ+BmU3CSZaHup5FigEAAtCmtNyxkrmID7OAeK2qONHghw1aQ2l2T1RxmfhP1H1tEXVRWArUTGVCk5832ww==}
     engines: {node: '>=18'}
@@ -4750,6 +4828,9 @@ packages:
 
   jju@1.4.0:
     resolution: {integrity: sha512-8wb9Yw966OSxApiCt0K3yNJL8pnNeIv+OEq2YMidz4FKP6nonSRoOXc80iXY4JaN2FC11B9qsNmDsm+ZOfMROA==}
+
+  jose@6.2.16:
+    resolution: {integrity: sha512-4LSJpbuBuPdGrONCdZUy0xnxtLf8eEz+EY0SMXdHQEBU7bgUHDVblU/JAjryv3wID9/LK7/YuwFwq+AQNfMscQ==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -5137,6 +5218,10 @@ packages:
   pino@10.4.0:
     resolution: {integrity: sha512-bk1ZMTwG/Vymx+zPoa28MhNzucFvXJWp3csrSuxuHPSMeUettaCoQ5Jvg07mtC4JGNpcfTwz41oVCnNgBK9+vA==}
     hasBin: true
+
+  pkce-challenge@5.0.1:
+    resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
+    engines: {node: '>=16.20.0'}
 
   playwright-core@1.64.1:
     resolution: {integrity: sha512-BC4s8y6SEVA6Q1rSxZTto8hI1KUI3xXlHGZgvGqP4IqPdI/a6FX9H29IDNz7vKo9l21b6LfYosScPL6M3xxyDQ==}
@@ -6798,6 +6883,25 @@ snapshots:
   '@minhducsun2002/leb128@1.0.0':
     optional: true
 
+  '@modelcontextprotocol/client@2.4.0':
+    dependencies:
+      '@modelcontextprotocol/core': 2.4.0
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.1.1
+      jose: 6.2.16
+      pkce-challenge: 5.0.1
+      zod: 4.6.7
+
+  '@modelcontextprotocol/core@2.4.0':
+    dependencies:
+      zod: 4.6.7
+
+  '@modelcontextprotocol/server@2.4.0':
+    dependencies:
+      '@modelcontextprotocol/core': 2.4.0
+      zod: 4.6.7
+
   '@noble/curves@1.9.7':
     dependencies:
       '@noble/hashes': 1.8.0
@@ -8315,6 +8419,12 @@ snapshots:
 
   esutils@2.0.3: {}
 
+  eventsource-parser@3.1.1: {}
+
+  eventsource@3.0.7:
+    dependencies:
+      eventsource-parser: 3.1.1
+
   fake-indexeddb@6.2.7: {}
 
   fast-check@4.10.2:
@@ -8663,6 +8773,8 @@ snapshots:
       istanbul-lib-report: 3.0.1
 
   jju@1.4.0: {}
+
+  jose@6.2.16: {}
 
   js-tokens@4.0.0: {}
 
@@ -9065,6 +9177,8 @@ snapshots:
       safe-stable-stringify: 2.5.0
       sonic-boom: 4.2.1
       thread-stream: 4.2.0
+
+  pkce-challenge@5.0.1: {}
 
   playwright-core@1.64.1: {}
 

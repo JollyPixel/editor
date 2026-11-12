@@ -24,7 +24,7 @@ import type {
 } from "./Room.ts";
 import { ClientRoom } from "./ClientRoom.ts";
 import {
-  createLogger,
+  consoleLogger,
   type Logger
 } from "./logger.ts";
 
@@ -87,7 +87,7 @@ export class Client extends Emitter<ClientEventMap> {
   ) {
     super();
     this.#profile = options.profile ?? {};
-    this.#logger = options.logger ?? createLogger();
+    this.#logger = options.logger ?? consoleLogger();
     this.#connect = options.socket ?? connectWebSocket;
     this.#delays = reconnectDelays(options.reconnect ?? true);
     this.#parse = options.trustServer === true ?

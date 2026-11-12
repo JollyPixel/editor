@@ -15,6 +15,13 @@
       "page": "index.html"
     },
     "scene": "./scene",
+    "sceneComponents": {
+      "Script": {
+        "assets": {
+          "script": "script"
+        }
+      }
+    },
     "runtime": "./runtime"
   },
   "exports": {

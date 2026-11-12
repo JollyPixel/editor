@@ -5,6 +5,7 @@ import {
 } from "@jolly-pixel/network/client";
 import {
   MaterialSurface,
+  VOXEL_MODEL_PRESENCE_KEYS,
   type MaterialSurfacePatchJSON,
   type ModelChange,
   type ModelDocument,
@@ -16,7 +17,6 @@ import type {
   MaterialPreviews,
   PreviewOwner
 } from "../../../state/index.ts";
-import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 import { LatestFrameThrottle } from "../../../collaboration/LatestFrameThrottle.ts";
 
 // CONSTANTS
@@ -104,7 +104,7 @@ export class MaterialLiveSync {
     this.#document = options.document;
     this.#previews = options.previews;
     this.#channel = new PresenceChannel<MaterialLiveFrame | null>(options.room, {
-      key: PRESENCE_KEYS.materialLive,
+      key: VOXEL_MODEL_PRESENCE_KEYS.materialLive,
       decode: decodeLiveFrame,
       equals: () => false
     });

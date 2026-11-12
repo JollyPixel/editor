@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { ChangeReceipts } from "@jolly-pixel/history";
 import {
   CommandSync,
   type CommandReconciler
@@ -16,6 +17,7 @@ import {
 } from "@jolly-pixel/asset.pixel-art/client";
 import type {
   BlocksetDocument,
+  BlocksetDocumentCommand,
   BlocksetDocumentListener
 } from "@jolly-pixel/voxel.renderer";
 
@@ -23,7 +25,8 @@ import type {
 import type {
   BlocksetNetworkCommand,
   BlocksetRoom,
-  BlocksetSnapshot
+  BlocksetSnapshot,
+  BlocksetStep
 } from "./types.ts";
 import { blocksetWriteKeys } from "./BlocksetCommandKeys.ts";
 
@@ -71,12 +74,22 @@ export class BlocksetSyncClient extends CommandSync<
   BlocksetSnapshot,
   AssetRoomNotice
 > {
+  readonly receipts = new ChangeReceipts<BlocksetStep>();
+
   #pixels: PixelLink;
   #blockset: BlocksetDocument;
+  #step: BlocksetStep | null = null;
 
   #sendBlocksetCommand: BlocksetDocumentListener = (command, { origin }) => {
-    if (origin === "local") {
+    if (origin !== "local") {
+      return;
+    }
+
+    if (this.#step === null) {
       this.send(command);
+    }
+    else {
+      this.sendChange(command, this.#step, this.receipts);
     }
   };
 
@@ -101,6 +114,19 @@ export class BlocksetSyncClient extends CommandSync<
     this.#blockset = options.blockset;
     this.#blockset.on("command", this.#sendBlocksetCommand);
     this.on("command", (command) => this.#applyRemote(command));
+  }
+
+  applyStep(
+    command: BlocksetDocumentCommand
+  ): BlocksetStep | null {
+    const step: BlocksetStep = { command };
+    this.#step = step;
+    try {
+      return this.#blockset.applyCommand(command) ? step : null;
+    }
+    finally {
+      this.#step = null;
+    }
   }
 
   override destroy(): void {

@@ -1,0 +1,47 @@
+{
+  "extends": "../../tsconfig/lib.json",
+  "references": [
+    {
+      "path": "../accounts"
+    },
+    {
+      "path": "../asset"
+    },
+    {
+      "path": "../asset-server"
+    },
+    {
+      "path": "../assets/pixel-art"
+    },
+    {
+      "path": "../assets/scene"
+    },
+    {
+      "path": "../assets/script"
+    },
+    {
+      "path": "../assets/voxel-map"
+    },
+    {
+      "path": "../assets/voxel-model"
+    },
+    {
+      "path": "../color"
+    },
+    {
+      "path": "../history"
+    },
+    {
+      "path": "../network"
+    },
+    {
+      "path": "../pixel-draw-renderer"
+    },
+    {
+      "path": "../server"
+    },
+    {
+      "path": "../voxel-renderer"
+    }
+  ]
+}

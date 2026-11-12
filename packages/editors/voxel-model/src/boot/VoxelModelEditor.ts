@@ -9,6 +9,7 @@ import {
 } from "@jolly-pixel/asset.pixel-art/client";
 import {
   VOXEL_MODEL_KIND,
+  linkedTextureId,
   voxelModelDocumentKind,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -40,7 +41,6 @@ import {
 import { EditorShell } from "./EditorShell.ts";
 import { sessionAnimationSets } from "./animationSetSource.ts";
 import { VOXEL_MODEL_KEYBINDINGS } from "../preferences.ts";
-import { linkedTextureId } from "../viewer/linkedTexture.ts";
 
 // CONSTANTS
 const kCanvas = "#three-renderer canvas";

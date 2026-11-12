@@ -24,6 +24,10 @@
       "types": "./dist/scene/index.d.ts",
       "default": "./dist/scene/index.js"
     },
+    "./testing": {
+      "types": "./dist/testing/sceneComponentDeclarations.d.ts",
+      "default": "./dist/testing/sceneComponentDeclarations.js"
+    },
     "./ui": {
       "types": "./dist/ui/index.d.ts",
       "default": "./dist/ui/index.js"

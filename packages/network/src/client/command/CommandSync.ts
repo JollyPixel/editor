@@ -10,7 +10,8 @@ import {
   PendingLedger,
   type ChangeOutbox,
   type LedgerEntry,
-  type SentChange
+  type SentChange,
+  type SentReceipt
 } from "./PendingLedger.ts";
 import type {
   NetworkAcks,
@@ -241,9 +242,15 @@ export class CommandSync<
 
   sendChange(
     body: CommandBody<TCommand>,
-    change: SentChange
+    change: SentChange,
+    receipts: ChangeReceipts<SentChange> | null = this.#receipts
   ): TCommand {
-    return this.#enqueue(body, Date.now(), change.basis, change);
+    return this.#enqueue(
+      body,
+      Date.now(),
+      change.basis,
+      receipts === null ? null : { change, receipts }
+    );
   }
 
   destroy(): void {
@@ -265,7 +272,7 @@ export class CommandSync<
     body: CommandBody<TCommand>,
     timestamp: number,
     basis: number | undefined,
-    change: SentChange | null
+    receipt: SentReceipt | null
   ): TCommand {
     const entry: LedgerEntry<TCommand> = {
       command: {
@@ -275,7 +282,7 @@ export class CommandSync<
         timestamp,
         ...(basis === undefined ? {} : { basis })
       } as unknown as TCommand,
-      change,
+      receipt,
       sent: false,
       applied: true
     };
@@ -388,18 +395,14 @@ export class CommandSync<
     version: number | undefined
   ): void {
     this.emit("acknowledged", entry.command, version);
-    if (entry.change !== null) {
-      this.#receipts?.confirm(entry.change, version);
-    }
+    entry.receipt?.receipts.confirm(entry.receipt.change, version);
   }
 
   #refuse(
     entry: LedgerEntry<TCommand>
   ): void {
     this.emit("refused", entry.command);
-    if (entry.change !== null) {
-      this.#receipts?.refuse(entry.change);
-    }
+    entry.receipt?.receipts.refuse(entry.receipt.change);
   }
 
   #noteSettled(

@@ -1,14 +1,18 @@
 // Import Third-party Dependencies
 import {
+  commandUnion,
+  commandVariant,
   MessageProtocol,
-  requireAnyGroup
+  requireAnyGroup,
+  withCommandHeader
 } from "@jolly-pixel/network";
 import {
   MAX_BLOCKSET_SLOT,
   VOXEL_WORLD_VERSION,
   type VoxelLayerCommandAction,
   type VoxelTemplateCommandAction,
-  type VoxelBlocksetCommandAction
+  type VoxelBlocksetCommandAction,
+  type VoxelWorldCommand
 } from "@jolly-pixel/voxel.renderer";
 import * as z from "zod/mini";
 
@@ -216,18 +220,28 @@ export const voxelWorldSchema = z.object({
   templates: z.optional(z.array(kTemplateSchema))
 });
 
-export const voxelCommandProtocol: MessageProtocol = new MessageProtocol(z.union([
-  ...Object.entries(kLayerMetadataSchemas).map(
-    ([action, metadata]) => networkCommand(action, action.startsWith("object-") ?
+const kVoxelCommandVariants: z.ZodMiniObject[] = [
+  ...Object.entries(kLayerMetadataSchemas).map(([action, metadata]) => {
+    const properties: z.core.$ZodLooseShape = action.startsWith("object-") ?
       { layerName: z.string(), metadata } :
-      { layerId: kIdSchema, metadata })
-  ),
+      { layerId: kIdSchema, metadata };
+
+    return commandVariant(action, properties);
+  }),
   ...Object.entries(kTemplateCommandProperties).map(
-    ([action, properties]) => networkCommand(action, properties)
+    ([action, properties]) => commandVariant(action, properties)
   ),
   ...Object.entries(kBlocksetCommandProperties).map(
-    ([action, properties]) => networkCommand(action, properties)
-  ),
+    ([action, properties]) => commandVariant(action, properties)
+  )
+];
+
+export const voxelCommandSchema = commandUnion<VoxelWorldCommand>(
+  kVoxelCommandVariants
+);
+
+export const voxelCommandProtocol: MessageProtocol = new MessageProtocol(z.union([
+  ...kVoxelCommandVariants.map(withCommandHeader),
   networkCommand("world-replace", {
     data: voxelWorldSchema
   })

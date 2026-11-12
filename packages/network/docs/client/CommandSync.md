@@ -38,10 +38,12 @@ readonly version: number;
 
 Stamps an already-applied edit. `basis` is the version replayed by undo/redo.
 
-### `sendChange(body, change): TCommand`
+### `sendChange(body, change, receipts?): TCommand`
 
-Sends `body` with `change.basis` and answers `change` in the `receipts` option
-once the server acknowledges or refuses it.
+Sends `body` with `change.basis` and answers `change` in `receipts` once the
+server acknowledges or refuses it. `receipts` defaults to the `receipts`
+option; pass another one when a document syncs two kinds of change through one
+client. With neither, the change gets no answer.
 
 ### `keepIn(outbox): void`
 
@@ -129,6 +131,24 @@ interface DocumentKind<TKind extends string, TRoom, TSynced extends SyncedDocume
 
 Pairs an asset kind with the factory of its synced document. Each
 `syncDocument(room)` call returns a new `TSynced` bound to `room`.
+
+### EditableDocumentKind
+
+```ts
+interface EditableDocumentKind<TKind extends string, TRoom, TSynced extends SyncedDocument<unknown>, TCommand>
+  extends DocumentKind<TKind, TRoom, TSynced> {
+  readonly commandSchema: z.ZodMiniType<TCommand>;
+  readonly commandProtocol: MessageProtocol;
+  localEdits(synced: TSynced): LocalEdits<TCommand>;
+}
+```
+
+A `DocumentKind` that a client outside an editor can write to with raw
+commands. `commandSchema` parses a command without its network header,
+`commandProtocol` is the room protocol, whose `events` name the actions the
+room can refuse. `localEdits(synced)` returns the `LocalEdits` from
+`@jolly-pixel/history` that applies a command to that synced document and
+answers it once the server does.
 
 ### SyncedCommandDocument
 

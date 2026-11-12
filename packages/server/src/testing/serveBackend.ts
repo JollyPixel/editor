@@ -11,7 +11,7 @@ import {
   StudioBackend,
   type StudioBackendOptions
 } from "../node/StudioBackend.ts";
-
+import { ManifestRoute } from "../node/project/ManifestRoute.ts";
 import { StudioAccess } from "../node/project/StudioAccess.ts";
 import { NO_SHELL_PREFERENCES } from "../preferences/PreferenceScopes.ts";
 import type { StudioProject } from "../node/project/StudioProject.ts";
@@ -78,10 +78,13 @@ export async function listenBackend(
       masterPassword: options.masterPassword
     }
   });
+  const manifest = new ManifestRoute(project);
   const server = http.createServer((request, response) => {
     backend.middleware(request, response, () => {
-      response.statusCode = PASSED_ON_STATUS;
-      response.end();
+      manifest.middleware(request, response, () => {
+        response.statusCode = PASSED_ON_STATUS;
+        response.end();
+      });
     });
   });
   backend.attach(server);

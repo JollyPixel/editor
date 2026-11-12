@@ -18,6 +18,7 @@ export const SCENE_KIND = "scene";
 export const SCENE_COMMAND = "scene.command";
 export const SCENE_EXTENSION = ".scene.json";
 export const SCENE_FILE_VERSION = 1;
+export const SCENE_SELECTION_PRESENCE_KEY = "actor";
 const kCameraPosition = { x: 0, y: 2, z: 6 };
 const kCameraPitch = -Math.atan2(kCameraPosition.y, kCameraPosition.z) * 180 / Math.PI;
 

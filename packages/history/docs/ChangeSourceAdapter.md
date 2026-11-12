@@ -59,7 +59,7 @@ The [`CommandChange`](./CommandChange.md) for a source change, created once and 
 
 `change` forwards the source's changes as `CommandChange`s; `reset` forwards its resets.
 
-### applyStep(command, basis): CommandChange | null
+### applyStep(command, basis?): CommandChange | null
 
 Calls the source's `applyStep` with `basis` set for the change it emits.
 

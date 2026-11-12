@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
-import type {
-  Account,
-  AccountActivity
+import {
+  agentTokenId,
+  type Account,
+  type AccountActivity,
+  type AgentToken
 } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
@@ -47,6 +49,7 @@ export interface AuditFeedOptions {
   assets: AssetLog;
   audit: AuditLog;
   account: (accountId: string) => Account | null;
+  agentToken: (subject: string) => AgentToken | null;
   assetPath: (assetId: string) => string | undefined;
 }
 
@@ -62,6 +65,7 @@ export class AuditFeed {
   #assets: AssetLog;
   #audit: AuditLog;
   #account: (accountId: string) => Account | null;
+  #agentToken: (subject: string) => AgentToken | null;
   #assetPath: (assetId: string) => string | undefined;
 
   constructor(
@@ -71,6 +75,7 @@ export class AuditFeed {
     this.#assets = options.assets;
     this.#audit = options.audit;
     this.#account = options.account;
+    this.#agentToken = options.agentToken;
     this.#assetPath = options.assetPath;
   }
 
@@ -201,6 +206,9 @@ export class AuditFeed {
         kind: "share"
       };
     }
+    if (agentTokenId(actor.id) !== null) {
+      return this.#agentActor(actor.id);
+    }
 
     const account = this.#account(actor.id);
 
@@ -215,6 +223,28 @@ export class AuditFeed {
         name: account.username,
         kind: "user"
       };
+  }
+
+  #agentActor(
+    subject: string
+  ): AuditActor {
+    const token = this.#agentToken(subject);
+    if (token !== null) {
+      const owner = this.#account(token.ownerId);
+      if (owner !== null) {
+        return {
+          id: subject,
+          name: `${token.name} (${owner.username})`,
+          kind: "agent"
+        };
+      }
+    }
+
+    return {
+      id: subject,
+      name: "Deleted golem",
+      kind: "deleted"
+    };
   }
 
   #asset(
@@ -236,6 +266,12 @@ export class AuditFeed {
         return {
           type: activity.type,
           asset: this.#asset(activity.assetId, null)
+        };
+      case "agent-token-created":
+      case "agent-token-revoked":
+        return {
+          type: activity.type,
+          name: activity.name
         };
       case "registered":
         return {

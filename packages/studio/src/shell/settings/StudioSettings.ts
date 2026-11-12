@@ -31,6 +31,7 @@ import {
   type SettingsSection
 } from "./SettingsSections.ts";
 import "../shares/ShareLinksPane.ts";
+import "../golem/AgentTokensPane.ts";
 import "./PreferencesPage.ts";
 import "./PreferencesTransfer.ts";
 import "./ProfileSettings.ts";
@@ -334,6 +335,12 @@ export class StudioSettings extends LitElement {
             .links=${user.shares}
             .catalog=${this.catalog}
           ></studio-share-links>
+        `;
+      case "agents":
+        return html`
+          <studio-agent-tokens
+            .tokens=${user.agentTokens}
+          ></studio-agent-tokens>
         `;
       case "general":
         return html`

@@ -28,7 +28,7 @@ Same as [`jolly-presence`](./presence.md#properties): `peers`, `max`,
 ## Tooltip
 
 - Hover or focus shows `displayName`, then "(you)" for the local peer and the
-  `badge`.
+  `badge`. A peer's `activity` goes on a second, muted line.
 - It starts at the avatar's leading edge, so a stack in a bottom-left corner
   stays in the viewport.
 
@@ -45,4 +45,5 @@ Same as [`jolly-presence`](./presence.md#properties): `peers`, `max`,
 - `--jolly-presence-stack-size`: diameter with the ring, default `32px`.
 - `--jolly-presence-stack-overlap`: default `8px`.
 - Set `hidden` to remove it, for example while the local peer is alone.
-- Parts: `stack`, `peer`, `peer-button`, `avatar`, `tooltip`, `overflow`.
+- Parts: `stack`, `peer`, `peer-button`, `avatar`, `tooltip`, `activity`,
+  `overflow`.

@@ -7,3 +7,4 @@ export * from "./blockset/types.ts";
 export * from "./blockset/BlocksetCommand.schema.ts";
 export * from "./blockset/BlocksetCommandRules.ts";
 export * from "./blockset/BlocksetCommandKeys.ts";
+export * from "./editableKinds.ts";

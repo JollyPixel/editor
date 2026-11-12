@@ -7,3 +7,4 @@ export * from "./SceneDocument.ts";
 export * from "./changes/SceneEnvironment.ts";
 export * from "./changes/SceneTransform.ts";
 export * from "./tree/SceneTree.ts";
+export * from "./footprint/sceneCommandActor.ts";

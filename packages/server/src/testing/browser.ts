@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import { parseSetCookie } from "cookie";
 import { AccountsClient } from "@jolly-pixel/accounts";
+import { WEBSOCKET_PROTOCOL } from "@jolly-pixel/network";
+import type { ClientSocket } from "@jolly-pixel/network/client";
 
 export interface Browser {
   client: AccountsClient;
@@ -48,4 +50,31 @@ export function browser(
     cookies,
     fetch: jarFetch
   };
+}
+
+type CookieWebSocket = new (
+  url: string,
+  init: {
+    protocols: string[];
+    headers: Record<string, string>;
+  }
+) => WebSocket;
+
+export function signedInSocket(
+  url: string,
+  account: Browser
+): ClientSocket {
+  const NodeWebSocket = WebSocket as unknown as CookieWebSocket;
+  const socket = new NodeWebSocket(url, {
+    protocols: [WEBSOCKET_PROTOCOL],
+    headers: {
+      cookie: Array.from(
+        account.cookies,
+        ([name, value]) => `${name}=${value}`
+      ).join("; ")
+    }
+  });
+  socket.binaryType = "arraybuffer";
+
+  return socket;
 }

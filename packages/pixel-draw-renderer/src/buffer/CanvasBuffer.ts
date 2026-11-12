@@ -35,36 +35,32 @@ export type CanvasBufferEvent = {
   ) => void;
 };
 
+interface CanvasSurface {
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+}
+
 export class CanvasBuffer extends Emitter<
   CanvasBufferEvent
 > implements DefaultPixelBuffer {
   #buffer: PixelBuffer;
-  #workingCanvas: HTMLCanvasElement;
-  #workingCtx: CanvasRenderingContext2D;
+  #surface: CanvasSurface | null = null;
 
   constructor(
     options: CanvasBufferOptions
   ) {
     super();
 
-    const { size } = options;
-
     this.#buffer = new PixelBuffer(options);
-
-    this.#workingCanvas = document.createElement("canvas");
-    this.#workingCanvas.width = size.x;
-    this.#workingCanvas.height = size.y;
-    this.#workingCtx = this.#workingCanvas.getContext("2d", {
-      willReadFrequently: true
-    })!;
-    this.#workingCtx.imageSmoothingEnabled = false;
-
-    this.#syncCanvasFromBuffer();
   }
 
-  #syncCanvasFromBuffer(): void {
+  #syncCanvasFromBuffer(
+    surface: CanvasSurface
+  ): void {
     const size = this.#buffer.size();
-    const imageData = this.#workingCtx.createImageData(
+    surface.canvas.width = size.x;
+    surface.canvas.height = size.y;
+    const imageData = surface.ctx.createImageData(
       size.x,
       size.y
     );
@@ -72,11 +68,20 @@ export class CanvasBuffer extends Emitter<
     imageData.data.set(
       this.#buffer.pixels()
     );
-    this.#workingCtx.putImageData(imageData, 0, 0);
+    surface.ctx.putImageData(imageData, 0, 0);
   }
 
   canvas(): HTMLCanvasElement {
-    return this.#workingCanvas;
+    if (this.#surface === null) {
+      const canvas = document.createElement("canvas");
+      this.#surface = {
+        canvas,
+        ctx: canvasContext(canvas)
+      };
+      this.#syncCanvasFromBuffer(this.#surface);
+    }
+
+    return this.#surface.canvas;
   }
 
   size(): Vec2 {
@@ -91,10 +96,9 @@ export class CanvasBuffer extends Emitter<
     size: Vec2
   ): void {
     this.#buffer.resize(size);
-    this.#workingCanvas.width = size.x;
-    this.#workingCanvas.height = size.y;
-
-    this.#syncCanvasFromBuffer();
+    if (this.#surface !== null) {
+      this.#syncCanvasFromBuffer(this.#surface);
+    }
     this.emit(
       "resized",
       { size: this.#buffer.size() }
@@ -120,22 +124,19 @@ export class CanvasBuffer extends Emitter<
       canvas = document.createElement("canvas");
       canvas.width = sourceSize.x;
       canvas.height = sourceSize.y;
-      const ctx = canvas.getContext("2d", {
-        willReadFrequently: true
-      })!;
-      ctx.drawImage(source, 0, 0);
+      canvasContext(canvas).drawImage(source, 0, 0);
     }
 
-    this.#workingCanvas = canvas;
-    this.#workingCtx = canvas.getContext("2d", {
-      willReadFrequently: true
-    })!;
+    this.#surface = {
+      canvas,
+      ctx: canvasContext(canvas)
+    };
 
     const size: Vec2 = {
       x: canvas.width,
       y: canvas.height
     };
-    const imageData = this.#workingCtx.getImageData(
+    const imageData = this.#surface.ctx.getImageData(
       0,
       0,
       size.x,
@@ -160,10 +161,9 @@ export class CanvasBuffer extends Emitter<
       pixels,
       size
     );
-    this.#workingCanvas.width = size.x;
-    this.#workingCanvas.height = size.y;
-
-    this.#syncCanvasFromBuffer();
+    if (this.#surface !== null) {
+      this.#syncCanvasFromBuffer(this.#surface);
+    }
     this.emit(
       "replaced",
       { size: this.#buffer.size() }
@@ -248,11 +248,12 @@ export class CanvasBuffer extends Emitter<
     const size = this.#buffer.size();
     const area = RectArea.from(rect);
     const clipped = area.intersection(size);
-    if (clipped === null) {
+    const surface = this.#surface;
+    if (clipped === null || surface === null) {
       return;
     }
 
-    const imageData = this.#workingCtx.createImageData(
+    const imageData = surface.ctx.createImageData(
       clipped.width,
       clipped.height
     );
@@ -272,7 +273,7 @@ export class CanvasBuffer extends Emitter<
       destinationIndex += byteLength;
     }
 
-    this.#workingCtx.putImageData(
+    surface.ctx.putImageData(
       imageData,
       clipped.x,
       clipped.y
@@ -308,4 +309,15 @@ export class CanvasBuffer extends Emitter<
   ): boolean {
     return this.#buffer.hasTransparency(rect);
   }
+}
+
+function canvasContext(
+  canvas: HTMLCanvasElement
+): CanvasRenderingContext2D {
+  const ctx = canvas.getContext("2d", {
+    willReadFrequently: true
+  })!;
+  ctx.imageSmoothingEnabled = false;
+
+  return ctx;
 }

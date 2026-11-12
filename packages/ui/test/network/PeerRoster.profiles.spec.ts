@@ -102,6 +102,40 @@ describe("PeerRoster profiles", () => {
     assert.strictEqual(local.color, peerProfileColor("local", { peerId: "server-minted" }));
   });
 
+  test("republishes on a presence change only when a peer's activity changed", () => {
+    const harness = createHarness();
+    const profile = {
+      username: "Builder",
+      peerId: "b"
+    };
+    harness.addPeer("client-b", { profile });
+    harness.emit("peer-joined", { clientId: "client-b" });
+    const joined = harness.peers();
+
+    harness.addPeer("client-b", {
+      profile,
+      presence: { actor: "actor-1" }
+    });
+    harness.emit("peer-presence", {
+      clientId: "client-b",
+      patch: { actor: "actor-1" }
+    });
+    assert.strictEqual(harness.peers(), joined);
+
+    harness.addPeer("client-b", {
+      profile,
+      presence: {
+        actor: "actor-1",
+        activity: { label: "Placing trees" }
+      }
+    });
+    harness.emit("peer-presence", {
+      clientId: "client-b",
+      patch: { activity: { label: "Placing trees" } }
+    });
+    assert.strictEqual(harness.peers()[1].activity, "Placing trees");
+  });
+
   test("badges every peer that joined through a share link, the local one included", () => {
     const harness = createHarness();
     const guest = {

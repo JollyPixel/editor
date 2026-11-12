@@ -151,7 +151,7 @@ them from the `access` section; offline, every one is false.
 
 Who the shell runs for: the signed-in account online, or nobody offline. It
 holds the project rights and the preferences; online only, it also holds the
-account, the roster and the share links.
+account, the roster, the share links and the agent tokens.
 
 ### Project owner
 
@@ -172,6 +172,24 @@ create one.
 
 Whoever opens a share link: the built-in `guest` role, read-only, shown as
 "Guest" with a "via link" badge. A project cannot declare that role.
+
+### Agent token
+
+A credential an account creates in Settings › Agents for an AI agent on its
+own machine. The agent connects with its owner's current role, under the
+token's name with a "via golem" badge; its subject is `agent:<token id>`.
+Shown once, stored as a digest, never expires, revoked by its owner.
+
+### Golem
+
+An AI agent connected with an agent token, and the `@jolly-pixel/golem`
+package it connects through.
+
+### Golem chat
+
+The studio-wide conversation between people and agents, over the
+`agent-chat` room, shown in the pane `/golem` opens. Agents also mirror
+their activity there.
 
 ### Roster
 

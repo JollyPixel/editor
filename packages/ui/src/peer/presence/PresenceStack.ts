@@ -46,6 +46,9 @@ export class PresenceStack extends PeerListElement {
         <span class="line">${name}${peer.badge === undefined ? "" : html`
           <span class="badge">${peer.badge}</span>
         `}</span>
+        ${peer.activity === undefined ? "" : html`
+          <span class="line activity" part="activity">${peer.activity}</span>
+        `}
       </span>
     `;
 

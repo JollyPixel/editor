@@ -42,7 +42,8 @@ const kManifest = {
       name: "voxel-map",
       kinds: ["voxelmap"],
       preferences: [],
-      sharedPreferences: []
+      sharedPreferences: [],
+      sceneComponents: []
     }
   ],
   kinds: [

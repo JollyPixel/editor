@@ -21,7 +21,9 @@ const kErrorStatuses: Record<AccountsErrorCode, number> = {
   "invalid-avatar": 422,
   throttled: 429,
   "share-link-not-found": 404,
-  "share-link-refused": 403
+  "share-link-refused": 403,
+  "agent-token-not-found": 404,
+  "agent-token-refused": 403
 };
 
 export function accountsFailure(

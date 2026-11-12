@@ -13,6 +13,11 @@ export {
   type ShareLinkCreation,
   type ShareLinks
 } from "./share/ShareLinks.ts";
+export type {
+  AgentTokenCreation,
+  AgentTokens,
+  CreatedAgentToken
+} from "./agent/AgentTokens.ts";
 export * from "./session/SessionCookie.ts";
 export * from "./session/origin.ts";
 export type { MasterPasswordOptions } from "./registration/MasterPassword.ts";

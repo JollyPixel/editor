@@ -5,7 +5,10 @@ import type {
   CameraPose,
   Systems
 } from "@jolly-pixel/engine";
-import type { SceneRoom } from "@jolly-pixel/asset.scene/client";
+import {
+  SCENE_SELECTION_PRESENCE_KEY,
+  type SceneRoom
+} from "@jolly-pixel/asset.scene/client";
 import { decodeString } from "@jolly-pixel/network/client";
 import {
   PeerMarkTracker,
@@ -15,9 +18,6 @@ import {
 // Import Internal Dependencies
 import type { PresenceStore } from "../state/PresenceStore.ts";
 import type { SelectionStore } from "../state/SelectionStore.ts";
-
-// CONSTANTS
-const kSelectionKey = "actor";
 
 export interface SceneCollaborationOptions {
   room: SceneRoom;
@@ -45,7 +45,7 @@ export class SceneCollaboration {
     });
     this.#selections = new PeerMarkTracker({
       room,
-      presenceKey: kSelectionKey,
+      presenceKey: SCENE_SELECTION_PRESENCE_KEY,
       decode: decodeString,
       local: {
         read: () => selection.primary,

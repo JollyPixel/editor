@@ -60,6 +60,25 @@ describe("peer profile", () => {
     });
   });
 
+  test("describes what a peer says it is doing, with its progress", () => {
+    function describeActivity(
+      activity: unknown
+    ): string | undefined {
+      return toPresencePeer({
+        clientId: "client-1",
+        profile: { username: "Builder" },
+        presence: { activity }
+      }).activity;
+    }
+
+    assert.equal(describeActivity({ label: "Placing trees" }), "Placing trees");
+    assert.equal(
+      describeActivity({ label: "Placing trees", progress: 0.404 }),
+      "Placing trees · 40%"
+    );
+    assert.equal(describeActivity(null), undefined);
+  });
+
   test("badges a peer that joined through a link", () => {
     const peer = toPresencePeer({
       clientId: "client-1",

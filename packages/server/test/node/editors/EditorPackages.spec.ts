@@ -91,7 +91,8 @@ describe("EditorPackages", () => {
         },
         preferences: [],
         sharedPreferences: [],
-        previewKinds: []
+        previewKinds: [],
+        sceneComponents: []
       }),
       new EditorPackage({
         package: "./pixel-art",
@@ -103,7 +104,8 @@ describe("EditorPackages", () => {
         },
         preferences: [],
         sharedPreferences: [],
-        previewKinds: []
+        previewKinds: [],
+        sceneComponents: []
       })
     ]);
     assert.deepEqual(editors.descriptors(), [
@@ -111,13 +113,15 @@ describe("EditorPackages", () => {
         name: "voxel-map",
         kinds: ["voxelmap"],
         preferences: [],
-        sharedPreferences: []
+        sharedPreferences: [],
+        sceneComponents: []
       },
       {
         name: "pixel-art",
         kinds: ["pixelart"],
         preferences: [],
-        sharedPreferences: []
+        sharedPreferences: [],
+        sceneComponents: []
       }
     ]);
   });

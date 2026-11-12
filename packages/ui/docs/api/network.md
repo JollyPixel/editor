@@ -34,7 +34,8 @@ const roster = new PeerRoster({
 
 - `peers` lists the local peer first (`self: true`), then remote peers by
   `clientId`.
-- Republishes on `sync`, `peer-joined`, `peer-left` and `peer-profile`.
+- Republishes on `sync`, `peer-joined`, `peer-left` and `peer-profile`,
+  and on `peer-presence` only when a remote peer's activity label changed.
 - With `log`, pushes a "has joined" or "has left" entry per remote peer.
   Peers already present at `sync`, and observers, are not announced.
 - `dispose()` unsubscribes and publishes an empty list.

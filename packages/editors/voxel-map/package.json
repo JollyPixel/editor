@@ -14,6 +14,13 @@
       "preferences": "src/preferences.ts"
     },
     "scene": "./scene",
+    "sceneComponents": {
+      "VoxelMap": {
+        "assets": {
+          "map": "voxelmap"
+        }
+      }
+    },
     "runtime": "./runtime",
     "preview": ["voxelmap"]
   },

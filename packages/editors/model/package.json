@@ -13,6 +13,14 @@
       "page": "index.html"
     },
     "scene": "./scene",
+    "sceneComponents": {
+      "Model": {
+        "assets": {
+          "model": "model",
+          "shader": "shader"
+        }
+      }
+    },
     "runtime": "./runtime",
     "preview": ["model"]
   },

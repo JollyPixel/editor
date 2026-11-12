@@ -9,9 +9,10 @@ import {
   type PresenceChange,
   type Room
 } from "@jolly-pixel/network/client";
-import type {
-  VoxelMapNetworkCommand,
-  VoxelMapServerMessage
+import {
+  VOXEL_BRUSH_PRESENCE_KEY,
+  type VoxelMapNetworkCommand,
+  type VoxelMapServerMessage
 } from "@jolly-pixel/asset.voxel-map/client";
 import { peerProfileColor } from "@jolly-pixel/ui/network";
 
@@ -19,9 +20,6 @@ import { peerProfileColor } from "@jolly-pixel/ui/network";
 import { BrushFootprint } from "../model/BrushFootprint.ts";
 import { BrushMesh } from "../rendering/BrushMesh.ts";
 import type { PeerEditContext } from "../../templates/editing/PeerEditContext.ts";
-
-// CONSTANTS
-const kPresenceCursorKey = "brush";
 
 export interface PeerBrushesOptions {
   room: Room<VoxelMapNetworkCommand, VoxelMapServerMessage>;
@@ -60,7 +58,7 @@ export class PeerBrushes extends ActorComponent {
     this.#room = options.room;
     this.#peers = options.peers;
     this.#channel = new PresenceChannel(options.room, {
-      key: kPresenceCursorKey,
+      key: VOXEL_BRUSH_PRESENCE_KEY,
       decode: BrushFootprint.parse,
       equals: (left, right) => left === right || left?.equals(right) === true
     });

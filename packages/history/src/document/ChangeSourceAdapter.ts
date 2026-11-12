@@ -95,7 +95,7 @@ export class ChangeSourceAdapter<
 
   applyStep(
     command: TCommand,
-    basis: number | undefined
+    basis?: number
   ): CommandChange<TCommand, null> | null {
     const previous = this.#basis;
     this.#basis = basis;

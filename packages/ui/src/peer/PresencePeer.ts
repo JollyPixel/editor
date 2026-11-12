@@ -18,6 +18,10 @@ export interface PresencePeer {
    * Short label shown after the name, such as "via link".
    */
   badge?: string;
+  /**
+   * What the peer says it is doing, such as "Placing 12 trees · 40%".
+   */
+  activity?: string;
 }
 
 export function samePeer(
@@ -31,7 +35,8 @@ export function samePeer(
     left.self === right.self &&
     left.peerId === right.peerId &&
     left.avatar === right.avatar &&
-    left.badge === right.badge
+    left.badge === right.badge &&
+    left.activity === right.activity
   );
 }
 

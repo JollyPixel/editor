@@ -39,6 +39,7 @@ import {
 import type { GamePlayer } from "./game/BuiltPlayer.ts";
 import { GameExport } from "./game/GameExport.ts";
 import { StudioGame } from "./game/StudioGame.ts";
+import { AgentChatExtension } from "./golem/AgentChatExtension.ts";
 import { ProjectArchive } from "./project/ProjectArchive.ts";
 import { ProjectSettings } from "./project/ProjectSettings.ts";
 import type { StudioProject } from "./project/StudioProject.ts";
@@ -139,7 +140,10 @@ export class StudioBackend implements AsyncDisposable {
       rights: project.access.rights,
       defaultRole: accounts.roles.defaultRole,
       auth: accounts,
-      extensions: [accounts.extension],
+      extensions: [
+        accounts.extension,
+        new AgentChatExtension()
+      ],
       backend: {
         stateIgnores: [
           ...ACCOUNTS_STATE_IGNORES,
@@ -178,6 +182,7 @@ export class StudioBackend implements AsyncDisposable {
         assets: new AssetLog(assetServer.eventStore),
         audit,
         account: (accountId) => accounts.account(accountId),
+        agentToken: (subject) => accounts.agentTokens.bySubject(subject),
         assetPath: (assetId) => assetServer.backend.catalog.record(assetId)?.path.toString()
       }),
       archive: new ProjectArchive({

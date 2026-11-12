@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { VoxelBrushPresence } from "@jolly-pixel/asset.voxel-map/client";
 import type { VoxelCoord } from "@jolly-pixel/voxel.renderer";
 import { is } from "@jolly-pixel/utils";
 
@@ -26,8 +27,8 @@ export interface BrushFootprintOptions extends BrushShape {
   face?: CellFace;
 }
 
-export interface BrushFootprintJSON extends BrushShape {
-  position: VoxelCoord;
+export interface BrushFootprintJSON extends VoxelBrushPresence {
+  pattern: BrushPattern;
   face?: CellFaceId;
 }
 

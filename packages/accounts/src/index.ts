@@ -32,3 +32,6 @@ export * from "./avatar/errors/InvalidAvatarError.ts";
 export * from "./share/ShareLink.ts";
 export * from "./share/errors/ShareLinkNotFoundError.ts";
 export * from "./share/errors/ShareLinkRefusedError.ts";
+export * from "./agent/AgentToken.ts";
+export * from "./agent/errors/AgentTokenNotFoundError.ts";
+export * from "./agent/errors/AgentTokenRefusedError.ts";

@@ -25,6 +25,7 @@ import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/tree";
 import {
   MaterialSurface,
+  materialFieldLockPath,
   type MaterialSurfaceJSON,
   type MaterialSurfacePatchJSON,
   type ModelMaterialJSON
@@ -194,7 +195,7 @@ export class MaterialLibrary extends LitElement {
       <div class="fields">
         <jolly-text
           label="Name"
-          path=${fieldPath(edited.id, "name")}
+          path=${materialFieldLockPath(edited.id, "name")}
           ?readonly=${!this.#surface.editable}
           .value=${edited.name}
           @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => this.#controller.rename(
@@ -276,7 +277,7 @@ export class MaterialLibrary extends LitElement {
     edited: ModelMaterialJSON
   ): TemplateResult {
     const { surface } = edited;
-    const path = fieldPath(edited.id, field.key);
+    const path = materialFieldLockPath(edited.id, field.key);
     const readOnly = !this.#surface.editable;
 
     return field.control === "color" ?
@@ -359,13 +360,6 @@ export class MaterialLibrary extends LitElement {
       event.preventDefault();
     }
   };
-}
-
-function fieldPath(
-  materialId: string,
-  field: SurfaceField["key"] | "name"
-): string {
-  return `material:${materialId}:${field}`;
 }
 
 function editingLabel(

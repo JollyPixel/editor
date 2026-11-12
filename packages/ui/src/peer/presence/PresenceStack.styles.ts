@@ -108,4 +108,8 @@ export const presenceStackStyles = css`
     margin-inline-start: var(--jolly-space-1, 4px);
     color: var(--jolly-text-muted);
   }
+
+  .activity {
+    color: var(--jolly-text-muted);
+  }
 `;

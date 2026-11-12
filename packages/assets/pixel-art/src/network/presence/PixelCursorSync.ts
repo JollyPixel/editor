@@ -28,6 +28,9 @@ export interface PixelCursorSyncOptions {
   color: PeerColor;
 }
 
+// CONSTANTS
+export const PIXEL_CURSOR_PRESENCE_KEY = "cursor";
+
 function decodeCursor(
   value: unknown
 ): Vec2 | null | undefined {
@@ -73,7 +76,7 @@ export class PixelCursorSync {
     this.#displayLabel = peerStyle(options.room, options.label ?? profileLabel);
     this.#peerColor = peerStyle(options.room, options.color);
     this.#channel = new PresenceChannel(options.room, {
-      key: "cursor",
+      key: PIXEL_CURSOR_PRESENCE_KEY,
       decode: decodeCursor,
       equals: vec2Equal
     });

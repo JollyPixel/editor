@@ -13,6 +13,7 @@ import {
   activeAccount,
   createDirectory,
   databaseWith,
+  insertAgentToken,
   name,
   registration
 } from "./helpers/accounts.ts";
@@ -91,9 +92,11 @@ describe("AccountDirectory changes", () => {
     assert.equal(changes, 0);
   });
 
-  test("revokes the account on a role change, a removal and an ownership transfer", () => {
+  test("revokes the account and its agents on a role change, a removal and an ownership transfer", () => {
     using database = databaseWith("Alice", "Bob", "Carol", "Dave");
     const [alice, bob, carol, dave] = database.accounts;
+    const bobAgent = insertAgentToken(database, bob.id);
+    const daveAgent = insertAgentToken(database, dave.id);
     const directory = createDirectory(database);
     const revoked: string[] = [];
     const stop = directory.subscribe("revoked", (accountId) => revoked.push(accountId));
@@ -104,7 +107,14 @@ describe("AccountDirectory changes", () => {
     stop();
     directory.remove(alice.id, name("carol"));
 
-    assert.deepEqual(revoked, [bob.id, bob.id, dave.id]);
+    assert.deepEqual(revoked, [
+      bob.id,
+      `agent:${bobAgent.id}`,
+      bob.id,
+      `agent:${bobAgent.id}`,
+      dave.id,
+      `agent:${daveAgent.id}`
+    ]);
     assert.equal(owner.owner, true);
     assert.equal(directory.account(carol.id), null);
   });
