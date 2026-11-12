@@ -17,7 +17,9 @@ export class LightMarker implements ComponentHelper {
   }
 
   sync(): void {
-    this.root.update(this.#component.threeLight);
+    const component = this.#component;
+    this.root.update(component.threeLight);
+    this.root.position.copy(component.actor.transform.global.position);
   }
 
   dispose(): void {

@@ -3,7 +3,6 @@ import type { Preferences } from "@jolly-pixel/preferences";
 import type * as THREE from "three";
 import type { OrbitFlyCamera } from "@jolly-pixel/engine";
 import type {
-  SceneChange,
   SceneDocument,
   SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
@@ -22,13 +21,15 @@ import type { SceneBinding } from "../../scene/SceneBinding.ts";
 import { decomposePose } from "../../scene/sceneTransform.ts";
 import type { SceneDraft } from "../../state/SceneDraft.ts";
 import type { SelectionStore } from "../../state/SelectionStore.ts";
-import { gizmoSnap } from "./gizmoSnap.ts";
+import { DraftGesture } from "./DraftGesture.ts";
+import { actorSnap } from "./gizmoSnap.ts";
 import type {
   GizmoMode,
   GizmoSettings
 } from "./GizmoSettings.ts";
 
 // CONSTANTS
+const kIdleOpacity = 0.55;
 const kPatchFields: Readonly<Record<GizmoMode, keyof SceneTransformPatch>> = {
   translate: "position",
   rotate: "rotation",
@@ -54,26 +55,28 @@ export interface SceneGizmoOptions {
 export class SceneGizmo {
   #options: SceneGizmoOptions;
   #controls: TransformControls;
-  #dragged: string | null = null;
-  #stopSnap: () => void;
+  #gesture: DraftGesture;
+  #stopPreferences: () => void;
+  #resize: ResizeObserver;
 
   #applySnap = (): void => {
-    const {
-      binding,
-      selection,
-      preferences,
-      components
-    } = this.#options;
-    const id = selection.primary;
-    const entry = id === null ? null : binding.actorEntry(id);
-    const origin = entry === null ?
-      "center" :
-      components.actorOrigin(entry.components.map(({ type }) => type));
-
-    this.#controls.snap = gizmoSnap(
-      preferences.values(SCENE_PREFERENCES),
-      origin
+    this.#controls.snap = actorSnap(
+      this.#options,
+      this.#options.selection.primary
     );
+  };
+
+  #applySize = (): void => {
+    const { canvas, preferences } = this.#options;
+    if (canvas.clientHeight > 0) {
+      this.#controls.size = preferences.values(SCENE_PREFERENCES).gizmoSize /
+        canvas.clientHeight;
+    }
+  };
+
+  #applyPreferences = (): void => {
+    this.#applySnap();
+    this.#applySize();
   };
 
   #sync = (): void => {
@@ -92,47 +95,27 @@ export class SceneGizmo {
     }
   };
 
-  #onDocumentChange = (
-    change: SceneChange
-  ): void => {
-    if (
-      this.#dragged !== null &&
-      change.origin !== "local" &&
-      touchesActor(change, this.#dragged)
-    ) {
-      this.#controls.cancel();
-    }
-    this.#sync();
-  };
-
   #onStart = (): void => {
-    this.#dragged = this.#options.selection.primary;
-    this.#options.camera.enabled = false;
+    const id = this.#options.selection.primary;
+    if (id !== null) {
+      this.#gesture.begin(id);
+    }
   };
 
   #onChange = (
     event: TransformChangeEvent
   ): void => {
-    if (this.#dragged !== null) {
-      this.#options.draft.editTransform(this.#dragged, posePatch(event));
-    }
+    this.#gesture.edit(posePatch(event));
   };
 
   #onEnd = (
     event: TransformEndEvent
   ): void => {
-    const id = this.#dragged;
-    this.#dragged = null;
-    this.#options.camera.enabled = true;
-    if (id === null) {
-      return;
-    }
-
-    if (event.changed && !event.cancelled) {
-      this.#options.draft.commitTransform(id, posePatch(event));
+    if (event.cancelled) {
+      this.#gesture.cancel();
     }
     else {
-      this.#options.draft.discardTransform(id);
+      this.#gesture.end();
     }
   };
 
@@ -146,23 +129,35 @@ export class SceneGizmo {
       {
         appearance: {
           ...COMPACT_GIZMO_APPEARANCE,
-          planes: false
+          planes: false,
+          viewRing: false,
+          idleOpacity: kIdleOpacity,
+          hideInactive: true
         }
       }
     );
+    this.#gesture = new DraftGesture({
+      camera: options.camera,
+      document: options.document,
+      draft: options.draft,
+      onInterrupt: () => this.#controls.cancel()
+    });
     options.scene.add(this.#controls.helper);
-    this.#stopSnap = options.preferences.watch(
+    this.#stopPreferences = options.preferences.watch(
       SCENE_PREFERENCES,
-      this.#applySnap
+      this.#applyPreferences
     );
+    this.#resize = new ResizeObserver(this.#applySize);
+    this.#resize.observe(options.canvas);
 
     this.#controls.addEventListener("start", this.#onStart);
     this.#controls.addEventListener("change", this.#onChange);
     this.#controls.addEventListener("end", this.#onEnd);
     options.selection.on("change", this.#sync);
     options.settings.on("change", this.#sync);
-    options.document.on("change", this.#onDocumentChange);
+    options.document.on("change", this.#sync);
     options.document.on("reset", this.#sync);
+    this.#applySize();
     this.#sync();
   }
 
@@ -178,9 +173,11 @@ export class SceneGizmo {
     const { selection, settings, document, scene } = this.#options;
     selection.off("change", this.#sync);
     settings.off("change", this.#sync);
-    document.off("change", this.#onDocumentChange);
+    document.off("change", this.#sync);
     document.off("reset", this.#sync);
-    this.#stopSnap();
+    this.#gesture.dispose();
+    this.#stopPreferences();
+    this.#resize.disconnect();
     this.#controls.removeEventListener("start", this.#onStart);
     this.#controls.removeEventListener("change", this.#onChange);
     this.#controls.removeEventListener("end", this.#onEnd);
@@ -197,19 +194,4 @@ function posePatch(
   return {
     [field]: decomposePose(event)[field]
   };
-}
-
-function touchesActor(
-  change: SceneChange,
-  id: string
-): boolean {
-  const { command } = change;
-  switch (command.action) {
-    case "actor-transformed":
-    case "actor-moved":
-    case "actor-removed":
-      return command.id === id;
-    default:
-      return false;
-  }
 }

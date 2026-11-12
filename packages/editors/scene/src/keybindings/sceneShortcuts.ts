@@ -8,6 +8,7 @@ import {
   SCENE_HISTORY_SCOPE,
   type SceneHistory
 } from "../features/history/sceneHistory.ts";
+import type { ActorMover } from "../features/viewport/ActorMover.ts";
 import type { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import { SCENE_PREFERENCES } from "../preferences.ts";
 import type { SceneAction } from "./sceneActions.ts";
@@ -20,6 +21,7 @@ export interface SceneShortcutsOptions {
   >;
   gizmo: GizmoSettings;
   preferences: Pick<Preferences, "values" | "update">;
+  mover: Pick<ActorMover, "dropToGround">;
   frameSelection(): void;
 }
 
@@ -56,6 +58,7 @@ export function sceneShortcuts(
 
       return true;
     },
+    "edit.dropToGround": () => options.mover.dropToGround(),
     "gizmo.translate": () => {
       gizmo.mode = "translate";
     },

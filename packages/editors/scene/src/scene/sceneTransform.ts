@@ -45,9 +45,9 @@ export function decomposePose(
   const { position, rotation, scale } = Systems.readSceneTransform(pose);
 
   return {
-    position: rounded(position),
-    rotation: rounded(rotation),
-    scale: rounded(scale)
+    position: roundedVector(position),
+    rotation: roundedVector(rotation),
+    scale: roundedVector(scale)
   };
 }
 
@@ -88,7 +88,7 @@ function placementMatrix(
     Systems.composeSceneTransform({ ...pose, scale: kUnitScale }, new THREE.Matrix4());
 }
 
-function rounded(
+export function roundedVector(
   vector: Vector3JSON
 ): Vector3JSON {
   return {

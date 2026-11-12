@@ -44,6 +44,12 @@ export class SilhouetteRing extends THREE.Mesh<
     this.frustumCulled = false;
   }
 
+  fade(
+    scale: number
+  ): void {
+    this.material.opacity = kOpacity * scale;
+  }
+
   face(
     view: GizmoView
   ): void {

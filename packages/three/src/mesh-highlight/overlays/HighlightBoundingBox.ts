@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { computeLocalBoundingBox } from "./computeLocalBoundingBox.ts";
+import { markHighlightOverlay } from "./HighlightOverlay.ts";
 
 // CONSTANTS
 const kSizeBias = 1.01;
@@ -69,6 +70,7 @@ export class HighlightBoundingBox extends THREE.LineSegments<THREE.BufferGeometr
       this.add(this.#fillMesh);
     }
 
+    markHighlightOverlay(this);
     target.add(this);
     this.update();
   }

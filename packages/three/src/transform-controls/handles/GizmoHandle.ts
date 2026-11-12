@@ -75,6 +75,8 @@ export class GizmoHandle extends THREE.Object3D {
   #hoverColor: THREE.Color;
   #activeColor: THREE.Color;
   #state: GizmoHandleState = "idle";
+  #visualOpacity: number;
+  #outlineOpacity: number;
   #disposed = false;
 
   constructor(
@@ -105,6 +107,8 @@ export class GizmoHandle extends THREE.Object3D {
     this.#color = new THREE.Color(color);
     this.#hoverColor = new THREE.Color(style.hoverColor);
     this.#activeColor = new THREE.Color(style.activeColor);
+    this.#visualOpacity = opacity;
+    this.#outlineOpacity = style.outline === false ? 0 : style.outline.opacity;
 
     this.#visualOrder = style.renderOrder + layer + kVisualLayer;
     this.#visual = new THREE.Mesh(
@@ -191,6 +195,18 @@ export class GizmoHandle extends THREE.Object3D {
     }
     this.#visual.material.color.copy(color);
     this.#border?.material.color.copy(color);
+  }
+
+  fade(
+    scale: number
+  ): void {
+    this.#visual.material.opacity = this.#visualOpacity * scale;
+    if (this.#border) {
+      this.#border.material.opacity = scale;
+    }
+    if (this.#outline) {
+      this.#outline.material.opacity = this.#outlineOpacity * scale;
+    }
   }
 
   orderByDepth(

@@ -234,6 +234,16 @@ export interface TransformGizmoAppearanceOptions {
    * camera. Defaults to false.
    */
   flipTowardCamera?: boolean;
+  /**
+   * Opacity factor of every handle while none is hovered or dragged.
+   * Defaults to 1.
+   */
+  idleOpacity?: number;
+  /**
+   * Hide every handle but the dragged one during a gesture. Defaults to
+   * false.
+   */
+  hideInactive?: boolean;
   depthTest?: boolean;
   renderOrder?: number;
 }

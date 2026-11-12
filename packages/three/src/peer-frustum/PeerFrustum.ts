@@ -2,6 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
+import { frustumLinePoints } from "../common/geometry/frustumLines.ts";
 import { PeerFrustumLabel } from "./PeerFrustumLabel.ts";
 
 export interface PeerFrustumOptions {
@@ -58,13 +59,6 @@ export interface PeerFrustumDefaults {
   color: THREE.ColorRepresentation;
   showApex: boolean;
   showNameBox: boolean;
-}
-
-interface FrustumCorners {
-  readonly topLeft: THREE.Vector3;
-  readonly topRight: THREE.Vector3;
-  readonly bottomRight: THREE.Vector3;
-  readonly bottomLeft: THREE.Vector3;
 }
 
 export class PeerFrustum extends THREE.LineSegments<
@@ -198,24 +192,6 @@ export class PeerFrustum extends THREE.LineSegments<
     this.label?.dispose();
   }
 
-  static #computeCorners(
-    fov: number,
-    aspect: number,
-    distance: number
-  ): FrustumCorners {
-    const halfHeight = distance * Math.tan(
-      (fov / 2) * THREE.MathUtils.DEG2RAD
-    );
-    const halfWidth = halfHeight * aspect;
-
-    return {
-      topLeft: new THREE.Vector3(-halfWidth, halfHeight, -distance),
-      topRight: new THREE.Vector3(halfWidth, halfHeight, -distance),
-      bottomRight: new THREE.Vector3(halfWidth, -halfHeight, -distance),
-      bottomLeft: new THREE.Vector3(-halfWidth, -halfHeight, -distance)
-    };
-  }
-
   static #buildGeometry(
     fov: number,
     aspect: number,
@@ -223,43 +199,16 @@ export class PeerFrustum extends THREE.LineSegments<
     depth: number,
     showApex: boolean
   ): THREE.BufferGeometry {
-    const nearCorners = PeerFrustum.#computeCorners(
-      fov,
-      aspect,
-      near
+    const points = frustumLinePoints(
+      {
+        projection: "perspective",
+        fov,
+        aspect,
+        near,
+        far: depth
+      },
+      { apex: showApex }
     );
-    const farCorners = PeerFrustum.#computeCorners(
-      fov,
-      aspect,
-      depth
-    );
-
-    const points = [
-      nearCorners.topLeft, nearCorners.topRight,
-      nearCorners.topRight, nearCorners.bottomRight,
-      nearCorners.bottomRight, nearCorners.bottomLeft,
-      nearCorners.bottomLeft, nearCorners.topLeft,
-
-      farCorners.topLeft, farCorners.topRight,
-      farCorners.topRight, farCorners.bottomRight,
-      farCorners.bottomRight, farCorners.bottomLeft,
-      farCorners.bottomLeft, farCorners.topLeft,
-
-      nearCorners.topLeft, farCorners.topLeft,
-      nearCorners.topRight, farCorners.topRight,
-      nearCorners.bottomRight, farCorners.bottomRight,
-      nearCorners.bottomLeft, farCorners.bottomLeft
-    ];
-
-    if (showApex) {
-      const apex = new THREE.Vector3(0, 0, 0);
-      points.push(...[
-        apex, nearCorners.topLeft,
-        apex, nearCorners.topRight,
-        apex, nearCorners.bottomRight,
-        apex, nearCorners.bottomLeft
-      ]);
-    }
 
     return new THREE.BufferGeometry().setFromPoints(points);
   }

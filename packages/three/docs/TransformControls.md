@@ -184,6 +184,8 @@ interface TransformGizmoAppearanceOptions {
   activeColor?: THREE.ColorRepresentation;
   hideAligned?: boolean;
   flipTowardCamera?: boolean;
+  idleOpacity?: number;
+  hideInactive?: boolean;
   depthTest?: boolean;
   renderOrder?: number;
 }
@@ -206,6 +208,8 @@ interface TransformGizmoAppearanceOptions {
 | `picker.ringTube` | `0.08` | Tube radius of the invisible ring picker. |
 | `hideAligned` | `false` | Hide axis handles pointing at the camera and plane handles seen edge-on. |
 | `flipTowardCamera` | `false` | Point single-direction axis handles and plane handles toward the camera. |
+| `idleOpacity` | `1` | Opacity factor of every handle, outlines included, while no handle is hovered or dragged. Between `0` and `1`. |
+| `hideInactive` | `false` | During a gesture, hide every handle except the dragged one. |
 | `depthTest` | `false` | Whether scene depth may hide the helper. |
 | `renderOrder` | `20` | Outline render order, shared by the plane handles. Colored axis handles use the next value, sorted by depth, and the center the two after. |
 
@@ -214,7 +218,8 @@ scale afterwards. Every visible material is transparent so the helper is drawn
 in the transparent render pass, where `depthTest` and `renderOrder` can keep it
 above a scene's own transparent geometry.
 
-Appearance is resolved at construction. Recreate the controls to change it.
+Appearance is resolved at construction. Recreate the controls to change it,
+except for `size`, which is also a live [property](#properties).
 
 `COMPACT_GIZMO_APPEARANCE` is a preset: size `0.1`, an interactive center,
 inset planes, handles flipped toward the camera and a thicker dark outline.
@@ -346,6 +351,7 @@ get dragging(): boolean;
 get hoveredHandle(): TransformHandle | null;
 get activeHandle(): TransformHandle | null;
 
+size: number;
 mode: "translate" | "rotate" | "scale";
 orientation: TransformOrientation;
 pivot: TransformPivot;
@@ -356,8 +362,10 @@ limits: THREE.Box3 | null;
 
 Add `helper` to the rendered scene. It shows on `attach()` and hides on
 `detach()`. The handles of a mode are built the first time that mode shows on a
-target. Changing `mode` or `axes` ends an active gesture. Vectors and
-quaternions read back from `orientation`, `pivot` and `snap` are copies.
+target. `size` is the appearance `size`; setting a value that is not positive
+throws a `RangeError`. Setting `axes`, or `mode` to a different mode, ends an
+active gesture. Vectors and quaternions read back from `orientation`, `pivot`
+and `snap` are copies.
 
 `object` is the camera, as on every `THREE.Controls`. The attached object is
 `target`.

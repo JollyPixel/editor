@@ -131,6 +131,18 @@ describe("gesture lifecycle", () => {
     harness.controls.dispose();
   });
 
+  test("keeps the gesture when the mode is set to its current value", () => {
+    const harness = createHarness();
+    const start = harness.pointOnHandle("x-positive");
+
+    harness.send("pointerdown", start);
+    harness.controls.mode = "translate";
+
+    assert.equal(harness.controls.dragging, true);
+
+    harness.controls.dispose();
+  });
+
   test("restores the start transform on Escape", () => {
     const harness = createHarness();
     harness.target.position.set(1, 2, 3);
