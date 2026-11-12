@@ -153,6 +153,16 @@ export class TransformControls extends THREE.Controls<
     return this.#gizmo.activeHandle;
   }
 
+  get size(): number {
+    return this.#gizmo.size;
+  }
+
+  set size(
+    size: number
+  ) {
+    this.#gizmo.size = size;
+  }
+
   get mode(): TransformMode {
     return this.#gizmo.mode;
   }
@@ -162,6 +172,9 @@ export class TransformControls extends THREE.Controls<
   ) {
     if (!kModes.includes(mode)) {
       throw new TypeError(`Unknown transform mode: ${mode}`);
+    }
+    if (mode === this.#gizmo.mode) {
+      return;
     }
 
     this.#drag.end();

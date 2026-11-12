@@ -14,6 +14,7 @@ import {
   resolveAppearance,
   resolveDirections
 } from "./appearance.ts";
+import { positive } from "./validation.ts";
 import { AxisHandle } from "./handles/AxisHandle.ts";
 import { CenterHandle } from "./handles/CenterHandle.ts";
 import { createAxisHandleGeometry } from "./handles/geometry.ts";
@@ -138,6 +139,16 @@ export class TransformGizmo extends THREE.Object3D {
     return this.#worldScale;
   }
 
+  get size(): number {
+    return this.#appearance.size;
+  }
+
+  set size(
+    size: number
+  ) {
+    this.#appearance.size = positive(size, "gizmo size");
+  }
+
   follow(
     target: THREE.Object3D | null
   ): void {
@@ -183,6 +194,7 @@ export class TransformGizmo extends THREE.Object3D {
 
     this.#active = handle;
     this.#paintStates();
+    this.#applyVisibility();
   }
 
   pick(
@@ -306,7 +318,8 @@ export class TransformGizmo extends THREE.Object3D {
       handle.visible = this.#enabled(handle);
     }
     if (this.#silhouette !== null) {
-      this.#silhouette.visible = this.#mode === "rotate";
+      this.#silhouette.visible = this.#mode === "rotate" &&
+        !this.#isolating();
     }
   }
 
@@ -314,7 +327,12 @@ export class TransformGizmo extends THREE.Object3D {
     handle: GizmoHandle
   ): boolean {
     return handle.modes.includes(this.#mode) &&
-      handle.axes.every((axis) => this.#axes[axis]);
+      handle.axes.every((axis) => this.#axes[axis]) &&
+      (!this.#isolating() || handle === this.#active);
+  }
+
+  #isolating(): boolean {
+    return this.#appearance.hideInactive && this.#active !== null;
   }
 
   #yieldsToHub(
@@ -354,6 +372,7 @@ export class TransformGizmo extends THREE.Object3D {
       this.#createCenterHandle();
     }
     this.#builtModes.add(mode);
+    this.#paintStates();
   }
 
   #createCenterHandle(): void {
@@ -485,7 +504,12 @@ export class TransformGizmo extends THREE.Object3D {
   }
 
   #paintStates(): void {
+    const fade = this.#hovered === null && this.#active === null
+      ? this.#appearance.idleOpacity
+      : 1;
+    this.#silhouette?.fade(fade);
     for (const handle of this.#handles) {
+      handle.fade(fade);
       if (handle === this.#active) {
         handle.state = "active";
       }

@@ -38,6 +38,7 @@ import type {
   SceneEditing
 } from "../editing/SceneEditing.ts";
 import { createSceneHistory } from "../features/history/sceneHistory.ts";
+import { ActorMover } from "../features/viewport/ActorMover.ts";
 import { AnchorMarkers } from "../features/viewport/AnchorMarkers.ts";
 import { followGridPreferences } from "../features/viewport/followGridPreferences.ts";
 import { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
@@ -197,6 +198,17 @@ export class SceneEditorScene extends Systems.Scene {
       components
     });
     teardown.defer(() => sceneGizmo.dispose());
+    const mover = new ActorMover({
+      camera,
+      scene,
+      binding,
+      document,
+      draft,
+      selection,
+      preferences: this.#options.preferences,
+      components
+    });
+    teardown.defer(() => mover.dispose());
     const anchorMarkers = world
       .createActor("anchor-markers")
       .addComponentAndGet(AnchorMarkers, {
@@ -212,6 +224,7 @@ export class SceneEditorScene extends Systems.Scene {
         anchors: anchorMarkers,
         anchorPicks,
         selection,
+        mover,
         busy: () => sceneGizmo.hovering || sceneGizmo.dragging
       });
     const collaboration = new SceneCollaboration({
@@ -246,6 +259,7 @@ export class SceneEditorScene extends Systems.Scene {
         actions,
         gizmo,
         preferences: this.#options.preferences,
+        mover,
         frameSelection
       })
     ));

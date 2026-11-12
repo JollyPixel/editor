@@ -113,6 +113,8 @@ export interface ResolvedAppearance {
   viewRing: false | ResolvedViewRing;
   hideAligned: boolean;
   flipTowardCamera: boolean;
+  idleOpacity: number;
+  hideInactive: boolean;
 }
 
 export function resolveAppearance(
@@ -160,7 +162,12 @@ export function resolveAppearance(
     rings: resolveRings(options.rings),
     viewRing: resolveViewRing(options.viewRing),
     hideAligned: options.hideAligned ?? false,
-    flipTowardCamera: options.flipTowardCamera ?? false
+    flipTowardCamera: options.flipTowardCamera ?? false,
+    idleOpacity: normalizedOpacity(
+      options.idleOpacity ?? 1,
+      "gizmo idleOpacity"
+    ),
+    hideInactive: options.hideInactive ?? false
   };
 }
 

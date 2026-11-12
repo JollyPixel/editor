@@ -6,6 +6,7 @@ export const SCENE_KEY_BINDINGS = Object.freeze({
   "edit.redo": ["Mod+y", "Mod+Shift+z"],
   "edit.duplicate": "Mod+d",
   "edit.delete": ["Delete", "Backspace"],
+  "edit.dropToGround": "End",
   "gizmo.translate": "Digit1",
   "gizmo.rotate": "Digit2",
   "gizmo.scale": "Digit3",

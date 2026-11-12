@@ -44,6 +44,16 @@ export const SCENE_PREFERENCES = definePreferences({
       description: "Box selected actors instead of outlining them",
       default: false
     },
+    gizmoSize: {
+      type: "range",
+      label: "Size",
+      group: "Gizmo",
+      description: "Pixels",
+      min: 32,
+      max: 160,
+      step: 4,
+      default: 64
+    },
     snap: {
       type: "boolean",
       label: "Snap",
@@ -123,6 +133,10 @@ export const SCENE_KEYBINDINGS = defineKeyBindings({
     },
     "edit.delete": {
       label: "Delete the selection",
+      group: "Editing"
+    },
+    "edit.dropToGround": {
+      label: "Drop the selection to the ground",
       group: "Editing"
     },
     "gizmo.translate": {

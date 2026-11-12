@@ -20,10 +20,12 @@ export interface ActorHit {
 export function castActor(
   aimed: THREE.Raycaster,
   scene: THREE.Object3D,
-  targets: ActorResolver
+  targets: ActorResolver,
+  excluded: THREE.Object3D | null = null
 ): ActorHit | null {
   for (const hit of aimed.intersectObjects(scene.children, true)) {
-    const id = isVisibleInHierarchy(hit.object) ?
+    const id = isVisibleInHierarchy(hit.object) &&
+      !isWithin(hit.object, excluded) ?
       targets.findActorId(hit.object) :
       null;
     if (id !== null) {
@@ -36,6 +38,25 @@ export function castActor(
   }
 
   return null;
+}
+
+function isWithin(
+  object: THREE.Object3D,
+  ancestor: THREE.Object3D | null
+): boolean {
+  if (ancestor === null) {
+    return false;
+  }
+
+  let current: THREE.Object3D | null = object;
+  while (current !== null) {
+    if (current === ancestor) {
+      return true;
+    }
+    current = current.parent;
+  }
+
+  return false;
 }
 
 export function pivotPoint(
