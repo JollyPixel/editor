@@ -33,7 +33,7 @@ export function blockNameTakenMessage(
   parentId: string | null,
   name: string
 ): string {
-  const parent = blockParentName(tree, tree.findEnclosingBlock(parentId));
+  const parent = blockParentName(tree, tree.nodes.findEnclosingBlock(parentId));
 
   return parent === null ?
     `A root block is already named "${name}"` :
@@ -45,7 +45,7 @@ export function blockNameClashMessage(
   id: string,
   name: string
 ): string {
-  const parent = blockParentName(tree, tree.findTransformParent(id));
+  const parent = blockParentName(tree, tree.nodes.findTransformParent(id));
 
   return parent === null ?
     `Another root block is named "${name}"` :
@@ -56,7 +56,7 @@ function blockParentName(
   tree: ModelTreeReader,
   blockParentId: string | null
 ): string | null {
-  const parent = blockParentId === null ? undefined : tree.get(blockParentId);
+  const parent = blockParentId === null ? undefined : tree.nodes.get(blockParentId);
 
   return parent === undefined ? null : nodeDisplayName(parent);
 }

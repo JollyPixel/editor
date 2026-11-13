@@ -2,7 +2,7 @@
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import type { ModelMaterialJSON } from "../../network/types.ts";
+import type { ModelMaterialJSON } from "../types.ts";
 import { materialSurfaceSchema } from "./MaterialSurface.ts";
 
 // CONSTANTS

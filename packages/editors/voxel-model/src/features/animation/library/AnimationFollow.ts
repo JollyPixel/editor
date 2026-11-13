@@ -97,7 +97,7 @@ export class AnimationFollow {
     track: BoundTrack
   ): void {
     const { tree } = this.#document;
-    if (tree.block(track.blockId) === undefined) {
+    if (tree.nodes.block(track.blockId) === undefined) {
       return;
     }
 

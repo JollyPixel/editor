@@ -9,7 +9,8 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import { VOXEL_MODEL_KIND } from "../asset/voxelModel.ts";
 import { ModelDocument } from "../model/ModelDocument.ts";
-import { voxelModelWriteKeys } from "./VoxelModelCommandKeys.ts";
+import { modelFootprint } from "../model/command/modelCommands.ts";
+import { modelValueKey } from "../model/command/ModelValueRef.ts";
 
 export type SyncedModelDocument = SyncedCommandDocument<
   ModelDocument,
@@ -26,6 +27,6 @@ export function voxelModelDocumentKind(): VoxelModelDocumentKind {
   return commandDocumentKind({
     kind: VOXEL_MODEL_KIND,
     createDocument: () => new ModelDocument(),
-    keys: voxelModelWriteKeys
+    keys: (command) => modelFootprint(command).writes?.map(modelValueKey) ?? null
   });
 }

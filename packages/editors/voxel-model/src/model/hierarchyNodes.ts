@@ -1,10 +1,9 @@
 // Import Third-party Dependencies
-import {
-  BlockShape,
-  type BlockShapeJSON,
-  type ModelMaterialJSON,
-  type ModelNodeKind,
-  type ModelTreeReader
+import type {
+  BlockShapeJSON,
+  ModelMaterialJSON,
+  ModelNodeKind,
+  ModelTreeReader
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -38,10 +37,10 @@ export function buildHierarchyNodes(
   tree: ModelTreeReader
 ): HierarchyNode[] {
   const byParent = Map.groupBy(
-    tree.values(),
+    tree.nodes.values(),
     (node) => node.parentId
   );
-  const clashes = tree.blockNameClashes();
+  const clashes = tree.nodes.blockNameClashes();
 
   function build(
     parentId: string | null
@@ -53,7 +52,7 @@ export function buildHierarchyNodes(
         id: node.id,
         name,
         kind: node.kind,
-        shape: node.kind === "block" ? BlockShape.fromBlock(node) : null,
+        shape: node.kind === "block" ? node.shape : null,
         material: node.kind === "block" && node.materialId !== undefined ?
           tree.materials.material(node.materialId) ?? null :
           null,

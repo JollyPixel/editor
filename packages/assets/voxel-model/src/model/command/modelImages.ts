@@ -1,12 +1,11 @@
 // Import Internal Dependencies
-import type { ModelTreeReader } from "../ModelTree.ts";
+import type { ModelCollections } from "./ModelCollections.ts";
 import type {
   AnimationSetLinkJSON,
   MaterialEntryJSON,
   ModelNodeJSON,
-  VoxelModelCommand,
   VoxelModelSnapshot
-} from "../../network/types.ts";
+} from "../types.ts";
 
 export interface ModelImages {
   nodes: readonly ModelNodeJSON[];
@@ -23,26 +22,22 @@ export interface ModelImage {
   readonly order: EntryOrder;
 }
 
-export function captureModelImage(
-  tree: ModelTreeReader,
-  command: VoxelModelCommand
-): ModelImage {
+export function entryOrder(
+  tree: ModelCollections
+): EntryOrder {
   return {
-    before: tree.captureImages(command),
-    order: {
-      nodes: collectIds(tree.values()),
-      materials: collectIds(tree.materials.values()),
-      animationSets: collectIds(tree.animationSets.values())
-    }
+    nodes: collectIds(tree.nodes.values()),
+    materials: collectIds(tree.materials.values()),
+    animationSets: collectIds(tree.animationSets.values())
   };
 }
 
 export function restoreModelImages(
-  tree: ModelTreeReader,
+  tree: ModelCollections,
   images: readonly ModelImage[]
 ): VoxelModelSnapshot {
   return {
-    nodes: restored(tree.values(), images, "nodes"),
+    nodes: restored(tree.nodes.values(), images, "nodes"),
     materials: restored(tree.materials.values(), images, "materials"),
     animationSets: restored(tree.animationSets.values(), images, "animationSets")
   };

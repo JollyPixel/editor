@@ -3,9 +3,7 @@ import * as THREE from "three/webgpu";
 import { UVRegion } from "@jolly-pixel/pixel-draw.renderer";
 import { UVGeometryBinding } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 import {
-  BlockShape,
   MaterialSurface,
-  NO_FLIP,
   type BlockNodeJSON,
   type MaterialSurfaceJSON
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -27,8 +25,8 @@ export class ViewBlock extends BlockBody {
     texture: ModelViewTexture
   ) {
     super({
-      shape: BlockShape.fromBlock(block),
-      flip: block.flipAxes ?? NO_FLIP,
+      shape: block.shape,
+      flip: block.flipAxes,
       size: new THREE.Vector3().copy(block.transform.size),
       texture: texture.map
     });
@@ -42,8 +40,8 @@ export class ViewBlock extends BlockBody {
     surface: MaterialSurfaceJSON | null
   ): void {
     const rebuilt = this.rebuild({
-      shape: BlockShape.fromBlock(block),
-      flip: block.flipAxes ?? NO_FLIP
+      shape: block.shape,
+      flip: block.flipAxes
     });
     this.transform = block.transform;
     if (rebuilt) {

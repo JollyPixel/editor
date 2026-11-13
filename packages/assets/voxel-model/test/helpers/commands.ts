@@ -2,7 +2,9 @@
 import type { NetworkCommandHeader } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import { BlockFlip } from "#src/model/nodes/BlockFlip.ts";
 import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
+import { BlockShape } from "#src/model/nodes/BlockShape.ts";
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import type {
   BlockNodeJSON,
@@ -11,9 +13,9 @@ import type {
   MaterialFolderJSON,
   ModelMaterialJSON,
   UVLayoutData,
-  VoxelModelCommand,
-  VoxelModelNetworkCommand
-} from "#src/network/types.ts";
+  VoxelModelCommand
+} from "#src/model/types.ts";
+import type { VoxelModelNetworkCommand } from "#src/network/types.ts";
 
 // CONSTANTS
 export const TRANSFORM: BlockTransformJSON = BlockTransform.create();
@@ -49,6 +51,8 @@ export function blockNode(
     parentId,
     name: id,
     transform: TRANSFORM,
+    flipAxes: { ...BlockFlip.none },
+    shape: { ...BlockShape.box },
     uv: UV
   };
 }

@@ -1,10 +1,11 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
-import type {
-  MaterialSurfaceJSON,
-  ModelChange,
-  ModelDocument
+import {
+  removedModelNodes,
+  type MaterialSurfaceJSON,
+  type ModelChange,
+  type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -47,13 +48,13 @@ export class ModelView {
         break;
 
       case "node-removed":
-        for (const node of change.image.before.nodes) {
+        for (const node of removedModelNodes(change)) {
           this.#discard(node.id);
         }
         break;
 
       case "node-moved":
-        for (const node of tree.subtreeFrom(command.id)) {
+        for (const node of tree.nodes.subtreeFrom(command.id)) {
           this.#attach(node.id);
           this.#refresh(node.id);
         }
@@ -67,7 +68,7 @@ export class ModelView {
         break;
 
       case "material-changed":
-        for (const id of tree.blocksUsing(command.id)) {
+        for (const id of tree.nodes.blocksUsing(command.id)) {
           this.#refresh(id);
         }
         break;
@@ -100,7 +101,7 @@ export class ModelView {
       this.#discard(id);
     }
 
-    const blocks = [...this.#document.tree.blocks()];
+    const blocks = [...this.#document.tree.nodes.blocks()];
     for (const { id } of blocks) {
       this.#add(id);
     }
@@ -174,7 +175,7 @@ export class ModelView {
   #add(
     id: string
   ): void {
-    const node = this.#document.tree.block(id);
+    const node = this.#document.tree.nodes.block(id);
     if (node === undefined || this.#blocks.has(id)) {
       return;
     }
@@ -193,7 +194,7 @@ export class ModelView {
       return;
     }
 
-    const parentId = this.#document.tree.findTransformParent(id);
+    const parentId = this.#document.tree.nodes.findTransformParent(id);
     const parent = parentId === null ?
       this.root :
       this.#blocks.get(parentId)?.node ?? this.root;
@@ -206,7 +207,7 @@ export class ModelView {
     id: string
   ): void {
     const block = this.#blocks.get(id);
-    const node = this.#document.tree.block(id);
+    const node = this.#document.tree.nodes.block(id);
     if (block !== undefined && node !== undefined) {
       block.update(node, this.#surface(id));
     }
@@ -222,7 +223,7 @@ export class ModelView {
     id: string
   ): MaterialSurfaceJSON | null {
     const { tree } = this.#document;
-    const materialId = tree.blockMaterialId(id);
+    const materialId = tree.nodes.blockMaterialId(id);
 
     return materialId === undefined ?
       null :

@@ -1,14 +1,13 @@
 // Import Third-party Dependencies
 import { CommandHistory } from "@jolly-pixel/history";
 import {
-  modelHistoryKeys,
+  modelChangeLabel,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import type { EditorTab } from "../../state/index.ts";
 import type { AnimationScope } from "./animationScopes.ts";
-import { describeModelChange } from "./describeModelChange.ts";
 import { scopeOfModelChange } from "./scopeOfModelChange.ts";
 
 export type TabHistoryScope = Exclude<EditorTab, "animate">;
@@ -45,9 +44,9 @@ export function createEditorHistory(
   history.register({
     id: "model",
     document,
-    keys: modelHistoryKeys(document.tree),
+    keys: document.historyKeys,
     resolveScope: (change) => scopeOfModelChange(change, document.tree.animationSets),
-    label: describeModelChange
+    label: modelChangeLabel
   });
 
   return history;

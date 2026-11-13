@@ -8,7 +8,7 @@ import {
   TrackBinding,
   buildBlockPath
 } from "#src/model/animation/TrackBinding.ts";
-import type { AnimationSetLinkJSON } from "#src/network/types.ts";
+import type { AnimationSetLinkJSON } from "#src/model/types.ts";
 
 function createModel() {
   const document = new ModelDocument();

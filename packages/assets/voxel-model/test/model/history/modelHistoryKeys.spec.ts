@@ -3,15 +3,12 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { CommandHistory } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import { ModelDocument, type ModelChange } from "#src/model/ModelDocument.ts";
-import { modelHistoryKeys } from "#src/model/history/modelHistoryKeys.ts";
 import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
 import { BlockUvLayouts } from "#src/model/nodes/BlockUvLayouts.ts";
-import { invert } from "#src/model/history/modelInverse.ts";
 import type { ModelTreeReader } from "#src/model/ModelTree.ts";
 
 // CONSTANTS
@@ -33,7 +30,7 @@ function createHistory(
   history.register({
     id: "model",
     document,
-    keys: modelHistoryKeys(document.tree),
+    keys: document.historyKeys,
     resolveScope: () => kScope,
     ...options.label === undefined ? {} : { label: options.label }
   });
@@ -69,7 +66,7 @@ function readShape(
   function nodes(
     parentId: string | null
   ): unknown[] {
-    return tree.listChildren(parentId).map((node) => [node, nodes(node.id)]);
+    return tree.nodes.listChildren(parentId).map((node) => [node, nodes(node.id)]);
   }
   function materials(
     parentId: string | null
@@ -83,17 +80,6 @@ function readShape(
     animationSets: [...tree.animationSets.values()]
   };
 }
-
-describe("invert", () => {
-  test("throws for a command the tree would refuse instead of undoing nothing", () => {
-    const { document } = createFixture();
-
-    assert.throws(
-      () => invert(document.tree, { action: "node-renamed", id: "missing", name: "A" }),
-      InvalidEntryError
-    );
-  });
-});
 
 describe("model history round trips", () => {
   const kEdits: Record<string, (fixture: Fixture) => void> = {

@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { ModelTree } from "#src/model/ModelTree.ts";
-import type { VoxelModelCommand } from "#src/network/types.ts";
+import type { VoxelModelCommand } from "#src/model/types.ts";
 import { blockAdded, blockNode } from "../helpers/commands.ts";
 
 function createTree(
@@ -27,8 +27,8 @@ describe("ModelTree", () => {
     const loaded = new ModelTree();
     loaded.load({ nodes: [node], materials: [], animationSets: [] });
 
-    assert.notStrictEqual(tree.block("a"), tree.block("a"));
-    assert.notStrictEqual(loaded.block("a"), node);
-    assert.deepEqual(loaded.block("a"), node);
+    assert.notStrictEqual(tree.nodes.block("a"), tree.nodes.block("a"));
+    assert.notStrictEqual(loaded.nodes.block("a"), node);
+    assert.deepEqual(loaded.nodes.block("a"), node);
   });
 });

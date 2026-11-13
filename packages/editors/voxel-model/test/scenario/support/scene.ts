@@ -100,7 +100,7 @@ export async function blockSurface(
       }
 
       const { tree } = editing.document;
-      const node = [...tree.blocks()].find((block) => block.name === query.name);
+      const node = [...tree.nodes.blocks()].find((block) => block.name === query.name);
 
       return node?.materialId === undefined ?
         undefined :

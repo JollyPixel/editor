@@ -7,23 +7,25 @@ import {
 import {
   CommandDocument,
   type CommandChange,
-  type CommandState
+  type CommandState,
+  type HistoryKeys
 } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import { ModelTree, type ModelTreeReader } from "./ModelTree.ts";
-import { BlockTransform } from "./nodes/BlockTransform.ts";
-import { BlockUvLayouts } from "./nodes/BlockUvLayouts.ts";
-import { BlockShape } from "./nodes/BlockShape.ts";
+import { BlockNode } from "./nodes/BlockNode.ts";
 import { MaterialSurface } from "./materials/MaterialSurface.ts";
-import { invert } from "./history/modelInverse.ts";
 import {
   captureModelImage,
+  invertModelCommand
+} from "./command/modelCommands.ts";
+import {
   restoreModelImages,
   type EntryOrder,
   type ModelImage,
   type ModelImages
-} from "./history/modelImages.ts";
+} from "./command/modelImages.ts";
+import { modelHistoryKeys } from "./history/modelHistoryKeys.ts";
 import type {
   BlockShapeJSON,
   BlockTransformJSON,
@@ -34,7 +36,7 @@ import type {
   UVLayoutData,
   VoxelModelCommand,
   VoxelModelSnapshot
-} from "../network/types.ts";
+} from "./types.ts";
 
 export type { EntryOrder, ModelImage, ModelImages };
 
@@ -57,17 +59,7 @@ export interface AddBlockOptions extends AddFolderOptions {
   materialId?: string;
 }
 
-export interface AddMaterialFolderOptions {
-  id?: string;
-  name: string;
-  parentId?: string | null;
-  /**
-   * The sibling to land before; last when omitted.
-   */
-  beforeId?: string;
-}
-
-export interface AddMaterialOptions extends AddMaterialFolderOptions {
+export interface AddMaterialOptions extends AddFolderOptions {
   surface?: MaterialSurfaceJSON;
 }
 
@@ -92,41 +84,30 @@ export class ModelDocument extends CommandDocument<
   ModelImage
 > {
   readonly tree: ModelTreeReader;
+  readonly historyKeys: HistoryKeys<VoxelModelCommand, ModelImage>;
 
   constructor() {
     const tree = new ModelTree();
     super(modelState(tree));
     this.tree = tree;
+    this.historyKeys = modelHistoryKeys(tree);
   }
 
   addBlock(
     options: AddBlockOptions
   ): string | null {
     const {
-      id = randomId(),
-      name,
-      parentId = null,
-      transform = BlockTransform.create(),
-      shape = BlockShape.box,
-      uv = BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape),
-      materialId,
-      beforeId
+      beforeId,
+      ...block
     } = options;
+    const node = BlockNode.create(block);
     const added = this.commit({
       action: "node-added",
-      node: BlockShape.applyTo({
-        kind: "block",
-        id,
-        parentId,
-        name,
-        transform,
-        uv,
-        ...(materialId === undefined ? {} : { materialId })
-      }, shape),
+      node,
       ...withBefore(beforeId)
     });
 
-    return added ? id : null;
+    return added ? node.id : null;
   }
 
   addFolder(
@@ -265,7 +246,7 @@ export class ModelDocument extends CommandDocument<
   }
 
   addMaterialFolder(
-    options: AddMaterialFolderOptions
+    options: AddFolderOptions
   ): string | null {
     const {
       id = randomId(),
@@ -401,7 +382,7 @@ function modelState(
     apply: (command) => tree.apply(command),
     load: (snapshot) => tree.load(snapshot),
     captureImage: (command) => captureModelImage(tree, command),
-    invert: (command) => invert(tree, command),
+    invert: (command) => invertModelCommand(tree, command),
     restored: (images) => restoreModelImages(tree, images)
   };
 }

@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { ModelTree } from "#src/model/ModelTree.ts";
 import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
-import type { VoxelModelCommand } from "#src/network/types.ts";
+import type { VoxelModelCommand } from "#src/model/types.ts";
 import {
   TRANSFORM,
   UV,
@@ -41,11 +41,11 @@ describe("ModelTree", () => {
       blockNode("arm", "limbs")
     ]);
     assert.deepEqual(
-      tree.listChildren("body").map((node) => node.id),
+      tree.nodes.listChildren("body").map((node) => node.id),
       ["limbs"]
     );
     assert.deepEqual(
-      tree.subtreeFrom("body").map((node) => node.id),
+      tree.nodes.subtreeFrom("body").map((node) => node.id),
       ["body", "limbs", "arm"]
     );
   });
@@ -60,12 +60,12 @@ describe("ModelTree", () => {
       blockAdded("prop", "loose")
     );
 
-    assert.equal(tree.findTransformParent("arm"), "body");
-    assert.equal(tree.findTransformParent("prop"), null);
-    assert.equal(tree.findTransformParent("body"), null);
-    assert.equal(tree.findEnclosingBlock("left"), "body");
-    assert.equal(tree.findEnclosingBlock("body"), "body");
-    assert.equal(tree.findEnclosingBlock(null), null);
+    assert.equal(tree.nodes.findTransformParent("arm"), "body");
+    assert.equal(tree.nodes.findTransformParent("prop"), null);
+    assert.equal(tree.nodes.findTransformParent("body"), null);
+    assert.equal(tree.nodes.findEnclosingBlock("left"), "body");
+    assert.equal(tree.nodes.findEnclosingBlock("body"), "body");
+    assert.equal(tree.nodes.findEnclosingBlock(null), null);
   });
 
   test("rejects an addition under an unknown parent or a known id", () => {
@@ -136,9 +136,9 @@ describe("ModelTree", () => {
       transforms: [{ id: "arm", transform }]
     });
 
-    assert.equal(tree.get("limbs")?.parentId, "body");
-    assert.equal(tree.findTransformParent("arm"), "body");
-    assert.deepEqual(tree.block("arm")?.transform, transform);
+    assert.equal(tree.nodes.get("limbs")?.parentId, "body");
+    assert.equal(tree.nodes.findTransformParent("arm"), "body");
+    assert.deepEqual(tree.nodes.block("arm")?.transform, transform);
   });
 
   test("places a moved node before a sibling, or last without one", () => {
@@ -157,7 +157,7 @@ describe("ModelTree", () => {
       beforeId: "a"
     });
     assert.deepEqual(
-      tree.listChildren(null).map((node) => node.id),
+      tree.nodes.listChildren(null).map((node) => node.id),
       ["c", "a", "f", "b"]
     );
 
@@ -168,7 +168,7 @@ describe("ModelTree", () => {
       transforms: []
     });
     assert.deepEqual(
-      tree.listChildren(null).map((node) => node.id),
+      tree.nodes.listChildren(null).map((node) => node.id),
       ["c", "f", "b", "a"]
     );
   });
@@ -194,7 +194,7 @@ describe("ModelTree", () => {
     tree.apply(addedBefore("f"));
 
     assert.deepEqual(
-      tree.listChildren(null).map((node) => node.id),
+      tree.nodes.listChildren(null).map((node) => node.id),
       ["a", "c", "f"]
     );
   });
@@ -252,7 +252,7 @@ describe("ModelTree", () => {
     });
     tree.apply({ action: "node-transformed", id: "a", transform: TRANSFORM });
 
-    assert.deepEqual(tree.block("a")?.flipAxes, flipAxes);
+    assert.deepEqual(tree.nodes.block("a")?.flipAxes, flipAxes);
   });
 
   test("stores the UV layout of a block", () => {
@@ -266,7 +266,7 @@ describe("ModelTree", () => {
     assert.equal(tree.accepts(command), true);
     tree.apply(command);
 
-    assert.deepEqual(tree.block("a")?.uv, UV);
-    assert.notStrictEqual(tree.block("a")?.uv, UV);
+    assert.deepEqual(tree.nodes.block("a")?.uv, UV);
+    assert.notStrictEqual(tree.nodes.block("a")?.uv, UV);
   });
 });

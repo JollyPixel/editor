@@ -23,20 +23,20 @@ import {
 } from "./voxelModel.ts";
 import { VOXEL_MODEL_FILE } from "./voxelModelFile.ts";
 import { ModelTree } from "../model/ModelTree.ts";
-import {
-  voxelModelCommandProtocol,
-  voxelModelSnapshotSchema
-} from "../network/VoxelModelCommand.schema.ts";
-import { voxelModelConflictKeys } from "../network/VoxelModelCommandKeys.ts";
+import { voxelModelSnapshotSchema } from "../model/VoxelModel.schema.ts";
+import { voxelModelCommandProtocol } from "../network/voxelModelCommandProtocol.ts";
+import { modelFootprint } from "../model/command/modelCommands.ts";
+import { modelValueKey } from "../model/command/ModelValueRef.ts";
+import { upcastVoxelModelCommand } from "../network/upcastVoxelModelCommand.ts";
 import {
   CSMODEL_EXTENSION,
   voxelModelFromCsModel
 } from "../conversion/csmodel/csModelConversion.ts";
 import type {
   VoxelModelCommand,
-  VoxelModelNetworkCommand,
   VoxelModelSnapshot
-} from "../network/types.ts";
+} from "../model/types.ts";
+import type { VoxelModelNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
 const kEncoder = new TextEncoder();
@@ -86,6 +86,25 @@ export class VoxelModelState {
     return this.#texture === null ?
       sets :
       [{ ...this.#texture }, ...sets];
+  }
+
+  rebind(
+    idMap: ReadonlyMap<string, string>
+  ): void {
+    const file = this.toJSON();
+    this.load({
+      ...file,
+      texture: {
+        ...file.texture,
+        id: idMap.get(file.texture.id) ?? file.texture.id
+      },
+      animationSets: file.animationSets.map((link) => {
+        return {
+          ...link,
+          id: idMap.get(link.id) ?? link.id
+        };
+      })
+    });
   }
 
   snapshot(): VoxelModelSnapshot {
@@ -177,26 +196,13 @@ export function voxelModelAssetKind(
       state: VoxelModelState,
       idMap: ReadonlyMap<string, string>
     ): void {
-      const file = state.toJSON();
-      const { texture, animationSets } = file;
-      state.load({
-        ...file,
-        texture: {
-          ...texture,
-          id: idMap.get(texture.id) ?? texture.id
-        },
-        animationSets: animationSets.map((link) => {
-          return {
-            ...link,
-            id: idMap.get(link.id) ?? link.id
-          };
-        })
-      });
+      state.rebind(idMap);
     },
 
     commands: {
       eventType: VOXEL_MODEL_COMMAND,
       protocol: voxelModelCommandProtocol,
+      upcast: upcastVoxelModelCommand,
 
       apply(state, command) {
         state.applyCommand(command);
@@ -209,7 +215,7 @@ export function voxelModelAssetKind(
           ...arbitrated(state, {
             accepts: (model, command) => model.accepts(command),
             writes: (command) => {
-              return { keys: voxelModelConflictKeys(command) };
+              return { keys: modelFootprint(command).conflicts.map(modelValueKey) };
             }
           })
         };

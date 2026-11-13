@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { MessageParser } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { voxelModelCommandProtocol } from "#src/network/VoxelModelCommand.schema.ts";
+import { voxelModelCommandProtocol } from "#src/network/voxelModelCommandProtocol.ts";
 import { TRANSFORM, UV } from "../helpers/commands.ts";
 
 function parse(

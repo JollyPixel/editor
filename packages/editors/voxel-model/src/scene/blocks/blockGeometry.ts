@@ -3,8 +3,8 @@ import * as THREE from "three/webgpu";
 import type { UVSlot } from "@jolly-pixel/pixel-draw.renderer";
 import type { FaceRanges } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
 import {
+  BlockFlip,
   BlockShape,
-  NO_FLIP,
   type BlockShapeJSON,
   type MirrorAxes
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -28,7 +28,7 @@ const kBoxFaces: Readonly<FaceRanges> = Object.freeze(Object.fromEntries(
 export function blockGeometry(
   shape: BlockShapeJSON,
   size: THREE.Vector3,
-  flip: Readonly<MirrorAxes> = NO_FLIP
+  flip: Readonly<MirrorAxes> = BlockFlip.none
 ): BlockGeometry {
   return placed(unitGeometry(shape), size, flip);
 }

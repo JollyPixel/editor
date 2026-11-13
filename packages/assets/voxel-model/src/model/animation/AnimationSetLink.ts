@@ -9,7 +9,7 @@ import {
 import type {
   AnimationBindingJSON,
   AnimationSetLinkJSON
-} from "../../network/types.ts";
+} from "../types.ts";
 
 type AnimationSetLinkHeader = Omit<AnimationSetLinkJSON, "bindings">;
 

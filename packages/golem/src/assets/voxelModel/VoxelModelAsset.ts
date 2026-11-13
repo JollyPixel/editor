@@ -4,19 +4,19 @@ import { randomUUID } from "node:crypto";
 // Import Third-party Dependencies
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art/client";
 import {
+  BlockNode,
   BlockShape,
   BlockTransform,
   BlockUvLayouts,
   MaterialSurface,
   VOXEL_MODEL_PRESENCE_KEYS,
   linkedTextureId,
-  modelConflictRefs,
+  modelFootprint,
   type BlockShapeJSON,
   type BlockTransformJSON,
   type MaterialSurfaceJSON,
   type ModelTreeReader,
   type SyncedModelDocument,
-  type ModelValueRef,
   type VoxelModelCommand,
   type VoxelModelSnapshot
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -36,17 +36,6 @@ import type { PixelArtAsset } from "../pixelArt/PixelArtAsset.ts";
 import type { PixelRect } from "../pixelArt/PixelSurface.ts";
 import { resolveEntry } from "../resolveEntry.ts";
 import { assertModelUnlocked } from "./assertModelUnlocked.ts";
-
-// CONSTANTS
-const kNodeRefKinds: ReadonlySet<ModelValueRef["kind"]> = new Set([
-  "name",
-  "parent",
-  "transform",
-  "uv",
-  "shape",
-  "material",
-  "flip"
-]);
 
 export interface BlockSpec {
   name: string;
@@ -131,7 +120,7 @@ export class VoxelModelAsset extends GolemAsset<
     const { parent = null } = options;
     const parentId = parent === null ?
       null :
-      resolveEntry("node", parent, this.tree.values()).id;
+      resolveEntry("node", parent, this.tree.nodes.values()).id;
     const blocks = Array.from(specs, (spec) => {
       return {
         name: spec.name,
@@ -145,7 +134,7 @@ export class VoxelModelAsset extends GolemAsset<
     const texture = await this.#texture();
     const size = texture.pixels.size;
     const { textureSize, nets } = new BlockUvLayouts(
-      Array.from(this.tree.blocks(), (block) => block.uv)
+      Array.from(this.tree.nodes.blocks(), (block) => block.uv)
     ).place(
       blocks.map(({ shape }) => shape),
       size,
@@ -164,13 +153,13 @@ export class VoxelModelAsset extends GolemAsset<
 
       return {
         action: "node-added",
-        node: BlockShape.applyTo({
-          kind: "block",
+        node: BlockNode.create({
           id,
           parentId,
           uv,
+          shape,
           ...block
-        }, shape)
+        })
       };
     });
     this.guard(commands);
@@ -214,8 +203,8 @@ export class VoxelModelAsset extends GolemAsset<
     commands: readonly VoxelModelCommand[]
   ): PeerMetadata | null {
     for (const command of commands.toReversed()) {
-      const nodeId = touchedNode(command);
-      if (nodeId !== null && this.tree.block(nodeId) !== undefined) {
+      const nodeId = modelFootprint(command).node;
+      if (nodeId !== null && this.tree.nodes.block(nodeId) !== undefined) {
         return { [VOXEL_MODEL_PRESENCE_KEYS.block]: nodeId };
       }
     }
@@ -244,20 +233,4 @@ export class VoxelModelAsset extends GolemAsset<
 
     return resolveEntry("material", nameOrId, materials).id;
   }
-}
-
-function touchedNode(
-  command: VoxelModelCommand
-): string | null {
-  if (command.action === "node-added") {
-    return command.node.id;
-  }
-
-  return modelConflictRefs(command).find(isNodeRef)?.id ?? null;
-}
-
-function isNodeRef(
-  ref: ModelValueRef
-): boolean {
-  return kNodeRefKinds.has(ref.kind);
 }

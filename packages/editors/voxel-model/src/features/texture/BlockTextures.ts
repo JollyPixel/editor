@@ -9,10 +9,11 @@ import {
   PixelCanvasTexture,
   UVGeometryBinding
 } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
-import type {
-  BlockNodeJSON,
-  ModelChange,
-  ModelDocument
+import {
+  removedModelNodes,
+  type BlockNodeJSON,
+  type ModelChange,
+  type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -65,7 +66,7 @@ export class BlockTextures {
         break;
       case "node-removed":
         this.#restore(() => {
-          for (const node of change.image.before.nodes) {
+          for (const node of removedModelNodes(change)) {
             if (node.kind === "block") {
               this.#pixels.uv.delete(blockRegionId(node.id));
             }
@@ -75,7 +76,7 @@ export class BlockTextures {
       case "node-renamed":
       case "node-uv-changed":
       case "node-shape-changed": {
-        const block = this.#document.tree.block(command.id);
+        const block = this.#document.tree.nodes.block(command.id);
         if (block) {
           this.#project(block);
         }
@@ -96,11 +97,11 @@ export class BlockTextures {
     this.#restore(() => {
       for (const region of [...this.#pixels.uv.regions]) {
         const uuid = blockUuidFromRegion(region.id);
-        if (uuid !== null && !this.#document.tree.has(uuid)) {
+        if (uuid !== null && !this.#document.tree.nodes.has(uuid)) {
           this.#pixels.uv.delete(region.id);
         }
       }
-      for (const block of this.#document.tree.blocks()) {
+      for (const block of this.#document.tree.nodes.blocks()) {
         this.#pixels.uv.restore(createBlockRegion(block));
       }
     });
@@ -149,7 +150,7 @@ export class BlockTextures {
       return;
     }
 
-    const block = this.#document.tree.block(uuid);
+    const block = this.#document.tree.nodes.block(uuid);
     if (block !== undefined) {
       this.#project(block);
     }

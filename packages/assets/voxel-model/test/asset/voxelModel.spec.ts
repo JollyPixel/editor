@@ -83,7 +83,7 @@ describe("createVoxelModelFile", () => {
 });
 
 describe("VOXEL_MODEL_FILE.encode", () => {
-  test("stores only the transform parts and active faces that differ from the defaults", () => {
+  test("stores only the transform parts, active faces, shape and flip that differ from the defaults", () => {
     const created = createVoxelModelFile({
       texture: kTexture,
       blocks: ["Head", "Torso"]
@@ -99,6 +99,8 @@ describe("VOXEL_MODEL_FILE.encode", () => {
         },
         {
           ...torso,
+          flipAxes: { x: true, y: false, z: false },
+          shape: { type: "plane" as const },
           uv: {
             ...torso.uv,
             activeFaces: ["front" as const]
@@ -114,6 +116,10 @@ describe("VOXEL_MODEL_FILE.encode", () => {
     assert.equal("activeFaces" in stored.nodes[0].uv, false);
     assert.deepEqual(stored.nodes[1].transform, {});
     assert.deepEqual(stored.nodes[1].uv.activeFaces, ["front"]);
+    assert.equal("shape" in stored.nodes[0], false);
+    assert.equal("flipAxes" in stored.nodes[0], false);
+    assert.deepEqual(stored.nodes[1].shape, { type: "plane" });
+    assert.deepEqual(stored.nodes[1].flipAxes, { x: true, y: false, z: false });
     assert.deepEqual(VOXEL_MODEL_FILE.decode(content), file);
   });
 });

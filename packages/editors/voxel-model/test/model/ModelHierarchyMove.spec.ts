@@ -22,13 +22,13 @@ describe("ModelHierarchy.move", () => {
 
     hierarchy.move(block.uuid, folderId);
 
-    assert.equal(document.tree.get(block.uuid)?.parentId, folderId);
-    assert.equal(document.tree.findTransformParent(block.uuid), parent.uuid);
+    assert.equal(document.tree.nodes.get(block.uuid)?.parentId, folderId);
+    assert.equal(document.tree.nodes.findTransformParent(block.uuid), parent.uuid);
 
     hierarchy.move(block.uuid, null);
 
-    assert.equal(document.tree.get(block.uuid)?.parentId, null);
-    assert.equal(document.tree.findTransformParent(block.uuid), null);
+    assert.equal(document.tree.nodes.get(block.uuid)?.parentId, null);
+    assert.equal(document.tree.nodes.findTransformParent(block.uuid), null);
     assert.deepEqual(
       commands.map((command) => command.action),
       ["node-moved", "node-moved"]
@@ -63,8 +63,8 @@ describe("ModelHierarchy.move", () => {
     hierarchy.move(outer!, anchor.uuid);
     scene.updateMatrixWorld(true);
 
-    assert.equal(document.tree.findTransformParent(block.uuid), anchor.uuid);
-    assert.equal(document.tree.get(block.uuid)?.parentId, inner);
+    assert.equal(document.tree.nodes.findTransformParent(block.uuid), anchor.uuid);
+    assert.equal(document.tree.nodes.get(block.uuid)?.parentId, inner);
     assert.deepStrictEqual(block.worldPosition, new THREE.Vector3(1, 0, 0));
     assert.equal(commands.length, 1);
     assert.partialDeepStrictEqual(commands[0], {
@@ -107,7 +107,7 @@ describe("ModelHierarchy.move", () => {
 
     hierarchy.move(outer!, inner);
 
-    assert.equal(document.tree.get(outer!)?.parentId, null);
+    assert.equal(document.tree.nodes.get(outer!)?.parentId, null);
   });
 });
 
@@ -135,7 +135,7 @@ describe("ModelHierarchy.remove", () => {
     scene.updateMatrixWorld(true);
 
     assert.equal(blocks.get(middle.uuid), undefined);
-    assert.equal(document.tree.findTransformParent(leaf.uuid), root.uuid);
+    assert.equal(document.tree.nodes.findTransformParent(leaf.uuid), root.uuid);
     assert.deepStrictEqual(leaf.worldPosition, new THREE.Vector3(7, 0, 0));
   });
 
@@ -161,7 +161,7 @@ describe("ModelHierarchy.remove", () => {
     hierarchy.remove(body.uuid, { withChildren: false });
 
     assert.deepEqual(readShape(hierarchy.nodes()), [["Limbs", ["Arm"]]]);
-    assert.equal(document.tree.findTransformParent(arm.uuid), null);
+    assert.equal(document.tree.nodes.findTransformParent(arm.uuid), null);
     assert.equal(arm.node.parent?.type, "Scene");
   });
 

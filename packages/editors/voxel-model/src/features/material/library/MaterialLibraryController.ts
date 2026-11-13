@@ -391,7 +391,7 @@ export class MaterialLibraryController {
   #deleteConfirmation(
     material: ModelMaterialJSON
   ): DeleteContext | null {
-    const uses = this.#editing?.document.tree.blocksUsing(material.id).length ?? 0;
+    const uses = this.#editing?.document.tree.nodes.blocksUsing(material.id).length ?? 0;
 
     return uses === 0 ?
       null :
@@ -423,7 +423,7 @@ export class MaterialLibraryController {
     const editing = this.#editing;
     const selected = editing?.selection.selected ?? null;
 
-    return selected === null ? undefined : editing?.document.tree.block(selected);
+    return selected === null ? undefined : editing?.document.tree.nodes.block(selected);
   }
 
   #addAndAdopt(
@@ -476,7 +476,7 @@ export class MaterialLibraryController {
     return {
       nodes: toMaterialTreeNodes({
         materials: [...tree?.materials.materials() ?? []],
-        users: materialUsers(tree?.blocks() ?? []),
+        users: materialUsers(tree?.nodes.blocks() ?? []),
         marks: editing?.presence.materialEdits ?? new PeerMarks(),
         blockMarks: editing?.presence.blockSelections ?? new PeerMarks()
       }),

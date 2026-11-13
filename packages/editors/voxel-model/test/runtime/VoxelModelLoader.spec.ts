@@ -89,7 +89,7 @@ describe("VoxelModelLoader", () => {
     const model = await assets.load(new AssetReference("truck", VOXEL_MODEL_SOURCE));
 
     assert.deepEqual(
-      Array.from(model.document.tree.blocks(), (block) => block.name),
+      Array.from(model.document.tree.nodes.blocks(), (block) => block.name),
       ["Chassis", "Wheel"]
     );
     assert.deepEqual(model.texture.size(), { x: 32, y: 16 });

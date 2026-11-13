@@ -3,17 +3,12 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  BlockUvLayouts,
-  ModelDocument,
-  type ModelChange
-} from "@jolly-pixel/asset.voxel-model/client";
+import { BlockUvLayouts } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
   ANIMATION_LIBRARY,
   createEditorHistory,
-  describeModelChange,
   type EditorHistoryScope
 } from "#src/features/history/index.ts";
 import { ModelHierarchy } from "#src/model/index.ts";
@@ -27,49 +22,6 @@ import { modelAccess } from "../../fixtures/modelAccess.ts";
 // CONSTANTS
 const kNoMirror = { x: false, y: false, z: false };
 const kScopes: readonly EditorHistoryScope[] = ["texture", "material", ANIMATION_LIBRARY];
-
-function recordChanges(
-  document: ModelDocument,
-  edit: () => void
-): ModelChange[] {
-  const changes: ModelChange[] = [];
-  function record(
-    change: ModelChange
-  ): void {
-    changes.push(change);
-  }
-  document.on("change", record);
-  edit();
-  document.off("change", record);
-
-  return changes;
-}
-
-describe("describeModelChange", () => {
-  test("names a step after the node or material it touched", () => {
-    const document = new ModelDocument();
-    const iron = document.addMaterial({ name: "Iron" })!;
-    const arm = document.addBlock({ name: "Arm" })!;
-
-    const labels = recordChanges(document, () => {
-      document.addBlock({ name: "Leg" });
-      document.rename(arm, "Left Arm");
-      document.assignMaterial(arm, iron);
-      document.changeMaterial(iron, { opacity: 0.5 });
-      document.remove(arm);
-      document.removeMaterial(iron);
-    }).map(describeModelChange);
-
-    assert.deepEqual(labels, [
-      "Add Leg",
-      "Rename Arm",
-      "Set material of Left Arm",
-      "Edit Iron",
-      "Delete Left Arm",
-      "Delete Iron"
-    ]);
-  });
-});
 
 describe("ModelHierarchy undo steps", () => {
   function createHarness() {
@@ -93,7 +45,7 @@ describe("ModelHierarchy undo steps", () => {
     const { addBlock, document, history, hierarchy } = createHarness();
     const body = addBlock({ name: "Body" });
     addBlock({ name: "Arm", parentId: body.uuid });
-    const before = [...document.tree.values()];
+    const before = [...document.tree.nodes.values()];
 
     hierarchy.duplicate(body.uuid, {
       name: "Body Copy",
@@ -103,7 +55,7 @@ describe("ModelHierarchy undo steps", () => {
 
     assert.equal(history.state("texture").undoLabel, "Duplicate Body");
     assert.equal(history.undo("texture"), true);
-    assert.deepEqual([...document.tree.values()], before);
+    assert.deepEqual([...document.tree.nodes.values()], before);
     assert.equal(history.state("texture").canUndo, true);
   });
 
@@ -116,14 +68,14 @@ describe("ModelHierarchy undo steps", () => {
 
     assert.equal(history.state("texture").undoLabel, "Delete Body");
     assert.equal(history.undo("texture"), true);
-    assert.equal(document.tree.get(arm.uuid)?.parentId, body.uuid);
-    assert.equal(document.tree.listChildren(null).length, 1);
+    assert.equal(document.tree.nodes.get(arm.uuid)?.parentId, body.uuid);
+    assert.equal(document.tree.nodes.listChildren(null).length, 1);
   });
 
   test("tree edits and transforms share Build, materials keep their own", () => {
     const { addBlock, document, history, hierarchy } = createHarness();
     const body = addBlock({ name: "Body" });
-    const rest = document.tree.block(body.uuid)!.transform;
+    const rest = document.tree.nodes.block(body.uuid)!.transform;
 
     hierarchy.rename(body.uuid, "Torso");
     const metal = document.addMaterial({ name: "Metal" })!;
@@ -132,7 +84,7 @@ describe("ModelHierarchy undo steps", () => {
     assert.equal(history.state("texture").undoLabel, "Transform Torso");
     assert.equal(history.undo("texture"), true);
     assert.equal(history.undo("texture"), true);
-    assert.equal(document.tree.get(body.uuid)?.name, "Body");
+    assert.equal(document.tree.nodes.get(body.uuid)?.name, "Body");
     assert.notEqual(document.tree.materials.get(metal), undefined);
 
     assert.equal(history.state("material").undoLabel, "Add material Metal");
@@ -143,7 +95,7 @@ describe("ModelHierarchy undo steps", () => {
   test("a UV edit is in no history, and leaves the Build step before it undoable", () => {
     const { addBlock, document, history } = createHarness();
     const body = addBlock({ name: "Body" });
-    const rest = document.tree.block(body.uuid)!.transform;
+    const rest = document.tree.nodes.block(body.uuid)!.transform;
     document.transform(body.uuid, { ...rest, position: { x: 4, y: 0, z: 0 } });
     const steps = kScopes.map((scope) => history.state(scope).undoCount);
 
@@ -152,7 +104,7 @@ describe("ModelHierarchy undo steps", () => {
 
     assert.deepEqual(kScopes.map((scope) => history.state(scope).undoCount), steps);
     assert.equal(history.undo("texture"), true);
-    assert.equal(document.tree.block(body.uuid)?.transform.position.x, rest.position.x);
-    assert.deepEqual(document.tree.block(body.uuid)?.uv, uv);
+    assert.equal(document.tree.nodes.block(body.uuid)?.transform.position.x, rest.position.x);
+    assert.deepEqual(document.tree.nodes.block(body.uuid)?.uv, uv);
   });
 });

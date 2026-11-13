@@ -16,11 +16,10 @@ import {
   type TreeNode,
   MenuSession
 } from "@jolly-pixel/ui";
-import {
-  BlockShape,
-  type ModelChange,
-  type ModelDocument,
-  type VoxelModelCommand
+import type {
+  ModelChange,
+  ModelDocument,
+  VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
@@ -205,7 +204,7 @@ export class HierarchyController {
 
     return this.editable &&
       id !== undefined &&
-      this.#editing?.document.tree.block(id) !== undefined;
+      this.#editing?.document.tree.nodes.block(id) !== undefined;
   }
 
   attach(
@@ -329,7 +328,7 @@ export class HierarchyController {
       node.kind === "block" ?
         this.#blockEntries(menu, editing, node) :
         this.#folderEntries(menu, editing, node),
-      () => editing.document.tree.has(id)
+      () => editing.document.tree.nodes.has(id)
     );
   }
 
@@ -440,11 +439,11 @@ export class HierarchyController {
   #currentShape(
     id: string
   ): BlockShapeEntryId | null {
-    const block = this.#editing?.document.tree.block(id);
+    const block = this.#editing?.document.tree.nodes.block(id);
 
     return block === undefined ?
       null :
-      matchBlockShapeEntry(BlockShape.fromBlock(block)).id;
+      matchBlockShapeEntry(block.shape).id;
   }
 
   async #addBlock(
@@ -502,7 +501,7 @@ export class HierarchyController {
     }
 
     return {
-      defaultName: editing.document.tree.blockNamesUnder(parentId).free(name),
+      defaultName: editing.document.tree.nodes.blockNamesUnder(parentId).free(name),
       validate: (candidate) => editing.hierarchy.blockNameError(candidate, parentId)
     };
   }
@@ -516,7 +515,7 @@ export class HierarchyController {
     }
 
     const hasChildren = source.children.length > 0;
-    const parentId = this.#editing?.document.tree.get(id)?.parentId ?? null;
+    const parentId = this.#editing?.document.tree.nodes.get(id)?.parentId ?? null;
     const result = await this.#view.promptDuplicate({
       hasChildren,
       ...this.#naming(source.kind, duplicateName(source.name), parentId)
@@ -567,7 +566,7 @@ export class HierarchyController {
     event: CustomEvent<JollyActivateDetail>
   ): void => {
     const { id } = event.detail;
-    if (this.#editing?.document.tree.get(id)?.kind === "folder") {
+    if (this.#editing?.document.tree.nodes.get(id)?.kind === "folder") {
       this.#expanded.toggle(id);
       this.#host.requestUpdate();
     }

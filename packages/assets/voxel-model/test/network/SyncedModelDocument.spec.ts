@@ -10,7 +10,6 @@ import { CommandHistory } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import { voxelModelDocumentKind } from "#src/network/voxelModelDocumentKind.ts";
-import { modelHistoryKeys } from "#src/model/history/modelHistoryKeys.ts";
 import { createMockRoom } from "../helpers/room.ts";
 import { networkCommand } from "../helpers/commands.ts";
 
@@ -43,7 +42,7 @@ describe("SyncedModelDocument", () => {
     room.deliverSnapshot(kSnapshot);
     await synced.ready;
 
-    assert.strictEqual(synced.document.tree.get("limbs")?.name, "Limbs");
+    assert.strictEqual(synced.document.tree.nodes.get("limbs")?.name, "Limbs");
     synced.dispose();
   });
 
@@ -70,7 +69,7 @@ describe("SyncedModelDocument", () => {
       }
     }, { clientId: "client-B" }));
 
-    assert.strictEqual(synced.document.tree.get("remote")?.name, "Remote");
+    assert.strictEqual(synced.document.tree.nodes.get("remote")?.name, "Remote");
     assert.strictEqual(room.sent.length, 1);
     synced.dispose();
   });
@@ -98,9 +97,9 @@ describe("SyncedModelDocument", () => {
     room.deliverCommand(room.sent[1]);
 
     const { tree } = synced.document;
-    assert.strictEqual(tree.get("a")?.parentId, "b");
-    assert.strictEqual(tree.get("b")?.parentId, null);
-    assert.strictEqual(tree.get("a")?.name, "Renamed");
+    assert.strictEqual(tree.nodes.get("a")?.parentId, "b");
+    assert.strictEqual(tree.nodes.get("b")?.parentId, null);
+    assert.strictEqual(tree.nodes.get("a")?.name, "Renamed");
     synced.dispose();
   });
 
@@ -112,7 +111,7 @@ describe("SyncedModelDocument", () => {
     history.register({
       id: "model",
       document: synced.document,
-      keys: modelHistoryKeys(synced.document.tree),
+      keys: synced.document.historyKeys,
       resolveScope: () => "model"
     });
 

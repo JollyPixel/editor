@@ -27,7 +27,7 @@ function createKeying(
   const model = createAnimatedModel();
   model.tab.activate("animate");
   model.animationPlayback.seek(tick);
-  const rest = model.document.tree.block(model.ids.arm)!.transform;
+  const rest = model.document.tree.nodes.block(model.ids.arm)!.transform;
   const clip = model.set.set.clip(model.clipId)!.toJSON();
   const arm = {
     uuid: model.ids.arm,

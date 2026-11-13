@@ -7,10 +7,10 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
-import type { MaterialSurfaceJSON } from "#src/network/types.ts";
+import type { MaterialSurfaceJSON } from "#src/model/types.ts";
 
 describe("MaterialSurface", () => {
-  test("isValid accepts only a complete surface within its bounds", () => {
+  test("parse accepts only a complete surface within its bounds", () => {
     const cases: ReadonlyArray<readonly [unknown, boolean]> = [
       [MaterialSurface.create(), true],
       [MaterialSurface.create({ opacity: 0, emissiveIntensity: 7 }), true],
@@ -28,11 +28,11 @@ describe("MaterialSurface", () => {
     ];
 
     for (const [value, expected] of cases) {
-      assert.equal(MaterialSurface.isValid(value), expected, JSON.stringify(value));
+      assert.equal(MaterialSurface.parse(value) !== undefined, expected, JSON.stringify(value));
     }
   });
 
-  test("isPatch accepts one or more known fields within their bounds", () => {
+  test("parsePatch accepts one or more known fields within their bounds", () => {
     const cases: ReadonlyArray<readonly [unknown, boolean]> = [
       [{ roughness: 0.2 }, true],
       [{ emissive: "#ff0000", emissiveIntensity: 3 }, true],
@@ -45,7 +45,7 @@ describe("MaterialSurface", () => {
     ];
 
     for (const [value, expected] of cases) {
-      assert.equal(MaterialSurface.isPatch(value), expected, JSON.stringify(value));
+      assert.equal(MaterialSurface.parsePatch(value) !== undefined, expected, JSON.stringify(value));
     }
   });
 
@@ -59,10 +59,6 @@ describe("MaterialSurface", () => {
     assert.equal(glowsWith({ emissive: "#ffcc66" }), true);
     assert.equal(glowsWith({ emissive: "#ffcc66", emissiveIntensity: 0 }), false);
     assert.equal(glowsWith({}), false);
-  });
-
-  test("rejects an invalid surface", () => {
-    assert.throws(() => new MaterialSurface(MaterialSurface.create({ opacity: 1.5 })), RangeError);
   });
 
   test("tells whether it already holds every field of a patch", () => {

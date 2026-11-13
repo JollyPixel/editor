@@ -55,7 +55,7 @@ export function timelineRows(
       tracks.set(blockId, { path: track.path, keys: listKeys(track) });
     }
   }
-  if (selectedId !== null && tree.block(selectedId) !== undefined && !tracks.has(selectedId)) {
+  if (selectedId !== null && tree.nodes.block(selectedId) !== undefined && !tracks.has(selectedId)) {
     tracks.set(selectedId, { path: binding.trackPath(selectedId), keys: [] });
   }
 
@@ -115,7 +115,7 @@ function blocksInOrder(
   function visit(
     parentId: string | null
   ): ModelNodeJSON[] {
-    return tree.listChildren(parentId).flatMap((node) => [
+    return tree.nodes.listChildren(parentId).flatMap((node) => [
       ...node.kind === "block" ? [node] : [],
       ...visit(node.id)
     ]);

@@ -6,20 +6,11 @@ import {
 
 // Import Internal Dependencies
 import type {
-  BlockNodeJSON,
   BlockShapeJSON,
   BlockShapeType
-} from "../../network/types.ts";
+} from "../types.ts";
 
 // CONSTANTS
-export const BLOCK_SHAPE_TYPES = [
-  "box",
-  "plane",
-  "cylinder",
-  "cone",
-  "torus"
-] as const satisfies readonly BlockShapeType[];
-
 export type BlockShapeParameter = "sides" | "ringSides" | "thickness";
 
 export interface BlockShapeRange {
@@ -48,6 +39,7 @@ const kSidePrefix = "side-";
 interface BlockShapeKind<TShape extends BlockShapeJSON> {
   defaults: Readonly<TShape>;
   caps: readonly UVSlot[];
+  round: "sides" extends keyof TShape ? true : false;
   pointed: boolean;
 }
 
@@ -58,23 +50,27 @@ type BlockShapeKinds = {
 const { sides, ringSides, thickness } = BLOCK_SHAPE_PARAMETERS;
 const kKinds: BlockShapeKinds = {
   box: {
-    defaults: { type: "box" },
+    defaults: Object.freeze({ type: "box" }),
     caps: DEFAULT_UV_SLOTS,
+    round: false,
     pointed: false
   },
   plane: {
     defaults: { type: "plane" },
     caps: ["top"],
+    round: false,
     pointed: false
   },
   cylinder: {
     defaults: { type: "cylinder", sides: sides.default },
     caps: ["top", "bottom"],
+    round: true,
     pointed: false
   },
   cone: {
     defaults: { type: "cone", sides: sides.default },
     caps: ["bottom"],
+    round: true,
     pointed: true
   },
   torus: {
@@ -85,6 +81,7 @@ const kKinds: BlockShapeKinds = {
       thickness: thickness.default
     },
     caps: [],
+    round: true,
     pointed: false
   }
 };
@@ -92,7 +89,7 @@ const kKinds: BlockShapeKinds = {
 type BlockShapeFields = Pick<BlockShapeJSON, "type"> & Partial<Record<BlockShapeParameter, number>>;
 
 export class BlockShape {
-  static readonly box: Readonly<BlockShapeJSON> = Object.freeze({ type: "box" });
+  static readonly box: Readonly<BlockShapeJSON> = kKinds.box.defaults;
 
   static create(
     type: BlockShapeType
@@ -103,7 +100,7 @@ export class BlockShape {
   static isRound(
     shape: BlockShapeJSON
   ): boolean {
-    return "sides" in shape;
+    return kKinds[shape.type].round;
   }
 
   static isPointed(
@@ -146,12 +143,6 @@ export class BlockShape {
     };
   }
 
-  static fromBlock(
-    block: Pick<BlockNodeJSON, "shape">
-  ): BlockShapeJSON {
-    return { ...block.shape ?? BlockShape.box };
-  }
-
   static slots(
     shape: BlockShapeJSON
   ): UVSlot[] {
@@ -183,19 +174,5 @@ export class BlockShape {
 
     return left.type === right.type &&
       kParameters.every((key) => leftFields[key] === rightFields[key]);
-  }
-
-  static applyTo(
-    block: BlockNodeJSON,
-    shape: BlockShapeJSON
-  ): BlockNodeJSON {
-    const { shape: _previous, ...rest } = block;
-
-    return shape.type === "box" ?
-      rest :
-      {
-        ...rest,
-        shape: { ...shape }
-      };
   }
 }
