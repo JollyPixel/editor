@@ -84,7 +84,7 @@
     "@openally/emitt": "1.1.0",
     "idb": "8.0.4",
     "lit": "3.3.3",
-    "three": "0.186.1",
+    "three": "0.187.0",
     "zod": "4.6.7"
   },
   "devDependencies": {

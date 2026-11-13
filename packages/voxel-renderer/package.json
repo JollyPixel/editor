@@ -57,7 +57,7 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/physics": "workspace:*",
-    "three": "^0.186.0"
+    "three": "^0.187.0"
   },
   "peerDependenciesMeta": {
     "@jolly-pixel/asset": {

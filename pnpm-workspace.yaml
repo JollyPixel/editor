@@ -25,4 +25,8 @@ linkWorkspacePackages: false
 saveExact: true
 savePrefix: ""
 patchedDependencies:
-  three@0.186.1: patches/three@0.186.1.patch
+  three@0.187.0: patches/three@0.187.0.patch
+overrides:
+  "@openally/config.stylelint>stylelint": "18.0.0"
+  "@openally/config.stylelint>stylelint-config-standard": "41.0.0"
+  "@openally/config.stylelint>@stylistic/stylelint-plugin": "6.0.1"

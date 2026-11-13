@@ -49,7 +49,7 @@
   "license": "MIT",
   "peerDependencies": {
     "@jolly-pixel/network": "workspace:^",
-    "three": "^0.186.0"
+    "three": "^0.187.0"
   },
   "peerDependenciesMeta": {
     "@jolly-pixel/network": {

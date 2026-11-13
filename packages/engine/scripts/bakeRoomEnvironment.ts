@@ -9,6 +9,7 @@ import type { Texture } from "three/webgpu";
 
 // CONSTANTS
 const kCubeSize = 64;
+const kMipLevels = 4;
 const kOrigin = "https://bake.local";
 const kPackageRoot = path.join(import.meta.dirname, "..");
 const kThreeRoot = path.join(kPackageRoot, "node_modules/three");
@@ -34,6 +35,11 @@ const kPage = `<!doctype html>
 }
 </script>
 <body></body>`;
+
+interface BakeLayout {
+  size: number;
+  levels: number;
+}
 
 interface BakeResult {
   backend: string;
@@ -76,13 +82,16 @@ try {
   });
   await page.goto(`${kOrigin}/`);
 
-  const result = await page.evaluate(bakeInPage, kCubeSize);
+  const result = await page.evaluate(bakeInPage, {
+    size: kCubeSize,
+    levels: kMipLevels
+  });
   if (result.backend !== "WebGPU") {
     throw new Error(`Baking needs WebGPU, the page ran on ${result.backend}`);
   }
   if (result.difference !== 0) {
     throw new Error(
-      `The uploaded atlas renders ${result.difference} away from the generated one`
+      `The uploaded map renders ${result.difference} away from the generated one`
     );
   }
 
@@ -94,7 +103,7 @@ finally {
 }
 
 async function bakeInPage(
-  size: number
+  layout: BakeLayout
 ): Promise<BakeResult> {
   const THREE = await import("three/webgpu");
   const { RoomEnvironment } = await import(
@@ -107,34 +116,67 @@ async function bakeInPage(
   const renderer = new THREE.WebGPURenderer();
   await renderer.init();
 
+  const generated = new THREE.CubeRenderTarget(layout.size, {
+    minFilter: THREE.LinearMipmapLinearFilter,
+    generateMipmaps: false,
+    type: THREE.HalfFloatType,
+    colorSpace: THREE.LinearSRGBColorSpace,
+    depthBuffer: false
+  });
+  for (let level = 0; level < layout.levels; level++) {
+    const faceSize = layout.size >> level;
+    // @ts-expect-error
+    generated.texture.mipmaps.push({
+      width: faceSize,
+      height: faceSize
+    });
+  }
+  generated.texture.isPMREMTexture = true;
+
   const generator = new THREE.PMREMGenerator(renderer);
-  const generated = generator.fromScene(
+  generator.fromScene(
     new RoomEnvironment(),
     0.04,
     0.1,
     100,
-    { size }
+    { renderTarget: generated }
   );
 
-  const { width, height } = generated;
-  const rowLength = width * 4;
-  const paddedRow = Math.ceil((rowLength * 2) / 256) * 128;
-  const padded = await renderer.readRenderTargetPixelsAsync(
-    generated,
-    0,
-    0,
-    width,
-    height
-  ) as Uint16Array;
-  const texels = new Uint16Array(rowLength * height);
-  for (let row = 0; row < height; row++) {
-    texels.set(
-      padded.subarray(row * paddedRow, (row * paddedRow) + rowLength),
-      row * rowLength
-    );
+  const texels: number[] = [];
+  for (let level = 0; level < layout.levels; level++) {
+    const faceSize = layout.size >> level;
+    const face = new THREE.RenderTarget(faceSize, faceSize, {
+      type: THREE.HalfFloatType,
+      depthBuffer: false
+    });
+    renderer.initRenderTarget(face);
+    for (let layer = 0; layer < 6; layer++) {
+      renderer.copyTextureToTexture(
+        generated.texture,
+        face.texture,
+        new THREE.Box3(
+          new THREE.Vector3(0, 0, layer),
+          new THREE.Vector3(faceSize, faceSize, layer + 1)
+        ),
+        new THREE.Vector3(0, 0, 0),
+        level,
+        0
+      );
+      const pixels = await renderer.readRenderTargetPixelsAsync(
+        face,
+        0,
+        0,
+        faceSize,
+        faceSize
+      ) as Uint16Array;
+      for (const value of pixels) {
+        texels.push(value);
+      }
+    }
+    face.dispose();
   }
 
-  const restored = new BakedRoomEnvironment(texels)
+  const restored = new BakedRoomEnvironment(Uint16Array.from(texels))
     .createRenderTarget(renderer);
 
   const viewSize = 256;
@@ -188,7 +230,7 @@ async function bakeInPage(
 
   return {
     backend: "isWebGPUBackend" in renderer.backend ? "WebGPU" : "WebGL2",
-    texels: Array.from(texels),
+    texels,
     difference
   };
 }

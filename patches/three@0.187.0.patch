@@ -1,8 +1,8 @@
 diff --git a/examples/jsm/loaders/FBXLoader.js b/examples/jsm/loaders/FBXLoader.js
-index 23adc69e9faf639a076c7b68729fa4c5513b69b4..dd097d21484fffadac5373b6ebdf5bd87749826e 100644
+index fc155a4dfae3175309a6970659a7f37fa39356ea..13d78c8be621a1f3e5b38b91b1f3bddf51dc8478 100644
 --- a/examples/jsm/loaders/FBXLoader.js
 +++ b/examples/jsm/loaders/FBXLoader.js
-@@ -4073,7 +4073,8 @@ class BinaryParser {
+@@ -4077,7 +4077,8 @@ class BinaryParser {
  
  				}
  
