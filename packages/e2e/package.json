@@ -29,7 +29,7 @@
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
-    "cookie": "2.0.1"
+    "cookie": "2.0.2"
   },
   "peerDependencies": {
     "@playwright/test": "^1.63.0"

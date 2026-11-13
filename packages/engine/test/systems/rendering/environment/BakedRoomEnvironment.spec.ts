@@ -12,13 +12,13 @@ import {
 } from "../../../../src/three/rendering/environment/BakedRoomEnvironment.ts";
 
 // CONSTANTS
-const kAtlasPath = new URL(
+const kMapPath = new URL(
   "../../../../src/three/rendering/environment/roomEnvironment.bin",
   import.meta.url
 );
 
 async function shippedTexels(): Promise<Uint16Array> {
-  const bytes = await fs.readFile(kAtlasPath);
+  const bytes = await fs.readFile(kMapPath);
 
   return new Uint16Array(
     bytes.buffer,
@@ -28,15 +28,15 @@ async function shippedTexels(): Promise<Uint16Array> {
 }
 
 describe("Systems.BakedRoomEnvironment", () => {
-  test("rejects texels of another size than the atlas", () => {
+  test("rejects texels of another size than the map", () => {
     assert.throws(
       () => new BakedRoomEnvironment(new Uint16Array(8)),
       RangeError
     );
   });
 
-  test("requests the atlas once, after the calling job ends", async(t) => {
-    const bytes = await fs.readFile(kAtlasPath);
+  test("requests the map once, after the calling job ends", async(t) => {
+    const bytes = await fs.readFile(kMapPath);
     const request = t.mock.method(
       globalThis,
       "fetch",
@@ -53,35 +53,68 @@ describe("Systems.BakedRoomEnvironment", () => {
     assert.equal(second, first);
   });
 
-  test("copies the texels into a PMREM render target", async() => {
+  test("copies each mip level into a PMREM cube render target on WebGPU", async() => {
     const texels = await shippedTexels();
     const calls: string[] = [];
     const initialized: THREE.RenderTarget[] = [];
     const copies: Array<{
-      from: THREE.Texture;
+      from: THREE.DataArrayTexture;
       to: THREE.Texture;
+      level: number | undefined;
     }> = [];
 
-    const target = new BakedRoomEnvironment(texels).createRenderTarget({
+    const renderer: Pick<
+      THREE.Renderer,
+      "initRenderTarget" | "copyTextureToTexture"
+    > & {
+      backend: { isWebGPUBackend: true; };
+    } = {
+      backend: {
+        isWebGPUBackend: true
+      },
       initRenderTarget(renderTarget) {
         calls.push("init");
         initialized.push(renderTarget);
       },
-      copyTextureToTexture(from, to) {
-        calls.push("copy");
-        copies.push({ from, to });
+      copyTextureToTexture(...args) {
+        const [from, to, , , , level] = args;
+        calls.push(`copy ${level}`);
+        assert.ok(from instanceof THREE.DataArrayTexture);
+        copies.push({ from, to, level });
         from.addEventListener("dispose", () => calls.push("dispose upload"));
       }
-    });
+    };
 
-    assert.deepEqual(calls, ["init", "copy", "dispose upload"]);
+    const target = new BakedRoomEnvironment(texels)
+      .createRenderTarget(renderer as unknown as THREE.Renderer);
+
+    assert.deepEqual(calls, [
+      "init",
+      "copy 0",
+      "dispose upload",
+      "copy 1",
+      "dispose upload",
+      "copy 2",
+      "dispose upload",
+      "copy 3",
+      "dispose upload"
+    ]);
     assert.deepEqual(initialized, [target]);
-    const [{ from, to }] = copies;
-    assert.equal(to, target.texture);
-    assert.ok(from instanceof THREE.DataTexture);
-    assert.equal(from.image.data, texels);
-    assert.equal(target.texture.mapping, THREE.CubeUVReflectionMapping);
+    assert.ok(copies.every(({ to }) => to === target.texture));
+    assert.deepEqual(
+      copies.map(({ from }) => [from.image.width, from.image.depth]),
+      [[64, 6], [32, 6], [16, 6], [8, 6]]
+    );
+    assert.deepEqual(
+      Uint16Array.from(copies.flatMap(({ from }) => [...from.image.data ?? []])),
+      texels
+    );
+    assert.ok(target instanceof THREE.CubeRenderTarget);
+    assert.equal(target.texture.isPMREMTexture, true);
     assert.equal(target.texture.type, THREE.HalfFloatType);
-    assert.deepEqual([target.width, target.height], [336, 256]);
+    assert.deepEqual(
+      target.texture.mipmaps.map(({ width }) => width),
+      [64, 32, 16, 8]
+    );
   });
 });

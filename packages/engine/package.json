@@ -58,6 +58,6 @@
     "@jolly-pixel/bench": "workspace:*"
   },
   "peerDependencies": {
-    "three": "^0.186.0"
+    "three": "^0.187.0"
   }
 }

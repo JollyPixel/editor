@@ -52,13 +52,13 @@
     "@jolly-pixel/loop": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",
-    "@pmndrs/detect-gpu": "6.0.28"
+    "@pmndrs/detect-gpu": "6.0.29"
   },
   "peerDependencies": {
-    "three": "^0.186.0"
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@jolly-pixel/e2e": "workspace:*",
-    "electron": "45.1.0"
+    "electron": "45.2.3"
   }
 }
