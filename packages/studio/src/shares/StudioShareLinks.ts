@@ -40,7 +40,7 @@ export class StudioShareLinks extends RemoteState {
       this.#links.filter((link) => link.assetId === assetId);
 
     return ShareLinkRow.newestFirst(links, {
-      assetPath: (id) => catalog.record(id)?.path,
+      asset: (id) => catalog.record(id),
       username: (accountId) => [...this.roster].find(
         (entry) => entry.id === accountId
       )?.username,

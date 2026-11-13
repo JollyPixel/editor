@@ -79,7 +79,7 @@ import { SceneEnvironment } from "../scene/environment/SceneEnvironment.ts";
 import { EditorCamera } from "../scene/camera/EditorCamera.ts";
 import { PivotClick } from "../scene/camera/PivotClick.ts";
 import { viewShortcuts } from "../scene/viewShortcuts.ts";
-import { MAP_CAPABILITIES } from "../access/MapAccess.ts";
+import { MAP_CAPABILITY_TABLE } from "../access/MapAccess.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
@@ -232,7 +232,7 @@ export class EditorScene extends Systems.Scene {
       renderer: world.renderer,
       environmentMap: () => environment.environmentMap
     });
-    const access = new RoomGrants(session.room, MAP_CAPABILITIES)
+    const access = new RoomGrants(session.room, MAP_CAPABILITY_TABLE)
       .setMaxListeners(kMaxAccessListeners);
     const editorMap = new EditorMap({
       map: session.map,

@@ -68,7 +68,7 @@ import {
 import { createModelGrid } from "./modelGrid.ts";
 import { SceneWaker } from "./SceneWaker.ts";
 import {
-  MODEL_CAPABILITIES,
+  MODEL_CAPABILITY_TABLE,
   type ModelGrants
 } from "../access/ModelAccess.ts";
 import type { ModelAction } from "../keybindings/modelActions.ts";
@@ -168,7 +168,7 @@ export class ModelEditorScene extends Systems.Scene {
       this.#options.preferences
     ));
 
-    const access = new RoomGrants(room, MODEL_CAPABILITIES)
+    const access = new RoomGrants(room, MODEL_CAPABILITY_TABLE)
       .setMaxListeners(kMaxAccessListeners);
     const history = createEditorHistory({ document });
     const unregisterPixels = registerPixelHistory(history, pixels, { scope: "texture" });

@@ -20,7 +20,7 @@ import {
 function restoringCounterHandler(
   restored: Array<[unknown, number]>
 ): AssetKindHandler<CounterState> {
-  const inner = liveCounterHandler({ delay: 0, maxDelay: 0 });
+  const inner = liveCounterHandler();
   const commands = inner.commands!;
 
   return {

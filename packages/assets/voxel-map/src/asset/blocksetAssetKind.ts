@@ -6,8 +6,7 @@ import {
   JSON_CONTENT_TYPE,
   JsonAssetFile,
   PASS_THROUGH_BUILD,
-  type AssetKindHandler,
-  type SnapshotPolicy
+  type AssetKindHandler
 } from "@jolly-pixel/asset-server";
 import { PixelArtState } from "@jolly-pixel/asset.pixel-art";
 import {
@@ -181,7 +180,6 @@ export class BlocksetState {
 export interface BlocksetAssetKindOptions {
   tileSize?: number;
   defaultSize?: Vec2;
-  snapshot?: SnapshotPolicy;
 }
 
 export function blocksetAssetKind(
@@ -192,8 +190,7 @@ export function blocksetAssetKind(
     defaultSize = {
       x: kDefaultGridSize * tileSize,
       y: kDefaultGridSize * tileSize
-    },
-    snapshot
+    }
   } = options;
 
   return {
@@ -201,7 +198,6 @@ export function blocksetAssetKind(
     extensions: {
       [BLOCKSET_EXTENSION]: JSON_CONTENT_TYPE
     },
-    snapshot,
     build: PASS_THROUGH_BUILD,
 
     create(): BlocksetState {

@@ -8,7 +8,7 @@ import type { PixelCommandAction } from "@jolly-pixel/asset.pixel-art/client";
 // Import Internal Dependencies
 import type { PixelDrawPanel } from "../panel/PixelDrawPanel.ts";
 import {
-  PIXEL_ART_CAPABILITIES,
+  PIXEL_ART_CAPABILITY_TABLE,
   type PixelArtCapability
 } from "./PixelArtAccess.ts";
 
@@ -25,7 +25,7 @@ export class RoomAccess {
     panel: AccessPanel,
     textureId: string
   ) {
-    this.#grants = new RoomGrants(room, PIXEL_ART_CAPABILITIES);
+    this.#grants = new RoomGrants(room, PIXEL_ART_CAPABILITY_TABLE);
     this.#grants.on("change", (access) => {
       panel.updateTexture(textureId, { access });
     });

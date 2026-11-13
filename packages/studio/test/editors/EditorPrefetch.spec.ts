@@ -26,6 +26,7 @@ function editor(
 ) {
   return {
     name,
+    package: `@jolly-pixel/editor.${name}`,
     kinds: [name]
   };
 }

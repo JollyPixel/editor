@@ -33,7 +33,7 @@ import { pickFiles } from "@jolly-pixel/utils/dom";
 // Import Internal Dependencies
 import {
   canImportHeights,
-  TERRAIN_CAPABILITIES,
+  TERRAIN_CAPABILITY_TABLE,
   type TerrainAccess
 } from "../../../access/TerrainAccess.ts";
 import type {
@@ -129,7 +129,7 @@ export class ExchangePanel extends LitElement {
   constructor() {
     super();
     this.context = null;
-    this.access = TERRAIN_CAPABILITIES.full;
+    this.access = TERRAIN_CAPABILITY_TABLE.full;
     this.rect = { x: 0, z: 0, columns: 1, rows: 1 };
     this.tier = 1;
     this.format = "png";

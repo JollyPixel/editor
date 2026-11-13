@@ -30,13 +30,13 @@ Set `JOLLY_MASTER_PASSWORD` so that a stranger who reaches the server first cann
 
 The Users pane on Home lists every account under its role and shows who is online. An admin manages them from the same pane: a role change or a removal from an account's context menu, or with the `/users` console commands. Admins also see pending access requests in their own group, and approve one with a role or deny it, which frees the username. A role change reconnects the user's open tabs under the new role.
 
-Settings › Access also edits the roles themselves, the default role and access requests, and saves them to `project.json` without a restart. Turning access requests on still needs `JOLLY_MASTER_PASSWORD`.
+Settings › Project › Access edits the roles themselves, and Settings › Project › General the default role and access requests; both save to `project.json` without a restart. Turning access requests on still needs `JOLLY_MASTER_PASSWORD`. General also lists the pending requests: approving or denying one there acts at once, outside the save bar.
 
 A crown marks the owner. No admin can change the owner's role or remove it. The owner can make another account the owner from its context menu or with `/users transfer`; that account becomes an admin, and the previous owner stays one.
 
 ## Agent tokens
 
-An agent token lets an AI agent running on your machine (Claude Code, Codex, Cursor…) join the studio as a peer through `@jolly-pixel/golem`. Create one in Settings › Agents. The page shows the token once, inside a `claude mcp add` line that points at the studio's URL; copy it before closing the panel, because only a digest is stored. Replace the line's `<checkout>` with the path of your clone of this repository.
+An agent token lets an AI agent running on your machine (Claude Code, Codex, Cursor…) join the studio as a peer through `@jolly-pixel/golem`. Create one in Settings › You › Access keys. The page shows the token once, inside a `claude mcp add` line that points at the studio's URL; copy it before closing the panel, because only a digest is stored. Replace the line's `<checkout>` with the path of your clone of this repository.
 
 An agent has your current role and never more. It shows in the peer lists under the token's name with a "via golem" badge, and the audit names its edits after the token and you, "Golem (Alice)". Revoking the token disconnects it for good. A role change or a removal of your account reconnects or refuses your agents too; signing out does not. Tokens never expire.
 

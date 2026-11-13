@@ -1,7 +1,12 @@
 // Import Third-party Dependencies
 import type { PreferenceScope } from "@jolly-pixel/preferences";
-import type { IconName } from "@jolly-pixel/ui";
+import type {
+  IconName,
+  IconTone
+} from "@jolly-pixel/ui";
 import {
+  CAMERA_PREFERENCES,
+  COLOR_PICKER_PREFERENCES,
   LANTERN_PREFERENCES,
   RUNTIME_PREFERENCES
 } from "@jolly-pixel/editor.host/preferences";
@@ -15,57 +20,79 @@ import {
 import { STUDIO_PREFERENCES } from "../../../shared/preferences.ts";
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import type { StudioUser } from "../../accounts/StudioUser.ts";
+import type { ProjectDrafts } from "../../project/ProjectDrafts.ts";
 
 // CONSTANTS
-export const PROFILE_SECTION = "profile";
+export const ACCOUNT_SECTION = "account";
 export const APPEARANCE_SECTION = "appearance";
-export const PREFERENCES_FILE_SECTION = "preferences-file";
-export const SHARE_LINKS_SECTION = "share-links";
-export const AGENTS_SECTION = "agents";
+export const ACCESS_KEYS_SECTION = "access-keys";
 export const GENERAL_SECTION = "project-general";
 export const ACCESS_SETTINGS_SECTION = "project-access";
 export const AUDIT_SECTION = "project-audit";
+export const YOU_TAB = "you";
+export const PROJECT_TAB = "project";
 const kEditorPrefix = "editor:";
 const kKindPackagePrefix = "kind-package:";
 const kAppearanceScopes = new Set(
-  [STUDIO_PREFERENCES, RUNTIME_PREFERENCES, LANTERN_PREFERENCES].map(
-    (scope) => scope.name
-  )
+  [
+    STUDIO_PREFERENCES,
+    RUNTIME_PREFERENCES,
+    LANTERN_PREFERENCES,
+    COLOR_PICKER_PREFERENCES
+  ].map((scope) => scope.name)
 );
+const kScopePresentations: ReadonlyMap<string, SectionPresentation> = new Map([
+  [
+    CAMERA_PREFERENCES.name,
+    {
+      label: CAMERA_PREFERENCES.label,
+      icon: "camera",
+      tone: "teal"
+    }
+  ]
+]);
 const kPages = {
-  profile: {
-    id: PROFILE_SECTION,
-    label: "Profile",
-    kind: "profile"
+  account: {
+    id: ACCOUNT_SECTION,
+    label: "Account",
+    icon: "user",
+    tone: "sky",
+    kind: "account"
   },
-  "preferences-file": {
-    id: PREFERENCES_FILE_SECTION,
-    label: "Import & export",
-    kind: "preferences-file"
-  },
-  "share-links": {
-    id: SHARE_LINKS_SECTION,
-    label: "Share links",
-    kind: "share-links"
-  },
-  agents: {
-    id: AGENTS_SECTION,
-    label: "Agents",
-    kind: "agents"
+  "access-keys": {
+    id: ACCESS_KEYS_SECTION,
+    label: "Access keys",
+    icon: "key",
+    tone: "amber",
+    kind: "access-keys"
   },
   general: {
     id: GENERAL_SECTION,
     label: "General",
-    kind: "general"
+    icon: "settings",
+    tone: "coral",
+    kind: "general",
+    unsaved: (drafts) => drafts.changedIn(
+      ["kindFilter", "game", "physics", "snapshot"]
+    ) || drafts.section("access").differsIn(
+      (access) => [access.defaultRole, access.accessRequests]
+    )
   },
   access: {
     id: ACCESS_SETTINGS_SECTION,
     label: "Access",
-    kind: "access"
+    icon: "shield",
+    tone: "lime",
+    kind: "access",
+    unsaved: (drafts) => drafts.section("access").differsIn(
+      (access) => access.toJSON().roles
+    )
   },
   audit: {
     id: AUDIT_SECTION,
     label: "Audit",
+    icon: "history",
+    tone: "violet",
     kind: "audit"
   }
 } satisfies Record<string, PageSection>;
@@ -73,17 +100,17 @@ const kPages = {
 interface SectionPresentation {
   label: string;
   icon?: IconName;
+  tone?: IconTone;
 }
 
 interface SectionBase extends SectionPresentation {
   id: string;
+  unsaved?(drafts: ProjectDrafts): boolean;
 }
 
 type PageKind =
-  | "profile"
-  | "preferences-file"
-  | "share-links"
-  | "agents"
+  | "account"
+  | "access-keys"
   | "general"
   | "access"
   | "audit";
@@ -94,6 +121,7 @@ export type PageSection = {
 
 export interface PreferencesSection extends SectionBase {
   kind: "preferences";
+  scopes: readonly PreferenceScope[];
   forms: readonly PreferenceScope[];
   keyBindings: readonly PreferenceScope[];
 }
@@ -110,14 +138,23 @@ export type SettingsSection =
 
 export interface SettingsGroup {
   id: string;
-  label: string;
+  label?: string;
   sections: readonly SettingsSection[];
+}
+
+export interface SettingsTab {
+  id: typeof YOU_TAB | typeof PROJECT_TAB;
+  label: string;
+  icon: IconName;
+  groups: readonly SettingsGroup[];
+  first: SettingsSection;
+  unsaved(drafts: ProjectDrafts): boolean;
 }
 
 export interface SettingsSectionsOptions {
   /**
-   * The account adds Profile, Share links and Agents; its project rights pick the
-   * Project sections.
+   * The account adds Access keys; its project rights pick the Project
+   * sections.
    */
   user: Pick<StudioUser, "online" | "rights">;
   /**
@@ -138,7 +175,7 @@ export class SettingsSections implements Iterable<SettingsSection> {
     shellScopes: []
   });
 
-  readonly blocks: readonly (readonly SettingsGroup[])[];
+  readonly tabs: readonly SettingsTab[];
   readonly shortcutScopes: readonly PreferenceScope[];
 
   #sections: SettingsSection[];
@@ -154,35 +191,55 @@ export class SettingsSections implements Iterable<SettingsSection> {
     } = options;
     const shellScopes = [...options.shellScopes].filter(hasPage);
 
-    const you: SettingsSection[] = [];
-    if (user.online) {
-      you.push(kPages.profile);
-    }
-    you.push(preferencesPage(
-      APPEARANCE_SECTION,
-      { label: "Appearance" },
-      shellScopes.filter((scope) => kAppearanceScopes.has(scope.name))
-    ));
+    const you: SettingsSection[] = [
+      kPages.account,
+      preferencesPage(
+        APPEARANCE_SECTION,
+        {
+          label: "Appearance",
+          icon: "palette",
+          tone: "pink"
+        },
+        shellScopes.filter((scope) => kAppearanceScopes.has(scope.name))
+      )
+    ];
     for (const scope of shellScopes) {
       if (!kAppearanceScopes.has(scope.name)) {
-        you.push(preferencesPage(scope.name, scope, [scope]));
+        you.push(preferencesPage(
+          scope.name,
+          kScopePresentations.get(scope.name) ?? { label: scope.label },
+          [scope]
+        ));
       }
     }
-    you.push(kPages["preferences-file"]);
     if (user.online) {
-      you.push(kPages["share-links"], kPages.agents);
+      you.push(kPages["access-keys"]);
     }
 
-    this.blocks = [
-      [
-        group("you", "You", you),
-        group("editors", "Editors", editorPages([...editors], kinds))
-      ],
-      projectGroups(user.rights, [...kindPackages], kinds)
-    ]
-      .map((block) => block.filter((entry) => entry !== null))
-      .filter((block) => block.length > 0);
-    this.#sections = this.blocks.flat().flatMap((entry) => entry.sections);
+    this.tabs = [
+      tab(
+        {
+          id: YOU_TAB,
+          label: "You",
+          icon: "user"
+        },
+        [
+          group("you", undefined, you),
+          group("editors", "Editors", editorPages([...editors], kinds))
+        ]
+      ),
+      tab(
+        {
+          id: PROJECT_TAB,
+          label: "Project",
+          icon: "folder"
+        },
+        projectGroups(user.rights, [...kindPackages], kinds)
+      )
+    ].filter((entry) => entry !== null);
+    this.#sections = this.tabs
+      .flatMap((entry) => entry.groups)
+      .flatMap((entry) => entry.sections);
     this.shortcutScopes = [
       ...new Map(this.#sections
         .flatMap((section) => (section.kind === "preferences" ? section.keyBindings : []))
@@ -205,6 +262,14 @@ export class SettingsSections implements Iterable<SettingsSection> {
     return this.#sections.find((section) => section.id === id);
   }
 
+  tabHolding(
+    id: string
+  ): SettingsTab | undefined {
+    return this.tabs.find((entry) => entry.groups.some(
+      (settingsGroup) => settingsGroup.sections.some((section) => section.id === id)
+    ));
+  }
+
   [Symbol.iterator](): IterableIterator<SettingsSection> {
     return this.#sections.values();
   }
@@ -220,11 +285,17 @@ function projectGroups(
   if (project.allows("readSettings")) {
     pages.push(kPages.general);
     for (const kindPackage of kindPackages) {
+      if (!kindPackage.configurable) {
+        continue;
+      }
       kindPackagePages.push({
         id: `${kKindPackagePrefix}${kindPackage.name}`,
         ...kindPresentation(kindPackage.name, kindPackage.kinds, kinds),
         kind: "kind-package",
-        packageName: kindPackage.name
+        packageName: kindPackage.name,
+        unsaved: (drafts) => drafts.section("kinds").differsIn(
+          (kinds) => kinds.toJSON()[kindPackage.name]
+        )
       });
     }
   }
@@ -236,9 +307,29 @@ function projectGroups(
   }
 
   return [
-    group("project", "Project", pages),
+    group("project", undefined, pages),
     group("assets", "Assets", kindPackagePages)
   ];
+}
+
+function tab(
+  presentation: Pick<SettingsTab, "id" | "label" | "icon">,
+  groups: readonly (SettingsGroup | null)[]
+): SettingsTab | null {
+  const shown = groups.filter((entry) => entry !== null);
+  const sections = shown.flatMap((entry) => entry.sections);
+  if (sections.length === 0) {
+    return null;
+  }
+
+  return {
+    ...presentation,
+    groups: shown,
+    first: sections[0],
+    unsaved: (drafts) => sections.some(
+      (section) => section.unsaved?.(drafts) ?? false
+    )
+  };
 }
 
 function editorPages(
@@ -270,7 +361,7 @@ function editorPages(
 
 function group(
   id: string,
-  label: string,
+  label: string | undefined,
   sections: readonly SettingsSection[]
 ): SettingsGroup | null {
   return sections.length === 0 ? null : {
@@ -295,7 +386,9 @@ function preferencesPage(
     id,
     label: presentation.label,
     icon: presentation.icon,
+    tone: presentation.tone,
     kind: "preferences",
+    scopes,
     forms: scopes.filter((scope) => scope.form.length > 0),
     keyBindings: scopes.filter((scope) => scope.keyBindings.length > 0)
   };

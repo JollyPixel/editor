@@ -9,7 +9,7 @@ import { Grants } from "@jolly-pixel/network/client";
 import {
   canImportHeights,
   canUseTool,
-  TERRAIN_CAPABILITIES,
+  TERRAIN_CAPABILITY_TABLE,
   type TerrainCapability
 } from "#src/access/TerrainAccess.ts";
 import { BRUSH_TOOLS } from "#src/state/SculptSettings.ts";
@@ -17,14 +17,14 @@ import { BRUSH_TOOLS } from "#src/state/SculptSettings.ts";
 function resolved(
   denied: readonly string[]
 ): Grants<TerrainCapability> {
-  return TERRAIN_CAPABILITIES.resolveGrants({
+  return TERRAIN_CAPABILITY_TABLE.resolveGrants({
     can: (event) => (denied.includes(event) ? "read" : "write")
   });
 }
 
 describe("TerrainAccess", () => {
   test("no tool is usable and no import allowed when every command is refused", () => {
-    const { none } = TERRAIN_CAPABILITIES;
+    const { none } = TERRAIN_CAPABILITY_TABLE;
 
     assert.equal(BRUSH_TOOLS.some((tool) => canUseTool(none, tool)), false);
     assert.equal(canImportHeights(none), false);

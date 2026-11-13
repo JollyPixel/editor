@@ -31,7 +31,12 @@ const kKinds = new AssetKindSet({
       extensions: [".png"]
     }
   ],
-  editable: ["pixelart"],
+  editors: [
+    {
+      package: "@jolly-pixel/editor.pixel-art",
+      kinds: ["pixelart"]
+    }
+  ],
   maxContentBytes: 1024
 });
 

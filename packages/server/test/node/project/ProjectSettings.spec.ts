@@ -6,96 +6,19 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
-import {
-  Accounts,
-  type AccountRoles
-} from "@jolly-pixel/accounts/node";
-import { AssetServer } from "@jolly-pixel/asset-server/node";
+import type { AccountRoles } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
+import { SETTINGS_CHANGED } from "#src/node/audit/AuditLog.ts";
 import {
-  AuditLog,
-  SETTINGS_CHANGED
-} from "#src/node/audit/AuditLog.ts";
-import { ProjectSettings } from "#src/node/project/ProjectSettings.ts";
-import { DEFAULT_PHYSICS } from "#src/project/api.ts";
-import type { StudioProject } from "#src/node/project/StudioProject.ts";
+  DEFAULT_PHYSICS,
+  DEFAULT_PROJECT_SECTIONS
+} from "#src/project/api.ts";
 import { InvalidSettingsError } from "#src/node/project/errors/InvalidSettingsError.ts";
-import { openTestProject } from "../../helpers/testProject.ts";
+import { settingsHarness } from "../../helpers/settingsHarness.ts";
 
 // CONSTANTS
-const kPassword = "p".repeat(43);
-const kVoxelModelKinds = "@jolly-pixel/asset.voxel-model";
-
-interface SettingsHarness extends AsyncDisposable {
-  settings: ProjectSettings;
-  project: StudioProject;
-  accounts: Accounts;
-  audit: AuditLog;
-  handlerDelay(kind: string): number | undefined;
-  revoked: string[];
-  register(username: string): Promise<Account>;
-}
-
-async function settingsHarness(): Promise<SettingsHarness> {
-  const project = await openTestProject();
-  const accounts = await Accounts.open({
-    roles: project.access.roles
-  });
-  const assetServer = await AssetServer.open({
-    root: project.file.root,
-    inMemory: true,
-    handlers: project.kinds.handlers(),
-    rights: project.access.rights,
-    defaultRole: accounts.roles.defaultRole,
-    auth: accounts
-  });
-  const audit = await AuditLog.open(null);
-  const revoked: string[] = [];
-
-  return {
-    project,
-    accounts,
-    audit,
-    revoked,
-    settings: new ProjectSettings({
-      project,
-      accounts,
-      server: {
-        replaceRights: (rights, defaultRole) => assetServer.network.replaceRights(
-          rights,
-          defaultRole
-        ),
-        revoke: (subject) => {
-          revoked.push(subject);
-          assetServer.network.revoke(subject);
-        }
-      },
-      registry: assetServer.backend.kinds,
-      audit
-    }),
-    handlerDelay: (kind) => assetServer.backend.kinds.get(kind).snapshot?.delay,
-    async register(username) {
-      const registration = await accounts.register({
-        username,
-        password: kPassword
-      }, {
-        address: "203.0.113.7",
-        secure: false,
-        headers: {}
-      });
-      assert.ok(registration.status === "active");
-
-      return registration.account;
-    },
-    async [Symbol.asyncDispose]() {
-      await assetServer.close();
-      await audit[Symbol.asyncDispose]();
-      accounts[Symbol.dispose]();
-    }
-  };
-}
+const kVoxelMapKinds = "@jolly-pixel/asset.voxel-map";
 
 function roleNames(
   roles: AccountRoles
@@ -112,18 +35,17 @@ describe("ProjectSettings", () => {
     );
     const after = {
       ...kinds,
-      [kVoxelModelKinds]: {
-        snapshot: {
-          delay: 500,
-          maxDelay: 30_000
+      [kVoxelMapKinds]: {
+        voxelmap: {
+          chunkSize: 8
         }
       }
     };
 
-    await harness.settings.replace(admin, "kinds", after);
+    await harness.update(admin, "kinds", after);
 
-    assert.equal(harness.handlerDelay("voxelmodel"), 500);
-    assert.deepEqual(harness.project.file.kinds.get(kVoxelModelKinds), after[kVoxelModelKinds]);
+    assert.equal(harness.voxelMapChunkSize(), 8);
+    assert.deepEqual(harness.project.file.kinds.get(kVoxelMapKinds), after[kVoxelMapKinds]);
     const [event] = await harness.audit.store.reader.listAll();
     assert.equal(event.eventType, SETTINGS_CHANGED);
     assert.deepEqual(event.actor, { type: "user", id: admin.id });
@@ -138,7 +60,7 @@ describe("ProjectSettings", () => {
     await using harness = await settingsHarness();
     const admin = await harness.register("Alice");
 
-    const reply = await harness.settings.replace(admin, "kindFilter", {
+    const reply = await harness.update(admin, "kindFilter", {
       hidden: ["voxelmodel", "voxelmap", "voxelmodel"]
     });
 
@@ -156,7 +78,7 @@ describe("ProjectSettings", () => {
       after
     });
     await assert.rejects(
-      harness.settings.replace(admin, "kindFilter", {
+      harness.update(admin, "kindFilter", {
         hidden: ["unknown"]
       }),
       InvalidSettingsError
@@ -169,13 +91,33 @@ describe("ProjectSettings", () => {
     const admin = await harness.register("Alice");
     const after = { ...DEFAULT_PHYSICS, gravity: { x: 0, y: -1.62, z: 0 } };
 
-    await harness.settings.replace(admin, "physics", after);
+    await harness.update(admin, "physics", after);
 
     assert.deepEqual(harness.project.file.data.physics, after);
     const [event] = await harness.audit.store.reader.listAll();
     assert.deepEqual(event.eventData, {
       section: "physics",
       before: DEFAULT_PHYSICS,
+      after
+    });
+  });
+
+  test("a new snapshot policy reaches the asset backend, the project file and the audit log", async() => {
+    await using harness = await settingsHarness();
+    const admin = await harness.register("Alice");
+    const after = {
+      delay: 500,
+      maxDelay: 10_000
+    };
+
+    await harness.update(admin, "snapshot", after);
+
+    assert.deepEqual(harness.snapshotPolicies, [after]);
+    assert.deepEqual(harness.project.file.data.snapshot, after);
+    const [event] = await harness.audit.store.reader.listAll();
+    assert.deepEqual(event.eventData, {
+      section: "snapshot",
+      before: DEFAULT_PROJECT_SECTIONS.snapshot,
       after
     });
   });
@@ -187,7 +129,7 @@ describe("ProjectSettings", () => {
     const { access } = harness.settings.read(admin);
     assert.ok(access !== undefined);
 
-    await harness.settings.replace(admin, "access", {
+    await harness.update(admin, "access", {
       access: {
         ...access,
         defaultRole: "reviewer",
@@ -222,7 +164,7 @@ describe("ProjectSettings", () => {
     assert.ok(access !== undefined);
 
     await assert.rejects(
-      harness.settings.replace(admin, "access", {
+      harness.update(admin, "access", {
         access: {
           ...access,
           accessRequests: true
@@ -246,7 +188,7 @@ describe("ProjectSettings", () => {
       (subject) => accountsRevoked.push(subject)
     );
 
-    await harness.settings.replace(admin, "access", {
+    await harness.update(admin, "access", {
       access: {
         ...access,
         defaultRole: "viewer",
@@ -278,7 +220,7 @@ describe("ProjectSettings", () => {
     assert.ok(access !== undefined);
 
     await assert.rejects(
-      harness.settings.replace(admin, "access", {
+      harness.update(admin, "access", {
         access: {
           ...access,
           roles: {

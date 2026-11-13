@@ -4,10 +4,9 @@ import {
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
   JsonAssetFile,
-  SNAPSHOT_OPTIONS_SCHEMA,
+  NO_OPTIONS_SCHEMA,
   type AssetKindHandler,
-  type AssetKindPackage,
-  type SnapshotPolicy
+  type AssetKindPackage
 } from "@jolly-pixel/asset-server";
 import { InvalidEntryError } from "@jolly-pixel/asset.common";
 import { ChunkCoord } from "@jolly-pixel/terrain.renderer";
@@ -71,25 +70,16 @@ export const TERRAIN_FILE = new JsonAssetFile({
   isInvalid: (error) => error instanceof InvalidEntryError
 });
 
-export interface TerrainAssetKindOptions {
-  snapshot?: SnapshotPolicy;
-}
-
-export function terrainAssetKind(
-  options: TerrainAssetKindOptions = {}
-): AssetKindHandler<
+export function terrainAssetKind(): AssetKindHandler<
   TerrainModel,
   TerrainNetworkCommand,
   TerrainLiveMessage
 > {
-  const { snapshot } = options;
-
   return {
     kind: TERRAIN_KIND,
     extensions: {
       [TERRAIN_EXTENSION]: JSON_CONTENT_TYPE
     },
-    snapshot,
 
     create(): TerrainModel {
       const model = new TerrainModel();
@@ -202,8 +192,8 @@ export function terrainAssetKind(
   };
 }
 
-export const ASSET_KINDS: AssetKindPackage<TerrainAssetKindOptions> = {
+export const ASSET_KINDS: AssetKindPackage = {
   descriptors: [TERRAIN_ASSET],
-  optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
-  handlers: (options) => [terrainAssetKind(options)]
+  optionsSchema: NO_OPTIONS_SCHEMA,
+  handlers: () => [terrainAssetKind()]
 };

@@ -12,9 +12,18 @@
 ```ts
 interface Text {
   placeholder: string;
+  suggestions: readonly string[]; // property only, default []
   value: string | typeof Mixed; // default ""
 }
 ```
 
 - Typing emits `jolly-input`. Enter or blur emits `jolly-change`.
+- `suggestions` feeds the browser's autocomplete list. Picking one emits
+  `jolly-input`, as typing it would.
 - Escape discards the draft and does not close an outer dialog.
+
+## Methods
+
+### `select(): void`
+
+Focuses the input and selects its text.

@@ -5,12 +5,6 @@ import { DEFAULT_ACCESS } from "@jolly-pixel/server/node";
 // Import Internal Dependencies
 import { TEXTURE_SIZE } from "../shared/seed.ts";
 
-// CONSTANTS
-const kSnapshot = {
-  delay: 2_000,
-  maxDelay: 30_000
-};
-
 export const STUDIO_PROJECT_FILE: ProjectFileData = {
   version: 1,
   editors: [
@@ -27,35 +21,14 @@ export const STUDIO_PROJECT_FILE: ProjectFileData = {
     "@jolly-pixel/asset.font": {},
     "@jolly-pixel/asset.model": {},
     "@jolly-pixel/asset.pixel-art": {
-      defaultSize: TEXTURE_SIZE,
-      snapshot: kSnapshot
+      defaultSize: TEXTURE_SIZE
     },
     "@jolly-pixel/asset.scene": {},
     "@jolly-pixel/asset.script": {},
     "@jolly-pixel/asset.sound": {},
-    "@jolly-pixel/asset.voxel-map": {
-      blockset: {
-        tileSize: 32,
-        defaultSize: {
-          x: 256,
-          y: 256
-        },
-        snapshot: kSnapshot
-      },
-      voxelmap: {
-        chunkSize: 16,
-        snapshot: {
-          delay: 5_000,
-          maxDelay: 60_000
-        }
-      }
-    },
-    "@jolly-pixel/asset.voxel-model": {
-      snapshot: kSnapshot
-    },
-    "@jolly-pixel/asset.voxel-animation": {
-      snapshot: kSnapshot
-    }
+    "@jolly-pixel/asset.voxel-map": {},
+    "@jolly-pixel/asset.voxel-model": {},
+    "@jolly-pixel/asset.voxel-animation": {}
   },
   access: DEFAULT_ACCESS
 };

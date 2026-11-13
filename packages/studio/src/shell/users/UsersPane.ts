@@ -18,7 +18,6 @@ import type {
   AccountsRoster,
   RosterEntry
 } from "@jolly-pixel/accounts";
-import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/context-menu";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/tree";
@@ -29,6 +28,7 @@ import {
   parseRoleAction,
   type UsersMenuTarget
 } from "../../accounts/UsersTreeModel.ts";
+import { RosterController } from "../RosterController.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 
 @customElement("studio-users")
@@ -65,14 +65,7 @@ export class UsersPane extends LitElement {
   @query("jolly-context-menu")
   declare _menu: HTMLElementTagNameMap["jolly-context-menu"] | null;
 
-  #roster = new SubscriptionController<AccountsRoster>(this, (roster) => {
-    const repaint = () => this.requestUpdate();
-    roster.on("change", repaint);
-
-    return [
-      () => roster.off("change", repaint)
-    ];
-  });
+  #roster = new RosterController(this);
 
   #menuTarget: UsersMenuTarget | null = null;
 

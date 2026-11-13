@@ -20,7 +20,7 @@ import {
 } from "./CanvasDefaults.ts";
 import { ToolSettings } from "../tools/ToolSettings.ts";
 import { ViewSettings } from "../panel/ViewSettings.ts";
-import { PIXEL_ART_CAPABILITIES } from "../access/PixelArtAccess.ts";
+import { PIXEL_ART_CAPABILITY_TABLE } from "../access/PixelArtAccess.ts";
 import {
   TextureAccess,
   type UvAccess
@@ -92,7 +92,7 @@ export class TextureSet extends Emitter<TextureSetEvents> {
   get activeAccess(): TextureAccess {
     return new TextureAccess(
       this.#uvAccess,
-      this.#active?.access ?? PIXEL_ART_CAPABILITIES.full
+      this.#active?.access ?? PIXEL_ART_CAPABILITY_TABLE.full
     );
   }
 
@@ -150,7 +150,7 @@ export class TextureSet extends Emitter<TextureSetEvents> {
       name,
       tooltip = "",
       disabled = false,
-      access = PIXEL_ART_CAPABILITIES.full,
+      access = PIXEL_ART_CAPABILITY_TABLE.full,
       ...canvasOptions
     } = options;
     if (this.#entries.has(id)) {

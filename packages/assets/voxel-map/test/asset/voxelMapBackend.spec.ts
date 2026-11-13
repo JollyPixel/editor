@@ -85,13 +85,13 @@ describe("voxel-map asset kind over a real back-end", () => {
         eventStore,
         handlers: [
           voxelMapAssetKind({
-            chunkSize: kChunkSize,
-            snapshot: {
-              delay: 1_000,
-              maxDelay: 5_000
-            }
+            chunkSize: kChunkSize
           })
         ],
+        snapshot: {
+          delay: 1_000,
+          maxDelay: 5_000
+        },
         reconcile: {
           watch: false
         }

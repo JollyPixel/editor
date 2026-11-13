@@ -23,7 +23,7 @@ import { Emitter } from "@openally/emitt";
 // Import Internal Dependencies
 import type { EditorMap } from "../../map/EditorMap.ts";
 import {
-  BLOCKSET_CAPABILITIES,
+  BLOCKSET_CAPABILITY_TABLE,
   type BlocksetAccess,
   type BlocksetCapability
 } from "../../access/BlocksetAccess.ts";
@@ -178,7 +178,7 @@ export class MapBlocksets
     blocksetId: string
   ): BlocksetAccess {
     return this.#bindings.get(blocksetId)?.access.current ??
-      BLOCKSET_CAPABILITIES.none;
+      BLOCKSET_CAPABILITY_TABLE.none;
   }
 
   entriesGranting(

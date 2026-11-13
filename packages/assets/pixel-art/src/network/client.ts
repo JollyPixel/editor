@@ -24,3 +24,4 @@ export * from "./presence/PixelCursorSync.ts";
 export * from "./presence/PixelStrokeGhostSync.ts";
 export * from "./presence/UVGhostSync.ts";
 export * from "./presence/SelectionGhostSync.ts";
+export * from "../asset/capabilities.ts";

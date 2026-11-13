@@ -131,6 +131,7 @@ describe("StudioServer", () => {
       [
         {
           name: "voxel-map",
+          package: "@jolly-pixel/editor.voxel-map",
           kinds: ["voxelmap"],
           preferences: [],
           sharedPreferences: [],

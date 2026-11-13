@@ -6,7 +6,11 @@ import assert from "node:assert/strict";
 import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import { AssetKindRegistry, type AssetKindHandler } from "#src/index.ts";
+import {
+  AssetKindRegistry,
+  type AssetKindHandler,
+  type SnapshotPolicy
+} from "#src/index.ts";
 import { AssetStateStore } from "#src/live/AssetStateStore.ts";
 import { syncHarness, type SyncHarness } from "../helpers/backend.ts";
 import {
@@ -21,6 +25,10 @@ import { bytes, text } from "../helpers/bytes.ts";
 const kActor: EventStore.Actor = {
   type: "user",
   id: "alice"
+};
+const kSlowSnapshot: SnapshotPolicy = {
+  delay: 60_000,
+  maxDelay: 120_000
 };
 
 async function counterAsset(
@@ -59,7 +67,7 @@ interface GatedCounter {
 }
 
 function gatedCounter(): GatedCounter {
-  const base = counterHandler({ delay: 60_000, maxDelay: 120_000 });
+  const base = counterHandler();
   let gate: {
     started: PromiseWithResolvers<void>;
     released: PromiseWithResolvers<void>;
@@ -99,7 +107,8 @@ describe("SnapshotScheduler — concurrent commands", () => {
   test("a command folded while serializing is not lost", async() => {
     const counter = gatedCounter();
     await using harness = await syncHarness({
-      handlers: [counter.handler]
+      handlers: [counter.handler],
+      snapshot: kSlowSnapshot
     });
     const assetId = await counterAsset(harness);
     await increment(harness, assetId);
@@ -130,7 +139,8 @@ describe("SnapshotScheduler — concurrent commands", () => {
   test("flush retries a snapshot a command superseded", async() => {
     const counter = gatedCounter();
     await using harness = await syncHarness({
-      handlers: [counter.handler]
+      handlers: [counter.handler],
+      snapshot: kSlowSnapshot
     });
     const assetId = await counterAsset(harness);
     await increment(harness, assetId);

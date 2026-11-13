@@ -32,7 +32,7 @@ export const ROOM_ACTOR: EventStore.Actor = {
 type CounterKind = "live" | "plain";
 
 const counterKinds: Record<CounterKind, () => AssetKindHandler<CounterState>> = {
-  live: () => liveCounterHandler({ delay: 0, maxDelay: 0 }),
+  live: () => liveCounterHandler(),
   plain: () => counterHandler()
 };
 

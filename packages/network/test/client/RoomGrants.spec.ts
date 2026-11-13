@@ -14,11 +14,18 @@ import {
 import { RoomHarness } from "../helpers/client/RoomHarness.ts";
 
 // CONSTANTS
-const kTable = new CapabilityTable({
-  stroke: "pixels",
-  fill: "pixels",
-  "palette-changed": "palette"
-});
+const kTable = new CapabilityTable([
+  {
+    name: "pixels",
+    label: "Pixels",
+    events: ["stroke", "fill"]
+  },
+  {
+    name: "palette",
+    label: "Palette",
+    events: ["palette-changed"]
+  }
+]);
 
 type Capability = "pixels" | "palette";
 
@@ -64,6 +71,21 @@ describe("CapabilityTable", () => {
     assert.equal(grants.readOnly, true);
     assert.equal(grants.equals(kTable.none), true);
     assert.equal(kTable.full.equals(kTable.none), false);
+  });
+
+  test("refuses an event declared under two capabilities", () => {
+    assert.throws(() => new CapabilityTable([
+      {
+        name: "pixels",
+        label: "Pixels",
+        events: ["stroke"]
+      },
+      {
+        name: "palette",
+        label: "Palette",
+        events: ["stroke"]
+      }
+    ]), /"stroke" belongs to both "pixels" and "palette"/);
   });
 });
 

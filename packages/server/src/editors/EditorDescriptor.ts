@@ -19,6 +19,10 @@ export interface SceneComponentDeclaration {
 
 export interface EditorDescriptor {
   name: string;
+  /**
+   * The npm package the editor comes from.
+   */
+  package: string;
   kinds: readonly string[];
   /**
    * Descriptors of the preference scopes the editor declares, as

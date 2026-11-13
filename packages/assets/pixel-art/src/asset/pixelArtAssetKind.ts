@@ -4,11 +4,9 @@ import {
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
   PASS_THROUGH_BUILD,
-  SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
-  type AssetPreview,
-  type SnapshotPolicy
+  type AssetPreview
 } from "@jolly-pixel/asset-server";
 import {
   decodePixelArtFile,
@@ -55,8 +53,7 @@ const kDefaultSize: Vec2 = {
 const kOptionsSchema = z.strictObject({
   defaultSize: z.optional(
     sizeSchema.check(z.meta({ default: kDefaultSize }))
-  ),
-  snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+  )
 });
 
 export class PixelArtState {
@@ -107,16 +104,12 @@ export class PixelArtState {
 
 export interface PixelArtAssetKindOptions {
   defaultSize?: Vec2;
-  snapshot?: SnapshotPolicy;
 }
 
 export function pixelArtAssetKind(
   options: PixelArtAssetKindOptions = {}
 ): AssetKindHandler<PixelArtState, PixelWireCommand> {
-  const {
-    defaultSize = kDefaultSize,
-    snapshot
-  } = options;
+  const { defaultSize = kDefaultSize } = options;
 
   return {
     kind: PIXEL_ART_KIND,
@@ -131,7 +124,6 @@ export function pixelArtAssetKind(
         };
       }
     },
-    snapshot,
 
     create(): PixelArtState {
       return new PixelArtState(defaultSize);

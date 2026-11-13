@@ -6,8 +6,7 @@ import {
   projectSettingsReplySchema,
   type ProjectSections,
   type ProjectSettingsReply,
-  type SettingsSectionBody,
-  type SettingsSectionName,
+  type SettingsUpdate,
   ProjectRights
 } from "@jolly-pixel/server";
 
@@ -43,18 +42,14 @@ export class ProjectSettingsClient {
     return this.#endpoint.json(PROJECT_ROUTES.sections, projectSectionsSchema);
   }
 
-  replace<TName extends SettingsSectionName>(
-    section: TName,
-    body: SettingsSectionBody<TName>
+  replace(
+    update: SettingsUpdate
   ): Promise<ProjectSettingsReply> {
     return this.#endpoint.json(
-      PROJECT_ROUTES.replaceSection,
+      PROJECT_ROUTES.replaceSettings,
       projectSettingsReplySchema,
       {
-        params: {
-          section
-        },
-        body
+        body: update
       }
     );
   }

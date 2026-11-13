@@ -155,7 +155,7 @@ Shows a status message on the stage for three seconds.
 ## Access rights
 
 Each texture has its own `PixelArtAccess`, passed to `addTexture()` or
-`updateTexture()`. It defaults to `PIXEL_ART_CAPABILITIES.full`. The panel hides
+`updateTexture()`. It defaults to `PIXEL_ART_CAPABILITY_TABLE.full`. The panel hides
 or disables what the active texture does not grant; the server still checks
 every command.
 

@@ -25,4 +25,12 @@ export class ChangeController<
       ];
     });
   }
+
+  override attach(
+    source: TSource
+  ): void {
+    if (source !== this.current) {
+      super.attach(source);
+    }
+  }
 }

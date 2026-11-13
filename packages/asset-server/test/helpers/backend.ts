@@ -152,7 +152,6 @@ export async function syncHarness(
   const scheduler = new SnapshotScheduler({
     eventStore,
     states,
-    kinds,
     projector,
     writer,
     snapshot: options.snapshot,

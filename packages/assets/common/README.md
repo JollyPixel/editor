@@ -2,7 +2,7 @@
 
 Private workspace for code that several asset workspaces share: the ordered tree behind scene actors and voxel-model nodes and materials, `InvalidEntryError`, sibling-slot helpers, `NameSet` and `randomId`.
 
-It has no dependencies and imports nothing from the server, so both browser and server code can use it. Server helpers for asset kinds (`JsonAssetFile`, `arbitrated`, `SNAPSHOT_OPTIONS_SCHEMA`) live in `@jolly-pixel/asset-server`.
+It has no dependencies and imports nothing from the server, so both browser and server code can use it. Server helpers for asset kinds (`JsonAssetFile`, `arbitrated`, `NO_OPTIONS_SCHEMA`) live in `@jolly-pixel/asset-server`.
 
 ## 🚀 Building
 

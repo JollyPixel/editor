@@ -23,7 +23,7 @@ import { EditorPackages } from "../node/editors/EditorPackages.ts";
 import type { Middleware } from "../node/http/Middleware.ts";
 import { StudioAccess } from "../node/project/StudioAccess.ts";
 import { StudioProject } from "../node/project/StudioProject.ts";
-import { DEFAULT_PHYSICS } from "../project/api.ts";
+import { DEFAULT_PROJECT_SECTIONS } from "../project/api.ts";
 import { KindFilter } from "../project/KindFilter.ts";
 import { PASSED_ON_STATUS } from "./serveBackend.ts";
 
@@ -111,12 +111,9 @@ export function voxelMapProject(
       fallbacks: [kPackageRoot]
     })),
     {
+      ...DEFAULT_PROJECT_SECTIONS,
       access: StudioAccess.read({}, "project.json"),
-      kindFilter: KindFilter.NONE,
-      game: {
-        start: null
-      },
-      physics: DEFAULT_PHYSICS
+      kindFilter: KindFilter.NONE
     }
   );
 }

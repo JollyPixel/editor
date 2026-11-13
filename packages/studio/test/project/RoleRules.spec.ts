@@ -47,10 +47,7 @@ describe("RoleRules", () => {
   });
 
   test("keeps one rule per pattern when adding or editing", () => {
-    const added = kSpectator.add({
-      pattern: "*",
-      right: "void"
-    });
+    const added = kSpectator.withExact({ "*": "void" });
     const edited = kSpectator.replace(0, {
       pattern: "*",
       right: "write"
@@ -67,15 +64,12 @@ describe("RoleRules", () => {
     });
   });
 
-  test("withGrant names a studio right exactly, ahead of every wildcard", () => {
-    const granted = kSpectator.withGrant("studio.$settings", true);
+  test("a named right ignores every wildcard and reads only its exact rule", () => {
+    const granted = kSpectator.withExact({ "studio.$settings": "read" });
 
-    assert.equal(kSpectator.grants("studio.$settings"), false);
-    assert.equal(granted.grants("studio.$settings"), true);
+    assert.equal(kSpectator.effective("studio.$settings"), "read");
+    assert.equal(kSpectator.named("studio.$settings"), "void");
+    assert.equal(granted.named("studio.$settings"), "read");
     assert.equal(granted.match("studio.$settings")?.index, 0);
-    assert.deepEqual(
-      patterns(granted.withGrant("studio.$settings", false)),
-      patterns(kSpectator)
-    );
   });
 });

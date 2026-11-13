@@ -14,15 +14,13 @@ import {
 import { retainedPartEvents } from "./model/events/retainedPartEvents.ts";
 import { AssetIndex } from "./storage/AssetIndex.ts";
 import { AssetKindRegistry } from "./model/kinds/AssetKindRegistry.ts";
-import type {
-  AnyAssetKindHandler,
-  SnapshotPolicy
-} from "./model/kinds/AssetKindHandler.ts";
+import type { AnyAssetKindHandler } from "./model/kinds/AssetKindHandler.ts";
 import { ProjectionState } from "./storage/projection/ProjectionState.ts";
 import { AssetProjector } from "./storage/projection/AssetProjector.ts";
 import { AssetStateStore } from "./live/AssetStateStore.ts";
 import { AssetWriter } from "./storage/writer/AssetWriter.ts";
 import { SnapshotScheduler } from "./live/SnapshotScheduler.ts";
+import type { SnapshotPolicy } from "./live/SnapshotPolicy.ts";
 import type { ReconcileReport } from "./storage/reconcile/Reconciler.ts";
 import {
   SourceSync,
@@ -69,7 +67,7 @@ export interface CompactionPolicy {
 
 export interface AssetBackendTuning {
   /**
-   * Default snapshot cadence, overridable per kind.
+   * Snapshot cadence of every asset kind.
    */
   snapshot?: SnapshotPolicy;
   catalog?: CatalogPolicy;
@@ -98,6 +96,10 @@ export interface AssetBackend extends CatalogBackend, AsyncDisposable {
   readonly eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
 
   reconcile(): Promise<Result<ReconcileReport, Error>>;
+
+  replaceSnapshotPolicy(
+    policy: SnapshotPolicy
+  ): void;
 
   attach(
     server: Server,
@@ -197,7 +199,6 @@ async function assembleAssetBackend(
   const scheduler = new SnapshotScheduler({
     eventStore,
     states,
-    kinds,
     projector,
     writer,
     snapshot: options.snapshot,
@@ -281,6 +282,7 @@ async function assembleAssetBackend(
 
     flush,
     reconcile: () => sync.reconcile(),
+    replaceSnapshotPolicy: (policy) => scheduler.replacePolicy(policy),
 
     attach(server, attachOptions = {}) {
       server.register(catalogExtension);

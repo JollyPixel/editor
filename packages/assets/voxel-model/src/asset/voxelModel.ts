@@ -22,6 +22,7 @@ import type {
   VoxelModelSnapshot
 } from "../model/types.ts";
 import { VOXEL_MODEL_ICON } from "./icons.ts";
+import { VOXEL_MODEL_CAPABILITIES } from "./capabilities.ts";
 
 // CONSTANTS
 export const VOXEL_MODEL_KIND = "voxelmodel";
@@ -34,7 +35,8 @@ export const VOXEL_MODEL_ASSET: AssetKindDescriptor = {
   kind: VOXEL_MODEL_KIND,
   label: "Voxel model",
   extension: VOXEL_MODEL_EXTENSION,
-  icon: VOXEL_MODEL_ICON
+  icon: VOXEL_MODEL_ICON,
+  capabilities: VOXEL_MODEL_CAPABILITIES
 };
 
 const kCompactBlockNodeSchema = z.extend(blockNodeSchema, {

@@ -4,10 +4,9 @@ import {
   arbitrated,
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
-  SNAPSHOT_OPTIONS_SCHEMA,
+  NO_OPTIONS_SCHEMA,
   type AssetKindHandler,
-  type AssetKindPackage,
-  type SnapshotPolicy
+  type AssetKindPackage
 } from "@jolly-pixel/asset-server";
 import { PIXEL_ART_KIND } from "@jolly-pixel/asset.pixel-art";
 
@@ -127,21 +126,15 @@ export class VoxelModelState {
   }
 }
 
-export interface VoxelModelAssetKindOptions {
-  snapshot?: SnapshotPolicy;
-}
-
-export function voxelModelAssetKind(
-  options: VoxelModelAssetKindOptions = {}
-): AssetKindHandler<VoxelModelState, VoxelModelNetworkCommand> {
-  const { snapshot } = options;
-
+export function voxelModelAssetKind(): AssetKindHandler<
+  VoxelModelState,
+  VoxelModelNetworkCommand
+> {
   return {
     kind: VOXEL_MODEL_KIND,
     extensions: {
       [VOXEL_MODEL_EXTENSION]: JSON_CONTENT_TYPE
     },
-    snapshot,
     build: {
       build: (state) => Promise.resolve(
         kEncoder.encode(JSON.stringify(state.toJSON()))
@@ -224,8 +217,8 @@ export function voxelModelAssetKind(
   };
 }
 
-export const ASSET_KINDS: AssetKindPackage<VoxelModelAssetKindOptions> = {
+export const ASSET_KINDS: AssetKindPackage = {
   descriptors: [VOXEL_MODEL_ASSET],
-  optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
-  handlers: (options) => [voxelModelAssetKind(options)]
+  optionsSchema: NO_OPTIONS_SCHEMA,
+  handlers: () => [voxelModelAssetKind()]
 };

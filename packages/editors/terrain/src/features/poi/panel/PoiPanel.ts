@@ -32,7 +32,7 @@ import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import {
-  TERRAIN_CAPABILITIES,
+  TERRAIN_CAPABILITY_TABLE,
   type TerrainAccess
 } from "../../../access/TerrainAccess.ts";
 import type { PoiEditor } from "../model/PoiEditor.ts";
@@ -127,7 +127,7 @@ export class PoiPanel extends LitElement {
   constructor() {
     super();
     this.context = null;
-    this.access = TERRAIN_CAPABILITIES.full;
+    this.access = TERRAIN_CAPABILITY_TABLE.full;
   }
 
   protected override willUpdate(

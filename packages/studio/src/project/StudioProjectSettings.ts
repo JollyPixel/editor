@@ -1,9 +1,7 @@
 // Import Third-party Dependencies
 import {
-  type AccessChange,
+  type ApiFailureCode,
   type GameSection,
-  type KindOptions,
-  type PhysicsSection,
   type ProjectSections,
   type ProjectSettingsReply,
   KindFilter,
@@ -11,12 +9,17 @@ import {
 } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import { RemoteState } from "../api/RemoteState.ts";
+import {
+  REMOTE_STATE_CHANGE,
+  RemoteState
+} from "../api/RemoteState.ts";
+import { ProjectDrafts } from "./ProjectDrafts.ts";
 import type { ProjectSettingsClient } from "./ProjectSettingsClient.ts";
 
 // CONSTANTS
 export const KIND_FILTER_CHANGE = "kind-filter-change";
 export const GAME_CHANGE = "game-change";
+const kStaleSettings: ApiFailureCode = "stale-settings";
 
 export type ProjectSettingsSource = Pick<
   ProjectSettingsClient,
@@ -25,11 +28,13 @@ export type ProjectSettingsSource = Pick<
 
 export class StudioProjectSettings extends RemoteState {
   readonly rights: ProjectRights;
+  readonly drafts: ProjectDrafts;
 
   #client: ProjectSettingsSource;
   #data: ProjectSettingsReply | null = null;
   #kindFilter: KindFilter;
   #game: GameSection;
+  #reading: Promise<boolean> | null = null;
 
   constructor(
     client: ProjectSettingsSource,
@@ -41,6 +46,9 @@ export class StudioProjectSettings extends RemoteState {
     this.rights = rights;
     this.#kindFilter = KindFilter.from(sections.kindFilter);
     this.#game = sections.game;
+    this.drafts = new ProjectDrafts(
+      () => this.dispatchEvent(new Event(REMOTE_STATE_CHANGE))
+    );
   }
 
   get data(): ProjectSettingsReply | null {
@@ -59,40 +67,47 @@ export class StudioProjectSettings extends RemoteState {
     return this.rights.allows("editSettings");
   }
 
-  async load(): Promise<void> {
-    await this.#replace(() => this.#client.read());
+  get conflict(): boolean {
+    return this.errorCode === kStaleSettings;
   }
 
-  replaceKinds(
-    kinds: KindOptions
-  ): Promise<boolean> {
-    return this.#replace(() => this.#client.replace("kinds", kinds));
+  load(): Promise<boolean> {
+    this.#reading ??= this.#replace(() => this.#client.read()).finally(() => {
+      this.#reading = null;
+    });
+
+    return this.#reading;
   }
 
-  replaceAccess(
-    change: AccessChange
-  ): Promise<boolean> {
-    return this.#replace(() => this.#client.replace("access", change));
+  async save(): Promise<boolean> {
+    const data = this.#data;
+    if (data === null || !this.drafts.changed) {
+      return false;
+    }
+
+    const saved = await this.#replace(() => this.#client.replace({
+      revision: data.revision,
+      sections: this.drafts.sections()
+    }));
+    if (saved) {
+      this.discard();
+    }
+
+    return saved;
   }
 
-  replaceKindFilter(
-    kindFilter: KindFilter
-  ): Promise<boolean> {
-    return this.#replace(
-      () => this.#client.replace("kindFilter", kindFilter.toJSON())
-    );
+  async overwrite(): Promise<boolean> {
+    return await this.load() && this.save();
   }
 
-  replaceGame(
-    game: GameSection
-  ): Promise<boolean> {
-    return this.#replace(() => this.#client.replace("game", game));
+  async reload(): Promise<void> {
+    this.discard();
+    await this.load();
   }
 
-  replacePhysics(
-    physics: PhysicsSection
-  ): Promise<boolean> {
-    return this.#replace(() => this.#client.replace("physics", physics));
+  discard(): void {
+    this.drafts.discard();
+    this.dispatchEvent(new Event(REMOTE_STATE_CHANGE));
   }
 
   async #replace(
@@ -100,6 +115,7 @@ export class StudioProjectSettings extends RemoteState {
   ): Promise<boolean> {
     const data = await this.run(request, (reply) => {
       this.#data = reply;
+      this.drafts.rebase(reply);
       const kindFilter = KindFilter.from(reply.kindFilter);
       if (!kindFilter.equals(this.#kindFilter)) {
         this.#kindFilter = kindFilter;

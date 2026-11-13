@@ -41,12 +41,6 @@ export class RoleRules implements Iterable<RoleRule> {
     return this.#rules.length;
   }
 
-  at(
-    index: number
-  ): RoleRule | undefined {
-    return this.#rules[index];
-  }
-
   match(
     key: string
   ): RuleMatch | null {
@@ -62,10 +56,16 @@ export class RoleRules implements Iterable<RoleRule> {
       };
   }
 
-  grants(
+  effective(
+    key: string
+  ): Right {
+    return this.match(key)?.rule.right ?? "void";
+  }
+
+  named(
     name: NamedRight
-  ): boolean {
-    return namedRight(this.toJSON(), name) !== "void";
+  ): Right {
+    return namedRight(this.toJSON(), name);
   }
 
   move(
@@ -80,15 +80,6 @@ export class RoleRules implements Iterable<RoleRule> {
     rules.splice(Math.max(0, Math.min(to, rules.length)), 0, rule);
 
     return new RoleRules(rules);
-  }
-
-  add(
-    rule: RoleRule
-  ): RoleRules {
-    return new RoleRules([
-      rule,
-      ...this.#rules.filter(({ pattern }) => pattern !== rule.pattern)
-    ]);
   }
 
   replace(
@@ -110,21 +101,22 @@ export class RoleRules implements Iterable<RoleRule> {
     );
   }
 
-  withGrant(
-    key: string,
-    granted: boolean
+  withExact(
+    rules: Readonly<Record<string, Right>>
   ): RoleRules {
-    const rules = this.#rules.filter(({ pattern }) => pattern !== key);
+    return new RoleRules([
+      ...RoleRules.from(rules),
+      ...this.without(Object.keys(rules))
+    ]);
+  }
 
-    return new RoleRules(granted ?
-      [
-        {
-          pattern: key,
-          right: "write"
-        },
-        ...rules
-      ] :
-      rules
+  without(
+    patterns: Iterable<string>
+  ): RoleRules {
+    const removed = new Set(patterns);
+
+    return new RoleRules(
+      this.#rules.filter(({ pattern }) => !removed.has(pattern))
     );
   }
 

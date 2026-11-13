@@ -25,7 +25,7 @@ import {
   type StudioAgentChat
 } from "../../golem/StudioAgentChat.ts";
 import { ChangeController } from "../ChangeController.ts";
-import { AGENTS_SECTION } from "../settings/SettingsSections.ts";
+import { ACCESS_KEYS_SECTION } from "../settings/SettingsSections.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
 
 // CONSTANTS
@@ -220,7 +220,7 @@ export class GolemChatPane extends LitElement {
           class="link"
           type="button"
           @click=${this.#openAgents}
-        >Settings › Agents</button>
+        >Settings › Access keys</button>
         and run its setup line.
       </jolly-message>
     `;
@@ -338,7 +338,7 @@ export class GolemChatPane extends LitElement {
   };
 
   readonly #openAgents = (): void => {
-    this.dispatchEvent(new SettingsOpenEvent(AGENTS_SECTION));
+    this.dispatchEvent(new SettingsOpenEvent(ACCESS_KEYS_SECTION));
   };
 }
 

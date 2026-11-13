@@ -72,4 +72,29 @@ describe("AccessDraft", () => {
     assert.deepEqual(draft.roles, ["member", "spectator", "critic"]);
     assert.deepEqual(draft.toChange().renamedRoles, {});
   });
+
+  test("names a created role after the free \"new role\" slots, saved names included", () => {
+    const saved = AccessDraft.from({
+      ...kAccess,
+      roles: {
+        ...kAccess.roles,
+        "new role": {}
+      }
+    });
+    const renamed = saved.renameRole("new role", "reviewer");
+    const created = renamed.addRole(renamed.newRoleName());
+
+    assert.equal(renamed.newRoleName(), "new role 2");
+    assert.equal(created.newRoleName(), "new role 3");
+  });
+
+  test("tells the saved name of a role, and none for a role not saved yet", () => {
+    const draft = AccessDraft.from(kAccess)
+      .renameRole("member", "editor")
+      .addRole("reviewer");
+
+    assert.equal(draft.savedName("editor"), "member");
+    assert.equal(draft.savedName("spectator"), "spectator");
+    assert.equal(draft.savedName("reviewer"), null);
+  });
 });

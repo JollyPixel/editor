@@ -12,8 +12,10 @@ import { decodeVoxelWorld } from "@jolly-pixel/voxel.renderer";
 import {
   ASSET_KINDS,
   BLOCKSET_KIND,
+  BlocksetState,
   VOXEL_MAP_COMMAND,
   VOXEL_MAP_KIND,
+  VoxelMapState,
   blocksetAsset,
   voxelMapAssetKind
 } from "../../src/index.ts";
@@ -106,23 +108,21 @@ describe("ASSET_KINDS", () => {
   });
 
   test("passes the options of each kind to its handler", () => {
-    const blockset = {
-      delay: 10
-    };
-    const voxelmap = {
-      delay: 20
-    };
     const [blocksetHandler, voxelMapHandler] = ASSET_KINDS.handlers({
       blockset: {
-        snapshot: blockset
+        tileSize: 16
       },
       voxelmap: {
-        snapshot: voxelmap
+        chunkSize: 8
       }
     });
+    const blockset = blocksetHandler.create("blockset-1");
+    const voxelMap = voxelMapHandler.create("map-1");
 
-    assert.strictEqual(blocksetHandler.snapshot, blockset);
-    assert.strictEqual(voxelMapHandler.snapshot, voxelmap);
+    assert.ok(blockset instanceof BlocksetState);
+    assert.ok(voxelMap instanceof VoxelMapState);
+    assert.strictEqual(blockset.document.tileSize, 16);
+    assert.strictEqual(voxelMap.world.chunkSize, 8);
   });
 
   test("accepts only the JSON options of each handler", () => {
@@ -134,16 +134,10 @@ describe("ASSET_KINDS", () => {
         defaultSize: {
           x: 128,
           y: 128
-        },
-        snapshot: {
-          delay: 10
         }
       },
       voxelmap: {
-        chunkSize: 8,
-        snapshot: {
-          maxDelay: 20
-        }
+        chunkSize: 8
       }
     }).ok);
     for (const options of [

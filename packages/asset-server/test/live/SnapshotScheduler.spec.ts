@@ -160,33 +160,15 @@ describe("SnapshotScheduler — cadence", () => {
     assert.strictEqual(await pendingAfter(t, harness, 1), 0);
   });
 
-  for (const [label, override, quiet] of [
-    ["quiet period", { delay: 100 }, 100],
-    ["maximum delay", { maxDelay: 200 }, 200]
-  ] as const) {
-    test(`a kind can override the default ${label}`, async(t) => {
-      t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
-      await using harness = await syncHarness({
-        handlers: [counterHandler(override)],
-        snapshot: { delay: 1_000, maxDelay: 10_000 }
-      });
-      const assetId = await counterAsset(harness);
-
-      await increment(harness, assetId);
-      assert.strictEqual(await pendingAfter(t, harness, quiet - 1), 1);
-      assert.strictEqual(await pendingAfter(t, harness, 1), 0);
-    });
-  }
-
-  test("an open asset follows the delay of the handler that replaced its kind", async(t) => {
+  test("an open asset follows a replaced policy", async(t) => {
     t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
     await using harness = await syncHarness({
-      handlers: [counterHandler({ delay: 1_000 })],
+      handlers: [counterHandler()],
       snapshot: { delay: 1_000, maxDelay: 10_000 }
     });
     const assetId = await counterAsset(harness);
 
-    harness.kinds.replace(counterHandler({ delay: 100 }));
+    harness.scheduler.replacePolicy({ delay: 100, maxDelay: 10_000 });
     await increment(harness, assetId);
 
     assert.strictEqual(await pendingAfter(t, harness, 99), 1);

@@ -74,7 +74,6 @@ export type EditorPage =
   };
 
 export interface EditorPackageData extends EditorDescriptor {
-  package: string;
   /**
    * Absolute path of the built page folder.
    */
@@ -184,6 +183,7 @@ export class EditorPackage implements EditorPackageData {
   toDescriptor(): EditorDescriptor {
     return {
       name: this.name,
+      package: this.package,
       kinds: [...this.kinds],
       preferences: this.preferences.map((scope) => scope.toJSON()),
       sharedPreferences: this.sharedPreferences.map((scope) => scope.toJSON()),

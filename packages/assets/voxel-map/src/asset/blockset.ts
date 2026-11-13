@@ -20,6 +20,7 @@ import {
 
 // Import Internal Dependencies
 import { BLOCKSET_ICON } from "./icons.ts";
+import { BLOCKSET_CAPABILITIES } from "./capabilities.ts";
 
 // CONSTANTS
 export const BLOCKSET_KIND = "blockset";
@@ -33,7 +34,8 @@ export const BLOCKSET_ASSET: AssetKindDescriptor = {
   kind: BLOCKSET_KIND,
   label: "Blockset",
   extension: BLOCKSET_EXTENSION,
-  icon: BLOCKSET_ICON
+  icon: BLOCKSET_ICON,
+  capabilities: BLOCKSET_CAPABILITIES
 };
 
 export interface BlocksetFile {

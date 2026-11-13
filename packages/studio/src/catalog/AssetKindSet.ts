@@ -4,6 +4,7 @@ import type {
   IconName,
   JollyOption
 } from "@jolly-pixel/ui";
+import type { CapabilityDeclaration } from "@jolly-pixel/network";
 import type { KindPreview } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
@@ -24,18 +25,32 @@ export interface AssetKindEntry {
   readonly extensions: readonly string[];
   readonly maxContentBytes?: number;
   readonly preview?: KindPreview;
+  readonly capabilities?: readonly CapabilityDeclaration[];
+}
+
+export interface KindEditor {
+  readonly package: string;
+  readonly kinds: readonly string[];
+}
+
+export interface KindEditorRow {
+  /**
+   * `null` for the kinds no editor opens.
+   */
+  readonly package: string | null;
+  readonly kinds: readonly AssetKindEntry[];
 }
 
 export interface AssetKindSetInit {
   kinds: Iterable<AssetKindEntry>;
-  editable: Iterable<string>;
+  editors: Iterable<KindEditor>;
   maxContentBytes: number;
 }
 
 export class AssetKindSet implements AssetKindPresenter {
   static readonly EMPTY = new AssetKindSet({
     kinds: [],
-    editable: [],
+    editors: [],
     maxContentBytes: 0
   });
 
@@ -43,6 +58,7 @@ export class AssetKindSet implements AssetKindPresenter {
   readonly maxContentBytes: number;
 
   #byKind: ReadonlyMap<string, AssetKindEntry>;
+  #editors: readonly KindEditor[];
   #editable: ReadonlySet<string>;
 
   constructor(
@@ -57,10 +73,34 @@ export class AssetKindSet implements AssetKindPresenter {
     this.#byKind = new Map(
       this.entries.map((entry) => [entry.kind, entry])
     );
+    this.#editors = Array.from(init.editors, (editor) => {
+      return {
+        package: editor.package,
+        kinds: [...editor.kinds]
+      };
+    });
     this.#editable = new Set(
-      init.editable
+      this.#editors.flatMap((editor) => editor.kinds)
     );
     this.maxContentBytes = init.maxContentBytes;
+  }
+
+  byEditor(): KindEditorRow[] {
+    const rows: KindEditorRow[] = this.#editors.map((editor) => {
+      return {
+        package: editor.package,
+        kinds: editor.kinds.flatMap((kind) => this.#byKind.get(kind) ?? [])
+      };
+    });
+    const orphans = this.entries.filter((entry) => !this.#editable.has(entry.kind));
+    if (orphans.length > 0) {
+      rows.push({
+        package: null,
+        kinds: orphans
+      });
+    }
+
+    return rows;
   }
 
   has(

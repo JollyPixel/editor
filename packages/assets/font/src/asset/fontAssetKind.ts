@@ -2,6 +2,7 @@
 import {
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
+  NO_OPTIONS_SCHEMA,
   PASS_THROUGH_BUILD,
   readOnlyCommands,
   type AssetKindHandler,
@@ -109,6 +110,6 @@ export function fontAssetKind(): AssetKindHandler<FontAssetState, never> {
 
 export const ASSET_KINDS: AssetKindPackage = {
   descriptors: [FONT_ASSET],
-  optionsSchema: z.strictObject({}),
+  optionsSchema: NO_OPTIONS_SCHEMA,
   handlers: () => [fontAssetKind()]
 };

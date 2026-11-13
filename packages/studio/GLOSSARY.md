@@ -64,13 +64,30 @@ paths and dependency edges, never stored.
 The button group above the tree. A kind shows only its assets and their
 companions; every folder still shows. The choice is kept per browser.
 It offers a kind once the project has an asset of it, unless the project hides
-the kind in Settings › Project › General (the `kindFilter` section of the
+the kind in Settings › Project › General, where Editors & kinds lists each
+editor package with the kinds it opens (the `kindFilter` section of the
 project file). An active kind stays offered until another is picked.
 
 ### Kind descriptor
 
-The `AssetKindDescriptor` an asset package exports: kind, label and optional
-icon. The shell registers one per kind it can show.
+The `AssetKindDescriptor` an asset package exports: kind, label, optional
+icon and optional capabilities. The shell registers one per kind it can show.
+
+### Capability
+
+A named group of a kind's room events, such as the voxel map's Voxels or
+Layers, declared by the asset package next to its kind descriptor. An editor
+enables a feature only when the role can write every event of its capability.
+A kind without capabilities is granted only as a whole.
+
+### Capability catalog
+
+The permissions Settings › Project › Access offers for a role: the project
+rights (assets, share links, export, settings, audit), then one row per kind
+with its capabilities folded under it. A row shows the right the role's rules
+give by first match; a kind whose capabilities differ shows Mixed. Setting a
+row puts its own exact rules at the top of the list; setting a kind also drops
+the kind's other rules, so its capabilities follow it.
 
 ### Editor manifest
 
@@ -165,7 +182,7 @@ A view-only link to one asset, `/view/<token>`, for people without an
 account. It opens the asset's editor page alone and reaches the asset and its
 dependency closure. Its creator picks a lifetime (1, 7 or 30 days, or never);
 the creator or an admin copies or revokes it, from the asset's Share dialog
-or the Share links pane on Home. A role needs write on `studio.$share` to
+or Settings › You › Access keys. A role needs write on `studio.$share` to
 create one.
 
 ### Guest
@@ -175,8 +192,8 @@ Whoever opens a share link: the built-in `guest` role, read-only, shown as
 
 ### Agent token
 
-A credential an account creates in Settings › Agents for an AI agent on its
-own machine. The agent connects with its owner's current role, under the
+A credential an account creates in Settings › You › Access keys for an AI agent on
+its own machine. The agent connects with its owner's current role, under the
 token's name with a "via golem" badge; its subject is `agent:<token id>`.
 Shown once, stored as a digest, never expires, revoked by its owner.
 
@@ -226,6 +243,13 @@ General: the physics engine (Rapier, the only one for now) and the gravity,
 at start, prefabs included, holds a component that uses physics: a RigidBody,
 or a voxel map with Collision on. A RigidBody a script adds to a game without
 physics throws.
+
+### Snapshot settings
+
+The `snapshot` section of the project file, set in Settings › Project ›
+General: how long the server waits after the last edit
+before writing an asset to disk (2 s by default), and the longest it waits
+while the asset keeps changing (30 s). One policy covers every asset kind.
 
 ### Default scene
 

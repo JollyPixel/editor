@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as z from "zod";
+import { DEFAULT_SNAPSHOT_POLICY } from "@jolly-pixel/asset-server/client";
 import {
   ADMIN_ROLE,
   GUEST_ROLE
@@ -31,9 +32,9 @@ export const PROJECT_ROUTES = {
     method: "GET",
     path: "sections"
   },
-  replaceSection: {
+  replaceSettings: {
     method: "PUT",
-    path: "settings/:section"
+    path: "settings"
   }
 } as const satisfies Record<string, ApiRoute>;
 export const SHARE_RIGHT = "studio.$share";
@@ -148,14 +149,32 @@ export const DEFAULT_PHYSICS: Readonly<PhysicsSection> = Object.freeze({
   })
 });
 
+export const snapshotSectionSchema = z.object({
+  delay: z.int().nonnegative(),
+  maxDelay: z.int().nonnegative()
+});
+
 export const projectSectionsSchema = z.object({
   kindFilter: kindFilterSchema,
   game: gameSectionSchema,
-  physics: physicsSectionSchema
+  physics: physicsSectionSchema,
+  snapshot: snapshotSectionSchema
+});
+
+export const DEFAULT_PROJECT_SECTIONS: Readonly<ProjectSections> = Object.freeze({
+  kindFilter: Object.freeze({
+    hidden: []
+  }),
+  game: Object.freeze({
+    start: null
+  }),
+  physics: DEFAULT_PHYSICS,
+  snapshot: DEFAULT_SNAPSHOT_POLICY
 });
 
 export const projectSettingsReplySchema = z.object({
   ...projectSectionsSchema.shape,
+  revision: z.string(),
   name: z.string(),
   editors: z.array(z.string()),
   kinds: z.array(kindPackageSchema),
@@ -167,10 +186,16 @@ export const SETTINGS_SECTIONS = {
   access: accessChangeSchema,
   kindFilter: kindFilterSchema,
   game: gameSectionSchema,
-  physics: physicsSectionSchema
+  physics: physicsSectionSchema,
+  snapshot: snapshotSectionSchema
 } as const;
 
 export const settingsSectionSchema = z.keyof(z.object(SETTINGS_SECTIONS));
+
+export const settingsUpdateSchema = z.object({
+  revision: z.string().min(1),
+  sections: z.object(SETTINGS_SECTIONS).partial()
+});
 
 export type ProjectReply = z.infer<typeof projectReplySchema>;
 export type KindOptions = z.infer<typeof kindOptionsSchema>;
@@ -188,9 +213,12 @@ export type KindFilterSection = z.infer<typeof kindFilterSchema>;
 export type GameSection = z.infer<typeof gameSectionSchema>;
 export type PhysicsEngine = typeof PHYSICS_ENGINES[number];
 export type PhysicsSection = z.infer<typeof physicsSectionSchema>;
+export type SnapshotSection = z.infer<typeof snapshotSectionSchema>;
 export type ProjectSections = z.infer<typeof projectSectionsSchema>;
 export type ProjectSettingsReply = z.infer<typeof projectSettingsReplySchema>;
 export type SettingsSectionName = z.infer<typeof settingsSectionSchema>;
+export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>;
+export type SettingsUpdateSections = SettingsUpdate["sections"];
 export type SettingsSectionBody<
   TName extends SettingsSectionName = SettingsSectionName
 > = z.infer<typeof SETTINGS_SECTIONS[TName]>;

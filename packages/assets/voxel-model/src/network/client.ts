@@ -8,3 +8,4 @@ export {
   VOXEL_MODEL_KIND
 } from "../asset/voxelModel.ts";
 export * from "../asset/linkedTexture.ts";
+export * from "../asset/capabilities.ts";

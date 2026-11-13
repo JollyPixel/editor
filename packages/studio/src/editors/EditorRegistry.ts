@@ -60,7 +60,8 @@ export class EditorRegistry {
       convertsFrom: descriptor.convertsFrom,
       extensions: descriptor.extensions,
       maxContentBytes: descriptor.maxContentBytes,
-      preview: descriptor.preview
+      preview: descriptor.preview,
+      capabilities: descriptor.capabilities
     });
 
     return this;
@@ -80,6 +81,7 @@ export class EditorRegistry {
 
     const descriptor: EditorDescriptor = {
       name: editor.name,
+      package: editor.package,
       kinds: [...editor.kinds]
     };
     for (const kind of descriptor.kinds) {
@@ -92,7 +94,7 @@ export class EditorRegistry {
   kindSet(): AssetKindSet {
     return new AssetKindSet({
       kinds: this.#kinds.values(),
-      editable: this.#editors.keys(),
+      editors: new Set(this.#editors.values()),
       maxContentBytes: this.#maxContentBytes
     });
   }

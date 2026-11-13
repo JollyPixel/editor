@@ -12,3 +12,4 @@ export * from "./network/TerrainInterest.ts";
 export * from "./network/TerrainLive.schema.ts";
 export * from "./network/TerrainLiveRelay.ts";
 export * from "./network/types.ts";
+export * from "./asset/capabilities.ts";

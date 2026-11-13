@@ -1,9 +1,8 @@
 // Import Third-party Dependencies
 import {
-  SNAPSHOT_OPTIONS_SCHEMA,
+  NO_OPTIONS_SCHEMA,
   type AssetKindHandler,
-  type AssetKindPackage,
-  type SnapshotPolicy
+  type AssetKindPackage
 } from "@jolly-pixel/asset-server";
 import {
   buildScript,
@@ -37,24 +36,19 @@ import {
 } from "../network/ScriptOutlineRelay.ts";
 
 export interface ScriptAssetKindOptions {
-  snapshot?: SnapshotPolicy;
   readOutline?: ScriptOutlineReader;
 }
 
 export function scriptAssetKind(
   options: ScriptAssetKindOptions = {}
 ): AssetKindHandler<ScriptText, ScriptNetworkCommand, ScriptOutlineRequest> {
-  const {
-    snapshot,
-    readOutline = readScriptOutline
-  } = options;
+  const { readOutline = readScriptOutline } = options;
 
   return textKindHandler({
     kind: SCRIPT_KIND,
     eventType: SCRIPT_COMMAND,
     extensions: SCRIPT_CONTENT_TYPES,
     template: SCRIPT_TEMPLATE,
-    snapshot,
     compile: buildScript,
     relay: {
       schemas: SCRIPT_RELAY_SCHEMAS,
@@ -63,12 +57,12 @@ export function scriptAssetKind(
   });
 }
 
-export const ASSET_KINDS: AssetKindPackage<Pick<ScriptAssetKindOptions, "snapshot">> = {
+export const ASSET_KINDS: AssetKindPackage = {
   descriptors: [SCRIPT_ASSET, TEXT_ASSET, SHADER_ASSET],
-  optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
-  handlers: (options) => [
-    scriptAssetKind(options),
-    textAssetKind(options),
-    shaderAssetKind(options)
+  optionsSchema: NO_OPTIONS_SCHEMA,
+  handlers: () => [
+    scriptAssetKind(),
+    textAssetKind(),
+    shaderAssetKind()
   ]
 };

@@ -154,7 +154,8 @@ describe("AssetStateStore — commands since checkpoint", () => {
 
   test("restarts at a checkpoint appended after the replay", async() => {
     await using harness = await syncHarness({
-      handlers: [counterHandler({ delay: 0, maxDelay: 0 })]
+      handlers: [counterHandler()],
+      snapshot: { delay: 0, maxDelay: 0 }
     });
     const assetId = await counterAsset(harness);
 
@@ -204,7 +205,8 @@ describe("AssetStateStore — replaced content", () => {
 
   test("stays quiet for a scheduled snapshot and for commands", async() => {
     await using harness = await syncHarness({
-      handlers: [counterHandler({ delay: 0, maxDelay: 0 })]
+      handlers: [counterHandler()],
+      snapshot: { delay: 0, maxDelay: 0 }
     });
     const assetId = await counterAsset(harness);
     await harness.states.acquire(assetId, "counter");

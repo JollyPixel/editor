@@ -7,7 +7,12 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
-import { PROJECT_URL_PATH } from "@jolly-pixel/server";
+import {
+  PROJECT_URL_PATH,
+  type ProjectSettingsReply,
+  type SettingsSectionBody,
+  type SettingsSectionName
+} from "@jolly-pixel/server";
 import { DEFAULT_ACCESS } from "@jolly-pixel/server/node";
 import {
   browser,
@@ -32,6 +37,20 @@ async function settingsClient(
   return new ProjectSettingsClient({
     url: new URL(`.${PROJECT_URL_PATH}`, backend.url),
     fetch: page.fetch
+  });
+}
+
+async function update<TName extends SettingsSectionName>(
+  client: ProjectSettingsClient,
+  section: TName,
+  body: SettingsSectionBody<TName>,
+  revision?: string
+): Promise<ProjectSettingsReply> {
+  return client.replace({
+    revision: revision ?? (await client.read()).revision,
+    sections: {
+      [section]: body
+    }
   });
 }
 
@@ -72,7 +91,7 @@ describe("/api/project/settings", () => {
     const admin = await settingsClient(backend, "Alice");
     const { access } = await admin.read();
     assert.ok(access !== undefined);
-    await admin.replace("access", {
+    await update(admin, "access", {
       access: {
         ...access,
         roles: {
@@ -88,30 +107,28 @@ describe("/api/project/settings", () => {
     const member = await settingsClient(backend, "Bob");
     const kinds = KindOptionsDraft.from((await member.read()).kinds).toJSON();
 
-    const replaced = await member.replace("kinds", {
+    const replaced = await update(member, "kinds", {
       ...kinds,
-      "@jolly-pixel/asset.voxel-model": {
-        snapshot: {
-          delay: 500,
-          maxDelay: 30_000
+      "@jolly-pixel/asset.voxel-map": {
+        voxelmap: {
+          chunkSize: 8
         }
       }
     });
 
-    const voxelModel = replaced.kinds.find(
-      ({ name }) => name === "@jolly-pixel/asset.voxel-model"
+    const voxelMap = replaced.kinds.find(
+      ({ name }) => name === "@jolly-pixel/asset.voxel-map"
     );
     assert.equal(replaced.access, undefined);
-    assert.deepEqual(voxelModel?.options, {
-      snapshot: {
-        delay: 500,
-        maxDelay: 30_000
+    assert.deepEqual(voxelMap?.options, {
+      voxelmap: {
+        chunkSize: 8
       }
     });
-    await assert.rejects(member.replace("access", {
+    await assert.rejects(update(member, "access", {
       access,
       renamedRoles: {}
-    }), {
+    }, replaced.revision), {
       name: "ApiRequestError",
       status: 403
     });
@@ -122,18 +139,18 @@ describe("/api/project/settings", () => {
     const admin = await settingsClient(backend, "Alice");
     const member = await settingsClient(backend, "Bob");
 
-    await admin.replace("kindFilter", {
+    await update(admin, "kindFilter", {
       hidden: ["voxelmodel"]
     });
 
     assert.deepEqual((await member.sections()).kindFilter.hidden, ["voxelmodel"]);
-    await assert.rejects(member.replace("kindFilter", {
+    await assert.rejects(update(member, "kindFilter", {
       hidden: []
-    }), {
+    }, (await admin.read()).revision), {
       name: "ApiRequestError",
       status: 403
     });
-    await assert.rejects(admin.replace("kindFilter", {
+    await assert.rejects(update(admin, "kindFilter", {
       hidden: ["unknown"]
     }), {
       name: "ApiRequestError",
@@ -147,13 +164,26 @@ describe("/api/project/settings", () => {
     const member = await settingsClient(backend, "Bob");
 
     assert.deepEqual((await member.sections()).game, { start: null });
-    const reply = await admin.replace("game", { start: "arena" });
+    const reply = await update(admin, "game", { start: "arena" });
 
     assert.deepEqual(reply.game, { start: "arena" });
     assert.deepEqual((await member.sections()).game, { start: "arena" });
-    await assert.rejects(member.replace("game", { start: null }), {
+    await assert.rejects(update(member, "game", { start: null }, reply.revision), {
       name: "ApiRequestError",
       status: 403
+    });
+  });
+
+  test("answers 409 with the stale code to a batch read before another save", async() => {
+    await using backend = await serveBackend();
+    const admin = await settingsClient(backend, "Alice");
+    const { revision } = await admin.read();
+    await update(admin, "game", { start: "arena" });
+
+    await assert.rejects(update(admin, "game", { start: null }, revision), {
+      name: "ApiRequestError",
+      status: 409,
+      code: "stale-settings"
     });
   });
 
@@ -167,11 +197,11 @@ describe("/api/project/settings", () => {
     assert.ok(access !== undefined);
 
     await assert.rejects(
-      admin.replace("kinds", {
+      update(admin, "kinds", {
         ...kinds,
-        "@jolly-pixel/asset.voxel-model": {
-          snapshot: {
-            delay: -1
+        "@jolly-pixel/asset.voxel-map": {
+          voxelmap: {
+            chunkSize: 0
           }
         }
       }),
@@ -181,7 +211,7 @@ describe("/api/project/settings", () => {
       }
     );
     await assert.rejects(
-      admin.replace("access", {
+      update(admin, "access", {
         access: {
           ...access,
           roles: {

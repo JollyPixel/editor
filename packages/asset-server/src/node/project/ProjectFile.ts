@@ -9,12 +9,14 @@ import {
   SchemaParser,
   type Infer
 } from "@jolly-pixel/network";
+import { is } from "@jolly-pixel/utils";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { PROJECT_FILE_PATH } from "../../storage/stateDirectory.ts";
 
 // CONSTANTS
+const kRetiredOption = "snapshot";
 const kProjectFileSchema = z.object({
   version: z.literal(1),
   kinds: z.optional(z.record(
@@ -123,7 +125,7 @@ export class ProjectFile {
       );
     }
 
-    return new ProjectFile(root, result.val);
+    return new ProjectFile(root, withoutRetiredOptions(result.val));
   }
 
   constructor(
@@ -148,16 +150,17 @@ export class ProjectFile {
   }
 
   async replace(
-    section: string,
-    value: unknown
+    sections: Readonly<Record<string, unknown>>
   ): Promise<void> {
     const result = kProjectFileParser.parse({
       ...this.#data,
-      [section]: value
+      ...sections
     });
     if (result.err) {
+      const names = Object.keys(sections).join(", ");
+
       throw new TypeError(
-        `"${section}" is invalid: ${describeErrors(result.val)}`
+        `"${names}" is invalid: ${describeErrors(result.val)}`
       );
     }
 
@@ -192,6 +195,44 @@ export class ProjectFile {
       return true;
     }
   }
+}
+
+function withoutRetiredOptions(
+  data: ProjectFileData
+): ProjectFileData {
+  if (data.kinds === undefined) {
+    return data;
+  }
+
+  return {
+    ...data,
+    kinds: Object.fromEntries(
+      Object.entries(data.kinds).map(
+        ([name, options]) => [name, kindOptionsWithoutRetired(options)]
+      )
+    )
+  };
+}
+
+function kindOptionsWithoutRetired(
+  options: Readonly<Record<string, unknown>>
+): Record<string, unknown> {
+  const kept = withoutRetired(options);
+  for (const [key, value] of Object.entries(kept)) {
+    if (is.plainObject(value)) {
+      kept[key] = withoutRetired(value);
+    }
+  }
+
+  return kept;
+}
+
+function withoutRetired(
+  record: Readonly<Record<string, unknown>>
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([key]) => key !== kRetiredOption)
+  );
 }
 
 function serialize(

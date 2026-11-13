@@ -144,20 +144,31 @@ Detaches the channel without leaving the room.
 
 ## RoomGrants API
 
+### defineCapabilities
+
+```ts
+const capabilities = defineCapabilities<"stroke" | "fill" | "palette-changed">()([
+  { name: "pixels", label: "Pixels", events: ["stroke", "fill"] },
+  { name: "palette", label: "Palette", events: ["palette-changed"] }
+]);
+```
+
+Returns the `CapabilityDeclaration` list unchanged, with its literal types. The
+call does not compile when an event of the union is missing from every
+declaration; `UncoveredEvents` names the missing ones.
+`CapabilityName<typeof capabilities>` is the union of the declared names.
+
 ### CapabilityTable
 
 ```ts
-const table = new CapabilityTable({
-  stroke: "pixels",
-  fill: "pixels",
-  "palette-changed": "palette"
-});
+const table = new CapabilityTable(capabilities);
 ```
 
-Groups room events into capabilities. `resolveGrants(source)` grants a capability
-only when `source.can()` returns `"write"` for every event mapped to it.
-`full` and `none` grant every capability and none. `governs(event)` tells
-whether the table maps an event.
+Groups room events into capabilities. The constructor throws a `TypeError`
+when one event is declared under two capabilities. `resolveGrants(source)`
+grants a capability only when `source.can()` returns `"write"` for every event
+of it. `full` and `none` grant every capability and none. `governs(event)`
+tells whether the table maps an event.
 
 ### Grants
 

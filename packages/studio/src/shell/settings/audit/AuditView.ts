@@ -68,13 +68,23 @@ export class AuditView extends LitElement {
       box-sizing: border-box;
       width: 100%;
       min-width: 0;
-      padding: var(--jolly-space-1);
-      border: 1px solid var(--jolly-border);
+      height: var(--jolly-control-height);
+      padding: 0 var(--jolly-space-1);
+      border: 0;
       border-radius: var(--jolly-radius-sm);
       background: var(--jolly-control-bg);
       color: var(--jolly-text);
       font: inherit;
       color-scheme: light dark;
+    }
+
+    input[type="date"]:hover {
+      background: var(--jolly-control-bg-hover);
+    }
+
+    input[type="date"]:focus {
+      outline: none;
+      background: var(--jolly-control-bg-focus);
     }
 
     ol {

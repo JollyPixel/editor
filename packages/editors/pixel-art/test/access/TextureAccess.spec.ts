@@ -18,12 +18,12 @@ import {
   type UvAccess
 } from "../../src/access/TextureAccess.ts";
 import {
-  PIXEL_ART_CAPABILITIES,
+  PIXEL_ART_CAPABILITY_TABLE,
   type PixelArtCapability
 } from "../../src/access/PixelArtAccess.ts";
 
 // CONSTANTS
-const kFull = PIXEL_ART_CAPABILITIES.full;
+const kFull = PIXEL_ART_CAPABILITY_TABLE.full;
 
 function grants(
   ...capabilities: PixelArtCapability[]
@@ -155,7 +155,7 @@ describe("TextureAccess document gates", () => {
   });
 
   test("no grant at all is view only", () => {
-    const access = new TextureAccess("edit", PIXEL_ART_CAPABILITIES.none);
+    const access = new TextureAccess("edit", PIXEL_ART_CAPABILITY_TABLE.none);
 
     assert.equal(access.viewOnly, true);
     assert.equal(access.pixels, false);

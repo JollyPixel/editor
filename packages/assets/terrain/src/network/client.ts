@@ -39,3 +39,4 @@ export {
   TERRAIN_EXTENSION,
   TERRAIN_KIND
 } from "../asset/terrain.ts";
+export * from "../asset/capabilities.ts";

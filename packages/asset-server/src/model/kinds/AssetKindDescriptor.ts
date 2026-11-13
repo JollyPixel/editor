@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { CapabilityDeclaration } from "@jolly-pixel/network";
+
 export interface AssetKindIcon {
   /**
    * SVG children drawn in `viewBox`, without the `<svg>` element.
@@ -21,6 +24,11 @@ export interface AssetKindDescriptor {
    * @default true
    */
   creatable?: boolean;
+  /**
+   * Named groups of the kind's room events, offered as permissions in
+   * Settings. Without them, a role is only granted the whole kind.
+   */
+  capabilities?: readonly CapabilityDeclaration[];
 }
 
 export interface LoadedAssetKind extends AssetKindDescriptor {
