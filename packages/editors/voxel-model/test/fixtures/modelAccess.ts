@@ -8,7 +8,7 @@ import {
 
 // Import Internal Dependencies
 import {
-  MODEL_CAPABILITIES,
+  MODEL_CAPABILITY_TABLE,
   type ModelAccess,
   type ModelCapability
 } from "../../src/access/ModelAccess.ts";
@@ -19,7 +19,7 @@ export class TestModelAccess extends Emitter<
   current: ModelAccess;
 
   constructor(
-    current: ModelAccess = MODEL_CAPABILITIES.full
+    current: ModelAccess = MODEL_CAPABILITY_TABLE.full
   ) {
     super();
     this.current = current;

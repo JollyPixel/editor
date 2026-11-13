@@ -4,8 +4,7 @@ import {
   type AssetBuild,
   type AssetKindHandler,
   type AssetRelay,
-  type AssetRelaySchemas,
-  type SnapshotPolicy
+  type AssetRelaySchemas
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
@@ -34,24 +33,16 @@ export interface TextKindOptions<TRelay extends object> {
   eventType: string;
   extensions: Readonly<Record<string, string>>;
   template: string;
-  snapshot?: SnapshotPolicy;
   relay?: TextKindRelay<TRelay>;
   compile?: (source: string) => Promise<string>;
 }
 
-export interface TextAssetKindOptions {
-  snapshot?: SnapshotPolicy;
-}
-
-export function textAssetKind(
-  options: TextAssetKindOptions = {}
-): AssetKindHandler<ScriptText, ScriptNetworkCommand> {
+export function textAssetKind(): AssetKindHandler<ScriptText, ScriptNetworkCommand> {
   return textKindHandler({
     kind: TEXT_KIND,
     eventType: TEXT_COMMAND,
     extensions: TEXT_CONTENT_TYPES,
-    template: "",
-    snapshot: options.snapshot
+    template: ""
   });
 }
 
@@ -69,7 +60,6 @@ export function textKindHandler<TRelay extends object = never>(
   return {
     kind,
     extensions: options.extensions,
-    snapshot: options.snapshot,
     build: compile === undefined ? undefined : compiledBuild(compile),
 
     create(): ScriptText {

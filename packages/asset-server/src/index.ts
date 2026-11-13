@@ -7,6 +7,7 @@ export * from "./live/index.ts";
 export * from "./catalog/tags/index.ts";
 export * from "./createAssetBackend.ts";
 export type { RecordedCommand } from "./live/AssetStateStore.ts";
+export * from "./live/SnapshotPolicy.ts";
 export * from "./launch.ts";
 export * from "./common/logger.ts";
 export * from "./storage/seedAssetSource.ts";

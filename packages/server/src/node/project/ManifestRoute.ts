@@ -11,6 +11,7 @@ import {
   PROJECT_MANIFEST_FILE,
   ProjectManifest
 } from "../../project/ProjectManifest.ts";
+import { KindOptionSections } from "./KindOptionSections.ts";
 import type { StudioProject } from "./StudioProject.ts";
 import { requestPathname } from "../http/requestPathname.ts";
 
@@ -27,7 +28,11 @@ export class ManifestRoute {
       kindPackages: project.kinds.packages.map((kindPackage) => {
         return {
           name: kindPackage.name,
-          kinds: kindPackage.descriptors.map(({ kind }) => kind)
+          kinds: kindPackage.descriptors.map(({ kind }) => kind),
+          configurable: !KindOptionSections.read(
+            kindPackage.optionsSchema,
+            kindPackage.descriptors
+          ).empty
         };
       }),
       maxContentBytes: DEFAULT_CATALOG_MAX_CONTENT_BYTES

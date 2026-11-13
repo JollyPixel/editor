@@ -8,10 +8,8 @@ import {
   InvalidAssetFileError,
   JSON_CONTENT_TYPE,
   PASS_THROUGH_BUILD,
-  SNAPSHOT_POLICY_SCHEMA,
   type AssetKindHandler,
-  type AssetKindPackage,
-  type SnapshotPolicy
+  type AssetKindPackage
 } from "@jolly-pixel/asset-server";
 import {
   applyVoxelWorldCommand,
@@ -70,20 +68,14 @@ const kOptionsSchema = z.strictObject({
     defaultSize: z.optional(z.object({
       x: kPositiveIntegerSchema,
       y: kPositiveIntegerSchema
-    })),
-    snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+    }))
   })),
   voxelmap: z.optional(z.strictObject({
     chunkSize: z.optional(
       kPositiveIntegerSchema.check(z.meta({ default: DEFAULT_CHUNK_SIZE }))
-    ),
-    snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+    )
   }))
 });
-const kDefaultSnapshot: SnapshotPolicy = {
-  delay: 5_000,
-  maxDelay: 60_000
-};
 
 export class VoxelMapState implements VoxelWorldCommandTarget {
   readonly world: VoxelWorld;
@@ -161,23 +153,18 @@ export function createVoxelMapFile(
 
 export interface VoxelMapAssetKindOptions {
   chunkSize?: number;
-  snapshot?: SnapshotPolicy;
 }
 
 export function voxelMapAssetKind(
   options: VoxelMapAssetKindOptions = {}
 ): AssetKindHandler<VoxelMapState, VoxelMapNetworkCommand> {
-  const {
-    chunkSize = DEFAULT_CHUNK_SIZE,
-    snapshot = kDefaultSnapshot
-  } = options;
+  const { chunkSize = DEFAULT_CHUNK_SIZE } = options;
 
   return {
     kind: VOXEL_MAP_KIND,
     extensions: {
       [VOXEL_MAP_EXTENSION]: JSON_CONTENT_TYPE
     },
-    snapshot,
     build: PASS_THROUGH_BUILD,
     companions: [
       {

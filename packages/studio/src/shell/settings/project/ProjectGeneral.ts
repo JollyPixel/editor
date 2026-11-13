@@ -10,89 +10,117 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
+import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/text";
-import "@jolly-pixel/ui/elements/toggle";
-import { KindFilter } from "@jolly-pixel/server";
+import type { KindFilter } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import { AssetKindSet } from "../../../catalog/AssetKindSet.ts";
-import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
+import {
+  AssetKindSet,
+  type AssetKindEntry
+} from "../../../catalog/AssetKindSet.ts";
 import { settingsStyles } from "../settingsStyles.ts";
-import { SettingsDraftController } from "./SettingsDraftController.ts";
+import { SettingsEditEvent } from "../SettingsEditEvent.ts";
+
+// CONSTANTS
+const kEditorsLabel = "Editors & kinds";
+const kNoEditorLabel = "No editor";
 
 @customElement("studio-project-general")
 export class ProjectGeneral extends LitElement {
   static override styles = [settingsStyles, css`
-    ul {
+    dl {
+      display: grid;
+      grid-template-columns: max-content minmax(0, 1fr);
+      gap: var(--jolly-space-2) var(--jolly-space-3);
+      align-items: start;
       margin: 0;
-      padding-inline-start: var(--jolly-space-4);
+    }
+
+    dt {
+      padding-block: var(--jolly-space-1);
+      color: var(--jolly-text-muted);
+      overflow-wrap: anywhere;
+    }
+
+    dd {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--jolly-space-1);
+      margin: 0;
     }
   `];
 
-  #draft = new SettingsDraftController(this, {
-    saved: (data) => KindFilter.from(data.kindFilter),
-    save: (project, draft) => project.replaceKindFilter(draft)
-  });
+  @property()
+  declare name: string;
 
   @property({ attribute: false })
   declare kinds: AssetKindSet;
 
+  @property({ attribute: false })
+  declare value: KindFilter | null;
+
+  @property({ type: Boolean })
+  declare disabled: boolean;
+
   constructor() {
     super();
+    this.name = "";
     this.kinds = AssetKindSet.EMPTY;
+    this.value = null;
+    this.disabled = false;
   }
 
-  set project(
-    project: StudioProjectSettings
-  ) {
-    this.#draft.attach(project);
-  }
-
-  override render(): TemplateResult | typeof nothing {
-    const { project, draft } = this.#draft;
-    if (project === null) {
-      return nothing;
-    }
-
+  override render(): TemplateResult {
     return html`
-      ${this.#draft.error()}
       <jolly-text
         label="Name"
         description="The name of the project folder"
         readonly
-        .value=${project.data?.name ?? ""}
+        .value=${this.name}
       ></jolly-text>
-      <section aria-label="Editor packages">
-        <jolly-separator label="Editor packages"></jolly-separator>
-        <ul>
-          ${project.data?.editors.map((editor) => html`<li>${editor}</li>`)}
-        </ul>
-      </section>
-      ${draft === null ? nothing : this.#kindFilter(draft, !project.canEdit)}
+      ${this.value === null ? nothing : this.#editors(this.value)}
     `;
   }
 
-  #kindFilter(
-    draft: KindFilter,
-    readonly: boolean
+  #editors(
+    filter: KindFilter
   ): TemplateResult {
     return html`
-      <section aria-label="Kind filter">
-        <jolly-separator label="Kind filter"></jolly-separator>
-        ${this.kinds.entries.map(({ kind, label }) => html`
-          <jolly-toggle
-            data-kind=${kind}
-            label=${label}
-            .value=${draft.shows(kind)}
-            ?readonly=${readonly}
-            @jolly-change=${(event: CustomEvent<{ value: boolean; }>) => {
-              this.#draft.edit(draft.with(kind, event.detail.value));
-            }}
-          ></jolly-toggle>
-        `)}
+      <section aria-label=${kEditorsLabel}>
+        <jolly-separator label=${kEditorsLabel}></jolly-separator>
+        <dl>
+          ${this.kinds.byEditor().map((row) => html`
+            <dt>${row.package ?? kNoEditorLabel}</dt>
+            <dd>${row.kinds.map((entry) => this.#chip(filter, entry))}</dd>
+          `)}
+        </dl>
       </section>
-      ${readonly ? nothing : this.#draft.actions("Kind filter actions")}
+    `;
+  }
+
+  #chip(
+    filter: KindFilter,
+    entry: AssetKindEntry
+  ): TemplateResult {
+    const shown = filter.shows(entry.kind);
+
+    return html`
+      <jolly-button
+        data-kind=${entry.kind}
+        icon=${this.kinds.kindIcon(entry.kind)}
+        variant=${shown ? "accent" : "default"}
+        title=${shown ? "Offered in the kind filter" : "Hidden from the kind filter"}
+        .pressed=${shown}
+        ?disabled=${this.disabled}
+        @click=${() => {
+          this.dispatchEvent(new SettingsEditEvent(
+            "kindFilter",
+            filter.with(entry.kind, !shown)
+          ));
+        }}
+      >${entry.label}</jolly-button>
     `;
   }
 }

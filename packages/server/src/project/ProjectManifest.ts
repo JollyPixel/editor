@@ -13,6 +13,7 @@ export const PROJECT_MANIFEST_FILE = "project-manifest.json";
 const kProjectManifestSchema = z.object({
   editors: z.array(z.object({
     name: z.string(),
+    package: z.string(),
     kinds: z.array(z.string()),
     preferences: z.array(z.unknown()).default([]),
     sharedPreferences: z.array(z.unknown()).default([]),
@@ -31,6 +32,11 @@ const kProjectManifestSchema = z.object({
       viewBox: z.string().optional()
     }).optional(),
     creatable: z.boolean().optional(),
+    capabilities: z.array(z.object({
+      name: z.string(),
+      label: z.string(),
+      events: z.array(z.string())
+    })).optional(),
     convertsFrom: z.array(z.string()),
     extensions: z.array(z.string()),
     maxContentBytes: z.number().optional(),
@@ -38,7 +44,8 @@ const kProjectManifestSchema = z.object({
   })),
   kindPackages: z.array(z.object({
     name: z.string(),
-    kinds: z.array(z.string())
+    kinds: z.array(z.string()),
+    configurable: z.boolean()
   })),
   maxContentBytes: z.number()
 });
@@ -56,6 +63,10 @@ export interface ManifestKind extends Omit<LoadedAssetKind, "preview"> {
 export interface KindPackageDescriptor {
   name: string;
   kinds: readonly string[];
+  /**
+   * `true` when the package has options Settings can edit.
+   */
+  configurable: boolean;
 }
 
 export interface EditorScopes extends EditorPreferenceScopes {

@@ -8,8 +8,10 @@ import {
 
 // Import Internal Dependencies
 import { RoleRules } from "./RoleRules.ts";
+import { unusedName } from "./unusedName.ts";
 
 // CONSTANTS
+const kNewRoleName = "new role";
 const kNewRoleRules: Readonly<Record<string, Right>> = {
   "*.$join": "write",
   "*.$presence": "write",
@@ -86,6 +88,16 @@ export class AccessDraft {
         [role]: { ...kNewRoleRules }
       }
     });
+  }
+
+  newRoleName(): string {
+    return unusedName(kNewRoleName, (name) => this.#conflict(name) !== null);
+  }
+
+  savedName(
+    role: string
+  ): string | null {
+    return this.#savedNames.get(role) ?? null;
   }
 
   renameRole(
@@ -174,19 +186,29 @@ export class AccessDraft {
     savedName?: string
   ): string {
     const role = name.trim();
-    if (role === "") {
-      throw new RangeError("a role needs a name");
-    }
-    if (BUILT_IN_ROLES.includes(role) || Object.hasOwn(this.#section.roles, role)) {
-      throw new RangeError(`the "${role}" role already exists`);
-    }
-    if (role !== savedName && this.#savedRoles.has(role)) {
-      throw new RangeError(
-        `the saved settings still use the "${role}" role; save before reusing its name`
-      );
+    const conflict = this.#conflict(role, savedName);
+    if (conflict !== null) {
+      throw new RangeError(conflict);
     }
 
     return role;
+  }
+
+  #conflict(
+    role: string,
+    savedName?: string
+  ): string | null {
+    if (role === "") {
+      return "a role needs a name";
+    }
+    if (BUILT_IN_ROLES.includes(role) || Object.hasOwn(this.#section.roles, role)) {
+      return `the "${role}" role already exists`;
+    }
+    if (role !== savedName && this.#savedRoles.has(role)) {
+      return `the saved settings still use the "${role}" role; save before reusing its name`;
+    }
+
+    return null;
   }
 
   #with(

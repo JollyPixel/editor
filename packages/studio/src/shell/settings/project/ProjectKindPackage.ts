@@ -1,7 +1,6 @@
 // Import Third-party Dependencies
 import {
   LitElement,
-  css,
   html,
   nothing,
   type TemplateResult
@@ -18,78 +17,51 @@ import type {
   KindOptionField,
   KindOptionGroup,
   KindOptionSection,
-  KindOptionValue,
-  KindOptionVector2
+  KindOptionVector2,
+  KindPackageSettings
 } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import { KindOptionsDraft } from "../../../project/KindOptionsDraft.ts";
-import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
+import type { KindOptionsDraft } from "../../../project/KindOptionsDraft.ts";
 import { settingsStyles } from "../settingsStyles.ts";
-import { SettingsDraftController } from "./SettingsDraftController.ts";
-
-interface KindOptionForm {
-  draft: KindOptionsDraft;
-  readonly: boolean;
-}
+import { SettingsEditEvent } from "../SettingsEditEvent.ts";
 
 @customElement("studio-project-kind-package")
 export class ProjectKindPackage extends LitElement {
-  static override styles = [settingsStyles, css`
-    pre {
-      margin: 0;
-      padding: var(--jolly-space-2);
-      border-radius: var(--jolly-radius-sm);
-      background: var(--jolly-surface-sunken);
-      font-size: 0.9em;
-      white-space: pre-wrap;
-    }
-  `];
+  static override styles = settingsStyles;
 
-  #draft = new SettingsDraftController(this, {
-    saved: (data) => KindOptionsDraft.from(data.kinds),
-    save: (project, draft) => project.replaceKinds(draft.toJSON())
-  });
   @property({ attribute: false })
-  declare packageName: string;
+  declare settings: KindPackageSettings | null;
+
+  @property({ attribute: false })
+  declare value: KindOptionsDraft | null;
+
+  @property({ type: Boolean })
+  declare disabled: boolean;
 
   constructor() {
     super();
-    this.packageName = "";
-  }
-
-  set project(
-    project: StudioProjectSettings
-  ) {
-    this.#draft.attach(project);
+    this.settings = null;
+    this.value = null;
+    this.disabled = false;
   }
 
   override render(): TemplateResult | typeof nothing {
-    const { project } = this.#draft;
-    const kindPackage = project?.data?.kinds.find(
-      (candidate) => candidate.name === this.packageName
-    );
-    const { draft } = this.#draft;
-    if (project === null || kindPackage === undefined || draft === null) {
-      return this.#draft.error();
+    const { settings, value } = this;
+    if (settings === null || value === null) {
+      return nothing;
     }
 
-    const form: KindOptionForm = {
-      draft,
-      readonly: !project.canEdit
-    };
-
     return html`
-      ${this.#draft.error()}
-      ${kindPackage.sections.length === 0 ?
-        html`<pre>${JSON.stringify(kindPackage.options, null, 2)}</pre>` :
-        kindPackage.sections.map((section) => this.#section(form, section))}
-      ${form.readonly ? nothing : this.#draft.actions("Kind option actions")}
+      ${settings.sections.map(
+        (section) => this.#section(settings.name, value, section)
+      )}
     `;
   }
 
   #section(
-    form: KindOptionForm,
+    packageName: string,
+    value: KindOptionsDraft,
     section: KindOptionSection
   ): TemplateResult {
     return html`
@@ -97,17 +69,18 @@ export class ProjectKindPackage extends LitElement {
         ${section.label === null ? nothing : html`
           <jolly-separator label=${section.label}></jolly-separator>
         `}
-        ${section.fields.map((field) => this.#field(form, field))}
-        ${section.groups.map((group) => this.#group(form, group))}
+        ${section.fields.map((field) => this.#field(packageName, value, field))}
+        ${section.groups.map((group) => this.#group(packageName, value, group))}
       </section>
     `;
   }
 
   #group(
-    form: KindOptionForm,
+    packageName: string,
+    value: KindOptionsDraft,
     group: KindOptionGroup
   ): TemplateResult {
-    const key = `${this.packageName}:${group.path.join(".")}`;
+    const key = `${packageName}:${group.path.join(".")}`;
 
     return html`
       <jolly-folder
@@ -117,16 +90,17 @@ export class ProjectKindPackage extends LitElement {
         flush
         .open=${false}
       >
-        ${group.fields.map((field) => this.#field(form, field))}
+        ${group.fields.map((field) => this.#field(packageName, value, field))}
       </jolly-folder>
     `;
   }
 
   #field(
-    form: KindOptionForm,
+    packageName: string,
+    value: KindOptionsDraft,
     field: KindOptionField
   ): TemplateResult {
-    const option = `${this.packageName}:${field.path.join(".")}`;
+    const option = `${packageName}:${field.path.join(".")}`;
     const min = field.min ?? -Infinity;
     const max = field.max ?? Infinity;
 
@@ -139,11 +113,11 @@ export class ProjectKindPackage extends LitElement {
           .min=${min}
           .max=${max}
           .step=${1}
-          .value=${form.draft.value(this.packageName, field) ?? field.default}
+          .value=${value.value(packageName, field) ?? field.default}
           .default=${field.default}
-          ?readonly=${form.readonly}
+          ?readonly=${this.disabled}
           @jolly-change=${(event: CustomEvent<{ value: KindOptionVector2; }>) => {
-            this.#edit(form, field, event.detail.value);
+            this.#edit(value.with(packageName, field, event.detail.value));
           }}
         ></jolly-vector2>
       `;
@@ -157,22 +131,20 @@ export class ProjectKindPackage extends LitElement {
         .min=${min}
         .max=${max}
         .step=${1}
-        .value=${form.draft.value(this.packageName, field) ?? field.default}
+        .value=${value.value(packageName, field) ?? field.default}
         .default=${field.default}
-        ?readonly=${form.readonly}
+        ?readonly=${this.disabled}
         @jolly-change=${(event: CustomEvent<{ value: number; }>) => {
-          this.#edit(form, field, event.detail.value);
+          this.#edit(value.with(packageName, field, event.detail.value));
         }}
       ></jolly-number>
     `;
   }
 
-  #edit<TField extends KindOptionField>(
-    form: KindOptionForm,
-    field: TField,
-    value: KindOptionValue<TField>
+  #edit(
+    kinds: KindOptionsDraft
   ): void {
-    this.#draft.edit(form.draft.with(this.packageName, field, value));
+    this.dispatchEvent(new SettingsEditEvent("kinds", kinds));
   }
 }
 

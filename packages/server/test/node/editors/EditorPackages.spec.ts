@@ -111,6 +111,7 @@ describe("EditorPackages", () => {
     assert.deepEqual(editors.descriptors(), [
       {
         name: "voxel-map",
+        package: "./voxel-map",
         kinds: ["voxelmap"],
         preferences: [],
         sharedPreferences: [],
@@ -118,6 +119,7 @@ describe("EditorPackages", () => {
       },
       {
         name: "pixel-art",
+        package: "./pixel-art",
         kinds: ["pixelart"],
         preferences: [],
         sharedPreferences: [],

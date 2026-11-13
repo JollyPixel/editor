@@ -3,11 +3,11 @@ import {
   binaryAssetKind,
   binaryCommands,
   InvalidAssetFileError,
+  NO_OPTIONS_SCHEMA,
   type AssetKindHandler,
   type AssetKindPackage,
   type BinaryAssetState
 } from "@jolly-pixel/asset-server";
-import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -70,6 +70,6 @@ function isOggFile(
 
 export const ASSET_KINDS: AssetKindPackage = {
   descriptors: [SOUND_ASSET],
-  optionsSchema: z.strictObject({}),
+  optionsSchema: NO_OPTIONS_SCHEMA,
   handlers: () => [soundAssetKind()]
 };

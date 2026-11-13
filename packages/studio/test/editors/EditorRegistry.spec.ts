@@ -25,6 +25,7 @@ const kOptions = {
 };
 const kMapEditor = {
   name: "voxel-map",
+  package: "@jolly-pixel/editor.voxel-map",
   kinds: ["voxelmap"]
 };
 
@@ -119,7 +120,8 @@ describe("EditorRegistry", () => {
         convertsFrom: [],
         extensions: [".voxelmap.json"],
         maxContentBytes: undefined,
-        preview: undefined
+        preview: undefined,
+        capabilities: undefined
       },
       {
         kind: "pixelart",
@@ -130,7 +132,8 @@ describe("EditorRegistry", () => {
         convertsFrom: [".png"],
         extensions: [".pixelart"],
         maxContentBytes: undefined,
-        preview: "server"
+        preview: "server",
+        capabilities: undefined
       },
       {
         kind: "font",
@@ -141,7 +144,8 @@ describe("EditorRegistry", () => {
         convertsFrom: [".ttf"],
         extensions: [".typeface.json"],
         maxContentBytes: 2048,
-        preview: undefined
+        preview: undefined,
+        capabilities: undefined
       }
     ]);
   });
@@ -175,6 +179,7 @@ describe("EditorRegistry", () => {
     assert.throws(
       () => registry.registerEditor({
         name: "terrain",
+        package: "@jolly-pixel/editor.terrain",
         kinds: ["heightmap", "voxelmap"]
       }),
       /already opens in editor "voxel-map"/
@@ -186,6 +191,7 @@ describe("EditorRegistry", () => {
     const kinds = ["voxelmap"];
     const registry = new EditorRegistry(kOptions).registerEditor({
       name: "voxel-map",
+      package: "@jolly-pixel/editor.voxel-map",
       kinds
     });
     kinds.push("voxelmodel");

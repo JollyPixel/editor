@@ -51,7 +51,16 @@ export const TREE_KINDS = new AssetKindSet({
       convertsFrom: [".png"]
     }
   ],
-  editable: ["voxelmap", "voxelmodel"],
+  editors: [
+    {
+      package: "@jolly-pixel/editor.voxel-map",
+      kinds: ["voxelmap"]
+    },
+    {
+      package: "@jolly-pixel/editor.voxel-model",
+      kinds: ["voxelmodel"]
+    }
+  ],
   maxContentBytes: CATALOG_MAX_CONTENT_BYTES
 });
 

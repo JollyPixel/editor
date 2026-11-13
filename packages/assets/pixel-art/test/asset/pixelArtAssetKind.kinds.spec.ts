@@ -22,17 +22,6 @@ describe("ASSET_KINDS", () => {
     );
   });
 
-  test("passes its options to the handler", () => {
-    const snapshot = {
-      delay: 10
-    };
-    const [handler] = ASSET_KINDS.handlers({
-      snapshot
-    });
-
-    assert.strictEqual(handler.snapshot, snapshot);
-  });
-
   test("accepts only the JSON options of the handler", () => {
     const parser = new SchemaParser(ASSET_KINDS.optionsSchema);
 
@@ -40,14 +29,10 @@ describe("ASSET_KINDS", () => {
       defaultSize: {
         x: 64,
         y: 64
-      },
-      snapshot: {
-        delay: 10
       }
     }).ok);
     for (const options of [
       { defaultSize: { x: 0, y: 64 } },
-      { snapshot: { delay: -1 } },
       { size: 64 }
     ]) {
       assert.ok(parser.parse(options).err, JSON.stringify(options));

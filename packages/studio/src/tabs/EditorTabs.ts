@@ -107,7 +107,7 @@ interface OpenTab {
 
 interface PageEntry {
   element: HTMLElement;
-  item: HTMLElement;
+  item: TabItem;
 }
 
 export class EditorTabs {
@@ -177,7 +177,9 @@ export class EditorTabs {
   }
 
   get unsaved(): boolean {
-    return [...this.#open.values()].some((entry) => entry.item.modified);
+    return [...this.#open.values(), ...this.#pages.values()].some(
+      (entry) => entry.item.modified
+    );
   }
 
   ids(): string[] {
@@ -320,12 +322,12 @@ export class EditorTabs {
     id: string,
     unsaved: boolean
   ): boolean {
-    const entry = this.#open.get(id);
-    if (entry === undefined) {
+    const item = this.#open.get(id)?.item ?? this.#pages.get(id)?.item;
+    if (item === undefined) {
       return false;
     }
 
-    entry.item.modified = unsaved;
+    item.modified = unsaved;
 
     return true;
   }

@@ -322,6 +322,7 @@ export class Studio extends LitElement implements GolemChatOpener {
       browserState: this.#browserState,
       notifications: this.#notifications,
       onTabsChange: this.#onTabsChange,
+      projectSettings: user.online ? user.project : undefined,
       play: user.online ?
         {
           project: user.project,

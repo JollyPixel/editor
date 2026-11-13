@@ -18,3 +18,4 @@ export * from "../asset/blocksetAssets.ts";
 export * from "../projection/blockShapeUv.ts";
 export * from "../projection/BlockProjection.ts";
 export * from "../projection/BlocksetIslands.ts";
+export * from "../asset/capabilities.ts";

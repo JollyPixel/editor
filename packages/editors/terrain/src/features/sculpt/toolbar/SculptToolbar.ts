@@ -29,7 +29,7 @@ import "@jolly-pixel/ui/elements/tool-button";
 // Import Internal Dependencies
 import {
   canUseTool,
-  TERRAIN_CAPABILITIES,
+  TERRAIN_CAPABILITY_TABLE,
   type TerrainAccess
 } from "../../../access/TerrainAccess.ts";
 import type { TerrainAction } from "../../../keybindings/terrainActions.ts";
@@ -164,7 +164,7 @@ export class SculptToolbar extends LitElement {
     super();
     this.settings = null;
     this.history = null;
-    this.access = TERRAIN_CAPABILITIES.full;
+    this.access = TERRAIN_CAPABILITY_TABLE.full;
     this.shortcuts = null;
   }
 

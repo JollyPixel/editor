@@ -28,11 +28,41 @@ const kTexture: AssetKindEntry = {
 };
 const kKinds = new AssetKindSet({
   kinds: [kMap, kTexture],
-  editable: ["voxelmap"],
+  editors: [
+    {
+      package: "@jolly-pixel/editor.voxel-map",
+      kinds: ["voxelmap"]
+    }
+  ],
   maxContentBytes: 1024
 });
 
 describe("AssetKindSet", () => {
+  test("rows the kinds by the editor that opens them, then the kinds no editor opens", () => {
+    const kinds = new AssetKindSet({
+      kinds: [kTexture, kMap],
+      editors: [
+        {
+          package: "@jolly-pixel/editor.voxel-map",
+          kinds: ["voxelmap", "blockset"]
+        }
+      ],
+      maxContentBytes: 1024
+    });
+
+    assert.deepEqual(kinds.byEditor(), [
+      {
+        package: "@jolly-pixel/editor.voxel-map",
+        kinds: [kMap]
+      },
+      {
+        package: null,
+        kinds: [kTexture]
+      }
+    ]);
+    assert.deepEqual(AssetKindSet.EMPTY.byEditor(), []);
+  });
+
   test("knows only the listed kinds", () => {
     assert.equal(kKinds.has("voxelmap"), true);
     assert.equal(kKinds.has("binary"), false);
@@ -78,7 +108,7 @@ describe("AssetKindSet", () => {
           maxContentBytes: 4
         }
       ],
-      editable: [],
+      editors: [],
       maxContentBytes: 16
     });
     const cases: Array<[string, number]> = [
@@ -140,14 +170,19 @@ describe("AssetKindSet", () => {
 
   test("copies and freezes its inputs", () => {
     const kinds: AssetKindEntry[] = [{ ...kTexture }];
-    const editable = ["texture"];
+    const editorKinds = ["texture"];
     const set = new AssetKindSet({
       kinds,
-      editable,
+      editors: [
+        {
+          package: "@jolly-pixel/editor.texture",
+          kinds: editorKinds
+        }
+      ],
       maxContentBytes: 1024
     });
     kinds.push(kMap);
-    editable.push("voxelmap");
+    editorKinds.push("voxelmap");
 
     assert.equal(set.has("voxelmap"), false);
     assert.equal(set.kindDetail("voxelmap"), "no editor");

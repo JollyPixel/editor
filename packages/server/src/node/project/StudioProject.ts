@@ -20,12 +20,13 @@ import {
   StudioAccess
 } from "./StudioAccess.ts";
 import {
-  DEFAULT_PHYSICS,
-  gameSectionSchema,
-  kindFilterSchema,
-  physicsSectionSchema,
+  DEFAULT_PROJECT_SECTIONS,
+  projectSectionsSchema,
   type GameSection,
-  type PhysicsSection
+  type PhysicsSection,
+  type ProjectSections,
+  type SettingsSectionBody,
+  type SnapshotSection
 } from "../../project/api.ts";
 import { KindFilter } from "../../project/KindFilter.ts";
 
@@ -36,13 +37,7 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
 };
 const kSectionsSchema = z.object({
   editors: z.array(z.string().min(1)).default([]),
-  kindFilter: kindFilterSchema.default({
-    hidden: []
-  }),
-  game: gameSectionSchema.default({
-    start: null
-  }),
-  physics: physicsSectionSchema.default(DEFAULT_PHYSICS)
+  ...projectSectionsSchema.shape
 });
 
 export interface StudioProjectOpenOptions extends ProjectFileOpenOptions {
@@ -59,11 +54,12 @@ export interface StudioProjectOpenOptions extends ProjectFileOpenOptions {
   template?: ProjectFileData;
 }
 
-export interface StudioProjectSections {
+export type ProjectValueSection = "game" | "physics" | "snapshot";
+export type ProjectValueSections = Pick<ProjectSections, ProjectValueSection>;
+
+export interface StudioProjectSections extends ProjectValueSections {
   access: StudioAccess;
   kindFilter: KindFilter;
-  game: GameSection;
-  physics: PhysicsSection;
 }
 
 export class StudioProject {
@@ -74,8 +70,7 @@ export class StudioProject {
 
   #access: StudioAccess;
   #kindFilter: KindFilter;
-  #game: GameSection;
-  #physics: PhysicsSection;
+  #values: ProjectValueSections;
 
   static resolver(
     root: string,
@@ -100,9 +95,10 @@ export class StudioProject {
     );
 
     const resolver = StudioProject.resolver(file.root, packages);
-    const sections = kSectionsSchema.safeParse(
-      file.data
-    );
+    const sections = kSectionsSchema.safeParse({
+      ...DEFAULT_PROJECT_SECTIONS,
+      ...file.data
+    });
     if (!sections.success) {
       throw new TypeError(
         `"${file.path}" is invalid:\n${z.prettifyError(sections.error)}`
@@ -126,7 +122,8 @@ export class StudioProject {
         sections.data.kindFilter.hidden.filter((kind) => known.has(kind))
       ),
       game: sections.data.game,
-      physics: sections.data.physics
+      physics: sections.data.physics,
+      snapshot: sections.data.snapshot
     });
   }
 
@@ -141,8 +138,11 @@ export class StudioProject {
     this.kinds = kinds;
     this.#access = sections.access;
     this.#kindFilter = sections.kindFilter;
-    this.#game = structuredClone(sections.game);
-    this.#physics = structuredClone(sections.physics);
+    this.#values = structuredClone({
+      game: sections.game,
+      physics: sections.physics,
+      snapshot: sections.snapshot
+    });
     this.privateFiles = new PrivateFiles(
       file.root,
       kinds.descriptors().map((descriptor) => descriptor.extension)
@@ -181,22 +181,24 @@ export class StudioProject {
   }
 
   get game(): GameSection {
-    return structuredClone(this.#game);
-  }
-
-  replaceGame(
-    game: GameSection
-  ): void {
-    this.#game = structuredClone(game);
+    return structuredClone(this.#values.game);
   }
 
   get physics(): PhysicsSection {
-    return structuredClone(this.#physics);
+    return structuredClone(this.#values.physics);
   }
 
-  replacePhysics(
-    physics: PhysicsSection
+  get snapshot(): SnapshotSection {
+    return structuredClone(this.#values.snapshot);
+  }
+
+  replaceSection<TName extends ProjectValueSection>(
+    name: TName,
+    value: SettingsSectionBody<TName>
   ): void {
-    this.#physics = structuredClone(physics);
+    this.#values = {
+      ...this.#values,
+      [name]: structuredClone(value)
+    };
   }
 }

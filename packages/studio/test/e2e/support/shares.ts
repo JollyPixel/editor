@@ -51,7 +51,7 @@ export class ShareLinksPane {
   ) {
     this.#account = account;
     this.#settings = settings;
-    this.links = page.locator("studio-share-links share-link-list")
+    this.links = page.locator("studio-access-keys share-link-list")
       .getByRole("listitem");
     this.revokeDialog = page.getByRole("alertdialog", { name: "Revoke link?" });
     this.confirmRevokeButton = page.locator("jolly-dialog")
@@ -66,7 +66,7 @@ export class ShareLinksPane {
     username: string
   ): Promise<void> {
     await this.#account.openSettings(username);
-    await this.#settings.section("Share links").click();
+    await this.#settings.section("Access keys").click();
   }
 
   async revoke(): Promise<void> {

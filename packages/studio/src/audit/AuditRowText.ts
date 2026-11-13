@@ -12,7 +12,8 @@ const kSectionLabels: Readonly<Record<SettingsSectionName, string>> = {
   access: "the access settings",
   kindFilter: "the kind filter",
   game: "the default scene",
-  physics: "the physics settings"
+  physics: "the physics settings",
+  snapshot: "the snapshot settings"
 };
 
 export class AuditRowText {

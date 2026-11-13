@@ -9,6 +9,7 @@ import {
   terrainManifestSchema
 } from "../network/TerrainCommand.schema.ts";
 import { TERRAIN_ICON } from "./icons.ts";
+import { TERRAIN_CAPABILITIES } from "./capabilities.ts";
 
 // CONSTANTS
 export const TERRAIN_KIND = "terrain";
@@ -20,7 +21,8 @@ export const TERRAIN_ASSET: AssetKindDescriptor = {
   kind: TERRAIN_KIND,
   label: "Terrain",
   extension: TERRAIN_EXTENSION,
-  icon: TERRAIN_ICON
+  icon: TERRAIN_ICON,
+  capabilities: TERRAIN_CAPABILITIES
 };
 
 export const terrainFileSchema = z.extend(terrainManifestSchema, {

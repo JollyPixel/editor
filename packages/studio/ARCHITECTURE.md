@@ -1,8 +1,7 @@
 # Architecture
 
 `@jolly-pixel/studio` opens one project: one asset back-end, one asset tree,
-one editor page per tab. Terms are defined in the [glossary](./GLOSSARY.md),
-decisions in the [ADRs](./docs/adr/README.md).
+one editor page per tab. Terms are defined in the [glossary](./GLOSSARY.md).
 
 ## One project, one back-end
 

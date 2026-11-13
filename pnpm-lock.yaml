@@ -524,9 +524,6 @@ importers:
       mediabunny:
         specifier: 1.65.2
         version: 1.65.2
-      zod:
-        specifier: 4.6.7
-        version: 4.6.7
     devDependencies:
       '@jolly-pixel/asset':
         specifier: workspace:*

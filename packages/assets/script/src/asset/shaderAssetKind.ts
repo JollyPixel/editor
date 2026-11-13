@@ -9,22 +9,16 @@ import {
   SHADER_KIND,
   SHADER_TEMPLATE
 } from "./shader.ts";
-import {
-  textKindHandler,
-  type TextAssetKindOptions
-} from "./textAssetKind.ts";
+import { textKindHandler } from "./textAssetKind.ts";
 import type { ScriptText } from "../model/ScriptText.ts";
 import type { ScriptNetworkCommand } from "../network/types.ts";
 
-export function shaderAssetKind(
-  options: TextAssetKindOptions = {}
-): AssetKindHandler<ScriptText, ScriptNetworkCommand> {
+export function shaderAssetKind(): AssetKindHandler<ScriptText, ScriptNetworkCommand> {
   return textKindHandler({
     kind: SHADER_KIND,
     eventType: SHADER_COMMAND,
     extensions: SHADER_CONTENT_TYPES,
     template: SHADER_TEMPLATE,
-    snapshot: options.snapshot,
     compile: buildShader
   });
 }

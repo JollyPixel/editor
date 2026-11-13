@@ -9,10 +9,15 @@ const kDate = new Intl.DateTimeFormat("en", {
 const kMissingAsset = "Deleted asset";
 const kUnknownCreator = "a removed account";
 
+export interface SharedAsset {
+  path: string;
+  kind: string;
+}
+
 export interface ShareLinkLookups {
-  assetPath(
+  asset(
     assetId: string
-  ): string | undefined;
+  ): SharedAsset | undefined;
   username(
     accountId: string
   ): string | undefined;
@@ -34,6 +39,7 @@ export class ShareLinkRow {
 
   readonly id: string;
   readonly asset: string;
+  readonly kind: string | null;
   readonly url: string;
   readonly creator: string;
   readonly created: string;
@@ -44,7 +50,9 @@ export class ShareLinkRow {
     lookups: ShareLinkLookups
   ) {
     this.id = link.id;
-    this.asset = lookups.assetPath(link.assetId) ?? kMissingAsset;
+    const asset = lookups.asset(link.assetId);
+    this.asset = asset?.path ?? kMissingAsset;
+    this.kind = asset?.kind ?? null;
     this.url = new URL(`${VIEW_PAGES_PATH}${link.token}`, lookups.baseUrl).href;
     this.creator = lookups.username(link.createdBy) ?? kUnknownCreator;
     this.created = kDate.format(link.createdAt);

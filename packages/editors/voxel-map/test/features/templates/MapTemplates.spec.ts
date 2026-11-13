@@ -17,7 +17,7 @@ import { MapTemplates } from "../../../src/features/templates/MapTemplates.ts";
 import { TemplateDraft } from "../../../src/features/templates/editing/TemplateDraft.ts";
 import { createEditorMap } from "../../helpers/editorMap.ts";
 import { mapAccess } from "../../helpers/mapAccess.ts";
-import { MAP_CAPABILITIES } from "../../../src/access/MapAccess.ts";
+import { MAP_CAPABILITY_TABLE } from "../../../src/access/MapAccess.ts";
 
 function setup(
   access = mapAccess(),
@@ -115,7 +115,7 @@ describe("MapTemplates.saveSnapshot", () => {
   test("saves nothing when template access is lost while the prompt is open", async() => {
     const access = mapAccess();
     const { world, templates } = setup(access, () => {
-      access.current = MAP_CAPABILITIES.none;
+      access.current = MAP_CAPABILITY_TABLE.none;
 
       return "Wall";
     });
@@ -176,7 +176,7 @@ describe("MapTemplates.remove", () => {
 
 describe("MapTemplates access", () => {
   test("refuses every template write for a role that cannot write templates", async() => {
-    const { world, templates, prompts } = setup(mapAccess(MAP_CAPABILITIES.none));
+    const { world, templates, prompts } = setup(mapAccess(MAP_CAPABILITY_TABLE.none));
     const id = world.templates.createFromLayer("Draft", { name: "Draft" })!.id;
 
     assert.equal(templates.editable, false);

@@ -77,7 +77,6 @@ export interface GridCommand extends AssetCommandHeader {
 
 export interface GridOptions {
   contentBytes: number;
-  snapshot?: SnapshotPolicy;
 }
 
 export function gridHandler(
@@ -106,7 +105,6 @@ export function gridHandler(
   return {
     kind: GRID_KIND,
     extensions: { ".grid": "application/octet-stream" },
-    snapshot: options.snapshot,
     commands,
     create: () => {
       return { cells: new Uint8Array(contentBytes) };

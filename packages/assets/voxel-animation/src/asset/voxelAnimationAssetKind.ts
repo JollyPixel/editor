@@ -3,10 +3,9 @@ import {
   arbitrated,
   JSON_CONTENT_TYPE,
   JsonAssetFile,
-  SNAPSHOT_OPTIONS_SCHEMA,
+  NO_OPTIONS_SCHEMA,
   type AssetKindHandler,
-  type AssetKindPackage,
-  type SnapshotPolicy
+  type AssetKindPackage
 } from "@jolly-pixel/asset-server";
 import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
@@ -40,21 +39,15 @@ export const VOXEL_ANIMATION_FILE = new JsonAssetFile({
   isInvalid: (error) => error instanceof InvalidEntryError
 });
 
-export interface VoxelAnimationAssetKindOptions {
-  snapshot?: SnapshotPolicy;
-}
-
-export function voxelAnimationAssetKind(
-  options: VoxelAnimationAssetKindOptions = {}
-): AssetKindHandler<AnimationSet, AnimationNetworkCommand> {
-  const { snapshot } = options;
-
+export function voxelAnimationAssetKind(): AssetKindHandler<
+  AnimationSet,
+  AnimationNetworkCommand
+> {
   return {
     kind: VOXEL_ANIMATION_KIND,
     extensions: {
       [VOXEL_ANIMATION_EXTENSION]: JSON_CONTENT_TYPE
     },
-    snapshot,
 
     create(): AnimationSet {
       return new AnimationSet();
@@ -108,8 +101,8 @@ export function voxelAnimationAssetKind(
   };
 }
 
-export const ASSET_KINDS: AssetKindPackage<VoxelAnimationAssetKindOptions> = {
+export const ASSET_KINDS: AssetKindPackage = {
   descriptors: [VOXEL_ANIMATION_ASSET],
-  optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
-  handlers: (options) => [voxelAnimationAssetKind(options)]
+  optionsSchema: NO_OPTIONS_SCHEMA,
+  handlers: () => [voxelAnimationAssetKind()]
 };

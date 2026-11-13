@@ -6,7 +6,8 @@ import {
 } from "lit";
 import {
   customElement,
-  property
+  property,
+  query
 } from "lit/decorators.js";
 
 // Import Internal Dependencies
@@ -20,19 +21,39 @@ export class Text extends JollyField<string> {
   @property({ type: String })
   declare placeholder: string;
 
+  @property({ attribute: false })
+  declare suggestions: readonly string[];
+
+  @query("input")
+  declare _input: HTMLInputElement | null;
+
   #pointerFocus = new PointerFocusController(this);
 
   constructor() {
     super();
 
     this.placeholder = "";
+    this.suggestions = [];
     this.value = "";
   }
 
+  select(): void {
+    this._input?.focus();
+    this._input?.select();
+  }
+
   protected renderValue(): TemplateResult {
+    const suggested = this.suggestions.length > 0;
+
     return html`
+      ${suggested ? html`
+        <datalist id="suggestions">
+          ${this.suggestions.map((suggestion) => html`<option value=${suggestion}></option>`)}
+        </datalist>
+      ` : nothing}
       <input
         type="text"
+        list=${suggested ? "suggestions" : nothing}
         .value=${this.draftController.draft ?? this.#displayed}
         placeholder=${this.mixed ? MIXED_PLACEHOLDER : this.placeholder}
         ?disabled=${this.disabled}

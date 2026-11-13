@@ -10,8 +10,7 @@ import type {
   AssetLiveProtocol,
   AssetRelay,
   AssetRelaySchemas,
-  AssetRoomBinding,
-  SnapshotPolicy
+  AssetRoomBinding
 } from "#src/index.ts";
 import {
   bytes,
@@ -43,13 +42,10 @@ const kCounterCommands: AssetCommands<CounterState, CounterCommand> = {
   }
 };
 
-export function counterHandler(
-  snapshot?: SnapshotPolicy
-): AssetKindHandler<CounterState, CounterCommand> {
+export function counterHandler(): AssetKindHandler<CounterState, CounterCommand> {
   return {
     kind: "counter",
     extensions: { ".counter": "text/plain; charset=utf-8" },
-    snapshot,
     commands: kCounterCommands,
 
     create(): CounterState {
@@ -87,11 +83,9 @@ function counterLive(
   };
 }
 
-export function liveCounterHandler(
-  snapshot?: SnapshotPolicy
-): AssetKindHandler<CounterState, CounterCommand> {
+export function liveCounterHandler(): AssetKindHandler<CounterState, CounterCommand> {
   return {
-    ...counterHandler(snapshot),
+    ...counterHandler(),
     commands: {
       ...kCounterCommands,
       live: counterLive
@@ -101,7 +95,7 @@ export function liveCounterHandler(
 
 export function failingLiveCounterHandler(): AssetKindHandler<CounterState, CounterCommand> {
   return {
-    ...counterHandler({ delay: 0, maxDelay: 0 }),
+    ...counterHandler(),
     commands: {
       ...kCounterCommands,
       live: () => {
@@ -116,7 +110,7 @@ export function relayCounterHandler<TRelay extends object>(
   relay: AssetRelay<TRelay>
 ): AssetKindHandler<CounterState, CounterCommand, TRelay> {
   return {
-    ...counterHandler({ delay: 0, maxDelay: 0 }),
+    ...counterHandler(),
     commands: {
       ...kCounterCommands,
       relay: schemas,
@@ -281,7 +275,7 @@ export function liveTileHandler(
   compressCommands = false
 ): AssetKindHandler<TileState, TileCommand> {
   return {
-    ...tileHandler({ delay: 0, maxDelay: 0 }),
+    ...tileHandler(),
     commands: {
       ...kTileCommands,
       live: ({ state }) => {
@@ -304,13 +298,10 @@ export function liveTileHandler(
   };
 }
 
-export function tileHandler(
-  snapshot?: SnapshotPolicy
-): AssetKindHandler<TileState, TileCommand> {
+export function tileHandler(): AssetKindHandler<TileState, TileCommand> {
   return {
     kind: "tiles",
     extensions: { ".tiles": "text/plain; charset=utf-8" },
-    snapshot,
     commands: kTileCommands,
     parts: {
       extension: { ".tile": "text/plain; charset=utf-8" },

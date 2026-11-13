@@ -24,6 +24,10 @@ import type {
   SyncedCommandDocument
 } from "#src/client/index.ts";
 import {
+  CapabilityTable,
+  defineCapabilities
+} from "#src/client/grants/Grants.ts";
+import {
   PresenceChannel,
   type PresenceChannelOptions
 } from "#src/client/PresenceChannel.ts";
@@ -246,5 +250,46 @@ describe("PresenceChannel", () => {
       key: "tool",
       decode: z.string()
     });
+  });
+});
+
+describe("defineCapabilities", () => {
+  const declare = defineCapabilities<"stroke" | "fill">();
+
+  test("accepts declarations that cover every event", () => {
+    expect(declare).type.toBeCallableWith([
+      {
+        name: "pixels",
+        label: "Pixels",
+        events: ["stroke", "fill"]
+      }
+    ]);
+  });
+
+  test("rejects declarations that leave an event out", () => {
+    expect(declare).type.not.toBeCallableWith([
+      {
+        name: "pixels",
+        label: "Pixels",
+        events: ["stroke"]
+      }
+    ]);
+  });
+
+  test("gives the table the declared capability names", () => {
+    const table = new CapabilityTable(declare([
+      {
+        name: "pixels",
+        label: "Pixels",
+        events: ["stroke"]
+      },
+      {
+        name: "fills",
+        label: "Fills",
+        events: ["fill"]
+      }
+    ]));
+
+    expect(table).type.toBe<CapabilityTable<"stroke" | "fill", "pixels" | "fills">>();
   });
 });

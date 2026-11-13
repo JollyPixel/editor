@@ -53,7 +53,7 @@ export class SettingsPage {
   async changeAvatar(
     png: Buffer
   ): Promise<void> {
-    await this.section("Profile").click();
+    await this.section("Account").click();
     const chooser = this.#page.waitForEvent("filechooser");
     await this.root.getByRole("button", { name: "Change avatar…" }).click();
     await (await chooser).setFiles({

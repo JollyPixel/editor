@@ -145,6 +145,7 @@ export class StudioBackend implements AsyncDisposable {
         new AgentChatExtension()
       ],
       backend: {
+        snapshot: project.snapshot,
         stateIgnores: [
           ...ACCOUNTS_STATE_IGNORES,
           ...AUDIT_STATE_IGNORES
@@ -173,7 +174,7 @@ export class StudioBackend implements AsyncDisposable {
         project,
         accounts,
         server: assetServer.network,
-        registry: assetServer.backend.kinds,
+        backend: assetServer.backend,
         audit,
         accountsPolicy: options.accounts
       }),

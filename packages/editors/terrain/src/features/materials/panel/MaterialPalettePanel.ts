@@ -39,7 +39,7 @@ import "@jolly-pixel/ui/elements/toggle";
 
 // Import Internal Dependencies
 import {
-  TERRAIN_CAPABILITIES,
+  TERRAIN_CAPABILITY_TABLE,
   type TerrainAccess
 } from "../../../access/TerrainAccess.ts";
 import type {
@@ -292,7 +292,7 @@ export class MaterialPalettePanel extends LitElement {
   constructor() {
     super();
     this.context = null;
-    this.access = TERRAIN_CAPABILITIES.full;
+    this.access = TERRAIN_CAPABILITY_TABLE.full;
     this.dropping = false;
     this.busy = false;
     this.addEventListener("dragover", this.#onDragOver);

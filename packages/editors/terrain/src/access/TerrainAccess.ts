@@ -1,7 +1,11 @@
 // Import Third-party Dependencies
-import type { TerrainCommandAction } from "@jolly-pixel/asset.terrain/client";
+import {
+  TERRAIN_CAPABILITIES,
+  type TerrainCommandAction
+} from "@jolly-pixel/asset.terrain/client";
 import {
   CapabilityTable,
+  type CapabilityName,
   type Grants,
   type RoomGrants
 } from "@jolly-pixel/network/client";
@@ -21,33 +25,15 @@ const kToolCapabilities: Readonly<Record<BrushTool, TerrainCapability>> = {
   chunks: "chunks"
 };
 
-export type TerrainCapability =
-  | "heights"
-  | "paint"
-  | "holes"
-  | "chunks"
-  | "materials"
-  | "pointsOfInterest";
+export type TerrainCapability = CapabilityName<typeof TERRAIN_CAPABILITIES>;
 
 export type TerrainAccess = Grants<TerrainCapability>;
 export type TerrainGrants = RoomGrants<TerrainCommandAction, TerrainCapability>;
 export type TerrainAccessSource = Pick<TerrainGrants, "current">;
 
-export const TERRAIN_CAPABILITIES = new CapabilityTable<TerrainCommandAction, TerrainCapability>({
-  "heights-patched": "heights",
-  "splat-patched": "paint",
-  "holes-patched": "holes",
-  "chunk-added": "chunks",
-  "chunk-removed": "chunks",
-  "tier-changed": "chunks",
-  "material-added": "materials",
-  "material-updated": "materials",
-  "material-removed": "materials",
-  "texture-size-changed": "materials",
-  "poi-added": "pointsOfInterest",
-  "poi-updated": "pointsOfInterest",
-  "poi-removed": "pointsOfInterest"
-});
+export const TERRAIN_CAPABILITY_TABLE = new CapabilityTable(
+  TERRAIN_CAPABILITIES
+);
 
 export function canUseTool(
   access: TerrainAccess,

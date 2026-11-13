@@ -29,7 +29,7 @@ import {
   createTempDir,
   removeTempDir
 } from "../../helpers/tempDir.ts";
-import { DEFAULT_PHYSICS } from "#src/project/api.ts";
+import { DEFAULT_PROJECT_SECTIONS } from "#src/project/api.ts";
 import { KindFilter } from "#src/project/KindFilter.ts";
 
 // CONSTANTS
@@ -64,12 +64,9 @@ function voxelMapProject(
       })
     ], new PackageResolver(root)),
     {
+      ...DEFAULT_PROJECT_SECTIONS,
       access: StudioAccess.read({}, "project.json"),
-      kindFilter: KindFilter.NONE,
-      game: {
-        start: null
-      },
-      physics: DEFAULT_PHYSICS
+      kindFilter: KindFilter.NONE
     }
   );
 }

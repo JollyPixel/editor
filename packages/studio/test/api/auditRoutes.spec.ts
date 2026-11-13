@@ -51,12 +51,18 @@ describe("GET /api/audit", () => {
     await using backend = await serveBackend();
     const admin = await signedIn(backend, "Alice");
     await signedIn(backend, "Bob");
-    const kinds = KindOptionsDraft.from((await admin.settings.read()).kinds).toJSON();
-    await admin.settings.replace("kinds", {
-      ...kinds,
-      "@jolly-pixel/asset.voxel-model": {
-        snapshot: {
-          delay: 500
+    const settings = await admin.settings.read();
+    const kinds = KindOptionsDraft.from(settings.kinds).toJSON();
+    await admin.settings.replace({
+      revision: settings.revision,
+      sections: {
+        kinds: {
+          ...kinds,
+          "@jolly-pixel/asset.voxel-map": {
+            voxelmap: {
+              chunkSize: 8
+            }
+          }
         }
       }
     });

@@ -18,7 +18,7 @@ import { EditorPackages } from "#src/node/editors/EditorPackages.ts";
 import { StudioAccess } from "#src/node/project/StudioAccess.ts";
 import { openStudioAccounts } from "#src/node/accounts/openStudioAccounts.ts";
 import { StudioProject } from "#src/node/project/StudioProject.ts";
-import { DEFAULT_PHYSICS } from "#src/project/api.ts";
+import { DEFAULT_PROJECT_SECTIONS } from "#src/project/api.ts";
 import { KindFilter } from "#src/project/KindFilter.ts";
 
 // CONSTANTS
@@ -45,12 +45,9 @@ function project(
     new EditorPackages([]),
     new ProjectKinds([], new PackageResolver(root)),
     {
+      ...DEFAULT_PROJECT_SECTIONS,
       access: StudioAccess.read(document, "project.json"),
-      kindFilter: KindFilter.NONE,
-      game: {
-        start: null
-      },
-      physics: DEFAULT_PHYSICS
+      kindFilter: KindFilter.NONE
     }
   );
 }

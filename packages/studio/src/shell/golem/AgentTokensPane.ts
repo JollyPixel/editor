@@ -12,6 +12,8 @@ import {
 } from "lit/decorators.js";
 import type { AgentToken } from "@jolly-pixel/accounts";
 import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/toolbar";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/message";
@@ -20,6 +22,7 @@ import "@jolly-pixel/ui/elements/message";
 import { agentSetupLine } from "../../golem/AgentSetupLine.ts";
 import type { StudioAgentTokens } from "../../golem/StudioAgentTokens.ts";
 import { RemoteStateController } from "../RemoteStateController.ts";
+import { listRowStyles } from "../listRowStyles.ts";
 
 // CONSTANTS
 const kDate = new Intl.DateTimeFormat("en", {
@@ -34,17 +37,24 @@ interface RevealedToken {
 
 @customElement("studio-agent-tokens")
 export class AgentTokensPane extends LitElement {
-  static override styles = css`
+  static override styles = [listRowStyles, css`
     :host {
       display: grid;
-      gap: var(--jolly-space-2, 8px);
-      padding: var(--jolly-space-2, 8px);
+      gap: var(--jolly-space-2);
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .intro {
+      color: var(--jolly-text-muted);
     }
 
     .create {
       display: flex;
       align-items: end;
-      gap: var(--jolly-space-2, 8px);
+      gap: var(--jolly-space-2);
     }
 
     .create jolly-text {
@@ -53,9 +63,9 @@ export class AgentTokensPane extends LitElement {
 
     .revealed {
       display: grid;
-      gap: var(--jolly-space-1, 4px);
-      padding: var(--jolly-space-2, 8px);
-      border-radius: 2px;
+      gap: var(--jolly-space-2);
+      padding: var(--jolly-space-2);
+      border-radius: var(--jolly-radius-sm);
       background: var(--jolly-surface-sunken);
     }
 
@@ -63,38 +73,7 @@ export class AgentTokensPane extends LitElement {
       overflow-wrap: anywhere;
       user-select: all;
     }
-
-    ul {
-      display: grid;
-      gap: var(--jolly-space-1, 4px);
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    li {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-2, 8px);
-      padding: var(--jolly-space-1, 4px);
-      border-radius: 2px;
-      background: var(--jolly-surface-sunken);
-    }
-
-    .text {
-      display: grid;
-      flex: 1;
-      min-width: 0;
-    }
-
-    p {
-      margin: 0;
-    }
-
-    .meta {
-      color: var(--jolly-text-muted);
-    }
-  `;
+  `];
 
   @state()
   declare _name: string;
@@ -125,7 +104,7 @@ export class AgentTokensPane extends LitElement {
     const tokens = this.#tokens.current?.tokens ?? [];
 
     return html`
-      <p class="meta">
+      <p class="intro">
         A token lets a local AI agent join this studio with your role.
         It shows in the peer lists under its name, marked "via golem".
       </p>
@@ -140,6 +119,7 @@ export class AgentTokensPane extends LitElement {
           }}
         ></jolly-text>
         <jolly-button
+          variant="accent"
           data-action="create"
           @click=${this.#create}
         >New token</jolly-button>
@@ -149,7 +129,7 @@ export class AgentTokensPane extends LitElement {
       ${tokens.length === 0 ? html`
         <jolly-message flush>No agent token.</jolly-message>
       ` : html`
-        <ul aria-label="Agent tokens">
+        <ul class="rows" aria-label="Agent tokens">
           ${tokens.map((token) => this.#renderToken(token))}
         </ul>
       `}
@@ -169,8 +149,9 @@ export class AgentTokensPane extends LitElement {
           The token is shown only now.
         </p>
         <code>${revealed.setupLine}</code>
-        <div>
+        <jolly-toolbar label="Token actions">
           <jolly-button
+            variant="accent"
             data-action="copy"
             @click=${this.#copy}
           >${this._copied ? "Copied" : "Copy"}</jolly-button>
@@ -178,7 +159,7 @@ export class AgentTokensPane extends LitElement {
             data-action="dismiss"
             @click=${this.#dismiss}
           >Done</jolly-button>
-        </div>
+        </jolly-toolbar>
       </div>
     `;
   }
@@ -188,9 +169,10 @@ export class AgentTokensPane extends LitElement {
   ): TemplateResult {
     return html`
       <li data-token=${token.id}>
-        <div class="text">
-          <span>${token.name}</span>
-          <span class="meta">Created on ${kDate.format(token.createdAt)}.</span>
+        <jolly-icon name="key"></jolly-icon>
+        <div class="row-text">
+          <span class="row-title">${token.name}</span>
+          <span class="row-meta">Created on ${kDate.format(token.createdAt)}.</span>
         </div>
         <jolly-button
           variant="danger"

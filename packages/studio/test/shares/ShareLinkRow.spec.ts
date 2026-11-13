@@ -16,7 +16,12 @@ import {
 
 // CONSTANTS
 const kLookups: ShareLinkLookups = {
-  assetPath: (assetId) => (assetId === "map-1" ? "maps/overworld.voxelmap.json" : undefined),
+  asset: (assetId) => (assetId === "map-1" ?
+    {
+      path: "maps/overworld.voxelmap.json",
+      kind: "voxelmap"
+    } :
+    undefined),
   username: (accountId) => (accountId === "alice" ? "Alice" : undefined),
   baseUrl: "http://studio.local/projects/demo/"
 };
@@ -44,6 +49,7 @@ describe("ShareLinkRow", () => {
     assert.deepEqual({ ...row }, {
       id: "link-1",
       asset: "maps/overworld.voxelmap.json",
+      kind: "voxelmap",
       url: "http://studio.local/projects/demo/view/token-1",
       creator: "Alice",
       created: "Oct 11, 2026",
@@ -58,8 +64,8 @@ describe("ShareLinkRow", () => {
     }), kLookups);
 
     assert.deepEqual(
-      [row.asset, row.creator, row.expires],
-      ["Deleted asset", "a removed account", "Never expires"]
+      [row.asset, row.kind, row.creator, row.expires],
+      ["Deleted asset", null, "a removed account", "Never expires"]
     );
   });
 

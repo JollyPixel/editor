@@ -3,6 +3,7 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import { VOXEL_MAP_ICON } from "./icons.ts";
+import { VOXEL_MAP_CAPABILITIES } from "./capabilities.ts";
 
 // CONSTANTS
 export const VOXEL_MAP_KIND = "voxelmap";
@@ -13,5 +14,6 @@ export const VOXEL_MAP_ASSET: AssetKindDescriptor = {
   kind: VOXEL_MAP_KIND,
   label: "Voxel map",
   extension: VOXEL_MAP_EXTENSION,
-  icon: VOXEL_MAP_ICON
+  icon: VOXEL_MAP_ICON,
+  capabilities: VOXEL_MAP_CAPABILITIES
 };

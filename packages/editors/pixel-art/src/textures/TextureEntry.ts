@@ -29,7 +29,7 @@ export interface PixelDrawTextureOptions extends PixelArtCanvasOptions {
   disabled?: boolean;
   /**
    * What the user may change in this texture.
-   * @default PIXEL_ART_CAPABILITIES.full
+   * @default PIXEL_ART_CAPABILITY_TABLE.full
    */
   access?: PixelArtAccess;
 }

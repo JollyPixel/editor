@@ -1,10 +1,11 @@
 // Import Node.js Dependencies
+import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
 // Import Third-party Dependencies
 import type { Account } from "@jolly-pixel/accounts";
 import type { Accounts } from "@jolly-pixel/accounts/node";
-import type { AssetKindRegistry } from "@jolly-pixel/asset-server";
+import type { AssetBackend } from "@jolly-pixel/asset-server";
 import type { KindPackage } from "@jolly-pixel/asset-server/node";
 import type { Server } from "@jolly-pixel/network";
 
@@ -17,31 +18,47 @@ import type { SettingsChange } from "../audit/AuditEntry.ts";
 import type { AuditLog } from "../audit/AuditLog.ts";
 import { KindOptionSections } from "./KindOptionSections.ts";
 import { StudioAccess } from "./StudioAccess.ts";
-import type { StudioProject } from "./StudioProject.ts";
 import type {
-  AccessChange,
-  AccessSection,
-  KindOptions,
-  KindPackageSettings,
-  ProjectRight,
-  ProjectSections,
-  ProjectSettingsReply,
-  SettingsSectionBody,
-  SettingsSectionName
+  ProjectValueSection,
+  StudioProject
+} from "./StudioProject.ts";
+import {
+  settingsSectionSchema,
+  type AccessChange,
+  type AccessSection,
+  type KindOptions,
+  type KindPackageSettings,
+  type ProjectRight,
+  type ProjectSections,
+  type ProjectSettingsReply,
+  type SettingsSectionBody,
+  type SettingsSectionName,
+  type SettingsUpdate
 } from "../../project/api.ts";
 import { KindFilter } from "../../project/KindFilter.ts";
 import type { ProjectRights } from "../../project/ProjectRights.ts";
 import { InvalidSettingsError } from "./errors/InvalidSettingsError.ts";
 import { RoleInUseError } from "./errors/RoleInUseError.ts";
+import { StaleSettingsError } from "./errors/StaleSettingsError.ts";
+
+// CONSTANTS
+const kRevisionLength = 16;
+
+interface SettingsPlan {
+  change: SettingsChange;
+  apply(): void;
+}
 
 interface SectionHandler<TName extends SettingsSectionName> {
   right: ProjectRight;
-  replace(actorId: string, body: SettingsSectionBody<TName>): Promise<void>;
+  plan(body: SettingsSectionBody<TName>): SettingsPlan | null;
 }
 
 type SectionHandlers = {
   [TName in SettingsSectionName]: SectionHandler<TName>;
 };
+
+type SettingsBackend = Pick<AssetBackend, "kinds" | "replaceSnapshotPolicy">;
 
 export interface ProjectSettingsOptions {
   project: StudioProject;
@@ -52,7 +69,7 @@ export interface ProjectSettingsOptions {
    */
   accountsPolicy?: AccountsPolicy;
   server: Pick<Server, "replaceRights" | "revoke">;
-  registry: AssetKindRegistry;
+  backend: SettingsBackend;
   audit: AuditLog;
 }
 
@@ -61,32 +78,27 @@ export class ProjectSettings {
   #accounts: Accounts;
   #accountsPolicy: AccountsPolicy;
   #server: Pick<Server, "replaceRights" | "revoke">;
-  #registry: AssetKindRegistry;
+  #backend: SettingsBackend;
   #audit: AuditLog;
   #writes: Promise<unknown> = Promise.resolve();
   #sections: SectionHandlers = {
     kinds: {
       right: "editSettings",
-      replace: (actorId, kinds) => this.#replaceKinds(actorId, kinds)
+      plan: (kinds) => this.#planKinds(kinds)
     },
     access: {
       right: "manageAccess",
-      replace: (actorId, change) => this.#replaceAccess(actorId, change)
+      plan: (change) => this.#planAccess(change)
     },
     kindFilter: {
       right: "editSettings",
-      replace: (actorId, kindFilter) => this.#replaceKindFilter(
-        actorId,
-        KindFilter.from(kindFilter)
-      )
+      plan: (kindFilter) => this.#planKindFilter(KindFilter.from(kindFilter))
     },
-    game: this.#valueSection(
-      "game",
-      (game) => this.#project.replaceGame(game)
-    ),
-    physics: this.#valueSection(
-      "physics",
-      (physics) => this.#project.replacePhysics(physics)
+    game: this.#valueSection("game"),
+    physics: this.#valueSection("physics"),
+    snapshot: this.#valueSection(
+      "snapshot",
+      (snapshot) => this.#backend.replaceSnapshotPolicy(snapshot)
     )
   };
 
@@ -97,8 +109,15 @@ export class ProjectSettings {
     this.#accounts = options.accounts;
     this.#accountsPolicy = options.accountsPolicy ?? {};
     this.#server = options.server;
-    this.#registry = options.registry;
+    this.#backend = options.backend;
     this.#audit = options.audit;
+  }
+
+  get revision(): string {
+    return createHash("sha256")
+      .update(JSON.stringify(this.#project.file.data))
+      .digest("hex")
+      .slice(0, kRevisionLength);
   }
 
   rights(
@@ -114,6 +133,7 @@ export class ProjectSettings {
     rights.require("readSettings");
 
     const data: ProjectSettingsReply = {
+      revision: this.revision,
       name: this.#project.name,
       editors: Array.from(this.#project.editors, (editor) => editor.package),
       kinds: this.#project.kinds.packages.map(
@@ -132,48 +152,84 @@ export class ProjectSettings {
     return {
       kindFilter: this.#project.kindFilter.toJSON(),
       game: this.#project.game,
-      physics: this.#project.physics
+      physics: this.#project.physics,
+      snapshot: this.#project.snapshot
     };
   }
 
-  replace<TName extends SettingsSectionName>(
+  replace(
     account: Account,
-    section: TName,
-    body: SettingsSectionBody<TName>
+    update: SettingsUpdate
   ): Promise<ProjectSettingsReply> {
-    const handler: SectionHandler<TName> = this.#sections[section];
-
     return this.#serialize(account, async() => {
-      this.rights(account).require(handler.right);
-      await handler.replace(account.id, body);
+      const rights = this.rights(account);
+      const names = settingsSectionSchema.options.filter(
+        (name) => update.sections[name] !== undefined
+      );
+      for (const name of names) {
+        rights.require(this.#sections[name].right);
+      }
+      if (update.revision !== this.revision) {
+        throw new StaleSettingsError();
+      }
+
+      const plans = names.flatMap(
+        (name) => this.#plan(name, update.sections[name]) ?? []
+      );
+      if (plans.length === 0) {
+        return;
+      }
+
+      await this.#project.file.replace(Object.fromEntries(
+        plans.map(({ change }) => [change.section, change.after])
+      ));
+      for (const plan of plans) {
+        plan.apply();
+      }
+      for (const plan of plans) {
+        await this.#audit.recordSettings(account.id, plan.change);
+      }
     });
   }
 
-  #valueSection<TName extends "game" | "physics">(
+  #plan<TName extends SettingsSectionName>(
+    name: TName,
+    body: SettingsSectionBody<TName> | undefined
+  ): SettingsPlan | null {
+    const handler: SectionHandler<TName> = this.#sections[name];
+
+    return body === undefined ? null : handler.plan(body);
+  }
+
+  #valueSection<TName extends ProjectValueSection>(
     section: TName,
-    apply: (value: SettingsSectionBody<TName>) => void
+    replaced: (value: SettingsSectionBody<TName>) => void = () => undefined
   ): SectionHandler<TName> {
     return {
       right: "editSettings",
-      replace: async(actorId, after) => {
+      plan: (after) => {
         const before = this.#project[section];
-        if (isDeepStrictEqual(before, after)) {
-          return;
-        }
 
-        await this.#commit(actorId, {
-          section,
-          before,
-          after
-        }, () => apply(after));
+        return isDeepStrictEqual(before, after) ?
+          null :
+          {
+            change: {
+              section,
+              before,
+              after
+            },
+            apply: () => {
+              this.#project.replaceSection(section, after);
+              replaced(after);
+            }
+          };
       }
     };
   }
 
-  async #replaceKindFilter(
-    actorId: string,
+  #planKindFilter(
     next: KindFilter
-  ): Promise<void> {
+  ): SettingsPlan | null {
     const known = new Set(
       this.#project.kinds.descriptors().map((descriptor) => descriptor.kind)
     );
@@ -185,20 +241,22 @@ export class ProjectSettings {
     }
     const previous = this.#project.kindFilter;
     if (next.equals(previous)) {
-      return;
+      return null;
     }
 
-    await this.#commit(actorId, {
-      section: "kindFilter",
-      before: previous.toJSON(),
-      after: next.toJSON()
-    }, () => this.#project.replaceKindFilter(next));
+    return {
+      change: {
+        section: "kindFilter",
+        before: previous.toJSON(),
+        after: next.toJSON()
+      },
+      apply: () => this.#project.replaceKindFilter(next)
+    };
   }
 
-  async #replaceKinds(
-    actorId: string,
+  #planKinds(
     kinds: KindOptions
-  ): Promise<void> {
+  ): SettingsPlan | null {
     const before = this.#kindOptions();
     const names = Object.keys(before);
     if (!isDeepStrictEqual(Object.keys(kinds).sort(), [...names].sort())) {
@@ -215,37 +273,38 @@ export class ProjectSettings {
       }
     }
     if (changed.length === 0) {
-      return;
+      return null;
     }
 
-    const after = Object.fromEntries(
-      names.map((name) => [name, kinds[name]])
-    );
-    await this.#commit(actorId, {
-      section: "kinds",
-      before,
-      after
-    }, () => {
-      for (const kindPackage of changed) {
-        this.#project.kinds.replace(kindPackage);
-        for (const handler of kindPackage.handlers) {
-          this.#registry.replace(handler);
+    return {
+      change: {
+        section: "kinds",
+        before,
+        after: Object.fromEntries(
+          names.map((name) => [name, kinds[name]])
+        )
+      },
+      apply: () => {
+        for (const kindPackage of changed) {
+          this.#project.kinds.replace(kindPackage);
+          for (const handler of kindPackage.handlers) {
+            this.#backend.kinds.replace(handler);
+          }
         }
       }
-    });
+    };
   }
 
-  async #replaceAccess(
-    actorId: string,
+  #planAccess(
     change: AccessChange
-  ): Promise<void> {
+  ): SettingsPlan | null {
     const next = invalidAsSettings(
       () => StudioAccess.from(change.access, "access")
     );
     const before = this.#project.access.toJSON();
     const after = next.toJSON();
     if (isDeepStrictEqual(before, after)) {
-      return;
+      return null;
     }
     const renamed = new Map(Object.entries(change.renamedRoles));
     assertRenames(before, after, renamed);
@@ -254,26 +313,32 @@ export class ProjectSettings {
       () => AccountsAccess.resolve(next, this.#accountsPolicy, "access")
     );
 
-    await this.#commit(actorId, {
-      section: "access",
-      before,
-      after
-    }, () => {
-      this.#project.replaceAccess(next);
-      this.#server.replaceRights(next.rights, accountsAccess.roles.defaultRole);
-      accountsAccess.applyTo(this.#accounts, renamed);
-      const moved = new Set(renamed.values());
-      for (const role of Object.keys(after.roles)) {
-        if (
-          !moved.has(role) &&
-          !isDeepStrictEqual(before.roles[role], after.roles[role])
-        ) {
-          for (const accountId of this.#accounts.holders(role)) {
-            this.#server.revoke(accountId);
+    return {
+      change: {
+        section: "access",
+        before,
+        after
+      },
+      apply: () => {
+        this.#project.replaceAccess(next);
+        this.#server.replaceRights(
+          next.rights,
+          accountsAccess.roles.defaultRole
+        );
+        accountsAccess.applyTo(this.#accounts, renamed);
+        const moved = new Set(renamed.values());
+        for (const role of Object.keys(after.roles)) {
+          if (
+            !moved.has(role) &&
+            !isDeepStrictEqual(before.roles[role], after.roles[role])
+          ) {
+            for (const accountId of this.#accounts.holders(role)) {
+              this.#server.revoke(accountId);
+            }
           }
         }
       }
-    });
+    };
   }
 
   #assertRemovable(
@@ -300,16 +365,6 @@ export class ProjectSettings {
         (kindPackage) => [kindPackage.name, structuredClone(kindPackage.options)]
       )
     );
-  }
-
-  async #commit(
-    actorId: string,
-    change: SettingsChange,
-    apply: () => void
-  ): Promise<void> {
-    await this.#project.file.replace(change.section, change.after);
-    apply();
-    await this.#audit.recordSettings(actorId, change);
   }
 
   async #serialize(

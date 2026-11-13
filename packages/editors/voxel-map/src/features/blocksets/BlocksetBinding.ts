@@ -13,7 +13,7 @@ import { RoomGrants } from "@jolly-pixel/network/client";
 // Import Internal Dependencies
 import type { EditorMap } from "../../map/EditorMap.ts";
 import {
-  BLOCKSET_CAPABILITIES,
+  BLOCKSET_CAPABILITY_TABLE,
   type BlocksetGrants
 } from "../../access/BlocksetAccess.ts";
 import type { LinkedBlockset } from "../../viewer/LinkedBlockset.ts";
@@ -60,7 +60,7 @@ export class BlocksetBinding {
     this.#blocks = options.blocks;
     this.opened = opened;
     this.link = linked.link;
-    this.access = new RoomGrants(opened.room, BLOCKSET_CAPABILITIES);
+    this.access = new RoomGrants(opened.room, BLOCKSET_CAPABILITY_TABLE);
     this.#subscriptions = [
       new BlocksetIslands({
         blockset: opened.blockset,

@@ -14,58 +14,33 @@ import {
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/message";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
+import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import type { ShareLinkRow } from "../../shares/ShareLinkRow.ts";
 import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
 import { RemoteStateController } from "../RemoteStateController.ts";
+import { listRowStyles } from "../listRowStyles.ts";
+
+// CONSTANTS
+const kMissingAssetIcon = "file";
 
 @customElement("share-link-list")
 export class ShareLinkList extends LitElement {
-  static override styles = css`
+  static override styles = [listRowStyles, css`
     :host {
       display: block;
     }
-
-    ul {
-      display: grid;
-      gap: var(--jolly-space-1, 4px);
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    li {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-2, 8px);
-      padding: var(--jolly-space-1, 4px);
-      border-radius: 2px;
-      background: var(--jolly-surface-sunken);
-    }
-
-    .text {
-      display: grid;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .asset {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .meta {
-      margin: 0;
-      color: var(--jolly-text-muted);
-    }
-  `;
+  `];
 
   @property({ attribute: false })
   declare assetId: string | undefined;
+
+  @property({ attribute: false })
+  declare kinds: AssetKindSet;
 
   @property({ type: Boolean, attribute: "show-asset" })
   declare showAsset: boolean;
@@ -94,6 +69,7 @@ export class ShareLinkList extends LitElement {
   constructor() {
     super();
     this.assetId = undefined;
+    this.kinds = AssetKindSet.EMPTY;
     this.showAsset = false;
     this._copied = null;
   }
@@ -137,10 +113,20 @@ export class ShareLinkList extends LitElement {
       ${rows.length === 0 ? html`
         <jolly-message flush>No active link.</jolly-message>
       ` : html`
-        <ul aria-label="Share links">
+        <ul class="rows" aria-label="Share links">
           ${rows.map((row) => this.#renderRow(row))}
         </ul>
       `}
+    `;
+  }
+
+  #assetIcon(
+    row: ShareLinkRow
+  ): TemplateResult {
+    return html`
+      <jolly-icon
+        name=${row.kind === null ? kMissingAssetIcon : this.kinds.kindIcon(row.kind)}
+      ></jolly-icon>
     `;
   }
 
@@ -158,11 +144,12 @@ export class ShareLinkList extends LitElement {
   ): TemplateResult {
     return html`
       <li data-link=${row.id}>
-        <div class="text">
+        ${this.showAsset ? this.#assetIcon(row) : nothing}
+        <div class="row-text">
           ${this.showAsset ? html`
-            <span class="asset" title=${row.asset}>${row.asset}</span>
+            <span class="row-title" title=${row.asset}>${row.asset}</span>
           ` : nothing}
-          <span class="meta">
+          <span class="row-meta">
             By ${row.creator} on ${row.created}. ${row.expires}.
           </span>
         </div>

@@ -19,7 +19,7 @@ import { mapAccess } from "../../helpers/mapAccess.ts";
 import { CellRegion } from "../../../src/features/placement/CellRegion.ts";
 import { MapPlacement } from "../../../src/features/placement/MapPlacement.ts";
 import {
-  MAP_CAPABILITIES,
+  MAP_CAPABILITY_TABLE,
   type MapCapability
 } from "../../../src/access/MapAccess.ts";
 import { SelectionStore } from "../../../src/state/index.ts";
@@ -67,7 +67,7 @@ function setup() {
 describe("MapPlacement access", () => {
   test("starts no session that writes what the role can only view", () => {
     const { world, access, placement, templateId } = setup();
-    access.current = MAP_CAPABILITIES.none;
+    access.current = MAP_CAPABILITY_TABLE.none;
 
     assert.equal(placement.placeTemplate(templateId, { x: 0, y: 0, z: 0 }), false);
     assert.equal(placement.transformLayer("Draft"), false);

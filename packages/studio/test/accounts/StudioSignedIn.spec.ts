@@ -16,7 +16,7 @@ import {
   type ClientSocketEventType
 } from "@jolly-pixel/network/client";
 import {
-  DEFAULT_PHYSICS,
+  DEFAULT_PROJECT_SECTIONS,
   ProjectRights
 } from "@jolly-pixel/server";
 
@@ -97,15 +97,7 @@ function signedInAs(
       signIn: async() => kAlice,
       api,
       rights: ProjectRights.NONE,
-      sections: {
-        kindFilter: {
-          hidden: []
-        },
-        game: {
-          start: null
-        },
-        physics: DEFAULT_PHYSICS
-      },
+      sections: DEFAULT_PROJECT_SECTIONS,
       preferences: new AccountPreferences([], {
         accountId: kAlice.id,
         client: api.preferences,

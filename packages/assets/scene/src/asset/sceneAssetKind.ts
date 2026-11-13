@@ -4,10 +4,9 @@ import {
   arbitrated,
   JSON_CONTENT_TYPE,
   JsonAssetFile,
-  SNAPSHOT_OPTIONS_SCHEMA,
+  NO_OPTIONS_SCHEMA,
   type AssetKindHandler,
-  type AssetKindPackage,
-  type SnapshotPolicy
+  type AssetKindPackage
 } from "@jolly-pixel/asset-server";
 import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
@@ -109,21 +108,15 @@ export class SceneState {
   }
 }
 
-export interface SceneAssetKindOptions {
-  snapshot?: SnapshotPolicy;
-}
-
-export function sceneAssetKind(
-  options: SceneAssetKindOptions = {}
-): AssetKindHandler<SceneState, SceneNetworkCommand> {
-  const { snapshot } = options;
-
+export function sceneAssetKind(): AssetKindHandler<
+  SceneState,
+  SceneNetworkCommand
+> {
   return {
     kind: SCENE_KIND,
     extensions: {
       [SCENE_EXTENSION]: JSON_CONTENT_TYPE
     },
-    snapshot,
     build: {
       build: (state) => Promise.resolve(
         new TextEncoder().encode(JSON.stringify(state.toJSON()))
@@ -199,8 +192,8 @@ export function sceneAssetKind(
   };
 }
 
-export const ASSET_KINDS: AssetKindPackage<SceneAssetKindOptions> = {
+export const ASSET_KINDS: AssetKindPackage = {
   descriptors: [SCENE_ASSET],
-  optionsSchema: SNAPSHOT_OPTIONS_SCHEMA,
-  handlers: (options) => [sceneAssetKind(options)]
+  optionsSchema: NO_OPTIONS_SCHEMA,
+  handlers: () => [sceneAssetKind()]
 };

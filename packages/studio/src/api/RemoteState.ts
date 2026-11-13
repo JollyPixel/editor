@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
+import type { ApiFailureCode } from "@jolly-pixel/server";
 import { errorMessage } from "@jolly-pixel/utils";
+
+// Import Internal Dependencies
+import { ApiRequestError } from "./errors/ApiRequestError.ts";
 
 // CONSTANTS
 export const REMOTE_STATE_CHANGE = "change";
@@ -8,6 +12,7 @@ export class RemoteState extends EventTarget {
   #pending = 0;
   #latest = 0;
   #error: string | null = null;
+  #errorCode: ApiFailureCode | null = null;
 
   get loading(): boolean {
     return this.#pending > 0;
@@ -15,6 +20,10 @@ export class RemoteState extends EventTarget {
 
   get error(): string | null {
     return this.#error;
+  }
+
+  get errorCode(): ApiFailureCode | null {
+    return this.#errorCode;
   }
 
   protected run<TValue>(
@@ -47,12 +56,14 @@ export class RemoteState extends EventTarget {
       }
       settle(value);
       this.#error = null;
+      this.#errorCode = null;
 
       return value;
     }
     catch (error) {
       if (current()) {
         this.#error = errorMessage(error);
+        this.#errorCode = error instanceof ApiRequestError ? error.code : null;
       }
 
       return null;

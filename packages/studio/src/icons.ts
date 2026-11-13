@@ -206,3 +206,105 @@ registerIcon("play", `
   <path d="M20 12 L52 32 L20 52 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="7" stroke-linejoin="round" />
   <path d="M20 12 L52 32 L20 52 Z" fill="#4cc35b" />
 `, { viewBox: "0 0 64 64" });
+
+registerIcon("user", `
+  <path
+    d="M12 4a4 4 0 1 1 0 8a4 4 0 0 1 0-8ZM4 21a8 8 0 0 1 16 0Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M12 4a4 4 0 1 1 0 8a4 4 0 0 1 0-8ZM4 21a8 8 0 0 1 16 0Z"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);
+
+registerIcon("palette", `
+  <path
+    d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.9 0-1.2-1-1.6-1-2.6s.8-1.5 1.8-1.5H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.9 0-1.2-1-1.6-1-2.6s.8-1.5 1.8-1.5H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <circle class="tone-ink" cx="7.5" cy="11" r="1.75" fill="currentColor" />
+  <circle class="tone-ink" cx="11" cy="7.5" r="1.75" fill="currentColor" />
+  <circle class="tone-ink" cx="15.5" cy="8.5" r="1.75" fill="currentColor" />
+`);
+
+registerIcon("camera", `
+  <path
+    d="M3 9a2 2 0 0 1 2-2h3l1.5-3h5L16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M3 9a2 2 0 0 1 2-2h3l1.5-3h5L16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM12 10a3.5 3.5 0 1 1 0 7a3.5 3.5 0 0 1 0-7Z"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);
+
+registerIcon("key", `
+  <path
+    d="M8 10.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 0 1 0-9Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M8 10.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 0 1 0-9ZM11.2 11.8L20 3M16.5 6.5l3 3M13.5 9.5l2 2"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);
+
+registerIcon("shield", `
+  <path
+    d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6ZM8.5 12l2.5 2.5 4.5-4.5"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);
+
+registerIcon("history", `
+  <path
+    d="M12 4a8 8 0 1 1 0 16a8 8 0 0 1 0-16Z"
+    fill="currentColor"
+    opacity="0.35"
+  />
+  <path
+    class="tone-ink"
+    d="M4 12a8 8 0 1 0 2.34-5.66L4 8.5M4 4v4.5h4.5M12 8v4.5l3 2"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);

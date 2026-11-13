@@ -9,17 +9,16 @@ import { AttachmentDisposition } from "../../http/AttachmentDisposition.ts";
 import type { ApiRoute } from "../../http/api.ts";
 import {
   PROJECT_ROUTES,
-  SETTINGS_SECTIONS,
-  settingsSectionSchema,
+  settingsUpdateSchema,
   type ProjectReply,
-  type SettingsSectionBody
+  type SettingsUpdate
 } from "../../project/api.ts";
 import type { GameExport } from "../game/GameExport.ts";
 import type { ProjectArchive } from "./ProjectArchive.ts";
 import type { ProjectSettings } from "./ProjectSettings.ts";
 
 // CONSTANTS
-const kMaxSettingsBytes = 64 * 1_024;
+const kMaxSettingsBytes = 256 * 1_024;
 
 export interface ProjectRoutesOptions {
   archive: ProjectArchive;
@@ -32,8 +31,8 @@ interface ProjectDownload {
   export(account: Account): Promise<Uint8Array>;
 }
 
-interface ReplaceSectionRoute {
-  Body: SettingsSectionBody;
+interface ReplaceSettingsRoute {
+  Body: SettingsUpdate;
 }
 
 export async function projectRoutes(
@@ -47,7 +46,7 @@ export async function projectRoutes(
     game,
     settings: settingsRoute,
     sections,
-    replaceSection
+    replaceSettings
   } = PROJECT_ROUTES;
 
   app.route({
@@ -69,21 +68,18 @@ export async function projectRoutes(
     url: sections.path,
     handler: () => settings.sections()
   });
-  for (const section of settingsSectionSchema.options) {
-    app.route<ReplaceSectionRoute>({
-      method: replaceSection.method,
-      url: replaceSection.path.replace(":section", section),
-      bodyLimit: kMaxSettingsBytes,
-      schema: {
-        body: SETTINGS_SECTIONS[section]
-      },
-      handler: (request) => settings.replace(
-        signedInAccount(request),
-        section,
-        request.body
-      )
-    });
-  }
+  app.route<ReplaceSettingsRoute>({
+    method: replaceSettings.method,
+    url: replaceSettings.path,
+    bodyLimit: kMaxSettingsBytes,
+    schema: {
+      body: settingsUpdateSchema
+    },
+    handler: (request) => settings.replace(
+      signedInAccount(request),
+      request.body
+    )
+  });
 }
 
 function downloadRoute(

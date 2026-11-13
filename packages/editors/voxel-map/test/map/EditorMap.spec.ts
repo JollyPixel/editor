@@ -20,7 +20,7 @@ import {
   type EditorMapEvents,
   type SyncedMap
 } from "../../src/map/EditorMap.ts";
-import { MAP_CAPABILITIES } from "../../src/access/MapAccess.ts";
+import { MAP_CAPABILITY_TABLE } from "../../src/access/MapAccess.ts";
 import { mapAccess } from "../helpers/mapAccess.ts";
 
 // CONSTANTS
@@ -226,7 +226,7 @@ describe("EditorMap", () => {
   });
 
   it("leaves an empty map without layers for a role that cannot add one", () => {
-    const { view } = setup(new FakeMap(), mapAccess(MAP_CAPABILITIES.none));
+    const { view } = setup(new FakeMap(), mapAccess(MAP_CAPABILITY_TABLE.none));
 
     view.emit("loaded");
 

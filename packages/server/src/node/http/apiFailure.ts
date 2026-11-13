@@ -10,6 +10,7 @@ import { GameExportError } from "../game/errors/GameExportError.ts";
 import { InvalidSettingsError } from "../project/errors/InvalidSettingsError.ts";
 import { ProjectRightRefusedError } from "../../project/errors/ProjectRightRefusedError.ts";
 import { RoleInUseError } from "../project/errors/RoleInUseError.ts";
+import { StaleSettingsError } from "../project/errors/StaleSettingsError.ts";
 import { UnknownScopeError } from "../preferences/errors/UnknownScopeError.ts";
 import { UnknownAssetError } from "../project/errors/UnknownAssetError.ts";
 
@@ -43,6 +44,9 @@ export function apiFailure(
   }
   if (error instanceof RoleInUseError) {
     return new ApiError(409, "role-in-use", error.message);
+  }
+  if (error instanceof StaleSettingsError) {
+    return new ApiError(409, "stale-settings", error.message);
   }
   if (error instanceof GameBuildError) {
     return new ApiError(422, "build-failed", error.message);

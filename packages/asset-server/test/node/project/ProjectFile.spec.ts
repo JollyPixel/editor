@@ -52,6 +52,50 @@ describe("ProjectFile", () => {
     assert.deepEqual(projectFile.data.editors, ["editor-a"]);
   });
 
+  test("drops the retired snapshot option of kind packages", async() => {
+    await using directory = await tempDirectory();
+    const file = path.join(directory.root, PROJECT_FILE_PATH);
+    const snapshot = {
+      delay: 2_000,
+      maxDelay: 30_000
+    };
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    await fs.writeFile(file, JSON.stringify({
+      version: 1,
+      kinds: {
+        "kind-a": {
+          size: 8,
+          snapshot
+        },
+        "kind-b": {
+          tiles: {
+            size: 16,
+            snapshot
+          },
+          maps: {
+            snapshot
+          }
+        }
+      }
+    }));
+
+    const projectFile = await ProjectFile.read(directory.root);
+
+    assert.deepEqual(
+      [...projectFile.kinds],
+      [
+        ["kind-a", { size: 8 }],
+        [
+          "kind-b",
+          {
+            tiles: { size: 16 },
+            maps: {}
+          }
+        ]
+      ]
+    );
+  });
+
   test("never overwrites an existing file", async() => {
     await using directory = await tempDirectory();
     const file = path.join(directory.root, PROJECT_FILE_PATH);
@@ -151,19 +195,23 @@ describe("ProjectFile", () => {
     }
   });
 
-  test("replace writes one section and keeps the file fresh", async() => {
+  test("replace writes its sections in one write and keeps the file fresh", async() => {
     await using directory = await tempDirectory();
     const projectFile = await ProjectFile.readOrCreate(directory.root, {
       version: 1,
       editors: ["editor-a"]
     });
 
-    await projectFile.replace("kinds", { "kind-a": { size: 8 } });
+    await projectFile.replace({
+      kinds: { "kind-a": { size: 8 } },
+      game: { start: null }
+    });
 
     const expected = {
       version: 1,
       editors: ["editor-a"],
-      kinds: { "kind-a": { size: 8 } }
+      kinds: { "kind-a": { size: 8 } },
+      game: { start: null }
     };
     assert.deepEqual(
       JSON.parse(await fs.readFile(projectFile.path, "utf8")),
@@ -181,7 +229,10 @@ describe("ProjectFile", () => {
     });
 
     await assert.rejects(
-      projectFile.replace("kinds", { "kind-a": 1 }),
+      projectFile.replace({
+        game: { start: null },
+        kinds: { "kind-a": 1 }
+      }),
       TypeError
     );
 

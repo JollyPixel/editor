@@ -1,9 +1,9 @@
-// Import Third-party Dependencies
-import * as z from "zod/mini";
-
 // Import Internal Dependencies
 import type { AssetKindHandler } from "../AssetKindHandler.ts";
-import type { AssetKindPackage } from "../AssetKindPackage.ts";
+import {
+  NO_OPTIONS_SCHEMA,
+  type AssetKindPackage
+} from "../AssetKindPackage.ts";
 import {
   textureAssetKind,
   TEXTURE_ASSET
@@ -19,6 +19,6 @@ export function builtInAssetKinds(): AssetKindHandler[] {
 
 export const BUILT_IN_ASSET_KINDS: AssetKindPackage = {
   descriptors: [TEXTURE_ASSET],
-  optionsSchema: z.strictObject({}),
+  optionsSchema: NO_OPTIONS_SCHEMA,
   handlers: builtInAssetKinds
 };

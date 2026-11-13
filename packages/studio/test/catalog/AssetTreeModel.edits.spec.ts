@@ -94,7 +94,7 @@ describe("AssetTreeModel empty folders", () => {
             extensions: [".scene.json"]
           }
         ],
-        editable: [],
+        editors: [],
         maxContentBytes: 1024
       })
     });

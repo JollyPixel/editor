@@ -13,8 +13,6 @@ import {
   SNAPSHOT_ACTOR
 } from "../model/events/AssetEvents.ts";
 import { retainedPartEvents } from "../model/events/retainedPartEvents.ts";
-import type { SnapshotPolicy } from "../model/kinds/AssetKindHandler.ts";
-import type { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
 import type {
   AssetStateEntry,
   AssetStateStore
@@ -22,10 +20,12 @@ import type {
 import type { AssetProjector } from "../storage/projection/AssetProjector.ts";
 import type { AssetProjection } from "../storage/projection/applyProjection.ts";
 import type { AssetWriter } from "../storage/writer/AssetWriter.ts";
+import {
+  DEFAULT_SNAPSHOT_POLICY,
+  type SnapshotPolicy
+} from "./SnapshotPolicy.ts";
 
 // CONSTANTS
-const kDefaultDelay = 2_000;
-const kDefaultMaxDelay = 30_000;
 const kFlushAttempts = 3;
 
 interface PendingSnapshot {
@@ -39,7 +39,6 @@ type SnapshotOutcome = "written" | "skipped" | "superseded";
 export interface SnapshotSchedulerOptions {
   eventStore: EventStore.EventStore;
   states: AssetStateStore;
-  kinds: AssetKindRegistry;
   projector: AssetProjector;
   writer: AssetWriter;
   snapshot?: SnapshotPolicy;
@@ -50,7 +49,6 @@ export interface SnapshotSchedulerOptions {
 export class SnapshotScheduler {
   #eventStore: EventStore.EventStore;
   #states: AssetStateStore;
-  #kinds: AssetKindRegistry;
   #projector: AssetProjector;
   #writer: AssetWriter;
   #policy: Required<SnapshotPolicy>;
@@ -66,19 +64,21 @@ export class SnapshotScheduler {
   ) {
     this.#eventStore = options.eventStore;
     this.#states = options.states;
-    this.#kinds = options.kinds;
     this.#projector = options.projector;
     this.#writer = options.writer;
-    this.#policy = {
-      delay: options.snapshot?.delay ?? kDefaultDelay,
-      maxDelay: options.snapshot?.maxDelay ?? kDefaultMaxDelay
-    };
+    this.#policy = resolvePolicy(options.snapshot);
     this.#compact = options.compact ?? false;
     this.#logger = options.logger ?? silentLogger();
   }
 
   get pending(): number {
     return this.#pending.size;
+  }
+
+  replacePolicy(
+    policy: SnapshotPolicy
+  ): void {
+    this.#policy = resolvePolicy(policy);
   }
 
   start(): void {
@@ -99,14 +99,11 @@ export class SnapshotScheduler {
   schedule(
     assetId: string
   ): void {
-    const entry = this.#states.get(assetId);
-    if (entry === undefined) {
+    if (this.#states.get(assetId) === undefined) {
       return;
     }
 
-    const { snapshot } = this.#kinds.get(entry.kind);
-    const delay = snapshot?.delay ?? this.#policy.delay;
-    const maxDelay = snapshot?.maxDelay ?? this.#policy.maxDelay;
+    const { delay, maxDelay } = this.#policy;
     const now = Date.now();
 
     const pending = this.#pending.get(assetId);
@@ -281,6 +278,15 @@ export class SnapshotScheduler {
         .debug("asset events compacted");
     }
   }
+}
+
+function resolvePolicy(
+  policy: SnapshotPolicy = {}
+): Required<SnapshotPolicy> {
+  return {
+    delay: policy.delay ?? DEFAULT_SNAPSHOT_POLICY.delay,
+    maxDelay: policy.maxDelay ?? DEFAULT_SNAPSHOT_POLICY.maxDelay
+  };
 }
 
 async function partChanges(

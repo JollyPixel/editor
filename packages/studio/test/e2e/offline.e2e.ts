@@ -32,5 +32,5 @@ test("opens Settings from the studio tools without an account", async({ studio }
   await studio.home.tool("Settings").click();
 
   await expect(studio.settings.section("Appearance")).toBeVisible();
-  await expect(studio.settings.section("Profile")).toHaveCount(0);
+  await expect(studio.settings.section("Access keys")).toHaveCount(0);
 });

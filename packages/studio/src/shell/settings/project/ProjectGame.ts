@@ -12,80 +12,63 @@ import {
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/separator";
-import { type GameSection, SCENE_KIND } from "@jolly-pixel/server";
+import {
+  SCENE_KIND,
+  type GameSection
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import type { StudioProjectSettings } from "../../../project/StudioProjectSettings.ts";
 import { settingsStyles } from "../settingsStyles.ts";
-import { SettingsDraftController } from "./SettingsDraftController.ts";
+import { SettingsEditEvent } from "../SettingsEditEvent.ts";
 
 // CONSTANTS
 const kNoScene = "";
-
-class GameDraft {
-  readonly start: string | null;
-
-  constructor(
-    start: string | null
-  ) {
-    this.start = start;
-  }
-
-  toJSON(): GameSection {
-    return {
-      start: this.start
-    };
-  }
-}
 
 @customElement("studio-project-game")
 export class ProjectGame extends LitElement {
   static override styles = [settingsStyles];
 
-  #draft = new SettingsDraftController(this, {
-    saved: (data) => new GameDraft(data.game.start),
-    save: (project, draft) => project.replaceGame(draft.toJSON())
-  });
+  @property({ attribute: false })
+  declare value: GameSection | null;
 
   @property({ attribute: false })
   declare catalog: CatalogClient | null;
 
+  @property({ type: Boolean })
+  declare disabled: boolean;
+
   constructor() {
     super();
+    this.value = null;
     this.catalog = null;
-  }
-
-  set project(
-    project: StudioProjectSettings
-  ) {
-    this.#draft.attach(project);
+    this.disabled = false;
   }
 
   override render(): TemplateResult | typeof nothing {
-    const { project, draft } = this.#draft;
-    if (project === null || draft === null) {
+    const { value } = this;
+    if (value === null) {
       return nothing;
     }
 
     return html`
       <section aria-label="Game">
         <jolly-separator label="Game"></jolly-separator>
-        ${this.#draft.error()}
         <jolly-select
           data-field="default-scene"
           label="Default scene"
           description="The scene Play (F5) starts the game from"
           description-display="tooltip"
-          ?disabled=${!project.canEdit}
+          ?disabled=${this.disabled}
           .options=${this.#sceneOptions()}
-          .value=${draft.start ?? kNoScene}
+          .value=${value.start ?? kNoScene}
           @jolly-change=${(event: CustomEvent<{ value: string; }>) => {
-            const { value } = event.detail;
-            this.#draft.edit(new GameDraft(value === kNoScene ? null : value));
+            const start = event.detail.value;
+            this.dispatchEvent(new SettingsEditEvent("game", {
+              start: start === kNoScene ? null : start
+            }));
           }}
         ></jolly-select>
       </section>
-      ${project.canEdit ? this.#draft.actions("Game actions") : nothing}
     `;
   }
 

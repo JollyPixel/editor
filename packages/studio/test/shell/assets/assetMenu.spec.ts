@@ -47,7 +47,7 @@ const kKinds = new AssetKindSet({
       creatable: false
     }
   ],
-  editable: [],
+  editors: [],
   maxContentBytes: 1024
 });
 const kCreation: Outline = [

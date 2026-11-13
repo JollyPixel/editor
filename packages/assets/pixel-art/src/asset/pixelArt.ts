@@ -9,6 +9,7 @@ import {
 
 // Import Internal Dependencies
 import { PIXEL_ART_ICON } from "./icons.ts";
+import { PIXEL_ART_CAPABILITIES } from "./capabilities.ts";
 
 // CONSTANTS
 export const PIXEL_ART_KIND = "pixelart";
@@ -20,7 +21,8 @@ export const PIXEL_ART_ASSET: AssetKindDescriptor = {
   kind: PIXEL_ART_KIND,
   label: "Pixel art",
   extension: PIXEL_ART_EXTENSION,
-  icon: PIXEL_ART_ICON
+  icon: PIXEL_ART_ICON,
+  capabilities: PIXEL_ART_CAPABILITIES
 };
 
 export async function pixelArtContentFromPng(

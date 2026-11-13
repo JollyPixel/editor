@@ -89,7 +89,7 @@ const kKinds = new AssetKindSet({
       extensions: [".blockset.json"]
     }
   ],
-  editable: ["voxelmap", "pixelart"],
+  editors: [],
   maxContentBytes: 1024
 });
 const kEveryRight = new ProjectRights({
@@ -103,10 +103,13 @@ const kEveryRight = new ProjectRights({
 
 function outline(
   settings: SettingsSections
-): Record<string, string[]>[] {
-  return settings.blocks.map((block) => Object.fromEntries(block.map(
-    (group) => [group.id, group.sections.map((section) => section.id)]
-  )));
+): Record<string, Record<string, string[]>> {
+  return Object.fromEntries(settings.tabs.map((tab) => [
+    tab.id,
+    Object.fromEntries(tab.groups.map(
+      (group) => [group.id, group.sections.map((section) => section.id)]
+    ))
+  ]));
 }
 
 function sections(
@@ -123,7 +126,13 @@ function sections(
     kindPackages: [
       {
         name: "@jolly-pixel/asset.voxel-map",
-        kinds: ["voxelmap", "blockset"]
+        kinds: ["voxelmap", "blockset"],
+        configurable: true
+      },
+      {
+        name: "@jolly-pixel/asset.font",
+        kinds: ["font"],
+        configurable: false
       }
     ],
     kinds: kKinds
@@ -134,20 +143,17 @@ describe("SettingsSections", () => {
   test("groups editor pages after You, each scope under the editor declaring it", () => {
     const settings = sections();
 
-    assert.deepEqual(outline(settings), [
-      {
+    assert.deepEqual(outline(settings), {
+      you: {
         you: [
-          "profile",
+          "account",
           "appearance",
           "camera",
-          "color-picker",
-          "preferences-file",
-          "share-links",
-          "agents"
+          "access-keys"
         ],
         editors: ["editor:voxel-map", "editor:pixel-art"]
       }
-    ]);
+    });
     const pixelArt = settings.find("editor:pixel-art");
     assert.ok(pixelArt?.kind === "preferences");
     assert.equal(pixelArt.label, "Pixel art");
@@ -168,26 +174,40 @@ describe("SettingsSections", () => {
     assert.deepEqual(voxelMap.keyBindings, [kPixelArtKeys]);
   });
 
-  test("gives the studio and host scopes to Appearance", () => {
+  test("gives the studio scope and the host scopes but Camera to Appearance", () => {
     const appearance = sections().find("appearance");
 
     assert.ok(appearance?.kind === "preferences");
     assert.deepEqual(
       appearance.forms.map((scope) => scope.name),
-      ["studio", "runtime", "lantern"]
+      ["studio", "runtime", "lantern", "color-picker"]
     );
   });
 
-  test("leaves out a group with no section", () => {
+  test("gives every page an icon", () => {
+    const missing = [...sections(kEveryRight)]
+      .filter((section) => section.icon === undefined)
+      .map((section) => section.id);
+
+    assert.deepEqual(missing, []);
+  });
+
+  test("leaves out a group with no section and the Project tab without project rights", () => {
     const settings = sections(ProjectRights.NONE, []);
 
-    assert.deepEqual(
-      outline(settings).map((block) => Object.keys(block)),
-      [["you"]]
-    );
+    assert.deepEqual(outline(settings), {
+      you: {
+        you: [
+          "account",
+          "appearance",
+          "camera",
+          "access-keys"
+        ]
+      }
+    });
   });
 
-  test("has no profile, share links or agents without an account", () => {
+  test("has an Account page but no Access keys without an account", () => {
     const settings = new SettingsSections({
       user: {
         online: false,
@@ -196,15 +216,16 @@ describe("SettingsSections", () => {
       shellScopes: [STUDIO_PREFERENCES]
     });
 
-    assert.equal(settings.first?.id, "appearance");
-    assert.equal(settings.find("profile"), undefined);
-    assert.equal(settings.find("share-links"), undefined);
-    assert.equal(settings.find("agents"), undefined);
+    assert.equal(settings.first?.id, "account");
+    assert.equal(settings.find("access-keys"), undefined);
   });
 
-  test("shows Share links and Agents under You, and the Project sections the role reads apart", () => {
-    const [{ you }, { project, assets }] = outline(sections(kEveryRight));
-    assert.deepEqual(you.slice(-2), ["share-links", "agents"]);
+  test("puts Access keys under You, the sections the role reads and kind packages under Project", () => {
+    const settings = sections(kEveryRight);
+    const { you: { you }, project: { project, assets } } = outline(settings);
+    assert.deepEqual(you.slice(-1), ["access-keys"]);
+    assert.equal(settings.tabHolding("editor:pixel-art")?.id, "you");
+    assert.equal(settings.tabHolding("project-audit")?.id, "project");
     assert.deepEqual(project, [
       "project-general",
       "project-access",
@@ -224,13 +245,10 @@ describe("SettingsSections", () => {
       manageAccess: false
     }));
     assert.deepEqual(reader.ids, [
-      "profile",
+      "account",
       "appearance",
       "camera",
-      "color-picker",
-      "preferences-file",
-      "share-links",
-      "agents",
+      "access-keys",
       "editor:voxel-map",
       "editor:pixel-art"
     ]);

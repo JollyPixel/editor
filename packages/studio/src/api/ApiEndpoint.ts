@@ -68,7 +68,8 @@ export class ApiEndpoint {
 
       throw new ApiRequestError(
         response.status,
-        failure.data?.message ?? response.statusText
+        failure.data?.message ?? response.statusText,
+        failure.data?.code ?? null
       );
     }
 

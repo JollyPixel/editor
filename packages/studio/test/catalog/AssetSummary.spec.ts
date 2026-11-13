@@ -40,7 +40,12 @@ const kKinds = new AssetKindSet({
       preview: "server"
     }
   ],
-  editable: ["voxelmap"],
+  editors: [
+    {
+      package: "@jolly-pixel/editor.voxel-map",
+      kinds: ["voxelmap"]
+    }
+  ],
   maxContentBytes: 1024
 });
 

@@ -7,27 +7,36 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as z from "zod/mini";
-import { SNAPSHOT_POLICY_SCHEMA } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import { KindOptionSections } from "#src/node/project/KindOptionSections.ts";
 
 // CONSTANTS
-const kSnapshotGroup = {
-  label: "Snapshot",
+const kGridSchema = z.strictObject({
+  padding: z.optional(z.number().check(
+    z.minimum(0),
+    z.meta({ title: "Padding (px)" })
+  )),
+  spacing: z.optional(z.number().check(
+    z.minimum(0),
+    z.meta({ title: "Spacing (px)" })
+  ))
+});
+const kGridGroup = {
+  label: "Grid",
   fields: [
     {
       type: "number",
-      path: ["blockset", "snapshot", "delay"],
-      label: "Delay (ms)",
+      path: ["blockset", "grid", "padding"],
+      label: "Padding (px)",
       min: 0,
       max: undefined,
       default: undefined
     },
     {
       type: "number",
-      path: ["blockset", "snapshot", "maxDelay"],
-      label: "Max delay (ms)",
+      path: ["blockset", "grid", "spacing"],
+      label: "Spacing (px)",
       min: 0,
       max: undefined,
       default: undefined
@@ -36,6 +45,19 @@ const kSnapshotGroup = {
 };
 
 describe("KindOptionSections", () => {
+  test("is empty when no option has a field to show", () => {
+    const blank = KindOptionSections.read(z.strictObject({}), []);
+    const textOnly = KindOptionSections.read(
+      z.strictObject({
+        palette: z.optional(z.string())
+      }),
+      []
+    );
+
+    assert.equal(blank.empty, true);
+    assert.equal(textOnly.empty, true);
+  });
+
   test("puts each kind's options under a section named after the kind, nested objects in groups", () => {
     const sections = KindOptionSections.read(
       z.strictObject({
@@ -45,7 +67,7 @@ describe("KindOptionSections", () => {
             z.maximum(64),
             z.meta({ default: 32 })
           )),
-          snapshot: z.optional(SNAPSHOT_POLICY_SCHEMA)
+          grid: z.optional(kGridSchema)
         })),
         palette: z.optional(z.string()),
         quality: z.optional(z.strictObject({
@@ -92,8 +114,8 @@ describe("KindOptionSections", () => {
         ],
         groups: [
           {
-            ...kSnapshotGroup,
-            path: ["blockset", "snapshot"]
+            ...kGridGroup,
+            path: ["blockset", "grid"]
           }
         ]
       }

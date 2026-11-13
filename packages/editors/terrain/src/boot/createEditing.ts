@@ -18,7 +18,7 @@ import {
 import { PeerRoster } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
-import { TERRAIN_CAPABILITIES } from "../access/TerrainAccess.ts";
+import { TERRAIN_CAPABILITY_TABLE } from "../access/TerrainAccess.ts";
 import type { TerrainEditing } from "../editing/TerrainEditing.ts";
 import { textureDocumentKind } from "../features/materials/model/TextureDocument.ts";
 import { TextureLeases } from "../features/materials/model/TextureLeases.ts";
@@ -56,7 +56,7 @@ export function createEditing(
   history.on("skipped", onSkipped);
   disposables.push(() => history.off("skipped", onSkipped));
 
-  const access = new RoomGrants(room, TERRAIN_CAPABILITIES);
+  const access = new RoomGrants(room, TERRAIN_CAPABILITY_TABLE);
   disposables.push(
     () => access.dispose(),
     access.subscribe("denied", () => log.push(kViewOnlyRefused))

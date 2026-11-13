@@ -97,16 +97,6 @@ describe("voxelMapAssetKind", () => {
     assert.strictEqual(handler.match, undefined);
   });
 
-  test("snapshots slower than the back-end default", () => {
-    assert.deepEqual(
-      voxelMapAssetKind().snapshot,
-      {
-        delay: 5_000,
-        maxDelay: 60_000
-      }
-    );
-  });
-
   test("creates an empty world at the configured chunk size", () => {
     const state = voxelMapAssetKind({ chunkSize: 8 }).create("asset-1");
 

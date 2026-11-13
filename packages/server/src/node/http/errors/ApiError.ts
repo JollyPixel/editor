@@ -1,13 +1,5 @@
-// Import Third-party Dependencies
-import type { AccountsFailureCode } from "@jolly-pixel/accounts";
-
-export type ApiFailureCode =
-  | AccountsFailureCode
-  | "refused"
-  | "invalid-settings"
-  | "role-in-use"
-  | "build-failed"
-  | "not-exportable";
+// Import Internal Dependencies
+import type { ApiFailureCode } from "../../../http/api.ts";
 
 export class ApiError extends Error {
   readonly status: number;

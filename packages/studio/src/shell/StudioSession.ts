@@ -30,6 +30,8 @@ import {
   type TabStrip
 } from "../tabs/EditorTabs.ts";
 import { SavedTabs } from "../tabs/SavedTabs.ts";
+import { REMOTE_STATE_CHANGE } from "../api/RemoteState.ts";
+import type { StudioProjectSettings } from "../project/StudioProjectSettings.ts";
 import { PreviewFrame } from "../preview/PreviewFrame.ts";
 import {
   StudioPlay,
@@ -110,6 +112,10 @@ export interface StudioSessionOptions extends Pick<
   console?: StudioSessionConsole;
   onTabsChange?: () => void;
   play?: StudioSessionPlay;
+  /**
+   * Marks the Settings tab unsaved while its drafts differ from the project.
+   */
+  projectSettings?: StudioProjectSettings;
   /**
    * @default new BrowserState()
    */
@@ -201,6 +207,12 @@ export class StudioSession {
       this.previews.notifySessionRenewed();
     });
     window.addEventListener("beforeunload", this.#onBeforeUnload, {
+      signal: this.#listening.signal
+    });
+    const { projectSettings } = options;
+    projectSettings?.addEventListener(REMOTE_STATE_CHANGE, () => {
+      this.tabs.markUnsaved(SETTINGS_TAB_ID, projectSettings.drafts.changed);
+    }, {
       signal: this.#listening.signal
     });
   }

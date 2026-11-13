@@ -62,6 +62,10 @@ export class KindOptionSections implements Iterable<KindOptionSection> {
     this.#sections = [...sections];
   }
 
+  get empty(): boolean {
+    return this.#sections.length === 0;
+  }
+
   [Symbol.iterator](): IterableIterator<KindOptionSection> {
     return this.#sections.values();
   }

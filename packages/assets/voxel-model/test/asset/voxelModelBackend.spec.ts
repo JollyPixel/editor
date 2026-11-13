@@ -86,7 +86,8 @@ async function withBackend(
     await using backend = await createAssetBackend({
       source: new FilesystemAssetSource(root),
       eventStore,
-      handlers: [voxelModelAssetKind({ snapshot: { delay: 0 } })],
+      handlers: [voxelModelAssetKind()],
+      snapshot: { delay: 0 },
       reconcile: {
         watch: false
       }

@@ -14,7 +14,7 @@ import {
   PaintAvailability,
   type PaintConditions
 } from "../../../../src/features/painting/toolbar/PaintAvailability.ts";
-import { MAP_CAPABILITIES } from "../../../../src/access/MapAccess.ts";
+import { MAP_CAPABILITY_TABLE } from "../../../../src/access/MapAccess.ts";
 
 function evaluate(
   conditions: Partial<PaintConditions>
@@ -26,7 +26,7 @@ function evaluate(
     },
     hasBlock: true,
     suspended: false,
-    access: MAP_CAPABILITIES.full,
+    access: MAP_CAPABILITY_TABLE.full,
     ...conditions
   });
 }
@@ -111,7 +111,7 @@ describe("PaintAvailability", () => {
   test("tells a role that cannot change voxels that the map is view only", () => {
     const availability = evaluate({
       suspended: true,
-      access: MAP_CAPABILITIES.none
+      access: MAP_CAPABILITY_TABLE.none
     });
 
     assert.strictEqual(availability.reason, BRUSH_VIEW_ONLY_REASON);

@@ -163,7 +163,7 @@ export const COLOR_PICKER_PREFERENCES = definePreferences({
     space: {
       type: "enum",
       label: "Color space",
-      group: "Picker",
+      group: "Color picker",
       description: "OKHSV keeps hue and lightness steps perceptually even",
       options: COLOR_PICKER_OPTIONS.space,
       default: COLOR_PICKER_DEFAULTS.space
@@ -171,14 +171,14 @@ export const COLOR_PICKER_PREFERENCES = definePreferences({
     selector: {
       type: "enum",
       label: "Selector",
-      group: "Picker",
+      group: "Color picker",
       options: COLOR_PICKER_OPTIONS.selector,
       default: COLOR_PICKER_DEFAULTS.selector
     },
     channels: {
       type: "enum",
       label: "Channel fields",
-      group: "Picker",
+      group: "Color picker",
       description: "The fields next to RGB in docked pickers",
       options: COLOR_PICKER_OPTIONS.channels,
       default: COLOR_PICKER_DEFAULTS.channels
@@ -186,7 +186,7 @@ export const COLOR_PICKER_PREFERENCES = definePreferences({
     harmony: {
       type: "enum",
       label: "Harmony",
-      group: "Harmony",
+      group: "Color picker",
       description: "Swatches for a color scheme built from the current color",
       options: COLOR_PICKER_OPTIONS.harmony,
       default: COLOR_PICKER_DEFAULTS.harmony
@@ -194,7 +194,7 @@ export const COLOR_PICKER_PREFERENCES = definePreferences({
     discrete: {
       type: "boolean",
       label: "Discrete wheel",
-      group: "Picker",
+      group: "Color picker",
       description: "Snaps the wheel to hue sectors and saturation rings",
       default: COLOR_PICKER_DEFAULTS.discrete
     }

@@ -129,10 +129,12 @@ export function session(
       })
       .registerEditor({
         name: "voxel-map",
+        package: "@jolly-pixel/editor.voxel-map",
         kinds: ["voxelmap"]
       })
       .registerEditor({
         name: "voxel-model",
+        package: "@jolly-pixel/editor.voxel-model",
         kinds: ["voxelmodel"]
       })
   });
