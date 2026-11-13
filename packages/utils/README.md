@@ -39,12 +39,20 @@ catch (error) {
 ## 📚 API
 
 - [is](./docs/is.md): `is.object`, `is.plainObject`, `is.member`
+- [Types](./docs/types.md): `DistributiveOmit`, `DeepReadonly`, `Simplify`
 - [Errors](./docs/error.md): `asError`, `errorMessage`
-- [Numbers](./docs/number.md): `clamp`, `formatBytes`
+- [JSON](./docs/json.md): `parseJsonObject`
+- [Numbers](./docs/number.md): `clamp`, `wrap`, `roundTo`, `formatBytes`
 - [Paths](./docs/path.md): `fileExtension`
-- [Base64](./docs/base64.md): `encodeBase64`, `encodeBase64Url`, `decodeBase64`
-- [TaskChain](./docs/TaskChain.md): runs async tasks one at a time
-- [Teardown](./docs/Teardown.md): `Teardown`, `AsyncTeardown`, release steps run in reverse
+- Bytes
+  - [Base64](./docs/bytes/base64.md): `encodeBase64`, `encodeBase64Url`, `decodeBase64`
+  - [Hashes](./docs/bytes/hash.md): `sha256Hex`
+- Async
+  - [TaskChain](./docs/async/TaskChain.md): runs async tasks one at a time
+  - [InFlight](./docs/async/InFlight.md): shares one pending run per key
+  - [Delays](./docs/async/delay.md): `delay`, `yieldToEventLoop`
+  - [withTimeout](./docs/async/withTimeout.md): rejects when a promise takes too long
+- [Teardown](./docs/teardown/Teardown.md): `Teardown`, `AsyncTeardown`, release steps run in reverse
 - [DOM](./docs/dom.md): `saveFile`
 
 ## ✨ Contributors guide

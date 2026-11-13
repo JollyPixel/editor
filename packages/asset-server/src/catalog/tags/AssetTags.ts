@@ -6,7 +6,7 @@ import {
   Ok,
   type Result
 } from "@openally/result";
-import { asError } from "@jolly-pixel/utils";
+import { asError, sha256Hex } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -24,7 +24,6 @@ import type { AssetWriter } from "../../storage/writer/AssetWriter.ts";
 import type { AssetBackups } from "../../storage/AssetBackups.ts";
 import { AssetPartFiles } from "../../storage/AssetPartFiles.ts";
 import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
-import { contentHash } from "../../common/contentHash.ts";
 import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError.ts";
 import {
   silentLogger,
@@ -278,7 +277,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     }
 
     const { event: current, head } = checkpoint.val;
-    if (current.eventData.hash === await contentHash(data)) {
+    if (current.eventData.hash === await sha256Hex(data)) {
       return Ok({ replaced: false });
     }
 

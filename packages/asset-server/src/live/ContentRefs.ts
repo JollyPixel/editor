@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import { sha256Hex } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
-import { contentHash } from "../common/contentHash.ts";
 import type {
   ContentRef,
   ContentRefOptions
@@ -26,7 +28,7 @@ export class ContentRefs {
     options: ContentRefOptions = {}
   ): Promise<ContentRef> {
     this.#issuing.set(roomId, bytes);
-    const hash = await contentHash(bytes);
+    const hash = await sha256Hex(bytes);
     if (this.#issuing.get(roomId) !== bytes) {
       throw new Error(`Room ${roomId} moved on before its content ref was issued.`);
     }

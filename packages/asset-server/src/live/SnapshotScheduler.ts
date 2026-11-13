@@ -1,13 +1,12 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
-import { TaskChain } from "@jolly-pixel/utils";
+import { sha256Hex, TaskChain } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
   silentLogger,
   type Logger
 } from "../common/logger.ts";
-import { contentHash } from "../common/contentHash.ts";
 import {
   ASSET_CHECKPOINT_EVENT_TYPES,
   isAssetEventType,
@@ -227,7 +226,7 @@ export class SnapshotScheduler {
     const data = await entry.handler.serialize(entry.state);
     const parts = await partChanges(entry, data, touched, desired);
     if (
-      await contentHash(data) === desired.hash &&
+      await sha256Hex(data) === desired.hash &&
       (parts === undefined || parts.size === 0)
     ) {
       return "skipped";
@@ -304,7 +303,7 @@ async function partChanges(
     }
 
     const data = await parts.serialize(entry.state, partId);
-    if (await contentHash(data) !== stored.get(partId)?.hash) {
+    if (await sha256Hex(data) !== stored.get(partId)?.hash) {
       changes.set(partId, data);
     }
   }

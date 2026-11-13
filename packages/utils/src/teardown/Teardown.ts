@@ -2,7 +2,7 @@
 import {
   throwFailures,
   throwWithFailures
-} from "./teardownFailures.ts";
+} from "./failures.ts";
 
 export type TeardownStep = () => void;
 

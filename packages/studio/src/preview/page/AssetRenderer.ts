@@ -6,6 +6,7 @@ import {
 } from "@jolly-pixel/editor.host";
 import type { SceneAssetResolver } from "@jolly-pixel/editor.host/scene";
 import { Systems } from "@jolly-pixel/engine";
+import { withTimeout } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { PreviewCapture } from "./PreviewCapture.ts";
@@ -147,22 +148,5 @@ export class AssetRenderer {
     finally {
       actor.destroy();
     }
-  }
-}
-
-async function withTimeout(
-  promise: Promise<void>,
-  timeoutMs: number,
-  message: string
-): Promise<void> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), timeoutMs);
-  });
-  try {
-    await Promise.race([promise, timeout]);
-  }
-  finally {
-    clearTimeout(timer);
   }
 }

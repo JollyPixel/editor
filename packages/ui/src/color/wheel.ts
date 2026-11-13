@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { wrap } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type {
   AreaRect,
@@ -40,7 +43,7 @@ export function hueSaturationAt(
   const angle = Math.atan2(x, -y) / kRadians;
 
   return {
-    h: ((angle % kTurn) + kTurn) % kTurn,
+    h: wrap(angle, kTurn),
     s: Math.min(Math.hypot(x, y), 1)
   };
 }

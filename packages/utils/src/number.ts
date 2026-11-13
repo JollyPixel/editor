@@ -10,6 +10,24 @@ export function clamp(
   return Math.min(Math.max(value, min), max);
 }
 
+export function wrap(
+  value: number,
+  length: number
+): number {
+  return ((value % length) + length) % length;
+}
+
+export function roundTo(
+  value: number,
+  decimals: number
+): number {
+  const scale = 10 ** decimals;
+
+  const rounded = Math.round(Math.abs(value) * scale) / scale;
+
+  return (Math.sign(value) * rounded) + 0;
+}
+
 export function formatBytes(
   bytes: number
 ): string {

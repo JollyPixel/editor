@@ -12,6 +12,7 @@ import {
   Ok,
   type Result
 } from "@openally/result";
+import { sha256Hex } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -23,7 +24,6 @@ import {
   type AssetInlineContent
 } from "./AssetEvents.schema.ts";
 import { upcastLegacyWriteData } from "./legacyInlineContent.ts";
-import { contentHash } from "../../common/contentHash.ts";
 
 // CONSTANTS
 export const ASSET_EVENT_PREFIX = "asset.";
@@ -257,7 +257,7 @@ export async function writeData(
   return {
     path,
     kind,
-    hash: await contentHash(snapshot),
+    hash: await sha256Hex(snapshot),
     size,
     content: {
       type: "inline",
@@ -282,7 +282,7 @@ async function partEntries(
   for (const [partId, data] of parts.written) {
     const snapshot = new Uint8Array(data);
     entries.push([partId, {
-      hash: await contentHash(snapshot),
+      hash: await sha256Hex(snapshot),
       size: snapshot.byteLength,
       content: {
         type: "inline",

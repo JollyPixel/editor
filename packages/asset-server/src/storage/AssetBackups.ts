@@ -7,7 +7,11 @@ import {
   writeJsonFile,
   type AssetSource
 } from "@jolly-pixel/asset-source";
-import { TaskChain } from "@jolly-pixel/utils";
+import {
+  type DistributiveOmit,
+  sha256Hex,
+  TaskChain
+} from "@jolly-pixel/utils";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
@@ -19,8 +23,6 @@ import {
   BACKUP_LEDGER_PATH,
   BACKUP_OBJECTS_PATH
 } from "./stateDirectory.ts";
-import { contentHash } from "../common/contentHash.ts";
-import type { Without } from "../common/types.ts";
 import {
   keepValid,
   readStateFile,
@@ -56,7 +58,10 @@ const kLedgerParser = new SchemaParser(z.object({
 const kEntryParser = new SchemaParser(kBackupEntrySchema);
 
 export type BackupEntry = Infer<typeof kBackupEntrySchema>;
-export type BackupInput = Without<BackupEntry, "hash" | "size" | "createdAt">;
+export type BackupInput = DistributiveOmit<
+  BackupEntry,
+  "hash" | "size" | "createdAt"
+>;
 
 interface BackupLedgerData {
   readonly version: typeof kLedgerVersion;
@@ -81,7 +86,7 @@ export class AssetBackups {
     data: Uint8Array,
     input: BackupInput
   ): Promise<BackupEntry> {
-    const hash = await contentHash(data);
+    const hash = await sha256Hex(data);
     await this.#source.writeIfAbsent(objectPath(hash), data);
 
     const entry: BackupEntry = {

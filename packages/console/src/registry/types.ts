@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { Simplify } from "@jolly-pixel/utils";
+
 export type ConsoleValueType = "string" | "number" | "boolean" | "enum";
 
 export type ConsoleScalar = string | number | boolean;
@@ -46,8 +49,6 @@ export type ArgValue<TArg extends ArgDef> =
       TArg extends {
         enumValues: readonly (infer TValue extends string)[];
       } ? TValue : string;
-
-type Simplify<T> = { [K in keyof T]: T[K] } & {};
 
 type RequiredName<TArg extends ArgDef> =
   TArg extends { required: true; } ? TArg["name"] : never;

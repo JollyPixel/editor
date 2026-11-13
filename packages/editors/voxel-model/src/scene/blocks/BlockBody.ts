@@ -9,6 +9,7 @@ import {
   clampUvRegion,
   type FaceRanges
 } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
+import { roundTo } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { BlockNode } from "./BlockNode.ts";
@@ -144,13 +145,6 @@ export class BlockBody {
     this.mesh.material.dispose();
     this.node.removeFromParent();
   }
-}
-
-function roundTo(
-  value: number,
-  decimals: number
-): number {
-  return Number(value.toFixed(decimals));
 }
 
 function roundVector(

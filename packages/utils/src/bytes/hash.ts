@@ -4,7 +4,7 @@ const kHexBytes = Array.from(
   (_, byte) => byte.toString(16).padStart(2, "0")
 );
 
-export async function contentHash(
+export async function sha256Hex(
   data: Uint8Array
 ): Promise<string> {
   const source = data.buffer instanceof ArrayBuffer ?

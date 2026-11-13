@@ -11,7 +11,7 @@ import {
 import { Emitter } from "@openally/emitt";
 import {
   clamp,
-  is
+  parseJsonObject
 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
@@ -92,7 +92,8 @@ export class SculptSettings extends Emitter<SculptSettingsEvents> {
   static parse(
     raw: string | null
   ): Readonly<SculptOptions> {
-    const stored = parseObject(raw);
+    const stored: Partial<Record<keyof SculptOptions, unknown>> =
+      parseJsonObject(raw);
     function number(key: keyof SculptOptions): number {
       const value = stored[key];
 
@@ -146,18 +147,5 @@ export class SculptSettings extends Emitter<SculptSettingsEvents> {
     this.#options = next;
     this.#storage.set(kStorageKey, JSON.stringify(next));
     this.emit("change", next);
-  }
-}
-
-function parseObject(
-  raw: string | null
-): Partial<Record<keyof SculptOptions, unknown>> {
-  try {
-    const value: unknown = raw === null ? null : JSON.parse(raw);
-
-    return is.plainObject(value) ? value : {};
-  }
-  catch {
-    return {};
   }
 }

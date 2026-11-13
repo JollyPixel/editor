@@ -2,6 +2,7 @@
 import type { ReactiveControllerHost } from "lit";
 import * as THREE from "three";
 import { SubscriptionController } from "@jolly-pixel/ui";
+import { roundTo } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -193,8 +194,8 @@ function roundVector3(
   value: THREE.Vector3Like
 ): THREE.Vector3Like {
   return {
-    x: Number(value.x.toFixed(kDisplayDecimals)),
-    y: Number(value.y.toFixed(kDisplayDecimals)),
-    z: Number(value.z.toFixed(kDisplayDecimals))
+    x: roundTo(value.x, kDisplayDecimals),
+    y: roundTo(value.y, kDisplayDecimals),
+    z: roundTo(value.z, kDisplayDecimals)
   };
 }

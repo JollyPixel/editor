@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { InferMessage } from "@jolly-pixel/network";
+import type { DistributiveOmit } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -19,12 +20,8 @@ export const ACCOUNTS_ROSTER = "accounts:roster";
 export const ACCOUNTS_APPLIED = "accounts:applied";
 export const ACCOUNTS_REJECTED = "accounts:rejected";
 
-type Without<TValue, TKey extends PropertyKey> = TValue extends unknown ?
-  Omit<TValue, TKey> :
-  never;
-
 export type AccountsCommand = InferMessage<typeof accountsCommandProtocol>;
-export type AccountsRequest = Without<AccountsCommand, "requestId">;
+export type AccountsRequest = DistributiveOmit<AccountsCommand, "requestId">;
 export type AccountsMessage = InferMessage<typeof accountsMessageProtocol>;
 export type AccountsRosterMessage = Extract<
   AccountsMessage,

@@ -8,6 +8,7 @@ import {
   withRotation,
   type UVGeometry
 } from "@jolly-pixel/pixel-draw.renderer";
+import { wrap } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -257,13 +258,6 @@ function negate(
   value: number
 ): number {
   return value === 0 ? 0 : -value;
-}
-
-function wrap(
-  value: number,
-  length: number
-): number {
-  return ((value % length) + length) % length;
 }
 
 function nodeId(

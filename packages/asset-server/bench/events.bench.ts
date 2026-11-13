@@ -4,6 +4,7 @@ import {
   defineSuite,
   runSuites
 } from "@jolly-pixel/bench";
+import { sha256Hex } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -19,7 +20,6 @@ import {
   parseAssetEvent,
   writeData
 } from "../src/index.ts";
-import { contentHash } from "../src/common/contentHash.ts";
 
 // CONSTANTS
 const kSizes = [4_096, 1_048_576];
@@ -46,7 +46,7 @@ const suite = defineSuite("asset-server / event primitives", async(bench) => {
     const label = `${size / 1_024} KB`;
 
     bench
-      .add(`contentHash [${label}]`, () => contentHash(data))
+      .add(`sha256Hex [${label}]`, () => sha256Hex(data))
       .add(`writeData [${label}]`, () => writeData(
         "grids/grid-0.grid",
         GRID_KIND,

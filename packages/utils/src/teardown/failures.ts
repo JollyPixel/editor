@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { asError } from "./error.ts";
+import { asError } from "../error.ts";
 
 export function throwFailures(
   failures: unknown[]

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { clamp } from "@jolly-pixel/utils";
+import { clamp, wrap } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -53,7 +53,7 @@ export class ClipSampler {
     elapsed: number
   ): number {
     return this.loop ?
-      ((elapsed % this.length) + this.length) % this.length :
+      wrap(elapsed, this.length) :
       clamp(elapsed, 0, this.length);
   }
 

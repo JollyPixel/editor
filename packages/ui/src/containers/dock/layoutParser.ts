@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { is } from "@jolly-pixel/utils";
+import {
+  is,
+  parseJsonObject
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -21,19 +24,8 @@ export function serializeLayout(
 export function parseLayout(
   raw: string | null
 ): LayoutSnapshot | null {
-  if (raw === null || raw === "") {
-    return null;
-  }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  }
-  catch {
-    return null;
-  }
-
-  if (!is.plainObject(parsed) || parsed.v !== LAYOUT_VERSION) {
+  const parsed = parseJsonObject(raw);
+  if (parsed.v !== LAYOUT_VERSION) {
     return null;
   }
 
