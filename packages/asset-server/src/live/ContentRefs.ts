@@ -17,7 +17,7 @@ interface HeldContent extends ServedContent {
 
 export class ContentRefs {
   #issuing = new Map<string, Uint8Array>();
-  #byRoom = new Map<string, HeldContent>();
+  #byRoom = new Map<string, readonly [HeldContent, HeldContent?]>();
   #byTicket = new Map<string, HeldContent>();
 
   async issue(
@@ -31,14 +31,17 @@ export class ContentRefs {
       throw new Error(`Room ${roomId} moved on before its content ref was issued.`);
     }
 
-    this.#drop(roomId);
+    const [previous, stale] = this.#byRoom.get(roomId) ?? [];
+    if (stale !== undefined) {
+      this.#byTicket.delete(stale.ticket);
+    }
     const held: HeldContent = {
       hash,
       bytes,
       ticket: crypto.randomUUID(),
       compress: options.compress === true
     };
-    this.#byRoom.set(roomId, held);
+    this.#byRoom.set(roomId, [held, previous]);
     this.#byTicket.set(held.ticket, held);
 
     return {
@@ -68,10 +71,11 @@ export class ContentRefs {
   #drop(
     roomId: string
   ): void {
-    const held = this.#byRoom.get(roomId);
-    if (held !== undefined) {
-      this.#byRoom.delete(roomId);
-      this.#byTicket.delete(held.ticket);
+    for (const held of this.#byRoom.get(roomId) ?? []) {
+      if (held !== undefined) {
+        this.#byTicket.delete(held.ticket);
+      }
     }
+    this.#byRoom.delete(roomId);
   }
 }

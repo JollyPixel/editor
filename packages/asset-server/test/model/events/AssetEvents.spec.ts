@@ -11,9 +11,7 @@ import {
   ASSET_DELETED,
   ASSET_RENAMED,
   ASSET_UPDATED,
-  decodeContent,
   describeRejection,
-  encodeContent,
   parseAssetEvent,
   writeData
 } from "#src/index.ts";
@@ -27,7 +25,7 @@ const kWriteData = {
   kind: "binary",
   hash: "h1",
   size: 5,
-  content: encodeContent(bytes("hello"))
+  content: { type: "inline", data: bytes("hello") }
 };
 const kRenamedData = {
   from: "a.png",
@@ -175,29 +173,69 @@ describe("parseAssetEvent", () => {
   });
 });
 
-describe("inline content", () => {
-  test("round-trips bytes through base64", () => {
-    const data = Uint8Array.from([0, 1, 2, 250, 251, 252, 253, 254, 255]);
-    const content = encodeContent(data.subarray(2, 7));
-
-    assert.deepEqual(
-      decodeContent(content),
-      data.subarray(2, 7)
-    );
-  });
-
-  test("stores the standard padded base64 alphabet", () => {
-    const data = Uint8Array.from([250, 251, 252, 253]);
-
-    assert.strictEqual(encodeContent(data).data, "+vv8/Q==");
-    assert.deepEqual(
-      decodeContent({
+describe("legacy base64 content", () => {
+  test("a stored base64 write event parses to bytes, parts included", () => {
+    const parsed = parseAssetEvent(assetEvent(ASSET_UPDATED, {
+      ...kWriteData,
+      content: {
         type: "inline",
         encoding: "base64",
         data: "+vv8/Q=="
-      }),
-      data
-    );
+      },
+      parts: {
+        a: {
+          hash: "h2",
+          size: 2,
+          content: {
+            type: "inline",
+            encoding: "base64",
+            data: "AAE="
+          }
+        },
+        b: {
+          hash: "h3",
+          size: 1,
+          at: 1
+        }
+      }
+    }));
+
+    assert.ok(parsed.ok);
+    assert.deepStrictEqual(parsed.val.eventData, {
+      ...kWriteData,
+      content: {
+        type: "inline",
+        data: Uint8Array.from([250, 251, 252, 253])
+      },
+      parts: {
+        a: {
+          hash: "h2",
+          size: 2,
+          content: {
+            type: "inline",
+            data: Uint8Array.from([0, 1])
+          }
+        },
+        b: {
+          hash: "h3",
+          size: 1,
+          at: 1
+        }
+      }
+    });
+  });
+
+  test("stored base64 that does not decode is malformed", () => {
+    const rejection = readRejection(ASSET_UPDATED, {
+      ...kWriteData,
+      content: {
+        type: "inline",
+        encoding: "base64",
+        data: "not base64"
+      }
+    });
+
+    assert.strictEqual(rejection.reason, "malformed");
   });
 });
 
@@ -217,7 +255,7 @@ describe("writeData", () => {
 
     const result = await pending;
 
-    assert.deepEqual(decodeContent(result.content), new Uint8Array([1, 2]));
+    assert.deepEqual(result.content.data, new Uint8Array([1, 2]));
     assert.equal(result.size, 2);
     assert.equal(result.hash, await contentHash(new Uint8Array([1, 2])));
     assert.deepEqual(result.dependencies, [{ id: "original", kind: "binary" }]);

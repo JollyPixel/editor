@@ -9,7 +9,6 @@ import assert from "node:assert/strict";
 import {
   ASSET_CREATED,
   AssetKindRegistry,
-  encodeContent,
   foldAssetEvent,
   textureAssetKind,
   TEXTURE_KIND
@@ -73,7 +72,7 @@ describe("textureAssetKind", () => {
       kind: TEXTURE_KIND,
       hash: "h1",
       size: 5,
-      content: encodeContent(bytes("hello"))
+      content: { type: "inline", data: bytes("hello") }
     }));
 
     assert.strictEqual(text(await handler.serialize(state)), "hello");
@@ -86,7 +85,7 @@ describe("textureAssetKind", () => {
 
     await room.connect("A");
     handler.load(room.state, bytes("second"));
-    room.extension.reload();
+    await room.extension.reload();
 
     const snapshots = room.take<Uint8Array>("A").map((message) => {
       assert.strictEqual(message.type, "snapshot");

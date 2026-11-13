@@ -28,6 +28,7 @@ const kEventColumnNames = [
   "asset_id",
   "event_type",
   "event_data",
+  "event_bytes",
   "event_version",
   "actor",
   "created_at"
@@ -43,6 +44,7 @@ interface EventRow {
   asset_id: string;
   event_type: string;
   event_data: string;
+  event_bytes: Uint8Array | null;
   event_version: number;
   actor: string;
   created_at: string;
@@ -77,8 +79,8 @@ export class SqliteEventLog implements EventLog {
       event_version: number;
     }>(
       `INSERT INTO events (asset_type, asset_id, event_type, event_data,
-           event_version, actor, created_at)
-         SELECT ?, ?, ?, ?, head.version + 1, ?, ?
+           event_bytes, event_version, actor, created_at)
+         SELECT ?, ?, ?, ?, ?, head.version + 1, ?, ?
          FROM (
            SELECT COALESCE((
              SELECT event_version
@@ -94,6 +96,7 @@ export class SqliteEventLog implements EventLog {
       assetId,
       record.eventType,
       record.eventDataJson,
+      record.eventBytes,
       record.actorJson,
       record.createdAt,
       assetId,
@@ -328,6 +331,7 @@ function toEvent(
     assetId: row.asset_id,
     eventType: row.event_type,
     eventDataJson: row.event_data,
+    eventBytes: row.event_bytes,
     actorJson: row.actor,
     createdAt: row.created_at
   });

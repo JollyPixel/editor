@@ -18,7 +18,6 @@ import {
   parseWriteEvent,
   type AssetWriteEvent
 } from "../../model/events/parseWriteEvent.ts";
-import { decodeContent } from "../../model/events/inlineContent.ts";
 import { AssetPartContents } from "../../model/events/AssetPartContents.ts";
 import type { AssetProjector } from "../../storage/projection/AssetProjector.ts";
 import type { AssetWriter } from "../../storage/writer/AssetWriter.ts";
@@ -199,7 +198,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
 
     return Ok({
       eventVersion,
-      data: decodeContent(eventData.content),
+      data: eventData.content.data,
       ...(eventData.parts === undefined ?
         {} :
         { parts: await this.#parts(tagged.val) })
@@ -237,7 +236,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     const { content, dependencies } = tagged.eventData;
     const updated = await this.#writer.update({
       assetId,
-      data: decodeContent(content),
+      data: content.data,
       ...(tagged.eventData.parts === undefined ?
         {} :
         { parts: await this.#parts(tagged, current) }),
@@ -434,7 +433,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     tag: AssetTag
   ): Promise<void> {
     const { assetId, eventData } = event;
-    const backups = new Map([[eventData.path, decodeContent(eventData.content)]]);
+    const backups = new Map([[eventData.path, eventData.content.data]]);
     const extension = this.#partFiles.extension(eventData.kind);
     if (extension !== null && eventData.parts !== undefined) {
       for (const [partId, data] of await this.#parts(event)) {

@@ -7,7 +7,6 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import {
   ASSET_CREATED,
   ASSET_DELETED,
-  encodeContent,
   foldAssetEvent,
   type AssetEventData
 } from "@jolly-pixel/asset-server";
@@ -54,7 +53,7 @@ function documentEvent(
     kind: VOXEL_MAP_KIND,
     hash: "h1",
     size: data.byteLength,
-    content: encodeContent(data)
+    content: { type: "inline", data }
   });
 }
 

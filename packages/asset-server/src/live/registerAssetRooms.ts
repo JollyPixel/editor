@@ -90,7 +90,12 @@ export function registerAssetRooms(
   function onStateReplaced(
     assetId: string
   ): void {
-    liveRooms.get(assetId)?.reload();
+    liveRooms.get(assetId)?.reload().catch((error: unknown) => {
+      logger
+        .withMetadata({ assetId })
+        .withError(error)
+        .error("asset room reload failed");
+    });
   }
   states.on("replaced", onStateReplaced);
 

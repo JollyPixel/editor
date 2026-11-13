@@ -11,7 +11,6 @@ import {
   ASSET_DELETED,
   ASSET_UPDATED,
   binaryAssetKind,
-  encodeContent,
   foldAssetEvent
 } from "#src/index.ts";
 import {
@@ -35,7 +34,7 @@ describe("binaryAssetKind", () => {
       kind: "binary",
       hash: "h1",
       size: 5,
-      content: encodeContent(bytes("hello"))
+      content: { type: "inline", data: bytes("hello") }
     }));
 
     assert.strictEqual(
@@ -49,11 +48,11 @@ describe("binaryAssetKind", () => {
 
     foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
-      content: encodeContent(bytes("one"))
+      content: { type: "inline", data: bytes("one") }
     }));
     foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_UPDATED, {
       path: "a.png", kind: "binary", hash: "h2", size: 3,
-      content: encodeContent(bytes("two"))
+      content: { type: "inline", data: bytes("two") }
     }));
 
     assert.strictEqual(
@@ -67,7 +66,7 @@ describe("binaryAssetKind", () => {
 
     foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
-      content: encodeContent(bytes("one"))
+      content: { type: "inline", data: bytes("one") }
     }));
     foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_DELETED, {
       path: "a.png",
@@ -85,7 +84,7 @@ describe("binaryAssetKind", () => {
 
     foldAssetEvent(binaryAssetKind, state, assetEvent(ASSET_CREATED, {
       path: "a.png", kind: "binary", hash: "h1", size: 3,
-      content: encodeContent(bytes("one"))
+      content: { type: "inline", data: bytes("one") }
     }));
     foldAssetEvent(
       binaryAssetKind,

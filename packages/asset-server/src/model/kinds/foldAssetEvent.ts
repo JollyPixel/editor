@@ -17,7 +17,6 @@ import {
   parseAssetEvent,
   type AssetWriteData
 } from "../events/AssetEvents.ts";
-import { decodeContent } from "../events/inlineContent.ts";
 import type { AssetHeldParts } from "../events/AssetPartContents.ts";
 
 export function foldAssetEvent<
@@ -81,7 +80,7 @@ function foldLifecycleEvent(
     case ASSET_UPDATED:
       handler.load(
         state,
-        decodeContent(assetEvent.eventData.content)
+        new Uint8Array(assetEvent.eventData.content.data)
       );
       loadParts(handler, state, assetEvent.eventData, event.assetId, held);
       break;
@@ -106,7 +105,7 @@ function loadParts(
 
   for (const [partId, entry] of Object.entries(data.parts)) {
     if ("content" in entry) {
-      handler.parts.load(state, partId, decodeContent(entry.content));
+      handler.parts.load(state, partId, new Uint8Array(entry.content.data));
       continue;
     }
 

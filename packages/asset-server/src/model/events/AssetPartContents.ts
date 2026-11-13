@@ -3,7 +3,6 @@ import type * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
 import type { AssetPartEntry } from "./AssetEvents.ts";
-import { decodeContent } from "./inlineContent.ts";
 import { parseWriteEvent } from "./parseWriteEvent.ts";
 
 export type AssetPartReader = Pick<EventStore.EventReader, "get">;
@@ -36,7 +35,7 @@ export class AssetPartContents {
       );
     }
 
-    return decodeContent(entry.content);
+    return new Uint8Array(entry.content.data);
   }
 
   #heldAt(

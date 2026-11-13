@@ -180,7 +180,7 @@ describe("AssetRoomExtension — acks", () => {
 
     await extension.onMessage("bob", { action: "increment", seq: 3 }, context);
     await extension.onMessage("alice", { action: "increment", seq: 5 }, context);
-    extension.reload();
+    await extension.reload();
 
     assert.deepEqual(broadcast.at(-1), {
       type: "snapshot",
@@ -201,7 +201,7 @@ describe("AssetRoomExtension — acks", () => {
     const peer = recordingClient("alice");
     await extension.onClientConnect(peer, roomPeer(peer.id), context);
 
-    extension.reload();
+    await extension.reload();
 
     assert.deepEqual(broadcastsSeen, [0]);
     assert.equal(broadcast.length, 1);

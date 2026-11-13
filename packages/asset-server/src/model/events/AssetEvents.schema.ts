@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
-import type { Infer } from "@jolly-pixel/network";
+import {
+  bytesSchema,
+  type Infer
+} from "@jolly-pixel/network";
 import * as z from "zod/mini";
 
 export const assetInlineContentSchema = z.object({
   type: z.literal("inline"),
-  encoding: z.literal("base64"),
-  data: z.string()
+  data: bytesSchema
 });
 
 export type AssetInlineContent = Infer<typeof assetInlineContentSchema>;

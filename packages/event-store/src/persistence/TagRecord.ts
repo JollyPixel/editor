@@ -4,7 +4,7 @@ import type {
   EventTag,
   EventTagInput
 } from "../EventStore.ts";
-import { encodeJson } from "./EventRecord.ts";
+import { encodeJson } from "./jsonWithBytes.ts";
 
 export interface TagRecordFields {
   assetId: string;

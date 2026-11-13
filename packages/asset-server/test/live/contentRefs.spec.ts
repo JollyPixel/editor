@@ -15,7 +15,10 @@ import {
 } from "#src/index.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { sha256Hex } from "../helpers/hash.ts";
-import { ROOM_ACTOR } from "../helpers/live/roomHarness.ts";
+import {
+  ROOM_ACTOR,
+  type RoomHarness
+} from "../helpers/live/roomHarness.ts";
 import {
   LARGE_CONTENT,
   blobRoom,
@@ -38,24 +41,35 @@ describe("content refs", () => {
     assert.equal(refs.read(hash, ticket), null);
   });
 
-  test("replaced content goes out as a new ref and the old one stops resolving", async() => {
+  test("replaced content reaches present members as a ref while the previous ref still resolves", async() => {
     const refs = new ContentRefs();
     await using harness = await blobRoom(LARGE_CONTENT, { contentRefs: refs });
     await harness.join("A");
     const before = lastSnapshot(harness, "A") as ContentRef;
     const replacement = bytes("replaced content");
 
-    (await harness.sync.writer.update({
-      assetId: harness.assetId,
-      data: replacement,
-      actor: ROOM_ACTOR
-    })).unwrap();
+    await replace(harness, replacement);
     await harness.join("B");
-    const after = lastSnapshot(harness, "B") as ContentRef;
+    const after = lastSnapshot(harness, "A") as ContentRef;
 
     assert.equal(after.hash, sha256Hex(replacement));
+    assert.deepEqual(lastSnapshot(harness, "B"), after);
     assert.deepEqual(refs.read(after.hash, after.ticket)?.bytes, replacement);
-    assert.equal(refs.read(before.hash, before.ticket), null);
+    assert.deepEqual(refs.read(before.hash, before.ticket)?.bytes, LARGE_CONTENT);
+  });
+
+  test("a ref two replacements old stops resolving", async() => {
+    const refs = new ContentRefs();
+    await using harness = await blobRoom(LARGE_CONTENT, { contentRefs: refs });
+    await harness.join("A");
+    const first = lastSnapshot(harness, "A") as ContentRef;
+
+    await replace(harness, bytes("second content"));
+    await harness.join("B");
+    await replace(harness, bytes("third content"));
+    await harness.join("C");
+
+    assert.equal(refs.read(first.hash, first.ticket), null);
   });
 
   const inline = [
@@ -82,3 +96,14 @@ describe("content refs", () => {
     });
   }
 });
+
+async function replace(
+  harness: RoomHarness,
+  data: Uint8Array
+): Promise<void> {
+  (await harness.sync.writer.update({
+    assetId: harness.assetId,
+    data,
+    actor: ROOM_ACTOR
+  })).unwrap();
+}

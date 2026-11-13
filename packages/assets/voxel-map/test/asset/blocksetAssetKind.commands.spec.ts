@@ -7,7 +7,6 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import {
   ASSET_CREATED,
   ASSET_DELETED,
-  encodeContent,
   foldAssetEvent,
   type AssetEventData
 } from "@jolly-pixel/asset-server";
@@ -74,7 +73,7 @@ function fileEvent(
     kind: BLOCKSET_KIND,
     hash: "h1",
     size: data.byteLength,
-    content: encodeContent(data)
+    content: { type: "inline", data }
   });
 }
 
