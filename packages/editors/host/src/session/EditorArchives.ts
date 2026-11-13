@@ -12,7 +12,10 @@ import type {
   ImportReport
 } from "@jolly-pixel/asset-server/client";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
-import { saveFile } from "@jolly-pixel/utils/dom";
+import {
+  pickFiles,
+  saveFile
+} from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import { EditorLaunch } from "../launch/EditorLaunch.ts";
@@ -32,20 +35,10 @@ const kDomArchiveBrowser: EditorArchiveBrowser = {
   get location() {
     return globalThis.location;
   },
-  pickFile(accept) {
-    const { promise, resolve } = Promise.withResolvers<File | null>();
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = accept;
-    input.addEventListener("change", () => {
-      resolve(input.files?.[0] ?? null);
-    }, { once: true });
-    input.addEventListener("cancel", () => {
-      resolve(null);
-    }, { once: true });
-    input.click();
+  async pickFile(accept) {
+    const [file] = await pickFiles({ accept });
 
-    return promise;
+    return file ?? null;
   },
   save: saveFile,
   askConflictPolicy: askImportConflictPolicy,

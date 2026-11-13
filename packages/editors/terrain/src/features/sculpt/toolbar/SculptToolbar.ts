@@ -22,6 +22,7 @@ import {
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/rail-group";
 import "@jolly-pixel/ui/elements/slider";
 import "@jolly-pixel/ui/elements/tool-button";
 
@@ -58,7 +59,6 @@ import {
   type TerrainHistory
 } from "../../../shared/terrainHistory.ts";
 import { viewportToolbarStyles } from "../../../shared/toolbar.styles.ts";
-import "../../../shared/historyIcons.ts";
 import "./sculptIcons.ts";
 
 // CONSTANTS
@@ -190,7 +190,7 @@ export class SculptToolbar extends LitElement {
     return html`
       <jolly-rail orientation="horizontal" floating role="toolbar" aria-label="Sculpt">
         ${this.#renderHistory()}
-        <div class="group divided" role="group" aria-label="Brush">
+        <jolly-rail-group divided role="group" aria-label="Brush">
           ${BRUSH_TOOLS.map((option) => html`
             <jolly-tool-button
               data-tool=${option}
@@ -201,7 +201,7 @@ export class SculptToolbar extends LitElement {
               @click=${() => settings.update({ tool: option })}
             ></jolly-tool-button>
           `)}
-        </div>
+        </jolly-rail-group>
         ${tool === "chunks" ? this.#renderChunkMode(settings) : this.#renderBrushSettings(settings)}
         ${tool === "flatten" ? this.#renderFlattenTarget(settings) : nothing}
         ${tool === "terrace" ? this.#renderTerrace() : nothing}
@@ -216,7 +216,7 @@ export class SculptToolbar extends LitElement {
     const { tool } = settings.options;
 
     return html`
-      <div class="group divided" role="group" aria-label="Brush settings">
+      <jolly-rail-group divided role="group" aria-label="Brush settings">
         <jolly-tool-button
           data-tool="size"
           flyout-side="above"
@@ -235,7 +235,7 @@ export class SculptToolbar extends LitElement {
           ></jolly-slider>
         </jolly-tool-button>
         ${STRENGTH_OPTIONS[tool] === null ? nothing : this.#renderStrength(settings)}
-      </div>
+      </jolly-rail-group>
     `;
   }
 
@@ -245,7 +245,7 @@ export class SculptToolbar extends LitElement {
     const { chunkMode } = settings.options;
 
     return html`
-      <div class="group divided" role="group" aria-label="Chunk mode">
+      <jolly-rail-group divided role="group" aria-label="Chunk mode">
         ${CHUNK_MODES.map((mode) => html`
           <jolly-tool-button
             data-tool=${`chunks-${mode}`}
@@ -255,7 +255,7 @@ export class SculptToolbar extends LitElement {
             @click=${() => settings.update({ chunkMode: mode })}
           ></jolly-tool-button>
         `)}
-      </div>
+      </jolly-rail-group>
       ${chunkMode === "detail" ? this.#renderChunkTier(settings) : nothing}
     `;
   }
@@ -266,7 +266,7 @@ export class SculptToolbar extends LitElement {
     const { chunkTier } = settings.options;
 
     return html`
-      <div class="group divided" role="group" aria-label="Detail">
+      <jolly-rail-group divided role="group" aria-label="Detail">
         ${CHUNK_TIERS.map((tier) => html`
           <jolly-tool-button
             data-tool=${`chunks-tier-${tier}`}
@@ -275,7 +275,7 @@ export class SculptToolbar extends LitElement {
             @click=${() => settings.update({ chunkTier: tier })}
           ><span class="value">×${tier}</span></jolly-tool-button>
         `)}
-      </div>
+      </jolly-rail-group>
     `;
   }
 
@@ -329,7 +329,7 @@ export class SculptToolbar extends LitElement {
     const { holeMode } = settings.options;
 
     return html`
-      <div class="group divided" role="group" aria-label="Hole mode">
+      <jolly-rail-group divided role="group" aria-label="Hole mode">
         ${HOLE_MODES.map((mode) => html`
           <jolly-tool-button
             data-tool=${`holes-${mode}`}
@@ -339,7 +339,7 @@ export class SculptToolbar extends LitElement {
             @click=${() => settings.update({ holeMode: mode })}
           ></jolly-tool-button>
         `)}
-      </div>
+      </jolly-rail-group>
     `;
   }
 
@@ -349,7 +349,7 @@ export class SculptToolbar extends LitElement {
     const fixed = settings.options.flattenTarget === "fixed";
 
     return html`
-      <div class="group divided" role="group" aria-label="Flatten target">
+      <jolly-rail-group divided role="group" aria-label="Flatten target">
         <jolly-tool-button
           data-tool="flatten-target"
           icon="flatten-fixed"
@@ -378,13 +378,13 @@ export class SculptToolbar extends LitElement {
             ></jolly-number>
           </jolly-tool-button>
         ` : nothing}
-      </div>
+      </jolly-rail-group>
     `;
   }
 
   #renderTerrace(): TemplateResult {
     return html`
-      <div class="group divided" role="group" aria-label="Terrace">
+      <jolly-rail-group divided role="group" aria-label="Terrace">
         <jolly-tool-button
           data-tool="terrace-step"
           flyout-side="above"
@@ -419,7 +419,7 @@ export class SculptToolbar extends LitElement {
             @jolly-change=${this.#terraceSharpness.commit}
           ></jolly-slider>
         </jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 
@@ -432,7 +432,7 @@ export class SculptToolbar extends LitElement {
     const state: HistoryScopeState = history.state(TERRAIN_HISTORY_SCOPE);
 
     return html`
-      <div class="group" role="group" aria-label="History">
+      <jolly-rail-group role="group" aria-label="History">
         <jolly-tool-button
           data-tool="undo"
           icon="undo"
@@ -449,7 +449,7 @@ export class SculptToolbar extends LitElement {
           ?disabled=${state.redoCount === 0}
           @click=${() => history.redo(TERRAIN_HISTORY_SCOPE)}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 }

@@ -3,7 +3,6 @@ import { css } from "lit";
 
 export const viewportToolbarStyles = css`
   :host {
-    --voxel-toolbar-button-size: 30px;
     --voxel-axis-x: light-dark(
       var(--jolly-axis-x),
       oklch(from var(--jolly-axis-x) 72% c h)
@@ -18,32 +17,8 @@ export const viewportToolbarStyles = css`
     );
   }
 
-  .group {
-    display: flex;
-    align-items: center;
-    gap: 0;
-  }
-
-  jolly-tool-button {
-    --jolly-tool-button-size: var(--voxel-toolbar-button-size);
-    --jolly-tool-button-gap: 10px;
-  }
-
-  jolly-tool-button::part(button) {
-    border-radius: var(--jolly-radius-sm, 2px);
-  }
-
   jolly-tool-button::part(notch) {
     display: none;
-  }
-
-  .divided::before {
-    content: "";
-    flex: 0 0 auto;
-    width: 1px;
-    height: 22px;
-    margin-inline: 6px;
-    background: var(--jolly-divider);
   }
 
   .axis .x {

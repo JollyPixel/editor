@@ -14,6 +14,7 @@ import type { AgentToken } from "@jolly-pixel/accounts";
 import "@jolly-pixel/ui/elements/button";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import { agentSetupLine } from "../../golem/AgentSetupLine.ts";
@@ -90,13 +91,8 @@ export class AgentTokensPane extends LitElement {
       margin: 0;
     }
 
-    .meta,
-    .empty {
+    .meta {
       color: var(--jolly-text-muted);
-    }
-
-    .error {
-      color: var(--jolly-danger);
     }
   `;
 
@@ -151,7 +147,7 @@ export class AgentTokensPane extends LitElement {
       ${this.#renderRevealed()}
       ${this.#tokens.error()}
       ${tokens.length === 0 ? html`
-        <p class="empty">No agent token.</p>
+        <jolly-message flush>No agent token.</jolly-message>
       ` : html`
         <ul aria-label="Agent tokens">
           ${tokens.map((token) => this.#renderToken(token))}

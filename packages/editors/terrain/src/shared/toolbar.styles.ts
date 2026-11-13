@@ -6,24 +6,6 @@ export const viewportToolbarStyles = css`
     display: inline-flex;
   }
 
-  .group {
-    display: flex;
-    align-items: center;
-  }
-
-  .divided::before {
-    content: "";
-    width: 1px;
-    height: 22px;
-    margin-inline: 6px;
-    background: var(--jolly-divider);
-  }
-
-  jolly-tool-button {
-    --jolly-tool-button-size: 30px;
-    --jolly-tool-button-gap: 10px;
-  }
-
   jolly-tool-button::part(notch) {
     display: none;
   }

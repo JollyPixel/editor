@@ -14,6 +14,7 @@ import {
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/message";
 import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
@@ -90,8 +91,7 @@ export class GolemChatPane extends LitElement {
       font-weight: 600;
     }
 
-    .muted,
-    .empty {
+    .muted {
       color: var(--jolly-text-muted);
     }
 
@@ -99,11 +99,6 @@ export class GolemChatPane extends LitElement {
       margin: 0;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
-    }
-
-    .empty {
-      margin: 0;
-      padding: var(--jolly-space-2, 8px);
     }
 
     .link {
@@ -219,7 +214,7 @@ export class GolemChatPane extends LitElement {
 
   #renderNoAgent(): TemplateResult {
     return html`
-      <p class="empty">
+      <jolly-message>
         No agent is connected. Create a token in
         <button
           class="link"
@@ -227,7 +222,7 @@ export class GolemChatPane extends LitElement {
           @click=${this.#openAgents}
         >Settings › Agents</button>
         and run its setup line.
-      </p>
+      </jolly-message>
     `;
   }
 

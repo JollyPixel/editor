@@ -11,6 +11,7 @@ import {
 } from "@jolly-pixel/controls";
 import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/tool-button";
+import "@jolly-pixel/ui/elements/rail-group";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
@@ -83,18 +84,18 @@ export class PlacementControls extends EditingElement {
         <jolly-icon name=${current.icon}></jolly-icon>
         <span>${current.caption}</span>
       </span>
-      <div class="group divided" role="group" aria-label="Rotate">
+      <jolly-rail-group divided role="group" aria-label="Rotate">
         ${PLACEMENT_ROTATIONS.map(
           (rotation) => this.#renderTransform(rotation)
         )}
-      </div>
-      <div class="group divided" role="group" aria-label="Mirror">
+      </jolly-rail-group>
+      <jolly-rail-group divided role="group" aria-label="Mirror">
         ${PLACEMENT_MIRRORS.map((mirror) => this.#renderTransform(
           mirror,
           axisBadge(mirror.axis)
         ))}
-      </div>
-      <div class="group divided" role="group" aria-label="Clipboard">
+      </jolly-rail-group>
+      <jolly-rail-group divided role="group" aria-label="Clipboard">
         <jolly-tool-button
           data-tool="copy"
           icon="copy"
@@ -117,8 +118,8 @@ export class PlacementControls extends EditingElement {
             @click=${this.#onSaveTemplate}
           ></jolly-tool-button>
         ` : nothing}
-      </div>
-      <div class="group divided" role="group" aria-label="Finish">
+      </jolly-rail-group>
+      <jolly-rail-group divided role="group" aria-label="Finish">
         ${current.deletable ? html`
           <jolly-tool-button
             data-tool="delete"
@@ -140,7 +141,7 @@ export class PlacementControls extends EditingElement {
           label=${`Cancel (${this.#shortcut(PLACEMENT_SHORTCUTS.cancel)})`}
           @click=${this.#onCancel}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 

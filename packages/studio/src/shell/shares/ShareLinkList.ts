@@ -14,6 +14,7 @@ import {
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/message";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
@@ -57,15 +58,9 @@ export class ShareLinkList extends LitElement {
       white-space: nowrap;
     }
 
-    .meta,
-    .empty {
+    .meta {
       margin: 0;
       color: var(--jolly-text-muted);
-    }
-
-    .error {
-      margin: 0 0 var(--jolly-space-2, 8px);
-      color: var(--jolly-danger);
     }
   `;
 
@@ -140,7 +135,7 @@ export class ShareLinkList extends LitElement {
     return html`
       ${this.#links.error()}
       ${rows.length === 0 ? html`
-        <p class="empty">No active link.</p>
+        <jolly-message flush>No active link.</jolly-message>
       ` : html`
         <ul aria-label="Share links">
           ${rows.map((row) => this.#renderRow(row))}

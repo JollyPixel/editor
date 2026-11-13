@@ -16,6 +16,7 @@ import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/slider";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import "../icons.ts";
@@ -125,16 +126,10 @@ export class ModelAnimate extends LitElement {
       white-space: nowrap;
     }
 
-    .duration,
-    .empty {
+    .duration {
       color: var(--jolly-text-muted);
       font-variant-numeric: var(--jolly-font-numeric);
       white-space: nowrap;
-    }
-
-    .empty {
-      margin: 0;
-      padding: var(--jolly-space-1) var(--jolly-space-2);
     }
   `;
 
@@ -185,7 +180,7 @@ export class ModelAnimate extends LitElement {
       <div class="controls" role="toolbar" aria-label="Playback">
         <jolly-button
           data-tool="play"
-          icon=${playing ? "model-pause" : "model-play"}
+          icon=${playing ? "pause" : "play"}
           label=${playLabel}
           title=${playLabel}
           icon-only
@@ -194,7 +189,7 @@ export class ModelAnimate extends LitElement {
         ></jolly-button>
         <jolly-button
           data-tool="stop"
-          icon="model-stop"
+          icon="stop"
           label="Stop"
           title="Stop"
           icon-only
@@ -203,7 +198,7 @@ export class ModelAnimate extends LitElement {
         ></jolly-button>
         <jolly-button
           data-tool="loop"
-          icon="model-loop"
+          icon="loop"
           label="Loop"
           title="Loop"
           icon-only
@@ -245,7 +240,7 @@ export class ModelAnimate extends LitElement {
   ): TemplateResult {
     const clips = player?.clips ?? [];
     if (player === null || clips.length === 0) {
-      return html`<p class="empty">This model has no animation.</p>`;
+      return html`<jolly-message>This model has no animation.</jolly-message>`;
     }
 
     return html`

@@ -8,12 +8,12 @@ import {
 } from "lit";
 import {
   customElement,
-  property,
-  query
+  property
 } from "lit/decorators.js";
 import type { Account } from "@jolly-pixel/accounts";
 import "@jolly-pixel/ui/elements/avatar";
 import "@jolly-pixel/ui/elements/button";
+import { pickFiles } from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import { roleLabel } from "../../accounts/UsersTreeModel.ts";
@@ -63,9 +63,6 @@ export class ProfileSettings extends LitElement {
   @property({ attribute: false })
   declare account: Account | null;
 
-  @query("input[type=file]")
-  declare _picker: HTMLInputElement | null;
-
   constructor() {
     super();
     this.account = null;
@@ -94,24 +91,13 @@ export class ProfileSettings extends LitElement {
         data-action="change-avatar"
         @click=${this.#pick}
       >Change avatar…</jolly-button>
-      <input
-        type="file"
-        accept="image/*"
-        hidden
-        @change=${this.#onPick}
-      />
     `;
   }
 
-  readonly #pick = (): void => {
-    this._picker?.click();
-  };
-
-  readonly #onPick = (): void => {
-    const image = this._picker?.files?.[0];
-    if (this._picker !== null) {
-      this._picker.value = "";
-    }
+  readonly #pick = async(): Promise<void> => {
+    const [image] = await pickFiles({
+      accept: "image/*"
+    });
     if (image === undefined) {
       return;
     }

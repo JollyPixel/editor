@@ -28,6 +28,7 @@ import "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/fields";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
@@ -134,7 +135,7 @@ export class BlockEditDialog extends EditingElement {
         @jolly-exited=${this.#onExited}
       >
         <div class="layout">
-          <div class="fields">
+          <jolly-fields>
             <jolly-select
               label="Blockset"
               .options=${blocksetOptions(blocksets.entries, owner === undefined)}
@@ -156,7 +157,7 @@ export class BlockEditDialog extends EditingElement {
               ></custom-properties-editor>
             `)}
             ${this.#renderUsage(editing, block)}
-          </div>
+          </jolly-fields>
           ${renderShapeColumn({
             open: this._open,
             stage: editing.previewStage,

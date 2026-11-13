@@ -12,7 +12,10 @@ import {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/folder";
 import { errorMessage } from "@jolly-pixel/utils";
-import { saveFile } from "@jolly-pixel/utils/dom";
+import {
+  pickFiles,
+  saveFile
+} from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import "../../icons.ts";
@@ -60,43 +63,31 @@ export class SoundFileFolder extends LitElement {
         <div class="actions">
           <jolly-button
             data-tool="replace"
-            icon="sound-import"
+            icon="import"
             title="Replace with an audio file"
             ?disabled=${file === null || this.#replacing}
-            @click=${() => this.#pick()}
+            @click=${() => void this.#pick()}
           >Replace…</jolly-button>
           <jolly-button
             data-tool="export"
-            icon="sound-export"
+            icon="export"
             title="Download the sound as an Ogg file"
             ?disabled=${file === null || file.empty}
             @click=${() => this.#export()}
           >Export</jolly-button>
         </div>
-        <input
-          type="file"
-          hidden
-          accept=${SoundUpload.accept}
-          @change=${this.#onFileSelected}
-        >
       </jolly-folder>
     `;
   }
 
-  #pick(): void {
-    this.renderRoot.querySelector("input")?.click();
-  }
-
-  #onFileSelected = (
-    event: Event
-  ): void => {
-    const input = event.currentTarget as HTMLInputElement;
-    const selected = input.files?.[0];
-    input.value = "";
+  async #pick(): Promise<void> {
+    const [selected] = await pickFiles({
+      accept: SoundUpload.accept
+    });
     if (selected !== undefined) {
-      void this.#replace(selected);
+      await this.#replace(selected);
     }
-  };
+  }
 
   async #replace(
     selected: File

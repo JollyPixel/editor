@@ -21,6 +21,7 @@ import { KeyboardLayoutStore } from "@jolly-pixel/controls";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/search";
 import "@jolly-pixel/ui/elements/separator";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import { KeyRecorder } from "../../keybindings/KeyRecorder.ts";
@@ -175,7 +176,9 @@ export class KeybindingSettings extends LitElement {
           this._query = event.detail.value;
         }}
       ></jolly-search>
-      ${this._error === "" ? nothing : html`<p class="error" role="alert">${this._error}</p>`}
+      ${this._error === "" ? nothing : html`
+        <jolly-message tone="danger" flush role="alert">${this._error}</jolly-message>
+      `}
       ${sections.map((section) => this.#section(section))}
     `;
   }

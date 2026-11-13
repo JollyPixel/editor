@@ -90,7 +90,7 @@ export class HierarchyPanel extends LitElement {
           @click=${this.#openAddMenu}
         >Add</jolly-button>
         <jolly-button
-          icon="action-duplicate"
+          icon="duplicate"
           icon-only
           label="Duplicate"
           title="Duplicate"

@@ -16,6 +16,7 @@ import type { AssetRecordData } from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/message";
 import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
@@ -129,7 +130,7 @@ export class ProjectReadme extends LitElement {
       case "loading":
         return nothing;
       case "failed":
-        return html`<p class="empty">Could not read ${kReadmePath}: ${view.reason}</p>`;
+        return html`<jolly-message flush>Could not read ${kReadmePath}: ${view.reason}</jolly-message>`;
       case "ready":
         return html`
           <jolly-markdown

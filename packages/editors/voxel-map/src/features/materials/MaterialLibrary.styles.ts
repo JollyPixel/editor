@@ -58,19 +58,22 @@ export const materialLibraryStyles = css`
     padding-block-end: var(--jolly-space-1, 4px);
   }
 
-  .editor .hint {
+  .editor jolly-message {
     padding-block: 0;
   }
 
-  .apply,
-  .fields {
+  .apply {
     display: flex;
     flex-direction: column;
     gap: var(--jolly-row-gap, 4px);
+  }
+
+  .apply,
+  jolly-fields {
     padding-inline: var(--jolly-space-1, 4px) 0;
   }
 
-  .fields {
+  jolly-fields {
     --jolly-label-width: 18ch;
     --jolly-label-max-width: 60%;
   }

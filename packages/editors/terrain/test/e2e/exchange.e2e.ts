@@ -58,7 +58,9 @@ test("a heightmap exported from the pane imports back at a doubled range and und
   expect((await decodePng(new Uint8Array(image.buffer))).depth).toBe(16);
   const { min, max } = parseHeightmapSidecar(sidecar.buffer.toString())!;
 
-  await panel.locator("input[data-input=heightmap]").setInputFiles([image, sidecar]);
+  const chooser = page.waitForEvent("filechooser");
+  await panel.locator("[data-action=choose-heightmap]").click();
+  await (await chooser).setFiles([image, sidecar]);
   await expect(panel.locator("[data-action=import-heightmap]")).toBeVisible();
   const taller = Math.ceil(max + (max - min));
   await setNumber(panel, "max", taller);

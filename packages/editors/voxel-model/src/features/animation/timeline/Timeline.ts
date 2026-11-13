@@ -15,6 +15,7 @@ import {
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import "./timelineIcons.ts";
@@ -227,11 +228,6 @@ export class Timeline extends LitElement {
     .unbound jolly-icon {
       vertical-align: middle;
     }
-
-    .empty {
-      padding: var(--jolly-space-2, 8px);
-      color: var(--jolly-text-muted, inherit);
-    }
   `;
 
   #controller = new TimelineController(this, {
@@ -255,7 +251,11 @@ export class Timeline extends LitElement {
   override render(): TemplateResult {
     const { view } = this.#controller;
     if (view === null) {
-      return html`<p class="empty">Pick or create a clip in the Animate panel to see its timeline.</p>`;
+      return html`
+        <jolly-message>
+          Pick or create a clip in the Animate panel to see its timeline.
+        </jolly-message>
+      `;
     }
 
     return html`
@@ -268,7 +268,7 @@ export class Timeline extends LitElement {
       >
         ${this.#renderRuler(view)}
         ${view.rows.length === 0 ?
-          html`<p class="empty">Select a block to animate it.</p>` :
+          html`<jolly-message>Select a block to animate it.</jolly-message>` :
           view.rows.map((row) => this.#renderRow(row, view))}
         ${view.unbound.map((row) => this.#renderUnboundRow(row, view))}
       </div>

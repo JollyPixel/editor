@@ -25,6 +25,7 @@ import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/tree";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import {
@@ -127,10 +128,10 @@ export class LayerManager extends EditingElement {
           label="Layers"
           storage-key="voxel-map:folder:layers"
         >
-          <p class="hint">
+          <jolly-message>
             Map layers are hidden while you edit a template. Press Done in the
             viewport to go back to the map.
-          </p>
+          </jolly-message>
         </jolly-folder>
       `;
     }
@@ -263,9 +264,9 @@ export class LayerManager extends EditingElement {
           .writable=${writable}
         ></object-panel>`;
       default:
-        return html`<p class="hint">
+        return html`<jolly-message>
           Select an object to edit its properties.
-        </p>`;
+        </jolly-message>`;
     }
   }
 

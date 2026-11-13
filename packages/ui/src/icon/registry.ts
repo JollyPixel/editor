@@ -23,7 +23,17 @@ export type BuiltinIconName =
   | "error"
   | "trash"
   | "settings"
-  | "eyedropper";
+  | "eyedropper"
+  | "undo"
+  | "redo"
+  | "duplicate"
+  | "pencil"
+  | "play"
+  | "pause"
+  | "stop"
+  | "loop"
+  | "import"
+  | "export";
 export type IconName = BuiltinIconName | (string & {});
 export type IconGlyph = string | SVGTemplateResult;
 

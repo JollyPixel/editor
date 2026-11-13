@@ -22,7 +22,7 @@ export const editToolbarStyles = [viewportToolbarStyles, css`
   }
 
   jolly-rail {
-    --jolly-icon-button-size: var(--voxel-toolbar-button-size);
+    --jolly-icon-button-size: var(--jolly-tool-button-size);
 
     gap: var(--voxel-toolbar-row-gap) 0;
     padding: var(--voxel-toolbar-row-gap) 4px;

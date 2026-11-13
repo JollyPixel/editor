@@ -10,10 +10,4 @@ export const treeHostStyles = css`
   jolly-tree {
     margin-inline: var(--jolly-space-1, 4px) 0;
   }
-
-  .hint {
-    margin: 0;
-    padding: var(--jolly-space-1, 4px);
-    color: var(--jolly-text-muted);
-  }
 `;

@@ -6,8 +6,8 @@ import { kFallback } from "../theme/styles/fallbacks.ts";
 
 export const toolButtonStyles = css`
   :host {
-    --jolly-tool-button-size: 36px;
-    --jolly-tool-button-gap: 6px;
+    --tool-size: var(--jolly-tool-button-size, 36px);
+    --tool-gap: var(--jolly-tool-button-gap, 6px);
 
     position: relative;
     display: inline-flex;
@@ -22,11 +22,11 @@ export const toolButtonStyles = css`
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    width: var(--jolly-tool-button-size);
-    height: var(--jolly-tool-button-size);
+    width: var(--tool-size);
+    height: var(--tool-size);
     padding: 0;
     border: 0;
-    border-radius: var(--jolly-radius-md, 6px);
+    border-radius: var(--jolly-tool-button-radius, var(--jolly-radius-md, 6px));
     background: transparent;
     color: var(--jolly-text-muted, ${kFallback.text});
     font: inherit;
@@ -204,28 +204,28 @@ export const toolButtonStyles = css`
 
   :host([flyout-side="above"]) .flyout,
   :host([flyout-side="above"]) .tooltip {
-    bottom: calc(100% + var(--jolly-tool-button-gap));
+    bottom: calc(100% + var(--tool-gap));
     left: 50%;
     transform: translateX(-50%);
   }
 
   :host([flyout-side="below"]) .flyout,
   :host([flyout-side="below"]) .tooltip {
-    top: calc(100% + var(--jolly-tool-button-gap));
+    top: calc(100% + var(--tool-gap));
     left: 50%;
     transform: translateX(-50%);
   }
 
   :host([flyout-side="right"]) .flyout,
   :host([flyout-side="right"]) .tooltip {
-    left: calc(100% + var(--jolly-tool-button-gap));
+    left: calc(100% + var(--tool-gap));
     top: 50%;
     transform: translateY(-50%);
   }
 
   :host([flyout-side="left"]) .flyout,
   :host([flyout-side="left"]) .tooltip {
-    right: calc(100% + var(--jolly-tool-button-gap));
+    right: calc(100% + var(--tool-gap));
     top: 50%;
     transform: translateY(-50%);
   }
@@ -259,21 +259,21 @@ export const toolButtonStyles = css`
 
   :host([flyout-side="above"]) .flyout::before {
     inset: 100% 0 auto;
-    height: var(--jolly-tool-button-gap);
+    height: var(--tool-gap);
   }
 
   :host([flyout-side="below"]) .flyout::before {
     inset: auto 0 100%;
-    height: var(--jolly-tool-button-gap);
+    height: var(--tool-gap);
   }
 
   :host([flyout-side="right"]) .flyout::before {
     inset: 0 100% 0 auto;
-    width: var(--jolly-tool-button-gap);
+    width: var(--tool-gap);
   }
 
   :host([flyout-side="left"]) .flyout::before {
     inset: 0 auto 0 100%;
-    width: var(--jolly-tool-button-gap);
+    width: var(--tool-gap);
   }
 `;

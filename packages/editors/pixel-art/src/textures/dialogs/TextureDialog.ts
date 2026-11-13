@@ -5,11 +5,12 @@ import {
   type TemplateResult
 } from "lit";
 import { query } from "lit/decorators.js";
-import type {
-  ButtonVariant,
-  Dialog,
-  DialogIntent,
-  IconName
+import {
+  DialogRequest,
+  type ButtonVariant,
+  type Dialog,
+  type DialogIntent,
+  type IconName
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/dialog";
@@ -37,7 +38,12 @@ export abstract class TextureDialog<
   @query("jolly-dialog")
   declare private dialogElement: Dialog;
 
-  #settle: ((result: TResult | null) => void) | null = null;
+  #request = new DialogRequest<TResult>(this, {
+    dialog: () => this.dialogElement,
+    focus: () => this.renderRoot.querySelector<HTMLElement>(
+      `[data-action="${this.frame.focus}"]`
+    )
+  });
 
   protected abstract get frame(): TextureDialogFrame<TAction>;
 
@@ -51,22 +57,12 @@ export abstract class TextureDialog<
 
   protected abstract renderFields(): unknown;
 
-  async open(
+  open(
     context: TContext
   ): Promise<TResult | null> {
-    this.#resolve(null);
     this.reset(context);
 
-    const { promise, resolve } = Promise.withResolvers<TResult | null>();
-    this.#settle = resolve;
-
-    await this.updateComplete;
-    await this.dialogElement.showModal();
-    this.renderRoot
-      .querySelector<HTMLElement>(`[data-action="${this.frame.focus}"]`)
-      ?.focus();
-
-    return promise;
+    return this.#request.open();
   }
 
   override render(): TemplateResult {
@@ -83,7 +79,6 @@ export abstract class TextureDialog<
         heading=${heading}
         icon=${icon}
         intent=${intent}
-        @jolly-close=${this.#onClose}
       >
         <p>${message}</p>
         ${this.renderFields()}
@@ -107,24 +102,10 @@ export abstract class TextureDialog<
   #confirm(
     action: TAction
   ): void {
-    this.#resolve(this.result(action));
-    this.dialogElement.close(action);
+    this.#request.confirm(this.result(action), action);
   }
 
   #cancel(): void {
-    this.#resolve(null);
-    this.dialogElement.close("cancel");
-  }
-
-  #onClose(): void {
-    this.#resolve(null);
-  }
-
-  #resolve(
-    result: TResult | null
-  ): void {
-    const settle = this.#settle;
-    this.#settle = null;
-    settle?.(result);
+    this.#request.cancel();
   }
 }

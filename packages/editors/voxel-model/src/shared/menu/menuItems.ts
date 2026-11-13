@@ -10,7 +10,7 @@ export const RENAME_ITEM: MenuItem<"rename"> = {
 export const DUPLICATE_ITEM: MenuItem<"duplicate"> = {
   id: "duplicate",
   label: "Duplicate",
-  icon: "action-duplicate"
+  icon: "duplicate"
 };
 
 export const DELETE_ITEM: MenuItem<"delete"> = {

@@ -26,19 +26,6 @@ registerIcon("material", svg`
   />
 `, { tone: "lime" });
 
-registerIcon("pencil", svg`
-  <mask id="pencil-ferrule-cut">
-    <rect width="24" height="24" fill="#fff" />
-    <path d="M13.2 6.3l4.5 4.5" stroke="#000" stroke-width="1.6" />
-  </mask>
-  <path
-    class="tone-ink"
-    d="M15.5 3.5a2.1 2.1 0 0 1 3 0l2 2a2.1 2.1 0 0 1 0 3L9 20l-5.5 1.5L5 16 15.5 3.5Z"
-    fill="currentColor"
-    mask="url(#pencil-ferrule-cut)"
-  />
-`, { tone: "pink" });
-
 registerIcon("model-animate", svg`
   <path
     class="tone-fill"

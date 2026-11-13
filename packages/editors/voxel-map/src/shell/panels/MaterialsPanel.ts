@@ -2,11 +2,11 @@
 import { html, css, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../editing/EditingElement.ts";
-import { hintStyles } from "../../shared/styles/hint.styles.ts";
 import "../../features/blocks/library/BlockLibrary.ts";
 import "../../features/materials/MaterialLibrary.ts";
 import "./MapConfigPanel.ts";
@@ -14,7 +14,6 @@ import "./MapConfigPanel.ts";
 @customElement("materials-panel")
 export class MaterialsPanel extends EditingElement {
   static override styles = [
-    hintStyles,
     css`
       :host {
         display: flex;
@@ -73,7 +72,7 @@ export class MaterialsPanel extends EditingElement {
     return html`
       ${this._hasBlocks ?
         this.#renderMaterials(editing) :
-        html`<p class="hint">Add a block to the map to edit materials.</p>`}
+        html`<jolly-message>Add a block to the map to edit materials.</jolly-message>`}
       <jolly-folder
         flush
         key="map-config"

@@ -9,12 +9,13 @@ import {
 import {
   customElement,
   property,
-  query,
   state
 } from "lit/decorators.js";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/toolbar";
+import "@jolly-pixel/ui/elements/message";
 import { errorMessage } from "@jolly-pixel/utils";
+import { pickFiles } from "@jolly-pixel/utils/dom";
 import type { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
@@ -33,9 +34,6 @@ export class PreferencesTransfer extends LitElement {
 
   @state()
   declare _status: TemplateResult | typeof nothing;
-
-  @query("input[type=file]")
-  declare _picker: HTMLInputElement | null;
 
   constructor() {
     super();
@@ -62,12 +60,6 @@ export class PreferencesTransfer extends LitElement {
           @click=${this.#pick}
         >Import preferences…</jolly-button>
       </jolly-toolbar>
-      <input
-        type="file"
-        accept=".json,application/json"
-        hidden
-        @change=${this.#onPick}
-      />
       ${this._status}
     `;
   }
@@ -78,15 +70,10 @@ export class PreferencesTransfer extends LitElement {
     }
   };
 
-  readonly #pick = (): void => {
-    this._picker?.click();
-  };
-
-  readonly #onPick = async(): Promise<void> => {
-    const file = this._picker?.files?.[0];
-    if (this._picker !== null) {
-      this._picker.value = "";
-    }
+  readonly #pick = async(): Promise<void> => {
+    const [file] = await pickFiles({
+      accept: ".json,application/json"
+    });
     if (file === undefined || this.preferences === null || this.scopes === null) {
       return;
     }
@@ -99,9 +86,9 @@ export class PreferencesTransfer extends LitElement {
         `Preferences imported from "${file.name}".`}</p>`;
     }
     catch (error) {
-      this._status = html`<p class="error" role="alert">
+      this._status = html`<jolly-message tone="danger" flush role="alert">
         Preferences not imported: ${errorMessage(error)}
-      </p>`;
+      </jolly-message>`;
     }
   };
 }

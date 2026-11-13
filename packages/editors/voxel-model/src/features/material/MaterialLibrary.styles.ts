@@ -101,10 +101,7 @@ export const materialLibraryStyles = css`
     padding-block: var(--jolly-space-1, 4px);
   }
 
-  .fields {
-    display: flex;
-    flex-direction: column;
-    gap: var(--jolly-row-gap, 4px);
+  jolly-fields {
     padding-inline: var(--jolly-space-1, 4px) 0;
   }
 
@@ -117,11 +114,5 @@ export const materialLibraryStyles = css`
     padding-inline: var(--jolly-space-1, 4px) 0;
     color: var(--jolly-text-muted, inherit);
     font-size: 0.9em;
-  }
-
-  .empty {
-    margin: 0;
-    padding: var(--jolly-space-2, 8px);
-    color: var(--jolly-text-muted, inherit);
   }
 `;

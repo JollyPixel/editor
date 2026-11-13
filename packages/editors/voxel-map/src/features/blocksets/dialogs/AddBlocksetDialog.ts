@@ -9,10 +9,11 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type {
-  Dialog,
-  JollyChangeDetail,
-  JollyOption
+import {
+  DialogRequest,
+  type Dialog,
+  type JollyChangeDetail,
+  type JollyOption
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
@@ -20,6 +21,8 @@ import "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/message";
+import "@jolly-pixel/ui/elements/fields";
 import {
   AssetPath,
   type AssetRecordData
@@ -68,18 +71,8 @@ export interface AddBlocksetContext {
 @customElement("add-blockset-dialog")
 export class AddBlocksetDialog extends LitElement {
   static override styles = css`
-    .fields {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
-
+    jolly-fields {
       --jolly-label-width: 80px;
-    }
-
-    .hint {
-      margin: 0;
-      color: var(--jolly-text-muted);
-      font-size: var(--jolly-font-size-sm, 12px);
     }
   `;
 
@@ -110,7 +103,9 @@ export class AddBlocksetDialog extends LitElement {
   @query("jolly-dialog")
   private declare _dialog: Dialog;
 
-  #settle: ((result: AddBlocksetResult | null) => void) | null = null;
+  #request = new DialogRequest<AddBlocksetResult>(this, {
+    dialog: () => this._dialog
+  });
 
   constructor() {
     super();
@@ -124,10 +119,9 @@ export class AddBlocksetDialog extends LitElement {
     this._importable = false;
   }
 
-  async open(
+  open(
     context: AddBlocksetContext
   ): Promise<AddBlocksetResult | null> {
-    this.#resolve(null);
     this._source = "create";
     this._name = kDefaultName;
     this._linkable = context.linkable;
@@ -137,13 +131,7 @@ export class AddBlocksetDialog extends LitElement {
     this._cols = kDefaultGridSize;
     this._rows = kDefaultGridSize;
 
-    const { promise, resolve } = Promise.withResolvers<AddBlocksetResult | null>();
-    this.#settle = resolve;
-
-    await this.updateComplete;
-    await this._dialog.showModal();
-
-    return promise;
+    return this.#request.open();
   }
 
   override render() {
@@ -153,9 +141,8 @@ export class AddBlocksetDialog extends LitElement {
       <jolly-dialog
         heading="Add blockset"
         icon="blockset"
-        @jolly-cancel=${this.#onCancel}
       >
-        <div class="fields">
+        <jolly-fields>
           <jolly-button-group
             label="Source"
             .options=${this.#sourceOptions()}
@@ -163,7 +150,7 @@ export class AddBlocksetDialog extends LitElement {
             @jolly-change=${this.#onSourceChange}
           ></jolly-button-group>
           ${this.#renderSourceFields(source)}
-        </div>
+        </jolly-fields>
 
         <jolly-button
           slot="actions"
@@ -189,7 +176,7 @@ export class AddBlocksetDialog extends LitElement {
         return this.#renderLinkFields();
       case "import":
         return html`
-          <p class="hint">A .zip archive or a ${BLOCKSET_EXTENSION} file.</p>
+          <jolly-message flush>A .zip archive or a ${BLOCKSET_EXTENSION} file.</jolly-message>
         `;
       default:
         return source satisfies never;
@@ -320,8 +307,7 @@ export class AddBlocksetDialog extends LitElement {
       return;
     }
 
-    this.#resolve(this.#result());
-    this._dialog.close("confirm");
+    this.#request.confirm(this.#result());
   }
 
   #result(): AddBlocksetResult {
@@ -345,20 +331,7 @@ export class AddBlocksetDialog extends LitElement {
   }
 
   #cancel(): void {
-    this.#resolve(null);
-    this._dialog.close("cancel");
-  }
-
-  #onCancel(): void {
-    this.#resolve(null);
-  }
-
-  #resolve(
-    result: AddBlocksetResult | null
-  ): void {
-    const settle = this.#settle;
-    this.#settle = null;
-    settle?.(result);
+    this.#request.cancel();
   }
 }
 

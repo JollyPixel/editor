@@ -14,6 +14,7 @@ import {
 import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/folder";
+import "@jolly-pixel/ui/elements/fields";
 
 // Import Internal Dependencies
 import {
@@ -70,10 +71,7 @@ export class ViewPanel extends LitElement {
       font-size: calc(var(--jolly-font-size, 11px) + 2px);
     }
 
-    .fields {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
+    jolly-fields {
       padding-block: var(--jolly-space-1, 4px);
     }
 
@@ -112,7 +110,7 @@ export class ViewPanel extends LitElement {
         storage-key="voxel-model:folder:view"
         .open=${false}
       >
-        <div class="fields">
+        <jolly-fields>
           <jolly-button-group
             label="Lighting"
             description=${kLightingHelp}
@@ -158,7 +156,7 @@ export class ViewPanel extends LitElement {
               @jolly-change=${this.#bind("reflections")}
             ></jolly-checkbox>
           </div>
-        </div>
+        </jolly-fields>
       </jolly-folder>
     `;
   }

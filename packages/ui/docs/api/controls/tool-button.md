@@ -58,4 +58,7 @@ to `flyout-side`.
 ## Styling
 
 - Parts: `button`, `count`, `notch`, `tooltip`, `flyout`.
-- `--jolly-tool-button-size` (`36px`), `--jolly-tool-button-gap` (`6px`).
+- `--jolly-tool-button-size` (`36px`), `--jolly-tool-button-gap` (`6px`),
+  `--jolly-tool-button-radius` (`--jolly-radius-md`). The properties inherit,
+  so a container can set them for every button inside it, as a floating
+  [`jolly-rail`](../containers/rail.md) does.

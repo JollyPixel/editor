@@ -20,6 +20,7 @@ import {
   SubscriptionController
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/rail-group";
 import "@jolly-pixel/ui/elements/slider";
 import "@jolly-pixel/ui/elements/tool-button";
 
@@ -80,7 +81,7 @@ export class OverlayToolbar extends LitElement {
 
     return html`
       <jolly-rail orientation="horizontal" floating role="toolbar" aria-label="Overlays">
-        <div class="group" role="group" aria-label="Overlay">
+        <jolly-rail-group role="group" aria-label="Overlay">
           ${TERRAIN_OVERLAYS.map((option) => html`
             <jolly-tool-button
               data-overlay=${option}
@@ -91,7 +92,7 @@ export class OverlayToolbar extends LitElement {
               @click=${() => settings.update({ overlay: option })}
             ></jolly-tool-button>
           `)}
-        </div>
+        </jolly-rail-group>
         ${overlay === "slope" ? this.#renderWalkableSlope() : nothing}
       </jolly-rail>
     `;
@@ -101,7 +102,7 @@ export class OverlayToolbar extends LitElement {
     const degrees = Math.round(this.#walkableSlope.value);
 
     return html`
-      <div class="group divided" role="group" aria-label="Slope">
+      <jolly-rail-group divided role="group" aria-label="Slope">
         <jolly-tool-button
           data-tool="walkable-slope"
           flyout-side="below"
@@ -119,7 +120,7 @@ export class OverlayToolbar extends LitElement {
             @jolly-change=${this.#walkableSlope.commit}
           ></jolly-slider>
         </jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 }

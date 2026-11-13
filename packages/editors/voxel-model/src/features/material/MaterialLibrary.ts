@@ -23,6 +23,8 @@ import "@jolly-pixel/ui/elements/separator";
 import "@jolly-pixel/ui/elements/slider";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/tree";
+import "@jolly-pixel/ui/elements/message";
+import "@jolly-pixel/ui/elements/fields";
 import {
   MaterialSurface,
   materialFieldLockPath,
@@ -35,7 +37,6 @@ import {
 import { materialLibraryStyles } from "./MaterialLibrary.styles.ts";
 import { presetMenuItems } from "./library/materialIcons.ts";
 import { MenuActions } from "../../shared/menu/MenuActions.ts";
-import "../../shared/actionIcons.ts";
 import type { MaterialAction } from "./library/materialMenu.ts";
 import {
   MaterialLibraryController,
@@ -120,13 +121,13 @@ export class MaterialLibrary extends LitElement {
             @jolly-reparent=${controller.handleReparent}
           ></jolly-tree>
           ${state.nodes.length === 0 ?
-            html`<p class="empty">No materials yet.</p>` :
+            html`<jolly-message>No materials yet.</jolly-message>` :
             nothing}
         </section>
         <section class="editor">
           <div class="scroll">
             ${edited === null ?
-              html`<p class="empty">Pick a material or create one.</p>` :
+              html`<jolly-message>Pick a material or create one.</jolly-message>` :
               this.#renderFields(edited, state.block)}
           </div>
         </section>
@@ -158,7 +159,7 @@ export class MaterialLibrary extends LitElement {
           @click=${this.#tool(null, "new-material")}
         ></jolly-button>
         <jolly-button
-          icon="action-duplicate"
+          icon="duplicate"
           icon-only
           label="Duplicate"
           title="Duplicate material"
@@ -192,7 +193,7 @@ export class MaterialLibrary extends LitElement {
   ): TemplateResult {
     return html`
       ${this.#renderEditors()}
-      <div class="fields">
+      <jolly-fields>
         <jolly-text
           label="Name"
           path=${materialFieldLockPath(edited.id, "name")}
@@ -203,7 +204,7 @@ export class MaterialLibrary extends LitElement {
             event.detail.value
           )}
         ></jolly-text>
-      </div>
+      </jolly-fields>
       ${SURFACE_GROUPS.map((group) => this.#renderGroup(group, edited))}
       ${this.#renderFooter(edited, block)}
     `;
@@ -221,9 +222,9 @@ export class MaterialLibrary extends LitElement {
         ${off ? html`<span slot="actions" class="group-state">Off</span>` : nothing}
       </jolly-separator>
       ${unlit ? html`<p class="note">${UNLIT_NOTE}</p>` : nothing}
-      <div class="fields">
+      <jolly-fields>
         ${group.fields.map((field) => this.#renderField(field, edited))}
-      </div>
+      </jolly-fields>
     `;
   }
 

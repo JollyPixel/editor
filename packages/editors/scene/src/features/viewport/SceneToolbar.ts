@@ -7,6 +7,7 @@ import {
 } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/rail-group";
 import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
@@ -91,7 +92,7 @@ export class SceneToolbar extends LitElement {
     const { undoCount, redoCount } = history.state(SCENE_HISTORY_SCOPE);
 
     return html`
-      <div class="group" role="group" aria-label="History">
+      <jolly-rail-group role="group" aria-label="History">
         <jolly-tool-button
           data-tool="undo"
           icon="undo"
@@ -110,7 +111,7 @@ export class SceneToolbar extends LitElement {
           ?disabled=${redoCount === 0}
           @click=${() => history.redo(SCENE_HISTORY_SCOPE)}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 
@@ -121,7 +122,7 @@ export class SceneToolbar extends LitElement {
     const local = gizmo.space === "local";
 
     return html`
-      <div class="group divided" role="group" aria-label="Gizmo">
+      <jolly-rail-group divided role="group" aria-label="Gizmo">
         ${kModes.map(({ mode, icon, label, action }) => html`
           <jolly-tool-button
             data-tool=${mode}
@@ -134,8 +135,8 @@ export class SceneToolbar extends LitElement {
             }}
           ></jolly-tool-button>
         `)}
-      </div>
-      <div class="group divided" role="group" aria-label="Axes">
+      </jolly-rail-group>
+      <jolly-rail-group divided role="group" aria-label="Axes">
         <jolly-tool-button
           data-tool="space"
           icon=${local ? "gizmo-space-local" : "gizmo-space-world"}
@@ -146,7 +147,7 @@ export class SceneToolbar extends LitElement {
           )}
           @click=${() => gizmo.toggleSpace()}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 
@@ -156,7 +157,7 @@ export class SceneToolbar extends LitElement {
     const { selection, shortcuts } = editing;
 
     return html`
-      <div class="group divided" role="group" aria-label="View">
+      <jolly-rail-group divided role="group" aria-label="View">
         <jolly-tool-button
           data-tool="frame"
           icon="view-frame"
@@ -165,7 +166,7 @@ export class SceneToolbar extends LitElement {
           ?disabled=${selection.ids.length === 0}
           @click=${() => editing.frameSelection()}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 }

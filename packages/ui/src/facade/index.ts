@@ -19,6 +19,7 @@ import "../math/Vector4.ts";
 
 export * from "./Pane.ts";
 export * from "./Dock.ts";
+export * from "./ExamplePane.ts";
 export * from "./Host.ts";
 export * from "./Presence.ts";
 export type {

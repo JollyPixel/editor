@@ -88,7 +88,7 @@ export class HierarchyDuplicateDialog extends EditorDialog<
   protected get frame(): EditorDialogFrame {
     return {
       heading: "Duplicate",
-      icon: "action-duplicate",
+      icon: "duplicate",
       confirmLabel: "Duplicate",
       confirmVariant: "accent",
       confirmDisabled: this.draft.error !== null
