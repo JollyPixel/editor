@@ -1,5 +1,46 @@
 # @jolly-pixel/three
 
+## 6.0.0
+
+### Major Changes
+
+- [#1175](https://github.com/JollyPixel/editor/pull/1175) [`174d961`](https://github.com/JollyPixel/editor/commit/174d9612d9543c5c966a9e4e22783094f017bb83) Thanks [@fraxken](https://github.com/fraxken)! - Move `BakedRoomEnvironment` from `three` to the engine as `Systems.BakedRoomEnvironment`; the engine drops `picomatch`, `reflect-metadata` and `@jolly-pixel/three`, and a decorated `Behavior` subclass no longer adds its properties to its parent class.
+  Breaking: `getActors` and `Logger` patterns only support `*`, `?` and `**` (no braces, classes or extglobs, and `*` matches a leading dot).
+  Breaking: `three` no longer exports `BakedRoomEnvironment`, and `three` and `voxel.renderer` take `three` as a `^0.186.0` peer dependency.
+
+- [#1228](https://github.com/JollyPixel/editor/pull/1228) [`c6ef608`](https://github.com/JollyPixel/editor/commit/c6ef608ea90157cfb2d891c65c3d967ced8c138c) Thanks [@fraxken](https://github.com/fraxken)! - `CameraGizmo` and `LightGizmo` draw flat screen-sized icons, our own frustum (with an orthographic box and an up marker) and light shapes shown only while `selected`; the `"silhouette"` technique outlines groups through the new `HighlightGroupSilhouette`.
+  Breaking: `LightGizmo` takes `selectedColor` instead of `color`, `CameraGizmo`'s `color` is now the idle line color beside a new `selectedColor`, and silhouette `linewidth`/`innerThickness` are now world units on scaled targets.
+
+### Minor Changes
+
+- [#1203](https://github.com/JollyPixel/editor/pull/1203) [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc) Thanks [@fraxken](https://github.com/fraxken)! - Kind handlers can declare a `preview(state)` hook, served by the `catalog:preview` query (`CatalogClient.preview`) and flagged `preview: "server"` on loaded kind descriptors; the built-in texture kind previews browser images up to 2 MiB and is now listed by `ProjectKinds.descriptors()`.
+  Peer profiles accept `observer: true`, set by `toPeerProfileMetadata(identity, { observer })` and left out by `PeerRoster` and `RoomPresenceSource`.
+  Three adds `renderToTarget` and `ReadbackPixels`, which turns a render-target readback into straight-alpha, top-down RGBA.
+
+- [#1140](https://github.com/JollyPixel/editor/pull/1140) [`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `bindOrbitFocus` to the engine (Escape leaves an `OrbitFlyCamera` pivot), and `COMPACT_GIZMO_APPEARANCE` and `createListedColorAllocator` to three. All three move out of the private editor host.
+
+- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files (`SceneFile`, `FileScene`, `SceneInstance`, scene transform helpers, `ComponentDefinitions`), `LightComponent`, `MeshRenderer`, `OrbitFlyCamera.frame()`, `Transform.visibleInHierarchy`, `inferScenePropertyType` and the `render` camera and `properties` behavior options to `engine`; `Actor.name` now follows `object3D.name`. Frames only visit actors with updating components and no longer allocate per actor or component; `sceneManager.actors.updating` lets a host sleep once nothing updates, and a component can start asleep with the `needUpdate` option.
+  Breaking: `Camera.configure()` replaces the camera setters, `sceneManager.actors` (`ActorRegistry`) replaces its actor and component scheduling methods, and `renderStrategy`, `markRenderOrderDirty()` and the `Behavior` property mirror (`getProperty`, `setProperty`, `mergeProperties`, `BehaviorProperties`) are removed.
+  Add `CameraGizmo` and `LightGizmo` to `three`, refusal messages to `history` and `reconcilePeerMarks` to `ui/network`.
+
+- [#1163](https://github.com/JollyPixel/editor/pull/1163) [`5f7d6ec`](https://github.com/JollyPixel/editor/commit/5f7d6ece37213086613de6e79259efff5a7a0718) Thanks [@fraxken](https://github.com/fraxken)! - Add the `doubleSided` option to `Grid`, so the grid stays visible from below.
+
+- [#1211](https://github.com/JollyPixel/editor/pull/1211) [`bda10d6`](https://github.com/JollyPixel/editor/commit/bda10d6064ff87512270d64fa560eaed02595ee4) Thanks [@fraxken](https://github.com/fraxken)! - Add `StudioSky`, `DaySky` and `NightSky` TSL background nodes, moved from the voxel-map editor, and the `SkyConstructor` type.
+
+- [#1135](https://github.com/JollyPixel/editor/pull/1135) [`e6572be`](https://github.com/JollyPixel/editor/commit/e6572beab0d4d5ab208f9f900ccdb0acdee355dc) Thanks [@fraxken](https://github.com/fraxken)! - Add `snap.grid` to `TransformControls`: the grid line offset that makes the translate step round the world position along the gizmo axes, instead of the travelled distance.
+
+- [#1228](https://github.com/JollyPixel/editor/pull/1228) [`d8486de`](https://github.com/JollyPixel/editor/commit/d8486de2c3b6dbd558ab46e3430830ddb6084e19) Thanks [@fraxken](https://github.com/fraxken)! - `TransformControls` gains a live `size` property and the `idleOpacity` and `hideInactive` appearance options, which fade idle handles and hide the other handles during a gesture.
+  Setting `mode` to the current mode no longer ends the active gesture.
+
+### Patch Changes
+
+- [#1184](https://github.com/JollyPixel/editor/pull/1184) [`83370eb`](https://github.com/JollyPixel/editor/commit/83370ebf0f4c9b62195dc895c0759ba469406ace) Thanks [@fraxken](https://github.com/fraxken)! - Silhouette highlights keep one `position` + `color` vertex layout, so a mesh that switches between a box and any other geometry no longer breaks WebGPU rendering.
+
+- [#1232](https://github.com/JollyPixel/editor/pull/1232) [`70b0e15`](https://github.com/JollyPixel/editor/commit/70b0e15d612fa6f9720d81af22e743f51eeebff2) Thanks [@fraxken](https://github.com/fraxken)! - Update three.js to 0.187.0.
+  `BakedRoomEnvironment` now bakes a 64 pixel PMREM cube with 4 mip levels, and `createRenderTarget` returns a `CubeRenderTarget` (generated on the WebGL 2 fallback).
+- Updated dependencies [[`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc), [`033a975`](https://github.com/JollyPixel/editor/commit/033a975db5003d093263c9f9820c0fde7b00ff39), [`d9cb732`](https://github.com/JollyPixel/editor/commit/d9cb7324a3b32509a5e3c9be31f0342bf947053c), [`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35), [`0d95f1f`](https://github.com/JollyPixel/editor/commit/0d95f1f55a3020accd4e947a833aa68960267526), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64), [`9a805e5`](https://github.com/JollyPixel/editor/commit/9a805e5fa847c30d41495bda22051e1aa6ed02f5), [`24991a6`](https://github.com/JollyPixel/editor/commit/24991a6edf1f7230b9268ffa647151ebe52d808e), [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`a89aeb7`](https://github.com/JollyPixel/editor/commit/a89aeb73fa118659494d3d9410dd9135fc39b551), [`5af0632`](https://github.com/JollyPixel/editor/commit/5af0632f9ae65a6005861f839adb4e97d22c209f), [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850), [`d26da53`](https://github.com/JollyPixel/editor/commit/d26da53c969781c9c1c3062f6f0b6df2f5b8ecfa)]:
+  - @jolly-pixel/network@7.0.0
+
 ## 5.0.0
 
 ### Major Changes

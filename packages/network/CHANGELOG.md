@@ -1,5 +1,58 @@
 # @jolly-pixel/network
 
+## 7.0.0
+
+### Major Changes
+
+- [#1195](https://github.com/JollyPixel/editor/pull/1195) [`033a975`](https://github.com/JollyPixel/editor/commit/033a975db5003d093263c9f9820c0fde7b00ff39) Thanks [@fraxken](https://github.com/fraxken)! - Extension sends and `ClientConnection.sendFrame` take `SendOptions { compress }`; WebSocket deflates a binary frame only when it is hinted, replacing `compression.binary`.
+  Asset kinds hint with `compressSnapshot`, `parts.compress` or `binaryCommands(type, { compress })`. `PngPixels.data` is now `Uint8Array`.
+
+- [#1101](https://github.com/JollyPixel/editor/pull/1101) [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64) Thanks [@fraxken](https://github.com/fraxken)! - Rename `KeyedSnapshot` to `KeyedCapture`, stop exporting `KeyedReads`, and rename `CommandDocument.apply` (and `SyncableDocument.apply`) to `applyRemote`.
+  `CommandDocument`, `CommandHistory` and `ChangeReceipts` no longer extend `Emitter`: listen with `on`/`off`/`subscribe` (`subscribe` only on receipts); `emit` is private. `CommandChangeInit` is a union keyed by `origin`.
+
+- [#1193](https://github.com/JollyPixel/editor/pull/1193) [`9a805e5`](https://github.com/JollyPixel/editor/commit/9a805e5fa847c30d41495bda22051e1aa6ed02f5) Thanks [@fraxken](https://github.com/fraxken)! - Envelopes holding a `Uint8Array` travel as binary frames (`bytesSchema`, `encodeFrame`, `decodeFrame`) instead of JSON text; binary frames skip deflate unless `compression.binary` is set.
+  `ClientConnection.sendSerialized(json)` becomes `sendFrame(frame)` and `ClientSocket.send` takes `string | Uint8Array`. `DataChannelPort` sends only binary chunks, so `DataChannelLike.send` takes a `Uint8Array` (and the channel needs `binaryType`), and `chunkLength` (bytes) replaces `frameLength`.
+
+- [#1237](https://github.com/JollyPixel/editor/pull/1237) [`5af0632`](https://github.com/JollyPixel/editor/commit/5af0632f9ae65a6005861f839adb4e97d22c209f) Thanks [@fraxken](https://github.com/fraxken)! - `CapabilityTable` takes a `CapabilityDeclaration` list checked by `defineCapabilities` (names typed by `CapabilityName`), and `AssetKindDescriptor` can declare one.
+  One backend `snapshot` policy covers every kind: `replaceSnapshotPolicy` changes it while the backend runs, `DEFAULT_SNAPSHOT_POLICY` holds its default, and project files drop the old per-kind `snapshot` option.
+  `ProjectFile.replace` writes a record of sections in one write; `jolly-text` gains `suggestions` and `select()`.
+
+### Minor Changes
+
+- [#1231](https://github.com/JollyPixel/editor/pull/1231) [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0) Thanks [@fraxken](https://github.com/fraxken)! - `CatalogClient.connect` accepts an abort `signal`, and `@jolly-pixel/network/client` exports `consoleLogger(target?)` to redirect client logs (e.g. to stderr).
+  `EditableDocumentKind` and history's `LocalEdits` let a client apply raw commands to a synced document; `CommandSync.sendChange` takes the receipts to answer in, `commandUnion` types a command union, and `applyStep`'s `basis` is optional.
+
+- [#1203](https://github.com/JollyPixel/editor/pull/1203) [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc) Thanks [@fraxken](https://github.com/fraxken)! - Kind handlers can declare a `preview(state)` hook, served by the `catalog:preview` query (`CatalogClient.preview`) and flagged `preview: "server"` on loaded kind descriptors; the built-in texture kind previews browser images up to 2 MiB and is now listed by `ProjectKinds.descriptors()`.
+  Peer profiles accept `observer: true`, set by `toPeerProfileMetadata(identity, { observer })` and left out by `PeerRoster` and `RoomPresenceSource`.
+  Three adds `renderToTarget` and `ReadbackPixels`, which turns a render-target readback into straight-alpha, top-down RGBA.
+
+- [#1195](https://github.com/JollyPixel/editor/pull/1195) [`d9cb732`](https://github.com/JollyPixel/editor/commit/d9cb7324a3b32509a5e3c9be31f0342bf947053c) Thanks [@fraxken](https://github.com/fraxken)! - `commandDocumentKind`, `SyncedCommandDocument` and `DocumentSyncClient` take `resolveSnapshot(received, room)` to turn a received snapshot into the loaded value.
+  `binaryCommands(type, { refAbove })` sends larger content as a content ref when `AssetServer.open({ content })` enables them, also to members present on a replace; the previous ref resolves until the next replace. `assetServer.contentHandler` serves refs, and `resolveBinarySnapshot` fetches one or falls back to the room's `inline-snapshot`.
+
+- [#1178](https://github.com/JollyPixel/editor/pull/1178) [`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35) Thanks [@fraxken](https://github.com/fraxken)! - Extensions can declare `queries`, events a member with `read` rights may still send. The catalog adds `CatalogClient.read(assetId)` as such a query.
+  Kind resolution picks the longest matching extension (`AssetPath.matchExtension`), and reconciliation re-creates a `binary` asset once a registered kind claims its path.
+
+- [#1206](https://github.com/JollyPixel/editor/pull/1206) [`24991a6`](https://github.com/JollyPixel/editor/commit/24991a6edf1f7230b9268ffa647151ebe52d808e) Thanks [@fraxken](https://github.com/fraxken)! - `decodeString` decodes a string presence value for `PresenceChannel`.
+
+- [#1231](https://github.com/JollyPixel/editor/pull/1231) [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0) Thanks [@fraxken](https://github.com/fraxken)! - Peers can publish a short activity in their presence (e.g. "Placing trees · 40%"), shown by `jolly-presence-stack` on a second tooltip line.
+
+- [#1231](https://github.com/JollyPixel/editor/pull/1231) [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0) Thanks [@fraxken](https://github.com/fraxken)! - Export `PEER_FIELD_LOCK_KEY` and `parsePeerFieldLock(presence)`, the presence key editors publish a field lock under.
+
+- [#1156](https://github.com/JollyPixel/editor/pull/1156) [`a89aeb7`](https://github.com/JollyPixel/editor/commit/a89aeb73fa118659494d3d9410dd9135fc39b551) Thanks [@fraxken](https://github.com/fraxken)! - Add `AssetLiveProtocol.authorRebases`, which skips the author's correction for kinds whose clients transform edits themselves, and a `reloaded()` hook called before a reload snapshot. `CommandSync` exposes its guarded `resync()` to subclasses.
+
+### Patch Changes
+
+- [#1212](https://github.com/JollyPixel/editor/pull/1212) [`0d95f1f`](https://github.com/JollyPixel/editor/commit/0d95f1f55a3020accd4e947a833aa68960267526) Thanks [@fraxken](https://github.com/fraxken)! - `ClientRoom` accepts up to 32 listeners per event, so an editor with one channel per collaboration concern no longer logs leak warnings.
+
+- [#1234](https://github.com/JollyPixel/editor/pull/1234) [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850) Thanks [@fraxken](https://github.com/fraxken)! - Add `DistributiveOmit`, `DeepReadonly`, `Simplify`, `parseJsonObject`, `wrap`, `roundTo`, `delay`, `yieldToEventLoop`, `withTimeout`, `InFlight` and `sha256Hex` to `@jolly-pixel/utils`.
+  The other packages drop their local copies of these helpers and import them from utils.
+
+- [#1192](https://github.com/JollyPixel/editor/pull/1192) [`d26da53`](https://github.com/JollyPixel/editor/commit/d26da53c969781c9c1c3062f6f0b6df2f5b8ecfa) Thanks [@fraxken](https://github.com/fraxken)! - Add `@jolly-pixel/utils` for shared helpers (`is` guards, `errorMessage`, `clamp`, `formatBytes`, base64, `TaskChain`, `Teardown`/`AsyncTeardown`, and `saveFile` from `@jolly-pixel/utils/dom`).
+  `saveFile` and `formatBytes` move out of `@jolly-pixel/ui`; asset-server inline content that is not valid base64 now throws instead of decoding to garbage bytes.
+- Updated dependencies [[`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64), [`7d1f07d`](https://github.com/JollyPixel/editor/commit/7d1f07da916e2f63622e4d3f49e24a4c4d3742ec), [`8a3c591`](https://github.com/JollyPixel/editor/commit/8a3c591b84dff46454fbad1717421400cad301c5), [`f5350de`](https://github.com/JollyPixel/editor/commit/f5350de576d82af8592928a4456f43702befff26), [`a2e6a27`](https://github.com/JollyPixel/editor/commit/a2e6a27dc11dedbd444ea7698158f320f1cb4402), [`f998437`](https://github.com/JollyPixel/editor/commit/f998437cc19077ec578beaf254cc826407e378f5), [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850), [`974ed36`](https://github.com/JollyPixel/editor/commit/974ed36053e2e6aab2a71cbc7e47e3e0fcb77f58)]:
+  - @jolly-pixel/history@3.0.0
+  - @jolly-pixel/utils@1.1.0
+
 ## 6.0.0
 
 ### Major Changes
