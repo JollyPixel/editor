@@ -10,7 +10,7 @@ import {
   type StorageAdapter
 } from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
-import { clamp, is } from "@jolly-pixel/utils";
+import { clamp, parseJsonObject } from "@jolly-pixel/utils";
 
 // CONSTANTS
 const kStorageKey = "terrain:view";
@@ -33,7 +33,8 @@ export class OverlaySettings extends Emitter<OverlaySettingsEvents> {
   static parse(
     raw: string | null
   ): Readonly<OverlayOptions> {
-    const stored = parseObject(raw);
+    const stored: Partial<Record<keyof OverlayOptions, unknown>> =
+      parseJsonObject(raw);
     const slope = stored.walkableSlope;
 
     return Object.freeze({
@@ -71,18 +72,5 @@ export class OverlaySettings extends Emitter<OverlaySettingsEvents> {
     this.#options = next;
     this.#storage.set(kStorageKey, JSON.stringify(next));
     this.emit("change", next);
-  }
-}
-
-function parseObject(
-  raw: string | null
-): Partial<Record<keyof OverlayOptions, unknown>> {
-  try {
-    const value: unknown = raw === null ? null : JSON.parse(raw);
-
-    return is.plainObject(value) ? value : {};
-  }
-  catch {
-    return {};
   }
 }

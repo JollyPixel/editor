@@ -5,6 +5,9 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { sha256Hex } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import {
   ASSET_CREATED,
@@ -15,7 +18,6 @@ import {
   parseAssetEvent,
   writeData
 } from "#src/index.ts";
-import { contentHash } from "#src/common/contentHash.ts";
 import { bytes } from "../../helpers/bytes.ts";
 import { assetEvent } from "../../helpers/events.ts";
 
@@ -257,7 +259,7 @@ describe("writeData", () => {
 
     assert.deepEqual(result.content.data, new Uint8Array([1, 2]));
     assert.equal(result.size, 2);
-    assert.equal(result.hash, await contentHash(new Uint8Array([1, 2])));
+    assert.equal(result.hash, await sha256Hex(new Uint8Array([1, 2])));
     assert.deepEqual(result.dependencies, [{ id: "original", kind: "binary" }]);
   });
 });

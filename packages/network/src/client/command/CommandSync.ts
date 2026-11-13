@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import type { ChangeReceipts } from "@jolly-pixel/history";
+import type { DistributiveOmit } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { Room } from "../Room.ts";
@@ -28,9 +29,7 @@ export type {
 };
 
 export type CommandBody<TCommand extends NetworkCommandHeader> =
-  TCommand extends unknown ?
-    Omit<TCommand, keyof NetworkCommandHeader> :
-    never;
+  DistributiveOmit<TCommand, keyof NetworkCommandHeader>;
 
 type SyncMessageType = NetworkSyncMessage<unknown, unknown>["type"];
 

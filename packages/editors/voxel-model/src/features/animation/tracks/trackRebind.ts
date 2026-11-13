@@ -11,7 +11,7 @@ export function rebindMenu(
   path: string
 ): MenuSession {
   const { tree } = document;
-  const options = [...tree.blocks()].map(({ id }) => {
+  const options = [...tree.nodes.blocks()].map(({ id }) => {
     const target = buildBlockPath(tree, id);
 
     return { label: target, value: target };

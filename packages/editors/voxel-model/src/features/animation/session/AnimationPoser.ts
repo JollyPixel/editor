@@ -50,7 +50,7 @@ export class AnimationPoser {
     blockId: string
   ): BlockTransformJSON | undefined {
     return this.#poses().get(blockId) ??
-      this.#options.document.tree.block(blockId)?.transform;
+      this.#options.document.tree.nodes.block(blockId)?.transform;
   }
 
   reset(
@@ -99,7 +99,7 @@ export class AnimationPoser {
     const { tree } = this.#options.document;
     const samples = posed.sampler.sample(tick);
     for (const [path, blockId] of posed.bound) {
-      const rest = tree.block(blockId)?.transform;
+      const rest = tree.nodes.block(blockId)?.transform;
       const sample = samples.get(path);
       if (rest !== undefined && sample !== undefined) {
         poses.set(blockId, new BlockTransform(rest).pose(sample));
@@ -114,7 +114,7 @@ export class AnimationPoser {
   ): void {
     const { document, blocks, requestFrame } = this.#options;
     for (const blockId of this.#posed) {
-      const rest = document.tree.block(blockId)?.transform;
+      const rest = document.tree.nodes.block(blockId)?.transform;
       if (!poses.has(blockId) && rest !== undefined) {
         blocks.applyTransform(blockId, rest);
       }

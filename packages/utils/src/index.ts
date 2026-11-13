@@ -1,8 +1,14 @@
 export * as is from "./is.ts";
+export type * from "./types.ts";
 export * from "./error.ts";
+export * from "./json.ts";
 export * from "./number.ts";
 export * from "./path.ts";
-export * from "./base64.ts";
-export * from "./TaskChain.ts";
-export * from "./Teardown.ts";
-export * from "./AsyncTeardown.ts";
+export * from "./bytes/base64.ts";
+export * from "./bytes/hash.ts";
+export * from "./async/TaskChain.ts";
+export * from "./async/InFlight.ts";
+export * from "./async/delay.ts";
+export * from "./async/withTimeout.ts";
+export * from "./teardown/Teardown.ts";
+export * from "./teardown/AsyncTeardown.ts";

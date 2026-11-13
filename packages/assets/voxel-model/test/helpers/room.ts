@@ -5,10 +5,8 @@ import {
 } from "@jolly-pixel/asset-server/testing";
 
 // Import Internal Dependencies
-import type {
-  VoxelModelNetworkCommand,
-  VoxelModelSnapshot
-} from "#src/network/types.ts";
+import type { VoxelModelSnapshot } from "#src/model/types.ts";
+import type { VoxelModelNetworkCommand } from "#src/network/types.ts";
 
 export interface MockRoom extends MockAssetRoom<VoxelModelNetworkCommand, VoxelModelSnapshot> {
   deliverCommand(command: VoxelModelNetworkCommand): void;

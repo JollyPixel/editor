@@ -41,6 +41,7 @@ describe("AssetLoaderRegistry", () => {
     const registry = new AssetLoaderRegistry();
 
     assert.equal(registry.has(kTextAsset), false);
+    assert.equal(registry.find(kTextAsset), undefined);
     assert.throws(
       () => registry.get(kTextAsset),
       AssetLoaderNotFoundError
@@ -53,6 +54,10 @@ describe("AssetLoaderRegistry", () => {
     const otherToken = new AssetType<number>("text");
 
     assert.equal(registry.has(otherToken), false);
+    assert.throws(
+      () => registry.find(otherToken),
+      AssetTypeMismatchError
+    );
     assert.throws(
       () => registry.get(otherToken),
       AssetTypeMismatchError

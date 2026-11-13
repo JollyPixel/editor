@@ -18,7 +18,7 @@ describe("timelineRows", () => {
       interpolation: "step"
     });
     const { tree } = model.document;
-    const clip = model.set.set.clip(model.clipId)!;
+    const clip = model.set.set.clip(model.clipId)!.toJSON();
     const link = tree.animationSets.get("walk")!;
 
     assert.deepEqual(timelineRows(tree, clip, link, model.ids.body), [
@@ -47,7 +47,7 @@ describe("timelineRows", () => {
     });
     document.remapAnimationTrack("walk", "Body/Arm", null);
     function unbound() {
-      const clip = model.set.set.clip(model.clipId)!;
+      const clip = model.set.set.clip(model.clipId)!.toJSON();
 
       return unboundTimelineRows(document.tree, clip, document.tree.animationSets.get("walk")!);
     }

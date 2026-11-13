@@ -1,5 +1,4 @@
 export * from "./types.ts";
-export * from "./VoxelModelCommandKeys.ts";
 export * from "./presenceKeys.ts";
 export * from "./voxelModelDocumentKind.ts";
 export * from "../model/index.ts";

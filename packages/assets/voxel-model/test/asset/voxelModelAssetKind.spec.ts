@@ -17,6 +17,7 @@ import {
   VoxelModelState
 } from "#src/asset/voxelModelAssetKind.ts";
 import { BlockUvLayouts } from "#src/model/nodes/BlockUvLayouts.ts";
+import { voxelModelCommandSchema } from "#src/network/VoxelModelCommand.schema.ts";
 import {
   blockAdded,
   folderAdded,
@@ -241,6 +242,23 @@ describe("voxelModelAssetKind", () => {
     assert.deepEqual(state.snapshot().animationSets, [
       { id: "walk-copy", kind: "voxelanimation", bindings: [] }
     ]);
+  });
+
+  test("upcasts a stored block added before shape and flip were required", () => {
+    const { commands } = voxelModelAssetKind();
+    const { flipAxes: _flipAxes, shape: _shape, ...legacy } = blockNode("old");
+    const plane = {
+      ...blockNode("plane"),
+      shape: { type: "plane" as const }
+    };
+    const state = new VoxelModelState();
+
+    for (const node of [legacy, plane]) {
+      const upcast = commands?.upcast?.({ action: "node-added", node });
+      state.applyCommand(voxelModelCommandSchema.parse(upcast));
+    }
+
+    assert.deepEqual(state.snapshot().nodes, [blockNode("old"), plane]);
   });
 
   test("declares its kind and claims .voxelmodel.json paths", () => {

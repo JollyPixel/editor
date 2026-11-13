@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   KeyedGuard,
+  type CommandChange,
   type HistoryKeys,
   type KeyedGuardEntry
 } from "@jolly-pixel/history";
@@ -8,21 +9,19 @@ import {
 // Import Internal Dependencies
 import {
   MODEL_ENTRY_TREES,
-  selectEntryTree,
+  entryTree,
   findEntrySlot,
+  modelFootprint,
   removedEntry,
   type EntryRef
-} from "./modelCommands.ts";
-import type { ModelChange } from "../ModelDocument.ts";
-import type { ModelImage } from "./modelImages.ts";
-import type { ModelTreeReader } from "../ModelTree.ts";
-import type { VoxelModelCommand } from "../../network/types.ts";
+} from "../command/modelCommands.ts";
+import type { ModelCollections } from "../command/ModelCollections.ts";
+import type { ModelImage } from "../command/modelImages.ts";
 import {
-  modelConflictRefs,
   modelValueKey,
-  voxelModelConflictKeys,
-  type ModelValueRef
-} from "../../network/VoxelModelCommandKeys.ts";
+  readModelValue
+} from "../command/ModelValueRef.ts";
+import type { VoxelModelCommand } from "../types.ts";
 
 // CONSTANTS
 const kSubtreeKeyPrefixes = {
@@ -31,64 +30,27 @@ const kSubtreeKeyPrefixes = {
 } as const;
 
 export function modelHistoryKeys(
-  tree: ModelTreeReader
+  tree: ModelCollections
 ): HistoryKeys<VoxelModelCommand, ModelImage> {
   return {
     written: (change) => [
-      ...voxelModelConflictKeys(change.command),
+      ...modelFootprint(change.command).conflicts.map(modelValueKey),
       ...collectContainerKeys(tree, change)
     ],
     guard: (commands) => new KeyedGuard(commands.flatMap((command) => [
-      ...modelConflictRefs(command).map((ref) => createValueGuard(tree, ref)),
+      ...modelFootprint(command).conflicts.map((ref): KeyedGuardEntry => {
+        return {
+          key: modelValueKey(ref),
+          read: () => readModelValue(tree, ref)
+        };
+      }),
       ...removedSubtreeGuards(tree, command)
     ]))
   };
 }
 
-function createValueGuard(
-  tree: ModelTreeReader,
-  ref: ModelValueRef
-): KeyedGuardEntry {
-  return {
-    key: modelValueKey(ref),
-    read: () => valueOf(tree, ref)
-  };
-}
-
-function valueOf(
-  tree: ModelTreeReader,
-  ref: ModelValueRef
-): unknown {
-  switch (ref.kind) {
-    case "name":
-      return tree.get(ref.id)?.name;
-    case "parent":
-      return tree.get(ref.id)?.parentId;
-    case "transform":
-      return tree.block(ref.id)?.transform;
-    case "flip":
-      return tree.block(ref.id)?.flipAxes;
-    case "uv":
-      return tree.block(ref.id)?.uv;
-    case "shape":
-      return tree.block(ref.id)?.shape;
-    case "material":
-      return tree.blockMaterialId(ref.id);
-    case "material-name":
-      return tree.materials.get(ref.id)?.name;
-    case "material-parent":
-      return tree.materials.get(ref.id)?.parentId;
-    case "material-surface":
-      return Reflect.get(tree.materials.material(ref.id)?.surface ?? {}, ref.field);
-    case "animation-own":
-      return tree.animationSets.get(ref.id)?.own === true;
-    case "animation-binding":
-      return tree.animationSets.binding(ref.id, ref.path);
-  }
-}
-
 function removedSubtreeGuards(
-  tree: ModelTreeReader,
+  tree: ModelCollections,
   command: VoxelModelCommand
 ): KeyedGuardEntry[] {
   const removed = removedEntry(command);
@@ -99,7 +61,7 @@ function removedSubtreeGuards(
   return [{
     key: subtreeKey(removed),
     read: () => {
-      const entries = selectEntryTree(tree, removed.which);
+      const entries = entryTree(tree, removed.which);
 
       return entries.get(removed.id) === undefined ? undefined : entries.subtreeFrom(removed.id);
     }
@@ -107,20 +69,20 @@ function removedSubtreeGuards(
 }
 
 function collectContainerKeys(
-  tree: ModelTreeReader,
-  change: ModelChange
+  tree: ModelCollections,
+  change: CommandChange<VoxelModelCommand, ModelImage>
 ): string[] {
   const { command, image: { before } } = change;
   const slot = findEntrySlot(command);
   const keys = MODEL_ENTRY_TREES.flatMap((which) => {
-    const entries = selectEntryTree(tree, which);
+    const entries = entryTree(tree, which);
     const parents = [
       ...before[which].map(({ parentId }) => parentId),
       ...slot?.which === which ? [slot.parentId] : []
     ];
 
     return parents
-      .flatMap((parentId) => ancestorChain(parentId, (id) => entries.get(id)?.parentId ?? null))
+      .flatMap((parentId) => (parentId === null ? [] : [parentId, ...entries.ancestorIds(parentId)]))
       .map((id) => subtreeKey({ which, id }));
   });
 
@@ -131,16 +93,4 @@ function subtreeKey(
   entry: EntryRef
 ): string {
   return `${kSubtreeKeyPrefixes[entry.which]}:${entry.id}`;
-}
-
-function ancestorChain(
-  id: string | null,
-  parentOf: (id: string) => string | null
-): string[] {
-  const chain: string[] = [];
-  for (let current = id; current !== null && !chain.includes(current); current = parentOf(current)) {
-    chain.push(current);
-  }
-
-  return chain;
 }

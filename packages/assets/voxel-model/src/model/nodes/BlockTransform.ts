@@ -2,18 +2,11 @@
 import type { AnimationSample } from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
-import type {
-  BlockTransformJSON,
-  MirrorAxes,
-  Vector3JSON
-} from "../../network/types.ts";
+import type { BlockTransformJSON } from "../types.ts";
+import { blockTransformSchema } from "../VoxelModel.schema.ts";
+import { Vector3 } from "./Vector3.ts";
 
 // CONSTANTS
-export const NO_FLIP: Readonly<MirrorAxes> = Object.freeze({
-  x: false,
-  y: false,
-  z: false
-});
 const kDegreesToRadians = Math.PI / 180;
 const kTransformKeys = [
   "position",
@@ -27,7 +20,7 @@ export class BlockTransform {
   static create(
     overrides: Partial<BlockTransformJSON> = {}
   ): BlockTransformJSON {
-    return cloneTransform({
+    return BlockTransform.#clone({
       position: { x: 0, y: 0, z: 0 },
       pivotOffset: { x: 0, y: 0, z: 0 },
       size: { x: 1, y: 1, z: 1 },
@@ -44,7 +37,7 @@ export class BlockTransform {
 
     return Object.fromEntries(
       kTransformKeys
-        .filter((key) => !sameVector(transform[key], identity[key]))
+        .filter((key) => !Vector3.same(transform[key], identity[key]))
         .map((key) => [key, { ...transform[key] }])
     );
   }
@@ -52,21 +45,21 @@ export class BlockTransform {
   static parse(
     value: unknown
   ): BlockTransformJSON | undefined {
-    if (typeof value !== "object" || value === null) {
-      return undefined;
-    }
+    const result = blockTransformSchema.safeParse(value);
 
-    const [position, pivotOffset, size, scale, rotation] = kTransformKeys.map(
-      (key) => parseVector3(Reflect.get(value, key))
-    );
+    return result.success ? result.data : undefined;
+  }
 
-    return (
-      position === undefined ||
-      pivotOffset === undefined ||
-      size === undefined ||
-      scale === undefined ||
-      rotation === undefined
-    ) ? undefined : { position, pivotOffset, size, scale, rotation };
+  static #clone(
+    transform: BlockTransformJSON
+  ): BlockTransformJSON {
+    return {
+      position: { ...transform.position },
+      pivotOffset: { ...transform.pivotOffset },
+      size: { ...transform.size },
+      scale: { ...transform.scale },
+      rotation: { ...transform.rotation }
+    };
   }
 
   readonly #rest: BlockTransformJSON;
@@ -74,7 +67,7 @@ export class BlockTransform {
   constructor(
     rest: BlockTransformJSON
   ) {
-    this.#rest = cloneTransform(rest);
+    this.#rest = BlockTransform.#clone(rest);
   }
 
   pose(
@@ -86,13 +79,13 @@ export class BlockTransform {
       ...rest,
       position: sample.position === undefined ?
         rest.position :
-        combine(rest.position, sample.position, (base, delta) => base + delta),
+        Vector3.combine(rest.position, sample.position, (base, delta) => base + delta),
       rotation: sample.rotation === undefined ?
         rest.rotation :
-        combine(rest.rotation, sample.rotation, (base, delta) => base + (delta * kDegreesToRadians)),
+        Vector3.combine(rest.rotation, sample.rotation, (base, delta) => base + (delta * kDegreesToRadians)),
       scale: sample.scale === undefined ?
         rest.scale :
-        combine(rest.scale, sample.scale, (base, factor) => base * factor)
+        Vector3.combine(rest.scale, sample.scale, (base, factor) => base * factor)
     };
   }
 
@@ -102,60 +95,17 @@ export class BlockTransform {
     const rest = this.#rest;
 
     return {
-      position: combine(pose.position, rest.position, (posed, base) => posed - base),
-      rotation: combine(pose.rotation, rest.rotation, (posed, base) => (posed - base) / kDegreesToRadians),
-      scale: combine(pose.scale, rest.scale, (posed, base) => (base === 0 ? 1 : posed / base))
+      position: Vector3.combine(pose.position, rest.position, (posed, base) => posed - base),
+      rotation: Vector3.combine(
+        pose.rotation,
+        rest.rotation,
+        (posed, base) => (posed - base) / kDegreesToRadians
+      ),
+      scale: Vector3.combine(pose.scale, rest.scale, (posed, base) => (base === 0 ? 1 : posed / base))
     };
   }
 
   toJSON(): BlockTransformJSON {
-    return cloneTransform(this.#rest);
+    return BlockTransform.#clone(this.#rest);
   }
-}
-
-function cloneTransform(
-  transform: BlockTransformJSON
-): BlockTransformJSON {
-  return {
-    position: { ...transform.position },
-    pivotOffset: { ...transform.pivotOffset },
-    size: { ...transform.size },
-    scale: { ...transform.scale },
-    rotation: { ...transform.rotation }
-  };
-}
-
-function parseVector3(
-  value: unknown
-): Vector3JSON | undefined {
-  if (typeof value !== "object" || value === null) {
-    return undefined;
-  }
-
-  const x: unknown = Reflect.get(value, "x");
-  const y: unknown = Reflect.get(value, "y");
-  const z: unknown = Reflect.get(value, "z");
-
-  return typeof x === "number" && typeof y === "number" && typeof z === "number" ?
-    { x, y, z } :
-    undefined;
-}
-
-function sameVector(
-  left: Vector3JSON,
-  right: Vector3JSON
-): boolean {
-  return left.x === right.x && left.y === right.y && left.z === right.z;
-}
-
-function combine(
-  base: Vector3JSON,
-  delta: Vector3JSON,
-  merge: (base: number, delta: number) => number
-): Vector3JSON {
-  return {
-    x: merge(base.x, delta.x),
-    y: merge(base.y, delta.y),
-    z: merge(base.z, delta.z)
-  };
 }

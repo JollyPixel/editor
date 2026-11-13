@@ -6,7 +6,7 @@ import * as z from "zod/mini";
 import type {
   MaterialSurfaceJSON,
   MaterialSurfacePatchJSON
-} from "../../network/types.ts";
+} from "../types.ts";
 
 type SurfaceFieldSchema =
   | { readonly type: "string"; readonly pattern: string; }
@@ -47,7 +47,7 @@ const kDefaultSurface: MaterialSurfaceJSON = {
   opacity: 1,
   roughness: 1,
   metalness: 0,
-  emissive: "#000000",
+  emissive: kNoEmissive,
   emissiveIntensity: 1
 };
 const kHexColorField = z.string().check(
@@ -88,16 +88,20 @@ export class MaterialSurface {
     };
   }
 
-  static isValid(
+  static parse(
     value: unknown
-  ): value is MaterialSurfaceJSON {
-    return materialSurfaceSchema.safeParse(value).success;
+  ): MaterialSurfaceJSON | undefined {
+    const result = materialSurfaceSchema.safeParse(value);
+
+    return result.success ? result.data : undefined;
   }
 
-  static isPatch(
+  static parsePatch(
     value: unknown
-  ): value is MaterialSurfacePatchJSON {
-    return materialSurfacePatchSchema.safeParse(value).success;
+  ): MaterialSurfacePatchJSON | undefined {
+    const result = materialSurfacePatchSchema.safeParse(value);
+
+    return result.success ? result.data : undefined;
   }
 
   static glows(
@@ -111,10 +115,6 @@ export class MaterialSurface {
   constructor(
     surface: MaterialSurfaceJSON
   ) {
-    if (!MaterialSurface.isValid(surface)) {
-      throw new RangeError(`Invalid material surface: ${JSON.stringify(surface)}`);
-    }
-
     this.#surface = { ...surface };
   }
 

@@ -41,6 +41,8 @@ export function torsoSnapshot(
         parentId: null,
         name: "Torso",
         transform: BlockTransform.create(),
+        flipAxes: { x: false, y: false, z: false },
+        shape: { type: "box" },
         uv
       }
     ],

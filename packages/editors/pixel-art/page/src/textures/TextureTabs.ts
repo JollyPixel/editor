@@ -17,6 +17,7 @@ import type {
   AssetLease,
   EditorSession
 } from "@jolly-pixel/editor.host";
+import { delay } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -198,20 +199,4 @@ function documentFromCanvas(
       region.toJSON()
     ]
   };
-}
-
-function delay(
-  milliseconds: number
-): Promise<void> {
-  if (milliseconds <= 0) {
-    return Promise.resolve();
-  }
-
-  const {
-    promise,
-    resolve
-  } = Promise.withResolvers<void>();
-  window.setTimeout(resolve, milliseconds);
-
-  return promise;
 }

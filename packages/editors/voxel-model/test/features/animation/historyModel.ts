@@ -50,6 +50,7 @@ export function createHistoryModel(
       label,
       () => model.set.writeKey(target.clipId, "Body/Arm", "position", HISTORY_KEY)
     ),
-    toKey: (clipId: string) => model.set.set.keyAt(clipId, "Body/Arm", "position", HISTORY_KEY.tick)?.value.x
+    toKey: (clipId: string) => model.set.set.clip(clipId)
+      ?.keyAt("Body/Arm", "position", HISTORY_KEY.tick)?.value.x
   };
 }

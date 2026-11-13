@@ -26,8 +26,8 @@
   `<Module>.schema.ts` only when other modules import it as a message or
   stored format, or when `./client` needs the module's constants without
   building its schemas.
-- `Immutable` leaves `Uint8Array` mutable, like `Infer` in network. Byte
-  payload rules are in `packages/network/AGENTS.md`.
+- `DeepReadonly` from `@jolly-pixel/utils` leaves `Uint8Array` mutable, like
+  `Infer` in network. Byte payload rules are in `packages/network/AGENTS.md`.
 
 ## State directory
 

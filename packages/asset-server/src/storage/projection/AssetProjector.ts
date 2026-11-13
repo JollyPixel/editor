@@ -4,6 +4,7 @@ import type { AssetSource } from "@jolly-pixel/asset-source";
 import { Emitter } from "@openally/emitt";
 import {
   asError,
+  sha256Hex,
   TaskChain
 } from "@jolly-pixel/utils";
 
@@ -28,7 +29,6 @@ import type { ProjectionState } from "./ProjectionState.ts";
 import type { AssetBackups } from "../AssetBackups.ts";
 import type { AssetPartFiles } from "../AssetPartFiles.ts";
 import { AssetPartContents } from "../../model/events/AssetPartContents.ts";
-import { contentHash } from "../../common/contentHash.ts";
 
 // CONSTANTS
 const kStateSaveDelayMs = 1_000;
@@ -483,7 +483,7 @@ export class AssetProjector extends Emitter<
     }
 
     const data = await this.#source.read(path);
-    const hash = await contentHash(data);
+    const hash = await sha256Hex(data);
     if (knownHashes.includes(hash)) {
       return;
     }

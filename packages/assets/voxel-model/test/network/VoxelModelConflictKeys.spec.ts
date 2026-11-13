@@ -6,11 +6,10 @@ import assert from "node:assert/strict";
 import { KeyedCommandArbiter } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { voxelModelConflictKeys } from "#src/network/VoxelModelCommandKeys.ts";
-import type {
-  VoxelModelCommand,
-  VoxelModelNetworkCommand
-} from "#src/network/types.ts";
+import { modelFootprint } from "#src/model/command/modelCommands.ts";
+import { modelValueKey } from "#src/model/command/ModelValueRef.ts";
+import type { VoxelModelCommand } from "#src/model/types.ts";
+import type { VoxelModelNetworkCommand } from "#src/network/types.ts";
 import { TRANSFORM, networkCommand } from "../helpers/commands.ts";
 
 interface ArbiterState {
@@ -28,7 +27,7 @@ function conflictArbiter(): ConflictArbiter {
   return new KeyedCommandArbiter<VoxelModelNetworkCommand, ArbiterState>({
     accepts: (state, command) => state.accepts(command),
     writes: (command) => {
-      return { keys: voxelModelConflictKeys(command) };
+      return { keys: modelFootprint(command).conflicts.map(modelValueKey) };
     }
   });
 }

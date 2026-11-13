@@ -13,7 +13,7 @@ import {
   voxelModelAssetKind,
   type ModelDocument
 } from "#src/index.ts";
-import type { VoxelModelSnapshot } from "#src/network/types.ts";
+import type { VoxelModelSnapshot } from "#src/model/types.ts";
 import { voxelModelDocumentKind } from "#src/network/voxelModelDocumentKind.ts";
 import {
   TRANSFORM,
@@ -34,7 +34,7 @@ function takeSnapshot(
   document: ModelDocument
 ) {
   return {
-    nodes: [...document.tree.values()],
+    nodes: [...document.tree.nodes.values()],
     materials: [...document.tree.materials.values()],
     animationSets: [...document.tree.animationSets.values()]
   };
@@ -85,7 +85,7 @@ describe("voxel-model convergence", () => {
     deliver();
 
     assert.deepStrictEqual(nodeIds(server.state.snapshot().nodes), ["K"]);
-    assert.deepStrictEqual(nodeIds(document.tree.values()), ["K"]);
+    assert.deepStrictEqual(nodeIds(document.tree.nodes.values()), ["K"]);
   });
 
   test("a rebased pending removal keeps the server sibling order", async() => {
@@ -98,7 +98,7 @@ describe("voxel-model convergence", () => {
     deliver();
 
     assert.deepStrictEqual(
-      [...document.tree.values()],
+      [...document.tree.nodes.values()],
       server.state.snapshot().nodes
     );
   });
@@ -113,7 +113,7 @@ describe("voxel-model convergence", () => {
     deliver();
 
     assert.deepStrictEqual(
-      [...document.tree.values()],
+      [...document.tree.nodes.values()],
       server.state.snapshot().nodes
     );
   });
@@ -134,7 +134,7 @@ describe("voxel-model convergence", () => {
     deliver();
 
     assert.deepStrictEqual(
-      [...document.tree.values()],
+      [...document.tree.nodes.values()],
       server.state.snapshot().nodes
     );
   });
@@ -145,14 +145,14 @@ describe("voxel-model convergence", () => {
     document.move("M", "N");
     await server.receive("A", networkCommand({ action: "node-removed", id: "N" }, { clientId: "A" }));
     deliver();
-    assert.deepStrictEqual(nodeIds(document.tree.values()), ["K", "M"]);
-    assert.strictEqual(document.tree.get("M")?.parentId, null);
+    assert.deepStrictEqual(nodeIds(document.tree.nodes.values()), ["K", "M"]);
+    assert.strictEqual(document.tree.nodes.get("M")?.parentId, null);
 
     await flush();
     deliver();
 
     assert.deepStrictEqual(
-      [...document.tree.values()],
+      [...document.tree.nodes.values()],
       server.state.snapshot().nodes
     );
   });
@@ -173,9 +173,9 @@ describe("voxel-model convergence", () => {
     await flush();
     deliver();
 
-    assert.deepStrictEqual(document.tree.block("M")?.transform, moved);
+    assert.deepStrictEqual(document.tree.nodes.block("M")?.transform, moved);
     assert.deepStrictEqual(
-      [...document.tree.values()],
+      [...document.tree.nodes.values()],
       server.state.snapshot().nodes
     );
   });
@@ -197,7 +197,7 @@ describe("voxel-model convergence", () => {
 
     assert.strictEqual(document.tree.materials.has("glass"), false);
     assert.strictEqual(document.tree.materials.has("iron"), true);
-    assert.strictEqual(document.tree.blockMaterialId("M"), undefined);
+    assert.strictEqual(document.tree.nodes.blockMaterialId("M"), undefined);
 
     await flush();
     deliver();

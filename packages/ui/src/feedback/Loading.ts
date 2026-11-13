@@ -9,6 +9,7 @@ import {
   property,
   state
 } from "lit/decorators.js";
+import { delay } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { JOLLY_PIXEL_LOGO } from "./JollyPixelLogo.ts";
@@ -83,10 +84,10 @@ export class Loading extends LitElement {
     }
     this.progress = this.maxProgress;
     await this.updateComplete;
-    await waitForAnimation(kProgressAnimationDurationMs);
+    await delay(kProgressAnimationDurationMs);
 
     this.completed = true;
-    await waitForAnimation(kFadeOutDurationMs);
+    await delay(kFadeOutDurationMs);
 
     this.remove();
     callback?.();
@@ -109,7 +110,7 @@ export class Loading extends LitElement {
 
   async dismiss(): Promise<void> {
     this.completed = true;
-    await waitForAnimation(kFadeOutDurationMs);
+    await delay(kFadeOutDurationMs);
     this.remove();
   }
 
@@ -177,18 +178,6 @@ export class Loading extends LitElement {
       >Dismiss</button>
     `;
   }
-}
-
-function waitForAnimation(
-  duration: number
-): Promise<void> {
-  const {
-    promise,
-    resolve
-  } = Promise.withResolvers<void>();
-  window.setTimeout(resolve, duration);
-
-  return promise;
 }
 
 declare global {

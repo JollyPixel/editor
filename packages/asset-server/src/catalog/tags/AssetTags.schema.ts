@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import type { Infer } from "@jolly-pixel/network";
 import * as z from "zod/mini";
+import type { DeepReadonly } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { assetReferenceSchema } from "../../model/events/AssetEvents.schema.ts";
-import type { Immutable } from "../../common/types.ts";
 import {
   TAG_NAME_MAX_LENGTH,
   TAG_NAME_PATTERN
@@ -61,6 +61,6 @@ export const replaceReportSchema = z.object({
   restorePoint: z.optional(assetTagSchema)
 });
 
-export type AssetTag = Immutable<Infer<typeof assetTagSchema>>;
-export type ReplaceReport = Immutable<Infer<typeof replaceReportSchema>>;
-export type RestoreReport = Immutable<Infer<typeof restoreReportSchema>>;
+export type AssetTag = DeepReadonly<Infer<typeof assetTagSchema>>;
+export type ReplaceReport = DeepReadonly<Infer<typeof replaceReportSchema>>;
+export type RestoreReport = DeepReadonly<Infer<typeof restoreReportSchema>>;

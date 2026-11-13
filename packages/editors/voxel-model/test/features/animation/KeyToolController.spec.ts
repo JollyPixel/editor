@@ -23,7 +23,7 @@ function createKeyTool() {
   model.tab.activate("animate");
   const arm = {
     uuid: model.ids.arm,
-    transform: model.document.tree.block(model.ids.arm)!.transform
+    transform: model.document.tree.nodes.block(model.ids.arm)!.transform
   };
   const keyBindings = new KeyBindingSettings({
     defaults: MODEL_KEY_BINDINGS

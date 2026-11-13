@@ -4,6 +4,7 @@ import type {
   AnimationKeyJSON,
   Vector3JSON
 } from "../../network/types.ts";
+import { roundKeyValue } from "../values/keyValue.ts";
 
 // CONSTANTS
 const kEasings: Record<AnimationInterpolation, (progress: number) => number> = {
@@ -28,7 +29,37 @@ export class KeyCurve {
       throw new RangeError("Key ticks must strictly rise");
     }
 
-    this.#keys = structuredClone(keys);
+    this.#keys = keys.map(roundKey);
+  }
+
+  get isEmpty(): boolean {
+    return this.#keys.length === 0;
+  }
+
+  at(
+    tick: number
+  ): AnimationKeyJSON | undefined {
+    const key = this.#keys.find((candidate) => candidate.tick === tick);
+
+    return key === undefined ? undefined : copyKey(key);
+  }
+
+  with(
+    key: AnimationKeyJSON
+  ): KeyCurve {
+    const keys = this.#keys.filter(({ tick }) => tick !== key.tick);
+    const index = keys.findIndex(({ tick }) => tick > key.tick);
+    keys.splice(index === -1 ? keys.length : index, 0, key);
+
+    return new KeyCurve(keys);
+  }
+
+  without(
+    tick: number
+  ): KeyCurve {
+    const keys = this.#keys.filter((key) => key.tick !== tick);
+
+    return keys.length === this.#keys.length ? this : new KeyCurve(keys);
   }
 
   sample(
@@ -58,6 +89,10 @@ export class KeyCurve {
     };
   }
 
+  toJSON(): AnimationKeyJSON[] {
+    return this.#keys.map(copyKey);
+  }
+
   #firstAfter(
     tick: number
   ): number {
@@ -75,4 +110,22 @@ export class KeyCurve {
 
     return low;
   }
+}
+
+function roundKey(
+  key: AnimationKeyJSON
+): AnimationKeyJSON {
+  return {
+    ...key,
+    value: roundKeyValue(key.value)
+  };
+}
+
+function copyKey(
+  key: AnimationKeyJSON
+): AnimationKeyJSON {
+  return {
+    ...key,
+    value: { ...key.value }
+  };
 }

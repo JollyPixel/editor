@@ -8,8 +8,8 @@ import {
 import {
   modelValueKey,
   type ModelValueRef
-} from "./VoxelModelCommandKeys.ts";
-import type { MaterialSurfaceJSON } from "./types.ts";
+} from "../model/command/ModelValueRef.ts";
+import type { MaterialSurfaceJSON } from "../model/types.ts";
 
 // CONSTANTS
 export const VOXEL_MODEL_PRESENCE_KEYS = {

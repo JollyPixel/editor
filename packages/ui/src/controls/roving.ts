@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { wrap } from "@jolly-pixel/utils";
+
 export function nextEnabledIndex(
   enabled: readonly boolean[],
   from: number,
@@ -19,11 +22,4 @@ export function nextEnabledIndex(
   }
 
   return -1;
-}
-
-function wrap(
-  index: number,
-  count: number
-): number {
-  return ((index % count) + count) % count;
 }

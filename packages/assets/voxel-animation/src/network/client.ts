@@ -1,5 +1,4 @@
 export * from "./types.ts";
-export * from "./AnimationCommandKeys.ts";
 export * from "./voxelAnimationDocumentKind.ts";
 export * from "../model/index.ts";
 export {

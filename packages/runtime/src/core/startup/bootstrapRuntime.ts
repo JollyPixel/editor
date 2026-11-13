@@ -4,7 +4,7 @@ import type {
   AssetReference
 } from "@jolly-pixel/asset";
 import type { GameLoop } from "@jolly-pixel/loop";
-import { asError } from "@jolly-pixel/utils";
+import { asError, delay } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -102,7 +102,7 @@ export async function bootstrapRuntime<TScene>(
           { maxFps }
         )
       ),
-      waitForLoadingDelay(skipLoadingScreen ? 0 : loadingDelay)
+      delay(skipLoadingScreen ? 0 : loadingDelay)
     ]);
 
     await logger.step(
@@ -177,20 +177,4 @@ function traceFirstFrame(
   void runtime.nextFrame().then(
     () => logger.debug("first frame")
   );
-}
-
-function waitForLoadingDelay(
-  delay: number
-): Promise<void> {
-  if (delay <= 0) {
-    return Promise.resolve();
-  }
-
-  const {
-    promise,
-    resolve
-  } = Promise.withResolvers<void>();
-  window.setTimeout(resolve, delay);
-
-  return promise;
 }

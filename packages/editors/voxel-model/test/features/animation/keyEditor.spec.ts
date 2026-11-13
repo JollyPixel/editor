@@ -19,7 +19,7 @@ function createTimeline() {
   });
   timeline.attach(model);
   function ticks(): number[] {
-    return model.set.set.clip(model.clipId)!.tracks[0]?.position?.map(({ tick }) => tick) ?? [];
+    return model.set.set.clip(model.clipId)!.toJSON().tracks[0]?.position?.map(({ tick }) => tick) ?? [];
   }
 
   return { model, host, playheads, timeline, keys: model.keyEditor, ticks };
@@ -39,7 +39,7 @@ describe("KeyEditor through the timeline", () => {
     keys.applyInterpolation("step");
 
     assert.deepEqual(ticks(), before);
-    assert.equal(model.set.set.clip(model.clipId)!.tracks[0].position![0].interpolation, "linear");
+    assert.equal(model.set.set.clip(model.clipId)!.toJSON().tracks[0].position![0].interpolation, "linear");
     assert.deepEqual(
       timeline.keyMenu().items.flatMap((entry) => (
         entry === "separator" || entry.disabled === true || entry.items !== undefined ? [] : [entry.label]

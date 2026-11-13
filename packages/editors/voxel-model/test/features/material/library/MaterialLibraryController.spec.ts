@@ -39,20 +39,20 @@ describe("MaterialLibraryController", () => {
 
     assert.notEqual(created, harness.glass);
     assert.equal(harness.document.tree.materials.get(created)?.name, "Glass");
-    assert.equal(harness.document.tree.block(bare.uuid)?.materialId, created);
+    assert.equal(harness.document.tree.nodes.block(bare.uuid)?.materialId, created);
 
     harness.selection.select(other.uuid);
     harness.controller.duplicate(harness.glass);
     const copy = harness.controller.state.editedId!;
 
     assert.deepEqual(namesOf(harness), ["Glass", "Glass Copy", "Glass"]);
-    assert.equal(harness.document.tree.block(other.uuid)?.materialId, copy);
+    assert.equal(harness.document.tree.nodes.block(other.uuid)?.materialId, copy);
 
     const dressed = harness.addBlock({ materialId: harness.glass });
     harness.selection.select(dressed.uuid);
     harness.controller.create(preset("metal"));
 
-    assert.equal(harness.document.tree.block(dressed.uuid)?.materialId, harness.glass);
+    assert.equal(harness.document.tree.nodes.block(dressed.uuid)?.materialId, harness.glass);
   });
 
   test("stops selecting a material deleted by any writer", () => {

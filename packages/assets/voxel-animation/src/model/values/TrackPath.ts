@@ -4,6 +4,21 @@ import { NameSet } from "@jolly-pixel/asset.common";
 export class TrackPath {
   static readonly SEPARATOR = "/";
 
+  static findRepeated(
+    paths: Iterable<string>
+  ): string | undefined {
+    const keys = new Set<string>();
+    for (const path of paths) {
+      const { key } = new TrackPath(path);
+      if (keys.has(key)) {
+        return path;
+      }
+      keys.add(key);
+    }
+
+    return undefined;
+  }
+
   readonly path: string;
   readonly key: string;
 
@@ -22,10 +37,8 @@ export class TrackPath {
   }
 
   equals(
-    other: string | TrackPath
+    other: string
   ): boolean {
-    const path = typeof other === "string" ? new TrackPath(other) : other;
-
-    return this.key === path.key;
+    return this.key === new TrackPath(other).key;
   }
 }

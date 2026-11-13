@@ -8,6 +8,9 @@ const kNoParent = -1;
 const kAssetTypeBytes = 1;
 const kNextNodeIdBytes = 2;
 const kUnwrapModeBytes = 1;
+const kQuarterTurnFlags = [[1, 1], [2, 2], [4, 3]] as const;
+const kMirrorHorizontal = 8;
+const kMirrorVertical = 16;
 
 export interface CsVector3 {
   x: number;
@@ -22,10 +25,16 @@ export interface CsQuaternion {
   z: number;
 }
 
+export interface CsFaceOrientation {
+  clockwiseTurns: number;
+  mirroredHorizontally: boolean;
+  mirroredVertically: boolean;
+}
+
 export interface CsFace {
   x: number;
   y: number;
-  flags: number;
+  orientation: CsFaceOrientation;
 }
 
 export interface CsModelNode {
@@ -180,7 +189,7 @@ function readNode(
     return {
       x,
       y,
-      flags: cursor.u8()
+      orientation: decodeOrientation(cursor.u8())
     };
   });
 
@@ -194,5 +203,17 @@ function readNode(
     orientation,
     size,
     faces
+  };
+}
+
+function decodeOrientation(
+  flags: number
+): CsFaceOrientation {
+  const turn = kQuarterTurnFlags.find(([bit]) => (flags & bit) !== 0);
+
+  return {
+    clockwiseTurns: turn === undefined ? 0 : turn[1],
+    mirroredHorizontally: (flags & kMirrorHorizontal) !== 0,
+    mirroredVertically: (flags & kMirrorVertical) !== 0
   };
 }

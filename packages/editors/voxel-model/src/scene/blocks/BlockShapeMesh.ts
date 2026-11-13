@@ -1,8 +1,8 @@
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
 import {
+  BlockFlip,
   BlockShape,
-  NO_FLIP,
   type BlockShapeJSON,
   type MirrorAxes
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -37,7 +37,7 @@ export class BlockShapeMesh {
   constructor(
     options: BlockShapeMeshOptions
   ) {
-    const { shape, flip = NO_FLIP, size } = options;
+    const { shape, flip = BlockFlip.none, size } = options;
     this.#size = size.clone();
     this.#built = build(shape, flip, this.#size);
   }
@@ -63,7 +63,7 @@ export class BlockShapeMesh {
   ): boolean {
     const previous = this.#built;
     const { shape = previous.shape, flip = previous.flip } = changes;
-    if (sameMirror(previous.flip, flip) && BlockShape.same(previous.shape, shape)) {
+    if (BlockFlip.same(previous.flip, flip) && BlockShape.same(previous.shape, shape)) {
       return false;
     }
 
@@ -115,11 +115,4 @@ function build(
     faces,
     baseUv: Float32Array.from(geometry.getAttribute("uv").array)
   };
-}
-
-function sameMirror(
-  left: MirrorAxes,
-  right: MirrorAxes
-): boolean {
-  return left.x === right.x && left.y === right.y && left.z === right.z;
 }

@@ -108,6 +108,8 @@ describe("ModelBlocks projection", () => {
           parentId: "parent",
           name: "Child",
           transform: transformAt({ x: 1, y: 0, z: 0 }),
+          flipAxes: { x: false, y: false, z: false },
+          shape: { type: "box" },
           uv: BlockUvLayouts.net(),
           materialId: "metal"
         },
@@ -117,6 +119,8 @@ describe("ModelBlocks projection", () => {
           parentId: null,
           name: "Parent",
           transform: transformAt({ x: 0, y: 0, z: 0 }),
+          flipAxes: { x: false, y: false, z: false },
+          shape: { type: "box" },
           uv: BlockUvLayouts.net()
         }
       ],

@@ -5,9 +5,9 @@ import {
   type Result
 } from "@openally/result";
 import { LRUCache } from "lru-cache";
+import { InFlight } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { InFlight } from "../../common/InFlight.ts";
 import type { AssetStates } from "./AssetStates.ts";
 
 export interface RevisionCacheOptions<T> {

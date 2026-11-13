@@ -105,6 +105,8 @@ describe("BlockTextures model layouts", () => {
         parentId: null,
         name: "Late",
         transform: BlockTransform.create(),
+        flipAxes: { x: false, y: false, z: false },
+        shape: { type: "box" },
         uv: stackedAt(32)
       }
     });

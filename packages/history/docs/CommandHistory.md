@@ -7,7 +7,7 @@ const history = new CommandHistory<"build" | "animate">({ limit: 50 });
 const unregister = history.register({
   id: "model",
   document,
-  keys: modelHistoryKeys(document.tree),
+  keys: document.historyKeys,
   resolveScope: () => "build"
 });
 

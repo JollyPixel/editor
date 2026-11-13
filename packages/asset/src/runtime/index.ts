@@ -9,3 +9,4 @@ export type {
 } from "./AssetLoadBatch.ts";
 export * from "./AssetLoader.ts";
 export * from "./AssetLoaderRegistry.ts";
+export type { AssetStatus } from "./AssetStore.ts";

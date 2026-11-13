@@ -4,6 +4,7 @@ import {
   type AuthenticationRequest,
   type PeerIdentity
 } from "@jolly-pixel/network";
+import { encodeBase64Url } from "@jolly-pixel/utils";
 
 // CONSTANTS
 const kTokenBytes = 32;
@@ -17,7 +18,9 @@ export class PeerInvites implements AuthenticationProvider {
   }
 
   issue(): string {
-    const token = randomToken();
+    const token = encodeBase64Url(
+      crypto.getRandomValues(new Uint8Array(kTokenBytes))
+    );
     this.#issued.set(token, kSubjectPrefix + crypto.randomUUID());
 
     return token;
@@ -45,13 +48,4 @@ export class PeerInvites implements AuthenticationProvider {
       role: request.defaultRole
     };
   }
-}
-
-function randomToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(kTokenBytes));
-
-  return btoa(String.fromCharCode(...bytes))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/[=]+$/, "");
 }

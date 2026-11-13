@@ -4,15 +4,9 @@ import { InvalidEntryError } from "@jolly-pixel/asset.common";
 // Import Internal Dependencies
 import type {
   AnimationBindingJSON,
-  AnimationSetLinkJSON,
-  VoxelModelCommand
-} from "../../network/types.ts";
+  AnimationSetLinkJSON
+} from "../types.ts";
 import { AnimationSetLink } from "./AnimationSetLink.ts";
-
-export type AnimationLinkCommand = Extract<
-  VoxelModelCommand,
-  { action: `animation-${string}`; }
->;
 
 export type ModelAnimationLinksReader = Pick<
   ModelAnimationLinks,
@@ -60,54 +54,25 @@ export class ModelAnimationLinks {
     return this.#ownedLink()?.toJSON();
   }
 
-  accepts(
-    command: AnimationLinkCommand
-  ): boolean {
-    switch (command.action) {
-      case "animation-set-linked":
-        return !this.#links.has(command.link.id) &&
-          (command.link.own !== true || this.#ownedLink() === undefined) &&
-          AnimationSetLink.findProblem(command.link) === null;
-      case "animation-set-unlinked":
-        return this.#links.has(command.id);
-      case "animation-set-owned": {
-        const owner = this.#ownedLink()?.id;
-
-        return this.#links.has(command.id) &&
-          (!command.own || owner === undefined || owner === command.id);
-      }
-      case "animation-binding-changed":
-      case "animation-binding-cleared":
-        return this.#links.has(command.id);
-    }
+  link(
+    json: AnimationSetLinkJSON
+  ): void {
+    this.#links.set(json.id, AnimationSetLink.parse(json));
   }
 
-  apply(
-    command: AnimationLinkCommand
+  unlink(
+    id: string
   ): void {
-    switch (command.action) {
-      case "animation-set-linked":
-        this.#links.set(command.link.id, new AnimationSetLink(command.link));
-        break;
+    this.#links.delete(id);
+  }
 
-      case "animation-set-unlinked":
-        this.#links.delete(command.id);
-        break;
-
-      case "animation-set-owned":
-        this.#update(command.id, (link) => link.withOwn(command.own));
-        break;
-
-      case "animation-binding-changed":
-        this.#update(command.id, (link) => link.rebound(
-          command.path,
-          [{ path: command.path, target: command.target }]
-        ));
-        break;
-
-      case "animation-binding-cleared":
-        this.#update(command.id, (link) => link.rebound(command.path, []));
-        break;
+  update(
+    id: string,
+    change: (link: AnimationSetLink) => AnimationSetLink
+  ): void {
+    const link = this.#links.get(id);
+    if (link !== undefined) {
+      this.#links.set(id, change(link));
     }
   }
 
@@ -119,7 +84,7 @@ export class ModelAnimationLinks {
       if (loaded.has(json.id)) {
         throw new InvalidEntryError("animation-set", json.id, "is linked twice");
       }
-      const link = new AnimationSetLink(json);
+      const link = AnimationSetLink.parse(json);
       if (link.own && [...loaded.values()].some(({ own }) => own)) {
         throw new InvalidEntryError("animation-set", json.id, "is a second own set");
       }
@@ -139,15 +104,5 @@ export class ModelAnimationLinks {
 
   #ownedLink(): AnimationSetLink | undefined {
     return [...this.#links.values()].find(({ own }) => own);
-  }
-
-  #update(
-    id: string,
-    change: (link: AnimationSetLink) => AnimationSetLink
-  ): void {
-    const link = this.#links.get(id);
-    if (link !== undefined) {
-      this.#links.set(id, change(link));
-    }
   }
 }

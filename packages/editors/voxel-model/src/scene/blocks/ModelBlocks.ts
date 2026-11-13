@@ -2,7 +2,7 @@
 import * as THREE from "three";
 import { Emitter } from "@openally/emitt";
 import {
-  BlockShape,
+  removedModelNodes,
   type BlockNodeJSON,
   type BlockTransformJSON,
   type MaterialSurfaceJSON,
@@ -74,7 +74,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
         break;
 
       case "node-removed":
-        for (const node of change.image.before.nodes) {
+        for (const node of removedModelNodes(change)) {
           this.#discard(node.id);
         }
         break;
@@ -88,7 +88,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       }
 
       case "node-moved":
-        for (const node of this.#document.tree.subtreeFrom(command.id)) {
+        for (const node of this.#document.tree.nodes.subtreeFrom(command.id)) {
           const block = this.#blocks.get(node.id);
           if (block) {
             this.#attach(block);
@@ -133,7 +133,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       this.#discard(uuid);
     }
 
-    const blocks = [...this.#document.tree.blocks()].map(
+    const blocks = [...this.#document.tree.nodes.blocks()].map(
       (node) => this.#create(node)
     );
     for (const block of blocks) {
@@ -361,8 +361,8 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     const block = new ModelBlock({
       uuid: node.id,
       name: node.name,
-      shape: BlockShape.fromBlock(node),
-      ...node.flipAxes === undefined ? {} : { flip: node.flipAxes },
+      shape: node.shape,
+      flip: node.flipAxes,
       texture: this.#texture,
       flatShading: this.#flatShading
     });
@@ -388,14 +388,14 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     block: ModelBlock
   ): void {
     block.surface = this.#previewSurface(
-      this.#document.tree.blockMaterialId(block.uuid)
+      this.#document.tree.nodes.blockMaterialId(block.uuid)
     );
   }
 
   #paintUsers(
     materialId: string
   ): void {
-    for (const uuid of this.#document.tree.blocksUsing(materialId)) {
+    for (const uuid of this.#document.tree.nodes.blocksUsing(materialId)) {
       const block = this.#blocks.get(uuid);
       if (block) {
         this.#paint(block);
@@ -427,7 +427,7 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
     block: ModelBlock
   ): void {
     const parent = this.#parentObject(
-      this.#document.tree.findTransformParent(block.uuid)
+      this.#document.tree.nodes.findTransformParent(block.uuid)
     );
     if (block.node.parent !== parent) {
       parent.add(block.node);

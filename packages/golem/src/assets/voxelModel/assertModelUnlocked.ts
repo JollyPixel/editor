@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   holdsModelLock,
-  modelConflictRefs,
+  modelFootprint,
   type ModelValueRef,
   type VoxelModelCommand
 } from "@jolly-pixel/asset.voxel-model/client";
@@ -17,7 +17,7 @@ export function assertModelUnlocked(
   room: Room,
   commands: readonly VoxelModelCommand[]
 ): void {
-  const refs = commands.flatMap(modelConflictRefs);
+  const refs = commands.flatMap((command) => modelFootprint(command).conflicts);
   if (refs.length === 0) {
     return;
   }

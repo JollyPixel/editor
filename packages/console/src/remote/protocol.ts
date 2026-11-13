@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import type { DistributiveOmit } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type {
   ArgDef,
@@ -23,9 +26,6 @@ const kMirrorMessageTypes = new Set([
   "revert",
   "refresh"
 ]);
-
-type DistributiveOmit<T, TKey extends PropertyKey> =
-  T extends unknown ? Omit<T, TKey> : never;
 
 export type RemoteArg = DistributiveOmit<ArgDef, "autocomplete"> & {
   completes: boolean;

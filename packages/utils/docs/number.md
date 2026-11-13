@@ -8,6 +8,40 @@ function clamp(value: number, min: number, max: number): number;
 
 `value` limited to `[min, max]`. When `min > max`, the result is `max`.
 
+## `wrap()`
+
+```ts
+function wrap(value: number, length: number): number;
+```
+
+`value` wrapped into `[0, length)`. Unlike `%`, a negative `value` lands at the
+end of the range, which suits cyclic indices and angles.
+
+```ts
+import { wrap } from "@jolly-pixel/utils";
+
+wrap(-1, 4);     // 3
+wrap(-90, 360);  // 270
+```
+
+## `roundTo()`
+
+```ts
+function roundTo(value: number, decimals: number): number;
+```
+
+`value` rounded to `decimals` digits after the point, with ties rounded away
+from zero, so `roundTo(-x, d)` is always `-roundTo(x, d)`. It never returns
+`-0`, so a rounded value compares and serializes like `0`.
+
+```ts
+import { roundTo } from "@jolly-pixel/utils";
+
+roundTo(0.1 + 0.2, 6);  // 0.3
+roundTo(-0.125, 2);     // -0.13
+roundTo(-0.0001, 2);    // 0
+```
+
 ## `formatBytes()`
 
 ```ts

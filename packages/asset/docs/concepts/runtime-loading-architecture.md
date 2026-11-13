@@ -96,9 +96,8 @@ still share in-flight work through the coordinator. Ready assets count toward th
 initial completed value and do not produce progress callbacks.
 
 The batch waits for every task to settle. Asset failures are collected in
-`AssetBatchLoadError`. If the progress callback throws, `done` rejects with the
-callback value after all tasks settle; that value is not added to the asset
-failure list.
+`AssetBatchLoadError`. If the progress callback throws, the error is rethrown
+from a microtask as an uncaught error and the batch carries on unaffected.
 
 ## Catalog changes
 

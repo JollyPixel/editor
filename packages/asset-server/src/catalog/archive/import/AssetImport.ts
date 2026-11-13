@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type { Infer } from "@jolly-pixel/network";
 import * as z from "zod/mini";
+import type { DeepReadonly } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { assetArchiveEntrySchema } from "../AssetArchive.ts";
@@ -9,7 +10,6 @@ import type { AssetArchiveError } from "../errors/AssetArchiveError.ts";
 import type {
   UnknownAssetKindError
 } from "../../../model/kinds/errors/UnknownAssetKindError.ts";
-import type { Immutable } from "../../../common/types.ts";
 
 // CONSTANTS
 export const IMPORT_CONFLICT_POLICIES = ["replace", "keep", "copy"] as const;
@@ -41,9 +41,9 @@ export const importReportSchema = z.object({
 });
 
 export type ImportConflictPolicy = typeof IMPORT_CONFLICT_POLICIES[number];
-export type SharedDependents = Immutable<Infer<typeof sharedDependentsSchema>>;
-export type ImportPlan = Immutable<Infer<typeof importPlanSchema>>;
-export type ImportFailure = Immutable<Infer<typeof importFailureSchema>>;
-export type ImportReport = Immutable<Infer<typeof importReportSchema>>;
+export type SharedDependents = DeepReadonly<Infer<typeof sharedDependentsSchema>>;
+export type ImportPlan = DeepReadonly<Infer<typeof importPlanSchema>>;
+export type ImportFailure = DeepReadonly<Infer<typeof importFailureSchema>>;
+export type ImportReport = DeepReadonly<Infer<typeof importReportSchema>>;
 
 export type AssetImportError = AssetArchiveError | UnknownAssetKindError;

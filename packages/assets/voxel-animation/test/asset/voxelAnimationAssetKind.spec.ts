@@ -12,12 +12,12 @@ import {
 
 // Import Internal Dependencies
 import {
-  createVoxelAnimationFile,
   VOXEL_ANIMATION_FILE,
   VOXEL_ANIMATION_KIND,
   voxelAnimationAssetKind
 } from "#src/index.ts";
 import {
+  animationFile,
   clip,
   key
 } from "../helpers/clips.ts";
@@ -30,10 +30,10 @@ const kActor: EventStore.Actor = {
 
 describe("voxel animation file", () => {
   test("round-trips through its codec", () => {
-    const file = createVoxelAnimationFile({
-      rig: "Humanoid",
-      clips: [clip("walk", { tracks: [{ path: "body", rotation: [key(0, 15)] }] })]
-    });
+    const file = animationFile(
+      [clip("walk", { tracks: [{ path: "body", rotation: [key(0, 15)] }] })],
+      "Humanoid"
+    );
 
     assert.deepEqual(
       VOXEL_ANIMATION_FILE.decode(VOXEL_ANIMATION_FILE.encode(file)),
@@ -42,9 +42,9 @@ describe("voxel animation file", () => {
   });
 
   test("stores linear keys without their interpolation", () => {
-    const file = createVoxelAnimationFile({
-      clips: [clip("walk", { tracks: [{ path: "body", rotation: [key(0, 15), key(12, 30, "smooth")] }] })]
-    });
+    const file = animationFile(
+      [clip("walk", { tracks: [{ path: "body", rotation: [key(0, 15), key(12, 30, "smooth")] }] })]
+    );
 
     const stored = JSON.parse(new TextDecoder().decode(VOXEL_ANIMATION_FILE.encode(file)));
 
@@ -70,7 +70,7 @@ describe("voxel animation file", () => {
   test("reports a set with a repeated clip as an invalid file", () => {
     const handler = voxelAnimationAssetKind();
     const content = VOXEL_ANIMATION_FILE.encode(
-      createVoxelAnimationFile({ clips: [clip("walk"), clip("walk")] })
+      animationFile([clip("walk"), clip("walk")])
     );
 
     assert.throws(
@@ -103,7 +103,7 @@ describe("voxel animation file", () => {
     assert.equal(record?.kind, VOXEL_ANIMATION_KIND);
     assert.deepEqual(
       VOXEL_ANIMATION_FILE.decode(await source.read("animations/humanoid.voxelanim.json")),
-      createVoxelAnimationFile()
+      animationFile()
     );
   });
 });

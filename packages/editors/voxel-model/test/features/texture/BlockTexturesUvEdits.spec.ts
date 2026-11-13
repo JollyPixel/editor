@@ -34,7 +34,7 @@ describe("BlockTextures UV edits", () => {
     uv.move(regionId, { x: 64, y: 32, width: 16, height: 16 });
 
     assert.deepEqual(readUv(block, 1), [80 / TEXTURE_SIZE.x, 1 - (32 / TEXTURE_SIZE.y)]);
-    assert.deepEqual(document.tree.block(block.uuid)?.uv, stackedAt(64, 32));
+    assert.deepEqual(document.tree.nodes.block(block.uuid)?.uv, stackedAt(64, 32));
     assert.deepEqual(
       changes.map((change) => change.command.action),
       ["node-uv-changed"]
@@ -43,7 +43,7 @@ describe("BlockTextures UV edits", () => {
 
   test("without UV rights puts a moved region back on the model's layout and sends nothing", () => {
     const { access, document, uv, block, regionId, changes } = bound();
-    const stored = document.tree.block(block.uuid)?.uv;
+    const stored = document.tree.nodes.block(block.uuid)?.uv;
     access.grant("hierarchy");
 
     uv.move(regionId, { x: 64, y: 32, width: 16, height: 16 });
@@ -102,7 +102,7 @@ describe("BlockTextures UV edits", () => {
     assert.deepEqual(readUv(block, 0), [16 / TEXTURE_SIZE.x, 1]);
     assert.deepEqual(readUv(block, 1), [16 / TEXTURE_SIZE.x, 1 - (16 / TEXTURE_SIZE.y)]);
     assert.deepEqual(
-      document.tree.block(block.uuid)?.uv,
+      document.tree.nodes.block(block.uuid)?.uv,
       {
         state: "stacked",
         rect: { x: 0, y: 0, width: 16, height: 16, rotation: 1 }
@@ -177,7 +177,8 @@ describe("BlockTextures UV edits", () => {
         name: "Mirrored",
         transform: BlockTransform.create(),
         flipAxes: { x: true, y: false, z: false },
-        uv: document.tree.block(block.uuid)!.uv
+        shape: { type: "box" },
+        uv: document.tree.nodes.block(block.uuid)!.uv
       }
     });
 

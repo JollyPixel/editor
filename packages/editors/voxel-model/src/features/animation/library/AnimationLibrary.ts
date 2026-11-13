@@ -241,10 +241,8 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
 
     const setId = await this.#resolve(target);
     const clipId = this.set(setId)?.document.addClip({
-      length: clip.length,
-      fps: clip.fps,
-      loop: clip.loop,
-      tracks: clip.tracks,
+      ...clip.timeline.toJSON(),
+      tracks: clip.toJSON().tracks,
       ...placement
     }) ?? null;
 

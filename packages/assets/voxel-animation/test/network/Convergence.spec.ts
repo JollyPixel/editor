@@ -73,7 +73,7 @@ describe("voxel-animation convergence", () => {
 
     assert.deepEqual(document.set.toJSON(), server.state.toJSON());
     assert.deepEqual(
-      document.set.clip("walk")?.tracks[0].rotation?.map(({ tick }) => tick),
+      document.set.clip("walk")?.toJSON().tracks[0].rotation?.map(({ tick }) => tick),
       [0, 12000]
     );
   });

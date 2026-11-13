@@ -1,57 +1,34 @@
 // Import Third-party Dependencies
-import {
-  InvalidEntryError,
-  type NameSet,
-  type OrderedTree
-} from "@jolly-pixel/asset.common";
+import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import type {
-  BlockNodeJSON,
-  MaterialEntryJSON,
-  ModelNodeJSON,
   VoxelModelCommand,
   VoxelModelSnapshot
-} from "../network/types.ts";
+} from "./types.ts";
 import {
   ModelAnimationLinks,
   type ModelAnimationLinksReader
 } from "./animation/ModelAnimationLinks.ts";
 import {
-  captureEntryImages,
-  findEntrySlot,
-  type ModelEntryTree
-} from "./history/modelCommands.ts";
-import type { ModelImages } from "./history/modelImages.ts";
+  acceptsModelCommand,
+  applyModelCommand,
+  placeModelCommand
+} from "./command/modelCommands.ts";
 import {
   ModelMaterials,
   type ModelMaterialsReader
 } from "./materials/ModelMaterials.ts";
-import { ModelNodes } from "./nodes/ModelNodes.ts";
+import {
+  ModelNodes,
+  type ModelNodesReader
+} from "./nodes/ModelNodes.ts";
 
 export type ModelTreeReader = Pick<
   ModelTree,
-  | "size"
-  | "has"
-  | "get"
-  | "block"
-  | "blockMaterialId"
-  | "values"
-  | "blocks"
-  | "listChildren"
-  | "findNextSibling"
-  | "subtreeFrom"
-  | "captureImages"
-  | "findEnclosingBlock"
-  | "findTransformParent"
-  | "blockNamesUnder"
-  | "blockNameClashes"
-  | "placeable"
+  | "nodes"
   | "materials"
   | "animationSets"
-  | "blocksUsing"
-  | "materialUses"
-  | "accepts"
   | "toJSON"
 >;
 
@@ -60,8 +37,8 @@ export class ModelTree {
   #materials = new ModelMaterials();
   #links = new ModelAnimationLinks();
 
-  get size(): number {
-    return this.#nodes.size;
+  get nodes(): ModelNodesReader {
+    return this.#nodes;
   }
 
   get materials(): ModelMaterialsReader {
@@ -72,187 +49,26 @@ export class ModelTree {
     return this.#links;
   }
 
-  has(
-    id: string
-  ): boolean {
-    return this.#nodes.has(id);
-  }
-
-  get(
-    id: string
-  ): ModelNodeJSON | undefined {
-    return this.#nodes.get(id);
-  }
-
-  block(
-    id: string
-  ): BlockNodeJSON | undefined {
-    return this.#nodes.block(id);
-  }
-
-  blockMaterialId(
-    id: string
-  ): string | undefined {
-    return this.#nodes.blockMaterialId(id);
-  }
-
-  values(): IterableIterator<ModelNodeJSON> {
-    return this.#nodes.values();
-  }
-
-  blocks(): IterableIterator<BlockNodeJSON> {
-    return this.#nodes.blocks();
-  }
-
-  listChildren(
-    parentId: string | null
-  ): ModelNodeJSON[] {
-    return this.#nodes.listChildren(parentId);
-  }
-
-  findNextSibling(
-    id: string
-  ): string | undefined {
-    return this.#nodes.findNextSibling(id);
-  }
-
-  subtreeFrom(
-    id: string
-  ): ModelNodeJSON[] {
-    return this.#nodes.subtreeFrom(id);
-  }
-
-  findEnclosingBlock(
-    id: string | null
-  ): string | null {
-    return this.#nodes.findEnclosingBlock(id);
-  }
-
-  findTransformParent(
-    id: string
-  ): string | null {
-    return this.#nodes.findTransformParent(id);
-  }
-
-  blockNamesUnder(
-    parentId: string | null,
-    exceptId?: string
-  ): NameSet {
-    return this.#nodes.blockNamesUnder(parentId, exceptId);
-  }
-
-  blockNameClashes(): Set<string> {
-    return this.#nodes.blockNameClashes();
-  }
-
-  blocksUsing(
-    materialId: string
-  ): string[] {
-    return this.#nodes.blocksUsing(materialId);
-  }
-
-  materialUses(): Map<string, number> {
-    const uses = new Map<string, number>();
-    for (const { id } of this.#materials.materials()) {
-      uses.set(id, 0);
-    }
-    for (const node of this.#nodes.scan()) {
-      if (node.kind === "block" && node.materialId !== undefined) {
-        uses.set(node.materialId, (uses.get(node.materialId) ?? 0) + 1);
-      }
-    }
-
-    return uses;
-  }
-
-  captureImages(
+  accepts(
     command: VoxelModelCommand
-  ): ModelImages {
-    return captureEntryImages(this, command);
+  ): boolean {
+    return acceptsModelCommand(this, command);
   }
 
   placeable(
     command: VoxelModelCommand
   ): VoxelModelCommand {
-    const slot = findEntrySlot(command);
-    if (
-      slot?.beforeId === undefined ||
-      this.#entries(slot.which).isSiblingSlot(slot.beforeId, slot.parentId, slot.id)
-    ) {
-      return command;
-    }
-
-    return withoutBefore(command);
-  }
-
-  accepts(
-    command: VoxelModelCommand
-  ): boolean {
-    switch (command.action) {
-      case "node-added":
-        return this.#nodes.accepts(command) &&
-          hasKnownMaterial(command.node, this.#materials);
-      case "node-material-changed":
-        return this.#nodes.accepts(command) && (
-          command.materialId === null ||
-          this.#materials.material(command.materialId) !== undefined
-        );
-      case "node-removed":
-      case "node-renamed":
-      case "node-moved":
-      case "node-transformed":
-      case "node-uv-changed":
-      case "node-shape-changed":
-        return this.#nodes.accepts(command);
-      case "material-added":
-      case "material-folder-added":
-      case "material-moved":
-      case "material-removed":
-      case "material-renamed":
-      case "material-changed":
-        return this.#materials.accepts(command);
-      case "animation-set-linked":
-      case "animation-set-unlinked":
-      case "animation-set-owned":
-      case "animation-binding-changed":
-      case "animation-binding-cleared":
-        return this.#links.accepts(command);
-    }
+    return placeModelCommand(this, command);
   }
 
   apply(
     command: VoxelModelCommand
   ): void {
-    switch (command.action) {
-      case "node-added":
-      case "node-removed":
-      case "node-renamed":
-      case "node-moved":
-      case "node-transformed":
-      case "node-uv-changed":
-      case "node-shape-changed":
-      case "node-material-changed":
-        this.#nodes.apply(command);
-        break;
-
-      case "material-added":
-      case "material-folder-added":
-      case "material-moved":
-      case "material-removed":
-      case "material-renamed":
-      case "material-changed":
-        this.#materials.apply(command);
-        this.#dropMissingMaterials();
-        break;
-
-      case "animation-set-linked":
-      case "animation-set-unlinked":
-      case "animation-set-owned":
-      case "animation-binding-changed":
-      case "animation-binding-cleared":
-        this.#links.apply(command);
-        break;
-    }
+    applyModelCommand({
+      nodes: this.#nodes,
+      materials: this.#materials,
+      animationSets: this.#links
+    }, command);
   }
 
   load(
@@ -267,7 +83,7 @@ export class ModelTree {
     const nodes = new ModelNodes();
     nodes.load(snapshot.nodes);
     for (const node of nodes.scan()) {
-      if (!hasKnownMaterial(node, materials)) {
+      if (node.kind === "block" && !materials.isAssignable(node.materialId)) {
         throw new InvalidEntryError("node", node.id, "has no such material");
       }
     }
@@ -290,40 +106,4 @@ export class ModelTree {
       animationSets: this.#links.toJSON()
     };
   }
-
-  #entries(
-    which: ModelEntryTree
-  ): OrderedTree<ModelNodeJSON> | OrderedTree<MaterialEntryJSON> {
-    return which === "nodes" ? this.#nodes : this.#materials;
-  }
-
-  #dropMissingMaterials(): void {
-    const orphans = [...this.#nodes.scan()].filter(
-      (node) => !hasKnownMaterial(node, this.#materials)
-    );
-    for (const { id } of orphans) {
-      this.#nodes.assignMaterial(id, null);
-    }
-  }
-}
-
-function withoutBefore(
-  command: VoxelModelCommand
-): VoxelModelCommand {
-  if (!("beforeId" in command)) {
-    return command;
-  }
-
-  const { beforeId: _beforeId, ...placed } = command;
-
-  return placed;
-}
-
-function hasKnownMaterial(
-  node: ModelNodeJSON,
-  materials: ModelMaterialsReader
-): boolean {
-  return node.kind === "folder" ||
-    node.materialId === undefined ||
-    materials.material(node.materialId) !== undefined;
 }

@@ -71,7 +71,7 @@ describe("ModelHierarchy.createBlock", () => {
     const uuid = hierarchy.createBlock("Head", null);
 
     assert.ok(uuid);
-    assert.deepEqual(document.tree.block(uuid)?.uv, BlockUvLayouts.net());
+    assert.deepEqual(document.tree.nodes.block(uuid)?.uv, BlockUvLayouts.net());
     assert.deepEqual(commands.map((command) => command.action), ["node-added"]);
   });
 
@@ -84,7 +84,7 @@ describe("ModelHierarchy.createBlock", () => {
 
     assert.ok(first && second);
     assert.deepEqual(
-      document.tree.block(second)?.uv,
+      document.tree.nodes.block(second)?.uv,
       BlockUvLayouts.net({ x: net.x, y: 0 })
     );
   });
@@ -96,7 +96,7 @@ describe("ModelHierarchy.createBlock", () => {
     const uuid = hierarchy.createBlock("Child", parent.uuid);
 
     assert.ok(uuid);
-    assert.equal(document.tree.findTransformParent(uuid), parent.uuid);
+    assert.equal(document.tree.nodes.findTransformParent(uuid), parent.uuid);
     assert.deepStrictEqual(
       blocks.get(uuid)?.worldPosition,
       new THREE.Vector3(4, 0, 0)
@@ -111,7 +111,7 @@ describe("ModelHierarchy.createBlock", () => {
     const uuid = hierarchy.createBlock("Child", folderId);
 
     assert.ok(uuid);
-    assert.equal(document.tree.get(uuid)?.parentId, folderId);
+    assert.equal(document.tree.nodes.get(uuid)?.parentId, folderId);
     assert.equal(blocks.get(uuid)?.node.parent, parent.node);
   });
 
@@ -119,7 +119,7 @@ describe("ModelHierarchy.createBlock", () => {
     const { document, hierarchy } = createHierarchyFixture();
 
     assert.equal(hierarchy.createBlock("Child", "missing"), null);
-    assert.equal(document.tree.size, 0);
+    assert.equal(document.tree.nodes.size, 0);
   });
 });
 
@@ -133,7 +133,7 @@ describe("ModelHierarchy.rename", () => {
     hierarchy.rename(folderId!, "Limbs");
 
     assert.equal(block.name, "Torso");
-    assert.equal(document.tree.get(folderId!)?.name, "Limbs");
+    assert.equal(document.tree.nodes.get(folderId!)?.name, "Limbs");
   });
 });
 
@@ -195,8 +195,8 @@ describe("ModelHierarchy.reshape", () => {
     assert.equal(hierarchy.reshape(body, kPlane), true);
     assert.equal(hierarchy.reshape(body, kPlane), false);
 
-    assert.deepEqual(document.tree.block(body)?.shape, kPlane);
-    assert.deepEqual(document.tree.block(body)?.uv, BlockUvLayouts.net(origin, kPlane));
+    assert.deepEqual(document.tree.nodes.block(body)?.shape, kPlane);
+    assert.deepEqual(document.tree.nodes.block(body)?.uv, BlockUvLayouts.net(origin, kPlane));
     assert.deepEqual(commands.map(({ action }) => action), ["node-shape-changed"]);
   });
 
@@ -204,13 +204,13 @@ describe("ModelHierarchy.reshape", () => {
     const { document, hierarchy } = createHierarchyFixture();
     const floor = hierarchy.createBlock("Floor", null, kPlane)!;
     const wall = hierarchy.createBlock("Wall", null, kPlane)!;
-    const others = new BlockUvLayouts([document.tree.block(wall)!.uv]);
+    const others = new BlockUvLayouts([document.tree.nodes.block(wall)!.uv]);
 
     assert.equal(hierarchy.reshape(floor, { type: "box" }), true);
 
-    assert.equal("shape" in document.tree.block(floor)!, false);
+    assert.deepEqual(document.tree.nodes.block(floor)?.shape, { type: "box" });
     assert.deepEqual(
-      document.tree.block(floor)?.uv,
+      document.tree.nodes.block(floor)?.uv,
       others.nextNet(kTextureSize, { type: "box" })
     );
   });

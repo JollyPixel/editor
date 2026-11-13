@@ -18,7 +18,7 @@ function assignedMaterial(
   harness: HierarchyHarness,
   uuid: string
 ): string | null {
-  return harness.document.tree.block(uuid)?.materialId ?? null;
+  return harness.document.tree.nodes.block(uuid)?.materialId ?? null;
 }
 
 describe("HierarchyController Material submenu", () => {
@@ -95,7 +95,7 @@ describe("HierarchyController material actions", () => {
     await chooseFromMenu(harness, source.uuid, "copy-material");
     await chooseFromMenu(harness, target.uuid, "paste-material");
 
-    assert.equal(harness.document.tree.block(target.uuid)?.materialId, metal);
+    assert.equal(harness.document.tree.nodes.block(target.uuid)?.materialId, metal);
   });
 
   test("creates a material from a preset and assigns it", async() => {
@@ -106,7 +106,7 @@ describe("HierarchyController material actions", () => {
 
     const [glass] = harness.document.tree.materials.materials();
     assert.equal(glass.name, "Glass");
-    assert.equal(harness.document.tree.block(block.uuid)?.materialId, glass.id);
+    assert.equal(harness.document.tree.nodes.block(block.uuid)?.materialId, glass.id);
     assert.equal(harness.history.undo("material"), true);
     assert.deepEqual([...harness.document.tree.materials.materials()], []);
   });

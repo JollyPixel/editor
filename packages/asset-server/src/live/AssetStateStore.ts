@@ -3,7 +3,8 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import { Emitter } from "@openally/emitt";
 import {
   asError,
-  TaskChain
+  TaskChain,
+  yieldToEventLoop
 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
@@ -28,7 +29,6 @@ import {
   silentLogger,
   type Logger
 } from "../common/logger.ts";
-import { yieldToEventLoop } from "../common/yieldToEventLoop.ts";
 
 // CONSTANTS
 const kReplayYieldEvery = 250;

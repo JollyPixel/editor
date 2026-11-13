@@ -9,6 +9,7 @@ does not validate that a path is relative, safe, or supported by a loader.
 
 ```ts
 class AssetPath {
+  readonly value: string;
   readonly directory: string;
   readonly name: string;
   readonly extension: string;
@@ -65,8 +66,8 @@ new AssetPath("scripts/Player.ts").resolve("../shared/label.ts").toString();
 ```
 
 `from()` constructs a path from a string and returns an existing `AssetPath`
-unchanged. `equals()` compares full path strings. `toJSON()` and `toString()`
-both return the full path string. Call `toString()` before passing a path to
+unchanged. `value` is the full path string given to the constructor.
+`equals()` compares values, and `toJSON()` and `toString()` both return it. Call `toString()` before passing a path to
 an API that expects a string, such as `fetch()`.
 
 ```ts

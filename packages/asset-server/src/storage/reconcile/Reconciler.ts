@@ -8,11 +8,11 @@ import {
 import type { AssetSource } from "@jolly-pixel/asset-source";
 import {
   asError,
+  sha256Hex,
   TaskChain
 } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import { contentHash } from "../../common/contentHash.ts";
 import {
   matchRenames,
   type ObservedEntry,
@@ -416,7 +416,7 @@ export class Reconciler {
         path,
         entry: {
           path,
-          hash: await contentHash(
+          hash: await sha256Hex(
             await this.#source.read(path)
           )
         }

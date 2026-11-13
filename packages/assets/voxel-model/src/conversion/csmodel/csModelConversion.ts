@@ -8,6 +8,7 @@ import {
   withRotation,
   type UVGeometry
 } from "@jolly-pixel/pixel-draw.renderer";
+import { wrap } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import {
@@ -23,11 +24,12 @@ import {
   type VoxelModelFile
 } from "../../asset/voxelModel.ts";
 import { VOXEL_MODEL_FILE } from "../../asset/voxelModelFile.ts";
+import { BlockNode } from "../../model/nodes/BlockNode.ts";
+import { Vector3 } from "../../model/nodes/Vector3.ts";
 import type {
   BlockNodeJSON,
-  MirrorAxes,
   Vector3JSON
-} from "../../network/types.ts";
+} from "../../model/types.ts";
 
 // CONSTANTS
 export const CSMODEL_EXTENSION = ".csmodel";
@@ -35,9 +37,6 @@ const kPixelsPerUnit = 16;
 const kMinThickness = 0.001;
 const kTextureId = "csmodel-texture";
 const kFaceSlots = ["front", "back", "right", "bottom", "left", "top"] as const;
-const kQuarterTurnFlags = [[1, 1], [2, 2], [4, 3]] as const;
-const kMirrorHorizontal = 8;
-const kMirrorVertical = 16;
 const kPngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
 type FaceSlot = (typeof kFaceSlots)[number];
@@ -87,20 +86,25 @@ function blockNode(
 ): BlockNodeJSON {
   const { stretch, size } = node;
   const parentOffset = parent?.offset ?? { x: 0, y: 0, z: 0 };
-  const block: BlockNodeJSON = {
-    kind: "block",
+
+  return BlockNode.create({
     id: nodeId(node.id),
     parentId: node.parentId === null ? null : nodeId(node.parentId),
     name: node.name,
     transform: {
-      position: combine(node.position, parentOffset, (a, b) => a + b),
-      pivotOffset: combine(node.offset, stretch, (offset, k) => negate(offset * k)),
-      size: combine(size, stretch, (pixels, k) => Math.max(
+      position: Vector3.combine(node.position, parentOffset, (a, b) => a + b),
+      pivotOffset: Vector3.combine(node.offset, stretch, (offset, k) => negate(offset * k)),
+      size: Vector3.combine(size, stretch, (pixels, k) => Math.max(
         kMinThickness,
         pixels * Math.abs(k) / kPixelsPerUnit
       )),
       scale: { x: 1, y: 1, z: 1 },
       rotation: eulerXyz(node.orientation)
+    },
+    flipAxes: {
+      x: stretch.x < 0,
+      y: stretch.y < 0,
+      z: stretch.z < 0
     },
     uv: {
       state: "free",
@@ -109,20 +113,7 @@ function blockNode(
         faceRect(slot, node.faces[index], size, textureSize)
       ]))
     }
-  };
-
-  const flipAxes: MirrorAxes = {
-    x: stretch.x < 0,
-    y: stretch.y < 0,
-    z: stretch.z < 0
-  };
-
-  return flipAxes.x || flipAxes.y || flipAxes.z ?
-    {
-      ...block,
-      flipAxes
-    } :
-    block;
+  });
 }
 
 function faceRect(
@@ -132,9 +123,11 @@ function faceRect(
   textureSize: TextureSize
 ): UVGeometry {
   const [width, height] = faceDimensions(slot, size);
-  const mirroredHorizontally = (face.flags & kMirrorHorizontal) !== 0;
-  const mirroredVertically = (face.flags & kMirrorVertical) !== 0;
-  const pivotTurns = clockwiseTurns(face.flags);
+  const {
+    clockwiseTurns: pivotTurns,
+    mirroredHorizontally,
+    mirroredVertically
+  } = face.orientation;
   const turns = pivotTurns + (mirroredVertically ? 2 : 0);
   const swapped = turns % 2 === 1;
   const [farX, farY] = quarterTurned(
@@ -171,14 +164,6 @@ function faceDimensions(
     default:
       return [size.x, size.z];
   }
-}
-
-function clockwiseTurns(
-  flags: number
-): number {
-  const found = kQuarterTurnFlags.find(([bit]) => (flags & bit) !== 0);
-
-  return found === undefined ? 0 : found[1];
 }
 
 function quarterTurned(
@@ -241,29 +226,10 @@ function pngSize(
   };
 }
 
-function combine(
-  a: CsVector3,
-  b: CsVector3,
-  merge: (a: number, b: number) => number
-): Vector3JSON {
-  return {
-    x: merge(a.x, b.x),
-    y: merge(a.y, b.y),
-    z: merge(a.z, b.z)
-  };
-}
-
 function negate(
   value: number
 ): number {
   return value === 0 ? 0 : -value;
-}
-
-function wrap(
-  value: number,
-  length: number
-): number {
-  return ((value % length) + length) % length;
 }
 
 function nodeId(

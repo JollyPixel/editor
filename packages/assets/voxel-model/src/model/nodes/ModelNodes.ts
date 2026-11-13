@@ -7,19 +7,50 @@ import {
 // Import Internal Dependencies
 import type {
   BlockNodeJSON,
-  BlockTransformJSON,
-  MirrorAxes,
-  ModelNodeJSON,
-  VoxelModelCommand
-} from "../../network/types.ts";
-import { BlockShape } from "./BlockShape.ts";
+  ModelNodeJSON
+} from "../types.ts";
 
-export type NodeCommand = Extract<
-  VoxelModelCommand,
-  { action: `node-${string}`; }
+export type BlockPatch = Partial<
+  Pick<BlockNodeJSON, "transform" | "flipAxes" | "shape" | "uv">
+>;
+
+export type MaterialBlockJSON = BlockNodeJSON & { materialId: string; };
+
+export type ModelNodesReader = Pick<
+  ModelNodes,
+  | "size"
+  | "has"
+  | "get"
+  | "canAdd"
+  | "canMove"
+  | "isSiblingSlot"
+  | "isBlock"
+  | "block"
+  | "blockMaterialId"
+  | "values"
+  | "blocks"
+  | "listChildren"
+  | "findNextSibling"
+  | "subtreeFrom"
+  | "ancestorIds"
+  | "findEnclosingBlock"
+  | "findTransformParent"
+  | "blockNamesUnder"
+  | "blockNameClashes"
+  | "blocksUsing"
+  | "blocksUsingAny"
 >;
 
 export class ModelNodes extends OrderedTree<ModelNodeJSON> {
+  static #usesAny(
+    node: Readonly<ModelNodeJSON>,
+    materialIds: ReadonlySet<string>
+  ): node is Readonly<MaterialBlockJSON> {
+    return node.kind === "block" &&
+      node.materialId !== undefined &&
+      materialIds.has(node.materialId);
+  }
+
   constructor() {
     super({
       entry: "node"
@@ -59,24 +90,30 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
   blocksUsing(
     materialId: string
   ): string[] {
-    return [...this.scan()]
-      .filter((node) => node.kind === "block" && node.materialId === materialId)
-      .map(({ id }) => id);
+    return Array.from(this.#scanUsing(new Set([materialId])), ({ id }) => id);
+  }
+
+  blocksUsingAny(
+    materialIds: ReadonlySet<string>
+  ): MaterialBlockJSON[] {
+    return Array.from(this.#scanUsing(materialIds), (block) => structuredClone(block));
   }
 
   findEnclosingBlock(
     id: string | null
   ): string | null {
-    let current = id;
-    for (let step = 0; current !== null && step <= this.size; step++) {
-      const node = this.peek(current);
+    if (id === null) {
+      return null;
+    }
+
+    for (const candidate of [id, ...this.ancestorIds(id)]) {
+      const node = this.peek(candidate);
       if (node === undefined) {
         return null;
       }
       if (node.kind === "block") {
         return node.id;
       }
-      current = node.parentId;
     }
 
     return null;
@@ -126,78 +163,16 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
     );
   }
 
-  accepts(
-    command: NodeCommand
-  ): boolean {
-    switch (command.action) {
-      case "node-added":
-        return this.canAdd(command.node, command.beforeId);
-      case "node-removed":
-      case "node-renamed":
-        return this.has(command.id);
-      case "node-moved":
-        return this.canMove(command.id, command.parentId, command.beforeId) &&
-          command.transforms.every(({ id }) => this.isBlock(id));
-      case "node-transformed":
-      case "node-uv-changed":
-      case "node-shape-changed":
-      case "node-material-changed":
-        return this.isBlock(command.id);
-    }
-  }
-
-  apply(
-    command: NodeCommand
+  rename(
+    id: string,
+    name: string
   ): void {
-    switch (command.action) {
-      case "node-added":
-        this.add(command.node, command.beforeId);
-        break;
-
-      case "node-removed":
-        this.remove(command.id);
-        break;
-
-      case "node-renamed":
-        this.update(command.id, (node) => {
-          return {
-            ...node,
-            name: command.name
-          };
-        });
-        break;
-
-      case "node-moved":
-        this.move(command.id, command.parentId, command.beforeId);
-        for (const { id, transform } of command.transforms) {
-          this.#transform(id, transform);
-        }
-        break;
-
-      case "node-transformed":
-        this.#transform(command.id, command.transform);
-        if (command.flipAxes) {
-          this.#flip(command.id, command.flipAxes);
-        }
-        break;
-
-      case "node-uv-changed":
-        this.#patchBlock(command.id, { uv: structuredClone(command.uv) });
-        break;
-
-      case "node-shape-changed":
-        this.update(command.id, (node) => (node.kind === "block" ?
-          {
-            ...BlockShape.applyTo(node, command.shape),
-            uv: structuredClone(command.uv)
-          } :
-          node));
-        break;
-
-      case "node-material-changed":
-        this.assignMaterial(command.id, command.materialId);
-        break;
-    }
+    this.update(id, (node) => {
+      return {
+        ...node,
+        name
+      };
+    });
   }
 
   assignMaterial(
@@ -220,42 +195,33 @@ export class ModelNodes extends OrderedTree<ModelNodeJSON> {
     });
   }
 
-  #patchBlock(
+  dropMaterials(
+    materialIds: ReadonlySet<string>
+  ): void {
+    for (const { id } of [...this.#scanUsing(materialIds)]) {
+      this.assignMaterial(id, null);
+    }
+  }
+
+  patchBlock(
     id: string,
-    patch: Partial<Pick<BlockNodeJSON, "transform" | "uv">>
+    patch: BlockPatch
   ): void {
     this.update(id, (node) => (node.kind === "block" ?
       {
         ...node,
-        ...patch
+        ...structuredClone(patch)
       } :
       node));
   }
 
-  #flip(
-    id: string,
-    flipAxes: MirrorAxes
-  ): void {
-    this.update(id, (node) => {
-      if (node.kind !== "block") {
-        return node;
+  * #scanUsing(
+    materialIds: ReadonlySet<string>
+  ): IterableIterator<Readonly<MaterialBlockJSON>> {
+    for (const node of this.scan()) {
+      if (ModelNodes.#usesAny(node, materialIds)) {
+        yield node;
       }
-
-      const { flipAxes: _previous, ...rest } = node;
-
-      return flipAxes.x || flipAxes.y || flipAxes.z ?
-        {
-          ...rest,
-          flipAxes: { ...flipAxes }
-        } :
-        rest;
-    });
-  }
-
-  #transform(
-    id: string,
-    transform: BlockTransformJSON
-  ): void {
-    this.#patchBlock(id, { transform: structuredClone(transform) });
+    }
   }
 }

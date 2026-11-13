@@ -6,8 +6,8 @@ import assert from "node:assert/strict";
 import { MessageParser } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { voxelModelCommandProtocol } from "#src/network/VoxelModelCommand.schema.ts";
-import type { VoxelModelCommand } from "#src/network/types.ts";
+import { voxelModelCommandProtocol } from "#src/network/voxelModelCommandProtocol.ts";
+import type { VoxelModelCommand } from "#src/model/types.ts";
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import {
   TRANSFORM,

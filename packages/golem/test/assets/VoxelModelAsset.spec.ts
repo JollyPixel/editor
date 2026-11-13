@@ -113,10 +113,10 @@ describe("VoxelModelAsset", { timeout: 10_000 }, () => {
       }
     ]);
     await model.settled();
-    await person.until(() => person.synced.document.tree.block(arm.id) !== undefined &&
+    await person.until(() => person.synced.document.tree.nodes.block(arm.id) !== undefined &&
       person.peerNamed("Builder")?.presence[VOXEL_MODEL_PRESENCE_KEYS.block] === arm.id);
 
-    const seen = person.synced.document.tree.block(arm.id);
+    const seen = person.synced.document.tree.nodes.block(arm.id);
     assert.equal(seen?.materialId, steel.id);
     assert.deepEqual(seen?.shape, { type: "cylinder", sides: 8 });
     assert.deepEqual(seen?.transform.size, { x: 1, y: 4, z: 1 });
@@ -149,7 +149,7 @@ describe("VoxelModelAsset", { timeout: 10_000 }, () => {
         {
           action: "node-transformed",
           id: arm.id,
-          transform: model.tree.block(arm.id)!.transform
+          transform: model.tree.nodes.block(arm.id)!.transform
         }
       ]),
       (error: unknown) => error instanceof LockedByPeerError && error.peer === "Watcher"
@@ -205,7 +205,7 @@ describe("VoxelModelAsset", { timeout: 10_000 }, () => {
     const size = pixels.read().size;
     assert.ok(size.x * size.y > before.x * before.y);
     const rects = Array.from(
-      model.tree.blocks(),
+      model.tree.nodes.blocks(),
       (block) => UVRegion.fromLayout(block.uv, kRegionIdentity).bounds
     );
     assert.deepEqual(

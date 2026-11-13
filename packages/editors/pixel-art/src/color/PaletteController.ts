@@ -10,6 +10,7 @@ import {
   type PixelDocument,
   type RGBA8
 } from "@jolly-pixel/pixel-draw.renderer";
+import { wrap } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type { ColorChangeDetail } from "./ColorSwatch.ts";
@@ -125,7 +126,7 @@ export class PaletteController implements ReactiveController {
     }
     const current = this.selected ?? (offset > 0 ? -1 : 0);
 
-    return this.select((((current + offset) % palette.size) + palette.size) % palette.size);
+    return this.select(wrap(current + offset, palette.size));
   }
 
   deselect(): void {

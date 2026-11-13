@@ -7,10 +7,14 @@ import {
   ModelDocument,
   type ModelChange
 } from "#src/model/ModelDocument.ts";
+import {
+  modelChangeLabel,
+  removedModelNodes
+} from "#src/model/command/modelCommands.ts";
 import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
 import { BlockUvLayouts } from "#src/model/nodes/BlockUvLayouts.ts";
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
-import type { UVLayoutData } from "#src/network/types.ts";
+import type { UVLayoutData } from "#src/model/types.ts";
 
 // CONSTANTS
 const kUv: UVLayoutData = {
@@ -44,12 +48,14 @@ describe("ModelDocument", () => {
         ["node-renamed", "local"]
       ]
     );
-    assert.deepEqual(document.tree.get(blockId!), {
+    assert.deepEqual(document.tree.nodes.get(blockId!), {
       kind: "block",
       id: blockId,
       parentId: folderId,
       name: "Leg",
       transform: BlockTransform.create(),
+      flipAxes: { x: false, y: false, z: false },
+      shape: { type: "box" },
       uv: BlockUvLayouts.net()
     });
   });
@@ -78,7 +84,7 @@ describe("ModelDocument", () => {
       }
     });
 
-    assert.equal(document.tree.has("f"), true);
+    assert.equal(document.tree.nodes.has("f"), true);
     assert.deepEqual(
       changes.map((change) => change.origin),
       ["remote"]
@@ -100,34 +106,47 @@ describe("ModelDocument", () => {
     });
 
     assert.equal(applied, false);
-    assert.equal(document.tree.get("a")?.parentId, null);
+    assert.equal(document.tree.nodes.get("a")?.parentId, null);
     assert.deepEqual(changes, []);
   });
 
-  test("reports every node a removal takes with it", () => {
+  test("reports every node a removal takes with it, and none for other changes", () => {
     const document = new ModelDocument();
     const folderId = document.addFolder({ name: "Limbs" });
     const blockId = document.addBlock({ name: "Arm", parentId: folderId });
     const changes = recordChanges(document);
 
+    document.rename(blockId!, "Leg");
     document.remove(folderId!);
 
     assert.deepEqual(
-      changes[0].image.before.nodes.map((node) => node.id),
-      [folderId, blockId]
+      changes.map((change) => removedModelNodes(change).map((node) => node.id)),
+      [[], [folderId, blockId]]
     );
-    assert.equal(document.tree.size, 0);
+    assert.equal(document.tree.nodes.size, 0);
   });
 
-  test("reports the nodes a change replaced, as they were before it", () => {
+  test("names a change after the node or material it touched", () => {
     const document = new ModelDocument();
-    const blockId = document.addBlock({ name: "Arm" });
-    const before = document.tree.get(blockId!);
+    const iron = document.addMaterial({ name: "Iron" })!;
+    const arm = document.addBlock({ name: "Arm" })!;
     const changes = recordChanges(document);
 
-    document.rename(blockId!, "Leg");
+    document.addBlock({ name: "Leg" });
+    document.rename(arm, "Left Arm");
+    document.assignMaterial(arm, iron);
+    document.changeMaterial(iron, { opacity: 0.5 });
+    document.remove(arm);
+    document.removeMaterial(iron);
 
-    assert.deepEqual(changes[0].image.before.nodes, [before]);
+    assert.deepEqual(changes.map(modelChangeLabel), [
+      "Add Leg",
+      "Rename Arm",
+      "Set material of Left Arm",
+      "Edit Iron",
+      "Delete Left Arm",
+      "Delete Iron"
+    ]);
   });
 
   test("loads a snapshot as one reset, with no change events", () => {
@@ -153,7 +172,7 @@ describe("ModelDocument", () => {
     assert.equal(resets, 1);
     assert.deepEqual(changes, []);
     assert.deepEqual(
-      [...document.tree.values()].map((node) => node.id),
+      [...document.tree.nodes.values()].map((node) => node.id),
       ["f"]
     );
   });
@@ -165,7 +184,7 @@ describe("ModelDocument", () => {
     const id = document.addBlock({ name: "Arm", uv: kUv });
 
     assert.equal(changes.length, 1);
-    assert.deepEqual(document.tree.block(id!)?.uv, kUv);
+    assert.deepEqual(document.tree.nodes.block(id!)?.uv, kUv);
   });
 
   test("changes the UV layout of a block only", () => {
@@ -177,28 +196,28 @@ describe("ModelDocument", () => {
     assert.equal(document.updateUv(blockId, kUv), true);
     assert.equal(document.updateUv(folderId, kUv), false);
 
-    assert.deepEqual(document.tree.block(blockId)?.uv, kUv);
+    assert.deepEqual(document.tree.nodes.block(blockId)?.uv, kUv);
     assert.deepEqual(
       changes.map((change) => change.command.action),
       ["node-added", "node-added", "node-uv-changed"]
     );
   });
 
-  test("reshapes a block with its UV layout in one command, storing no shape for a box", () => {
+  test("reshapes a block with its UV layout in one command", () => {
     const document = new ModelDocument();
     const blockId = document.addBlock({ name: "Floor", shape: { type: "plane" } })!;
     const folderId = document.addFolder({ name: "Limbs" })!;
     const planeUv = BlockUvLayouts.net(undefined, { type: "plane" });
     const changes = recordChanges(document);
 
-    assert.deepEqual(document.tree.block(blockId)?.shape, { type: "plane" });
-    assert.deepEqual(document.tree.block(blockId)?.uv, planeUv);
+    assert.deepEqual(document.tree.nodes.block(blockId)?.shape, { type: "plane" });
+    assert.deepEqual(document.tree.nodes.block(blockId)?.uv, planeUv);
 
     assert.equal(document.updateShape(blockId, { type: "box" }, kUv), true);
     assert.equal(document.updateShape(folderId, { type: "plane" }, planeUv), false);
 
-    const block = document.tree.block(blockId)!;
-    assert.equal("shape" in block, false);
+    const block = document.tree.nodes.block(blockId)!;
+    assert.deepEqual(block.shape, { type: "box" });
     assert.deepEqual(block.uv, kUv);
     assert.deepEqual(changes.map((change) => change.command.action), ["node-shape-changed"]);
   });
@@ -211,8 +230,8 @@ describe("ModelDocument", () => {
     const window = document.addBlock({ name: "Window", materialId: glass })!;
 
     assert.deepEqual(document.tree.materials.material(glass)?.surface, MaterialSurface.create());
-    assert.equal(document.tree.block(plain)?.materialId, undefined);
-    assert.equal(document.tree.block(window)?.materialId, glass);
+    assert.equal(document.tree.nodes.block(plain)?.materialId, undefined);
+    assert.equal(document.tree.nodes.block(window)?.materialId, glass);
     assert.equal(document.addBlock({ name: "Ghost", materialId: "missing" }), null);
   });
 
@@ -251,6 +270,6 @@ describe("ModelDocument", () => {
 
     assert.deepEqual([...document.tree.materials.values()].map(({ id }) => id), [glass]);
     assert.equal(document.tree.materials.has(gold), false);
-    assert.equal(document.tree.block(bolt)?.materialId, undefined);
+    assert.equal(document.tree.nodes.block(bolt)?.materialId, undefined);
   });
 });

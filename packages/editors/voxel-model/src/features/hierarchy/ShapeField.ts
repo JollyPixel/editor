@@ -137,13 +137,13 @@ export class ShapeField extends LitElement {
     const editing = this.#editing;
     const id = editing?.selection.selected ?? null;
 
-    return id === null ? undefined : editing?.document.tree.block(id);
+    return id === null ? undefined : editing?.document.tree.nodes.block(id);
   }
 
   #shape(): BlockShapeJSON {
     const block = this.#selectedBlock();
 
-    return block === undefined ? BlockShape.box : BlockShape.fromBlock(block);
+    return block?.shape ?? BlockShape.box;
   }
 
   #reshape(

@@ -72,18 +72,11 @@ const model = hero.get();
 Concurrent batches share the coordinator's in-flight promise. Each batch still owns
 its progress and failure state.
 
-For one explicit dynamic asset, `load()` returns the value and accepts an
-optional abort signal:
+For one explicit dynamic asset, `load()` returns the value:
 
 ```ts
-const controller = new AbortController();
-const model = await assets.load(heroReference, {
-  signal: controller.signal
-});
+const model = await assets.load(heroReference);
 ```
-
-The loader decides how to apply the signal. `loadBatch()` accepts the same
-`signal` option and passes it to every loader it starts.
 
 ## Replace loaded content
 

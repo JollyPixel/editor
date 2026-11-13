@@ -41,7 +41,7 @@ describe("ModelHierarchy.duplicate", () => {
     assert.ok(duplicateId);
     assert.equal(blocks.get(duplicateId)?.name, "Left Arm");
     assert.deepEqual(blocks.get(duplicateId)?.transform, source.transform);
-    assert.deepEqual(document.tree.block(duplicateId)?.uv, layoutAt(7));
+    assert.deepEqual(document.tree.nodes.block(duplicateId)?.uv, layoutAt(7));
   });
 
   test("gives the copy of a block the same material and shape", () => {
@@ -55,9 +55,9 @@ describe("ModelHierarchy.duplicate", () => {
       mirrorAxes: NO_MIRROR
     });
 
-    assert.equal(document.tree.block(duplicateId!)?.materialId, metalId);
+    assert.equal(document.tree.nodes.block(duplicateId!)?.materialId, metalId);
     assert.equal(document.tree.materials.size, 1);
-    assert.deepEqual(document.tree.block(duplicateId!)?.shape, { type: "plane" });
+    assert.deepEqual(document.tree.nodes.block(duplicateId!)?.shape, { type: "plane" });
     assert.deepEqual(blocks.get(duplicateId!)?.shape, { type: "plane" });
   });
 
@@ -169,9 +169,9 @@ describe("ModelHierarchy.duplicate", () => {
       blocks.get(duplicateId)?.worldPosition,
       new THREE.Vector3(-2, 0, 0)
     );
-    assert.deepEqual(document.tree.block(duplicateId)?.flipAxes, mirrorAxes);
+    assert.deepEqual(document.tree.nodes.block(duplicateId)?.flipAxes, mirrorAxes);
     assert.deepEqual(
-      document.tree.block(duplicateId)?.transform.position,
+      document.tree.nodes.block(duplicateId)?.transform.position,
       { x: -2, y: 0, z: 0 }
     );
   });

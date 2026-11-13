@@ -27,7 +27,7 @@ import {
   restoreImages,
   type AnimationImage
 } from "./history/animationImages.ts";
-import { invert } from "./history/animationInverse.ts";
+import { invertAnimationCommand } from "./command/animationCommands.ts";
 import { TICKS_PER_SECOND } from "./values/FrameRate.ts";
 
 // CONSTANTS
@@ -173,7 +173,7 @@ function animationState(
     apply: (command) => set.apply(command),
     load: (snapshot) => set.load(snapshot),
     captureImage: (command) => captureImage(set, command),
-    invert: (command) => invert(set, command),
+    invert: (command) => invertAnimationCommand(set, command),
     restored: (images) => restoreImages(set.toJSON(), images)
   };
 }

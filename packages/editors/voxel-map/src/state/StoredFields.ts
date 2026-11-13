@@ -1,26 +1,19 @@
 // Import Third-party Dependencies
-import { is } from "@jolly-pixel/utils";
+import { parseJsonObject } from "@jolly-pixel/utils";
 
 export class StoredFields {
   static parse(
     raw: string | null
   ): StoredFields {
-    try {
-      return new StoredFields(raw === null ? null : JSON.parse(raw));
-    }
-    catch {
-      return new StoredFields(null);
-    }
+    return new StoredFields(parseJsonObject(raw));
   }
 
   #fields: Map<string, unknown>;
 
   constructor(
-    value: unknown
+    fields: Record<string, unknown>
   ) {
-    this.#fields = is.plainObject(value) ?
-      new Map(Object.entries(value)) :
-      new Map();
+    this.#fields = new Map(Object.entries(fields));
   }
 
   boolean(

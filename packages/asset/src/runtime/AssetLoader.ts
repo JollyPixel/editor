@@ -3,10 +3,6 @@ import type { AssetCatalog } from "../AssetCatalog.ts";
 import type { AssetRecord } from "../AssetRecord.ts";
 import type { AssetReference } from "../AssetReference.ts";
 
-export interface AssetLoadOptions {
-  signal?: AbortSignal;
-}
-
 export interface AssetDependencies {
   readonly catalog: AssetCatalog;
 
@@ -15,7 +11,7 @@ export interface AssetDependencies {
   ): Promise<TValue>;
 }
 
-export interface AssetLoadContext extends AssetLoadOptions {
+export interface AssetLoadContext {
   readonly assets: AssetDependencies;
 }
 

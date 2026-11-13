@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import { ModelTree } from "#src/model/ModelTree.ts";
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
-import type { VoxelModelCommand } from "#src/network/types.ts";
+import type { VoxelModelCommand } from "#src/model/types.ts";
 import {
   UV,
   blockAdded,
@@ -46,10 +46,10 @@ describe("ModelTree", () => {
     const tree = createTree(materialAdded("glass"), blockAdded("a"));
 
     tree.apply({ action: "node-material-changed", id: "a", materialId: "glass" });
-    assert.equal(tree.block("a")?.materialId, "glass");
+    assert.equal(tree.nodes.block("a")?.materialId, "glass");
 
     tree.apply({ action: "node-material-changed", id: "a", materialId: null });
-    assert.equal("materialId" in (tree.block("a") ?? {}), false);
+    assert.equal("materialId" in (tree.nodes.block("a") ?? {}), false);
   });
 
   test("rejects a material for a folder, an unknown node or an unknown material", () => {
@@ -124,8 +124,8 @@ describe("ModelTree", () => {
     tree.apply({ action: "material-removed", id: "glass" });
 
     assert.equal(tree.materials.has("glass"), false);
-    assert.equal(tree.block("a")?.materialId, undefined);
-    assert.equal(tree.block("b")?.materialId, "metal");
+    assert.equal(tree.nodes.block("a")?.materialId, undefined);
+    assert.equal(tree.nodes.block("b")?.materialId, "metal");
   });
 
   test("nests materials in folders and orders siblings", () => {
@@ -154,12 +154,12 @@ describe("ModelTree", () => {
       folderAdded("limbs")
     );
 
-    assert.equal(tree.blockMaterialId("body"), "glass");
-    assert.equal(tree.blockMaterialId("arm"), undefined);
-    assert.equal(tree.blockMaterialId("limbs"), undefined);
-    assert.equal(tree.blockMaterialId("missing"), undefined);
-    assert.deepEqual(tree.blocksUsing("glass"), ["body"]);
-    assert.deepEqual(tree.blocksUsing("missing"), []);
+    assert.equal(tree.nodes.blockMaterialId("body"), "glass");
+    assert.equal(tree.nodes.blockMaterialId("arm"), undefined);
+    assert.equal(tree.nodes.blockMaterialId("limbs"), undefined);
+    assert.equal(tree.nodes.blockMaterialId("missing"), undefined);
+    assert.deepEqual(tree.nodes.blocksUsing("glass"), ["body"]);
+    assert.deepEqual(tree.nodes.blocksUsing("missing"), []);
   });
 
   test("finds the next sibling of a node or material, skipping other parents", () => {
@@ -173,9 +173,9 @@ describe("ModelTree", () => {
       materialAdded("gold", "metals")
     );
 
-    assert.equal(tree.findNextSibling("body"), "head");
-    assert.equal(tree.findNextSibling("head"), undefined);
-    assert.equal(tree.findNextSibling("missing"), undefined);
+    assert.equal(tree.nodes.findNextSibling("body"), "head");
+    assert.equal(tree.nodes.findNextSibling("head"), undefined);
+    assert.equal(tree.nodes.findNextSibling("missing"), undefined);
     assert.equal(tree.materials.findNextSibling("steel"), "gold");
     assert.equal(tree.materials.findNextSibling("metals"), "glass");
   });
@@ -221,8 +221,8 @@ describe("ModelTree", () => {
     tree.apply({ action: "material-removed", id: "metals" });
 
     assert.deepEqual([...tree.materials.values()].map(({ id }) => id), ["glass"]);
-    assert.equal(tree.block("a")?.materialId, undefined);
-    assert.equal(tree.block("b")?.materialId, "glass");
+    assert.equal(tree.nodes.block("a")?.materialId, undefined);
+    assert.equal(tree.nodes.block("b")?.materialId, "glass");
   });
 
   test("removes a folder alone and puts its contents in its place, keeping their blocks", () => {
@@ -241,25 +241,10 @@ describe("ModelTree", () => {
       [...tree.materials.values()].map(({ id, parentId }) => [id, parentId]),
       [["glass", null], ["steel", null], ["gold", null], ["wood", null]]
     );
-    assert.equal(tree.block("a")?.materialId, "steel");
+    assert.equal(tree.nodes.block("a")?.materialId, "steel");
     assert.equal(
       tree.accepts({ action: "material-removed", id: "glass", keepContents: true }),
       false
-    );
-  });
-
-  test("counts the blocks using each material, unused ones included", () => {
-    const tree = createTree(
-      materialAdded("glass"),
-      materialAdded("metal"),
-      { action: "node-added", node: { ...blockNode("a"), materialId: "glass" } },
-      { action: "node-added", node: { ...blockNode("b"), materialId: "glass" } },
-      blockAdded("c")
-    );
-
-    assert.deepEqual(
-      tree.materialUses(),
-      new Map([["glass", 2], ["metal", 0]])
     );
   });
 });

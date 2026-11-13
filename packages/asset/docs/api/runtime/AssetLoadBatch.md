@@ -11,7 +11,7 @@ type AssetLoadBatchStatus =
   | "ready"
   | "failed";
 
-interface AssetLoadBatchOptions extends AssetLoadOptions {
+interface AssetLoadBatchOptions {
   onProgress?: (progress: AssetLoadProgress) => void;
 }
 
@@ -26,8 +26,7 @@ interface AssetLoadBatch {
 
 `AssetCoordinator.loadBatch()` snapshots its input. Duplicate IDs count once.
 Ready assets are included in `total` and the initial `completed` count. An empty
-batch starts ready with both counts set to zero. `signal` is passed to every
-loader the batch starts.
+batch starts ready with both counts set to zero.
 
 Await `done` before synchronously reading every asset required by the
 operation:
@@ -64,9 +63,9 @@ type AssetLoadProgress =
 batch started do not produce callbacks. Completion order follows task
 settlement order.
 
-The `status` field narrows access to `error`. If the callback throws, the batch
-waits for every task and then rejects `done` with that value. Callback errors
-do not appear in `failures`.
+The `status` field narrows access to `error`. If the callback throws, the
+error is rethrown from a microtask, where the platform reports it as uncaught.
+The batch keeps running, and its `status`, `failures`, and `done` ignore it.
 
 ## Failures and retries
 

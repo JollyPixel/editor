@@ -6,8 +6,13 @@ import assert from "node:assert/strict";
 import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
+import { captureModelImage } from "#src/model/command/modelCommands.ts";
+import type { ModelImages } from "#src/model/command/modelImages.ts";
 import { ModelTree } from "#src/model/ModelTree.ts";
-import type { VoxelModelCommand, VoxelModelSnapshot } from "#src/network/types.ts";
+import type {
+  VoxelModelCommand,
+  VoxelModelSnapshot
+} from "#src/model/types.ts";
 import {
   TRANSFORM,
   blockAdded,
@@ -42,7 +47,7 @@ describe("ModelTree.load", () => {
       animationSets: []
     });
 
-    assert.equal(tree.get("arm")?.parentId, "body");
+    assert.equal(tree.nodes.get("arm")?.parentId, "body");
   });
 
   test("rejects a repeated id, a missing parent or material and a cycle", () => {
@@ -89,14 +94,14 @@ describe("ModelTree.load", () => {
       animationSets: []
     }));
 
-    assert.ok(tree.has("body"));
-    assert.equal(tree.has("a"), false);
+    assert.ok(tree.nodes.has("body"));
+    assert.equal(tree.nodes.has("a"), false);
     assert.ok(tree.materials.has("glass"));
     assert.equal(tree.materials.has("metal"), false);
   });
 });
 
-describe("ModelTree.captureImages", () => {
+describe("captureEntryImages", () => {
   test("returns the nodes a command changes, as they are before it", () => {
     const tree = createTree(
       folderAdded("f"),
@@ -104,13 +109,13 @@ describe("ModelTree.captureImages", () => {
       blockAdded("b")
     );
 
-    assert.deepEqual(tree.captureImages(blockAdded("c")).nodes, []);
+    assert.deepEqual(beforeImage(tree, blockAdded("c")).nodes, []);
     assert.deepEqual(
-      tree.captureImages({ action: "node-removed", id: "f" }).nodes.map((node) => node.id),
+      beforeImage(tree, { action: "node-removed", id: "f" }).nodes.map((node) => node.id),
       ["f", "a"]
     );
     assert.deepEqual(
-      tree.captureImages({
+      beforeImage(tree, {
         action: "node-moved",
         id: "a",
         parentId: null,
@@ -119,11 +124,11 @@ describe("ModelTree.captureImages", () => {
       ["a", "b"]
     );
     assert.deepEqual(
-      tree.captureImages({ action: "node-renamed", id: "b", name: "B" }),
+      beforeImage(tree, { action: "node-renamed", id: "b", name: "B" }),
       { nodes: [blockNode("b")], materials: [], animationSets: [] }
     );
     assert.deepEqual(
-      tree.captureImages({ action: "node-renamed", id: "missing", name: "B" }).nodes,
+      beforeImage(tree, { action: "node-renamed", id: "missing", name: "B" }).nodes,
       []
     );
   });
@@ -138,15 +143,15 @@ describe("ModelTree.captureImages", () => {
     );
 
     assert.deepEqual(
-      tree.captureImages({ action: "material-removed", id: "metals" }).nodes.map((node) => node.id),
+      beforeImage(tree, { action: "material-removed", id: "metals" }).nodes.map((node) => node.id),
       ["a"]
     );
     assert.deepEqual(
-      tree.captureImages({ action: "material-removed", id: "metals", keepContents: true }).nodes,
+      beforeImage(tree, { action: "material-removed", id: "metals", keepContents: true }).nodes,
       []
     );
     assert.deepEqual(
-      tree.captureImages({ action: "material-renamed", id: "glass", name: "Glass" }).nodes,
+      beforeImage(tree, { action: "material-renamed", id: "glass", name: "Glass" }).nodes,
       []
     );
   });
@@ -160,7 +165,7 @@ describe("ModelTree.captureImages", () => {
     function readMaterials(
       command: VoxelModelCommand
     ): unknown {
-      return tree.captureImages(command).materials;
+      return beforeImage(tree, command).materials;
     }
 
     assert.deepEqual(readMaterials(materialAdded("gold")), []);
@@ -239,13 +244,13 @@ describe("ModelTree block names", () => {
       blockAdded("leg", "limbs")
     );
 
-    assert.equal(tree.blockNamesUnder("body").has(" ARM "), true);
-    assert.equal(tree.blockNamesUnder("limbs").has("arm"), true);
-    assert.equal(tree.blockNamesUnder("body").has("leg"), true);
-    assert.equal(tree.blockNamesUnder(null).has("arm"), false);
-    assert.equal(tree.blockNamesUnder("arm").has("arm"), false);
-    assert.equal(tree.blockNamesUnder("body", "arm").has("arm"), false);
-    assert.equal(tree.blockNamesUnder("body").has("limbs"), false);
+    assert.equal(tree.nodes.blockNamesUnder("body").has(" ARM "), true);
+    assert.equal(tree.nodes.blockNamesUnder("limbs").has("arm"), true);
+    assert.equal(tree.nodes.blockNamesUnder("body").has("leg"), true);
+    assert.equal(tree.nodes.blockNamesUnder(null).has("arm"), false);
+    assert.equal(tree.nodes.blockNamesUnder("arm").has("arm"), false);
+    assert.equal(tree.nodes.blockNamesUnder("body", "arm").has("arm"), false);
+    assert.equal(tree.nodes.blockNamesUnder("body").has("limbs"), false);
   });
 
   test("picks the first free numbered name among the siblings only", () => {
@@ -257,8 +262,8 @@ describe("ModelTree block names", () => {
       renamed("b", "Block 2")
     );
 
-    assert.equal(tree.blockNamesUnder("body").free("block"), "block 3");
-    assert.equal(tree.blockNamesUnder(null).free("Block"), "Block");
+    assert.equal(tree.nodes.blockNamesUnder("body").free("block"), "block 3");
+    assert.equal(tree.nodes.blockNamesUnder(null).free("Block"), "Block");
   });
 
   test("accepts clashing names and reports every block involved", () => {
@@ -274,6 +279,12 @@ describe("ModelTree block names", () => {
       renamed("d", "arm")
     );
 
-    assert.deepEqual(tree.blockNameClashes(), new Set(["a", "b"]));
+    assert.deepEqual(tree.nodes.blockNameClashes(), new Set(["a", "b"]));
   });
 });
+
+function beforeImage(
+  ...args: Parameters<typeof captureModelImage>
+): ModelImages {
+  return captureModelImage(...args).before;
+}

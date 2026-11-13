@@ -10,7 +10,7 @@ import {
   AnimationDocument,
   type AnimationChange
 } from "#src/model/AnimationDocument.ts";
-import { invert } from "#src/model/history/animationInverse.ts";
+import { invertAnimationCommand } from "#src/model/command/animationCommands.ts";
 import { TICKS_PER_SECOND } from "#src/model/values/FrameRate.ts";
 import { key } from "../helpers/clips.ts";
 
@@ -36,7 +36,7 @@ describe("AnimationDocument", () => {
 
     assert.ok(id);
     assert.match(id, /^[0-9A-Za-z]{12}$/);
-    assert.deepEqual(document.set.clip(id), {
+    assert.deepEqual(document.set.clip(id)?.toJSON(), {
       id,
       name: "Idle",
       length: TICKS_PER_SECOND,
@@ -50,13 +50,16 @@ describe("AnimationDocument", () => {
 
   test("adds a clip with a copy of the given tracks", () => {
     const source = createDocument();
-    const { tracks } = source.set.clip("walk")!;
+    const { tracks } = source.set.clip("walk")!.toJSON();
     const document = new AnimationDocument();
 
     const id = document.addClip({ name: "Walk", tracks })!;
     source.writeKey("walk", "body/arm", "rotation", key(0, 45));
 
-    assert.deepEqual(document.set.clip(id)?.tracks, createDocument().set.clip("walk")?.tracks);
+    assert.deepEqual(
+      document.set.clip(id)?.toJSON().tracks,
+      createDocument().set.clip("walk")?.toJSON().tracks
+    );
   });
 
   test("rounds key values to four decimals", () => {
@@ -74,8 +77,8 @@ describe("AnimationDocument", () => {
     const id = document.addClip({ name: "Spin", tracks: [{ path: "ring", rotation: [noisy] }] })!;
     document.writeKey(id, "ring", "position", noisy);
 
-    assert.deepStrictEqual(document.set.keyAt(id, "ring", "rotation", 0), rounded);
-    assert.deepStrictEqual(document.set.keyAt(id, "ring", "position", 0), rounded);
+    assert.deepStrictEqual(document.set.clip(id)?.keyAt("ring", "rotation", 0), rounded);
+    assert.deepStrictEqual(document.set.clip(id)?.keyAt("ring", "position", 0), rounded);
   });
 
   const kEdits: Record<string, (document: AnimationDocument) => boolean> = {
@@ -121,7 +124,7 @@ describe("AnimationDocument", () => {
     const document = createDocument();
 
     assert.throws(
-      () => invert(document.set, { action: "clip-removed", id: "missing" }),
+      () => invertAnimationCommand(document.set, { action: "clip-removed", id: "missing" }),
       InvalidEntryError
     );
   });

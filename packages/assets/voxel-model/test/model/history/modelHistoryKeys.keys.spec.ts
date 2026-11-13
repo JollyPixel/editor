@@ -7,7 +7,6 @@ import { CommandHistory, type HistoryStepInfo } from "@jolly-pixel/history";
 
 // Import Internal Dependencies
 import { ModelDocument, type ModelChange } from "#src/model/ModelDocument.ts";
-import { modelHistoryKeys } from "#src/model/history/modelHistoryKeys.ts";
 import { BlockTransform } from "#src/model/nodes/BlockTransform.ts";
 import { MaterialSurface } from "#src/model/materials/MaterialSurface.ts";
 import type { ModelTreeReader } from "#src/model/ModelTree.ts";
@@ -32,7 +31,7 @@ function createHistory(
   history.register({
     id: "model",
     document,
-    keys: modelHistoryKeys(document.tree),
+    keys: document.historyKeys,
     resolveScope: () => kScope,
     ...options.label === undefined ? {} : { label: options.label }
   });
@@ -68,7 +67,7 @@ function readShape(
   function nodes(
     parentId: string | null
   ): unknown[] {
-    return tree.listChildren(parentId).map((node) => [node, nodes(node.id)]);
+    return tree.nodes.listChildren(parentId).map((node) => [node, nodes(node.id)]);
   }
   function materials(
     parentId: string | null
@@ -157,8 +156,8 @@ describe("modelHistoryKeys", () => {
     assert.equal(history.state(kScope).undoLabel, null);
     assert.equal(history.undo(kScope), true);
     assert.deepEqual(skips, [{ label: "Rename arm", refused: { reason: "peer", clientId: "peer-1" } }]);
-    assert.equal(document.tree.get(ids.arm)?.name, "Peer");
-    assert.equal(document.tree.get(ids.head)?.name, "Head");
+    assert.equal(document.tree.nodes.get(ids.arm)?.name, "Peer");
+    assert.equal(document.tree.nodes.get(ids.head)?.name, "Head");
   });
 
   test("still undoes a move after a peer renamed the same block", () => {
@@ -169,8 +168,8 @@ describe("modelHistoryKeys", () => {
     document.applyRemote(networkCommand({ action: "node-renamed", id: ids.arm, name: "Peer" }));
 
     assert.equal(history.undo(kScope), true);
-    assert.notDeepEqual(document.tree.block(ids.arm)?.transform, transform);
-    assert.equal(document.tree.get(ids.arm)?.name, "Peer");
+    assert.notDeepEqual(document.tree.nodes.block(ids.arm)?.transform, transform);
+    assert.equal(document.tree.nodes.get(ids.arm)?.name, "Peer");
   });
 
   test("refuses undoing a creation after a peer added inside it", () => {
@@ -192,8 +191,8 @@ describe("modelHistoryKeys", () => {
     document.applyRemote(networkCommand({ action: "node-renamed", id: ids.leg, name: "Peer" }));
 
     assert.equal(history.undo(kScope), true);
-    assert.equal(document.tree.get(ids.arm)?.name, "Arm");
-    assert.equal(document.tree.get(ids.leg)?.name, "Peer");
+    assert.equal(document.tree.nodes.get(ids.arm)?.name, "Arm");
+    assert.equal(document.tree.nodes.get(ids.leg)?.name, "Peer");
   });
 
   test("re-adds a node last when its old next sibling is gone", () => {
@@ -204,11 +203,11 @@ describe("modelHistoryKeys", () => {
 
     assert.equal(history.undo(kScope), true);
     assert.deepEqual(
-      document.tree.listChildren(ids.limbs).map(({ id }) => id),
+      document.tree.nodes.listChildren(ids.limbs).map(({ id }) => id),
       [ids.arm]
     );
     assert.deepEqual(
-      document.tree.listChildren(ids.arm).map(({ id }) => id),
+      document.tree.nodes.listChildren(ids.arm).map(({ id }) => id),
       [ids.hand]
     );
   });
@@ -218,7 +217,7 @@ describe("modelHistoryKeys", () => {
     document.rename(ids.head, "Skull");
     document.rename(ids.arm, "A");
 
-    const nodes = [...document.tree.values()].map((node) => (node.id === ids.arm ?
+    const nodes = [...document.tree.nodes.values()].map((node) => (node.id === ids.arm ?
       {
         ...node,
         name: "Reloaded"
@@ -231,8 +230,8 @@ describe("modelHistoryKeys", () => {
     });
 
     assert.equal(history.undo(kScope), true);
-    assert.equal(document.tree.get(ids.arm)?.name, "Reloaded");
-    assert.equal(document.tree.get(ids.head)?.name, "Head");
+    assert.equal(document.tree.nodes.get(ids.arm)?.name, "Reloaded");
+    assert.equal(document.tree.nodes.get(ids.head)?.name, "Head");
   });
 
   test("records nothing for an edit the tree refused", () => {

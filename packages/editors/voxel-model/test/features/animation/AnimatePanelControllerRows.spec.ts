@@ -53,7 +53,7 @@ describe("AnimatePanelController clip rows", () => {
     const [copy] = animations.set("shared")!.document.set.clips();
     assert.deepEqual(clipLabels(controller.state.ownClips), ["Wave"]);
     assert.equal(copy.name, "Wave");
-    assert.deepEqual(copy.tracks.map(({ path }) => path), ["Body"]);
+    assert.deepEqual([...copy.trackPaths()], ["Body"]);
     assert.deepEqual(controller.state.clip?.clip.id, copy.id);
   });
 

@@ -3,8 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
+import { captureModelImage } from "#src/model/command/modelCommands.ts";
+import type { ModelImages } from "#src/model/command/modelImages.ts";
 import { ModelTree } from "#src/model/ModelTree.ts";
-import type { VoxelModelCommand } from "#src/network/types.ts";
+import type { VoxelModelCommand } from "#src/model/types.ts";
 import {
   blockAdded,
   folderAdded
@@ -64,10 +66,10 @@ describe("ModelTree animation set links", () => {
       link: { ...kLink, id: "run" }
     };
 
-    const unlinked = tree.captureImages({ action: "animation-set-unlinked", id: "walk" });
+    const unlinked = beforeImage(tree, { action: "animation-set-unlinked", id: "walk" });
 
     assert.deepEqual(unlinked.animationSets, [kLink]);
-    assert.deepEqual(tree.captureImages(relink).animationSets, []);
+    assert.deepEqual(beforeImage(tree, relink).animationSets, []);
   });
 
   test("owns one set at most, and shares it back", () => {
@@ -96,3 +98,9 @@ describe("ModelTree animation set links", () => {
     );
   });
 });
+
+function beforeImage(
+  ...args: Parameters<typeof captureModelImage>
+): ModelImages {
+  return captureModelImage(...args).before;
+}

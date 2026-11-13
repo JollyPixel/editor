@@ -1,55 +1,63 @@
 // Import Third-party Dependencies
 import { InvalidEntryError } from "@jolly-pixel/asset.common";
-import { TrackPath } from "@jolly-pixel/asset.voxel-animation/client";
+import {
+  TrackMap,
+  TrackPath
+} from "@jolly-pixel/asset.voxel-animation/client";
 
 // Import Internal Dependencies
 import type {
   AnimationBindingJSON,
   AnimationSetLinkJSON
-} from "../../network/types.ts";
+} from "../types.ts";
+
+type AnimationSetLinkHeader = Omit<AnimationSetLinkJSON, "bindings">;
 
 export class AnimationSetLink {
   static findProblem(
     link: AnimationSetLinkJSON
   ): string | null {
-    const paths = new Set<string>();
-    for (const { path } of link.bindings) {
-      const { key } = new TrackPath(path);
-      if (paths.has(key)) {
-        return `binds ${path} twice`;
-      }
-      paths.add(key);
-    }
+    const repeated = TrackPath.findRepeated(link.bindings.map(({ path }) => path));
 
-    return null;
+    return repeated === undefined ? null : `binds ${repeated} twice`;
   }
 
-  readonly #json: AnimationSetLinkJSON;
-
-  constructor(
+  static parse(
     link: AnimationSetLinkJSON
-  ) {
+  ): AnimationSetLink {
     const problem = AnimationSetLink.findProblem(link);
     if (problem !== null) {
       throw new InvalidEntryError("animation-set", link.id, problem);
     }
 
-    this.#json = structuredClone(link);
+    const { bindings, ...header } = structuredClone(link);
+
+    return new AnimationSetLink(header, new TrackMap(bindings));
+  }
+
+  readonly #header: AnimationSetLinkHeader;
+  readonly #bindings: TrackMap<AnimationBindingJSON>;
+
+  constructor(
+    header: AnimationSetLinkHeader,
+    bindings: TrackMap<AnimationBindingJSON>
+  ) {
+    this.#header = header;
+    this.#bindings = bindings;
   }
 
   get id(): string {
-    return this.#json.id;
+    return this.#header.id;
   }
 
   get own(): boolean {
-    return this.#json.own === true;
+    return this.#header.own === true;
   }
 
   findBinding(
     path: string
   ): AnimationBindingJSON | undefined {
-    const track = new TrackPath(path);
-    const binding = this.#json.bindings.find((candidate) => track.equals(candidate.path));
+    const binding = this.#bindings.get(path);
 
     return binding === undefined ? undefined : { ...binding };
   }
@@ -58,34 +66,41 @@ export class AnimationSetLink {
     blockPath: string
   ): string | undefined {
     const block = new TrackPath(blockPath);
+    for (const { path, target } of this.#bindings) {
+      if (target !== null && block.equals(target)) {
+        return path;
+      }
+    }
 
-    return this.#json.bindings.find(({ target }) => target !== null && block.equals(target))?.path;
+    return undefined;
   }
 
   withOwn(
     own: boolean
   ): AnimationSetLink {
-    const { own: _own, ...shared } = this.#json;
+    const { own: _own, ...shared } = this.#header;
 
-    return new AnimationSetLink(own ? { ...shared, own: true } : shared);
+    return new AnimationSetLink(own ? { ...shared, own: true } : shared, this.#bindings);
   }
 
-  rebound(
-    path: string,
-    bindings: AnimationBindingJSON[]
+  withBinding(
+    binding: AnimationBindingJSON
   ): AnimationSetLink {
-    const replaced = new TrackPath(path);
+    return new AnimationSetLink(this.#header, this.#bindings.with({ ...binding }));
+  }
 
-    return new AnimationSetLink({
-      ...this.#json,
-      bindings: [
-        ...this.#json.bindings.filter((binding) => !replaced.equals(binding.path)),
-        ...bindings
-      ]
-    });
+  withoutBinding(
+    path: string
+  ): AnimationSetLink {
+    return new AnimationSetLink(this.#header, this.#bindings.without(path));
   }
 
   toJSON(): AnimationSetLinkJSON {
-    return structuredClone(this.#json);
+    return {
+      ...this.#header,
+      bindings: [...this.#bindings].map((binding) => {
+        return { ...binding };
+      })
+    };
   }
 }

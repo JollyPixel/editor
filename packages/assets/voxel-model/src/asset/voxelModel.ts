@@ -2,23 +2,25 @@
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { Infer } from "@jolly-pixel/network";
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
-import { randomId } from "@jolly-pixel/asset.common";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
+import { BlockFlip } from "../model/nodes/BlockFlip.ts";
+import { BlockNode } from "../model/nodes/BlockNode.ts";
 import { BlockTransform } from "../model/nodes/BlockTransform.ts";
-import { BlockUvLayouts } from "../model/nodes/BlockUvLayouts.ts";
 import {
   blockNodeSchema,
+  blockShapeSchema,
   blockTransformSchema,
   folderNodeSchema,
+  mirrorAxesSchema,
   voxelModelSnapshotSchema
-} from "../network/VoxelModelCommand.schema.ts";
+} from "../model/VoxelModel.schema.ts";
 import type {
   ModelNodeJSON,
   UVLayoutData,
   VoxelModelSnapshot
-} from "../network/types.ts";
+} from "../model/types.ts";
 import { VOXEL_MODEL_ICON } from "./icons.ts";
 
 // CONSTANTS
@@ -36,7 +38,9 @@ export const VOXEL_MODEL_ASSET: AssetKindDescriptor = {
 };
 
 const kCompactBlockNodeSchema = z.extend(blockNodeSchema, {
-  transform: z.partial(blockTransformSchema)
+  transform: z.partial(blockTransformSchema),
+  flipAxes: z.optional(mirrorAxesSchema),
+  shape: z.optional(blockShapeSchema)
 });
 
 export const compactVoxelModelFileSchema = z.object({
@@ -73,16 +77,7 @@ export function createVoxelModelFile(
 
   return {
     version: VOXEL_MODEL_FILE_VERSION,
-    nodes: [...blocks].map((name) => {
-      return {
-        kind: "block",
-        id: randomId(),
-        parentId: null,
-        name,
-        transform: BlockTransform.create(),
-        uv: BlockUvLayouts.net()
-      };
-    }),
+    nodes: [...blocks].map((name) => BlockNode.create({ name })),
     materials: [],
     animationSets: [],
     texture: {
@@ -113,13 +108,19 @@ export function expandVoxelModelFile(
 function compactNode(
   node: ModelNodeJSON
 ): CompactModelNode {
-  return node.kind === "folder" ?
-    node :
-    {
-      ...node,
-      transform: BlockTransform.compact(node.transform),
-      uv: compactUv(node.uv)
-    };
+  if (node.kind === "folder") {
+    return node;
+  }
+
+  const { flipAxes, shape, ...block } = node;
+
+  return {
+    ...block,
+    transform: BlockTransform.compact(node.transform),
+    uv: compactUv(node.uv),
+    ...BlockFlip.isMirrored(flipAxes) ? { flipAxes } : {},
+    ...shape.type === "box" ? {} : { shape }
+  };
 }
 
 function compactUv(
@@ -141,13 +142,15 @@ function compactUv(
 function expandNode(
   compact: CompactModelNode
 ): ModelNodeJSON {
-  return compact.kind === "folder" ?
-    compact :
-    {
-      ...compact,
-      transform: BlockTransform.create(compact.transform),
-      uv: expandUv(compact.uv)
-    };
+  if (compact.kind === "folder") {
+    return compact;
+  }
+
+  return BlockNode.upgrade({
+    ...compact,
+    transform: BlockTransform.create(compact.transform),
+    uv: expandUv(compact.uv)
+  });
 }
 
 function expandUv(

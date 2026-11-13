@@ -24,7 +24,7 @@ function createFollowing(
       return { x: 256, y: 256 };
     },
     poses: {
-      under: (uuid) => document.tree.block(uuid)!.transform,
+      under: (uuid) => document.tree.nodes.block(uuid)!.transform,
       mirror: () => []
     },
     access: model.access,
@@ -34,7 +34,7 @@ function createFollowing(
   return {
     ...model,
     hierarchy,
-    trackPaths: () => model.set.set.clip(model.clipId)!.tracks.map(({ path }) => path),
+    trackPaths: () => model.set.set.clip(model.clipId)!.toJSON().tracks.map(({ path }) => path),
     bindings: () => document.tree.animationSets.get("walk")?.bindings ?? []
   };
 }
@@ -79,13 +79,13 @@ describe("AnimationFollow", () => {
 
     hierarchy.rename(ids.body, "Torso");
     assert.deepEqual(trackPaths(), ["Body/Arm"]);
-    assert.deepEqual(set.set.clip("run")?.tracks.map(({ path }) => path), ["Body/Arm", "Torso/Arm"]);
+    assert.deepEqual(set.set.clip("run")?.toJSON().tracks.map(({ path }) => path), ["Body/Arm", "Torso/Arm"]);
     assert.deepEqual(bindings(), [{ path: "Body/Arm", target: "Torso/Arm" }]);
   });
 
   test("a reparent remaps, moving back clears the remap, and a folder-only move writes nothing", () => {
     const { document, hierarchy, ids, bindings } = createFollowing();
-    const limbs = document.tree.get(ids.arm)!.parentId;
+    const limbs = document.tree.nodes.get(ids.arm)!.parentId;
 
     hierarchy.move(ids.arm, null);
     assert.deepEqual(bindings(), [{ path: "Body/Arm", target: "Arm" }]);

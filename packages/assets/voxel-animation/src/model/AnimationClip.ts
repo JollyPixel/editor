@@ -6,15 +6,15 @@ import type {
   AnimationChannel,
   AnimationClipJSON,
   AnimationClipPatchJSON,
-  AnimationKeyJSON,
-  AnimationTrackJSON
+  AnimationKeyJSON
 } from "../network/types.ts";
-import { ANIMATION_CHANNELS } from "../network/AnimationCommand.schema.ts";
-import { KeyCurve } from "./sampling/KeyCurve.ts";
+import { AnimationTrack } from "./AnimationTrack.ts";
+import { ClipTimeline } from "./values/ClipTimeline.ts";
 import { FrameRate } from "./values/FrameRate.ts";
-import { roundKeyValue } from "./values/keyValue.ts";
-import { mapTrackKeys } from "./values/trackKeys.ts";
+import { TrackMap } from "./values/TrackMap.ts";
 import { TrackPath } from "./values/TrackPath.ts";
+
+export type AnimationClipSettings = Required<AnimationClipPatchJSON>;
 
 export class AnimationClip {
   static findProblem(
@@ -24,64 +24,75 @@ export class AnimationClip {
       return `has an fps of ${clip.fps} that does not divide the tick rate`;
     }
 
-    const paths = new Set<string>();
+    const repeated = TrackPath.findRepeated(clip.tracks.map(({ path }) => path));
+    if (repeated !== undefined) {
+      return `repeats the track ${repeated}`;
+    }
+
     for (const track of clip.tracks) {
-      const { key } = new TrackPath(track.path);
-      if (paths.has(key)) {
-        return `repeats the track ${track.path}`;
-      }
-      paths.add(key);
-      for (const channel of ANIMATION_CHANNELS) {
-        if (!KeyCurve.isOrdered(track[channel] ?? [])) {
-          return `has ${channel} keys of ${track.path} out of order`;
-        }
+      const problem = AnimationTrack.findProblem(track);
+      if (problem !== null) {
+        return problem;
       }
     }
 
     return null;
   }
 
-  readonly #json: AnimationClipJSON;
-
-  constructor(
+  static parse(
     clip: AnimationClipJSON
-  ) {
+  ): AnimationClip {
     const problem = AnimationClip.findProblem(clip);
     if (problem !== null) {
       throw new InvalidEntryError("clip", clip.id, problem);
     }
 
-    this.#json = {
-      ...clip,
-      tracks: clip.tracks.map((track) => mapTrackKeys(track, (key) => {
-        return {
-          ...key,
-          value: roundKeyValue(key.value)
-        };
-      }))
+    return new AnimationClip(
+      clip.id,
+      clip.name,
+      new ClipTimeline(clip),
+      new TrackMap(clip.tracks.map(AnimationTrack.parse))
+    );
+  }
+
+  readonly id: string;
+  readonly name: string;
+  readonly timeline: ClipTimeline;
+  readonly #tracks: TrackMap<AnimationTrack>;
+
+  constructor(
+    id: string,
+    name: string,
+    timeline: ClipTimeline,
+    tracks: TrackMap<AnimationTrack>
+  ) {
+    this.id = id;
+    this.name = name;
+    this.timeline = timeline;
+    this.#tracks = tracks;
+  }
+
+  settings(): AnimationClipSettings {
+    return {
+      name: this.name,
+      ...this.timeline.toJSON()
     };
   }
 
-  get id(): string {
-    return this.#json.id;
+  trackPaths(): IterableIterator<string> {
+    return this.#tracks.paths();
   }
 
-  get name(): string {
-    return this.#json.name;
-  }
-
-  * trackPaths(): IterableIterator<string> {
-    for (const { path } of this.#json.tracks) {
-      yield path;
-    }
+  hasTrack(
+    path: string
+  ): boolean {
+    return this.#tracks.has(path);
   }
 
   track(
     path: string
-  ): AnimationTrackJSON | undefined {
-    const track = this.#findTrack(path);
-
-    return track === undefined ? undefined : structuredClone(track);
+  ): AnimationTrack | undefined {
+    return this.#tracks.get(path);
   }
 
   keyAt(
@@ -89,29 +100,49 @@ export class AnimationClip {
     channel: AnimationChannel,
     tick: number
   ): AnimationKeyJSON | undefined {
-    const key = this.#findTrack(path)?.[channel]?.find((candidate) => candidate.tick === tick);
-
-    return key === undefined ? undefined : structuredClone(key);
+    return this.#tracks.get(path)?.keyAt(channel, tick);
   }
 
   canRenameTrack(
     path: string,
     to: string
   ): boolean {
-    const track = this.#findTrack(path);
+    const track = this.#tracks.get(path);
 
     return track !== undefined &&
       track.path !== to &&
-      (this.#findTrack(to) === undefined || new TrackPath(path).equals(to));
+      (!this.#tracks.has(to) || new TrackPath(path).equals(to));
+  }
+
+  canPatch(
+    patch: AnimationClipPatchJSON
+  ): boolean {
+    return Object.keys(patch).length > 0 &&
+      (patch.fps === undefined || FrameRate.isValid(patch.fps));
+  }
+
+  restoringPatch(
+    patch: AnimationClipPatchJSON
+  ): AnimationClipPatchJSON {
+    const { name, length, fps, loop } = this.settings();
+
+    return {
+      ...patch.name === undefined ? {} : { name },
+      ...patch.length === undefined ? {} : { length },
+      ...patch.fps === undefined ? {} : { fps },
+      ...patch.loop === undefined ? {} : { loop }
+    };
   }
 
   withPatch(
     patch: AnimationClipPatchJSON
   ): AnimationClip {
-    return new AnimationClip({
-      ...this.#json,
-      ...patch
-    });
+    return new AnimationClip(
+      this.id,
+      patch.name ?? this.name,
+      this.timeline.with(patch),
+      this.#tracks
+    );
   }
 
   withKey(
@@ -119,16 +150,9 @@ export class AnimationClip {
     channel: AnimationChannel,
     key: AnimationKeyJSON
   ): AnimationClip {
-    const track = this.#findTrack(path) ?? { path };
-    const keys = [
-      ...(track[channel] ?? []).filter(({ tick }) => tick !== key.tick),
-      key
-    ].sort((left, right) => left.tick - right.tick);
+    const track = this.#tracks.get(path) ?? new AnimationTrack(path);
 
-    return this.#withTrack(path, {
-      ...track,
-      [channel]: keys
-    });
+    return this.#withTracks(this.#tracks.with(track.withKey(channel, key)));
   }
 
   withoutKey(
@@ -136,77 +160,49 @@ export class AnimationClip {
     channel: AnimationChannel,
     tick: number
   ): AnimationClip {
-    const track = this.#findTrack(path);
+    const track = this.#tracks.get(path)?.withoutKey(channel, tick);
     if (track === undefined) {
       return this;
     }
 
-    const keys = (track[channel] ?? []).filter((key) => key.tick !== tick);
-    const { [channel]: _removed, ...rest } = track;
-    const next: AnimationTrackJSON = keys.length === 0 ?
-      rest :
-      {
-        ...rest,
-        [channel]: keys
-      };
-
-    return ANIMATION_CHANNELS.some((name) => next[name] !== undefined) ?
-      this.#withTrack(path, next) :
-      this.withoutTrack(path);
+    return track.isEmpty ?
+      this.withoutTrack(path) :
+      this.#withTracks(this.#tracks.with(track));
   }
 
   withoutTrack(
     path: string
   ): AnimationClip {
-    const removed = new TrackPath(path);
-
-    return this.#withTracks(this.#json.tracks.filter((track) => !removed.equals(track.path)));
+    return this.#withTracks(this.#tracks.without(path));
   }
 
   withTrackPath(
     path: string,
     to: string
   ): AnimationClip {
-    const renamed = new TrackPath(path);
+    const renamed = this.#tracks.get(path);
+    if (renamed === undefined) {
+      return this;
+    }
 
-    return this.#withTracks(this.#json.tracks.map((track) => (renamed.equals(track.path) ?
-      {
-        ...track,
-        path: to
-      } :
-      track)));
+    return this.#withTracks(this.#tracks.map(
+      (track) => (track === renamed ? track.renamed(to) : track)
+    ));
   }
 
   toJSON(): AnimationClipJSON {
-    return structuredClone(this.#json);
-  }
-
-  #findTrack(
-    path: string
-  ): AnimationTrackJSON | undefined {
-    const wanted = new TrackPath(path);
-
-    return this.#json.tracks.find((track) => wanted.equals(track.path));
-  }
-
-  #withTrack(
-    path: string,
-    track: AnimationTrackJSON
-  ): AnimationClip {
-    const wanted = new TrackPath(path);
-    const exists = this.#findTrack(path) !== undefined;
-
-    return this.#withTracks(exists ?
-      this.#json.tracks.map((candidate) => (wanted.equals(candidate.path) ? track : candidate)) :
-      [...this.#json.tracks, track]);
+    return {
+      id: this.id,
+      ...this.settings(),
+      tracks: [...this.#tracks].map((track) => track.toJSON())
+    };
   }
 
   #withTracks(
-    tracks: AnimationTrackJSON[]
+    tracks: TrackMap<AnimationTrack>
   ): AnimationClip {
-    return new AnimationClip({
-      ...this.#json,
-      tracks
-    });
+    return tracks === this.#tracks ?
+      this :
+      new AnimationClip(this.id, this.name, this.timeline, tracks);
   }
 }

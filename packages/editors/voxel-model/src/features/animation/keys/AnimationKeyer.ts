@@ -101,7 +101,7 @@ export class AnimationKeyer implements TransformTarget {
   ): boolean {
     const { document: { tree }, session } = this.#options;
     const { focused } = session;
-    const rest = tree.block(blockId)?.transform;
+    const rest = tree.nodes.block(blockId)?.transform;
     if (focused === null || rest === undefined || !this.writable) {
       return false;
     }
@@ -113,12 +113,12 @@ export class AnimationKeyer implements TransformTarget {
     const delta = new BlockTransform(rest).deltaTo(pose);
     const frameTick = Math.min(new FrameRate(clip.fps).snap(tick), clip.length);
 
-    return this.#options.history.record(key, `Key ${tree.get(blockId)?.name ?? ""}`, () => {
+    return this.#options.history.record(key, `Key ${tree.nodes.get(blockId)?.name ?? ""}`, () => {
       let keyed = false;
       for (const channel of ANIMATION_CHANNELS) {
         const value = roundKeyValue(delta[channel]);
         if (channels === "all" || !sameVector(value, roundKeyValue(shown[channel]))) {
-          const current = set.document.set.keyAt(clip.id, path, channel, frameTick);
+          const current = set.document.set.clip(clip.id)?.keyAt(path, channel, frameTick);
           const key = {
             tick: frameTick,
             value,

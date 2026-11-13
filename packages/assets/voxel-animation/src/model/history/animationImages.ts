@@ -5,23 +5,34 @@ import type {
   AnimationSetSnapshot
 } from "../../network/types.ts";
 import type { AnimationSetReader } from "../AnimationSet.ts";
+import { animationFootprint } from "../command/animationCommands.ts";
+
+export interface AnimationClipImage {
+  readonly id: string;
+  readonly before: AnimationClipJSON | undefined;
+}
 
 export interface AnimationImage {
   readonly rig: string;
   readonly order: readonly string[];
-  readonly clips: ReadonlyMap<string, AnimationClipJSON | undefined>;
+  readonly clip: AnimationClipImage | null;
 }
 
 export function captureImage(
   set: AnimationSetReader,
   command: AnimationCommand
 ): AnimationImage {
-  const touched = touchedClip(command);
+  const { clip } = animationFootprint(command);
 
   return {
     rig: set.rig,
-    order: [...set.clips()].map(({ id }) => id),
-    clips: new Map(touched === null ? [] : [[touched, set.clip(touched)]])
+    order: [...set.clipIds()],
+    clip: clip === null ?
+      null :
+      {
+        id: clip.id,
+        before: set.clip(clip.id)?.toJSON()
+      }
   };
 }
 
@@ -35,13 +46,16 @@ export function restoreImages(
   for (const image of [...images].reverse()) {
     rig = image.rig;
     order = [...image.order];
-    for (const [id, clip] of image.clips) {
-      if (clip === undefined) {
-        clips.delete(id);
-      }
-      else {
-        clips.set(id, clip);
-      }
+    if (image.clip === null) {
+      continue;
+    }
+
+    const { id, before } = image.clip;
+    if (before === undefined) {
+      clips.delete(id);
+    }
+    else {
+      clips.set(id, before);
     }
   }
 
@@ -53,24 +67,4 @@ export function restoreImages(
       return clip === undefined ? [] : [structuredClone(clip)];
     })
   };
-}
-
-function touchedClip(
-  command: AnimationCommand
-): string | null {
-  switch (command.action) {
-    case "rig-renamed":
-      return null;
-    case "clip-added":
-      return command.clip.id;
-    case "clip-removed":
-    case "clip-changed":
-    case "clip-moved":
-      return command.id;
-    case "key-set":
-    case "key-removed":
-    case "track-removed":
-    case "track-renamed":
-      return command.clipId;
-  }
 }

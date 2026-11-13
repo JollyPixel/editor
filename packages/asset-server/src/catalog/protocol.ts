@@ -3,6 +3,7 @@ import type {
   Infer,
   InferMessage
 } from "@jolly-pixel/network";
+import type { DeepReadonly, DistributiveOmit } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
@@ -10,7 +11,6 @@ import type {
   catalogCommandProtocol,
   catalogMessageProtocol
 } from "./protocol.schema.ts";
-import type { Immutable, Without } from "../common/types.ts";
 import { MAX_KIND_CONTENT_BYTES } from "../model/kinds/KindLimits.ts";
 
 // CONSTANTS
@@ -49,7 +49,7 @@ export const CATALOG_PREVIEW = "catalog:preview";
 export const CATALOG_STAGES = ["converting", "writing"] as const;
 
 export type CatalogCommand = InferMessage<typeof catalogCommandProtocol>;
-export type CatalogRequest = Without<CatalogCommand, "requestId">;
+export type CatalogRequest = DistributiveOmit<CatalogCommand, "requestId">;
 export type CatalogCommandType = CatalogCommand["type"];
 export type CatalogStage = typeof CATALOG_STAGES[number];
 export type CatalogProgress = (stage: CatalogStage) => void;
@@ -74,11 +74,11 @@ export type CatalogReplaceCommand = RequestOf<typeof CATALOG_REPLACE>;
 export type CatalogReadCommand = RequestOf<typeof CATALOG_READ>;
 export type CatalogPreviewCommand = RequestOf<typeof CATALOG_PREVIEW>;
 
-export type CatalogMessage = Immutable<
+export type CatalogMessage = DeepReadonly<
   InferMessage<typeof catalogMessageProtocol>
 >;
-export type CatalogApplied = Without<
+export type CatalogApplied = DistributiveOmit<
   Extract<CatalogMessage, { type: typeof CATALOG_APPLIED; }>,
   "type" | "requestId"
 >;
-export type CatalogChange = Immutable<Infer<typeof catalogChangeSchema>>;
+export type CatalogChange = DeepReadonly<Infer<typeof catalogChangeSchema>>;

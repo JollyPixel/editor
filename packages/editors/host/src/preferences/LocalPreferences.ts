@@ -4,7 +4,7 @@ import {
   type PreferenceChange,
   type PreferenceOverrides
 } from "@jolly-pixel/preferences";
-import { is } from "@jolly-pixel/utils";
+import { parseJsonObject } from "@jolly-pixel/utils";
 
 // CONSTANTS
 export const LOCAL_PREFERENCES_KEY_PREFIX = "jolly-pixel:preferences:";
@@ -52,7 +52,7 @@ export class LocalPreferences implements Disposable {
       if (key?.startsWith(LOCAL_PREFERENCES_KEY_PREFIX)) {
         yield [
           key.slice(LOCAL_PREFERENCES_KEY_PREFIX.length),
-          parseOverrides(this.#storage.getItem(key))
+          parseJsonObject(this.#storage.getItem(key))
         ];
       }
     }
@@ -89,7 +89,7 @@ export class LocalPreferences implements Disposable {
 
     this.preferences.receive(
       event.key.slice(LOCAL_PREFERENCES_KEY_PREFIX.length),
-      parseOverrides(event.newValue)
+      parseJsonObject(event.newValue)
     );
   };
 }
@@ -100,22 +100,5 @@ function browserStorage(): Storage | null {
   }
   catch {
     return null;
-  }
-}
-
-function parseOverrides(
-  text: string | null
-): PreferenceOverrides {
-  if (text === null) {
-    return {};
-  }
-
-  try {
-    const value: unknown = JSON.parse(text);
-
-    return is.plainObject(value) ? { ...value } : {};
-  }
-  catch {
-    return {};
   }
 }

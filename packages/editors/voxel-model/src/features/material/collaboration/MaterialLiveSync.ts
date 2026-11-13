@@ -189,8 +189,8 @@ function decodeLiveFrame(
   }
 
   const materialId: unknown = Reflect.get(value, "materialId");
-  const changes: unknown = Reflect.get(value, "changes");
-  if (typeof materialId !== "string" || !MaterialSurface.isPatch(changes)) {
+  const changes = MaterialSurface.parsePatch(Reflect.get(value, "changes"));
+  if (typeof materialId !== "string" || changes === undefined) {
     return undefined;
   }
 

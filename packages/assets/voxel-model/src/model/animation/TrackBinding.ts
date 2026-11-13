@@ -5,34 +5,52 @@ import { TrackPath } from "@jolly-pixel/asset.voxel-animation/client";
 import type {
   AnimationBindingJSON,
   AnimationSetLinkJSON
-} from "../../network/types.ts";
+} from "../types.ts";
 import type { ModelTreeReader } from "../ModelTree.ts";
 import { AnimationSetLink } from "./AnimationSetLink.ts";
 
 export type TrackState = "bound" | "missing" | "ambiguous" | "ignored";
 
-export interface TrackResolution {
-  state: TrackState;
-  /**
-   * `null` unless bound.
-   */
-  blockId: string | null;
-  remap: AnimationBindingJSON | null;
-}
+export type TrackResolution =
+  | {
+    state: "bound";
+    blockId: string;
+    remap: AnimationBindingJSON | null;
+  }
+  | {
+    state: Exclude<TrackState, "bound">;
+    blockId: null;
+    remap: AnimationBindingJSON | null;
+  };
 
 export function buildBlockPath(
   tree: ModelTreeReader,
   id: string
 ): string {
   const names: string[] = [];
-  for (let current: string | null = id; current !== null; current = tree.findTransformParent(current)) {
-    names.unshift(tree.get(current)?.name ?? "");
+  for (let current: string | null = id; current !== null; current = tree.nodes.findTransformParent(current)) {
+    names.unshift(tree.nodes.get(current)?.name ?? "");
   }
 
   return names.join(TrackPath.SEPARATOR);
 }
 
 export class TrackBinding {
+  static #resolve(
+    ids: readonly string[],
+    remap: AnimationBindingJSON | null
+  ): TrackResolution {
+    if (ids.length === 1) {
+      return { state: "bound", blockId: ids[0], remap };
+    }
+
+    return {
+      state: ids.length === 0 ? "missing" : "ambiguous",
+      blockId: null,
+      remap
+    };
+  }
+
   readonly #link: AnimationSetLink;
   readonly #tree: ModelTreeReader;
   readonly #tracks = new Map<string, TrackResolution>();
@@ -42,19 +60,16 @@ export class TrackBinding {
     link: AnimationSetLinkJSON,
     tree: ModelTreeReader
   ) {
-    this.#link = new AnimationSetLink(link);
+    this.#link = AnimationSetLink.parse(link);
     this.#tree = tree;
 
     const byPath = blockPaths(tree);
     for (const path of paths) {
       const remap = this.#link.findBinding(path) ?? null;
       const target = remap === null ? path : remap.target;
-      const ids = target === null ? [] : byPath.get(new TrackPath(target).key) ?? [];
-      this.#tracks.set(path, {
-        state: target === null ? "ignored" : toTrackState(ids),
-        blockId: ids.length === 1 && target !== null ? ids[0] : null,
-        remap
-      });
+      this.#tracks.set(path, target === null ?
+        { state: "ignored", blockId: null, remap } :
+        TrackBinding.#resolve(byPath.get(new TrackPath(target).key) ?? [], remap));
     }
   }
 
@@ -98,20 +113,10 @@ function blockPaths(
   tree: ModelTreeReader
 ): Map<string, string[]> {
   const paths = new Map<string, string[]>();
-  for (const block of tree.blocks()) {
+  for (const block of tree.nodes.blocks()) {
     const { key } = new TrackPath(buildBlockPath(tree, block.id));
     paths.set(key, [...paths.get(key) ?? [], block.id]);
   }
 
   return paths;
-}
-
-function toTrackState(
-  ids: readonly string[]
-): TrackState {
-  if (ids.length === 0) {
-    return "missing";
-  }
-
-  return ids.length === 1 ? "bound" : "ambiguous";
 }

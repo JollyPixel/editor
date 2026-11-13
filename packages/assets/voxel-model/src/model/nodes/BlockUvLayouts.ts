@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import {
-  RectArea,
   UVRegion,
   type SelectionRect,
   type UVCompoundPart,
@@ -11,8 +10,9 @@ import {
 } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
-import type { BlockShapeJSON } from "../../network/types.ts";
+import type { BlockShapeJSON } from "../types.ts";
 import { BlockShape } from "./BlockShape.ts";
+import { TextureSpace } from "./TextureSpace.ts";
 
 // CONSTANTS
 const kBlockUvSize = 16;
@@ -76,6 +76,27 @@ export class BlockUvLayouts {
       UVRegion.fromLayout(stacked, kLayoutIdentity).unfold().toLayout();
   }
 
+  static #placeNets(
+    shapes: readonly BlockShapeJSON[],
+    space: TextureSpace
+  ): PlacedNet[] {
+    let free = space;
+
+    return shapes.map((shape) => {
+      const size = measureBounds(BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape));
+      const origin = free.freeCell(size);
+      const uv = BlockUvLayouts.net(origin ?? BlockUvLayouts.ORIGIN, shape);
+      const bounds = measureBounds(uv);
+      free = free.taking(bounds);
+
+      return {
+        uv,
+        bounds,
+        shared: origin === null
+      };
+    });
+  }
+
   readonly #bounds: readonly SelectionRect[];
 
   constructor(
@@ -109,21 +130,19 @@ export class BlockUvLayouts {
     textureSize: Vec2,
     maxTextureSize: number
   ): NetPlacement {
-    let size = textureSize;
-    let nets = this.#placeNets(shapes, size);
+    let space = this.#space(textureSize);
+    let nets = BlockUvLayouts.#placeNets(shapes, space);
     while (nets.some(({ shared }) => shared)) {
-      const grown = size.x <= size.y ?
-        { x: size.x * 2, y: size.y } :
-        { x: size.x, y: size.y * 2 };
-      if (Math.max(grown.x, grown.y) > maxTextureSize) {
+      const grown = space.grown();
+      if (Math.max(grown.size.x, grown.size.y) > maxTextureSize) {
         break;
       }
-      size = grown;
-      nets = this.#placeNets(shapes, size);
+      space = grown;
+      nets = BlockUvLayouts.#placeNets(shapes, space);
     }
 
     return {
-      textureSize: size,
+      textureSize: { ...space.size },
       nets
     };
   }
@@ -137,7 +156,7 @@ export class BlockUvLayouts {
     if (from.type !== to.type) {
       const net = BlockUvLayouts.net(measureBounds(layout), to);
 
-      return isFree(measureBounds(net), textureSize, this.#bounds) ? net : this.nextNet(textureSize, to);
+      return this.#space(textureSize).isFree(measureBounds(net)) ? net : this.nextNet(textureSize, to);
     }
 
     return layout.state === "stacked" ?
@@ -159,13 +178,13 @@ export class BlockUvLayouts {
     }
 
     const cell = boundingRect(current[anchor]);
-    const taken = [...this.#bounds, ...kept.map((slot) => boundingRect(current[slot]))];
+    let space = this.#space(textureSize).taking(...kept.map((slot) => boundingRect(current[slot])));
     const faces = Object.fromEntries(kept.map((slot) => [slot, current[slot]]));
     for (const slot of slots.filter((each) => !(each in current))) {
-      const origin = freeCell(cell, textureSize, taken) ?? cell;
+      const origin = space.freeCell(cell) ?? cell;
       const placed = { ...cell, x: origin.x, y: origin.y };
       faces[slot] = cellGeometry(shape, slot, placed);
-      taken.push(placed);
+      space = space.taking(placed);
     }
 
     return {
@@ -181,28 +200,13 @@ export class BlockUvLayouts {
   ): Vec2 {
     const net = measureBounds(BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape));
 
-    return freeCell(net, textureSize, this.#bounds) ?? BlockUvLayouts.ORIGIN;
+    return this.#space(textureSize).freeCell(net) ?? BlockUvLayouts.ORIGIN;
   }
 
-  #placeNets(
-    shapes: readonly BlockShapeJSON[],
+  #space(
     textureSize: Vec2
-  ): PlacedNet[] {
-    const taken = [...this.#bounds];
-
-    return shapes.map((shape) => {
-      const size = measureBounds(BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape));
-      const origin = freeCell(size, textureSize, taken);
-      const uv = BlockUvLayouts.net(origin ?? BlockUvLayouts.ORIGIN, shape);
-      const bounds = measureBounds(uv);
-      taken.push(bounds);
-
-      return {
-        uv,
-        bounds,
-        shared: origin === null
-      };
-    });
+  ): TextureSpace {
+    return new TextureSpace(textureSize, this.#bounds);
   }
 }
 
@@ -239,44 +243,6 @@ function filterActiveFaces(
       ...slots.filter((slot) => !(slot in current))
     ]
   };
-}
-
-function freeCell(
-  size: Pick<SelectionRect, "width" | "height">,
-  textureSize: Vec2,
-  taken: readonly SelectionRect[]
-): Vec2 | null {
-  const columns = Math.floor(textureSize.x / size.width);
-  const rows = Math.floor(textureSize.y / size.height);
-
-  for (let row = 0; row < rows; row++) {
-    for (let column = 0; column < columns; column++) {
-      const cell = {
-        x: column * size.width,
-        y: row * size.height,
-        width: size.width,
-        height: size.height
-      };
-      if (isFree(cell, textureSize, taken)) {
-        return {
-          x: cell.x,
-          y: cell.y
-        };
-      }
-    }
-  }
-
-  return null;
-}
-
-function isFree(
-  rect: SelectionRect,
-  textureSize: Vec2,
-  taken: readonly SelectionRect[]
-): boolean {
-  return rect.x + rect.width <= textureSize.x &&
-    rect.y + rect.height <= textureSize.y &&
-    !taken.some((bounds) => RectArea.from(bounds).intersects(rect));
 }
 
 function cellGeometry(

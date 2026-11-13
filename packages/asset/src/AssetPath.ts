@@ -11,6 +11,7 @@ export class AssetPath {
       : path;
   }
 
+  readonly value: string;
   readonly directory: string;
   readonly name: string;
   readonly extension: string;
@@ -28,6 +29,7 @@ export class AssetPath {
     const dot = path.indexOf(".", slash + 1);
     const end = dot === -1 ? path.length : dot;
 
+    this.value = path;
     this.directory = path.slice(0, slash);
     this.name = path.slice(slash, end);
     this.extension = path.slice(end);
@@ -58,12 +60,11 @@ export class AssetPath {
   matchExtension(
     extensions: Iterable<string>
   ): string | null {
-    const path = this.toString();
     let matched: string | null = null;
     for (const extension of extensions) {
       if (
         extension.length > (matched?.length ?? 0) &&
-        path.endsWith(extension)
+        this.value.endsWith(extension)
       ) {
         matched = extension;
       }
@@ -77,7 +78,7 @@ export class AssetPath {
   ): AssetPath {
     const url = new URL(
       specifier.replaceAll("\\", "/"),
-      new URL(this.toString(), kRelativeBase)
+      new URL(this.value, kRelativeBase)
     );
 
     return new AssetPath(
@@ -90,15 +91,15 @@ export class AssetPath {
   equals(
     other: AssetPath
   ): boolean {
-    return this.toString() === other.toString();
+    return this.value === other.value;
   }
 
   toJSON(): string {
-    return this.toString();
+    return this.value;
   }
 
   toString(): string {
-    return `${this.directory}${this.name}${this.extension}`;
+    return this.value;
   }
 }
 

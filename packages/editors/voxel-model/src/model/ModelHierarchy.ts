@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import type { Vec2 } from "@jolly-pixel/pixel-draw.renderer";
 import {
+  BlockFlip,
   BlockShape,
   BlockTransform,
   BlockUvLayouts,
@@ -92,7 +93,7 @@ export class ModelHierarchy {
     id: string
   ): boolean {
     return this.#access.current.has("transforms") &&
-      this.#document.tree.block(id) !== undefined &&
+      this.#document.tree.nodes.block(id) !== undefined &&
       this.#locks.lockedBy(id) === null;
   }
 
@@ -103,7 +104,7 @@ export class ModelHierarchy {
   isFolder(
     id: string
   ): boolean {
-    return this.#document.tree.get(id)?.kind === "folder";
+    return this.#document.tree.nodes.get(id)?.kind === "folder";
   }
 
   blockNameError(
@@ -113,7 +114,7 @@ export class ModelHierarchy {
   ): string | null {
     const { tree } = this.#document;
 
-    return tree.blockNamesUnder(parentId, exceptId).has(name) ?
+    return tree.nodes.blockNamesUnder(parentId, exceptId).has(name) ?
       blockNameTakenMessage(tree, parentId, name.trim()) :
       null;
   }
@@ -122,7 +123,7 @@ export class ModelHierarchy {
     id: string,
     name: string
   ): string | null {
-    const node = this.#document.tree.get(id);
+    const node = this.#document.tree.nodes.get(id);
 
     return node?.kind === "block" ?
       this.blockNameError(name, node.parentId, id) :
@@ -137,7 +138,7 @@ export class ModelHierarchy {
     if (!this.editable) {
       return null;
     }
-    const layouts = new BlockUvLayouts([...this.#document.tree.blocks()].map((block) => block.uv));
+    const layouts = new BlockUvLayouts([...this.#document.tree.nodes.blocks()].map((block) => block.uv));
 
     return this.#document.addBlock({
       name,
@@ -153,23 +154,23 @@ export class ModelHierarchy {
     shape: BlockShapeJSON
   ): boolean {
     const { tree } = this.#document;
-    const block = tree.block(id);
+    const block = tree.nodes.block(id);
     if (
       !this.canReshape(id) ||
       block === undefined ||
-      BlockShape.same(BlockShape.fromBlock(block), shape)
+      BlockShape.same(block.shape, shape)
     ) {
       return false;
     }
 
     const others = new BlockUvLayouts(
-      [...tree.blocks()].filter((each) => each.id !== id).map((each) => each.uv)
+      [...tree.nodes.blocks()].filter((each) => each.id !== id).map((each) => each.uv)
     );
 
     return this.#document.updateShape(
       id,
       shape,
-      others.reshaped(block.uv, BlockShape.fromBlock(block), shape, this.#textureSize())
+      others.reshaped(block.uv, block.shape, shape, this.#textureSize())
     );
   }
 
@@ -205,9 +206,9 @@ export class ModelHierarchy {
       return;
     }
     const { tree } = this.#document;
-    const parentUuid = tree.findEnclosingBlock(parentId);
+    const parentUuid = tree.nodes.findEnclosingBlock(parentId);
     const transforms = this.#blocksCarriedBy(id)
-      .filter((uuid) => tree.findTransformParent(uuid) !== parentUuid)
+      .filter((uuid) => tree.nodes.findTransformParent(uuid) !== parentUuid)
       .map((uuid) => {
         return {
           id: uuid,
@@ -236,12 +237,12 @@ export class ModelHierarchy {
     sourceId: string,
     options: DuplicateOptions
   ): string | null {
-    const source = this.#document.tree.get(sourceId);
+    const source = this.#document.tree.nodes.get(sourceId);
     const { mirrorAxes } = options;
     if (
       source === undefined ||
       !this.editable ||
-      (isMirrored(mirrorAxes) && !this.#access.current.has("transforms"))
+      (BlockFlip.isMirrored(mirrorAxes) && !this.#access.current.has("transforms"))
     ) {
       return null;
     }
@@ -253,7 +254,7 @@ export class ModelHierarchy {
         {
           name: options.name,
           parentId: source.parentId,
-          beforeId: this.#document.tree.findNextSibling(source.id)
+          beforeId: this.#document.tree.nodes.findNextSibling(source.id)
         },
         options.includeChildren,
         duplicatedUuids
@@ -261,7 +262,7 @@ export class ModelHierarchy {
 
       if (
         duplicateId !== null &&
-        isMirrored(mirrorAxes)
+        BlockFlip.isMirrored(mirrorAxes)
       ) {
         const mirrored = this.#poses.mirror(
           duplicatedUuids,
@@ -281,14 +282,14 @@ export class ModelHierarchy {
     options: RemoveOptions
   ): void {
     const { tree } = this.#document;
-    const node = tree.get(id);
+    const node = tree.nodes.get(id);
     if (node === undefined || !this.editable) {
       return;
     }
 
     this.#edits.record(`Delete ${node.name}`, () => {
       if (!options.withChildren) {
-        for (const child of tree.listChildren(id)) {
+        for (const child of tree.nodes.listChildren(id)) {
           this.move(child.id, node.parentId, id);
         }
       }
@@ -300,7 +301,7 @@ export class ModelHierarchy {
     id: string
   ): string[] {
     const { tree } = this.#document;
-    const node = tree.get(id);
+    const node = tree.nodes.get(id);
     if (node === undefined) {
       return [];
     }
@@ -308,7 +309,7 @@ export class ModelHierarchy {
       return [node.id];
     }
 
-    return tree.listChildren(id).flatMap(
+    return tree.nodes.listChildren(id).flatMap(
       (child) => this.#blocksCarriedBy(child.id)
     );
   }
@@ -320,15 +321,15 @@ export class ModelHierarchy {
     duplicatedUuids: string[]
   ): string | null {
     const children = includeChildren ?
-      this.#document.tree.listChildren(node.id) :
+      this.#document.tree.nodes.listChildren(node.id) :
       [];
     const duplicateId = node.kind === "folder" ?
       this.#document.addFolder(copy) :
       this.#document.addBlock({
         ...copy,
-        name: this.#document.tree.blockNamesUnder(copy.parentId ?? null).free(copy.name),
+        name: this.#document.tree.nodes.blockNamesUnder(copy.parentId ?? null).free(copy.name),
         transform: node.transform,
-        shape: BlockShape.fromBlock(node),
+        shape: node.shape,
         uv: node.uv,
         materialId: node.materialId
       });
@@ -353,10 +354,4 @@ export class ModelHierarchy {
 
     return duplicateId;
   }
-}
-
-function isMirrored(
-  axes: MirrorAxes
-): boolean {
-  return axes.x || axes.y || axes.z;
 }

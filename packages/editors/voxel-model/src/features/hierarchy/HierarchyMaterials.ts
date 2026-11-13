@@ -210,7 +210,7 @@ function assignedMaterial(
   document: ModelDocument,
   blockId: string
 ): string | null {
-  return document.tree.block(blockId)?.materialId ?? null;
+  return document.tree.nodes.block(blockId)?.materialId ?? null;
 }
 
 function allAssigned(

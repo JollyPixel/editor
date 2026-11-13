@@ -7,9 +7,10 @@ import type {
   Vector3JSON
 } from "@jolly-pixel/asset.scene/client";
 import { Systems } from "@jolly-pixel/engine";
+import { roundTo } from "@jolly-pixel/utils";
 
 // CONSTANTS
-const kPrecision = 1e6;
+const kDecimals = 6;
 const kUnitScale = {
   x: 1,
   y: 1,
@@ -92,14 +93,8 @@ export function roundedVector(
   vector: Vector3JSON
 ): Vector3JSON {
   return {
-    x: round(vector.x),
-    y: round(vector.y),
-    z: round(vector.z)
+    x: roundTo(vector.x, kDecimals),
+    y: roundTo(vector.y, kDecimals),
+    z: roundTo(vector.z, kDecimals)
   };
-}
-
-function round(
-  value: number
-): number {
-  return (Math.round(value * kPrecision) / kPrecision) + 0;
 }

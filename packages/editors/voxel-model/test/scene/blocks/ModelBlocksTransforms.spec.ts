@@ -48,7 +48,7 @@ describe("ModelBlocks transforms", () => {
     assert.deepEqual(applied, [block.uuid]);
     assert.deepEqual(commands, []);
     assert.equal(
-      fixture.document.tree.block(block.uuid)?.transform.position.x,
+      fixture.document.tree.nodes.block(block.uuid)?.transform.position.x,
       0
     );
   });

@@ -18,7 +18,7 @@ import {
   voxelModelAssetKind,
   type VoxelModelFile
 } from "#src/index.ts";
-import type { BlockNodeJSON } from "#src/network/types.ts";
+import type { BlockNodeJSON } from "#src/model/types.ts";
 import { InvalidCsModelError } from "#src/conversion/csmodel/errors/InvalidCsModelError.ts";
 import {
   csModelBytes,
@@ -95,7 +95,7 @@ describe("voxelModelAssetKind .csmodel conversion", () => {
     const head = block(model, "cs-2");
     assert.strictEqual(head.parentId, "cs-1");
     assert.deepStrictEqual(head.transform.position, { x: 0.5, y: 1, z: -0.25 });
-    assert.strictEqual(head.flipAxes, undefined);
+    assert.deepStrictEqual(head.flipAxes, { x: false, y: false, z: false });
   });
 
   test("mirrors then turns each face around its texture offset", async() => {

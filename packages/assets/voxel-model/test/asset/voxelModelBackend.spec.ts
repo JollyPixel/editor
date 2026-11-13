@@ -17,7 +17,10 @@ import {
   type ClientConnection
 } from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
-import { createAssetBackend } from "@jolly-pixel/asset-server";
+import {
+  createAssetBackend,
+  foldAssetEvent
+} from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import {
@@ -29,6 +32,7 @@ import {
 } from "#src/index.ts";
 import {
   blockAdded,
+  blockNode,
   folderAdded,
   networkCommand
 } from "../helpers/commands.ts";
@@ -158,5 +162,33 @@ describe("voxel-model asset kind over a real back-end", () => {
 
       await server.close();
     });
+  });
+});
+
+describe("voxel-model stored commands", () => {
+  test("replays a stored block added before blocks carried their shape and flip", () => {
+    const handler = voxelModelAssetKind();
+    const state = handler.create("model");
+    state.load(createVoxelModelFile({ texture: kTexture, blocks: [] }));
+    const { flipAxes: _flipAxes, shape: _shape, ...legacy } = blockNode("a");
+
+    foldAssetEvent(handler, state, {
+      eventId: 1,
+      assetType: "binary",
+      assetId: "model",
+      eventType: VOXEL_MODEL_COMMAND,
+      eventData: {
+        action: "node-added",
+        node: legacy,
+        clientId: "client-A",
+        seq: 1,
+        timestamp: 1
+      },
+      eventVersion: 1,
+      actor: { type: "system", source: "test" },
+      createdAt: new Date(0).toISOString()
+    });
+
+    assert.deepEqual(state.snapshot().nodes, [blockNode("a")]);
   });
 });
