@@ -45,6 +45,12 @@ import {
   ShareLinks,
   shareLinkSubject
 } from "./share/ShareLinks.ts";
+import {
+  AGENT_TOKEN_VIA,
+  agentTokenSubject,
+  type AgentToken
+} from "./agent/AgentToken.ts";
+import { AgentTokens } from "./agent/AgentTokens.ts";
 
 export interface AccountsOptions {
   database: AccountsDatabase;
@@ -128,6 +134,7 @@ export class Accounts implements AuthenticationProvider, Disposable {
   readonly cookie: SessionCookie;
   readonly extension: AccountsExtension;
   readonly shareLinks: ShareLinks;
+  readonly agentTokens: AgentTokens;
 
   #database: AccountsDatabase;
   #directory: AccountDirectory;
@@ -154,6 +161,10 @@ export class Accounts implements AuthenticationProvider, Disposable {
     this.extension = new AccountsExtension(this.#directory);
     this.shareLinks = new ShareLinks(
       options.database.shareLinks,
+      this.#directory
+    );
+    this.agentTokens = new AgentTokens(
+      options.database.agentTokens,
       this.#directory
     );
   }
@@ -271,8 +282,11 @@ export class Accounts implements AuthenticationProvider, Disposable {
     const { credential } = request;
     if (credential !== undefined) {
       const link = this.shareLinks.find(credential);
+      if (link !== null) {
+        return toGuestIdentity(link);
+      }
 
-      return link === null ? null : toGuestIdentity(link);
+      return this.#agentIdentity(credential);
     }
 
     const account = this.signedIn(request.headers);
@@ -314,6 +328,18 @@ export class Accounts implements AuthenticationProvider, Disposable {
     this.#database.close();
   }
 
+  #agentIdentity(
+    credential: string
+  ): PeerIdentity | null {
+    const token = this.agentTokens.find(credential);
+    if (token === null) {
+      return null;
+    }
+    const owner = this.#directory.account(token.ownerId);
+
+    return owner === null ? null : toAgentIdentity(token, owner);
+  }
+
   #signIn(
     account: Account,
     requester: Requester
@@ -345,6 +371,22 @@ function toGuestIdentity(
       peerId: randomUUID(),
       avatar: null,
       via: SHARE_LINK_VIA
+    } satisfies PeerProfileMetadata
+  };
+}
+
+function toAgentIdentity(
+  token: AgentToken,
+  owner: Account
+): PeerIdentity {
+  return {
+    subject: agentTokenSubject(token.id),
+    role: owner.role,
+    profile: {
+      username: token.name,
+      peerId: token.id,
+      avatar: null,
+      via: AGENT_TOKEN_VIA
     } satisfies PeerProfileMetadata
   };
 }

@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
 import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
+import type { SentChange } from "@jolly-pixel/network/client";
 import type {
   PixelWireCommand,
   PixelWireSnapshot
 } from "@jolly-pixel/asset.pixel-art/client";
+import type { PixelEditCommand } from "@jolly-pixel/asset.pixel-art/server";
 import type {
   BlocksetDocumentCommand,
   BlocksetDocumentJSON
@@ -13,6 +15,12 @@ import type {
 export type BlocksetDocumentNetworkCommand =
   & BlocksetDocumentCommand
   & network.NetworkCommandHeader;
+
+export type BlocksetEditCommand = BlocksetDocumentCommand | PixelEditCommand;
+
+export interface BlocksetStep extends SentChange {
+  readonly command: BlocksetDocumentCommand;
+}
 
 export type BlocksetNetworkCommand =
   | PixelWireCommand

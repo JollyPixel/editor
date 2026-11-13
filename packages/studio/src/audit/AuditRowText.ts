@@ -85,6 +85,10 @@ function accountAction(
       return `created a share link to ${assetLabel(activity.asset)}`;
     case "share-link-revoked":
       return `revoked a share link to ${assetLabel(activity.asset)}`;
+    case "agent-token-created":
+      return `created the agent token "${activity.name}"`;
+    case "agent-token-revoked":
+      return `revoked the agent token "${activity.name}"`;
     default:
       return activity satisfies never;
   }

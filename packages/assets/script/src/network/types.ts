@@ -10,6 +10,10 @@ import type {
 } from "./ScriptCommand.schema.ts";
 
 export type ScriptCommand = network.Infer<typeof scriptCommandSchema>;
+
+export interface ScriptStep {
+  readonly command: ScriptCommand;
+}
 export type ScriptNetworkCommand = ScriptCommand & network.NetworkCommandHeader;
 export type ScriptSnapshot = network.Infer<typeof scriptSnapshotSchema>;
 export type ScriptNotice = AssetRoomNotice | ScriptOutlineMessage;

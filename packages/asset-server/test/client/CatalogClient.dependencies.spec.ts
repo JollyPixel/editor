@@ -259,4 +259,19 @@ describe("CatalogClient.connect", () => {
     await assert.rejects(connecting, CatalogUnavailableError);
     assert.strictEqual(room.left, true);
   });
+
+  test("rejects with the abort reason and leaves the room when aborted", async() => {
+    const room = new FakeCatalogRoom();
+    const controller = new AbortController();
+    const reason = new Error("token refused");
+
+    const connecting = CatalogClient.connect(roomSource(room), {
+      timeoutMs: 60_000,
+      signal: controller.signal
+    });
+    controller.abort(reason);
+
+    await assert.rejects(connecting, (error) => error === reason);
+    assert.strictEqual(room.left, true);
+  });
 });

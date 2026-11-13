@@ -35,7 +35,7 @@ export const auditQuerySchema = z.object({
 export const auditActorSchema = z.object({
   id: z.string().nullable(),
   name: z.string(),
-  kind: z.enum(["user", "deleted", "share", "system"])
+  kind: z.enum(["user", "agent", "deleted", "share", "system"])
 });
 
 export const auditAssetSchema = z.object({
@@ -67,6 +67,10 @@ export const auditAccountActivitySchema = z.discriminatedUnion("type", [
   z.object({
     type: z.enum(["share-link-created", "share-link-revoked"]),
     asset: auditAssetSchema
+  }),
+  z.object({
+    type: z.enum(["agent-token-created", "agent-token-revoked"]),
+    name: z.string()
   })
 ]);
 

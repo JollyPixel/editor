@@ -33,6 +33,23 @@ const kTriangleParts: readonly UVCompoundPart[] = [
   }
 ];
 
+export interface PlacedNet {
+  uv: UVLayoutData;
+  bounds: SelectionRect;
+  /**
+   * `true` when no free space was left, so the net overlaps another one.
+   */
+  shared: boolean;
+}
+
+export interface NetPlacement {
+  /**
+   * The texture size the nets were placed in, grown from the given one.
+   */
+  textureSize: Vec2;
+  nets: PlacedNet[];
+}
+
 export class BlockUvLayouts {
   static readonly ORIGIN: Readonly<Vec2> = Object.freeze({ x: 0, y: 0 });
 
@@ -85,6 +102,30 @@ export class BlockUvLayouts {
     shape: BlockShapeJSON = BlockShape.box
   ): UVLayoutData {
     return BlockUvLayouts.net(this.#freeOrigin(textureSize, shape), shape);
+  }
+
+  place(
+    shapes: readonly BlockShapeJSON[],
+    textureSize: Vec2,
+    maxTextureSize: number
+  ): NetPlacement {
+    let size = textureSize;
+    let nets = this.#placeNets(shapes, size);
+    while (nets.some(({ shared }) => shared)) {
+      const grown = size.x <= size.y ?
+        { x: size.x * 2, y: size.y } :
+        { x: size.x, y: size.y * 2 };
+      if (Math.max(grown.x, grown.y) > maxTextureSize) {
+        break;
+      }
+      size = grown;
+      nets = this.#placeNets(shapes, size);
+    }
+
+    return {
+      textureSize: size,
+      nets
+    };
   }
 
   reshaped(
@@ -141,6 +182,27 @@ export class BlockUvLayouts {
     const net = measureBounds(BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape));
 
     return freeCell(net, textureSize, this.#bounds) ?? BlockUvLayouts.ORIGIN;
+  }
+
+  #placeNets(
+    shapes: readonly BlockShapeJSON[],
+    textureSize: Vec2
+  ): PlacedNet[] {
+    const taken = [...this.#bounds];
+
+    return shapes.map((shape) => {
+      const size = measureBounds(BlockUvLayouts.net(BlockUvLayouts.ORIGIN, shape));
+      const origin = freeCell(size, textureSize, taken);
+      const uv = BlockUvLayouts.net(origin ?? BlockUvLayouts.ORIGIN, shape);
+      const bounds = measureBounds(uv);
+      taken.push(bounds);
+
+      return {
+        uv,
+        bounds,
+        shared: origin === null
+      };
+    });
   }
 }
 

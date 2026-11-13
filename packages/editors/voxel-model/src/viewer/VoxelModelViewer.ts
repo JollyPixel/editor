@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
 import { pixelArtDocumentKind } from "@jolly-pixel/asset.pixel-art/client";
 import {
+  linkedTextureId,
   voxelModelDocumentKind,
+  type ModelDependencies,
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
 import type {
@@ -17,10 +19,6 @@ import type {
   ModelViewTexture
 } from "./ModelView.ts";
 import type { VoxelModelSource } from "./VoxelModelSource.ts";
-import {
-  linkedTextureId,
-  type ModelDependencies
-} from "./linkedTexture.ts";
 import { pixelModelTexture } from "./pixelModelTexture.ts";
 
 // CONSTANTS

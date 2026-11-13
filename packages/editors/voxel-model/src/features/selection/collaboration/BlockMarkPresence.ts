@@ -2,7 +2,10 @@
 import type { PeerMarks } from "@jolly-pixel/ui";
 import { PeerMarkTracker } from "@jolly-pixel/ui/network";
 import { decodeString } from "@jolly-pixel/network/client";
-import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/client";
+import {
+  VOXEL_MODEL_PRESENCE_KEYS,
+  type VoxelModelRoom
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import type {
@@ -10,7 +13,6 @@ import type {
   BlockSelectionStore,
   PresenceStore
 } from "../../../state/index.ts";
-import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 
 // CONSTANTS
 const kMarkChannels: Record<BlockMark, {
@@ -19,14 +21,14 @@ const kMarkChannels: Record<BlockMark, {
   publish(presence: PresenceStore, marks: PeerMarks<string>): void;
 }> = {
   select: {
-    key: PRESENCE_KEYS.block,
+    key: VOXEL_MODEL_PRESENCE_KEYS.block,
     read: (selection) => selection.selected,
     publish: (presence, marks) => {
       presence.blockSelections = marks;
     }
   },
   hover: {
-    key: PRESENCE_KEYS.blockHover,
+    key: VOXEL_MODEL_PRESENCE_KEYS.blockHover,
     read: (selection) => selection.hovered,
     publish: (presence, marks) => {
       presence.blockHovers = marks;

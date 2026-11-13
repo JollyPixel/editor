@@ -13,6 +13,21 @@
       "page": "index.html",
       "preferences": "src/preferences.ts"
     },
+    "sceneComponents": {
+      "Camera": {},
+      "Light": {},
+      "Mesh": {
+        "assets": {
+          "shader": "shader"
+        }
+      },
+      "Text": {
+        "assets": {
+          "font": "font"
+        }
+      },
+      "RigidBody": {}
+    },
     "runtime": "./runtime"
   },
   "exports": {

@@ -1,7 +1,10 @@
 // Import Third-party Dependencies
 import { PresenceChannel } from "@jolly-pixel/network/client";
 import { markedPeers } from "@jolly-pixel/ui/network";
-import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/client";
+import {
+  VOXEL_MODEL_PRESENCE_KEYS,
+  type VoxelModelRoom
+} from "@jolly-pixel/asset.voxel-model/client";
 
 // Import Internal Dependencies
 import {
@@ -12,7 +15,6 @@ import {
 } from "../../../state/index.ts";
 import type { AnimationSession } from "../session/AnimationSession.ts";
 import type { KeyEditor } from "../keys/KeyEditor.ts";
-import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 import { LatestFrameThrottle } from "../../../collaboration/LatestFrameThrottle.ts";
 import { combineReleases } from "../../../shared/combineReleases.ts";
 
@@ -38,7 +40,7 @@ export class AnimatePresence {
     this.#options = options;
     const { room, session, keyEditor } = options;
     this.#cursors = new PresenceChannel<AnimateCursor | null>(room, {
-      key: PRESENCE_KEYS.animateCursor,
+      key: VOXEL_MODEL_PRESENCE_KEYS.animateCursor,
       decode: (value) => decodeAnimateCursor(value)
     });
     this.#throttle = new LatestFrameThrottle(

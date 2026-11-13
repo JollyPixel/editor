@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { ScriptDocument } from "@jolly-pixel/asset.script/client";
+import {
+  SCRIPT_CARET_PRESENCE_KEY,
+  type ScriptDocument
+} from "@jolly-pixel/asset.script/client";
 import {
   PresenceChannel,
   type Room
@@ -26,9 +29,6 @@ export interface ScriptCollaborationOptions {
   document: ScriptDocument;
 }
 
-// CONSTANTS
-const kCaretKey = "caret";
-
 export class ScriptCollaboration {
   #events = new Emitter<ScriptCollaborationEvents>();
   #document: ScriptDocument;
@@ -44,7 +44,7 @@ export class ScriptCollaboration {
     const { room, document } = options;
     this.#document = document;
     this.#channel = new PresenceChannel<ScriptCaret | null>(room, {
-      key: kCaretKey,
+      key: SCRIPT_CARET_PRESENCE_KEY,
       decode: (value) => ScriptCaret.parse(value),
       equals: (left, right) => (
         left === right ||

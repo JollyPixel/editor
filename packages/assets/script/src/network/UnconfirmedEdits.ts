@@ -3,34 +3,58 @@ import type { CommandReconciler } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { TextEdit } from "../model/TextEdit.ts";
-import type { ScriptNetworkCommand } from "./types.ts";
+import type {
+  ScriptNetworkCommand,
+  ScriptStep
+} from "./types.ts";
 
 interface InflightEdit {
   readonly command: ScriptNetworkCommand;
   edit: TextEdit;
 }
 
+interface HeldEdit {
+  edit: TextEdit;
+  readonly steps: ScriptStep[];
+}
+
+export type SendHeldEdit = (
+  edit: TextEdit,
+  steps: readonly ScriptStep[]
+) => ScriptNetworkCommand;
+
+function nothingHeld(): HeldEdit {
+  return {
+    edit: TextEdit.empty,
+    steps: []
+  };
+}
+
 export class UnconfirmedEdits implements CommandReconciler<ScriptNetworkCommand> {
   #inflight: InflightEdit | null = null;
-  #held = TextEdit.empty;
+  #held = nothingHeld();
 
   hold(
-    edit: TextEdit
+    edit: TextEdit,
+    step: ScriptStep | null
   ): void {
-    this.#held = this.#held.then(edit);
+    this.#held.edit = this.#held.edit.then(edit);
+    if (step !== null) {
+      this.#held.steps.push(step);
+    }
   }
 
   flush(
-    send: (edit: TextEdit) => ScriptNetworkCommand
+    send: SendHeldEdit
   ): void {
-    if (this.#inflight !== null || this.#held.empty) {
+    if (this.#inflight !== null || this.#held.edit.empty) {
       return;
     }
 
-    const edit = this.#held;
-    this.#held = TextEdit.empty;
+    const { edit, steps } = this.#held;
+    this.#held = nothingHeld();
     this.#inflight = {
-      command: send(edit),
+      command: send(edit, steps),
       edit
     };
   }
@@ -47,9 +71,12 @@ export class UnconfirmedEdits implements CommandReconciler<ScriptNetworkCommand>
     return true;
   }
 
-  forget(): void {
+  forget(): ScriptStep[] {
+    const { steps } = this.#held;
     this.#inflight = null;
-    this.#held = TextEdit.empty;
+    this.#held = nothingHeld();
+
+    return steps;
   }
 
   rebase(
@@ -61,8 +88,8 @@ export class UnconfirmedEdits implements CommandReconciler<ScriptNetworkCommand>
       this.#inflight.edit = rebased.edit;
       earlier = rebased.earlier;
     }
-    const held = this.#held.rebaseOnto(earlier);
-    this.#held = held.edit;
+    const held = this.#held.edit.rebaseOnto(earlier);
+    this.#held.edit = held.edit;
 
     return held.earlier;
   }

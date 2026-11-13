@@ -33,3 +33,9 @@ export function withCommandHeader<
 ) {
   return z.extend(variant, commandHeaderShape);
 }
+
+export function commandUnion<TCommand>(
+  variants: z.ZodMiniObject[]
+): z.ZodMiniType<TCommand> {
+  return z.union(variants) as z.ZodMiniType as z.ZodMiniType<TCommand>;
+}

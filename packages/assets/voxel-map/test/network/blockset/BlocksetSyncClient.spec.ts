@@ -251,6 +251,38 @@ describe("BlocksetSyncClient", () => {
     assert.equal(blockset.blocks.has(2), true);
   });
 
+  it("answers each document step from the room: confirmed on its echo, refused by a correction", () => {
+    const { room, client } = harness();
+    room.simulateSnapshot(snapshot());
+    const answered: string[] = [];
+    client.receipts.subscribe("confirmed", (step) => answered.push(`confirmed ${step.command.action}`));
+    client.receipts.subscribe("refused", (step) => answered.push(`refused ${step.command.action}`));
+
+    assert.ok(client.applyStep({ action: "block-defined", block: makeResolvedBlockDef(3, "cube") }));
+    room.simulateCommand(room.sentCommands[0]);
+    assert.ok(client.applyStep({ action: "block-removed", blockId: 2 }));
+    room.deliver({
+      type: "correction",
+      data: {
+        ...kPeerHeader,
+        action: "block-defined",
+        block: makeResolvedBlockDef(2, "slope")
+      },
+      acks: { "client-A": 2 },
+      refused: 2
+    });
+
+    assert.deepEqual(answered, ["confirmed block-defined", "refused block-removed"]);
+  });
+
+  it("applies no document step the blockset cannot take", () => {
+    const { room, client } = harness();
+    room.simulateSnapshot(snapshot());
+
+    assert.equal(client.applyStep({ action: "block-removed", blockId: 9 }), null);
+    assert.equal(room.sentCommands.length, 0);
+  });
+
   it("destroy unsubscribes from the pixels and stops forwarding", () => {
     const { room, pixels, blockset, client } = harness();
 

@@ -1,6 +1,6 @@
 # PixelDocument
 
-The texture buffer, UV map and normal map settings of one pixel-art texture, without any view. A network client can keep it in sync with no canvas mounted, and several [`PixelArtCanvas`](./PixelArtCanvas.md) instances can edit the same document through the `document` option. It emits a change for each edit, which [pixel history](./history/PixelHistory.md) records.
+The texture buffer, UV map and normal map settings of one pixel-art texture, without any view. A network client can keep it in sync with no canvas mounted, in Node too as long as nothing calls `buffer.canvas()` or passes `init`, and several [`PixelArtCanvas`](./PixelArtCanvas.md) instances can edit the same document through the `document` option. It emits a change for each edit, which [pixel history](./history/PixelHistory.md) records.
 
 ```ts
 const doc = new PixelDocument({

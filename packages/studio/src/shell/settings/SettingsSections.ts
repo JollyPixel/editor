@@ -21,6 +21,7 @@ export const PROFILE_SECTION = "profile";
 export const APPEARANCE_SECTION = "appearance";
 export const PREFERENCES_FILE_SECTION = "preferences-file";
 export const SHARE_LINKS_SECTION = "share-links";
+export const AGENTS_SECTION = "agents";
 export const GENERAL_SECTION = "project-general";
 export const ACCESS_SETTINGS_SECTION = "project-access";
 export const AUDIT_SECTION = "project-audit";
@@ -46,6 +47,11 @@ const kPages = {
     id: SHARE_LINKS_SECTION,
     label: "Share links",
     kind: "share-links"
+  },
+  agents: {
+    id: AGENTS_SECTION,
+    label: "Agents",
+    kind: "agents"
   },
   general: {
     id: GENERAL_SECTION,
@@ -77,6 +83,7 @@ type PageKind =
   | "profile"
   | "preferences-file"
   | "share-links"
+  | "agents"
   | "general"
   | "access"
   | "audit";
@@ -109,7 +116,7 @@ export interface SettingsGroup {
 
 export interface SettingsSectionsOptions {
   /**
-   * The account adds Profile and Share links; its project rights pick the
+   * The account adds Profile, Share links and Agents; its project rights pick the
    * Project sections.
    */
   user: Pick<StudioUser, "online" | "rights">;
@@ -163,7 +170,7 @@ export class SettingsSections implements Iterable<SettingsSection> {
     }
     you.push(kPages["preferences-file"]);
     if (user.online) {
-      you.push(kPages["share-links"]);
+      you.push(kPages["share-links"], kPages.agents);
     }
 
     this.blocks = [

@@ -12,6 +12,7 @@ import {
   createDirectory,
   databaseWith,
   databaseWithRetiredRole,
+  insertAgentToken,
   name,
   registration,
   requestAccess
@@ -108,6 +109,35 @@ describe("AccountDirectory activity", () => {
       }
     ]);
   });
+
+  test("reports the agent tokens an account creates and revokes", () => {
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
+    const activities: AccountActivity[] = [];
+    accounts.watchActivity((activity) => activities.push(activity));
+
+    const { token } = accounts.agentTokens.create({
+      ownerId: alice.id,
+      name: "Builder"
+    });
+    accounts.agentTokens.revoke(alice.id, token.id);
+
+    assert.deepEqual(activities, [
+      {
+        type: "agent-token-created",
+        actorId: alice.id,
+        tokenId: token.id,
+        name: "Builder"
+      },
+      {
+        type: "agent-token-revoked",
+        actorId: alice.id,
+        tokenId: token.id,
+        name: "Builder"
+      }
+    ]);
+  });
 });
 
 describe("AccountDirectory.replaceRoles", () => {
@@ -129,9 +159,10 @@ describe("AccountDirectory.replaceRoles", () => {
     assert.deepEqual([...directory.roles], ["admin", "editor", "viewer"]);
   });
 
-  test("moves the accounts and requests of a renamed role and revokes them", () => {
+  test("moves the accounts and requests of a renamed role and revokes them with their agents", () => {
     using database = databaseWith("Alice", "Bob");
     const [alice, bob] = database.accounts;
+    const bobAgent = insertAgentToken(database, bob.id);
     const carol = requestAccess(database, "Carol");
     const directory = createDirectory(database);
     const revoked: string[] = [];
@@ -149,7 +180,7 @@ describe("AccountDirectory.replaceRoles", () => {
 
     assert.deepEqual(directory.holders("viewer"), [bob.id, carol.id]);
     assert.equal(directory.account(alice.id)?.role, "admin");
-    assert.deepEqual(revoked, [bob.id, carol.id]);
+    assert.deepEqual(revoked, [bob.id, `agent:${bobAgent.id}`, carol.id]);
     assert.equal(changes, 1);
   });
 

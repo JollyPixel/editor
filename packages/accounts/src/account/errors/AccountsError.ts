@@ -11,7 +11,9 @@ export const ACCOUNTS_ERROR_CODES = [
   "invalid-avatar",
   "throttled",
   "share-link-not-found",
-  "share-link-refused"
+  "share-link-refused",
+  "agent-token-not-found",
+  "agent-token-refused"
 ] as const;
 
 export type AccountsErrorCode = typeof ACCOUNTS_ERROR_CODES[number];

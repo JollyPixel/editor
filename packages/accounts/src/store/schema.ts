@@ -43,6 +43,17 @@ CREATE TABLE IF NOT EXISTS share_links (
 
 CREATE INDEX IF NOT EXISTS share_links_by_creator ON share_links (created_by);
 
+CREATE TABLE IF NOT EXISTS agent_tokens (
+  id TEXT PRIMARY KEY,
+  token_hash BLOB NOT NULL UNIQUE,
+  owner_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  revoked_at INTEGER
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS agent_tokens_by_owner ON agent_tokens (owner_id);
+
 CREATE TABLE IF NOT EXISTS avatars (
   user_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
   hash TEXT NOT NULL,

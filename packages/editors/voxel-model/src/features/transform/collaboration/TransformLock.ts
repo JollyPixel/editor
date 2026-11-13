@@ -5,11 +5,11 @@ import {
 } from "@jolly-pixel/network/client";
 import { Emitter } from "@openally/emitt";
 import type { PresencePeer } from "@jolly-pixel/ui";
-import type { VoxelModelRoom } from "@jolly-pixel/asset.voxel-model/client";
+import {
+  VOXEL_MODEL_PRESENCE_KEYS,
+  type VoxelModelRoom
+} from "@jolly-pixel/asset.voxel-model/client";
 import { toPresencePeer } from "@jolly-pixel/ui/network";
-
-// Import Internal Dependencies
-import { PRESENCE_KEYS } from "../../../collaboration/presenceKeys.ts";
 
 export interface TransformLockOptions {
   room: VoxelModelRoom;
@@ -34,7 +34,7 @@ export class TransformLock extends Emitter<TransformLockEvents> {
     super();
     this.#room = options.room;
     this.#channel = new PresenceChannel<string | null>(options.room, {
-      key: PRESENCE_KEYS.transformLock,
+      key: VOXEL_MODEL_PRESENCE_KEYS.transformLock,
       decode: decodeString
     });
     this.#channel.on("change", this.#onChange);

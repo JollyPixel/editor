@@ -65,6 +65,19 @@ interface ShareLink {
 
 A link that lets people without an account open one asset. `token` is the credential the link carries, so anyone who reads it can open the asset. `createdBy` is the account id of its creator. Both times are epoch milliseconds; `expiresAt` is `null` for a link that never expires. `shareLinkSchema` parses one. A guest connected through it carries `via: "link"` (`SHARE_LINK_VIA`) in its profile.
 
+## `AgentToken`
+
+```ts
+interface AgentToken {
+  id: string;
+  ownerId: string;
+  name: string;
+  createdAt: number;
+}
+```
+
+A credential that lets a local AI agent join the project as a peer, with the role of the account `ownerId`. `name` is the peer name the agent shows, and `createdAt` is epoch milliseconds. The value of the credential is not part of it. `agentTokenSchema` parses one and `agentTokenNameSchema` a name (1 to 32 characters once trimmed, `AGENT_TOKEN_NAME_MAX_LENGTH`). An agent carries `via: "golem"` (`AGENT_TOKEN_VIA`) in its profile, which `isAgentProfile(profile)` checks, and is named `"Golem"` (`AGENT_TOKEN_DEFAULT_NAME`) unless its token says otherwise. Its peer subject is `agent:<token id>`: `agentTokenSubject(tokenId)` builds it, and `agentTokenId(subject)` reads the id back, or returns `null` for any other subject.
+
 ## `AccountsError`
 
-The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the host picks one when it answers. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError`, `AccessRequestsFullError`, `ShareLinkNotFoundError` and `ShareLinkRefusedError` extend it, and so do `InvalidCredentialsError` and `AccountsThrottledError`, exported from `@jolly-pixel/accounts/node`. `ACCOUNTS_ERROR_CODES` lists the codes.
+The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the host picks one when it answers. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError`, `AccessRequestsFullError`, `ShareLinkNotFoundError`, `ShareLinkRefusedError`, `AgentTokenNotFoundError` and `AgentTokenRefusedError` extend it, and so do `InvalidCredentialsError` and `AccountsThrottledError`, exported from `@jolly-pixel/accounts/node`. `ACCOUNTS_ERROR_CODES` lists the codes.

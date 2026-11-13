@@ -82,7 +82,8 @@ export function voxelMapEditor(
     page,
     preferences: [],
     sharedPreferences: [],
-    previewKinds
+    previewKinds,
+    sceneComponents: []
   });
 }
 

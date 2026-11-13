@@ -32,4 +32,10 @@ export type AccountActivity =
     actorId: string;
     linkId: string;
     assetId: string;
+  }
+  | {
+    type: "agent-token-created" | "agent-token-revoked";
+    actorId: string;
+    tokenId: string;
+    name: string;
   };

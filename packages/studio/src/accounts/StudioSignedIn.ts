@@ -18,6 +18,7 @@ import type { ProjectSections, ProjectRights } from "@jolly-pixel/server";
 import type { StudioClients } from "../api/StudioClients.ts";
 import { AuditPages } from "../audit/AuditPages.ts";
 import type { FileDownload } from "../browser/FileDownload.ts";
+import { StudioAgentTokens } from "../golem/StudioAgentTokens.ts";
 import { AccountPreferences } from "../preferences/AccountPreferences.ts";
 import { StudioProjectSettings } from "../project/StudioProjectSettings.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
@@ -75,6 +76,7 @@ export class StudioSignedIn extends EventTarget {
   readonly client: Client;
   readonly roster: AccountsRoster;
   readonly shares: StudioShareLinks;
+  readonly agentTokens: StudioAgentTokens;
   readonly renewal: SessionRenewal;
   readonly project: StudioProjectSettings;
 
@@ -101,6 +103,7 @@ export class StudioSignedIn extends EventTarget {
       this.roster,
       options.rights.allows("share")
     );
+    this.agentTokens = new StudioAgentTokens(options.api.agentTokens);
     this.project = new StudioProjectSettings(
       options.api.project,
       options.rights,

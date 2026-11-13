@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { ChangeReceipts } from "@jolly-pixel/history";
 import {
   SyncedDocument,
   type DocumentKind
@@ -6,12 +7,16 @@ import {
 import {
   VoxelDocument,
   type VoxelDocumentOptions,
+  type VoxelWorldCommand,
   type VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import { VOXEL_MAP_KIND } from "../../asset/voxelMap.ts";
-import type { VoxelEdits } from "../../history/VoxelEdits.ts";
+import type {
+  VoxelChange,
+  VoxelEdits
+} from "../../history/VoxelEdits.ts";
 import { VoxelSyncClient } from "./VoxelSyncClient.ts";
 import type { VoxelMapRoom } from "./types.ts";
 
@@ -43,6 +48,16 @@ export class SyncedVoxelMap extends SyncedDocument<SyncedVoxelMap> {
     this.voxels = voxels;
     this.edits = sync.edits;
     this.#sync = sync;
+  }
+
+  get receipts(): ChangeReceipts<VoxelChange> {
+    return this.edits.receipts;
+  }
+
+  applyStep(
+    command: VoxelWorldCommand
+  ): VoxelChange | null {
+    return this.edits.captureLocal(() => this.voxels.applyCommand(command));
   }
 
   replaceWorld(

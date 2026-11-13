@@ -1,13 +1,10 @@
 // Import Third-party Dependencies
-import type { TextEdit } from "@jolly-pixel/asset.script/client";
+import {
+  scriptCaretSchema,
+  type ScriptCaretJSON,
+  type TextEdit
+} from "@jolly-pixel/asset.script/client";
 import * as z from "zod/mini";
-
-// CONSTANTS
-const kOffset = z.int().check(z.minimum(0));
-const kCaretSchema = z.object({
-  anchor: kOffset,
-  head: kOffset
-});
 
 export type CaretField = Pick<
   HTMLTextAreaElement,
@@ -38,7 +35,7 @@ export class ScriptCaret {
       return null;
     }
 
-    const result = z.safeParse(kCaretSchema, value);
+    const result = z.safeParse(scriptCaretSchema, value);
 
     return result.success ?
       new ScriptCaret(result.data.anchor, result.data.head) :
@@ -115,7 +112,7 @@ export class ScriptCaret {
     return this.anchor === other.anchor && this.head === other.head;
   }
 
-  toJSON(): z.infer<typeof kCaretSchema> {
+  toJSON(): ScriptCaretJSON {
     return {
       anchor: this.anchor,
       head: this.head

@@ -88,7 +88,7 @@ The network `AuthenticationProvider`: pass the accounts as the server's `auth`. 
 
 The `profile` overrides what the client claims on join, so a signed-in user cannot pose as another. A socket without a valid session or share link is refused.
 
-A socket that offers a credential (`connectWebSocket({ credential })`) is read as a [share link](#sharelinks) token and never falls back to the cookie. A live link resolves to a guest; an unknown, expired or malformed token is refused:
+A socket that offers a credential (`connectWebSocket({ credential })`) is read as a [share link](#sharelinks) token, then as an [agent token](#agenttokens), and never falls back to the cookie. A live link resolves to a guest; a credential that is neither a live link nor a live agent token is refused:
 
 ```ts
 {
@@ -103,6 +103,21 @@ A socket that offers a credential (`connectWebSocket({ credential })`) is read a
 }
 ```
 
+A live agent token resolves to its owner's current role, under the token's name:
+
+```ts
+{
+  subject: "agent:<token id>",
+  role: owner.role,
+  profile: {
+    username: token.name,
+    peerId: token.id,
+    avatar: null,
+    via: "golem"
+  }
+}
+```
+
 A new avatar reaches open connections through [`watchProfiles`](#watchprofileslistener).
 
 `avatar` is always set, `null` without an uploaded image, so a client cannot claim an image of its own. Its path starts with `ACCOUNTS_URL_PATH`.
@@ -112,6 +127,8 @@ A new avatar reaches open connections through [`watchProfiles`](#watchprofilesli
 Calls `listener` with the account id after a role change or a removal in the [`accounts` room](#accounts-room), and after a [`POST logout`](#post-logout) that closed a session. It returns a function that stops the calls. The network server watches it, so every open connection of that account is closed and authenticates again: a removed or signed-out account is refused, and a new role applies at once. A logout also reconnects the account's other devices, whose sessions stay valid.
 
 It also calls `listener` with a link's guest subject, `share:<link id>`, when the link is revoked, expires, or its creator is removed, so its guests are disconnected and refused.
+
+It calls `listener` with an agent subject, `agent:<token id>`, when the token is revoked, and for each live token of an account whose role changes or that is removed. A reconnecting agent then gets the owner's new role, or is refused. A logout does not reach the account's agents.
 
 ### `watchActivity(listener)`
 
@@ -123,7 +140,8 @@ type AccountActivity =
   | { type: "approved"; actorId; accountId; username; role }
   | { type: "denied" | "owner-transferred" | "removed"; actorId; accountId; username }
   | { type: "role-changed"; actorId; accountId; username; from; to }
-  | { type: "share-link-created" | "share-link-revoked"; actorId; linkId; assetId };
+  | { type: "share-link-created" | "share-link-revoked"; actorId; linkId; assetId }
+  | { type: "agent-token-created" | "agent-token-revoked"; actorId; tokenId; name };
 ```
 
 A registration is its own actor. A share link that expires reports nothing.
@@ -135,6 +153,10 @@ Calls `listener` with the account id and its new `profile`, shaped as in `authen
 ### `shareLinks`
 
 The project's [`ShareLinks`](#sharelinks).
+
+### `agentTokens`
+
+The project's [`AgentTokens`](#agenttokens).
 
 ### `extension`
 
@@ -194,9 +216,33 @@ The live links an account may manage, oldest first: the ones it created, or ever
 
 Deletes the link and returns it. Only its creator or an admin may: anyone else gets `ShareLinkRefusedError`, and an unknown or expired link `ShareLinkNotFoundError`. Its guests are [revoked](#watchrevocationslistener). An expired link is deleted and revoked the same way when its time comes.
 
+## `AgentTokens`
+
+The agent tokens stored beside the accounts. A token lets a local AI agent connect as a peer with its owner's role. Tokens never expire, and each account manages its own.
+
+### `create({ ownerId, name? })`
+
+Creates a token for `ownerId` and returns `{ token, value }`: the [`AgentToken`](./Accounts.md#agenttoken) and the credential, 256 random bits. The database keeps only a SHA-256 digest of `value`, so it cannot be shown again. `name` defaults to `"Golem"` and is trimmed to 1 to 32 characters. Throws `AgentTokenRefusedError` for a name out of bounds or an `ownerId` that names no account.
+
+### `find(value)`
+
+The live `AgentToken` of a credential, or `null`.
+
+### `bySubject(subject)`
+
+The `AgentToken` of an agent subject, `agent:<token id>`, revoked or not, so an audit can name the agent behind an old edit. `null` for another subject or once the owner is removed.
+
+### `ownedBy(ownerId)`
+
+The live tokens of an account, oldest first.
+
+### `revoke(ownerId, tokenId)`
+
+Revokes a live token of `ownerId` and returns it. Its connections are [revoked](#watchrevocationslistener) and the credential stops working; the record stays for `bySubject`. Throws `AgentTokenNotFoundError` for a token of another account, an unknown id or a token already revoked.
+
 ## `AccountsDatabase`
 
-The SQLite database (`node:sqlite`) that holds the accounts, their sessions, their avatars and the share links. `Accounts` reads and writes it: a host only opens it.
+The SQLite database (`node:sqlite`) that holds the accounts, their sessions, their avatars, the share links and the agent tokens. `Accounts` reads and writes it: a host only opens it.
 
 ### `AccountsDatabase.open(location?)`
 

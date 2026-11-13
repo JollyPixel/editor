@@ -85,6 +85,10 @@ export interface CatalogRoomSource {
 export interface CatalogConnectOptions {
   timeoutMs?: number;
   /**
+   * Aborting it rejects the connection with the signal's reason.
+   */
+  signal?: AbortSignal;
+  /**
    * @default CATALOG_ROOM
    */
   room?: string;
@@ -173,9 +177,7 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
       rooms.room(options.room ?? CATALOG_ROOM)
     );
     try {
-      await (options.timeoutMs === undefined ?
-        catalog.ready :
-        readyWithin(catalog.ready, options.timeoutMs));
+      await readyWithin(catalog.ready, options);
     }
     catch (error) {
       catalog.dispose();
@@ -644,22 +646,32 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
 
 async function readyWithin(
   ready: Promise<void>,
-  timeoutMs: number
+  options: CatalogConnectOptions
 ): Promise<void> {
-  const timeout = Promise.withResolvers<never>();
-  const timer = setTimeout(
-    () => timeout.reject(new CatalogUnavailableError()),
-    timeoutMs
-  );
+  const { timeoutMs, signal } = options;
+  signal?.throwIfAborted();
+
+  const failed = Promise.withResolvers<never>();
+  const timer = timeoutMs === undefined ?
+    undefined :
+    setTimeout(
+      () => failed.reject(new CatalogUnavailableError()),
+      timeoutMs
+    );
+  function onAbort(): void {
+    failed.reject(signal?.reason);
+  }
+  signal?.addEventListener("abort", onAbort, { once: true });
 
   try {
     await Promise.race([
       ready,
-      timeout.promise
+      failed.promise
     ]);
   }
   finally {
     clearTimeout(timer);
+    signal?.removeEventListener("abort", onAbort);
   }
 }
 

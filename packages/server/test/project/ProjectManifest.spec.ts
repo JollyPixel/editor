@@ -17,7 +17,15 @@ const kEditors = [
     name: "voxel-map",
     kinds: ["voxelmap"],
     preferences: [],
-    sharedPreferences: []
+    sharedPreferences: [],
+    sceneComponents: [
+      {
+        type: "VoxelMap",
+        assets: {
+          map: "voxelmap"
+        }
+      }
+    ]
   }
 ];
 const kKinds = [

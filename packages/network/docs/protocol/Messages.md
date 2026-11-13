@@ -52,6 +52,10 @@ Opaque protocols skip validation; no-message protocols accept no feature message
 `commandVariant(action, shape)` builds a command object schema;
 `withCommandHeader(variant)` adds the stamped header fields.
 
+`commandUnion<TCommand>(variants)` joins header-less variants into one schema
+typed as `TCommand`, for command lists built from a table where zod cannot
+infer the union.
+
 ## Schemas
 
 A schema is a zod schema without transforms or defaults: parsers return the

@@ -3,6 +3,7 @@ import {
   LitElement,
   css,
   html,
+  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -41,9 +42,12 @@ import { BrowserState } from "../browser/BrowserState.ts";
 import type { FileDownload } from "../browser/FileDownload.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
+import { StudioAgentChat } from "../golem/StudioAgentChat.ts";
+import type { GolemChatOpener } from "./golem/golemConsole.ts";
 import "./home/StudioHome.ts";
 import "./account/AccountBadge.ts";
 import "./play/PlayButton.ts";
+import "./golem/GolemChatPane.ts";
 
 export interface StudioOptions extends Pick<
   StudioSessionOptions,
@@ -55,7 +59,7 @@ export interface StudioOptions extends Pick<
 }
 
 @customElement("jolly-studio")
-export class Studio extends LitElement {
+export class Studio extends LitElement implements GolemChatOpener {
   static override styles = css`
     :host {
       display: flex;
@@ -154,6 +158,12 @@ export class Studio extends LitElement {
       margin-block-end: 2px;
     }
 
+    #studio-body {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
     #workbench {
       position: relative;
       display: flex;
@@ -237,6 +247,12 @@ export class Studio extends LitElement {
   @query("jolly-notifications")
   declare _notifications: HTMLElementTagNameMap["jolly-notifications"] | null;
 
+  @query("studio-golem-chat")
+  declare _golemChat: HTMLElementTagNameMap["studio-golem-chat"] | null;
+
+  @state()
+  declare _agentChat: StudioAgentChat | null;
+
   @state()
   declare _play: StudioPlay | null;
 
@@ -264,6 +280,7 @@ export class Studio extends LitElement {
     this._assets = null;
     this._play = null;
     this._exportGame = null;
+    this._agentChat = null;
     this._sections = SettingsSections.EMPTY;
   }
 
@@ -325,6 +342,10 @@ export class Studio extends LitElement {
     this.#scopes = options.scopes;
     this._sections = options.settings;
     this.#user.attach(user);
+    this._agentChat?.dispose();
+    this._agentChat = user.online ?
+      StudioAgentChat.join(user.client, this.#notifications) :
+      null;
     this._assets = {
       catalog,
       kinds: session.kinds,
@@ -346,6 +367,23 @@ export class Studio extends LitElement {
       this._settingsPage?.requestUpdate();
     }
     this.#session?.openSettings();
+  }
+
+  openGolemChat(
+    message?: string
+  ): void {
+    const chat = this._agentChat;
+    if (chat === null) {
+      return;
+    }
+
+    chat.show();
+    if (message !== undefined && message.trim() !== "") {
+      chat.say(message).catch((error: unknown) => {
+        this.#fail(`Message not sent: ${errorMessage(error)}`);
+      });
+    }
+    void this._golemChat?.focusPrompt();
   }
 
   reloadEditor(
@@ -370,6 +408,8 @@ export class Studio extends LitElement {
     super.disconnectedCallback();
     this.#session?.dispose();
     this.#session = null;
+    this._agentChat?.dispose();
+    this._agentChat = null;
     this.#notifications.dispose();
   }
 
@@ -395,39 +435,50 @@ export class Studio extends LitElement {
           ></studio-account>
         </jolly-toolbar>
       </header>
-      <section id="workbench">
-        <div id="editor-frames">
-          <studio-home
-            id="studio-home"
-            role="region"
-            aria-label="Home"
-            .assets=${this._assets}
-            @asset-open=${this.#onAssetOpen}
-            @console-toggle=${this.#toggleConsole}
-            @settings-open=${this.#openSettings}
-            .user=${user}
-            .browserState=${this.#browserState}
-            @studio-error=${this.#logError}
-          ></studio-home>
-          <div
-            id="studio-settings"
-            role="region"
-            aria-label="Settings"
-            hidden
-          >${this.#settingsPage.render(() => html`
-            <studio-settings
-              .sections=${this._sections}
-              .scopes=${this.#scopes}
+      <div id="studio-body">
+        <section id="workbench">
+          <div id="editor-frames">
+            <studio-home
+              id="studio-home"
+              role="region"
+              aria-label="Home"
+              .assets=${this._assets}
+              @asset-open=${this.#onAssetOpen}
+              @console-toggle=${this.#toggleConsole}
+              @settings-open=${this.#openSettings}
               .user=${user}
-              .catalog=${this._assets?.catalog ?? null}
-              .kinds=${this._assets?.kinds ?? AssetKindSet.EMPTY}
               .browserState=${this.#browserState}
-              @avatar-change=${this.#replaceAvatar}
-            ></studio-settings>
-          `)}</div>
-        </div>
-        <jolly-notifications></jolly-notifications>
-      </section>
+              @studio-error=${this.#logError}
+            ></studio-home>
+            <div
+              id="studio-settings"
+              role="region"
+              aria-label="Settings"
+              hidden
+            >${this.#settingsPage.render(() => html`
+              <studio-settings
+                .sections=${this._sections}
+                .scopes=${this.#scopes}
+                .user=${user}
+                .catalog=${this._assets?.catalog ?? null}
+                .kinds=${this._assets?.kinds ?? AssetKindSet.EMPTY}
+                .browserState=${this.#browserState}
+                @avatar-change=${this.#replaceAvatar}
+              ></studio-settings>
+            `)}</div>
+          </div>
+          <jolly-notifications></jolly-notifications>
+        </section>
+        ${this._agentChat === null ? nothing : html`
+          <studio-golem-chat
+            role="complementary"
+            aria-label="Golem chat"
+            .chat=${this._agentChat}
+            .catalog=${this._assets?.catalog ?? null}
+            @settings-open=${this.#openSettings}
+          ></studio-golem-chat>
+        `}
+      </div>
     `;
   }
 

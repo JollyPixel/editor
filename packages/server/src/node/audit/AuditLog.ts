@@ -67,11 +67,8 @@ export class AuditLog implements AsyncDisposable {
   async recordAccount(
     activity: AccountActivity
   ): Promise<void> {
-    const isLink = "linkId" in activity;
-
     (await this.store.writer.append({
-      assetType: isLink ? "share-link" : "account",
-      assetId: isLink ? activity.linkId : activity.accountId,
+      ...activityTarget(activity),
       eventType: `${kAccountEventPrefix}${activity.type}`,
       eventData: activity,
       actor: {
@@ -95,6 +92,37 @@ export class AuditLog implements AsyncDisposable {
 
   async [Symbol.asyncDispose](): Promise<void> {
     await this.store.close();
+  }
+}
+
+function activityTarget(
+  activity: AccountActivity
+): Pick<EventStore.AppendInput, "assetType" | "assetId"> {
+  switch (activity.type) {
+    case "registered":
+    case "approved":
+    case "denied":
+    case "owner-transferred":
+    case "removed":
+    case "role-changed":
+      return {
+        assetType: "account",
+        assetId: activity.accountId
+      };
+    case "share-link-created":
+    case "share-link-revoked":
+      return {
+        assetType: "share-link",
+        assetId: activity.linkId
+      };
+    case "agent-token-created":
+    case "agent-token-revoked":
+      return {
+        assetType: "agent-token",
+        assetId: activity.tokenId
+      };
+    default:
+      return activity satisfies never;
   }
 }
 

@@ -9,10 +9,12 @@ import type { Logger } from "../logger.ts";
 
 export type { Logger };
 
-export function createLogger(): Logger {
+export function consoleLogger(
+  target: Console = console
+): Logger {
   return new LogLayer({
     transport: new ConsoleTransport({
-      logger: console
+      logger: target
     })
   });
 }

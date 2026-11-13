@@ -52,6 +52,7 @@ export type ModelTreeReader = Pick<
   | "blocksUsing"
   | "materialUses"
   | "accepts"
+  | "toJSON"
 >;
 
 export class ModelTree {

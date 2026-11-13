@@ -106,7 +106,7 @@ export class CommandDocument<
 
   applyStep(
     command: TCommand,
-    basis: number | undefined
+    basis?: number
   ): CommandChange<TCommand, TImage> | null {
     return this.#local(this.#state.placeable(command), basis);
   }

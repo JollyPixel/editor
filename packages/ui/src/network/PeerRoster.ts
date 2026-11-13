@@ -2,13 +2,17 @@
 import { html } from "lit";
 import type {
   Room,
-  RoomPeerEvent
+  RoomPeerEvent,
+  RoomPeerPresenceEvent
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import type { LogQueue } from "../feedback/LogQueue.ts";
 import type { PresencePeer } from "../peer/PresencePeer.ts";
-import { roomPeers } from "./peerProfile.ts";
+import {
+  peerActivityLabel,
+  roomPeers
+} from "./peerProfile.ts";
 
 export interface PeerRosterOptions {
   room: Room;
@@ -46,6 +50,19 @@ export class PeerRoster {
     this.#publish();
   };
 
+  #onPeerPresence = (
+    event: RoomPeerPresenceEvent
+  ): void => {
+    const known = this.#known.get(event.clientId);
+    const presence = this.#room.peers.get(event.clientId)?.presence;
+    if (
+      known !== undefined &&
+      peerActivityLabel(presence) !== known.activity
+    ) {
+      this.#publish();
+    }
+  };
+
   constructor(
     options: PeerRosterOptions
   ) {
@@ -57,6 +74,7 @@ export class PeerRoster {
     this.#room.on("peer-joined", this.#onPeerJoined);
     this.#room.on("peer-left", this.#onPeerLeft);
     this.#room.on("peer-profile", this.#publish);
+    this.#room.on("peer-presence", this.#onPeerPresence);
 
     this.#publish();
   }
@@ -66,6 +84,7 @@ export class PeerRoster {
     this.#room.off("peer-joined", this.#onPeerJoined);
     this.#room.off("peer-left", this.#onPeerLeft);
     this.#room.off("peer-profile", this.#publish);
+    this.#room.off("peer-presence", this.#onPeerPresence);
 
     this.#known.clear();
     this.#publishPeers([]);

@@ -1,11 +1,15 @@
 // Import Third-party Dependencies
 import {
   bytesSchema,
+  commandUnion,
   commandVariant,
   MessageProtocol,
   withCommandHeader
 } from "@jolly-pixel/network";
-import { COLOR_PALETTE_MAX_SIZE } from "@jolly-pixel/pixel-draw.renderer";
+import {
+  COLOR_PALETTE_MAX_SIZE,
+  type PixelDocumentCommand
+} from "@jolly-pixel/pixel-draw.renderer";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
@@ -75,20 +79,33 @@ const kUvOrientationSchemas: readonly z.core.$ZodLooseShape[] = [
   }
 ];
 
+const kBinaryAction = "texture-replaced" satisfies PixelCommandAction;
+
+const kPackedMetadata: ReadonlyMap<string, z.core.$ZodLooseShape> = new Map([
+  [
+    "stroke",
+    {
+      color: kRgba8Schema,
+      xy: kFlatIntegers
+    }
+  ],
+  [
+    "select-edit",
+    {
+      xy: kFlatIntegers,
+      rgba: kFlatNumbers
+    }
+  ]
+]);
+
 const kPixelCommandMetadata: Record<
   PixelCommandAction,
   readonly z.core.$ZodLooseShape[]
 > = {
-  stroke: [
-    {
-      color: kRgba8Schema,
-      xy: kFlatIntegers
-    },
-    {
-      color: kRgba8Schema,
-      positions: z.array(kVec2Schema)
-    }
-  ],
+  stroke: [{
+    color: kRgba8Schema,
+    positions: z.array(kVec2Schema)
+  }],
   resized: [{
     size: sizeSchema
   }],
@@ -100,16 +117,10 @@ const kPixelCommandMetadata: Record<
     fromColor: kRgba8Schema,
     toColor: kRgba8Schema
   }],
-  "select-edit": [
-    {
-      xy: kFlatIntegers,
-      rgba: kFlatNumbers
-    },
-    {
-      positions: z.array(kVec2Schema),
-      colors: z.array(kRgba8Schema)
-    }
-  ],
+  "select-edit": [{
+    positions: z.array(kVec2Schema),
+    colors: z.array(kRgba8Schema)
+  }],
   "uv-region-created": [{
     region: uvRegionSchema
   }],
@@ -161,16 +172,34 @@ function pixelCommand(
   action: string,
   variants: readonly z.core.$ZodLooseShape[]
 ) {
-  return withCommandHeader(commandVariant(action, {
+  return commandVariant(action, {
     metadata: variants.length === 1 ?
       z.object(variants[0]) :
       z.union(variants.map((variant) => z.object(variant)))
-  }));
+  });
 }
 
 export const pixelCommandSchemas: readonly z.ZodMiniObject[] = Object.entries(
   kPixelCommandMetadata
-).map(([action, variants]) => pixelCommand(action, variants));
+).map(([action, variants]) => {
+  const packed = kPackedMetadata.get(action);
+
+  return withCommandHeader(pixelCommand(
+    action,
+    packed === undefined ? variants : [packed, ...variants]
+  ));
+});
+
+export type PixelEditCommand = Exclude<
+  PixelDocumentCommand,
+  { action: typeof kBinaryAction; }
+>;
+
+export const pixelEditCommandSchema = commandUnion<PixelEditCommand>(
+  Object.entries(kPixelCommandMetadata)
+    .filter(([action]) => action !== kBinaryAction)
+    .map(([action, variants]) => pixelCommand(action, variants))
+);
 
 export const pixelCommandProtocol: MessageProtocol = new MessageProtocol(
   z.union(pixelCommandSchemas)

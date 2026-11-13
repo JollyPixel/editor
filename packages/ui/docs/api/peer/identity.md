@@ -59,4 +59,11 @@ The colour of the published `peerId`, or of `clientId` without one.
 
 A room peer as a `PresencePeer`: named by `username`, coloured by
 `peerProfileColor`, with the profile's `peerId` and `avatar`. A `via` string,
-such as `"link"`, becomes the badge "via link".
+such as `"link"`, becomes the badge "via link". The member's `presence`
+gives the `activity`, parsed with `parsePeerActivity` from
+`@jolly-pixel/network` and formatted with `formatPeerActivity`.
+
+### `formatPeerActivity(activity: PeerActivity): string`
+
+A peer activity as one line: the label, followed by " · 40%" when it has a
+progress.

@@ -41,6 +41,7 @@ import type { RegisterOptions } from "./registration/RegisterOptions.ts";
 import type { RegistrationResult } from "./registration/RegistrationResult.ts";
 import type { PasswordDigest } from "./session/PasswordDigest.ts";
 import { shareLinkSubject } from "./share/ShareLinks.ts";
+import { agentTokenSubject } from "./agent/AgentToken.ts";
 import type { AccountsDatabase } from "./store/AccountsDatabase.ts";
 
 // CONSTANTS
@@ -193,7 +194,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     this.#roles = roles;
     this.emit("changed");
     for (const account of moved) {
-      this.revoke(account.id);
+      this.#revokeAccount(account.id);
     }
   }
 
@@ -263,7 +264,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       from,
       to: role
     });
-    this.revoke(account.id);
+    this.#revokeAccount(account.id);
 
     return this.#account(account);
   }
@@ -315,16 +316,21 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     actorId: string,
     username: Username
   ): Account {
-    const { account, links } = this.#database.transaction(() => {
+    const { account, subjects } = this.#database.transaction(() => {
       this.#actor(actorId).assertAdmin();
       const removed = this.#existingAccount(username);
       removed.assertNotOwner();
-      const createdLinks = this.#database.shareLinks.deleteCreatedBy(removed.id);
+      const revoked = [
+        ...this.#accountSubjects(removed.id),
+        ...this.#database.shareLinks
+          .deleteCreatedBy(removed.id)
+          .map((link) => shareLinkSubject(link.id))
+      ];
       this.#database.accounts.delete(removed.id);
 
       return {
         account: removed,
-        links: createdLinks
+        subjects: revoked
       };
     });
     this.#changed({
@@ -333,9 +339,8 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       accountId: account.id,
       username: account.username
     });
-    this.revoke(account.id);
-    for (const link of links) {
-      this.revoke(shareLinkSubject(link.id));
+    for (const subject of subjects) {
+      this.revoke(subject);
     }
 
     return this.#account(account);
@@ -360,7 +365,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       accountId: owner.id,
       username: owner.username
     });
-    this.revoke(owner.id);
+    this.#revokeAccount(owner.id);
 
     return this.#account(owner);
   }
@@ -449,6 +454,25 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
 
       return request;
     });
+  }
+
+  #revokeAccount(
+    accountId: string
+  ): void {
+    for (const subject of this.#accountSubjects(accountId)) {
+      this.revoke(subject);
+    }
+  }
+
+  #accountSubjects(
+    accountId: string
+  ): string[] {
+    return [
+      accountId,
+      ...this.#database.agentTokens
+        .ownedBy(accountId)
+        .map((token) => agentTokenSubject(token.id))
+    ];
   }
 
   #changed(

@@ -107,6 +107,9 @@
       "path": "./packages/server"
     },
     {
+      "path": "./packages/golem"
+    },
+    {
       "path": "./packages/studio"
     }
   ]

@@ -14,7 +14,10 @@ import {
   CatalogClient
 } from "@jolly-pixel/asset-server/client";
 import { WEBSOCKET_PROTOCOL } from "@jolly-pixel/network";
-import { Client } from "@jolly-pixel/network/client";
+import {
+  Client,
+  connectWebSocket
+} from "@jolly-pixel/network/client";
 import { Window } from "happy-dom";
 
 // Import Internal Dependencies
@@ -24,6 +27,11 @@ import {
 } from "../helpers/shares.ts";
 import { serveBackend } from "../helpers/studioBackend.ts";
 import { browser } from "#src/testing.ts";
+import { auditPageSchema } from "#src/audit/api.ts";
+import {
+  GOLEM_TOKENS_URL_PATH,
+  createdAgentTokenReplySchema
+} from "#src/golem/api.ts";
 
 // CONSTANTS
 const kPassword = "p".repeat(43);
@@ -57,6 +65,60 @@ describe("StudioBackend", () => {
     finally {
       guest.destroy();
       await guestPage.happyDOM.close();
+    }
+  });
+
+  test("an agent token edits as its owner's golem until it is revoked", async() => {
+    await using backend = await serveBackend();
+    const [alice, bob] = [backend.browser(), backend.browser()];
+    await alice.client.register("Alice", kPassword);
+    await bob.client.register("Bob", kPassword);
+    const tokensUrl = new URL(`.${GOLEM_TOKENS_URL_PATH}`, backend.url);
+    const { token, value } = createdAgentTokenReplySchema.parse(
+      await (await bob.fetch(tokensUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({ name: "Builder" })
+      })).json()
+    );
+
+    const agent = new Client({
+      reconnect: {
+        delays: [10]
+      },
+      socket: () => connectWebSocket({
+        url: backend.socketUrl,
+        credential: value
+      })
+    });
+    try {
+      const catalog = await CatalogClient.connect(agent, {
+        timeoutMs: kTimeoutMs
+      });
+      await catalog.rename("map-overworld", "maps/renamed.voxelmap");
+
+      const audit = auditPageSchema.parse(
+        await (await alice.fetch(
+          new URL("./api/audit/?category=structure", backend.url)
+        )).json()
+      );
+      assert.deepEqual(audit.rows[0].actor, {
+        id: `agent:${token.id}`,
+        name: "Builder (Bob)",
+        kind: "agent"
+      });
+
+      const refused = Promise.withResolvers<void>();
+      agent.on("unauthorized", () => refused.resolve());
+      await bob.fetch(new URL(token.id, tokensUrl), {
+        method: "DELETE"
+      });
+      await refused.promise;
+    }
+    finally {
+      agent.destroy();
     }
   });
 

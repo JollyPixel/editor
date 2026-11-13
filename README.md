@@ -100,6 +100,10 @@ Generic packages used by more than one sub-domain.
 - [cdp](./packages/cdp) - Chrome DevTools Protocol recording, page probes and profile readers for perf harnesses
 - [e2e](./packages/e2e) - Playwright config, locators and editor fixtures for e2e suites
 
+## 🤖 AI
+
+- [golem](./packages/golem) - Connects a local AI agent to a running JollyPixel studio as a peer
+
 ## 💃 Getting started
 
 Public packages are published on npm and can be installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com). The studio, editors, formats, tooling and 🚧 renderers are private workspaces.

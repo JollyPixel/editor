@@ -22,3 +22,4 @@ export {
   encodePixelSnapshot,
   pixelWireSnapshot
 } from "./protocol/PixelSnapshotCodec.ts";
+export * from "./sync/pixelArtEditableKind.ts";

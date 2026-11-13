@@ -1,5 +1,10 @@
+// Import Third-party Dependencies
+import type { LocalEdits } from "@jolly-pixel/history";
+import type * as z from "zod/mini";
+
 // Import Internal Dependencies
 import type { PendingChanges } from "./CommandSync.ts";
+import type { MessageProtocol } from "../../protocol/message/MessageProtocol.ts";
 
 export interface DocumentSync extends PendingChanges {
   readonly ready: boolean;
@@ -44,4 +49,18 @@ export interface DocumentKind<
   syncDocument(
     room: TRoom
   ): TSynced;
+}
+
+export interface EditableDocumentKind<
+  TKind extends string,
+  TRoom,
+  TSynced extends SyncedDocument<unknown>,
+  TCommand
+> extends DocumentKind<TKind, TRoom, TSynced> {
+  readonly commandSchema: z.ZodMiniType<TCommand>;
+  readonly commandProtocol: MessageProtocol;
+
+  localEdits(
+    synced: TSynced
+  ): LocalEdits<TCommand>;
 }

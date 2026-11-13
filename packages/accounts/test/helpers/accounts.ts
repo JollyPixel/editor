@@ -7,6 +7,7 @@ import type { PasswordHash } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
 import type { Account } from "#src/account/Account.ts";
+import type { AgentToken } from "#src/agent/AgentToken.ts";
 import { AccountEntity } from "#src/account/AccountEntity.ts";
 import { Username } from "#src/account/Username.ts";
 import {
@@ -147,6 +148,21 @@ export function createAccounts(
     roles: ROLES,
     ...options
   });
+}
+
+export function insertAgentToken(
+  database: AccountsDatabase,
+  ownerId: string
+): AgentToken {
+  const token: AgentToken = {
+    id: `agent-of-${ownerId}`,
+    ownerId,
+    name: "Golem",
+    createdAt: 0
+  };
+  database.agentTokens.insert(token, SessionToken.mint());
+
+  return token;
 }
 
 export function openSession(

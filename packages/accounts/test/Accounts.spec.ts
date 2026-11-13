@@ -17,6 +17,7 @@ import {
   createAccounts,
   databaseWith,
   databaseWithRetiredRole,
+  insertAgentToken,
   openSession
 } from "./helpers/accounts.ts";
 import { solidPng } from "./helpers/avatar/images.ts";
@@ -85,6 +86,49 @@ describe("Accounts.authenticate — share links", () => {
   });
 });
 
+describe("Accounts.authenticate — agent tokens", () => {
+  test("identifies an agent token by its name with the current role of its owner", () => {
+    using database = databaseWith("Alice", "Bob");
+    const [, bob] = database.accounts;
+    using accounts = createAccounts(database);
+    const { token, value } = accounts.agentTokens.create({
+      ownerId: bob.id,
+      name: "Builder"
+    });
+
+    assert.deepEqual(accounts.authenticate(upgrade(undefined, value)), {
+      subject: `agent:${token.id}`,
+      role: "spectator",
+      profile: {
+        username: "Builder",
+        peerId: token.id,
+        avatar: null,
+        via: "golem"
+      }
+    });
+
+    database.accounts.save(bob.withRole("member"));
+
+    assert.equal(
+      accounts.authenticate(upgrade(undefined, value))?.role,
+      "member"
+    );
+  });
+
+  test("refuses a revoked token", () => {
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
+    const { token, value } = accounts.agentTokens.create({
+      ownerId: alice.id
+    });
+
+    accounts.agentTokens.revoke(alice.id, token.id);
+
+    assert.equal(accounts.authenticate(upgrade(undefined, value)), null);
+  });
+});
+
 describe("Accounts.authenticate", () => {
   test("identifies the account of a session cookie", () => {
     using database = databaseWith("Alice");
@@ -132,9 +176,10 @@ describe("Accounts.authenticate", () => {
 });
 
 describe("Accounts.watchRevocations", () => {
-  test("revokes the account that signs out", async() => {
+  test("revokes the account that signs out, not its agents", async() => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
+    insertAgentToken(database, alice.id);
     using accounts = createAccounts(database);
     const revoked: string[] = [];
     const stop = accounts.watchRevocations((accountId) => revoked.push(accountId));

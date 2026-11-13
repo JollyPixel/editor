@@ -41,6 +41,7 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/scripting": "workspace:*",
     "@openally/emitt": "1.1.0",

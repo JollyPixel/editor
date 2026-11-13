@@ -39,6 +39,7 @@ export class EditorPackages implements Iterable<EditorPackage> {
       }
       byName.set(editor.name, editor);
     }
+    assertOneOwnerPerComponent(byName.values());
 
     this.#editors = [...byName.values()];
   }
@@ -84,5 +85,22 @@ export class EditorPackages implements Iterable<EditorPackage> {
     return this.#editors.map(
       (editor) => editor.toDescriptor()
     );
+  }
+}
+
+function assertOneOwnerPerComponent(
+  editors: Iterable<EditorPackage>
+): void {
+  const owners = new Map<string, string>();
+  for (const editor of editors) {
+    for (const { type } of editor.sceneComponents) {
+      const owner = owners.get(type);
+      if (owner !== undefined) {
+        throw new TypeError(
+          `Scene component "${type}" is declared by both "${owner}" and "${editor.package}".`
+        );
+      }
+      owners.set(type, editor.package);
+    }
   }
 }

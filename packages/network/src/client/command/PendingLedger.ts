@@ -1,8 +1,16 @@
+// Import Third-party Dependencies
+import type { ChangeReceipts } from "@jolly-pixel/history";
+
 // Import Internal Dependencies
 import type { NetworkCommandHeader } from "../../sync/types.ts";
 
 export interface SentChange {
   readonly basis?: number;
+}
+
+export interface SentReceipt {
+  readonly change: SentChange;
+  readonly receipts: ChangeReceipts<SentChange>;
 }
 
 export interface ChangeOutbox {
@@ -17,7 +25,7 @@ export interface ChangeOutbox {
 
 export interface LedgerEntry<TCommand extends NetworkCommandHeader> {
   readonly command: TCommand;
-  readonly change: SentChange | null;
+  readonly receipt: SentReceipt | null;
   sent: boolean;
   applied: boolean;
 }
@@ -41,7 +49,7 @@ export class PendingLedger<TCommand extends NetworkCommandHeader> {
     this.#entries = outbox.restore().map((command) => {
       return {
         command: command as TCommand,
-        change: null,
+        receipt: null,
         sent: command.seq > 0,
         applied: false
       };

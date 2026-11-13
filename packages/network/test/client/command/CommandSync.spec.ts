@@ -162,4 +162,31 @@ describe("CommandSync", () => {
     assert.deepEqual(answers, ["first@4", "second refused"]);
     assert.equal(receipts.attached, false);
   });
+
+  test("answers a change in the receipts it was sent with instead of the option", () => {
+    const harness = new RoomHarness<TestCommand, TestMessage>();
+    harness.admit();
+    const optionReceipts = new ChangeReceipts<SentChange>();
+    const ownReceipts = new ChangeReceipts<SentChange>();
+    const sync = new CommandSync<TestCommand, TestSnapshot, TestNotice>(harness.room, {
+      reconciler: rebasingReconciler(),
+      receipts: optionReceipts
+    });
+    const own = {};
+    const answers: string[] = [];
+    optionReceipts.subscribe("confirmed", () => answers.push("option"));
+    ownReceipts.subscribe("confirmed", (change, version) => {
+      answers.push(change === own ? `own@${version}` : "other");
+    });
+
+    sync.sendChange({ action: "set", value: 1 }, own, ownReceipts);
+    harness.serverMessage({
+      type: "snapshot",
+      data: { value: 1 },
+      version: 2,
+      acks: { self: 1 }
+    });
+
+    assert.deepEqual(answers, ["own@2"]);
+  });
 });

@@ -15,12 +15,22 @@ import {
 ```
 
 A package exports its `SceneComponentPackage` as `SCENE_COMPONENTS` from an
-export subpath, and names that subpath in its manifest:
+export subpath, and names that subpath in its manifest. `sceneComponents`
+declares each component type with the asset kind of each `definition.assets`
+slot, so Node clients such as golem can check a component without loading
+the module:
 
 ```json
 {
   "jollypixel": {
-    "scene": "./scene"
+    "scene": "./scene",
+    "sceneComponents": {
+      "VoxelMap": {
+        "assets": {
+          "map": "voxelmap"
+        }
+      }
+    }
   },
   "exports": {
     "./scene": "./src/sceneComponents/index.ts"
@@ -29,7 +39,22 @@ export subpath, and names that subpath in its manifest:
 ```
 
 The scene editor loads the package when the project file lists it under
-`editors` or `kinds`.
+`editors` or `kinds`. The studio refuses a `scene` contribution without
+`sceneComponents`, and a component type that two packages declare.
+
+Nothing compares the declaration with the module at runtime, so the package
+pins it with a spec. `assertDeclaresSceneComponents(packageDir, components)`
+from `@jolly-pixel/editor.host/testing` reads `packageDir/package.json` and
+fails unless its `sceneComponents` is the object the `SceneComponentPackage`
+implies, with `assets` left out of a component that has no slot:
+
+```ts
+import { assertDeclaresSceneComponents } from "@jolly-pixel/editor.host/testing";
+
+test("matches the scene components the package declares", () => {
+  assertDeclaresSceneComponents(kPackageDir, SCENE_COMPONENTS);
+});
+```
 
 ```ts
 const kRows = new FormRows<VoxelMapSettings>();

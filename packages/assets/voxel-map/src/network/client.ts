@@ -10,6 +10,7 @@ export * from "../history/VoxelKeySet.ts";
 export * from "../history/voxelHistoryRegistration.ts";
 export * from "./voxelMap/VoxelSyncClient.ts";
 export * from "./voxelMap/SyncedVoxelMap.ts";
+export * from "./voxelMap/brushPresence.ts";
 export * from "./blockset/types.ts";
 export * from "./blockset/BlocksetSyncClient.ts";
 export * from "./blockset/SyncedBlockset.ts";

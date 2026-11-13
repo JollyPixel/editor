@@ -28,6 +28,7 @@ interface PresencePeer {
   peerId?: string; // picks the default avatar, default clientId
   avatar?: string; // image URL
   badge?: string; // short label after the name, such as "via link"
+  activity?: string; // what the peer is doing, such as "Placing trees · 40%"
 }
 ```
 

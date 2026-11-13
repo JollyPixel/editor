@@ -1,12 +1,19 @@
 // Import Third-party Dependencies
-import { MessageProtocol } from "@jolly-pixel/network";
+import {
+  commandUnion,
+  commandVariant,
+  MessageProtocol,
+  withCommandHeader
+} from "@jolly-pixel/network";
 import {
   pixelCommandSchemas,
+  pixelEditCommandSchema,
   pixelSnapshotSchema
 } from "@jolly-pixel/asset.pixel-art/server";
 import {
   MAX_LIGHT_LEVEL,
   MAX_LOCAL_BLOCK_ID,
+  type BlocksetDocumentCommand,
   type BlocksetMaterialGroupRenameCommand,
   type BlocksetTileSizeCommand,
   type VoxelBlendGroupCommandAction,
@@ -16,26 +23,49 @@ import {
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import {
-  networkCommand,
-  tileSizeSchema
-} from "../schema.ts";
+import { tileSizeSchema } from "../schema.ts";
+import type { BlocksetEditCommand } from "./types.ts";
 
 // CONSTANTS
 const kUnitSchema = z.number().check(z.minimum(0), z.maximum(1));
 const kNonEmptyString = z.string().check(z.minLength(1));
 const kHexColorSchema = z.string().check(z.regex(/^#[0-9a-fA-F]{6}$/));
+const kTileRefSchema = z.union([
+  z.tuple([z.int(), z.int()]),
+  z.looseObject({
+    col: z.int(),
+    row: z.int(),
+    blocksetId: z.optional(z.string()),
+    rotation: z.optional(z.literal([0, 1, 2, 3])),
+    size: z.optional(z.number().check(z.positive()))
+  })
+]);
+const kBlockSchema = z.looseObject({
+  id: z.int().check(z.minimum(1), z.maximum(MAX_LOCAL_BLOCK_ID)),
+  name: z.string(),
+  shapeId: z.string(),
+  faceTextures: z.optional(z.record(z.string(), kTileRefSchema)),
+  defaultTexture: z.optional(kTileRefSchema),
+  collidable: z.optional(z.boolean()),
+  cullCoveredFaces: z.optional(z.boolean()),
+  blendGroup: z.optional(kNonEmptyString),
+  defaultBlocksetId: z.optional(z.string()),
+  alphaMode: z.optional(z.enum(["opaque", "mask", "blend"])),
+  side: z.optional(z.enum(["front", "double"])),
+  alphaCutoff: z.optional(kUnitSchema),
+  materialGroup: z.optional(kNonEmptyString),
+  properties: z.optional(z.record(
+    z.string(),
+    z.union([z.string(), z.number(), z.boolean()])
+  ))
+});
 
 const kBlockCommandProperties: Record<
   VoxelBlockCommandAction,
   z.core.$ZodLooseShape
 > = {
   "block-defined": {
-    block: z.object({
-      id: z.int().check(z.minimum(1), z.maximum(MAX_LOCAL_BLOCK_ID)),
-      name: z.string(),
-      shapeId: z.string()
-    })
+    block: kBlockSchema
   },
   "block-removed": {
     blockId: z.int()
@@ -101,22 +131,35 @@ export const blocksetSnapshotSchema = z.object({
   blendGroups: z.optional(z.array(blendGroupSchema))
 });
 
-export const blocksetCommandProtocol: MessageProtocol = new MessageProtocol(z.union([
-  ...pixelCommandSchemas,
+const kBlocksetDocumentCommandVariants: z.ZodMiniObject[] = [
   ...Object.entries(kBlockCommandProperties).map(
-    ([action, properties]) => networkCommand(action, properties)
+    ([action, properties]) => commandVariant(action, properties)
   ),
   ...Object.entries(kMaterialGroupCommandProperties).map(
-    ([action, properties]) => networkCommand(action, properties)
+    ([action, properties]) => commandVariant(action, properties)
   ),
   ...Object.entries(kBlendGroupCommandProperties).map(
-    ([action, properties]) => networkCommand(action, properties)
+    ([action, properties]) => commandVariant(action, properties)
   ),
-  networkCommand(kTileSizeAction, {
+  commandVariant(kTileSizeAction, {
     tileSize: tileSizeSchema
   }),
-  networkCommand(kMaterialGroupRenameAction, {
+  commandVariant(kMaterialGroupRenameAction, {
     groupId: kNonEmptyString,
     to: kNonEmptyString
   })
+];
+
+export const blocksetCommandSchema = commandUnion<BlocksetDocumentCommand>(
+  kBlocksetDocumentCommandVariants
+);
+
+export const blocksetEditCommandSchema: z.ZodMiniType<BlocksetEditCommand> = z.union([
+  blocksetCommandSchema,
+  pixelEditCommandSchema
+]);
+
+export const blocksetCommandProtocol: MessageProtocol = new MessageProtocol(z.union([
+  ...pixelCommandSchemas,
+  ...kBlocksetDocumentCommandVariants.map(withCommandHeader)
 ]));

@@ -13,6 +13,13 @@
       "preferences": "src/preferences.ts"
     },
     "scene": "./scene",
+    "sceneComponents": {
+      "VoxelModel": {
+        "assets": {
+          "model": "voxelmodel"
+        }
+      }
+    },
     "runtime": "./runtime",
     "preview": ["voxelmodel"]
   },

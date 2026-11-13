@@ -6,7 +6,11 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { BlockUvLayouts } from "#src/model/nodes/BlockUvLayouts.ts";
+import { BlockShape } from "#src/model/nodes/BlockShape.ts";
+import {
+  BlockUvLayouts,
+  type NetPlacement
+} from "#src/model/nodes/BlockUvLayouts.ts";
 
 // CONSTANTS
 const kNet = new BlockUvLayouts([BlockUvLayouts.net()]).extent;
@@ -227,5 +231,49 @@ describe("BlockUvLayouts", () => {
     ]);
 
     assert.deepEqual(layouts.nextNet(kTexture), BlockUvLayouts.net());
+  });
+
+  describe("place", () => {
+    const layouts = new BlockUvLayouts([BlockUvLayouts.net()]);
+    const boxes = [BlockShape.box, BlockShape.box];
+
+    function origins(
+      placement: NetPlacement
+    ): [number, number, boolean][] {
+      return placement.nets.map(({ bounds, shared }) => [bounds.x, bounds.y, shared]);
+    }
+
+    test("places each net in free space of a texture that fits them", () => {
+      const placement = layouts.place(boxes, kTexture, kTexture.x);
+
+      assert.deepEqual(placement.textureSize, kTexture);
+      assert.deepEqual(origins(placement), [
+        [kNet.x, 0, false],
+        [0, kNet.y, false]
+      ]);
+    });
+
+    test("doubles the shorter texture side until every net fits", () => {
+      const placement = layouts.place(boxes, kNet, kTexture.y);
+
+      assert.deepEqual(placement.textureSize, {
+        x: kNet.x * 2,
+        y: kNet.y * 2
+      });
+      assert.deepEqual(origins(placement), [
+        [kNet.x, 0, false],
+        [0, kNet.y, false]
+      ]);
+    });
+
+    test("shares the texture origin once the texture cannot grow", () => {
+      const placement = layouts.place(boxes, kNet, kNet.y);
+
+      assert.deepEqual(placement.textureSize, kNet);
+      assert.deepEqual(origins(placement), [
+        [0, 0, true],
+        [0, 0, true]
+      ]);
+    });
   });
 });

@@ -15,6 +15,7 @@ import { NormalMapConfig } from "@jolly-pixel/pixel-draw.renderer";
 // Import Internal Dependencies
 import {
   blocksetCommandProtocol,
+  blocksetCommandSchema,
   blocksetSnapshotSchema
 } from "#src/network/blockset/BlocksetCommand.schema.ts";
 
@@ -36,6 +37,57 @@ function accepts(
 ): boolean {
   return new MessageParser(blocksetCommandProtocol).parse(payload).ok;
 }
+
+describe("blocksetCommandSchema", () => {
+  test("keeps every field of a defined block", () => {
+    const block = {
+      id: 3,
+      name: "stone",
+      shapeId: "cube",
+      faceTextures: {
+        top: [1, 0]
+      },
+      collidable: false,
+      properties: {
+        hardness: 2
+      }
+    };
+
+    assert.deepStrictEqual(
+      blocksetCommandSchema.parse({
+        action: "block-defined",
+        block
+      }),
+      {
+        action: "block-defined",
+        block
+      }
+    );
+  });
+
+  test("refuses a defined block with malformed optional fields", () => {
+    const fields = [
+      { faceTextures: { top: "stone" } },
+      { defaultTexture: { col: 1 } },
+      { collidable: "no" },
+      { alphaMode: "glass" },
+      { properties: { hardness: [2] } }
+    ];
+    for (const field of fields) {
+      const parsed = blocksetCommandSchema.safeParse({
+        action: "block-defined",
+        block: {
+          id: 3,
+          name: "stone",
+          shapeId: "cube",
+          ...field
+        }
+      });
+
+      assert.equal(parsed.success, false, JSON.stringify(field));
+    }
+  });
+});
 
 describe("blocksetCommandProtocol", () => {
   test("accepts a pixel stroke and parses it to its action", () => {

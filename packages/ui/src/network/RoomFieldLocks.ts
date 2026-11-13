@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  PEER_FIELD_LOCK_KEY,
   PresenceChannel,
   decodeString,
   type Room
@@ -15,7 +16,6 @@ import type { PresencePeer } from "../peer/PresencePeer.ts";
 import { roomPeers } from "./peerProfile.ts";
 
 // CONSTANTS
-const kFieldLockKey = "fieldLock";
 const kSelfEvents = [
   "sync",
   "left",
@@ -40,7 +40,7 @@ export class RoomFieldLocks implements FieldLockSource {
   ) {
     this.#room = room;
     this.#channel = new PresenceChannel<string | null>(room, {
-      key: kFieldLockKey,
+      key: PEER_FIELD_LOCK_KEY,
       decode: decodeString
     });
 

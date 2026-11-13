@@ -9,11 +9,15 @@ import {
 } from "./packages.mts";
 import { sidebarForPackages } from "./sidebar.mts";
 import { ignoredDeadLinks } from "./deadlinks.mts";
+import { writeLlmsFiles } from "./llms.mts";
 
 export default withMermaid(defineConfig({
   title: "JollyPixel",
   description: "The collaborative 3D HTML5 game maker",
   srcDir: "../packages",
+  buildEnd(siteConfig) {
+    writeLlmsFiles(siteConfig.outDir, siteConfig.site);
+  },
   base: "/editor/",
   srcExclude: [
     "**/public/**",

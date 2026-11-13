@@ -85,6 +85,14 @@ function feedHarness(
           owner: false
         } :
         null),
+      agentToken: (subject) => (subject === "agent:builder" ?
+        {
+          id: "builder",
+          ownerId: "bob",
+          name: "Builder",
+          createdAt: 0
+        } :
+        null),
       assetPath: (assetId) => `${assetId}.voxelmap.json`
     }),
     at: (minutes) => t.mock.timers.setTime(minutes * kMinute),
@@ -207,6 +215,27 @@ describe("AuditFeed", () => {
     assert.deepEqual(await page({ actor: "bob" }), ["Bob map x1 1-1"]);
     assert.deepEqual(await page({ asset: "sky" }), ["Alice sky x1 1-1"]);
     assert.deepEqual(await page({ to: kMinute - 1 }), []);
+  });
+
+  test("names a golem after its token and owner, and one whose token is gone", async(t) => {
+    const harness = feedHarness(t);
+    await harness.edit("map", "agent:builder");
+    await harness.edit("sky", "agent:gone");
+
+    const { rows } = await harness.feed.page(kAdmin, {});
+
+    assert.deepEqual(rows.map((row) => row.actor), [
+      {
+        id: "agent:gone",
+        name: "Deleted golem",
+        kind: "deleted"
+      },
+      {
+        id: "agent:builder",
+        name: "Builder (Bob)",
+        kind: "agent"
+      }
+    ]);
   });
 
   test("names a removed account and skips the server's own snapshots", async(t) => {

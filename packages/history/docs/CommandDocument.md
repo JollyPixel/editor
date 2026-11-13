@@ -108,7 +108,7 @@ Every method that applies a command returns `false` or `null` when `accepts()` r
 
 Protected. Applies a local edit (`origin: "local"`). Subclass edit methods call it.
 
-### applyStep(command, basis): CommandChange | null
+### applyStep(command, basis?): CommandChange | null
 
 Applies `placeable(command)` as a local edit with `basis` set. `CommandHistory` calls it on undo and redo.
 

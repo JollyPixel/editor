@@ -142,7 +142,8 @@ describe("SettingsSections", () => {
           "camera",
           "color-picker",
           "preferences-file",
-          "share-links"
+          "share-links",
+          "agents"
         ],
         editors: ["editor:voxel-map", "editor:pixel-art"]
       }
@@ -186,7 +187,7 @@ describe("SettingsSections", () => {
     );
   });
 
-  test("has no profile without an account", () => {
+  test("has no profile, share links or agents without an account", () => {
     const settings = new SettingsSections({
       user: {
         online: false,
@@ -197,11 +198,13 @@ describe("SettingsSections", () => {
 
     assert.equal(settings.first?.id, "appearance");
     assert.equal(settings.find("profile"), undefined);
+    assert.equal(settings.find("share-links"), undefined);
+    assert.equal(settings.find("agents"), undefined);
   });
 
-  test("shows Share links under You and the Project sections the role reads in a block of their own", () => {
+  test("shows Share links and Agents under You, and the Project sections the role reads apart", () => {
     const [{ you }, { project, assets }] = outline(sections(kEveryRight));
-    assert.equal(you.at(-1), "share-links");
+    assert.deepEqual(you.slice(-2), ["share-links", "agents"]);
     assert.deepEqual(project, [
       "project-general",
       "project-access",
@@ -227,6 +230,7 @@ describe("SettingsSections", () => {
       "color-picker",
       "preferences-file",
       "share-links",
+      "agents",
       "editor:voxel-map",
       "editor:pixel-art"
     ]);
