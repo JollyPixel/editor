@@ -24,10 +24,7 @@ class AssetCoordinator {
 
   get<TValue>(reference: AssetReference<TValue>): TValue;
 
-  load<TValue>(
-    reference: AssetReference<TValue>,
-    options?: AssetLoadOptions
-  ): Promise<TValue>;
+  load<TValue>(reference: AssetReference<TValue>): Promise<TValue>;
 
   loadBatch(
     references: Iterable<AssetReference<unknown>>,
@@ -61,11 +58,10 @@ Resolves the reference and returns its prepared value synchronously. It throws
 Use this method after startup or another asynchronous boundary has prepared
 the reference.
 
-## `load(reference, options?)`
+## `load(reference)`
 
 Loads one reference through the loader registered with its `AssetType`. The
-returned promise resolves to the loaded value. `options.signal` is passed to
-the loader, which decides how to use it.
+returned promise resolves to the loaded value.
 
 Concurrent calls share one in-flight promise. A call after failure starts a
 new attempt. A rejection is kept as the asset's failure, whatever value the
@@ -75,8 +71,7 @@ loader rejected with.
 
 Starts an independent loading operation over a snapshot of the supplied
 references. Duplicate asset IDs count once within the batch. Concurrent
-batches still share in-flight loads. `options.signal` is passed to every
-loader the batch starts.
+batches still share in-flight loads.
 
 The coordinator retains no batch dependency list after construction. See
 [`AssetLoadBatch`](./AssetLoadBatch.md) for progress and failure behavior.
@@ -84,16 +79,14 @@ The coordinator retains no batch dependency list after construction. See
 ## `evict(reference)`
 
 Forgets one asset and returns its value when it was ready, or `undefined`
-otherwise. Evicting through another token of a tracked asset throws
-`AssetTypeMismatchError`. Existing handles report `"unloaded"` afterwards, and a load still in
-flight settles without restoring the entry.
+otherwise. Existing handles report `"unloaded"` afterwards, and a load still
+in flight settles without restoring the entry.
 
 Eviction does not cancel in-flight work or dispose loaded resources. Callers
 own platform resource disposal.
 
 ## Token identity
 
-Once an asset is loading, loaded, or failed, reading it through another
-`AssetType` token of the same kind throws `AssetTypeMismatchError`. Loading
-through a token other than the one registered with the loader throws the same
-error.
+When a loader is registered for a kind, every method except `canLoad()` throws
+`AssetTypeMismatchError` for a reference built from another `AssetType` token
+of that kind. `load()` rejects with it. `canLoad()` returns `false`.

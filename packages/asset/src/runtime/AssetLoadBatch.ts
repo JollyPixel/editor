@@ -1,7 +1,6 @@
 // Import Internal Dependencies
 import type { AssetRecord } from "../AssetRecord.ts";
 import { AssetBatchLoadError } from "../errors/AssetBatchLoadError.ts";
-import type { AssetLoadOptions } from "./AssetLoader.ts";
 
 export type AssetLoadBatchStatus =
   | "loading"
@@ -13,37 +12,29 @@ export interface AssetLoadFailure {
   readonly error: unknown;
 }
 
-interface ReadyAssetLoadOutcome {
+interface AssetLoadProgressBase {
   readonly record: AssetRecord;
+  readonly completed: number;
+  readonly total: number;
+}
+
+interface ReadyAssetLoadProgress extends AssetLoadProgressBase {
   readonly status: "ready";
 }
 
-interface FailedAssetLoadOutcome extends AssetLoadFailure {
+interface FailedAssetLoadProgress extends AssetLoadProgressBase {
   readonly status: "failed";
+  readonly error: unknown;
 }
 
-interface AssetLoadCounts {
-  readonly completed: number;
-  readonly total: number;
-}
+export type AssetLoadProgress =
+  | ReadyAssetLoadProgress
+  | FailedAssetLoadProgress;
 
-export type AssetLoadProgress = (
-  | ReadyAssetLoadOutcome
-  | FailedAssetLoadOutcome
-) & AssetLoadCounts;
-
-export interface AssetLoadBatchOptions extends AssetLoadOptions {
+export interface AssetLoadBatchOptions {
   onProgress?: (
     progress: AssetLoadProgress
   ) => void;
-}
-
-export interface AssetLoadBatch {
-  readonly status: AssetLoadBatchStatus;
-  readonly completed: number;
-  readonly total: number;
-  readonly failures: readonly AssetLoadFailure[];
-  readonly done: Promise<void>;
 }
 
 export interface AssetLoadBatchTask {
@@ -51,11 +42,7 @@ export interface AssetLoadBatchTask {
   load(): Promise<void>;
 }
 
-interface ProgressError {
-  readonly error: unknown;
-}
-
-class RunningAssetLoadBatch implements AssetLoadBatch {
+export class AssetLoadBatch {
   readonly total: number;
   readonly done: Promise<void>;
 
@@ -63,7 +50,6 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
   #completed: number;
   #failures: AssetLoadFailure[] = [];
   #onProgress: AssetLoadBatchOptions["onProgress"];
-  #progressError: ProgressError | null = null;
 
   constructor(
     pendingTasks: readonly AssetLoadBatchTask[],
@@ -103,11 +89,6 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
       tasks.map((task) => this.#runTask(task))
     );
 
-    if (this.#progressError !== null) {
-      this.#status = "failed";
-
-      throw this.#progressError.error;
-    }
     if (this.#failures.length > 0) {
       this.#status = "failed";
 
@@ -122,57 +103,39 @@ class RunningAssetLoadBatch implements AssetLoadBatch {
   async #runTask(
     task: AssetLoadBatchTask
   ): Promise<void> {
-    let outcome: ReadyAssetLoadOutcome | FailedAssetLoadOutcome;
+    const { record } = task;
+    let progress: AssetLoadProgress;
 
     try {
       await task.load();
-      outcome = {
-        record: task.record,
-        status: "ready"
+      progress = {
+        record,
+        status: "ready",
+        completed: ++this.#completed,
+        total: this.total
       };
     }
     catch (error: unknown) {
       this.#failures.push({
-        record: task.record,
+        record,
         error
       });
-      outcome = {
-        record: task.record,
+      progress = {
+        record,
         status: "failed",
-        error
+        error,
+        completed: ++this.#completed,
+        total: this.total
       };
     }
 
-    this.#completed++;
-    this.#reportProgress({
-      ...outcome,
-      completed: this.#completed,
-      total: this.total
-    });
-  }
-
-  #reportProgress(
-    progress: AssetLoadProgress
-  ): void {
     try {
       this.#onProgress?.(progress);
     }
     catch (error: unknown) {
-      this.#progressError ??= {
-        error
-      };
+      queueMicrotask(() => {
+        throw error;
+      });
     }
   }
-}
-
-export function startAssetLoadBatch(
-  pendingTasks: readonly AssetLoadBatchTask[],
-  total: number,
-  options: AssetLoadBatchOptions = {}
-): AssetLoadBatch {
-  return new RunningAssetLoadBatch(
-    pendingTasks,
-    total,
-    options
-  );
 }

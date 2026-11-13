@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { AssetId } from "../AssetId.ts";
-import type { AssetStatus } from "../runtime/AssetHandle.ts";
+import type { AssetStatus } from "../runtime/AssetStore.ts";
 
 export class AssetNotReadyError extends Error {
   readonly id: AssetId;

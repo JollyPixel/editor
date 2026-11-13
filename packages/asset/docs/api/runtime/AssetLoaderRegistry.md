@@ -15,6 +15,7 @@ class AssetLoaderRegistry {
   ): this;
 
   has(type: AssetType<unknown>): boolean;
+  find<TValue>(type: AssetType<TValue>): AssetLoader<TValue> | undefined;
   get<TValue>(type: AssetType<TValue>): AssetLoader<TValue>;
 }
 ```
@@ -24,9 +25,10 @@ for the same kind throws `AssetLoaderAlreadyExistsError`.
 
 `has()` returns `true` only when the kind and token object both match.
 
-`get()` preserves the value type carried by the token. It throws
-`AssetLoaderNotFoundError` when the kind is absent and `AssetTypeMismatchError`
-when the kind was registered with another token object.
+`find()` preserves the value type carried by the token. It returns `undefined`
+when the kind is absent and throws `AssetTypeMismatchError` when the kind was
+registered with another token object. `get()` behaves the same but throws
+`AssetLoaderNotFoundError` when the kind is absent.
 
 ```ts
 const loaders = new AssetLoaderRegistry()

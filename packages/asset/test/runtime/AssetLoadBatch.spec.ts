@@ -3,11 +3,23 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 // Import Internal Dependencies
-import { AssetBatchLoadError } from "../../src/index.ts";
+import {
+  AssetBatchLoadError,
+  type AssetLoadProgress
+} from "../../src/index.ts";
 import {
   createCoordinator,
   textReference as reference
 } from "../helpers/coordinator.ts";
+
+function summarize(
+  progress: AssetLoadProgress
+) {
+  return {
+    ...progress,
+    record: progress.record.id.value
+  };
+}
 
 async function rejectWithoutError(): Promise<string> {
   const reason: unknown = undefined;
@@ -136,20 +148,21 @@ describe("AssetLoadBatch", () => {
   });
 
   test("keeps progress and failures local to their batch", async() => {
+    const unavailable = new Error("unavailable");
     const coordinator = createCoordinator(async(record) => {
       if (record.id.value === "farewell") {
-        throw new Error("unavailable");
+        throw unavailable;
       }
 
       return "loaded";
     });
-    const successfulProgress: number[] = [];
-    const failedProgress: number[] = [];
+    const successfulProgress: unknown[] = [];
+    const failedProgress: unknown[] = [];
     const successful = coordinator.loadBatch(
       [reference("greeting")],
       {
         onProgress(progress) {
-          successfulProgress.push(progress.completed);
+          successfulProgress.push(summarize(progress));
         }
       }
     );
@@ -157,7 +170,7 @@ describe("AssetLoadBatch", () => {
       [reference("farewell")],
       {
         onProgress(progress) {
-          failedProgress.push(progress.completed);
+          failedProgress.push(summarize(progress));
         }
       }
     );
@@ -167,10 +180,20 @@ describe("AssetLoadBatch", () => {
 
     assert.equal(successful.status, "ready");
     assert.equal(successful.failures.length, 0);
-    assert.deepEqual(successfulProgress, [1]);
+    assert.deepEqual(successfulProgress, [
+      { record: "greeting", status: "ready", completed: 1, total: 1 }
+    ]);
     assert.equal(failed.status, "failed");
     assert.equal(failed.failures.length, 1);
-    assert.deepEqual(failedProgress, [1]);
+    assert.deepEqual(failedProgress, [
+      {
+        record: "farewell",
+        status: "failed",
+        error: unavailable,
+        completed: 1,
+        total: 1
+      }
+    ]);
   });
 
   test("retries a failed asset in a later batch", async() => {
@@ -218,24 +241,11 @@ describe("AssetLoadBatch", () => {
     assert.equal(batch.status, "failed");
   });
 
-  test("forwards its abort signal to every loader", async() => {
-    const controller = new AbortController();
-    const received: Array<AbortSignal | undefined> = [];
-    const coordinator = createCoordinator(async(record, context) => {
-      received.push(context.signal);
-
-      return record.path.toString();
+  test("rethrows progress callback errors outside the batch", async(t) => {
+    const queued: Array<() => void> = [];
+    t.mock.method(globalThis, "queueMicrotask", (callback: () => void) => {
+      queued.push(callback);
     });
-
-    await coordinator.loadBatch(
-      [reference("greeting"), reference("farewell")],
-      { signal: controller.signal }
-    ).done;
-
-    assert.deepEqual(received, [controller.signal, controller.signal]);
-  });
-
-  test("does not report progress callback errors as load failures", async() => {
     const coordinator = createCoordinator(async() => "loaded");
     const progressError = new Error("progress failed");
     let progressCount = 0;
@@ -250,10 +260,11 @@ describe("AssetLoadBatch", () => {
       }
     );
 
-    await assert.rejects(batch.done, progressError);
+    await batch.done;
 
-    assert.equal(batch.status, "failed");
-    assert.equal(batch.failures.length, 0);
+    assert.equal(batch.status, "ready");
     assert.equal(progressCount, 1);
+    assert.equal(queued.length, 1);
+    assert.throws(() => queued[0]?.(), progressError);
   });
 });

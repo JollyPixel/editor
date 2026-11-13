@@ -1,12 +1,9 @@
 // Import Internal Dependencies
 import type { AssetReference } from "../AssetReference.ts";
-import type { AssetStore } from "./AssetStore.ts";
-
-export type AssetStatus =
-  | "unloaded"
-  | "loading"
-  | "ready"
-  | "failed";
+import type {
+  AssetStatus,
+  AssetStore
+} from "./AssetStore.ts";
 
 export class AssetHandle<
   TValue = unknown

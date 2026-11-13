@@ -134,6 +134,7 @@ dist
 .pnp.*
 
 .claude/settings.local.json
+.codex/config.toml
 
 nsecure-result.json
 temp/

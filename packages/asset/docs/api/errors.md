@@ -54,5 +54,5 @@ class AssetBatchLoadError extends Error {
 loader may reject with any JavaScript value, including `undefined`, so each
 failure's `error` is typed as `unknown`.
 
-An exception thrown by `onProgress` rejects `AssetLoadBatch.done` directly. It
-is not wrapped in `AssetBatchLoadError` and does not appear in `failures`.
+An exception thrown by `onProgress` is rethrown from a microtask and reported
+as uncaught. It never reaches `AssetLoadBatch.done` or `failures`.

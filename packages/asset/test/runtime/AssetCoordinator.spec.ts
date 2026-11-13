@@ -8,8 +8,7 @@ import {
   AssetNotReadyError,
   AssetReference,
   type AssetRecord,
-  AssetType,
-  AssetTypeMismatchError
+  AssetType
 } from "../../src/index.ts";
 import {
   createCoordinator,
@@ -58,22 +57,6 @@ describe("AssetCoordinator", () => {
     assert.equal(value, "memory:greeting");
     assert.equal(handle.get(), "memory:greeting");
     assert.equal(coordinator.get(reference), "memory:greeting");
-  });
-
-  test("forwards the load context to the loader", async() => {
-    const controller = new AbortController();
-    let received: AbortSignal | undefined;
-    const coordinator = createCoordinator(async(record, context) => {
-      received = context.signal;
-
-      return record.path.toString();
-    });
-
-    await coordinator.load(textReference("greeting"), {
-      signal: controller.signal
-    });
-
-    assert.equal(received, controller.signal);
   });
 
   test("loads the assets a loader depends on into the same coordinator", async() => {
@@ -173,32 +156,25 @@ describe("AssetCoordinator", () => {
     assert.equal(handle.status, "unloaded");
   });
 
-  test("requesting through another token does not claim the asset", async() => {
+  test("rejects another token for a kind with a registered loader", async() => {
     const coordinator = createCoordinator(readSource);
     const foreign = new AssetReference("greeting", kForeignTextAsset);
+    const mismatch = {
+      name: "AssetTypeMismatchError",
+      kind: TEXT_ASSET.kind
+    };
 
-    assert.equal(coordinator.request(foreign).status, "unloaded");
-    assert.equal(
-      await coordinator.load(textReference("greeting")),
-      "memory:greeting"
-    );
-  });
+    assert.throws(() => coordinator.request(foreign), mismatch);
+    assert.throws(() => coordinator.get(foreign), mismatch);
+    assert.throws(() => coordinator.loadBatch([foreign]), mismatch);
+    await assert.rejects(coordinator.load(foreign), mismatch);
 
-  test("rejects another token for a loaded asset", async() => {
-    const coordinator = createCoordinator(readSource);
-    const foreign = new AssetReference("greeting", kForeignTextAsset);
     await coordinator.load(textReference("greeting"));
 
-    assert.throws(
-      () => coordinator.request(foreign).status,
-      {
-        name: "AssetTypeMismatchError",
-        kind: TEXT_ASSET.kind
-      }
-    );
-    assert.throws(
-      () => coordinator.get(foreign),
-      AssetTypeMismatchError
+    assert.throws(() => coordinator.evict(foreign), mismatch);
+    assert.equal(
+      coordinator.get(textReference("greeting")),
+      "memory:greeting"
     );
   });
 
@@ -214,15 +190,6 @@ describe("AssetCoordinator", () => {
     assert.equal(
       coordinator.canLoad(new AssetReference("greeting", kForeignTextAsset)),
       false
-    );
-  });
-
-  test("loads only through the registered token", async() => {
-    const coordinator = createCoordinator(readSource);
-
-    await assert.rejects(
-      coordinator.load(new AssetReference("greeting", kForeignTextAsset)),
-      AssetTypeMismatchError
     );
   });
 });

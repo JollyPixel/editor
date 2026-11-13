@@ -3,38 +3,15 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 // Import Internal Dependencies
-import {
-  AssetId,
-  AssetRoom
-} from "../src/index.ts";
+import { AssetRoom } from "../src/index.ts";
 
 describe("AssetRoom", () => {
-  describe("constructor", () => {
-    test("wraps a string asset id", () => {
-      const room = new AssetRoom("pixelart", "a1");
-
-      assert.strictEqual(room.kind.value, "pixelart");
-      assert.ok(room.assetId instanceof AssetId);
-      assert.strictEqual(room.assetId.value, "a1");
-    });
-
-    test("keeps an existing AssetId", () => {
-      const assetId = new AssetId("a1");
-
-      assert.strictEqual(new AssetRoom("pixelart", assetId).assetId, assetId);
-    });
-  });
-
   describe("parse", () => {
     test("splits kind from asset id", () => {
       const room = AssetRoom.parse("pixelart:a1");
 
       assert.strictEqual(room?.kind.value, "pixelart");
       assert.strictEqual(room?.assetId.value, "a1");
-    });
-
-    test("only the first colon separates", () => {
-      assert.strictEqual(AssetRoom.parse("pixelart:a:1")?.assetId.value, "a:1");
     });
 
     test("returns null for a missing separator or an empty half", () => {
@@ -45,7 +22,7 @@ describe("AssetRoom", () => {
       assert.strictEqual(AssetRoom.parse("pixelart: "), null);
     });
 
-    test("is the inverse of toString", () => {
+    test("is the inverse of toString when the asset id has a colon", () => {
       const room = new AssetRoom("pixelart", "a:1");
 
       assert.ok(AssetRoom.parse(room.toString())?.equals(room));

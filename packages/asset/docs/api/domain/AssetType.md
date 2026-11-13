@@ -29,5 +29,6 @@ export const MODEL_ASSET = new AssetType<Model>("model");
 The kind string is persisted. The token object is a runtime contract used by
 `AssetReference`, `AssetLoaderRegistry`, and `AssetCoordinator`. Two
 `AssetType` instances with the same kind are still different tokens, so compare
-tokens with `===`. Loading through a token other than the registered one, or
-reading a loaded asset through another token, throws `AssetTypeMismatchError`.
+tokens with `===`. Once a loader is registered for a kind, the coordinator
+throws `AssetTypeMismatchError` for references built from any other token of
+that kind.

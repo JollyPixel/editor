@@ -53,17 +53,28 @@ export class AssetLoaderRegistry {
     )?.type === type;
   }
 
-  get<TValue>(
+  find<TValue>(
     type: AssetType<TValue>
-  ): AssetLoader<TValue> {
+  ): AssetLoader<TValue> | undefined {
     const entry = this.#loaders.get(type.kind.value);
     if (entry === undefined) {
-      throw new AssetLoaderNotFoundError(type.kind);
+      return undefined;
     }
     if (entry.type !== type) {
       throw new AssetTypeMismatchError(type.kind);
     }
 
     return entry.loader as AssetLoader<TValue>;
+  }
+
+  get<TValue>(
+    type: AssetType<TValue>
+  ): AssetLoader<TValue> {
+    const loader = this.find(type);
+    if (loader === undefined) {
+      throw new AssetLoaderNotFoundError(type.kind);
+    }
+
+    return loader;
   }
 }

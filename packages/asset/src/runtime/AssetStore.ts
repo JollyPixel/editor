@@ -1,28 +1,18 @@
 // Import Internal Dependencies
 import type { AssetReference } from "../AssetReference.ts";
-import type { AssetType } from "../AssetType.ts";
-import type { AssetStatus } from "./AssetHandle.ts";
 import { AssetNotReadyError } from "../errors/AssetNotReadyError.ts";
-import { AssetTypeMismatchError } from "../errors/AssetTypeMismatchError.ts";
 
-interface AssetStoreEntryBase<TValue> {
-  readonly type: AssetType<TValue>;
-}
-
-interface LoadingAssetStoreEntry<TValue>
-  extends AssetStoreEntryBase<TValue> {
+interface LoadingAssetStoreEntry<TValue> {
   readonly status: "loading";
   readonly promise: Promise<TValue>;
 }
 
-interface ReadyAssetStoreEntry<TValue>
-  extends AssetStoreEntryBase<TValue> {
+interface ReadyAssetStoreEntry<TValue> {
   readonly status: "ready";
   readonly value: TValue;
 }
 
-interface FailedAssetStoreEntry<TValue>
-  extends AssetStoreEntryBase<TValue> {
+interface FailedAssetStoreEntry {
   readonly status: "failed";
   readonly error: unknown;
 }
@@ -30,7 +20,11 @@ interface FailedAssetStoreEntry<TValue>
 type AssetStoreEntry<TValue> =
   | LoadingAssetStoreEntry<TValue>
   | ReadyAssetStoreEntry<TValue>
-  | FailedAssetStoreEntry<TValue>;
+  | FailedAssetStoreEntry;
+
+export type AssetStatus =
+  | "unloaded"
+  | AssetStoreEntry<unknown>["status"];
 
 export class AssetStore {
   #entries = new Map<
@@ -84,14 +78,12 @@ export class AssetStore {
 
     const key = reference.id.value;
     const loading: LoadingAssetStoreEntry<TValue> = {
-      type: reference.type,
       status: "loading",
       promise: Promise.resolve()
         .then(load)
         .then(
           (value) => {
             this.#settle(key, loading, {
-              type: reference.type,
               status: "ready",
               value
             });
@@ -100,7 +92,6 @@ export class AssetStore {
           },
           (error: unknown) => {
             this.#settle(key, loading, {
-              type: reference.type,
               status: "failed",
               error
             });
@@ -138,14 +129,8 @@ export class AssetStore {
   #findEntry<TValue>(
     reference: AssetReference<TValue>
   ): AssetStoreEntry<TValue> | undefined {
-    const entry = this.#entries.get(reference.id.value);
-    if (entry === undefined) {
-      return undefined;
-    }
-    if (entry.type !== reference.type) {
-      throw new AssetTypeMismatchError(reference.kind);
-    }
-
-    return entry as AssetStoreEntry<TValue>;
+    return this.#entries.get(
+      reference.id.value
+    ) as AssetStoreEntry<TValue> | undefined;
   }
 }
