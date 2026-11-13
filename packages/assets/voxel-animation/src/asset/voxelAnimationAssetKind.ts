@@ -12,21 +12,23 @@ import { InvalidEntryError } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
 import {
-  compactVoxelAnimationFile,
-  compactVoxelAnimationFileSchema,
-  expandVoxelAnimationFile,
   VOXEL_ANIMATION_ASSET,
   VOXEL_ANIMATION_COMMAND,
   VOXEL_ANIMATION_FILE_VERSION,
   VOXEL_ANIMATION_EXTENSION,
   VOXEL_ANIMATION_KIND
 } from "./voxelAnimation.ts";
+import {
+  compactVoxelAnimationFile,
+  compactVoxelAnimationFileSchema,
+  expandVoxelAnimationFile
+} from "./voxelAnimationFile.ts";
 import { AnimationSet } from "../model/AnimationSet.ts";
+import { animationFootprint } from "../model/command/animationCommands.ts";
 import {
   animationCommandProtocol,
   animationSetSnapshotSchema
 } from "../network/AnimationCommand.schema.ts";
-import { animationConflictKeys } from "../network/AnimationCommandKeys.ts";
 import type { AnimationNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
@@ -97,7 +99,7 @@ export function voxelAnimationAssetKind(
           ...arbitrated(state, {
             accepts: (set, command) => set.accepts(command),
             writes: (command) => {
-              return { keys: animationConflictKeys(command) };
+              return { keys: animationFootprint(command).conflicts.map((ref) => ref.key) };
             }
           })
         };

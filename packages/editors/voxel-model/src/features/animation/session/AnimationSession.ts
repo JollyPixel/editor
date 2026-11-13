@@ -218,7 +218,7 @@ export class AnimationSession extends Emitter<AnimationSessionEvents> {
 
     const set = animations.set(setId);
     const link = document.tree.animationSets.get(setId);
-    const clip = set?.document.set.clip(clipId);
+    const clip = set?.document.set.clip(clipId)?.toJSON();
     if (set === undefined || link === undefined || clip === undefined) {
       return null;
     }

@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
-import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
 import type {
@@ -27,14 +26,3 @@ export type AnimationSetSnapshot = network.Infer<typeof animationSetSnapshotSche
 export type AnimationCommand = network.Infer<typeof animationCommandSchema>;
 export type AnimationCommandAction = AnimationCommand["action"];
 export type AnimationNetworkCommand = AnimationCommand & network.NetworkCommandHeader;
-
-export type AnimationServerMessage = network.NetworkServerMessage<
-  AnimationNetworkCommand,
-  AnimationSetSnapshot,
-  AssetRoomNotice
->;
-
-export type AnimationRoom = network.Room<
-  AnimationNetworkCommand,
-  AnimationServerMessage
->;

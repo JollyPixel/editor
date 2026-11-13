@@ -34,7 +34,7 @@ function createFollowing(
   return {
     ...model,
     hierarchy,
-    trackPaths: () => model.set.set.clip(model.clipId)!.tracks.map(({ path }) => path),
+    trackPaths: () => model.set.set.clip(model.clipId)!.toJSON().tracks.map(({ path }) => path),
     bindings: () => document.tree.animationSets.get("walk")?.bindings ?? []
   };
 }
@@ -79,7 +79,7 @@ describe("AnimationFollow", () => {
 
     hierarchy.rename(ids.body, "Torso");
     assert.deepEqual(trackPaths(), ["Body/Arm"]);
-    assert.deepEqual(set.set.clip("run")?.tracks.map(({ path }) => path), ["Body/Arm", "Torso/Arm"]);
+    assert.deepEqual(set.set.clip("run")?.toJSON().tracks.map(({ path }) => path), ["Body/Arm", "Torso/Arm"]);
     assert.deepEqual(bindings(), [{ path: "Body/Arm", target: "Torso/Arm" }]);
   });
 

@@ -28,7 +28,7 @@ function createKeying(
   model.tab.activate("animate");
   model.animationPlayback.seek(tick);
   const rest = model.document.tree.block(model.ids.arm)!.transform;
-  const clip = model.set.set.clip(model.clipId)!;
+  const clip = model.set.set.clip(model.clipId)!.toJSON();
   const arm = {
     uuid: model.ids.arm,
     transform: new BlockTransform(rest).pose(new ClipSampler(clip).sample(tick).get("Body/Arm")!)
@@ -45,7 +45,7 @@ function createKeying(
   function keys(
     channel: AnimationChannel
   ): AnimationKeyJSON[] {
-    return model.set.set.clip(model.clipId)!
+    return model.set.set.clip(model.clipId)!.toJSON()
       .tracks.find(({ path }) => path === "Body/Arm")?.[channel] ?? [];
   }
 
@@ -114,7 +114,7 @@ describe("AnimationKeyer", () => {
     keyer.commit(arm);
 
     assert.deepEqual(resets, [arm.uuid, arm.uuid]);
-    assert.equal(model.set.set.clip(model.clipId)!.tracks[0].position?.length, 2);
+    assert.equal(model.set.set.clip(model.clipId)!.toJSON().tracks[0].position?.length, 2);
   });
 
   test("the Key action keys every channel as one undo step, and only in Animate", () => {
@@ -141,7 +141,7 @@ describe("KeyInspectorController", () => {
     const inspector = new KeyInspectorController(createHost());
     inspector.attach(model);
     function interpolations(): string[] {
-      return model.set.set.clip(model.clipId)!.tracks[0].position!.map(({ interpolation }) => interpolation);
+      return model.set.set.clip(model.clipId)!.toJSON().tracks[0].position!.map((key) => key.interpolation);
     }
     function state() {
       return inspector.state;

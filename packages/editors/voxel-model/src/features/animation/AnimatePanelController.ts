@@ -415,7 +415,7 @@ export class AnimatePanelController {
     const own = sets.find((candidate) => candidate.own);
     const { setId, clipId } = editing.animationFocus.focus;
     const set = sets.find(({ id }) => id === setId) ?? null;
-    const clip = set === null || clipId === null ? undefined : set.document.set.clip(clipId);
+    const clip = set === null || clipId === null ? undefined : set.document.set.clip(clipId)?.toJSON();
     const focuses = editing.presence.clipFocuses;
 
     return {

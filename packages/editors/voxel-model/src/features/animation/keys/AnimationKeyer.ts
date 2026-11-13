@@ -118,7 +118,7 @@ export class AnimationKeyer implements TransformTarget {
       for (const channel of ANIMATION_CHANNELS) {
         const value = roundKeyValue(delta[channel]);
         if (channels === "all" || !sameVector(value, roundKeyValue(shown[channel]))) {
-          const current = set.document.set.keyAt(clip.id, path, channel, frameTick);
+          const current = set.document.set.clip(clip.id)?.keyAt(path, channel, frameTick);
           const key = {
             tick: frameTick,
             value,

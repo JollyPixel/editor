@@ -2,6 +2,10 @@
 import type { NetworkCommandHeader } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import {
+  VOXEL_ANIMATION_FILE_VERSION,
+  type VoxelAnimationFile
+} from "#src/asset/voxelAnimation.ts";
 import type {
   AnimationClipJSON,
   AnimationCommand,
@@ -24,6 +28,17 @@ export function clip(
     loop: true,
     tracks: [],
     ...overrides
+  };
+}
+
+export function animationFile(
+  clips: AnimationClipJSON[] = [],
+  rig = ""
+): VoxelAnimationFile {
+  return {
+    version: VOXEL_ANIMATION_FILE_VERSION,
+    rig,
+    clips
   };
 }
 

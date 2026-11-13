@@ -112,7 +112,7 @@ describe("AnimationHistories", () => {
     assert.equal(model.undo(model.wave), true);
     assert.equal(model.toKey(model.wave.clipId), undefined);
     assert.equal(model.toKey("run"), 5);
-    assert.equal(set.set.clip("run")?.fps, 12);
+    assert.equal(set.set.clip("run")?.timeline.rate.fps, 12);
     assert.equal(model.state(model.walkSet).undoCount, 2, "an undo in a clip files nothing in the set");
   });
 

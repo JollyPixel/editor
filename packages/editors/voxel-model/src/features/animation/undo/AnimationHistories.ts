@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  animationChangeLabel,
   animationHistoryKeys,
   type AnimationChange,
   type AnimationDocument
@@ -9,7 +10,6 @@ import type { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 // Import Internal Dependencies
 import { animationKey } from "../../../state/index.ts";
 import type { EditorHistory } from "../../history/index.ts";
-import { describeAnimationChange } from "./describeAnimationChange.ts";
 import { scopeOfAnimationChange } from "./scopeOfAnimationChange.ts";
 import { combineReleases } from "../../../shared/combineReleases.ts";
 import type {
@@ -72,7 +72,7 @@ export class AnimationHistories {
           setId,
           this.#document.tree.animationSets
         ),
-        label: describeAnimationChange
+        label: animationChangeLabel
       })
     });
   };
@@ -97,7 +97,7 @@ export class AnimationHistories {
     this.#open.delete(setId);
     open.unregister();
     this.#history.removeScope(animationKey(setId));
-    for (const { id: clipId } of open.document.set.clips()) {
+    for (const clipId of open.document.set.clipIds()) {
       this.#history.removeScope(animationKey(setId, clipId));
     }
   };

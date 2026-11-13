@@ -87,7 +87,7 @@ export class ModelAnimationLinks {
   ): void {
     switch (command.action) {
       case "animation-set-linked":
-        this.#links.set(command.link.id, new AnimationSetLink(command.link));
+        this.#links.set(command.link.id, AnimationSetLink.parse(command.link));
         break;
 
       case "animation-set-unlinked":
@@ -99,14 +99,14 @@ export class ModelAnimationLinks {
         break;
 
       case "animation-binding-changed":
-        this.#update(command.id, (link) => link.rebound(
-          command.path,
-          [{ path: command.path, target: command.target }]
-        ));
+        this.#update(command.id, (link) => link.withBinding({
+          path: command.path,
+          target: command.target
+        }));
         break;
 
       case "animation-binding-cleared":
-        this.#update(command.id, (link) => link.rebound(command.path, []));
+        this.#update(command.id, (link) => link.withoutBinding(command.path));
         break;
     }
   }
@@ -119,7 +119,7 @@ export class ModelAnimationLinks {
       if (loaded.has(json.id)) {
         throw new InvalidEntryError("animation-set", json.id, "is linked twice");
       }
-      const link = new AnimationSetLink(json);
+      const link = AnimationSetLink.parse(json);
       if (link.own && [...loaded.values()].some(({ own }) => own)) {
         throw new InvalidEntryError("animation-set", json.id, "is a second own set");
       }

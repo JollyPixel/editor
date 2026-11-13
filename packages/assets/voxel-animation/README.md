@@ -6,7 +6,7 @@
 
 Private asset workspace for `.voxelanim.json` animation sets (kind `voxelanimation`): clips of keyframes that target blocks by name path. Voxel models link them and `@jolly-pixel/editor.voxel-model` edits them.
 
-Browser code imports `@jolly-pixel/asset.voxel-animation/client`; the package root and `@jolly-pixel/asset.voxel-animation/server` pull in server dependencies.
+Browser code imports `@jolly-pixel/asset.voxel-animation/client`; the package root pulls in server dependencies.
 
 ## 🚀 Building
 

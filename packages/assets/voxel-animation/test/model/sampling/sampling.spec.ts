@@ -54,27 +54,19 @@ describe("KeyCurve", () => {
 });
 
 describe("ClipSampler", () => {
-  test("samples each track's keyed channels only", () => {
+  test("samples each track's keyed channels only, found by path in any case", () => {
     const walk = clip("walk", {
       tracks: [
         { path: "body", position: [key(0, 0), key(100, 4)] },
         { path: "body/arm", rotation: [key(0, 90)], scale: [key(0, 2)] }
       ]
     });
+    const samples = new ClipSampler(walk).sample(50);
 
-    assert.deepEqual(new ClipSampler(walk).sample(50), new Map([
-      ["body", { position: { x: 2, y: 0, z: 0 } }],
-      ["body/arm", { rotation: { x: 90, y: 0, z: 0 }, scale: { x: 2, y: 0, z: 0 } }]
-    ]));
-  });
-
-  test("wraps a loop and holds a one-shot at its ends", () => {
-    const looped = new ClipSampler(clip("walk", { length: 100, loop: true }));
-    const once = new ClipSampler(clip("jump", { length: 100, loop: false }));
-
-    assert.equal(looped.tickAt(250), 50);
-    assert.equal(looped.tickAt(-10), 90);
-    assert.equal(once.tickAt(250), 100);
-    assert.equal(once.tickAt(-10), 0);
+    assert.deepEqual([...samples], [
+      { path: "body", position: { x: 2, y: 0, z: 0 } },
+      { path: "body/arm", rotation: { x: 90, y: 0, z: 0 }, scale: { x: 2, y: 0, z: 0 } }
+    ]);
+    assert.equal(samples.get("Body/ ARM ")?.rotation?.x, 90);
   });
 });

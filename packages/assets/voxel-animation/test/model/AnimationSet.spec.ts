@@ -39,10 +39,11 @@ describe("AnimationSet", () => {
     );
 
     assert.deepEqual(
-      set.clip("walk")?.tracks.map(({ path, position }) => [path, position?.map(({ tick }) => tick)]),
+      set.clip("walk")!.toJSON().tracks
+        .map(({ path, position }) => [path, position?.map(({ tick }) => tick)]),
       [["Body/Arm", [0, 12]]]
     );
-    assert.equal(set.keyAt("walk", "BODY/arm", "position", 12)?.value.x, 2);
+    assert.equal(set.clip("walk")?.keyAt("BODY/arm", "position", 12)?.value.x, 2);
     assert.deepEqual(set.trackPaths(), ["Body/Arm", "Leg"]);
     assert.equal(set.accepts({
       action: "clip-added",
@@ -65,8 +66,8 @@ describe("AnimationSet", () => {
     assert.deepEqual([renames("body/LEG"), renames("Body/Arm"), renames("BODY/ARM")], [false, false, true]);
 
     set.apply({ action: "track-renamed", clipId: "walk", path: "body/arm", to: "Torso/Arm" });
-    assert.deepEqual(set.clip("walk")?.tracks.map(({ path }) => path), ["Torso/Arm", "Body/Leg"]);
-    assert.equal(set.keyAt("walk", "torso/arm", "position", 0)?.value.x, 1);
+    assert.deepEqual(set.clip("walk")?.toJSON().tracks.map(({ path }) => path), ["Torso/Arm", "Body/Leg"]);
+    assert.equal(set.clip("walk")?.keyAt("torso/arm", "position", 0)?.value.x, 1);
   });
 
   test("compares clip names trimmed and in any case, and finds a free one", () => {
@@ -94,6 +95,22 @@ describe("AnimationSet", () => {
     assert.equal(set.nextClipAfter("walk"), undefined);
   });
 
+  test("drops a beforeId that names no sibling, keeping one that does", () => {
+    const set = createSet(
+      { action: "clip-added", clip: clip("walk") },
+      { action: "clip-added", clip: clip("run") }
+    );
+
+    assert.deepEqual(
+      set.placeable({ action: "clip-moved", id: "run", beforeId: "missing" }),
+      { action: "clip-moved", id: "run" }
+    );
+    assert.deepEqual(
+      set.placeable({ action: "clip-added", clip: clip("idle"), beforeId: "walk" }),
+      { action: "clip-added", clip: clip("idle"), beforeId: "walk" }
+    );
+  });
+
   test("sets keys in tick order, replacing one at the same tick", () => {
     const rotation = {
       action: "key-set",
@@ -108,7 +125,7 @@ describe("AnimationSet", () => {
       { ...rotation, key: key(12000, 45, "step") }
     );
 
-    assert.deepEqual(set.clip("walk")?.tracks, [{
+    assert.deepEqual(set.clip("walk")?.toJSON().tracks, [{
       path: "body/arm",
       rotation: [key(0, 0), key(12000, 45, "step")]
     }]);
@@ -121,10 +138,10 @@ describe("AnimationSet", () => {
       { action: "key-set", clipId: "walk", path: "arm", channel: "scale", key: key(0, 2) },
       { action: "key-removed", clipId: "walk", path: "arm", channel: "position", tick: 0 }
     );
-    assert.deepEqual(set.clip("walk")?.tracks, [{ path: "arm", scale: [key(0, 2)] }]);
+    assert.deepEqual(set.clip("walk")?.toJSON().tracks, [{ path: "arm", scale: [key(0, 2)] }]);
 
     set.apply({ action: "key-removed", clipId: "walk", path: "arm", channel: "scale", tick: 0 });
-    assert.deepEqual(set.clip("walk")?.tracks, []);
+    assert.deepEqual(set.clip("walk")?.toJSON().tracks, []);
   });
 
   test("refuses commands on missing clips, keys and tracks, and frame rates off the tick grid", () => {
@@ -151,14 +168,26 @@ describe("AnimationSet", () => {
       { action: "clip-changed", id: "walk", patch: { loop: false, fps: 30 } }
     );
 
-    assert.deepEqual(set.clip("walk"), clip("walk", { loop: false, fps: 30 }));
+    assert.deepEqual(set.clip("walk")?.toJSON(), clip("walk", { loop: false, fps: 30 }));
   });
 
-  test("rejects a snapshot with a repeated clip or keys out of order, keeping the previous set", () => {
+  test("rejects a snapshot with a repeated clip or track, or unordered keys, keeping the set", () => {
     const set = createSet({ action: "rig-renamed", rig: "Humanoid" });
 
     assert.throws(
       () => set.load({ rig: "", clips: [clip("a"), clip("a")] }),
+      InvalidEntryError
+    );
+    assert.throws(
+      () => set.load({
+        rig: "",
+        clips: [clip("a", {
+          tracks: [
+            { path: "Body/Arm", scale: [key(0, 1)] },
+            { path: "body/arm", scale: [key(0, 1)] }
+          ]
+        })]
+      }),
       InvalidEntryError
     );
     assert.throws(

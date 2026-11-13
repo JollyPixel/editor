@@ -61,7 +61,7 @@ export function clipNodes(
       id,
       label: clip.name,
       renamable: true,
-      detail: `${(clip.length / TICKS_PER_SECOND).toFixed(1)}s`,
+      detail: `${(clip.timeline.length / TICKS_PER_SECOND).toFixed(1)}s`,
       badges: focuses.badges(id),
       data: { setId: set.id, target, clipId: clip.id }
     };

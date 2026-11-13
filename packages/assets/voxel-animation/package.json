@@ -13,10 +13,6 @@
     "./client": {
       "types": "./dist/network/client.d.ts",
       "default": "./dist/network/client.js"
-    },
-    "./server": {
-      "types": "./dist/network/server.d.ts",
-      "default": "./dist/network/server.js"
     }
   },
   "imports": {

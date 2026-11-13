@@ -11,7 +11,7 @@ describe("TrackPath", () => {
 
     assert.equal(path.key, "body/arm.l");
     assert.equal(path.equals(" BODY / arm.l "), true);
-    assert.equal(path.equals(new TrackPath("Body/Arm.R")), false);
+    assert.equal(path.equals("Body/Arm.R"), false);
   });
 
   test("names the block on its last segment", () => {

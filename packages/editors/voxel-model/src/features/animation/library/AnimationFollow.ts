@@ -132,9 +132,8 @@ export class AnimationFollow {
     }
 
     const { path } = track;
-    const renamed = new TrackPath(path);
     const clipIds = [...document.set.clips()]
-      .filter((clip) => clip.tracks.some((candidate) => renamed.equals(candidate.path)))
+      .filter((clip) => clip.hasTrack(path))
       .map((clip) => clip.id);
     const accepted = clipIds.every((clipId) => document.set.accepts({
       action: "track-renamed",

@@ -42,7 +42,7 @@ export class TrackBinding {
     link: AnimationSetLinkJSON,
     tree: ModelTreeReader
   ) {
-    this.#link = new AnimationSetLink(link);
+    this.#link = AnimationSetLink.parse(link);
     this.#tree = tree;
 
     const byPath = blockPaths(tree);
