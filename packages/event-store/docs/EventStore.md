@@ -76,9 +76,11 @@ writer.append(input: AppendInput): Promise<Result<Event, Error>>
   `eventVersion` equals it (`0` for an empty stream). Otherwise it resolves
   with an `EventVersionConflictError`.
 - `eventData` and `actor` are stored as JSON: a `Date` comes back as a string
-  and a `BigInt` fails the append. A `Uint8Array` is stored as
-  `{ "$bytes": base64 }` and comes back as a `Uint8Array`, so `$bytes` is a
-  reserved key: an object holding it fails the append.
+  and a `BigInt` fails the append. A `Uint8Array` in `eventData` comes back
+  as a `Uint8Array`. SQLite keeps its bytes raw in a BLOB column beside the
+  JSON, and IndexedDB keeps them as they are. `$bytes` marks them in the JSON,
+  so it is a reserved key: an object holding it fails the append, as does a
+  `Uint8Array` in `actor`.
 
 ## reader
 

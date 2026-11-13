@@ -6,7 +6,6 @@ import assert from "node:assert/strict";
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
   ASSET_CREATED,
-  encodeContent,
   foldAssetEvent,
   type AssetEventData,
   type AssetLiveProtocol,
@@ -125,7 +124,7 @@ describe("pixelArtAssetKind", () => {
       kind: PIXEL_ART_KIND,
       hash: "h1",
       size: data.byteLength,
-      content: encodeContent(data)
+      content: { type: "inline", data }
     }));
 
     assert.deepEqual(second.document.buffer.pixels(), first.document.buffer.pixels());

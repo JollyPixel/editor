@@ -9,7 +9,6 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import { AssetProjector, ProjectionState } from "#src/storage/projection/index.ts";
-import { encodeContent } from "#src/model/events/inlineContent.ts";
 import { AssetBackups } from "#src/storage/AssetBackups.ts";
 import {
   noPartFiles,
@@ -187,7 +186,7 @@ describe("AssetProjector — rejected events", () => {
         kind: "binary",
         hash: "h1",
         size: 3,
-        content: encodeContent(bytes("one"))
+        content: { type: "inline", data: bytes("one") }
       },
       actor: kActor
     })).ok);

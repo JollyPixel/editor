@@ -173,7 +173,7 @@ export class AssetRoomExtension<
     } satisfies AssetRoomDeletedMessage);
   }
 
-  reload(): void {
+  async reload(): Promise<void> {
     if (this.#deleted) {
       return;
     }
@@ -184,11 +184,12 @@ export class AssetRoomExtension<
       return;
     }
 
-    this.#sendSnapshot(
-      (message, options) => room.broadcast(message, options),
-      this.#acks.ofEveryone()
-    );
-    this.#parts?.resendAll(room);
+    await this.#inbox.run(async() => {
+      await this.#snapshots.refresh();
+      if (!this.#deleted) {
+        this.#broadcastSnapshot(room);
+      }
+    });
   }
 
   override async onClientConnect(
@@ -207,11 +208,7 @@ export class AssetRoomExtension<
     }
 
     await this.#inbox.run(async() => {
-      const encoding = this.#snapshots.refresh();
-      if (encoding !== null) {
-        await encoding;
-      }
-
+      await this.#snapshots.refresh();
       if (this.#deleted) {
         client.send({
           type: ASSET_ROOM_DELETED
@@ -451,6 +448,16 @@ export class AssetRoomExtension<
       } satisfies AssetRoomInlineSnapshotMessage,
       { compress: this.#protocol.compressSnapshot === true }
     );
+  }
+
+  #broadcastSnapshot(
+    room: network.RoomBroadcast
+  ): void {
+    this.#sendSnapshot(
+      (message, options) => room.broadcast(message, options),
+      this.#acks.ofEveryone()
+    );
+    this.#parts?.resendAll(room);
   }
 
   #sendSnapshot(

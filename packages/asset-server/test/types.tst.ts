@@ -33,8 +33,7 @@ import {
 
 type LegacyInlineContent = {
   readonly type: "inline";
-  readonly encoding: "base64";
-  readonly data: string;
+  readonly data: Uint8Array;
 };
 
 type LegacyContent =

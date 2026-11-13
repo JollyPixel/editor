@@ -22,7 +22,7 @@ import {
   assetWriteDataSchema,
   type AssetInlineContent
 } from "./AssetEvents.schema.ts";
-import { encodeContent } from "./inlineContent.ts";
+import { upcastLegacyWriteData } from "./legacyInlineContent.ts";
 import { contentHash } from "../../common/contentHash.ts";
 
 // CONSTANTS
@@ -185,7 +185,12 @@ function parseWriteEvent(
   eventType: typeof ASSET_CREATED | typeof ASSET_UPDATED,
   event: EventStore.Event
 ): Result<AssetEvent, AssetEventRejection> {
-  const result = kWriteDataParser.parse(event.eventData);
+  const upcast = upcastLegacyWriteData(event.eventData);
+  if (!upcast.ok) {
+    return Err(malformed([upcast.val]));
+  }
+
+  const result = kWriteDataParser.parse(upcast.val);
   if (!result.ok) {
     return Err(malformed(result.val));
   }
@@ -241,7 +246,7 @@ export async function writeData(
   parts?: AssetPartsWrite
 ): Promise<AssetWriteData> {
   const size = data.byteLength;
-  const content = encodeContent(data);
+  const snapshot = new Uint8Array(data);
   const references = dependencies.map((reference) => {
     return {
       id: reference.id,
@@ -252,9 +257,12 @@ export async function writeData(
   return {
     path,
     kind,
-    hash: await contentHash(data),
+    hash: await contentHash(snapshot),
     size,
-    content,
+    content: {
+      type: "inline",
+      data: snapshot
+    },
     ...(parts === undefined ? {} : { parts: await partEntries(parts) }),
     dependencies: references
   };
@@ -272,10 +280,14 @@ async function partEntries(
     }]);
   }
   for (const [partId, data] of parts.written) {
+    const snapshot = new Uint8Array(data);
     entries.push([partId, {
-      hash: await contentHash(data),
-      size: data.byteLength,
-      content: encodeContent(data)
+      hash: await contentHash(snapshot),
+      size: snapshot.byteLength,
+      content: {
+        type: "inline",
+        data: snapshot
+      }
     }]);
   }
 

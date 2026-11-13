@@ -33,17 +33,17 @@ export class SnapshotCache {
     this.#version = version;
   }
 
-  refresh(): Promise<void> | null {
+  async refresh(): Promise<void> {
     const version = this.#version();
     if (
       this.#protocol.encodeSnapshot === undefined ||
       version === undefined ||
       this.#encoded?.version === version
     ) {
-      return null;
+      return;
     }
 
-    return this.#store(
+    await this.#store(
       version,
       this.#protocol.encodeSnapshot()
     );

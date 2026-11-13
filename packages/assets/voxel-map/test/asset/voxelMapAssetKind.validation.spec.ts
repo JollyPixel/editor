@@ -6,7 +6,6 @@ import assert from "node:assert/strict";
 import type * as EventStore from "@jolly-pixel/event-store";
 import {
   ASSET_CREATED,
-  encodeContent,
   foldAssetEvent,
   type AssetEventData,
   type AssetLiveProtocol
@@ -78,7 +77,7 @@ function documentEvent(
     kind: VOXEL_MAP_KIND,
     hash: "h1",
     size: data.byteLength,
-    content: encodeContent(data)
+    content: { type: "inline", data }
   });
 }
 
@@ -94,7 +93,7 @@ describe("voxelMapAssetKind", () => {
         kind: VOXEL_MAP_KIND,
         hash: "h1",
         size: 2,
-        content: encodeContent(new TextEncoder().encode("{{"))
+        content: { type: "inline", data: new TextEncoder().encode("{{") }
       }));
     });
     assert.deepEqual(
@@ -169,7 +168,7 @@ describe("voxelMapAssetKind", () => {
       kind: VOXEL_MAP_KIND,
       hash: "h1",
       size: data.byteLength,
-      content: encodeContent(data)
+      content: { type: "inline", data }
     }));
 
     assert.strictEqual(
@@ -196,7 +195,7 @@ describe("voxelMapAssetKind", () => {
       kind: VOXEL_MAP_KIND,
       hash: "h1",
       size: data.byteLength,
-      content: encodeContent(data)
+      content: { type: "inline", data }
     }));
 
     const template = second.world.templates.get("pair");

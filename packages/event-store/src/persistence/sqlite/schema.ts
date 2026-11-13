@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS events (
   asset_id TEXT NOT NULL,
   event_type TEXT NOT NULL,
   event_data TEXT NOT NULL,
+  event_bytes BLOB,
   event_version INTEGER NOT NULL,
   actor TEXT NOT NULL,
   created_at TEXT NOT NULL,

@@ -11,7 +11,6 @@ import {
   ASSET_CREATED,
   CatalogProjection,
   createAssetBackend,
-  encodeContent,
   type AssetEventDataMap
 } from "#src/index.ts";
 import {
@@ -43,7 +42,7 @@ async function legacyCreated(
       kind: "link",
       hash: sha256Hex(data),
       size: data.byteLength,
-      content: encodeContent(data)
+      content: { type: "inline", data }
     },
     actor: kActor
   })).unwrap();
@@ -113,7 +112,7 @@ describe("createAssetBackend — dependency backfill", () => {
         kind: "binary",
         hash: sha256Hex(data),
         size: data.byteLength,
-        content: encodeContent(data)
+        content: { type: "inline", data }
       },
       actor: kActor
     })).unwrap();

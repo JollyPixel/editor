@@ -39,6 +39,7 @@ export class SqliteDatabase {
       db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;");
     }
     db.exec(SQL_SCHEMA);
+    addEventBytesColumn(db);
 
     return new SqliteDatabase(db);
   }
@@ -124,6 +125,17 @@ function enableIncrementalVacuum(
   if (Number(tables?.count ?? 0) > 0) {
     db.exec("VACUUM");
   }
+}
+
+function addEventBytesColumn(
+  db: DatabaseSync
+): void {
+  const columns = db.prepare("PRAGMA table_info(events)").all();
+  if (columns.some((column) => column.name === "event_bytes")) {
+    return;
+  }
+
+  db.exec("ALTER TABLE events ADD COLUMN event_bytes BLOB");
 }
 
 function usesIncrementalVacuum(

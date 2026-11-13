@@ -9,7 +9,6 @@ import {
   type AssetEvent,
   type AssetInlineContent
 } from "../../model/events/AssetEvents.ts";
-import { decodeContent } from "../../model/events/inlineContent.ts";
 import {
   applyProjection,
   type AssetProjection
@@ -60,7 +59,7 @@ export class AssetFold {
       return null;
     }
     if (this.#content !== null) {
-      return decodeContent(this.#content);
+      return new Uint8Array(this.#content.data);
     }
 
     return this.projected === null ?

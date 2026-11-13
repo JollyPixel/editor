@@ -99,7 +99,9 @@ a checkpoint and physical storage can be brought up to date.
 
 A snapshot that names a binary asset's bytes by hash instead of carrying them.
 The client fetches the bytes over HTTP with the ticket the ref holds, and the
-browser cache keeps them for the next open of the same content.
+browser cache keeps them for the next open of the same content. After a
+[replace](#replace), open rooms get a new ref, and the previous one resolves
+until the next replace.
 
 ### Reconciliation
 

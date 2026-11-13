@@ -10,7 +10,6 @@ import {
   ASSET_CREATED,
   ASSET_UPDATED,
   CatalogProjection,
-  encodeContent,
   type AssetEventDataMap,
   type CatalogChange
 } from "#src/index.ts";
@@ -70,7 +69,7 @@ async function legacyCreated(
       kind: "link",
       hash: sha256Hex(data),
       size: data.byteLength,
-      content: encodeContent(data)
+      content: { type: "inline", data }
     },
     actor: kActor
   })).unwrap();

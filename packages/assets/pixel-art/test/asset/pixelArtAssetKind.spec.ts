@@ -7,7 +7,6 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import {
   ASSET_CREATED,
   ASSET_DELETED,
-  encodeContent,
   foldAssetEvent,
   InvalidAssetFileError,
   type AssetEventData
@@ -70,7 +69,7 @@ function fileEvent(
     kind: PIXEL_ART_KIND,
     hash: "h1",
     size: data.byteLength,
-    content: encodeContent(data)
+    content: { type: "inline", data }
   });
 }
 
@@ -227,7 +226,7 @@ describe("pixelArtAssetKind", () => {
         kind: PIXEL_ART_KIND,
         hash: "h1",
         size: 2,
-        content: encodeContent(new TextEncoder().encode("{{"))
+        content: { type: "inline", data: new TextEncoder().encode("{{") }
       }));
     }, InvalidAssetFileError);
     assert.deepEqual(state.document.buffer.samplePixel(1, 1), kRedTuple);
