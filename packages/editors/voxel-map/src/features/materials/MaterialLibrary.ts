@@ -26,6 +26,8 @@ import "@jolly-pixel/ui/elements/color";
 import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/tree";
+import "@jolly-pixel/ui/elements/message";
+import "@jolly-pixel/ui/elements/fields";
 import type {
   BlocksetSlot,
   ResolvedBlockDefinition
@@ -34,7 +36,6 @@ import type {
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../editing/EditingElement.ts";
-import { hintStyles } from "../../shared/styles/hint.styles.ts";
 import type {
   MapMaterial,
   SelectedBlockUse
@@ -53,7 +54,7 @@ import "./MaterialFinish.ts";
 
 @customElement("material-library")
 export class MaterialLibrary extends EditingElement {
-  static override styles = [hintStyles, materialLibraryStyles];
+  static override styles = materialLibraryStyles;
 
   @state()
   private declare _selectedId: string | null;
@@ -156,12 +157,12 @@ export class MaterialLibrary extends EditingElement {
               @jolly-context-request=${this.#menu.onContextRequest}
             ></jolly-tree>
             ${shelves.materialCount === 0 ?
-              html`<p class="hint">No materials yet.</p>` :
+              html`<jolly-message>No materials yet.</jolly-message>` :
               nothing}
           </section>
           <section class="editor">
             ${material === undefined ?
-              html`<p class="hint">Pick a material or create one.</p>` :
+              html`<jolly-message>Pick a material or create one.</jolly-message>` :
               this.#renderFields(editing, material, editable)}
           </section>
         </div>
@@ -188,8 +189,8 @@ export class MaterialLibrary extends EditingElement {
       </div>
       ${editable ?
         nothing :
-        html`<p class="hint">This blockset's materials are read-only.</p>`}
-      <div class="fields">
+        html`<jolly-message>This blockset's materials are read-only.</jolly-message>`}
+      <jolly-fields>
         <jolly-color
           label="Swatch"
           label-position="auto"
@@ -208,7 +209,7 @@ export class MaterialLibrary extends EditingElement {
           .material=${material}
           .disabled=${!editable}
         ></material-finish>
-      </div>
+      </jolly-fields>
     `;
   }
 

@@ -15,8 +15,14 @@ import {
 SVG grid:
 
 `chevron`, `settings`, `close`, `plus`, `revert`, `drag`, `lock`, `eye`,
-`search`, `folder`, `check`, `info`, `warning`, `error`, and `trash`. `plus` carries the `lime` tone and
-`trash` the `coral` tone; the others have none.
+`search`, `folder`, `check`, `info`, `warning`, `error`, `trash`,
+`eyedropper`, `undo`, `redo`, `duplicate`, `pencil`, `play`, `pause`, `stop`,
+`loop`, `import` and `export`. Most carry a default tone, which
+`iconTone()` reports.
+
+A built-in never replaces a glyph registered under the same name before
+`@jolly-pixel/ui/elements/icon` loads, so an application can restyle one
+whatever its import order.
 
 ## Register a Lit SVG glyph
 

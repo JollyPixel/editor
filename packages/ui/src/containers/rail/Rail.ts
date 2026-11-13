@@ -37,6 +37,10 @@ export class Rail extends LitElement {
     }
 
     :host([floating]) {
+      --jolly-tool-button-size: 30px;
+      --jolly-tool-button-gap: 10px;
+      --jolly-tool-button-radius: var(--jolly-radius-sm, 2px);
+
       flex-wrap: wrap;
       justify-content: center;
       gap: var(--jolly-space-1, 4px) 0;

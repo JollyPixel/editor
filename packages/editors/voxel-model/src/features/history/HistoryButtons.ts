@@ -30,7 +30,6 @@ import type { HistoryAction } from "./historyShortcuts.ts";
 import { refusalWording } from "./refusalWording.ts";
 import type { ActiveHistory } from "./ActiveHistory.ts";
 import type { ModelAction } from "../../keybindings/modelActions.ts";
-import { viewportToolbarStyles } from "../../shared/styles/viewportToolbar.styles.ts";
 
 export interface HistoryEditing {
   activeHistory: ActiveHistory;
@@ -39,7 +38,7 @@ export interface HistoryEditing {
 }
 
 export class HistoryButtons extends LitElement {
-  static override styles = [viewportToolbarStyles, css`
+  static override styles = css`
     :host {
       display: inline-flex;
       align-items: center;
@@ -84,7 +83,7 @@ export class HistoryButtons extends LitElement {
       font-size: var(--jolly-font-size, 11px);
       white-space: nowrap;
     }
-  `];
+  `;
 
   static override properties = {
     editing: { attribute: false },

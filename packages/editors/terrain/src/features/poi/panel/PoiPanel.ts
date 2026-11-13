@@ -28,6 +28,7 @@ import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/spin-slider";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/toggle";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import {
@@ -85,8 +86,7 @@ export class PoiPanel extends LitElement {
       background: var(--jolly-accent-fill-muted, rgb(250 190 40 / 18%));
     }
 
-    .count,
-    .empty {
+    .count {
       color: var(--jolly-text-muted);
     }
 
@@ -159,7 +159,11 @@ export class PoiPanel extends LitElement {
         @click=${() => editor.add()}
       ></jolly-button>
       ${points.length === 0 ?
-        html`<p class="empty">No points of interest yet: add one to keep a far landmark detailed.</p>` :
+        html`
+          <jolly-message flush>
+            No points of interest yet: add one to keep a far landmark detailed.
+          </jolly-message>
+        ` :
         html`
           <div class="list" role="listbox" aria-label="Points of interest">
             ${points.map((point) => html`

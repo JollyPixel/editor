@@ -7,6 +7,7 @@ import {
 } from "lit";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/rail-group";
 import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
@@ -54,7 +55,7 @@ export class SceneTopBar extends LitElement {
         role="toolbar"
         aria-label="Viewport"
       >
-        <div class="group" role="group" aria-label="Grid">
+        <jolly-rail-group role="group" aria-label="Grid">
           ${this.#toggle(editing, {
             field: "grid",
             icon: "view-grid",
@@ -67,22 +68,22 @@ export class SceneTopBar extends LitElement {
             label: "Grid axes",
             disabled: !grid
           })}
-        </div>
-        <div class="group divided" role="group" aria-label="Physics">
+        </jolly-rail-group>
+        <jolly-rail-group divided role="group" aria-label="Physics">
           ${this.#toggle(editing, {
             field: "colliders",
             icon: "actor-rigid-body",
             label: "Colliders"
           })}
-        </div>
-        <div class="group end" role="group" aria-label="Snapping">
+        </jolly-rail-group>
+        <jolly-rail-group class="end" role="group" aria-label="Snapping">
           ${this.#toggle(editing, {
             field: "snap",
             icon: "view-snap",
             label: editing.shortcuts.label("Snap", "gizmo.snap"),
             tooltipAlign: "end"
           })}
-        </div>
+        </jolly-rail-group>
       </jolly-rail>
     `;
   }

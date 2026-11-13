@@ -11,6 +11,7 @@ import {
 } from "lit/decorators.js";
 import type { HistoryScopeState } from "@jolly-pixel/history";
 import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/rail-group";
 import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
@@ -155,7 +156,7 @@ export class EditToolbar extends EditingElement {
     const { shortcuts } = this.attached.state;
 
     return html`
-      <div class="group" role="group" aria-label="Tools">
+      <jolly-rail-group role="group" aria-label="Tools">
         <jolly-tool-button
           data-tool="brush"
           icon="pencil"
@@ -170,8 +171,8 @@ export class EditToolbar extends EditingElement {
           ?active=${selecting}
           @click=${() => this.#selectTool("select")}
         ></jolly-tool-button>
-      </div>
-      <div class="group divided" role="group" aria-label="History">
+      </jolly-rail-group>
+      <jolly-rail-group divided role="group" aria-label="History">
         <jolly-tool-button
           data-tool="undo"
           icon="undo"
@@ -188,8 +189,8 @@ export class EditToolbar extends EditingElement {
           ?disabled=${access.current.readOnly || this._redoDepth === 0}
           @click=${this.#onRedo}
         ></jolly-tool-button>
-      </div>
-      <div class="group divided" role="group" aria-label="Clipboard">
+      </jolly-rail-group>
+      <jolly-rail-group divided role="group" aria-label="Clipboard">
         <jolly-tool-button
           data-tool="paste"
           icon="paste"
@@ -197,7 +198,7 @@ export class EditToolbar extends EditingElement {
           ?disabled=${!placement.canPlace("copy") || !this._canPaste}
           @click=${this.#onPaste}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 
@@ -206,7 +207,7 @@ export class EditToolbar extends EditingElement {
     const { shortcuts } = this.attached.state;
 
     return html`
-      <div class="group divided" role="group" aria-label="Select mode">
+      <jolly-rail-group divided role="group" aria-label="Select mode">
         ${SELECT_MODES.map((mode) => {
           const { icon, label } = kSelectModeButtons[mode];
 
@@ -220,7 +221,7 @@ export class EditToolbar extends EditingElement {
             ></jolly-tool-button>
           `;
         })}
-      </div>
+      </jolly-rail-group>
     `;
   }
 

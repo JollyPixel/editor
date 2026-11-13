@@ -9,6 +9,7 @@ import {
 import { styleMap } from "lit/directives/style-map.js";
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/rail-group";
 import "@jolly-pixel/ui/elements/tool-button";
 
 // Import Internal Dependencies
@@ -121,24 +122,6 @@ export class TextureStage extends LitElement {
       inset-block-end: 16px;
       inset-inline-start: 50%;
       transform: translateX(-50%);
-    }
-
-    jolly-tool-button {
-      --jolly-tool-button-size: 30px;
-    }
-
-    .group {
-      display: flex;
-      align-items: center;
-    }
-
-    .divided::before {
-      content: "";
-      flex: 0 0 auto;
-      width: 1px;
-      height: 22px;
-      margin-inline: 6px;
-      background: var(--jolly-divider);
     }
 
     .zoom {
@@ -269,7 +252,7 @@ export class TextureStage extends LitElement {
         role="toolbar"
         aria-label="View"
       >
-        <div class="group" role="group" aria-label="Size">
+        <jolly-rail-group role="group" aria-label="Size">
           <jolly-tool-button
             data-tool="fit"
             icon="texture-fit"
@@ -286,8 +269,8 @@ export class TextureStage extends LitElement {
             ?disabled=${disabled}
             @click=${() => this.showActualSize()}
           ></jolly-tool-button>
-        </div>
-        <div class="group divided" role="group" aria-label="Zoom">
+        </jolly-rail-group>
+        <jolly-rail-group divided role="group" aria-label="Zoom">
           <jolly-tool-button
             data-tool="zoom-out"
             icon="texture-zoom-out"
@@ -307,8 +290,8 @@ export class TextureStage extends LitElement {
             ?disabled=${disabled}
             @click=${() => this.zoomBy(kZoomStep)}
           ></jolly-tool-button>
-        </div>
-        <div class="group divided" role="group" aria-label="Sampling">
+        </jolly-rail-group>
+        <jolly-rail-group divided role="group" aria-label="Sampling">
           <jolly-tool-button
             data-tool="pixelated"
             icon="texture-pixelated"
@@ -321,7 +304,7 @@ export class TextureStage extends LitElement {
               this.requestUpdate();
             }}
           ></jolly-tool-button>
-        </div>
+        </jolly-rail-group>
       </jolly-rail>
     `;
   }

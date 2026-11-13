@@ -15,6 +15,7 @@ import type {
   JollyOption
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/fields";
 import "@jolly-pixel/ui/elements/select";
 
 // Import Internal Dependencies
@@ -50,12 +51,7 @@ export const blockDialogStyles = css`
     }
   }
 
-  .fields,
-  .shape {
-    display: flex;
-    flex-direction: column;
-    gap: var(--jolly-row-gap, 4px);
-
+  jolly-fields {
     --jolly-label-width: 80px;
     --jolly-field-inset-start: 0px;
   }
@@ -123,7 +119,7 @@ export function renderShapeColumn(
   column: BlockShapeColumn
 ): TemplateResult {
   return html`
-    <div class="shape">
+    <jolly-fields class="shape">
       ${column.open ? html`
         <block-shape-preview
           .stage=${column.stage}
@@ -141,6 +137,6 @@ export function renderShapeColumn(
         ?disabled=${column.size === undefined}
         @jolly-change=${column.onSizeChange}
       ></jolly-button-group>
-    </div>
+    </jolly-fields>
   `;
 }

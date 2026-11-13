@@ -12,6 +12,7 @@ import {
   SubscriptionController
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/rail";
+import "@jolly-pixel/ui/elements/rail-group";
 import "@jolly-pixel/ui/elements/tool-button";
 import "@jolly-pixel/ui/elements/vector3";
 
@@ -31,7 +32,6 @@ import {
   type TransformEditing
 } from "../features/transform/TransformController.ts";
 import { TRANSFORM_MODES } from "../features/transform/transformModes.ts";
-import { viewportToolbarStyles } from "../shared/styles/viewportToolbar.styles.ts";
 import type { TabStore } from "../state/index.ts";
 
 export type ViewportToolbarEditing = HistoryEditing &
@@ -43,7 +43,6 @@ export type ViewportToolbarEditing = HistoryEditing &
 
 export class ViewportToolbar extends LitElement {
   static override styles = [
-    viewportToolbarStyles,
     css`
       :host {
         position: absolute;
@@ -172,7 +171,6 @@ export class ViewportToolbar extends LitElement {
           <div class="rows">
             <div class="row">
               <jolly-model-editor-history-buttons
-                class="group"
                 role="group"
                 aria-label="History"
                 .editing=${editing}
@@ -192,7 +190,7 @@ export class ViewportToolbar extends LitElement {
     const local = this.#transform.space === "local";
 
     return html`
-      <div class="group divided" role="group" aria-label="Transform mode">
+      <jolly-rail-group divided role="group" aria-label="Transform mode">
         ${this.#transform.modes.map((mode) => html`
           <jolly-tool-button
             data-tool=${mode}
@@ -205,8 +203,8 @@ export class ViewportToolbar extends LitElement {
             }}
           ></jolly-tool-button>
         `)}
-      </div>
-      <div class="group divided" role="group" aria-label="Transform space">
+      </jolly-rail-group>
+      <jolly-rail-group divided role="group" aria-label="Transform space">
         <jolly-tool-button
           data-tool="space"
           icon=${local ? "transform-local" : "transform-global"}
@@ -217,13 +215,13 @@ export class ViewportToolbar extends LitElement {
             this.#transform.space = local ? "world" : "local";
           }}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 
   #renderKey(): TemplateResult {
     return html`
-      <div class="group divided" role="group" aria-label="Animation">
+      <jolly-rail-group divided role="group" aria-label="Animation">
         <jolly-tool-button
           data-tool="key"
           icon="timeline-key"
@@ -232,7 +230,7 @@ export class ViewportToolbar extends LitElement {
           ?disabled=${!this.#key.enabled}
           @click=${() => this.#key.key()}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 

@@ -25,6 +25,7 @@ import "@jolly-pixel/ui/elements/reference";
 import "@jolly-pixel/ui/elements/show-more";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/transform";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import "../../app/sceneIcons.ts";
@@ -67,17 +68,6 @@ export class InspectorPanel extends LitElement {
       --jolly-gutter-width: 0px;
     }
 
-    .empty {
-      color: var(--jolly-text-muted, #9aa3ad);
-      padding: var(--jolly-space-2, 8px);
-    }
-
-    .missing {
-      margin: 0 0 4px;
-      font-size: 11px;
-      color: var(--jolly-text-muted, #9aa3ad);
-    }
-
     .unknown {
       margin: 0;
       overflow: auto;
@@ -99,7 +89,7 @@ export class InspectorPanel extends LitElement {
       null :
       editing.live.actorEntry(id);
     if (editing === null || actor === null) {
-      return html`<p class="empty">Select an actor or a component to inspect it.</p>`;
+      return html`<jolly-message>Select an actor or a component to inspect it.</jolly-message>`;
     }
 
     const { focused } = editing.selection;

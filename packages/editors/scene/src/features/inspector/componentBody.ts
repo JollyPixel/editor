@@ -31,6 +31,7 @@ import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/vector2";
 import "@jolly-pixel/ui/elements/vector3";
 import "@jolly-pixel/ui/elements/vector4";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import {
@@ -69,9 +70,9 @@ export function renderComponentBody(
   const kind = components.find(entry.type);
   if (kind === undefined) {
     return html`
-      <p class="missing">
+      <jolly-message flush>
         No package of this project provides this component. Its data is kept.
-      </p>
+      </jolly-message>
       <pre class="unknown">${JSON.stringify(entry.data, null, 2)}</pre>
     `;
   }

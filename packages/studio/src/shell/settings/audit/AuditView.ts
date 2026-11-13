@@ -14,6 +14,7 @@ import {
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/message";
 import {
   ACCOUNTS_CATEGORY,
   type AuditCategory,
@@ -124,16 +125,6 @@ export class AuditView extends LitElement {
       font-size: 0.85em;
       white-space: pre-wrap;
     }
-
-    .empty {
-      margin: 0;
-      color: var(--jolly-text-muted);
-    }
-
-    .error {
-      margin: 0;
-      color: var(--jolly-danger);
-    }
   `;
 
   @property({ attribute: false })
@@ -171,7 +162,7 @@ export class AuditView extends LitElement {
       ${this.#filters(user, pages)}
       ${this.#pages.error()}
       ${pages.rows.length === 0 && !pages.loading ?
-        html`<p class="empty">Nothing recorded.</p>` :
+        html`<jolly-message flush>Nothing recorded.</jolly-message>` :
         html`<ol aria-label="Audit entries">${pages.rows.map((row) => this.#row(row))}</ol>`}
       ${pages.hasMore ? html`
         <jolly-button

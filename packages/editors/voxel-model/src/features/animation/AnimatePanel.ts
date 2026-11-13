@@ -30,9 +30,10 @@ import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/tree";
+import "@jolly-pixel/ui/elements/message";
+import "@jolly-pixel/ui/elements/fields";
 
 // Import Internal Dependencies
-import "../../shared/actionIcons.ts";
 import "./tracks/TrackBindings.ts";
 import type { TrackBindings } from "./tracks/TrackBindings.ts";
 import type { TrackBindingsEditing } from "./tracks/TrackBindingsController.ts";
@@ -85,31 +86,8 @@ export class AnimatePanel extends LitElement {
       display: none;
     }
 
-    .fields {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
+    jolly-fields {
       padding-inline: var(--jolly-space-1, 4px) 0;
-    }
-
-    .empty {
-      margin: 0;
-      padding: var(--jolly-space-1, 4px);
-      color: var(--jolly-text-muted, inherit);
-    }
-
-    .error,
-    .notice {
-      margin-block: var(--jolly-space-1, 4px);
-      padding-inline: var(--jolly-space-1, 4px) 0;
-    }
-
-    .error {
-      color: var(--jolly-danger, inherit);
-    }
-
-    .notice {
-      color: var(--jolly-text-muted, inherit);
     }
   `;
 
@@ -160,8 +138,10 @@ export class AnimatePanel extends LitElement {
     const { state } = this.#controller;
 
     return html`
-      ${state.error === null ? nothing : html`<p class="error" role="alert">${state.error}</p>`}
-      ${state.notice === null ? nothing : html`<p class="notice" role="status">${state.notice}</p>`}
+      ${state.error === null ? nothing : html`
+        <jolly-message tone="danger" role="alert">${state.error}</jolly-message>
+      `}
+      ${state.notice === null ? nothing : html`<jolly-message role="status">${state.notice}</jolly-message>`}
       <div class="sets">
         <jolly-folder
           flush
@@ -189,7 +169,11 @@ export class AnimatePanel extends LitElement {
             @click=${(event: MouseEvent) => this.#openMenuBelow(event, "own")}
           ></jolly-button>
           ${state.ownClips.length === 0 ?
-            html`<p class="empty">This model has no clip yet. Click + to add one, like Idle or Walk.</p>` :
+            html`
+              <jolly-message>
+                This model has no clip yet. Click + to add one, like Idle or Walk.
+              </jolly-message>
+            ` :
             this.#renderTree("own", state.ownClips, state)}
         </jolly-folder>
         <jolly-folder
@@ -231,7 +215,11 @@ export class AnimatePanel extends LitElement {
             @click=${() => void this.#controller.actions?.importSet()}
           >Import…</jolly-button>
           ${state.sharedSets.length === 0 ?
-            html`<p class="empty">Shared sets reuse clips across models with the same block names.</p>` :
+            html`
+              <jolly-message>
+                Shared sets reuse clips across models with the same block names.
+              </jolly-message>
+            ` :
             this.#renderTree("shared", state.sharedSets, state)}
         </jolly-folder>
       </div>
@@ -297,7 +285,7 @@ export class AnimatePanel extends LitElement {
         label="Clip"
         storage-key="voxel-model:folder:clip"
       >
-        <div class="fields">
+        <jolly-fields>
           <jolly-text
             label="Name"
             ?readonly=${!editable}
@@ -333,7 +321,7 @@ export class AnimatePanel extends LitElement {
               this.#controller.changeClip({ loop: event.detail.value });
             }}
           ></jolly-checkbox>
-        </div>
+        </jolly-fields>
       </jolly-folder>
     `;
   }

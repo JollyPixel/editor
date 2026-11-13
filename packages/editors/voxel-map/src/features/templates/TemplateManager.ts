@@ -17,6 +17,7 @@ import {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/tree";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import { TemplateDraftId } from "../../map/TemplateDraftId.ts";
@@ -161,9 +162,9 @@ export class TemplateManager extends EditingElement {
     renamable: boolean
   ) {
     if (this._nodes.length === 0) {
-      return html`<p class="hint">
+      return html`<jolly-message>
         Drop a voxel layer here or save a selection to create a template.
-      </p>`;
+      </jolly-message>`;
     }
 
     return html`

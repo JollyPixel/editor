@@ -28,6 +28,7 @@ import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/toolbar";
 import "@jolly-pixel/ui/elements/tree";
 import { errorMessage } from "@jolly-pixel/utils";
+import { pickFiles } from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
@@ -191,9 +192,6 @@ export class AssetBrowser extends LitElement {
 
   @query(".new-asset")
   declare _newAssetButton: HTMLElement;
-
-  @query("input.replace-picker")
-  declare _replacePicker: HTMLInputElement | null;
 
   @state()
   declare _dropFolder: AssetPath | null;
@@ -361,7 +359,6 @@ export class AssetBrowser extends LitElement {
         label="Asset actions"
         @jolly-context-action=${this.#onContextAction}
       ></jolly-context-menu>
-      <input class="replace-picker" type="file" hidden />
       ${this.#dialogs.render(() => html`
         <asset-delete-dialog></asset-delete-dialog>
         <asset-share-dialog></asset-share-dialog>
@@ -488,27 +485,14 @@ export class AssetBrowser extends LitElement {
     this.#view?.run("replace");
   };
 
-  #pickFile(
+  async #pickFile(
     accept: readonly string[]
   ): Promise<File | null> {
-    if (this._replacePicker === null) {
-      return Promise.resolve(null);
-    }
+    const [file] = await pickFiles({
+      accept: accept.join(",")
+    });
 
-    const picker: HTMLInputElement = this._replacePicker;
-    const { promise, resolve } = Promise.withResolvers<File | null>();
-    const settled = new AbortController();
-    function settle(): void {
-      resolve(picker.files?.[0] ?? null);
-      picker.value = "";
-      settled.abort();
-    }
-    picker.accept = accept.join(",");
-    picker.addEventListener("change", settle, { signal: settled.signal });
-    picker.addEventListener("cancel", settle, { signal: settled.signal });
-    picker.click();
-
-    return promise;
+    return file ?? null;
   }
 
   readonly #acceptDrop = (

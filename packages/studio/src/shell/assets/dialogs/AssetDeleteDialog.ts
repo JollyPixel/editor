@@ -11,10 +11,11 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type {
-  Button,
-  Dialog,
-  JollyChangeDetail
+import {
+  DialogRequest,
+  type Button,
+  type Dialog,
+  type JollyChangeDetail
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";
@@ -59,7 +60,10 @@ export class AssetDeleteDialog extends LitElement {
   @query("jolly-button[data-action=cancel]")
   declare _cancelButton: Button;
 
-  #settle: ((confirmation: AssetDeleteConfirmation | null) => void) | null = null;
+  #request = new DialogRequest<AssetDeleteConfirmation>(this, {
+    dialog: () => this._dialog,
+    focus: () => this._cancelButton
+  });
 
   constructor() {
     super();
@@ -67,24 +71,13 @@ export class AssetDeleteDialog extends LitElement {
     this._companions = true;
   }
 
-  async open(
+  open(
     deletion: AssetDeletion
   ): Promise<AssetDeleteConfirmation | null> {
-    this.#resolve(null);
     this._deletion = deletion;
     this._companions = true;
 
-    const {
-      promise,
-      resolve
-    } = Promise.withResolvers<AssetDeleteConfirmation | null>();
-    this.#settle = resolve;
-
-    await this.updateComplete;
-    await this._dialog.showModal();
-    this._cancelButton.focus();
-
-    return promise;
+    return this.#request.open();
   }
 
   override render(): TemplateResult {
@@ -99,7 +92,6 @@ export class AssetDeleteDialog extends LitElement {
         heading=${formatHeading(deletion)}
         icon="trash"
         intent="danger"
-        @jolly-close=${this.#onClose}
       >
         <p>${formatMessage(deletion, dependents)}</p>
         ${dependents.length > 0 ? html`
@@ -137,27 +129,13 @@ export class AssetDeleteDialog extends LitElement {
   }
 
   #confirm(): void {
-    this.#resolve({
+    this.#request.confirm({
       companions: this._companions
     });
-    this._dialog.close("confirm");
   }
 
   #cancel(): void {
-    this.#resolve(null);
-    this._dialog.close("cancel");
-  }
-
-  #onClose(): void {
-    this.#resolve(null);
-  }
-
-  #resolve(
-    confirmation: AssetDeleteConfirmation | null
-  ): void {
-    const settle = this.#settle;
-    this.#settle = null;
-    settle?.(confirmation);
+    this.#request.cancel();
   }
 }
 

@@ -20,6 +20,7 @@ import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/toolbar";
+import "@jolly-pixel/ui/elements/message";
 import { errorMessage } from "@jolly-pixel/utils";
 import {
   AUDIT_RIGHT,
@@ -118,16 +119,6 @@ export class RolesEditor extends LitElement {
     li jolly-select {
       flex: 0 0 120px;
     }
-
-    .muted {
-      margin: 0;
-      color: var(--jolly-text-muted);
-    }
-
-    .error {
-      margin: 0;
-      color: var(--jolly-danger);
-    }
   `;
 
   @property({ attribute: false })
@@ -184,7 +175,7 @@ export class RolesEditor extends LitElement {
         }}
       ></jolly-select>
       ${BUILT_IN_ROLES.includes(role) ?
-        html`<p class="muted">${kBuiltInDescriptions[role]}</p>` :
+        html`<jolly-message flush>${kBuiltInDescriptions[role]}</jolly-message>` :
         this.#declared(draft, role)}
       <div class="add-role">
         <jolly-text
@@ -203,7 +194,7 @@ export class RolesEditor extends LitElement {
         >Add role</jolly-button>
       </div>
       ${this._error === null ? nothing : html`
-        <p class="error" role="alert">${this._error}</p>
+        <jolly-message tone="danger" flush role="alert">${this._error}</jolly-message>
       `}
     `;
   }
@@ -281,11 +272,11 @@ export class RolesEditor extends LitElement {
         }}
       ></jolly-text>
       ${this._probe === "" ? nothing : html`
-        <p class="muted" data-probe-result aria-live="polite">
+        <jolly-message flush data-probe-result aria-live="polite">
           ${match === null ?
             "No rule matches: none." :
             `Rule ${match.index + 1} (${match.rule.pattern}) gives ${match.rule.right}.`}
-        </p>
+        </jolly-message>
       `}
     `;
   }

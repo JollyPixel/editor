@@ -17,6 +17,7 @@ import type {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/select";
+import "@jolly-pixel/ui/elements/fields";
 
 // Import Internal Dependencies
 import { EditingElement } from "../../../editing/EditingElement.ts";
@@ -91,7 +92,7 @@ export class BlockCreateDialog extends EditingElement {
         @jolly-exited=${this.#onExited}
       >
         <div class="layout">
-          <div class="fields">
+          <jolly-fields>
             <jolly-select
               label="Blockset"
               .options=${blocksetOptions(writable, false)}
@@ -105,7 +106,7 @@ export class BlockCreateDialog extends EditingElement {
               preview: this.#shapePreview,
               onChange: this.#onShapeChange
             })}
-          </div>
+          </jolly-fields>
           ${renderShapeColumn({
             open: this._open,
             stage: editing.previewStage,

@@ -9,6 +9,7 @@ import {
 import { SubscriptionController } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/property-row";
+import "@jolly-pixel/ui/elements/message";
 import { formatBytes } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
@@ -40,13 +41,6 @@ export class ModelDetails extends LitElement {
 
     .value {
       font-variant-numeric: var(--jolly-font-numeric);
-    }
-
-    .missing {
-      margin: 0;
-      padding: var(--jolly-space-1) var(--jolly-space-2);
-      color: var(--jolly-warning);
-      overflow-wrap: anywhere;
     }
   `;
 
@@ -84,9 +78,9 @@ export class ModelDetails extends LitElement {
           </jolly-property-row>
         `)}
         ${missing.length === 0 ? nothing : html`
-          <p class="missing" role="note">
+          <jolly-message tone="warning" role="note">
             Missing external files: ${missing.join(", ")}
-          </p>
+          </jolly-message>
         `}
       </jolly-folder>
     `;

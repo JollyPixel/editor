@@ -6,11 +6,11 @@ import {
   state
 } from "lit/decorators.js";
 import "@jolly-pixel/ui/elements/icon";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../editing/EditingElement.ts";
-import { hintStyles } from "../../shared/styles/hint.styles.ts";
 import { previewWellStyles } from "../../shared/styles/previewWell.styles.ts";
 import { SquareTurntable } from "../preview/SquareTurntable.ts";
 import { TemplatePreviewSubject } from "./rendering/TemplatePreviewSubject.ts";
@@ -23,7 +23,6 @@ import "./templateIcons.ts";
 @customElement("template-preview")
 export class TemplatePreview extends EditingElement {
   static override styles = [
-    hintStyles,
     previewWellStyles,
     css`
       :host {
@@ -42,7 +41,7 @@ export class TemplatePreview extends EditingElement {
         height: clamp(160px, 40cqh, 300px);
       }
 
-      .hint {
+      jolly-message {
         position: absolute;
         text-align: center;
       }
@@ -122,9 +121,9 @@ export class TemplatePreview extends EditingElement {
   ) {
     switch (view.kind) {
       case "empty":
-        return html`<p class="hint">Select a template to preview it.</p>`;
+        return html`<jolly-message>Select a template to preview it.</jolly-message>`;
       case "disabled":
-        return html`<p class="hint">Preview disabled</p>`;
+        return html`<jolly-message>Preview disabled</jolly-message>`;
       default:
         return nothing;
     }

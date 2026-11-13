@@ -12,7 +12,10 @@ import {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/folder";
 import { errorMessage } from "@jolly-pixel/utils";
-import { saveFile } from "@jolly-pixel/utils/dom";
+import {
+  pickFiles,
+  saveFile
+} from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import "../icons.ts";
@@ -59,43 +62,32 @@ export class ModelFileFolder extends LitElement {
         <div class="actions">
           <jolly-button
             data-tool="replace"
-            icon="model-import"
+            icon="import"
             title="Replace with another file of the same format"
             ?disabled=${file === null || this.#replacing}
-            @click=${() => this.#pick()}
+            @click=${() => void this.#pick()}
           >Replace…</jolly-button>
           <jolly-button
             data-tool="export"
-            icon="model-export"
+            icon="export"
             title="Download the model file"
             ?disabled=${file === null || file.bytes === null}
             @click=${() => this.#export()}
           >Export</jolly-button>
         </div>
-        <input
-          type="file"
-          hidden
-          accept=${file?.extension ?? ""}
-          @change=${this.#onFileSelected}
-        >
       </jolly-folder>
     `;
   }
 
-  #pick(): void {
-    this.renderRoot.querySelector("input")?.click();
-  }
-
-  #onFileSelected = (
-    event: Event
-  ): void => {
-    const input = event.currentTarget as HTMLInputElement;
-    const selected = input.files?.[0];
-    input.value = "";
+  async #pick(): Promise<void> {
+    const file = this.#file.current;
+    const [selected] = await pickFiles({
+      accept: file?.extension ?? ""
+    });
     if (selected !== undefined) {
-      void this.#replace(selected);
+      await this.#replace(selected);
     }
-  };
+  }
 
   async #replace(
     selected: File

@@ -5,15 +5,17 @@ import {
   query,
   state
 } from "lit/decorators.js";
-import type {
-  Dialog,
-  JollyChangeDetail,
-  JollyOption
+import {
+  DialogRequest,
+  type Dialog,
+  type JollyChangeDetail,
+  type JollyOption
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/fields";
 
 // Import Internal Dependencies
 import "../layerIcons.ts";
@@ -41,11 +43,7 @@ export interface AddLayerResult {
 @customElement("add-layer-dialog")
 export class AddLayerDialog extends LitElement {
   static override styles = css`
-    .fields {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
-
+    jolly-fields {
       --jolly-label-width: 70px;
     }
   `;
@@ -68,7 +66,9 @@ export class AddLayerDialog extends LitElement {
     object: "Object"
   };
   #nameEdited = false;
-  #settle: ((result: AddLayerResult | null) => void) | null = null;
+  #request = new DialogRequest<AddLayerResult>(this, {
+    dialog: () => this._dialog
+  });
 
   constructor() {
     super();
@@ -77,7 +77,7 @@ export class AddLayerDialog extends LitElement {
     this._canAddObject = false;
   }
 
-  async open(
+  open(
     context: AddLayerContext
   ): Promise<AddLayerResult | null> {
     this.#defaultName = context.defaultName;
@@ -88,13 +88,7 @@ export class AddLayerDialog extends LitElement {
     this._name = this.#defaultName[this._kind];
     this.#nameEdited = false;
 
-    const { promise, resolve } = Promise.withResolvers<AddLayerResult | null>();
-    this.#settle = resolve;
-
-    await this.updateComplete;
-    await this._dialog.showModal();
-
-    return promise;
+    return this.#request.open();
   }
 
   override render() {
@@ -102,9 +96,8 @@ export class AddLayerDialog extends LitElement {
       <jolly-dialog
         heading="New"
         icon="layers"
-        @jolly-cancel=${this.#onCancel}
       >
-        <div class="fields">
+        <jolly-fields>
           <jolly-button-group
             label="Kind"
             .options=${this.#options()}
@@ -116,7 +109,7 @@ export class AddLayerDialog extends LitElement {
             .value=${this._name}
             @jolly-change=${this.#onNameChange}
           ></jolly-text>
-        </div>
+        </jolly-fields>
 
         <jolly-button
           slot="actions"
@@ -155,27 +148,20 @@ export class AddLayerDialog extends LitElement {
 
   #confirm(): void {
     const name = this._name.trim();
-    this.#resolve(
-      name ? { kind: this._kind, name } : null
-    );
-    this._dialog.close("confirm");
+    if (name === "") {
+      this.#request.cancel();
+
+      return;
+    }
+
+    this.#request.confirm({
+      kind: this._kind,
+      name
+    });
   }
 
   #cancel(): void {
-    this.#resolve(null);
-    this._dialog.close("cancel");
-  }
-
-  #onCancel(): void {
-    this.#resolve(null);
-  }
-
-  #resolve(
-    result: AddLayerResult | null
-  ): void {
-    const settle = this.#settle;
-    this.#settle = null;
-    settle?.(result);
+    this.#request.cancel();
   }
 }
 

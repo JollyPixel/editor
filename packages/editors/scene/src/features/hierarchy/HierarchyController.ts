@@ -149,7 +149,7 @@ export class HierarchyController {
       {
         id: "duplicate",
         label: "Duplicate",
-        icon: "action-duplicate"
+        icon: "duplicate"
       },
       ...overrides.length === 0 ? [] : ["separator" as const, ...overrides],
       "separator",
@@ -178,7 +178,7 @@ export class HierarchyController {
       {
         id: "duplicate",
         label: "Duplicate",
-        icon: "action-duplicate"
+        icon: "duplicate"
       },
       "separator",
       {

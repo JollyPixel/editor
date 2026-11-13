@@ -13,6 +13,7 @@ import { ifDefined } from "lit/directives/if-defined.js";
 import { FieldBinding } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/slider";
 import "@jolly-pixel/ui/elements/tool-button";
+import "@jolly-pixel/ui/elements/rail-group";
 
 // Import Internal Dependencies
 import {
@@ -94,8 +95,9 @@ export class BrushControls extends EditingElement {
     const { brush } = editing.state;
 
     return html`
-      <div
-        class="group divided brush"
+      <jolly-rail-group
+        divided
+        class="brush"
         role="group"
         aria-label="Brush"
         aria-disabled=${String(this.disabled)}
@@ -148,7 +150,7 @@ export class BrushControls extends EditingElement {
           ?disabled=${this.disabled}
           @click=${this.#onGhostToggle}
         ></jolly-tool-button>
-      </div>
+      </jolly-rail-group>
     `;
   }
 

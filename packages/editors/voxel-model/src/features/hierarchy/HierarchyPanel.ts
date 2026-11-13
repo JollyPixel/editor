@@ -18,7 +18,6 @@ import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/tree";
 
 // Import Internal Dependencies
-import "../../shared/actionIcons.ts";
 import "./hierarchyIcons.ts";
 import "./ShapeField.ts";
 import {
@@ -216,7 +215,7 @@ export class HierarchyPanel extends LitElement {
       ></jolly-button>
       <jolly-button
         slot="actions"
-        icon="action-duplicate"
+        icon="duplicate"
         icon-only
         label="Duplicate"
         title="Duplicate"

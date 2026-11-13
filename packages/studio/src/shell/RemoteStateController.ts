@@ -6,6 +6,7 @@ import {
   type TemplateResult
 } from "lit";
 import type { SourceSubscriber } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
 import {
@@ -29,6 +30,6 @@ export class RemoteStateController<
 
     return message === null ?
       nothing :
-      html`<p class="error" role="alert">${message}</p>`;
+      html`<jolly-message tone="danger" flush role="alert">${message}</jolly-message>`;
   }
 }

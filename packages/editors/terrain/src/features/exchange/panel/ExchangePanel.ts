@@ -10,7 +10,6 @@ import {
 import {
   customElement,
   property,
-  query,
   state
 } from "lit/decorators.js";
 import type { TerrainDocument } from "@jolly-pixel/asset.terrain/client";
@@ -29,6 +28,7 @@ import {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/select";
+import { pickFiles } from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import {
@@ -94,9 +94,6 @@ export class ExchangePanel extends LitElement {
       color: var(--jolly-danger, #f26d6d);
     }
 
-    input[type="file"] {
-      display: none;
-    }
   `;
 
   @property({ attribute: false })
@@ -128,12 +125,6 @@ export class ExchangePanel extends LitElement {
 
   @state()
   declare private status: { readonly text: string; readonly failed: boolean; } | null;
-
-  @query("input[data-input=heightmap]")
-  declare private heightmapInput: HTMLInputElement;
-
-  @query("input[data-input=masks]")
-  declare private maskInput: HTMLInputElement;
 
   constructor() {
     super();
@@ -264,15 +255,8 @@ export class ExchangePanel extends LitElement {
           label="Choose heightmap"
           data-action="choose-heightmap"
           ?disabled=${busy || !canImportHeights(this.access)}
-          @click=${() => this.heightmapInput.click()}
+          @click=${this.#chooseHeightmap}
         ></jolly-button>
-        <input
-          type="file"
-          multiple
-          data-input="heightmap"
-          accept=${kHeightmapAccept}
-          @change=${this.#onHeightmapChosen}
-        />
         ${size === undefined ?
           nothing :
           html`
@@ -332,15 +316,8 @@ export class ExchangePanel extends LitElement {
           label="Choose masks"
           data-action="choose-masks"
           ?disabled=${busy || !this.access.has("paint")}
-          @click=${() => this.maskInput.click()}
+          @click=${this.#chooseMasks}
         ></jolly-button>
-        <input
-          type="file"
-          multiple
-          data-input="masks"
-          accept=${kMaskAccept}
-          @change=${this.#onMasksChosen}
-        />
         ${masks.map((mask, index) => html`
           <jolly-select
             label=${mask.name}
@@ -386,8 +363,30 @@ export class ExchangePanel extends LitElement {
     return files.length === 1 ? "Saved 1 mask." : `Saved ${files.length} masks.`;
   });
 
-  #onHeightmapChosen = (): Promise<void> => this.#run(async() => {
-    const chosen = await this.context!.exchange.chooseHeightmap(await readFiles(this.heightmapInput));
+  #chooseHeightmap = async(): Promise<void> => {
+    const files = await pickFiles({
+      accept: kHeightmapAccept,
+      multiple: true
+    });
+    if (files.length > 0) {
+      await this.#onHeightmapChosen(files);
+    }
+  };
+
+  #chooseMasks = async(): Promise<void> => {
+    const files = await pickFiles({
+      accept: kMaskAccept,
+      multiple: true
+    });
+    if (files.length > 0) {
+      await this.#onMasksChosen(files);
+    }
+  };
+
+  #onHeightmapChosen = (
+    files: File[]
+  ): Promise<void> => this.#run(async() => {
+    const chosen = await this.context!.exchange.chooseHeightmap(await readFiles(files));
     this.heightmap = chosen;
     if (chosen.sidecar !== null) {
       const { min, max, tier, rect } = chosen.sidecar;
@@ -399,8 +398,10 @@ export class ExchangePanel extends LitElement {
     return "Check the rectangle and the heights, then import.";
   });
 
-  #onMasksChosen = (): Promise<void> => this.#run(async() => {
-    this.masks = await this.context!.exchange.chooseMasks(await readFiles(this.maskInput));
+  #onMasksChosen = (
+    files: File[]
+  ): Promise<void> => this.#run(async() => {
+    this.masks = await this.context!.exchange.chooseMasks(await readFiles(files));
 
     return "Pick a material for each mask, then import.";
   });
@@ -439,16 +440,14 @@ export class ExchangePanel extends LitElement {
     }
     finally {
       this.busy = false;
-      this.heightmapInput.value = "";
-      this.maskInput.value = "";
     }
   }
 }
 
 function readFiles(
-  input: HTMLInputElement
+  files: File[]
 ): Promise<ExchangeFile[]> {
-  return Promise.all(Array.from(input.files ?? [], async(file) => {
+  return Promise.all(files.map(async(file) => {
     return { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) };
   }));
 }

@@ -168,27 +168,6 @@ registerIcon("actor-rigid-body", svg`
   />
 `, { tone: "coral" });
 
-registerIcon("action-duplicate", svg`
-  <rect
-    class="tone-fill"
-    x="9"
-    y="9"
-    width="12"
-    height="12"
-    rx="2"
-    stroke="currentColor"
-    stroke-width="1.5"
-  />
-  <path
-    d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.5"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-`, { tone: "sky" });
-
 registerIcon("tree-options", svg`
   <circle cx="5" cy="12" r="2" fill="currentColor" />
   <circle cx="12" cy="12" r="2" fill="currentColor" />
@@ -201,32 +180,6 @@ registerIcon("action-rename", svg`
     d="M15 5l4 4L9 19H5v-4L15 5Z"
     stroke="currentColor"
     stroke-width="1.5"
-    stroke-linejoin="round"
-  />
-`, { tone: "teal" });
-
-registerIcon("undo", svg`
-  <path class="tone-ink" d="M8.5 4 3 9l5.5 5Z" fill="currentColor" />
-  <path
-    class="tone-ink"
-    d="M7 9h7.5a5 5 0 0 1 0 10H10"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  />
-`, { tone: "teal" });
-
-registerIcon("redo", svg`
-  <path class="tone-ink" d="M15.5 4 21 9l-5.5 5Z" fill="currentColor" />
-  <path
-    class="tone-ink"
-    d="M17 9H9.5a5 5 0 0 0 0 10H14"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.2"
-    stroke-linecap="round"
     stroke-linejoin="round"
   />
 `, { tone: "teal" });

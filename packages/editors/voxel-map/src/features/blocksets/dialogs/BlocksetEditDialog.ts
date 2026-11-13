@@ -18,6 +18,7 @@ import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/text";
+import "@jolly-pixel/ui/elements/fields";
 import { BlockTextures } from "@jolly-pixel/voxel.renderer";
 import { errorMessage } from "@jolly-pixel/utils";
 
@@ -35,11 +36,7 @@ const kOffGridWarning = "Some blocks will not line up with the new tile " +
 @customElement("blockset-edit-dialog")
 export class BlocksetEditDialog extends EditingElement {
   static override styles = css`
-    .fields {
-      display: flex;
-      flex-direction: column;
-      gap: var(--jolly-row-gap, 4px);
-
+    jolly-fields {
       --jolly-label-width: 80px;
     }
 
@@ -174,7 +171,7 @@ export class BlocksetEditDialog extends EditingElement {
     const pendingTileSize = this._pendingTileSize;
 
     return html`
-      <div class="fields">
+      <jolly-fields>
         <jolly-text
           label="Name"
           .value=${entry.label}
@@ -209,7 +206,7 @@ export class BlocksetEditDialog extends EditingElement {
             >Resize to ${pendingTileSize}</jolly-button>
           </div>
         `}
-      </div>
+      </jolly-fields>
       <p class="usage">${usage.summary}</p>
     `;
   }

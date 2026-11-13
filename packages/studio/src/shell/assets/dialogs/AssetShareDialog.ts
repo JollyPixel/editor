@@ -20,6 +20,7 @@ import type {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/message";
 import { ShareLifetime, type ShareLifetimeName } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
@@ -56,10 +57,6 @@ export class AssetShareDialog extends LitElement {
       align-items: center;
       gap: var(--jolly-space-2, 8px);
       margin-block-end: var(--jolly-space-2, 8px);
-    }
-
-    .muted {
-      color: var(--jolly-text-muted);
     }
   `;
 
@@ -133,7 +130,7 @@ export class AssetShareDialog extends LitElement {
             >Create link</jolly-button>
           </div>
         ` : html`
-          <p class="muted">Your role cannot create share links.</p>
+          <jolly-message flush>Your role cannot create share links.</jolly-message>
         `}
         ${this._status === null ? nothing : html`
           <p role="status">${this._status}</p>

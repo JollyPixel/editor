@@ -140,7 +140,7 @@ export class SoundTrack extends LitElement {
     return html`
       <jolly-button
         data-tool="play"
-        icon=${playing ? "sound-pause" : "sound-play"}
+        icon=${playing ? "pause" : "play"}
         label=${playLabel}
         title=${playLabel}
         icon-only
@@ -158,7 +158,7 @@ export class SoundTrack extends LitElement {
       ></jolly-button-group>
       <jolly-button
         data-tool="loop"
-        icon="sound-loop"
+        icon="loop"
         label="Loop"
         title="Loop"
         icon-only
