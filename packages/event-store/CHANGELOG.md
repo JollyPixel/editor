@@ -1,5 +1,16 @@
 # @jolly-pixel/event-store
 
+## 6.0.0
+
+### Major Changes
+
+- [#1128](https://github.com/JollyPixel/editor/pull/1128) [`75493f9`](https://github.com/JollyPixel/editor/commit/75493f9032176bfa25b4758b867c22f5b36c872f) Thanks [@fraxken](https://github.com/fraxken)! - Every reader, writer, `tags`, `compact` and `close` member returns a promise, and stores dispose with `await using` (`Symbol.asyncDispose`).
+  Writes run one at a time in call order and notify listeners before they resolve; an IndexedDB write resolves once its transaction committed.
+
+### Minor Changes
+
+- [#1195](https://github.com/JollyPixel/editor/pull/1195) [`00f50e5`](https://github.com/JollyPixel/editor/commit/00f50e5af2be1dcb0d11a6731330ffb823a6f802) Thanks [@fraxken](https://github.com/fraxken)! - `eventData` keeps `Uint8Array` values and reads them back as bytes; SQLite stores them raw in a new `event_bytes` BLOB column, added on open. `$bytes` is now a reserved key.
+
 ## 5.0.0
 
 ### Major Changes

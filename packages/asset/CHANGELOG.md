@@ -1,5 +1,27 @@
 # @jolly-pixel/asset
 
+## 5.0.0
+
+### Major Changes
+
+- [#1234](https://github.com/JollyPixel/editor/pull/1234) [`ec79d3f`](https://github.com/JollyPixel/editor/commit/ec79d3f32c41f9c43ea81271e805fe48416e1d6a) Thanks [@fraxken](https://github.com/fraxken)! - Remove `AssetLoadContext.signal` and the `options` of `AssetCoordinator.load`: shared loads ignored every caller signal but the first. The coordinator now rejects a foreign `AssetType` token as soon as its kind has a loader, and a throwing `onProgress` is reported as uncaught instead of failing the batch.
+  Add `AssetLoaderRegistry.find(type)` and `AssetPath.value`.
+
+### Minor Changes
+
+- [#1214](https://github.com/JollyPixel/editor/pull/1214) [`5b2019f`](https://github.com/JollyPixel/editor/commit/5b2019f7ae2624255c6c2ac3ea510fe817005ac0) Thanks [@fraxken](https://github.com/fraxken)! - A loader's `AssetLoadContext` now carries `assets`, which loads the assets its value depends on into the same coordinator and exposes the catalog.
+  Add `AssetPath.resolve(specifier)`, which resolves a relative specifier like a URL, and `AssetCatalog.findByPath(path)`.
+
+- [#1178](https://github.com/JollyPixel/editor/pull/1178) [`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35) Thanks [@fraxken](https://github.com/fraxken)! - Extensions can declare `queries`, events a member with `read` rights may still send. The catalog adds `CatalogClient.read(assetId)` as such a query.
+  Kind resolution picks the longest matching extension (`AssetPath.matchExtension`), and reconciliation re-creates a `binary` asset once a registered kind claims its path.
+
+- [#1225](https://github.com/JollyPixel/editor/pull/1225) [`b8d702d`](https://github.com/JollyPixel/editor/commit/b8d702d7da9e919b194ad25bdbca76aa86c95311) Thanks [@fraxken](https://github.com/fraxken)! - A `FileScene` skips, with a warning, a component whose asset is missing, of another kind or without a loader (`AssetCoordinator.canLoad`, `Scene.assetsToLoad`) instead of failing the scene load.
+  `LoggerOptions` takes a `listener` of unformatted entries; `Runtime.create` takes `worldLogger`, the `LoggerOptions` of `world.logger`.
+
+### Patch Changes
+
+- [#1225](https://github.com/JollyPixel/editor/pull/1225) [`b7d2f82`](https://github.com/JollyPixel/editor/commit/b7d2f8249cb29ac71e78cb7e92730a2d818d567f) Thanks [@fraxken](https://github.com/fraxken)! - `AssetPath.resolve()` reads a `\` in a specifier as `/`, and keeps a `%` that starts no valid escape, such as `50% off.png`, instead of throwing `URIError`.
+
 ## 4.0.0
 
 ### Major Changes
