@@ -27,7 +27,7 @@ The `./runtime` export (`jollypixel.runtime`) runs scripts and shaders in a game
 
 ### Markdown element
 
-The `./markdown` export registers `<jolly-markdown>`, used by the Markdown preview and the studio project README. Set its `markdown` property to render that text as HTML with [marked](https://github.com/markedjs/marked), sanitized by [DOMPurify](https://github.com/cure53/DOMPurify). Links open in a new tab. Setting it again renders only the top-level blocks whose source changed, and keeps the elements of the others, unless raw HTML leaves an element open across blocks.
+The `./markdown` export registers `<jolly-markdown>`, used by the Markdown preview and the studio project README. Set its `markdown` property to render that text as HTML with [marked](https://github.com/markedjs/marked), sanitized by [DOMPurify](https://github.com/cure53/DOMPurify). Links open in a new tab. Setting it again renders only the top-level blocks whose source changed, and keeps the elements of the others, unless raw HTML leaves an element open across blocks. The text renders in `::part(article)`, at most 80ch wide and aligned to the start; style that part to change its width or center it.
 
 ## 🚀 Running the editor
 

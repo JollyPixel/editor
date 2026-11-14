@@ -105,6 +105,7 @@ export class MarkdownView extends HTMLElement {
     const style = document.createElement("style");
     style.textContent = kStyles;
     this.#article = document.createElement("article");
+    this.#article.part.add("article");
     this.attachShadow({ mode: "open" }).append(style, this.#article);
   }
 

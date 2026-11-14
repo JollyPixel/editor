@@ -55,6 +55,17 @@ export class ProjectReadme extends LitElement {
         flex: 1 1 auto;
       }
 
+      .edit {
+        float: inline-end;
+        margin-inline-start: var(--jolly-space-3);
+        margin-block-end: var(--jolly-space-2);
+      }
+
+      jolly-markdown::part(article) {
+        max-width: clamp(80ch, 75%, 110ch);
+        margin-inline: auto;
+      }
+
       .empty {
         display: flex;
         flex-direction: column;
@@ -105,18 +116,19 @@ export class ProjectReadme extends LitElement {
     const view = this._view;
 
     return html`
-      <section class="card" aria-labelledby="readme-title">
-        <div class="card-head">
-          <h2 class="card-title" id="readme-title">${kReadmePath}</h2>
+      <section class="card" aria-label=${kReadmePath}>
+        <div class="card-body">
           ${view.state === "missing" || !this.#editable(view.record) ?
             nothing :
             html`
               <jolly-button
+                class="edit"
+                icon="pencil"
                 @click=${() => this.dispatchEvent(assetOpenEvent(view.record.id))}
               >Edit</jolly-button>
             `}
+          ${this.#body(view)}
         </div>
-        <div class="card-body">${this.#body(view)}</div>
       </section>
     `;
   }
