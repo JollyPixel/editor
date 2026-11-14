@@ -211,7 +211,10 @@ their activity there.
 ### Roster
 
 The accounts, their role and whether they are online, pushed by the
-`accounts` room to every shell and drawn by the Users pane.
+`accounts` room to every shell and drawn by the Users pane. Above the roles,
+while one is connected, the pane lists the agents of the golem chat, one row
+per agent token, with the owner's name. The owner can disconnect an agent
+from its context menu; the token keeps working.
 
 ### Preference
 

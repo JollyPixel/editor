@@ -22,6 +22,15 @@ export const agentTokenSchema = z.object({
 
 export type AgentToken = z.infer<typeof agentTokenSchema>;
 
+const kAgentProfileSchema = z.object({
+  username: z.string(),
+  peerId: z.string(),
+  via: z.literal(AGENT_TOKEN_VIA),
+  ownerId: z.string()
+});
+
+export type AgentProfile = z.infer<typeof kAgentProfileSchema>;
+
 export function agentTokenSubject(
   tokenId: string
 ): string {
@@ -40,4 +49,12 @@ export function isAgentProfile(
   profile: { readonly via?: string; }
 ): boolean {
   return profile.via === AGENT_TOKEN_VIA;
+}
+
+export function parseAgentProfile(
+  metadata: Readonly<Record<string, unknown>>
+): AgentProfile | null {
+  const profile = kAgentProfileSchema.safeParse(metadata);
+
+  return profile.success ? profile.data : null;
 }

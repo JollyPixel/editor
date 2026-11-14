@@ -34,6 +34,7 @@ import {
   golemTarget,
   type GolemConnectOptions
 } from "./GolemConnectOptions.ts";
+import { GolemDisconnectedError } from "./errors/GolemDisconnectedError.ts";
 import { GolemTokenRefusedError } from "./errors/GolemTokenRefusedError.ts";
 import { StudioUnreachableError } from "./errors/StudioUnreachableError.ts";
 import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
@@ -97,8 +98,12 @@ export class Golem {
       })
     });
     const revoked = new AbortController();
-    client.on("unauthorized", () => {
-      revoked.abort(new GolemTokenRefusedError());
+    client.on("unauthorized", (reason) => {
+      revoked.abort(
+        reason === network.DISCONNECTED_CLOSE_REASON ?
+          new GolemDisconnectedError() :
+          new GolemTokenRefusedError()
+      );
     });
     const agentChat = AgentChatClient.join(client);
     try {

@@ -122,7 +122,7 @@ describe("ShellChannel.renewWhenRefused", () => {
     }
 
     renew(parent, SHELL_ORIGIN);
-    client.emit("unauthorized");
+    client.emit("unauthorized", "unauthorized");
     renew(window, SHELL_ORIGIN);
     renew(parent, "http://elsewhere.test");
     assert.equal(client.reconnects, 0);

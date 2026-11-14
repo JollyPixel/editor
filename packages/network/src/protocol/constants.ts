@@ -8,5 +8,6 @@ export const DEFAULT_ROLE = "default";
 
 export const UNAUTHORIZED_CLOSE_CODE = 4401;
 export const UNAUTHORIZED_CLOSE_REASON = "unauthorized";
+export const DISCONNECTED_CLOSE_REASON = "disconnected";
 export const REAUTHENTICATE_CLOSE_CODE = 4001;
 export const REAUTHENTICATE_CLOSE_REASON = "reauthenticate";

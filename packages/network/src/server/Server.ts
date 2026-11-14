@@ -35,8 +35,10 @@ import type { ClientConnection } from "./connection/ClientConnection.ts";
 import type { ServerConnection } from "./connection/ServerConnection.ts";
 import type { PeerMetadata } from "../protocol/types.ts";
 import {
+  DISCONNECTED_CLOSE_REASON,
   REAUTHENTICATE_CLOSE_CODE,
-  REAUTHENTICATE_CLOSE_REASON
+  REAUTHENTICATE_CLOSE_REASON,
+  UNAUTHORIZED_CLOSE_CODE
 } from "../protocol/constants.ts";
 
 export interface ServerOptions {
@@ -92,6 +94,9 @@ export class Server {
       this.#auth.watchRevocations?.(
         (subject) => this.revoke(subject)
       ),
+      this.#auth.watchDisconnections?.(
+        (subject) => this.disconnect(subject)
+      ),
       this.#auth.watchProfiles?.(
         (subject, patch) => this.updateProfile(subject, patch)
       )
@@ -126,14 +131,21 @@ export class Server {
   revoke(
     subject: string
   ): void {
-    for (const handle of this.#sessions.revoke(subject)) {
-      void this.#sessions.drain(handle.id).then(
-        () => handle.close(
-          REAUTHENTICATE_CLOSE_CODE,
-          REAUTHENTICATE_CLOSE_REASON
-        )
-      );
-    }
+    this.#closeSubject(
+      subject,
+      REAUTHENTICATE_CLOSE_CODE,
+      REAUTHENTICATE_CLOSE_REASON
+    );
+  }
+
+  disconnect(
+    subject: string
+  ): void {
+    this.#closeSubject(
+      subject,
+      UNAUTHORIZED_CLOSE_CODE,
+      DISCONNECTED_CLOSE_REASON
+    );
   }
 
   updateProfile(
@@ -277,6 +289,18 @@ export class Server {
     }
 
     this.#logEnvelope(clientId, envelope, outcome);
+  }
+
+  #closeSubject(
+    subject: string,
+    code: number,
+    reason: string
+  ): void {
+    for (const handle of this.#sessions.revoke(subject)) {
+      void this.#sessions.drain(handle.id).then(
+        () => handle.close(code, reason)
+      );
+    }
   }
 
   #logEnvelope(

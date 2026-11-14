@@ -121,4 +121,20 @@ export class AgentTokens {
 
     return token;
   }
+
+  disconnect(
+    ownerId: string,
+    tokenId: string
+  ): AgentToken {
+    const token = this.#repository
+      .ownedBy(ownerId)
+      .find((owned) => owned.id === tokenId);
+    if (token === undefined) {
+      throw new AgentTokenNotFoundError();
+    }
+
+    this.#directory.disconnect(agentTokenSubject(token.id));
+
+    return token;
+  }
 }

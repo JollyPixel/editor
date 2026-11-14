@@ -25,6 +25,7 @@ interface Harness extends Disposable {
   sqlite: DatabaseSync;
   tokens: AgentTokens;
   revoked: string[];
+  disconnected: string[];
   alice: string;
   bob: string;
 }
@@ -40,11 +41,14 @@ function harness(): Harness {
   const directory = createDirectory(database);
   const revoked: string[] = [];
   directory.on("revoked", (subject) => revoked.push(subject));
+  const disconnected: string[] = [];
+  directory.on("disconnected", (subject) => disconnected.push(subject));
 
   return {
     sqlite,
     tokens: new AgentTokens(database.agentTokens, directory),
     revoked,
+    disconnected,
     alice: alice.id,
     bob: bob.id,
     [Symbol.dispose]() {
@@ -99,6 +103,33 @@ describe("AgentTokens", () => {
     assert.deepEqual(h.tokens.ownedBy(h.alice), [second]);
     assert.deepEqual(h.tokens.ownedBy(h.bob), [other]);
     assert.deepEqual(h.revoked, [`agent:${first.id}`]);
+  });
+
+  test("disconnects only a live token of its owner and keeps it working", () => {
+    using h = harness();
+    const { token, value } = h.tokens.create({
+      ownerId: h.alice
+    });
+    const revoked = h.tokens.create({
+      ownerId: h.alice
+    }).token;
+    h.tokens.revoke(h.alice, revoked.id);
+
+    for (const [ownerId, tokenId] of [
+      [h.bob, token.id],
+      [h.alice, revoked.id],
+      [h.alice, "unknown"]
+    ]) {
+      assert.throws(
+        () => h.tokens.disconnect(ownerId, tokenId),
+        AgentTokenNotFoundError
+      );
+    }
+    assert.deepEqual(h.tokens.disconnect(h.alice, token.id), token);
+
+    assert.deepEqual(h.disconnected, [`agent:${token.id}`]);
+    assert.deepEqual(h.revoked, [`agent:${revoked.id}`]);
+    assert.deepEqual(h.tokens.find(value), token);
   });
 
   test("trims the name and refuses an empty or long name, and an unknown owner", () => {

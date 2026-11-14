@@ -21,6 +21,7 @@ import {
   openSession
 } from "./helpers/accounts.ts";
 import { solidPng } from "./helpers/avatar/images.ts";
+import { parseAgentProfile } from "#src/agent/AgentToken.ts";
 
 function upgrade(
   cookie?: string,
@@ -96,16 +97,27 @@ describe("Accounts.authenticate — agent tokens", () => {
       name: "Builder"
     });
 
-    assert.deepEqual(accounts.authenticate(upgrade(undefined, value)), {
+    const identity = accounts.authenticate(upgrade(undefined, value));
+
+    assert.deepEqual(identity, {
       subject: `agent:${token.id}`,
       role: "spectator",
       profile: {
         username: "Builder",
         peerId: token.id,
         avatar: null,
-        via: "golem"
+        via: "golem",
+        ownerId: bob.id
       }
     });
+    const profile = identity?.profile ?? {};
+    assert.deepEqual(parseAgentProfile(profile), {
+      username: "Builder",
+      peerId: token.id,
+      via: "golem",
+      ownerId: bob.id
+    });
+    assert.equal(parseAgentProfile({ ...profile, via: "link" }), null);
 
     database.accounts.save(bob.withRole("member"));
 

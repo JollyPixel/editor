@@ -40,6 +40,10 @@ export interface AuthenticationProvider {
     listener: (subject: string) => void
   ): () => void;
 
+  watchDisconnections?(
+    listener: (subject: string) => void
+  ): () => void;
+
   watchProfiles?(
     listener: (subject: string, patch: PeerMetadata) => void
   ): () => void;

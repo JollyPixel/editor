@@ -18,12 +18,14 @@ import {
 // Import Internal Dependencies
 import type { SceneAsset } from "#src/assets/scene/SceneAsset.ts";
 import { Golem } from "#src/peer/Golem.ts";
+import { GolemDisconnectedError } from "#src/peer/errors/GolemDisconnectedError.ts";
 import { GolemTokenRefusedError } from "#src/peer/errors/GolemTokenRefusedError.ts";
 import { CommandDeniedError } from "#src/assets/errors/CommandDeniedError.ts";
 import { ChatPeer } from "./helpers/ChatPeer.ts";
 import { AssetPeer } from "./helpers/AssetPeer.ts";
 import {
   createAgentToken,
+  disconnectAgentToken,
   registered,
   revokeAgentToken,
   serveStudio
@@ -200,5 +202,28 @@ describe("Golem", { timeout: kTimeoutMs }, () => {
       golem.open(unopenedId, "scene"),
       GolemTokenRefusedError
     );
+  });
+
+  test("fails a later open once disconnected, and connects again with the same token", async() => {
+    await using backend = await serveStudio();
+    const bob = await registered(backend, "Bob");
+    const { token, value } = await createAgentToken(backend, bob, "Builder");
+    using golem = await Golem.connect({
+      url: backend.url,
+      token: value
+    });
+    const sceneId = await golem.catalog.create("scenes/main.scene.json", null);
+
+    await disconnectAgentToken(backend, bob, token.id);
+
+    await assert.rejects(
+      golem.open(sceneId, "scene"),
+      GolemDisconnectedError
+    );
+    using again = await Golem.connect({
+      url: backend.url,
+      token: value
+    });
+    assert.ok(await again.open(sceneId, "scene"));
   });
 });

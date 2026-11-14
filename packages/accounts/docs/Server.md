@@ -113,7 +113,8 @@ A live agent token resolves to its owner's current role, under the token's name:
     username: token.name,
     peerId: token.id,
     avatar: null,
-    via: "golem"
+    via: "golem",
+    ownerId: owner.id
   }
 }
 ```
@@ -129,6 +130,10 @@ Calls `listener` with the account id after a role change or a removal in the [`a
 It also calls `listener` with a link's guest subject, `share:<link id>`, when the link is revoked, expires, or its creator is removed, so its guests are disconnected and refused.
 
 It calls `listener` with an agent subject, `agent:<token id>`, when the token is revoked, and for each live token of an account whose role changes or that is removed. A reconnecting agent then gets the owner's new role, or is refused. A logout does not reach the account's agents.
+
+### `watchDisconnections(listener)`
+
+Calls `listener` with an agent subject, `agent:<token id>`, when its owner [disconnects](#disconnectownerid-tokenid) it, and returns a function that stops the calls. The network server watches it and closes the agent's connections as refused, so the agent does not reconnect on its own. Its token keeps working.
 
 ### `watchActivity(listener)`
 
@@ -239,6 +244,10 @@ The live tokens of an account, oldest first.
 ### `revoke(ownerId, tokenId)`
 
 Revokes a live token of `ownerId` and returns it. Its connections are [revoked](#watchrevocationslistener) and the credential stops working; the record stays for `bySubject`. Throws `AgentTokenNotFoundError` for a token of another account, an unknown id or a token already revoked.
+
+### `disconnect(ownerId, tokenId)`
+
+Closes the connections of a live token of `ownerId` and returns the token. They are [disconnected](#watchdisconnectionslistener), not revoked: the agent stays offline until it connects again, with the same credential. Throws `AgentTokenNotFoundError` like `revoke`.
 
 ## `AccountsDatabase`
 

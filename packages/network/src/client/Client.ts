@@ -65,7 +65,7 @@ export interface ClientOptions {
 export type ClientEventMap = {
   ready: () => void;
   disconnected: () => void;
-  unauthorized: () => void;
+  unauthorized: (reason: string) => void;
 };
 
 export class Client extends Emitter<ClientEventMap> {
@@ -214,7 +214,7 @@ export class Client extends Emitter<ClientEventMap> {
       this.#queue = [];
       this.#suspendRooms(wasOpen);
       if (event.code === UNAUTHORIZED_CLOSE_CODE) {
-        this.emit("unauthorized");
+        this.emit("unauthorized", event.reason ?? "");
       }
       else if (!expected) {
         this.#warnClosed(event);

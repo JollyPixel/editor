@@ -53,7 +53,7 @@ async function listed(
 }
 
 describe("golem token routes", () => {
-  test("create, list and revoke the tokens of the signed-in account only", async() => {
+  test("create, list, disconnect and revoke the tokens of the signed-in account only", async() => {
     await using server = await serveBackend();
     const [alice, bob] = [server.browser(), server.browser()];
     await alice.client.register("Alice", kPassword);
@@ -74,6 +74,17 @@ describe("golem token routes", () => {
     assert.deepEqual(aliceTokens, [token]);
     assert.ok(!JSON.stringify(aliceTokens).includes(value));
     assert.equal((await listed(server, bob)).length, 1);
+
+    const disconnectUrl = tokensUrl(server, `${token.id}/disconnect`);
+    assert.equal(
+      (await bob.fetch(disconnectUrl, { method: "POST" })).status,
+      404
+    );
+    assert.equal(
+      (await alice.fetch(disconnectUrl, { method: "POST" })).status,
+      204
+    );
+    assert.deepEqual(await listed(server, alice), [token]);
 
     const stolen = await bob.fetch(tokensUrl(server, token.id), {
       method: "DELETE"

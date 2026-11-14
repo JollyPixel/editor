@@ -108,3 +108,16 @@ export async function revokeAgentToken(
     }
   );
 }
+
+export async function disconnectAgentToken(
+  backend: ServedBackend,
+  owner: Browser,
+  tokenId: string
+): Promise<void> {
+  await owner.fetch(
+    new URL(`.${GOLEM_TOKENS_URL_PATH}${tokenId}/disconnect`, backend.url),
+    {
+      method: "POST"
+    }
+  );
+}

@@ -76,7 +76,20 @@ interface AgentToken {
 }
 ```
 
-A credential that lets a local AI agent join the project as a peer, with the role of the account `ownerId`. `name` is the peer name the agent shows, and `createdAt` is epoch milliseconds. The value of the credential is not part of it. `agentTokenSchema` parses one and `agentTokenNameSchema` a name (1 to 32 characters once trimmed, `AGENT_TOKEN_NAME_MAX_LENGTH`). An agent carries `via: "golem"` (`AGENT_TOKEN_VIA`) in its profile, which `isAgentProfile(profile)` checks, and is named `"Golem"` (`AGENT_TOKEN_DEFAULT_NAME`) unless its token says otherwise. Its peer subject is `agent:<token id>`: `agentTokenSubject(tokenId)` builds it, and `agentTokenId(subject)` reads the id back, or returns `null` for any other subject.
+A credential that lets a local AI agent join the project as a peer, with the role of the account `ownerId`. `name` is the peer name the agent shows, and `createdAt` is epoch milliseconds. The value of the credential is not part of it. `agentTokenSchema` parses one and `agentTokenNameSchema` a name (1 to 32 characters once trimmed, `AGENT_TOKEN_NAME_MAX_LENGTH`). An agent is named `"Golem"` (`AGENT_TOKEN_DEFAULT_NAME`) unless its token says otherwise. Its peer subject is `agent:<token id>`: `agentTokenSubject(tokenId)` builds it, and `agentTokenId(subject)` reads the id back, or returns `null` for any other subject.
+
+## `AgentProfile`
+
+```ts
+interface AgentProfile {
+  username: string;
+  peerId: string;
+  via: "golem";
+  ownerId: string;
+}
+```
+
+The profile of a connected agent: the name and id of its token, `via: "golem"` (`AGENT_TOKEN_VIA`) and the `ownerId` of the token. `parseAgentProfile(metadata)` reads it from a peer's metadata, or returns `null` for any other peer. `isAgentProfile(profile)` only checks `via`, which a chat entry also carries.
 
 ## `AccountsError`
 

@@ -345,7 +345,11 @@ export class Studio extends LitElement implements GolemChatOpener {
     this.#user.attach(user);
     this._agentChat?.dispose();
     this._agentChat = user.online ?
-      StudioAgentChat.join(user.client, this.#notifications) :
+      StudioAgentChat.join(
+        user.client,
+        this.#notifications,
+        user.agentTokens
+      ) :
       null;
     this._assets = {
       catalog,
@@ -448,6 +452,7 @@ export class Studio extends LitElement implements GolemChatOpener {
               @console-toggle=${this.#toggleConsole}
               @settings-open=${this.#openSettings}
               .user=${user}
+              .agentChat=${this._agentChat}
               .browserState=${this.#browserState}
               @studio-error=${this.#logError}
             ></studio-home>
