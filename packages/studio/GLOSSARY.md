@@ -70,8 +70,9 @@ paths and dependency edges, never stored.
 
 ### Kind filter
 
-The button group above the tree. A kind shows only its assets and their
-companions; every folder still shows. The choice is kept per browser.
+The button group above the tree. A kind shows only its assets, their
+companions, and the folders that lead to them. A folder created while it is
+active stays shown until the kind changes. The choice is kept per browser.
 It offers a kind once the project has an asset of it, unless the project hides
 the kind in Settings › Project › General, where Editors & kinds lists each
 editor package with the kinds it opens (the `kindFilter` section of the

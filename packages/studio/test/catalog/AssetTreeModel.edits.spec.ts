@@ -47,15 +47,14 @@ const kMaps = folderNodeId(AssetPath.parse("maps"));
 const kTextures = folderNodeId(AssetPath.parse("textures"));
 
 describe("AssetTreeModel empty folders", () => {
-  test("shows an empty folder, whatever the kind filter", () => {
+  test("shows a given folder, whatever the kind filter", () => {
     const model = new AssetTreeModel(kRecords, {
       kind: "voxelmap",
       folders: [AssetPath.parse("maps/caves/deep")]
     });
 
     assert.deepEqual(shape(model.nodes), [
-      ["maps", [["caves", [["deep", []]]], "overworld.voxelmap.json"]],
-      ["textures", [["old", []]]]
+      ["maps", [["caves", [["deep", []]]], "overworld.voxelmap.json"]]
     ]);
     assert.equal(
       model.dropFolder({

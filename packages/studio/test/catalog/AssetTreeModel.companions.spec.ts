@@ -113,8 +113,7 @@ describe("AssetTreeModel companions", () => {
     });
 
     assert.deepEqual(shape(model.nodes), [
-      ["maps", ["overworld.blockset.json"]],
-      ["models", []]
+      ["maps", ["overworld.blockset.json"]]
     ]);
   });
 
@@ -125,7 +124,6 @@ describe("AssetTreeModel companions", () => {
     });
 
     assert.deepEqual(shape(model.nodes), [
-      ["maps", []],
       ["models", [["hero.voxelmodel.json", ["hero.pixelart"]]]]
     ]);
   });

@@ -550,11 +550,15 @@ export class HierarchyController {
     anchor?: SceneAnchorJSON
   ): Promise<void> {
     const actions = this.#connection.current?.actions;
-    if (action === "add-instance") {
-      await actions?.addInstance(parentId, anchor);
+    if (actions === undefined) {
+      return;
     }
-    else {
-      actions?.addActor(parentId, anchor);
+
+    const id = action === "add-instance" ?
+      await actions.addInstance(parentId, anchor) :
+      actions.addActor(parentId, anchor);
+    if (id !== null) {
+      this.#view.beginRename(id);
     }
   }
 }

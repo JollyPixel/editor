@@ -2,9 +2,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import type { AssetRecordData } from "@jolly-pixel/asset";
-
 // Import Internal Dependencies
 import { AssetPath } from "../../src/catalog/AssetPath.ts";
 import {
@@ -14,42 +11,13 @@ import {
   type AssetRelocation
 } from "../../src/catalog/AssetTreeModel.ts";
 import { InvalidAssetNameError } from "../../src/catalog/errors/InvalidAssetNameError.ts";
-import { shape } from "../helpers/assetTree.ts";
+import {
+  TREE_RECORDS,
+  shape
+} from "../helpers/assetTree.ts";
 
 // CONSTANTS
-const kRecords: AssetRecordData[] = [
-  {
-    id: "tex-b",
-    kind: "pixelart",
-    path: "textures/b.pixelart"
-  },
-  {
-    id: "map-1",
-    kind: "voxelmap",
-    path: "maps/overworld.voxelmap.json"
-  },
-  {
-    id: "readme",
-    kind: "binary",
-    path: "README.bin"
-  },
-  {
-    id: "tex-a",
-    kind: "pixelart",
-    path: "textures/A.pixelart"
-  },
-  {
-    id: "tex-nested",
-    kind: "pixelart",
-    path: "textures/blocks/stone.pixelart"
-  },
-  {
-    id: "map-2",
-    kind: "voxelmap",
-    path: "maps/cave.voxelmap.json"
-  }
-];
-const kModel = new AssetTreeModel(kRecords);
+const kModel = new AssetTreeModel(TREE_RECORDS);
 const kMaps = folderNodeId(AssetPath.parse("maps"));
 const kTextures = folderNodeId(AssetPath.parse("textures"));
 const kBlocks = folderNodeId(AssetPath.parse("textures/blocks"));
@@ -98,7 +66,7 @@ describe("AssetTreeModel", () => {
   });
 
   test("resolves icons and details per kind", () => {
-    const model = new AssetTreeModel(kRecords, {
+    const model = new AssetTreeModel(TREE_RECORDS, {
       presenter: {
         kindIcon: (kind) => (kind === "voxelmap" ? "map" : undefined),
         kindDetail: (kind) => (kind === "binary" ? "no editor" : undefined),
@@ -126,48 +94,6 @@ describe("AssetTreeModel", () => {
       ["tex-b", "tex-a", "tex-nested"]
     );
     assert.equal(kModel.planDeletion(["asset:unknown"]).isEmpty, true);
-  });
-});
-
-describe("AssetTreeModel kind filter", () => {
-  test("shows only the assets of the kind, and every folder", () => {
-    const model = new AssetTreeModel(kRecords, { kind: "pixelart" });
-
-    assert.deepEqual(shape(model.nodes), [
-      ["maps", []],
-      ["textures", [["blocks", ["stone.pixelart"]], "A.pixelart", "b.pixelart"]]
-    ]);
-    assert.equal(model.has(kMaps), true);
-    assert.equal(model.has(assetNodeId("readme")), false);
-  });
-
-  test("shows every asset for a null kind", () => {
-    const model = new AssetTreeModel(kRecords, { kind: null });
-
-    assert.deepEqual(shape(model.nodes), shape(kModel.nodes));
-  });
-
-  test("still relocates and deletes hidden assets under a visible folder", () => {
-    const model = new AssetTreeModel([
-      ...kRecords,
-      {
-        id: "map-in-textures",
-        kind: "voxelmap",
-        path: "textures/level.voxelmap.json"
-      }
-    ], { kind: "pixelart" });
-
-    assert.equal(model.has(assetNodeId("map-in-textures")), false);
-    assert.ok(
-      model.planDeletion([kTextures]).assets.some(
-        (asset) => asset.id === "map-in-textures"
-      )
-    );
-    assert.ok(
-      model.planRename(kTextures, "images")?.renames.some(
-        (rename) => rename.to === "images/level.voxelmap.json"
-      )
-    );
   });
 });
 

@@ -95,13 +95,7 @@ export class SceneFootprint {
       case "actor-removed":
         return this.actors.length === 0 ?
           actorRefs(command.id) :
-          this.actors.flatMap((actor) => [
-            ...actorRefs(actor.id),
-            ...actor.components.flatMap(componentRefs),
-            ...overrideFields(actor.overrides).map(
-              ({ group, path, field }) => SceneValueRef.override(actor.id, group, path, field)
-            )
-          ]);
+          this.actors.flatMap(wholeActorRefs);
       case "actor-moved":
         return [
           SceneValueRef.actorParent(command.id),
@@ -139,7 +133,11 @@ export class SceneFootprint {
       .flatMap((id) => (id === null ? [] : [id, ...tree.ancestorIds(id)]))
       .map((id) => SceneValueRef.subtree(id));
 
-    return [...this.conflictRefs(), ...containers];
+    return [
+      ...this.conflictRefs(),
+      ...createdRefs(this.#command),
+      ...containers
+    ];
   }
 
   guardRefs(): SceneValueRef[] {
@@ -149,6 +147,31 @@ export class SceneFootprint {
       [...this.conflictRefs(), SceneValueRef.subtree(command.id)] :
       this.conflictRefs();
   }
+}
+
+function createdRefs(
+  command: SceneCommand
+): SceneValueRef[] {
+  switch (command.action) {
+    case "actor-added":
+      return command.actors.flatMap(wholeActorRefs);
+    case "component-added":
+      return componentRefs(command.component);
+    default:
+      return [];
+  }
+}
+
+function wholeActorRefs(
+  actor: SceneActorView
+): SceneValueRef[] {
+  return [
+    ...actorRefs(actor.id),
+    ...actor.components.flatMap(componentRefs),
+    ...overrideFields(actor.overrides).map(
+      ({ group, path, field }) => SceneValueRef.override(actor.id, group, path, field)
+    )
+  ];
 }
 
 function actorRefs(

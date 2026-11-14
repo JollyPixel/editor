@@ -215,19 +215,24 @@ new Scenario<ScenePage, SceneExpectation>({
     },
     {
       id: "crate",
-      title: "add an actor, undo and redo it, then shape it into a crate with a mesh",
+      title: "add an actor named on the fly, undo and redo it, then shape it into a crate with a mesh",
       play: async(scene) => {
         const undo = scene.tool("undo");
+        const redo = scene.tool("redo");
         await expect(undo).toHaveAttribute("disabled");
         await scene.addActor(["Actor"]);
-        await expect(scene.row("Actor")).toHaveAttribute("aria-selected", "true");
+        await scene.nameAdded("Crate");
+        await expect(scene.row("Crate")).toHaveAttribute("aria-selected", "true");
+        await undo.click();
+        await expect(scene.row("Actor")).toBeVisible();
         await undo.click();
         await expect(scene.row("Actor")).toHaveCount(0);
-        await scene.tool("redo").click();
+        await redo.click();
         await expect(scene.row("Actor")).toBeVisible();
+        await redo.click();
+        await expect(scene.row("Crate")).toBeVisible();
 
-        await scene.row("Actor").click();
-        await scene.rename("Crate");
+        await scene.row("Crate").click();
         await expect(scene.row("Crate")).toHaveAttribute("aria-selected", "true");
         await scene.editTransform("Scale", "Y", "2");
         await scene.addComponent(["3D", "Mesh"]);
@@ -311,6 +316,7 @@ new Scenario<ScenePage, SceneExpectation>({
         await scene.openScene("room");
         await scene.addActor(["Scene instance…"]);
         await scene.pickAsset("Pick a scene to include", "lamp");
+        await scene.nameAdded("lamp");
         await expect(scene.row("lamp")).toHaveAttribute("aria-selected", "true");
       },
       expected: kLampPlaced

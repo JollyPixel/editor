@@ -95,7 +95,7 @@ export interface StudioBackendOptions {
    */
   preferences: ShellPreferences;
   /**
-   * Documents written when the project holds no file at their path.
+   * Documents written when the project holds no document yet.
    * @default {}
    */
   seed?: AssetSeedMap;

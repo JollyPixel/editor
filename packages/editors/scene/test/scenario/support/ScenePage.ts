@@ -173,6 +173,16 @@ export class ScenePage {
     await field.press("Enter");
   }
 
+  async nameAdded(
+    name: string
+  ): Promise<void> {
+    await expect(
+      this.hierarchy.getByRole("textbox", { name: "Rename" })
+    ).toBeFocused();
+    await this.page.keyboard.type(name);
+    await this.page.keyboard.press("Enter");
+  }
+
   async rowMenu(
     name: string,
     item: string
