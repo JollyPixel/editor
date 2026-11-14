@@ -12,6 +12,7 @@ import type {
 // Import Internal Dependencies
 import { AssetCompanions } from "./AssetCompanions.ts";
 import { AssetDeletion } from "./AssetDeletion.ts";
+import type { AssetOccupancy } from "./AssetOccupancy.ts";
 import { AssetPath } from "./AssetPath.ts";
 import { AssetPathTakenError } from "./errors/AssetPathTakenError.ts";
 
@@ -80,6 +81,7 @@ export type AssetDrop = Pick<JollyReparentDetail, "targetId" | "where">;
 export interface AssetTreeOverlay {
   labels: ReadonlyMap<string, string>;
   rows: ReadonlyMap<string, readonly AssetTreeNode[]>;
+  occupancy: AssetOccupancy;
 }
 
 interface AssetLeaf {
@@ -293,7 +295,9 @@ export class AssetTreeModel {
   present(
     overlay: AssetTreeOverlay
   ): AssetTreeNode[] {
-    return overlay.labels.size === 0 && overlay.rows.size === 0 ?
+    return overlay.labels.size === 0 &&
+      overlay.rows.size === 0 &&
+      overlay.occupancy.isEmpty ?
       this.nodes :
       decorate(this.nodes, folderNodeId(AssetPath.ROOT), overlay);
   }
@@ -509,17 +513,18 @@ function decorate(
 ): AssetTreeNode[] {
   const decorated = nodes.map((node) => {
     const label = overlay.labels.get(node.id) ?? node.label;
+    const badges = node.data?.type === "asset" ?
+      overlay.occupancy.badges(node.data.id) :
+      [];
 
-    return node.children === undefined ?
-      {
-        ...node,
-        label
-      } :
-      {
-        ...node,
-        label,
+    return {
+      ...node,
+      label,
+      ...(badges.length === 0 ? {} : { badges }),
+      ...(node.children === undefined ? {} : {
         children: decorate(node.children, node.id, overlay)
-      };
+      })
+    };
   });
   const rows = overlay.rows.get(folderId);
 

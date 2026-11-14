@@ -77,6 +77,8 @@ Throws `AssetClosedError` when `asset` is not open on this golem.
 
 Clears the published activity.
 
+The golem also publishes, as its `openAssets` presence on the catalog room, the assets it opened with `open` and the one its activity is on. The studio's asset tree draws them.
+
 ### `peers(): IterableIterator<Peer>`
 
 The people and agents connected to the studio, without the golem itself. Each `Peer` from `@jolly-pixel/network/client` carries its `role`, its `profile` (`username`, `via` for an agent) and its `presence`.

@@ -19,6 +19,14 @@ export interface ChatRoomHarness {
     profile: PeerMetadata,
     presence?: PeerMetadata
   ): void;
+  readonly published: PeerMetadata[];
+  patchPresence(
+    clientId: string,
+    patch: PeerMetadata
+  ): void;
+  removePeer(
+    clientId: string
+  ): void;
   history(
     entries?: AgentChatEntry[]
   ): void;
@@ -31,6 +39,7 @@ export function chatRoomHarness(
   sayRight: Right = "write"
 ): ChatRoomHarness {
   const peers = new Map<string, Peer>();
+  const published: PeerMetadata[] = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
   function emit(
     event: string,
@@ -53,7 +62,9 @@ export function chatRoomHarness(
     join: () => undefined,
     leave: () => undefined,
     send: () => undefined,
-    updatePresence: () => undefined,
+    updatePresence: (patch: PeerMetadata) => {
+      published.push(patch);
+    },
     resync: () => undefined,
     resumeWith: () => undefined,
     on: (event: string, listener: (payload: unknown) => void) => {
@@ -80,6 +91,24 @@ export function chatRoomHarness(
         presence
       });
       emit("peer-joined", { clientId });
+    },
+    published,
+    patchPresence(clientId, patch) {
+      const peer = peers.get(clientId);
+      if (peer !== undefined) {
+        peers.set(clientId, {
+          ...peer,
+          presence: {
+            ...peer.presence,
+            ...patch
+          }
+        });
+        emit("peer-presence", { clientId, patch });
+      }
+    },
+    removePeer(clientId) {
+      peers.delete(clientId);
+      emit("peer-left", { clientId });
     },
     history(entries = []) {
       emit("message", {

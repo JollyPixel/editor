@@ -23,6 +23,7 @@ import { GolemTokenRefusedError } from "#src/peer/errors/GolemTokenRefusedError.
 import { CommandDeniedError } from "#src/assets/errors/CommandDeniedError.ts";
 import { ChatPeer } from "./helpers/ChatPeer.ts";
 import { AssetPeer } from "./helpers/AssetPeer.ts";
+import { CatalogPeer } from "./helpers/CatalogPeer.ts";
 import {
   createAgentToken,
   disconnectAgentToken,
@@ -126,6 +127,34 @@ describe("Golem", { timeout: kTimeoutMs }, () => {
 
     golem.close(scene.id);
     await person.until(() => mirrored(person) === null);
+  });
+
+  test("shows the assets it opened in the catalog room, focused on its activity", async() => {
+    await using backend = await serveStudio();
+    const alice = await registered(backend, "Alice");
+    using golem = await Golem.connect({
+      url: backend.url,
+      token: (await createAgentToken(backend, alice, "Builder")).value
+    });
+    using person = await CatalogPeer.join(backend, alice);
+    const scene = await createScene(golem);
+
+    await person.until(
+      () => person.findOpenAssets("Builder")?.open.includes(scene.id) ?? false
+    );
+    assert.equal(person.findOpenAssets("Builder")?.focused, null);
+
+    golem.activity(scene, { label: "Placing trees" });
+    await person.until(
+      () => person.findOpenAssets("Builder")?.focused === scene.id
+    );
+
+    golem.close(scene.id);
+    await person.until(() => {
+      const assets = person.findOpenAssets("Builder");
+
+      return assets?.open.length === 0 && assets.focused === null;
+    });
   });
 
   test("refuses to connect with an unknown token", async() => {

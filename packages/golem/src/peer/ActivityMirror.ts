@@ -25,6 +25,10 @@ export class ActivityMirror {
     this.#room = room;
   }
 
+  get assetId(): string | null {
+    return this.#current?.id ?? null;
+  }
+
   show(
     asset: GolemAsset,
     activity: PeerActivity

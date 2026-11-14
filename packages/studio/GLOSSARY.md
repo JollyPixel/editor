@@ -42,6 +42,15 @@ The `<asset-browser>` element in the asset dock on Home: the kind filter, the
 asset actions, the tree of catalog records and the details of the selection.
 The details start with the asset's preview image when its kind has one.
 
+### Occupant
+
+A person or agent with an asset open, read from the `openAssets` presence
+each shell and golem publishes on the catalog room: its open tabs, and the
+focused one. The tree draws a dot of the occupant's color on the asset's row,
+full when focused and faded otherwise. The details list the occupants, and the
+delete dialog names them. The viewer's own window, and editors opened outside
+a shell, are not counted.
+
 ### Folder
 
 A directory of the asset source, listed by the catalog room. It stays, empty
