@@ -37,7 +37,33 @@ export class PlayButton extends LitElement {
     :host {
       display: inline-flex;
       align-items: center;
-      gap: 1px;
+      border-radius: var(--jolly-radius-md, 6px);
+      overflow: hidden;
+    }
+
+    jolly-button {
+      --jolly-radius-sm: 0;
+      --jolly-control-height: 24px;
+    }
+
+    [data-action="play"] {
+      width: 76px;
+      font-weight: 600;
+    }
+
+    [data-action="play-menu"] {
+      --jolly-icon-button-size: 20px;
+    }
+
+    [data-action="play-menu"] jolly-icon {
+      --jolly-icon-size: 10px;
+
+      rotate: 90deg;
+      opacity: 0.7;
+    }
+
+    [data-action="play-menu"]:hover jolly-icon {
+      opacity: 1;
     }
   `;
 
@@ -92,6 +118,7 @@ export class PlayButton extends LitElement {
     return html`
       <jolly-button
         data-action="play"
+        variant="success"
         title=${`Play ${sceneName(target)} (F5)`}
         @click=${() => play.play("game")}
       >
@@ -100,14 +127,21 @@ export class PlayButton extends LitElement {
       </jolly-button>
       <jolly-button
         data-action="play-menu"
+        variant="success"
+        icon-only
+        label="Play options"
         aria-haspopup="menu"
         title="Play options"
         @click=${this.#openMenu}
+        @pointerenter=${this.#onMenuTriggerEnter}
+        @pointerleave=${this.#onMenuTriggerLeave}
       >
         <jolly-icon name="chevron"></jolly-icon>
       </jolly-button>
       <jolly-context-menu
         label="Play"
+        align="end"
+        hover
         .items=${playMenu(
           play.defaultScene,
           play.currentScene,
@@ -121,13 +155,21 @@ export class PlayButton extends LitElement {
   readonly #openMenu = (
     event: MouseEvent
   ): void => {
-    const button = event.currentTarget;
-    if (this._menu === null || !(button instanceof HTMLElement)) {
-      return;
+    if (event.currentTarget instanceof HTMLElement) {
+      this._menu?.openBelow(event.currentTarget);
     }
+  };
 
-    const { right, bottom } = button.getBoundingClientRect();
-    this._menu.openAt(right, bottom);
+  readonly #onMenuTriggerEnter = (
+    event: PointerEvent
+  ): void => {
+    this._menu?.onTriggerPointerEnter(event);
+  };
+
+  readonly #onMenuTriggerLeave = (
+    event: PointerEvent
+  ): void => {
+    this._menu?.onTriggerPointerLeave(event);
   };
 
   readonly #onAction = (

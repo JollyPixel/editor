@@ -630,10 +630,9 @@ export class AssetBrowser extends LitElement {
   };
 
   readonly #openNewAssetMenu = (): void => {
-    const anchor = this._newAssetButton.getBoundingClientRect();
     this.#menuTarget = this.#selection();
     this._menu.items = newAssetMenu(this.#kinds);
-    this._menu.openAt(anchor.left, anchor.bottom);
+    this._menu.openBelow(this._newAssetButton);
   };
 
   readonly #onContextAction = (

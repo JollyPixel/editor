@@ -90,6 +90,7 @@ export class AccountBadge extends LitElement {
       </jolly-button>
       <jolly-context-menu
         label="Account"
+        align="end"
         .items=${accountMenu(this.account)}
         @jolly-context-action=${this.#onAction}
       ></jolly-context-menu>
@@ -99,13 +100,9 @@ export class AccountBadge extends LitElement {
   readonly #openMenu = (
     event: MouseEvent
   ): void => {
-    const button = event.currentTarget;
-    if (this._menu === null || !(button instanceof HTMLElement)) {
-      return;
+    if (event.currentTarget instanceof HTMLElement) {
+      this._menu?.openBelow(event.currentTarget);
     }
-
-    const { right, bottom } = button.getBoundingClientRect();
-    this._menu.openAt(right, bottom);
   };
 
   readonly #onAction = (

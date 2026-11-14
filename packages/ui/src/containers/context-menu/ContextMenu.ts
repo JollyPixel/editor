@@ -22,7 +22,10 @@ import {
 import { emitContainerEvent } from "../events.ts";
 import { deepActiveElement } from "../../dom.ts";
 import { PopoverController } from "../../field/PopoverController.ts";
-import type { AnchorRect } from "../../geometry/anchoredPosition.ts";
+import type {
+  AnchorAlign,
+  AnchorRect
+} from "../../geometry/anchoredPosition.ts";
 import "../../icon/Icon.ts";
 import type { IconName } from "../../icon/registry.ts";
 import { revealOverflowTitle } from "../../interaction/overflowTitle.ts";
@@ -60,10 +63,16 @@ export class ContextMenu extends LitElement {
   @property({ type: String })
   declare label: string;
 
+  @property({ type: String })
+  declare align: AnchorAlign;
+
+  @property({ type: Boolean })
+  declare hover: boolean;
+
   @query(".menu")
   declare _menu: HTMLElement;
 
-  #point: AnchorRect = {
+  #anchor: HTMLElement | AnchorRect = {
     top: 0,
     bottom: 0,
     left: 0,
@@ -75,9 +84,12 @@ export class ContextMenu extends LitElement {
   #showOnRelease = false;
 
   #popup = new PopoverController(this, {
-    anchor: () => this.#point,
+    anchor: () => this.#anchor,
     popover: () => this._menu,
     gap: 0,
+    align: () => this.align,
+    openOnHover: {},
+    closeOnHoverLeave: {},
     onClose: () => this.#settle(),
     onReposition: () => this.#submenus.reposition()
   });
@@ -90,6 +102,8 @@ export class ContextMenu extends LitElement {
     super();
     this.items = [];
     this.label = "";
+    this.align = "start";
+    this.hover = false;
   }
 
   get open(): boolean {
@@ -140,12 +154,45 @@ export class ContextMenu extends LitElement {
     x: number,
     y: number
   ): void {
-    this.#point = {
+    this.#openAgainst({
       top: y,
       bottom: y,
       left: x,
       right: x
-    };
+    });
+  }
+
+  openBelow(
+    trigger: HTMLElement
+  ): void {
+    this.#openAgainst(trigger);
+  }
+
+  readonly onTriggerPointerEnter = (
+    event: PointerEvent
+  ): void => {
+    const trigger = event.currentTarget;
+    if (!this.hover || !(trigger instanceof HTMLElement)) {
+      return;
+    }
+    if (!this._menu.matches(":popover-open")) {
+      this.#anchor = trigger;
+    }
+    this.#popup.onPointerEnter(event);
+  };
+
+  readonly onTriggerPointerLeave = (
+    event: PointerEvent
+  ): void => {
+    if (this.hover) {
+      this.#popup.onPointerLeave(event);
+    }
+  };
+
+  #openAgainst(
+    anchor: HTMLElement | AnchorRect
+  ): void {
+    this.#anchor = anchor;
     this.#chosen = null;
     this.#submenus.closeAll();
     this.performUpdate();
@@ -170,10 +217,18 @@ export class ContextMenu extends LitElement {
   }
 
   #show(): void {
-    this.#invoker = deepActiveElement();
     this.#popup.show();
     this.#focusFirst();
   }
+
+  readonly #onBeforeToggle = (
+    event: ToggleEvent
+  ): void => {
+    if (event.newState === "open") {
+      this.#invoker = deepActiveElement();
+    }
+    this.#popup.onBeforeToggle(event);
+  };
 
   readonly #onPointerDown = (): void => {
     this.#pressed = true;
@@ -198,8 +253,10 @@ export class ContextMenu extends LitElement {
         popover
         role="menu"
         aria-label=${this.label === "" ? nothing : this.label}
-        @beforetoggle=${this.#popup.onBeforeToggle}
+        @beforetoggle=${this.#onBeforeToggle}
         @toggle=${this.#popup.onToggle}
+        @pointerenter=${this.hover ? this.#popup.onPointerEnter : nothing}
+        @pointerleave=${this.hover ? this.#popup.onPointerLeave : nothing}
         @keydown=${this.#onKeyDown}
       >
         ${this.#renderEntries(this.items, "")}

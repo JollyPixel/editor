@@ -20,8 +20,11 @@ interface Button {
   pressed: boolean | undefined; // property only, unset: not a toggle
 }
 
-type ButtonVariant = "default" | "accent" | "danger";
+type ButtonVariant = "default" | "accent" | "success" | "danger";
 ```
+
+- `accent` and `success` fill the button with `--jolly-accent-fill` and
+  `--jolly-intent-success-fill`, and lighten it on hover and focus.
 
 - The default slot holds the visible content.
 - `label` names an icon-only button but shows no tooltip. Add the global

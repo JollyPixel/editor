@@ -145,7 +145,7 @@ test.describe("Context menu submenus", () => {
   });
 
   test("follows its menu when a resize pushes the menu back into the viewport", async({ page }) => {
-    await page.locator("jolly-context-menu").evaluate((
+    await page.locator("#row-menu").evaluate((
       menu: HTMLElementTagNameMap["jolly-context-menu"]
     ) => {
       menu.items = [

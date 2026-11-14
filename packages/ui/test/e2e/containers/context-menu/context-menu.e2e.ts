@@ -59,7 +59,7 @@ test.describe("Context menu", () => {
   });
 
   test("opened while a button is held, it waits for the release", async({ page }) => {
-    const opened = await page.locator("jolly-context-menu").evaluate((
+    const opened = await page.locator("#row-menu").evaluate((
       menu: HTMLElementTagNameMap["jolly-context-menu"]
     ) => {
       menu.items = [{ id: "one", label: "One" }];
@@ -105,7 +105,7 @@ test.describe("Context menu", () => {
   });
 
   test("is placed at the point in the task that opens it", async({ page }) => {
-    const placed = await page.locator("jolly-context-menu").evaluate((
+    const placed = await page.locator("#row-menu").evaluate((
       menu: HTMLElementTagNameMap["jolly-context-menu"]
     ) => {
       menu.items = [{ id: "one", label: "One" }];
@@ -128,7 +128,7 @@ test.describe("Context menu", () => {
 
   test("stays inside the viewport near its corner", async({ page }) => {
     const viewport = page.viewportSize()!;
-    await page.locator("jolly-context-menu").evaluate((
+    await page.locator("#row-menu").evaluate((
       menu: HTMLElementTagNameMap["jolly-context-menu"],
       size
     ) => {
@@ -145,5 +145,54 @@ test.describe("Context menu", () => {
         placed.y + placed.height <= viewport.height &&
         placed.width > 100;
     }).toBe(true);
+  });
+
+  test("a trigger opens it below, aligned to the trigger's end", async({ page }) => {
+    const trigger = page.locator("button.options");
+    await trigger.click();
+
+    const menu = page.getByRole("menu", { name: "Options" });
+    const box = (await trigger.boundingBox())!;
+    await expect(page.getByRole("menuitem", { name: "Export everything" })).toBeFocused();
+    await expect.poll(async() => {
+      const placed = await menu.boundingBox();
+
+      return placed === null ? null : placed.x + placed.width;
+    }).toBeCloseTo(box.x + box.width, 0);
+    await expect.poll(async() => (await menu.boundingBox())?.y).toBeCloseTo(box.y + box.height, 0);
+  });
+
+  test("hover opens it without focus, and leaving it after hovering an item closes it", async({ page }) => {
+    const trigger = page.locator("button.options");
+    await trigger.hover();
+
+    const menu = page.getByRole("menu", { name: "Options" });
+    await expect(menu).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Export everything" })).not.toBeFocused();
+
+    const settings = page.getByRole("menuitem", { name: "Settings" });
+    await settings.hover();
+    await expect(settings).toBeFocused();
+    await page.mouse.move(5, 5);
+
+    await expect(menu).toBeHidden();
+    await expect(page.locator("main > div")).not.toHaveAttribute("data-result");
+  });
+
+  test("a click on the trigger keeps a hover-opened menu open", async({ page }) => {
+    await page.clock.install();
+    await page.clock.pauseAt(new Date());
+    const trigger = page.locator("button.options");
+    await trigger.hover();
+    await page.clock.runFor(200);
+
+    const menu = page.getByRole("menu", { name: "Options" });
+    await expect(menu).toBeVisible();
+    await trigger.click();
+    await page.mouse.move(5, 5);
+    await page.clock.runFor(1000);
+
+    await expect(menu).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Export everything" })).toBeFocused();
   });
 });

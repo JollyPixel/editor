@@ -135,6 +135,34 @@ test("re-entering the popover cancels a pending close", (t) => {
   assert.equal(close.mock.callCount(), 0);
 });
 
+test("focus inside keeps it open until the pointer enters the popover", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = popoverFixture({ closeOnHoverLeave: {} });
+  t.after(() => f.cleanup());
+  t.mock.method(
+    f.popover,
+    "matches",
+    (selector: string) => selector === ":popover-open" ||
+      selector === ":focus-within"
+  );
+  const close = t.mock.method(f.popover, "hidePopover", () => undefined);
+  f.popover.addEventListener("pointerenter", f.controller.onPointerEnter);
+  const leave = new PointerEvent("pointerleave", {
+    pointerType: "mouse"
+  });
+
+  f.controller.onPointerLeave(leave);
+  t.mock.timers.tick(1000);
+  assert.equal(close.mock.callCount(), 0);
+
+  f.popover.dispatchEvent(new PointerEvent("pointerenter", {
+    pointerType: "mouse"
+  }));
+  f.controller.onPointerLeave(leave);
+  t.mock.timers.tick(200);
+  assert.equal(close.mock.callCount(), 1);
+});
+
 function hoverOpen(
   t: TestContext,
   f: PopoverFixture

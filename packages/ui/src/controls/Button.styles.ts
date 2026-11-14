@@ -51,6 +51,7 @@ export const buttonStyles = css`
   }
 
   :host([variant="accent"]) button:is(*, :hover, :focus-visible),
+  :host([variant="success"]) button:is(*, :hover, :focus-visible),
   :host([variant="danger"]) button:is(*, :hover, :focus-visible) {
     --jolly-icon-tone-strength: 0%;
   }
@@ -67,6 +68,20 @@ export const buttonStyles = css`
   :host([variant="accent"]) button:focus-visible,
   :host([variant="accent"]) button:active:not(:disabled) {
     background: var(--jolly-accent-fill-focus);
+  }
+
+  :host([variant="success"]) button {
+    background: var(--jolly-intent-success-fill);
+    color: var(--jolly-text-on-fill);
+  }
+
+  :host([variant="success"]) button:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--jolly-intent-success-fill) 88%, white);
+  }
+
+  :host([variant="success"]) button:focus-visible,
+  :host([variant="success"]) button:active:not(:disabled) {
+    background: color-mix(in oklab, var(--jolly-intent-success-fill) 76%, white);
   }
 
   :host([variant="danger"]) button {
