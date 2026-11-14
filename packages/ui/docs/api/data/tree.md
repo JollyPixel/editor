@@ -31,6 +31,7 @@ interface Tree<TData> {
   indentGuides: boolean; // attribute indent-guides
   indentGuidesScope: "all" | "selected"; // attribute indent-guides-scope
   toggleStyle: "chevron" | "box"; // attribute toggle-style
+  reserveToggle: "level" | "tree"; // attribute reserve-toggle, default "level"
   swatchPosition: "start" | "end"; // attribute swatch-position, default "end"
   filter: string;
   virtual: boolean;
@@ -316,6 +317,9 @@ diacritics, plus their ancestors.
 - A leaf reserves the toggle width when a sibling has one, so labels align.
   A `collapsible: false` branch reserves it too, and its children are indented
   one extra step so they stay nested under its icon.
+- `reserveToggle="tree"` makes every leaf reserve the toggle width once any
+  row of the tree can expand, so a nested leaf sits one step right of a root
+  leaf. Children of a `collapsible: false` branch then take a single step.
 - `indentGuides` draws a line from each parent to its children.
   `indentGuidesScope="selected"` draws only the lines leading to the selected
   rows.

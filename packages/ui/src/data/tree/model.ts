@@ -2,7 +2,8 @@
 import type {
   TreeDropAccept,
   TreeDropWhere,
-  TreeNode
+  TreeNode,
+  TreeReserveToggle
 } from "./contract.ts";
 import { TreeDrop } from "./TreeDrop.ts";
 
@@ -63,11 +64,15 @@ export class TreeSnapshot<
 > {
   readonly #nodes = new Map<string, IndexedNode<TData>>();
   readonly #visibleRows: FlatTreeRow<TData>[] = [];
+  readonly #reserveToggle: TreeReserveToggle;
+  #hasBranch = false;
 
   constructor(
     nodes: readonly TreeNode<TData>[],
-    expanded: ReadonlySet<string> = new Set()
+    expanded: ReadonlySet<string> = new Set(),
+    reserveToggle: TreeReserveToggle = "level"
   ) {
+    this.#reserveToggle = reserveToggle;
     let order = 0;
 
     const visit = (
@@ -79,6 +84,7 @@ export class TreeSnapshot<
     ): void => {
       const parentId = parent === null ? null : parent.node.id;
       const levelHasBranches = list.some(isExpandable);
+      this.#hasBranch ||= levelHasBranches;
       let position = 0;
       for (const node of list) {
         position += 1;
@@ -106,11 +112,14 @@ export class TreeSnapshot<
         order += 1;
 
         if (node.children !== undefined) {
+          const step = reserveToggle === "level" &&
+            levelHasBranches &&
+            !isExpandable(node) ? 2 : 1;
           visit(
             node.children,
             indexed,
             depth + 1,
-            indent + childIndentStep(node, levelHasBranches),
+            indent + step,
             visible && isOpen(node, expanded)
           );
         }
@@ -172,6 +181,19 @@ export class TreeSnapshot<
       };
   }
 
+  reservesToggle(
+    id: string
+  ): boolean {
+    const indexed = this.#nodes.get(id);
+    if (indexed === undefined || isExpandable(indexed.node)) {
+      return false;
+    }
+
+    return this.#reserveToggle === "tree" ?
+      this.#hasBranch :
+      indexed.levelHasBranches;
+  }
+
   ancestorChain(
     id: string
   ): string[] {
@@ -228,20 +250,6 @@ export function isOpen<TData>(
   expanded: ReadonlySet<string>
 ): boolean {
   return node.collapsible === false || expanded.has(node.id);
-}
-
-export function reservesToggle<TData>(
-  node: TreeNode<TData>,
-  levelHasBranches: boolean
-): boolean {
-  return levelHasBranches && !isExpandable(node);
-}
-
-function childIndentStep<TData>(
-  node: TreeNode<TData>,
-  levelHasBranches: boolean
-): number {
-  return reservesToggle(node, levelHasBranches) && hasChildren(node) ? 2 : 1;
 }
 
 export function flattenVisible<TData>(

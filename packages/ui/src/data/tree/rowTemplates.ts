@@ -26,6 +26,18 @@ const kRailStrokes: Record<TreeRail, TemplateResult | typeof nothing> = {
   elbow: html`${kVerticalStroke}${kHorizontalStroke}`,
   start: kVerticalStroke
 };
+const kStateToggles = {
+  visible: {
+    icon: "eye",
+    activeLabel: "Hide",
+    inactiveLabel: "Show"
+  },
+  lock: {
+    icon: "lock",
+    activeLabel: "Unlock",
+    inactiveLabel: "Lock"
+  }
+} as const;
 
 export const BOX_GLYPH = html`<svg class="box-glyph" aria-hidden="true">
   <rect x="0.5" y="0.5" width="10" height="10"></rect>
@@ -135,6 +147,30 @@ function renderBadge(
       title=${title}
       style="color: ${badge.color}"
     ></jolly-icon>
+  `;
+}
+
+export function renderStateToggle(
+  kind: keyof typeof kStateToggles,
+  active: boolean | undefined,
+  toggle: (event: Event) => void
+): TemplateResult | typeof nothing {
+  if (active === undefined) {
+    return nothing;
+  }
+
+  const { icon, activeLabel, inactiveLabel } = kStateToggles[kind];
+
+  return html`
+    <button
+      class="${kind}-toggle"
+      type="button"
+      tabindex="-1"
+      data-active=${active ? "true" : "false"}
+      aria-label=${active ? activeLabel : inactiveLabel}
+      aria-pressed=${active ? "true" : "false"}
+      @click=${toggle}
+    ><jolly-icon name=${icon} aria-hidden="true"></jolly-icon></button>
   `;
 }
 

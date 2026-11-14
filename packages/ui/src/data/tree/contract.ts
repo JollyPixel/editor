@@ -21,6 +21,8 @@ export type TreeSwatchPosition = "start" | "end";
 
 export type TreeToggleStyle = "chevron" | "box";
 
+export type TreeReserveToggle = "level" | "tree";
+
 export type TreeIndentGuidesScope = "all" | "selected";
 
 export interface TreeSwatch {

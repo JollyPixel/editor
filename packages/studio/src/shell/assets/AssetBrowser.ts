@@ -328,6 +328,7 @@ export class AssetBrowser extends LitElement {
           row-drag
           indent-guides
           toggle-style="box"
+          reserve-toggle="tree"
           activate-on-double-click
           .nodes=${view?.nodes ?? AssetTreeModel.EMPTY.nodes}
           .expanded=${[...view?.expanded ?? []]}

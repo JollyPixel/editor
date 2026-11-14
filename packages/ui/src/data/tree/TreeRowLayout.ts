@@ -2,7 +2,6 @@
 import type { TreeIndentGuidesScope } from "./contract.ts";
 import {
   isOpen,
-  reservesToggle,
   type TreeSnapshot
 } from "./model.ts";
 
@@ -46,9 +45,7 @@ export class TreeRowLayout<TData = unknown> {
     id: string,
     guides: boolean
   ): TreeRowSpacer {
-    const node = this.#snapshot.node(id);
-    const levelHasBranches = this.#snapshot.placement(id)?.levelHasBranches;
-    if (node === null || !reservesToggle(node, levelHasBranches === true)) {
+    if (!this.#snapshot.reservesToggle(id)) {
       return "none";
     }
 

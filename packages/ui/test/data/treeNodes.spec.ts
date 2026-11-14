@@ -208,4 +208,11 @@ describe("Data.TreeSnapshot", () => {
     assert.equal(snapshot.row("companion")?.depth, 1);
     assert.equal(alone.row("companion")?.indent, 1);
   });
+
+  test("indents a non-collapsible branch's children one step when every level reserves", () => {
+    const snapshot = new TreeSnapshot(OWNER_TREE, new Set(), "tree");
+
+    assert.equal(snapshot.row("file")?.indent, 1);
+    assert.equal(snapshot.row("companion")?.indent, 1);
+  });
 });
