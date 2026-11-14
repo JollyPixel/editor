@@ -24,12 +24,13 @@ test("offers a shared offline catalog when the socket closes", async({ studio, p
   );
 });
 
-test("opens Settings from the studio tools without an account", async({ studio }) => {
+test("opens Settings from the header actions without an account", async({ studio }) => {
   await studio.openOffline();
 
   await expect(studio.home.users).toHaveCount(0);
-  await expect(studio.home.tool("Export project")).toBeDisabled();
-  await studio.home.tool("Settings").click();
+  await expect(studio.header.action("Export")).toBeDisabled();
+  await expect(studio.header.action("Open the golem chat")).toHaveCount(0);
+  await studio.header.action("Settings").click();
 
   await expect(studio.settings.section("Appearance")).toBeVisible();
   await expect(studio.settings.section("Access keys")).toHaveCount(0);

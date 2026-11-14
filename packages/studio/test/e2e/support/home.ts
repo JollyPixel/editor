@@ -17,15 +17,6 @@ export class Home {
     this.users = this.root.locator("studio-users");
   }
 
-  tool(
-    name: string
-  ): Locator {
-    return this.root.locator("#studio-tools").getByRole("button", {
-      name,
-      exact: true
-    });
-  }
-
   readmeButton(
     name: string
   ): Locator {

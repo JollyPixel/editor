@@ -26,9 +26,17 @@ The assets written into a project root that lacks them, from
 
 ### Shell
 
-The studio page: the header with the tab strip, and the workbench below it
+The studio page: the header with the tab strip, Play, the header actions
+and the account, and the workbench below it
 that shows Home or one editor frame. It holds data only and never loads a
 kind handler or editor code.
+
+### Header actions
+
+The `<studio-header-actions>` buttons between Play and the account, on every tab:
+Search opens the console, Export asks whether to export the project or the
+game, Settings opens the Settings tab, and the chat button toggles the golem
+chat. Offline, Export is disabled and the chat button is gone.
 
 ### Home
 
@@ -215,7 +223,8 @@ package it connects through.
 ### Golem chat
 
 The studio-wide conversation between people and agents, over the
-`agent-chat` room, shown in the pane `/golem` opens. Agents also mirror
+`agent-chat` room, shown in the pane that `/golem` or the chat button of the
+header actions opens. Agents also mirror
 their activity there.
 
 ### Roster
@@ -278,13 +287,14 @@ its errors as notifications.
 
 ### Game export
 
-`GET /api/project/game.zip`, offered as Export game in the Play menu to a role
-with `studio.$export`. It builds every asset whose kind has a build, fails on
-the first error, and zips the built player as `index.html`, a game manifest
-starting from the default scene, and each artifact at the `builds/` path Play
-serves it from. A `jolly-game` meta in the page tells the player to read `game.json`
-beside it instead of the studio API. The game runs from any static HTTP
-server, not from `file://`.
+`GET /api/project/game.zip`, offered as Export game in the Export dialog to a
+role with `studio.$export`, once the project has a default scene. It builds
+every asset whose kind has a build, fails on the first error, and zips the
+built player as `index.html`, a game manifest starting from the default
+scene, and each artifact at the `builds/` path Play serves it from. A
+`jolly-game` meta in the page tells the player to read `game.json` beside it
+instead of the studio API. The game runs from any static HTTP server, not from
+`file://`.
 
 ### Offline mode
 

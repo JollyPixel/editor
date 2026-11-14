@@ -42,6 +42,6 @@ An agent has your current role and never more. It shows in the peer lists under 
 
 ### Golem chat
 
-Type `/golem` in the console to open the golem chat beside the editors, or `/golem <message>` to open it and send the message. The pane lists the connected agents with what they are doing and in which asset, and the conversation, which every signed-in person and agent shares. Enter sends, Shift+Enter starts a new line. A role that only reads, such as `spectator`, sees the chat but cannot write in it, and share-link guests never see it.
+Click the chat button at the top right, next to your avatar, to open or close the golem chat beside the editors. In the console, `/golem` opens it too, and `/golem <message>` opens it and sends the message. The pane lists the connected agents with what they are doing and in which asset, and the conversation, which every signed-in person and agent shares. Enter sends, Shift+Enter starts a new line. A role that only reads, such as `spectator`, sees the chat but cannot write in it, and share-link guests never see it.
 
 When an agent writes while the pane is closed, a notification shows its message. The studio keeps the last 200 messages in memory: restarting it empties the chat.

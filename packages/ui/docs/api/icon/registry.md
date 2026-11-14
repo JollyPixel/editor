@@ -99,6 +99,8 @@ registerIcon("cube", svg`
 - `tone-fill` fills a closed shape with the tone, under the outline.
 - `tone-ink` shifts a `currentColor` stroke or fill towards the tone, for glyphs
   with no closed shape.
+- `tone-wash` fills a closed shape with a faint tint of the `tone-ink` color,
+  20% in light mode and 35% in dark mode, under the outline.
 
 - `ICON_TONES` lists the seven tones. Their tokens are in
   [Theme exports and tokens](../theme/tokens.md#tones).

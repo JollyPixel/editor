@@ -8,14 +8,11 @@ import {
 } from "lit";
 import {
   customElement,
-  property,
-  state
+  property
 } from "lit/decorators.js";
-import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/dock";
 import "@jolly-pixel/ui/elements/dock-layout";
 import "@jolly-pixel/ui/elements/pane";
-import "@jolly-pixel/ui/elements/toolbar";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
@@ -26,8 +23,6 @@ import {
 import { BrowserState } from "../../browser/BrowserState.ts";
 import type { StudioAgentChat } from "../../golem/StudioAgentChat.ts";
 import { ChangeController } from "../ChangeController.ts";
-import { StudioErrorEvent } from "../StudioErrorEvent.ts";
-import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
 import type { AssetBrowserOptions } from "../assets/AssetBrowser.ts";
 import "../assets/AssetBrowser.ts";
 import "./ProjectReadme.ts";
@@ -71,36 +66,6 @@ export class StudioHome extends LitElement {
 
     jolly-pane::part(content) {
       padding: 0;
-    }
-
-    #studio-side {
-      display: flex;
-      flex: 0 0 240px;
-      flex-direction: column;
-      margin-inline-start: var(--studio-gutter);
-    }
-
-    #studio-tools {
-      flex: 0 0 auto;
-      margin-block-end: var(--studio-gutter);
-
-      --jolly-control-height: var(--studio-card-head-height);
-      --jolly-icon-size: 18px;
-    }
-
-    #studio-tools jolly-button {
-      flex: 1 1 0;
-      border-radius: var(--studio-radius);
-      background: var(--studio-card);
-      box-shadow: var(--studio-bevel);
-
-      --jolly-icon-button-size: 100%;
-      --jolly-control-bg: transparent;
-      --jolly-control-bg-hover: color-mix(
-        in oklab,
-        var(--jolly-ink) 8%,
-        transparent
-      );
     }
 
     #users-dock > :is(jolly-pane, jolly-pane-group) {
@@ -158,9 +123,6 @@ export class StudioHome extends LitElement {
   @property({ attribute: false })
   declare agentChat: StudioAgentChat | null;
 
-  @state()
-  declare _exporting: boolean;
-
   #user = new ChangeController<StudioUser>(this, STUDIO_USER_CHANGE);
 
   constructor() {
@@ -168,7 +130,6 @@ export class StudioHome extends LitElement {
     this.assets = null;
     this.agentChat = null;
     this.browserState = new BrowserState();
-    this._exporting = false;
   }
 
   set user(
@@ -205,9 +166,6 @@ export class StudioHome extends LitElement {
           this.#usersDock(user, this.agentChat) :
           nothing}
       </jolly-dock-layout>
-      ${user?.online ?
-        nothing :
-        html`<div id="studio-side">${this.#tools(user)}</div>`}
     `;
   }
 
@@ -225,7 +183,6 @@ export class StudioHome extends LitElement {
         min-size="180"
         max-size="400"
       >
-        ${this.#tools(user)}
         <jolly-pane key="users" heading="Users" icon="users" locked>
           <studio-users
             .roster=${user.roster}
@@ -236,81 +193,10 @@ export class StudioHome extends LitElement {
       </jolly-dock>
     `;
   }
-
-  #tools(
-    user: StudioUser | null
-  ): TemplateResult {
-    const canExport = user?.rights.allows("export") ?? false;
-
-    return html`
-      <jolly-toolbar id="studio-tools" label="Studio tools">
-        <jolly-button
-          icon="settings"
-          icon-only
-          label="Settings"
-          title="Settings"
-          @click=${this.#openSettings}
-        ></jolly-button>
-        <jolly-button
-          icon="search"
-          icon-only
-          label="Search"
-          title="Search (opens the console)"
-          @click=${this.#search}
-        ></jolly-button>
-        <jolly-button
-          icon="export"
-          icon-only
-          label="Export project"
-          title=${user?.online ?
-            "Export project" :
-            "Export needs the studio server"}
-          ?disabled=${this._exporting || !canExport}
-          @click=${this.#export}
-        ></jolly-button>
-      </jolly-toolbar>
-    `;
-  }
-
-  readonly #openSettings = (): void => {
-    this.dispatchEvent(new SettingsOpenEvent());
-  };
-
-  readonly #export = async(): Promise<void> => {
-    const user = this.#user.current;
-    if (!user?.online || this._exporting) {
-      return;
-    }
-
-    this._exporting = true;
-    try {
-      const download = await user.exportProject();
-      download.save();
-    }
-    catch (error) {
-      this.dispatchEvent(
-        StudioErrorEvent.from(error, "Could not export the project")
-      );
-    }
-    finally {
-      this._exporting = false;
-    }
-  };
-
-  readonly #search = (): void => {
-    this.dispatchEvent(new Event("console-toggle", {
-      bubbles: true,
-      composed: true
-    }));
-  };
 }
 
 declare global {
   interface HTMLElementTagNameMap {
     "studio-home": StudioHome;
-  }
-
-  interface HTMLElementEventMap {
-    "console-toggle": Event;
   }
 }

@@ -15,16 +15,15 @@ registerIcon("new-folder", `
     <path d="M6 15 a3 3 0 0 1 3 -3 H23 L28 17 H55 a3 3 0 0 1 3 3 V52 a3 3 0 0 1 -3 3 H9 a3 3 0 0 1 -3 -3 Z" fill="#e39a1b" />
     <rect x="6" y="25" width="52" height="30" rx="3" fill="#ffc93c" />
   </g>
-  <circle cx="50" cy="50" r="11" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
-  <circle cx="50" cy="50" r="11" fill="#4cc35b" />
-  <path d="M50 44 V56 M44 50 H56" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" />
+  <rect x="38" y="38" width="22" height="22" rx="5" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
+  <rect x="38" y="38" width="22" height="22" rx="5" fill="#4cc35b" />
+  <path d="M49 43 V55 M43 49 H55" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" />
 `, { viewBox: "0 0 64 64" });
 
 registerIcon("pencil", `
   <path
+    class="tone-wash"
     d="M4 20l1-4L16 5l3 3L8 19l-4 1Z"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -38,9 +37,8 @@ registerIcon("pencil", `
 
 registerIcon("trash", `
   <path
+    class="tone-wash"
     d="M6 7h12l-1 13H7L6 7Z"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -73,9 +71,8 @@ registerIcon("share", `
 
 registerIcon("users", `
   <path
+    class="tone-wash"
     d="M9 4.5a3.5 3.5 0 1 1 0 7a3.5 3.5 0 0 1 0-7ZM3 20a6 6 0 0 1 12 0Z"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -90,6 +87,7 @@ registerIcon("users", `
 
 registerIcon("crown", `
   <path
+    class="tone-ink"
     d="M3 7l5 5 4-7 4 7 5-5-2 12H5L3 7Z"
     fill="currentColor"
     stroke="currentColor"
@@ -102,13 +100,13 @@ registerIcon("file", `
   <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
   <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#8fd8ff" />
   <path d="M39 5 V17 H51 Z" fill="#d6f1ff" />
+  <path d="M21 28 H43 M21 37 H43 M21 46 H35" stroke="#3f8fc0" stroke-width="3.5" stroke-linecap="round" />
 `, { viewBox: "0 0 64 64" });
 
 registerIcon("home", `
   <path
+    class="tone-wash"
     d="M5 11v9h5v-6h4v6h5v-9"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -123,9 +121,8 @@ registerIcon("home", `
 
 registerIcon("sign-out", `
   <path
+    class="tone-wash"
     d="M4 4h8v16H4Z"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -140,9 +137,8 @@ registerIcon("sign-out", `
 
 registerIcon("export", `
   <path
+    class="tone-wash"
     d="M4 15v5h16v-5"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -157,9 +153,8 @@ registerIcon("export", `
 
 registerIcon("replace", `
   <path
+    class="tone-wash"
     d="M4 15v5h16v-5"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -173,49 +168,27 @@ registerIcon("replace", `
 `, { tone: "sky" });
 
 registerIcon("all-kinds", `
-  <g transform="translate(10 -2) scale(.86)">
-    <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
-    <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#c79bff" />
-    <path d="M39 5 V17 H51 Z" fill="#ecdcff" />
+  <g fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round">
+    <rect x="7" y="7" width="22" height="22" rx="5" />
+    <rect x="35" y="7" width="22" height="22" rx="5" />
+    <rect x="7" y="35" width="22" height="22" rx="5" />
+    <rect x="35" y="35" width="22" height="22" rx="5" />
   </g>
-  <g transform="translate(1 8) scale(.86)">
-    <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="5" stroke-linejoin="round" />
-    <path d="M14 5 H39 L51 17 V59 H14 Z" fill="#8fd8ff" />
-    <path d="M39 5 V17 H51 Z" fill="#d6f1ff" />
-  </g>
+  <rect x="7" y="7" width="22" height="22" rx="5" fill="#ff8a65" />
+  <rect x="35" y="7" width="22" height="22" rx="5" fill="#ffc93c" />
+  <rect x="7" y="35" width="22" height="22" rx="5" fill="#8fd8ff" />
+  <rect x="35" y="35" width="22" height="22" rx="5" fill="#c79bff" />
 `, { viewBox: "0 0 64 64" });
 
 registerIcon("settings", `
   <path
-    d="M9.81 4.93L10.01 2.2L13.99 2.2L14.19 4.93L15.45 5.45L17.53 3.67L20.33 6.47L18.55 8.55L19.07 9.81L21.8 10.01L21.8 13.99L19.07 14.19L18.55 15.45L20.33 17.53L17.53 20.33L15.45 18.55L14.19 19.07L13.99 21.8L10.01 21.8L9.81 19.07L8.55 18.55L6.47 20.33L3.67 17.53L5.45 15.45L4.93 14.19L2.2 13.99L2.2 10.01L4.93 9.81L5.45 8.55L3.67 6.47L6.47 3.67L8.55 5.45ZM15 12a3 3 0 1 0 -6 0a3 3 0 1 0 6 0Z"
-    fill="currentColor"
+    class="tone-wash"
+    d="M9.7 5.18L9.82 2.24L14.18 2.24L14.3 5.18L16.76 6.6L19.36 5.23L21.54 9.01L19.06 10.58L19.06 13.42L21.54 14.99L19.36 18.77L16.76 17.4L14.3 18.82L14.18 21.76L9.82 21.76L9.7 18.82L7.24 17.4L4.64 18.77L2.46 14.99L4.94 13.42L4.94 10.58L2.46 9.01L4.64 5.23L7.24 6.6ZM15 12a3 3 0 1 0 -6 0a3 3 0 1 0 6 0Z"
     fill-rule="evenodd"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
-    d="M9.81 4.93L10.01 2.2L13.99 2.2L14.19 4.93L15.45 5.45L17.53 3.67L20.33 6.47L18.55 8.55L19.07 9.81L21.8 10.01L21.8 13.99L19.07 14.19L18.55 15.45L20.33 17.53L17.53 20.33L15.45 18.55L14.19 19.07L13.99 21.8L10.01 21.8L9.81 19.07L8.55 18.55L6.47 20.33L3.67 17.53L5.45 15.45L4.93 14.19L2.2 13.99L2.2 10.01L4.93 9.81L5.45 8.55L3.67 6.47L6.47 3.67L8.55 5.45ZM15 12a3 3 0 1 0 -6 0a3 3 0 1 0 6 0Z"
-    stroke="currentColor"
-    stroke-width="1.75"
-    stroke-linejoin="round"
-    fill="none"
-  />
-`);
-
-registerIcon("play", `
-  <path d="M20 12 L52 32 L20 52 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="7" stroke-linejoin="round" />
-  <path d="M20 12 L52 32 L20 52 Z" fill="#4cc35b" />
-`, { viewBox: "0 0 64 64" });
-
-registerIcon("user", `
-  <path
-    d="M12 4a4 4 0 1 1 0 8a4 4 0 0 1 0-8ZM4 21a8 8 0 0 1 16 0Z"
-    fill="currentColor"
-    opacity="0.35"
-  />
-  <path
-    class="tone-ink"
-    d="M12 4a4 4 0 1 1 0 8a4 4 0 0 1 0-8ZM4 21a8 8 0 0 1 16 0Z"
+    d="M9.7 5.18L9.82 2.24L14.18 2.24L14.3 5.18L16.76 6.6L19.36 5.23L21.54 9.01L19.06 10.58L19.06 13.42L21.54 14.99L19.36 18.77L16.76 17.4L14.3 18.82L14.18 21.76L9.82 21.76L9.7 18.82L7.24 17.4L4.64 18.77L2.46 14.99L4.94 13.42L4.94 10.58L2.46 9.01L4.64 5.23L7.24 6.6ZM15 12a3 3 0 1 0 -6 0a3 3 0 1 0 6 0Z"
     stroke="currentColor"
     stroke-width="2"
     stroke-linejoin="round"
@@ -223,11 +196,32 @@ registerIcon("user", `
   />
 `);
 
+registerIcon("play", `
+  <path d="M23 14.5 Q18 11.5 18 17.5 V46.5 Q18 52.5 23 49.5 L49 35 Q54 32 49 29 Z" fill="#2b1d16" stroke="#2b1d16" stroke-width="7" stroke-linejoin="round" />
+  <path d="M23 14.5 Q18 11.5 18 17.5 V46.5 Q18 52.5 23 49.5 L49 35 Q54 32 49 29 Z" fill="#4cc35b" />
+  <path d="M24 22 V31" stroke="#a8ecb1" stroke-width="3.5" stroke-linecap="round" />
+`, { viewBox: "0 0 64 64" });
+
+registerIcon("user", `
+  <path
+    class="tone-wash"
+    d="M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18Z"
+  />
+  <path
+    class="tone-ink"
+    d="M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18ZM12 7a3 3 0 1 1 0 6a3 3 0 0 1 0-6ZM6.4 18.4a7 7 0 0 1 11.2 0"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);
+
 registerIcon("palette", `
   <path
+    class="tone-wash"
     d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.9 2-1.9 0-1.2-1-1.6-1-2.6s.8-1.5 1.8-1.5H17a4 4 0 0 0 4-4C21 6.6 17 3 12 3Z"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -244,15 +238,15 @@ registerIcon("palette", `
 
 registerIcon("camera", `
   <path
-    d="M3 9a2 2 0 0 1 2-2h3l1.5-3h5L16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
-    fill="currentColor"
-    opacity="0.35"
+    class="tone-wash"
+    d="M5 7h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"
   />
   <path
     class="tone-ink"
-    d="M3 9a2 2 0 0 1 2-2h3l1.5-3h5L16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM12 10a3.5 3.5 0 1 1 0 7a3.5 3.5 0 0 1 0-7Z"
+    d="M5 7h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2ZM15 10.5l6-3.5v10l-6-3.5"
     stroke="currentColor"
     stroke-width="2"
+    stroke-linecap="round"
     stroke-linejoin="round"
     fill="none"
   />
@@ -260,9 +254,8 @@ registerIcon("camera", `
 
 registerIcon("key", `
   <path
+    class="tone-wash"
     d="M8 10.5a4.5 4.5 0 1 1 0 9a4.5 4.5 0 0 1 0-9Z"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -277,13 +270,12 @@ registerIcon("key", `
 
 registerIcon("shield", `
   <path
-    d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6Z"
-    fill="currentColor"
-    opacity="0.35"
+    class="tone-wash"
+    d="M12 3v18c-4.6-1-8-4.5-8-9V6Z"
   />
   <path
     class="tone-ink"
-    d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6ZM8.5 12l2.5 2.5 4.5-4.5"
+    d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6ZM12 3v18"
     stroke="currentColor"
     stroke-width="2"
     stroke-linecap="round"
@@ -294,9 +286,8 @@ registerIcon("shield", `
 
 registerIcon("history", `
   <path
+    class="tone-wash"
     d="M12 4a8 8 0 1 1 0 16a8 8 0 0 1 0-16Z"
-    fill="currentColor"
-    opacity="0.35"
   />
   <path
     class="tone-ink"
@@ -308,3 +299,19 @@ registerIcon("history", `
     fill="none"
   />
 `);
+
+registerIcon("chat", `
+  <path
+    class="tone-wash"
+    d="M3 4h12v9H8l-5 3.5Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 4h12v9H8l-5 3.5ZM18 9h3v8h-2v3l-3.5-3H11v-2"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`, { tone: "violet" });

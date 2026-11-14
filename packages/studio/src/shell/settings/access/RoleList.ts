@@ -15,6 +15,7 @@ import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { RoleSummary } from "../../../project/RoleSummary.ts";
+import { navRowStyles } from "../navRowStyles.ts";
 
 export class RoleSelectEvent extends Event {
   readonly role: string;
@@ -29,7 +30,7 @@ export class RoleSelectEvent extends Event {
 
 @customElement("studio-role-list")
 export class RoleList extends LitElement {
-  static override styles = css`
+  static override styles = [navRowStyles, css`
     :host {
       display: flex;
       flex-direction: column;
@@ -42,37 +43,6 @@ export class RoleList extends LitElement {
       margin: 0;
       padding: 0;
       list-style: none;
-    }
-
-    button {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-2);
-      width: 100%;
-      box-sizing: border-box;
-      min-height: 28px;
-      padding: 0 var(--jolly-space-2);
-      border: none;
-      border-radius: var(--jolly-radius-sm);
-      background: none;
-      color: inherit;
-      font: inherit;
-      text-align: start;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: var(--jolly-control-bg-hover);
-    }
-
-    button[aria-current="true"] {
-      background: var(--jolly-control-bg-active);
-      font-weight: 600;
-    }
-
-    button:focus-visible {
-      outline: 2px solid var(--jolly-focus-ring);
-      outline-offset: -2px;
     }
 
     .name {
@@ -92,7 +62,7 @@ export class RoleList extends LitElement {
       height: 14px;
       color: var(--jolly-text-muted);
     }
-  `;
+  `];
 
   @property({ attribute: false })
   declare roles: readonly RoleSummary[];
@@ -117,6 +87,7 @@ export class RoleList extends LitElement {
         ${this.roles.map((role) => html`
           <li>
             <button
+              class="nav-row"
               data-role=${role.name}
               aria-current=${role.name === this.selected ? "true" : "false"}
               title=${role.description ?? nothing}

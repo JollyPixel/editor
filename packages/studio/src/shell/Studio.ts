@@ -40,7 +40,6 @@ import { SettingsSections } from "./settings/SettingsSections.ts";
 import type { SettingsOpenEvent } from "./settings/SettingsOpenEvent.ts";
 import type { StudioPlay } from "../play/StudioPlay.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
-import type { FileDownload } from "../browser/FileDownload.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
 import { StudioAgentChat } from "../golem/StudioAgentChat.ts";
@@ -49,6 +48,7 @@ import type { GolemChatOpener } from "./golem/golemConsole.ts";
 import "./home/StudioHome.ts";
 import "./account/AccountBadge.ts";
 import "./play/PlayButton.ts";
+import "./header/HeaderActions.ts";
 import "./golem/GolemChatPane.ts";
 
 export interface StudioOptions extends Pick<
@@ -157,7 +157,19 @@ export class Studio extends LitElement implements GolemChatOpener {
 
     #studio-actions {
       flex: 0 0 auto;
+      gap: var(--studio-gutter);
       margin-block-end: 2px;
+    }
+
+    #studio-actions .divider {
+      align-self: stretch;
+      width: 1px;
+      margin-block: 6px;
+      background: var(--jolly-border);
+    }
+
+    studio-play-button[hidden] + .divider {
+      display: none;
     }
 
     #studio-body {
@@ -258,9 +270,6 @@ export class Studio extends LitElement implements GolemChatOpener {
   @state()
   declare _play: StudioPlay | null;
 
-  @state()
-  declare _exportGame: (() => Promise<FileDownload>) | null;
-
   #session: StudioSession | null = null;
   #presence: CatalogPresence | null = null;
   #scopes: PreferenceScopes | null = null;
@@ -282,7 +291,6 @@ export class Studio extends LitElement implements GolemChatOpener {
     super();
     this._assets = null;
     this._play = null;
-    this._exportGame = null;
     this._agentChat = null;
     this._sections = SettingsSections.EMPTY;
   }
@@ -340,9 +348,6 @@ export class Studio extends LitElement implements GolemChatOpener {
     });
     this.#session = session;
     this._play = session.play;
-    this._exportGame = user.online && user.rights.allows("export") ?
-      () => user.exportGame() :
-      null;
     this.#scopes = options.scopes;
     this._sections = options.settings;
     this.#user.attach(user);
@@ -438,16 +443,27 @@ export class Studio extends LitElement implements GolemChatOpener {
         <jolly-toolbar id="studio-actions" label="Studio actions">
           <studio-play-button
             .play=${this._play}
-            .exportGame=${this._exportGame}
             @settings-open=${this.#openSettings}
-            @studio-error=${this.#logError}
           ></studio-play-button>
-          <studio-account
-            .account=${account}
-            .avatar=${account?.avatar ?? ""}
-            @sign-out=${this.#signOut}
+          <div class="divider" role="separator"></div>
+          <studio-header-actions
+            .user=${user}
+            .play=${this._play}
+            .agentChat=${this._agentChat}
+            @console-toggle=${this.#toggleConsole}
             @settings-open=${this.#openSettings}
-          ></studio-account>
+            @golem-chat-toggle=${this.#toggleGolemChat}
+            @studio-error=${this.#logError}
+          ></studio-header-actions>
+          ${account === null ? nothing : html`
+            <div class="divider" role="separator"></div>
+            <studio-account
+              .account=${account}
+              .avatar=${account.avatar ?? ""}
+              @sign-out=${this.#signOut}
+              @settings-open=${this.#openSettings}
+            ></studio-account>
+          `}
         </jolly-toolbar>
       </header>
       <div id="studio-body">
@@ -459,8 +475,6 @@ export class Studio extends LitElement implements GolemChatOpener {
               aria-label="Home"
               .assets=${this._assets}
               @asset-open=${this.#onAssetOpen}
-              @console-toggle=${this.#toggleConsole}
-              @settings-open=${this.#openSettings}
               .user=${user}
               .agentChat=${this._agentChat}
               .browserState=${this.#browserState}
@@ -541,6 +555,15 @@ export class Studio extends LitElement implements GolemChatOpener {
 
   readonly #toggleConsole = (): void => {
     this.#session?.toggleConsole();
+  };
+
+  readonly #toggleGolemChat = (): void => {
+    if (this._agentChat?.visible) {
+      this._agentChat.hide();
+    }
+    else {
+      this.openGolemChat();
+    }
   };
 
   readonly #openSettings = (
