@@ -102,4 +102,16 @@ describe("HierarchyController add menus", () => {
     const [child] = [...document.tree.actors()].filter(({ parentId }) => parentId === mapId);
     assert.deepEqual([child.name, child.components], ["Actor", []]);
   });
+
+  test("starts renaming the actor or scene instance it adds", async() => {
+    const { document, hierarchy, renamed } = createHierarchy();
+
+    await hierarchy.addMenu().run("add-actor", kPoint);
+    await hierarchy.addMenu().run("add-instance", kPoint);
+
+    assert.deepEqual(
+      renamed.map((id) => document.tree.actor(id)?.name),
+      ["Actor", "Overworld"]
+    );
+  });
 });

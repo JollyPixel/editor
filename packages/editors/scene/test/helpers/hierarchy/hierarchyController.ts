@@ -32,6 +32,7 @@ import { createSceneComponents } from "../sceneComponents.ts";
 
 // CONSTANTS
 export const MAP_ASSET: AssetReferenceData = { id: "map-1", kind: "voxelmap" };
+const kOverworldScene: AssetReferenceData = { id: "overworld", kind: "scene" };
 
 type HierarchyEditing = Pick<
   SceneEditing,
@@ -65,7 +66,7 @@ export function createHierarchy(
     name: () => assetName,
     canLoad: () => true,
     pick: () => Promise.resolve(null),
-    pickScene: () => Promise.resolve(null),
+    pickScene: () => Promise.resolve(kOverworldScene),
     open,
     subscribe: (listener) => {
       catalog.add(listener);
@@ -112,8 +113,9 @@ export function createHierarchy(
     updateComplete: Promise.resolve(true)
   };
   const revealed: string[] = [];
+  const renamed: string[] = [];
   const hierarchy = new HierarchyController(host, {
-    beginRename: () => undefined,
+    beginRename: (id) => renamed.push(id),
     reveal: (id) => revealed.push(id)
   });
   hierarchy.attach(editing as SceneEditing);
@@ -128,6 +130,7 @@ export function createHierarchy(
     anchorPicks,
     hierarchy,
     revealed,
+    renamed,
     renameAsset
   };
 }

@@ -22,9 +22,11 @@ import { HierarchyController } from "./HierarchyController.ts";
 
 export class HierarchyPanel extends LitElement {
   #tree = new HierarchyController(this, {
-    beginRename: (id) => this.#treeElement()?.beginRename(id),
+    beginRename: (id) => {
+      void this.#afterTreeRender((tree) => tree.beginRename(id));
+    },
     reveal: (id) => {
-      void this.updateComplete.then(() => this.#treeElement()?.reveal(id));
+      void this.#afterTreeRender((tree) => tree.reveal(id));
     }
   });
 
@@ -141,6 +143,17 @@ export class HierarchyPanel extends LitElement {
 
   #treeElement(): Tree | null {
     return this.renderRoot.querySelector("jolly-tree");
+  }
+
+  async #afterTreeRender(
+    action: (tree: Tree) => void
+  ): Promise<void> {
+    await this.updateComplete;
+    const tree = this.#treeElement();
+    if (tree !== null) {
+      await tree.updateComplete;
+      action(tree);
+    }
   }
 
   #contextMenu(): ContextMenu {

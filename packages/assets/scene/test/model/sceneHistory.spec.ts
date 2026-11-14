@@ -175,6 +175,49 @@ describe("scene history", () => {
     assert.equal(document.tree.has("D"), true);
   });
 
+  const creations: [string, ((document: SceneDocument) => unknown)[]][] = [
+    ["an added actor", [
+      (document) => document.addActor({
+        id: "D",
+        name: "D",
+        components: [component("d1", { intensity: 1 })]
+      }),
+      (document) => document.rename("D", "Dee"),
+      (document) => document.changeComponent("d1", new ComponentChange({
+        data: { intensity: 4 }
+      }))
+    ]],
+    ["an added component", [
+      (document) => document.addComponent("B", {
+        id: "c2",
+        type: "Light",
+        data: { intensity: 1 }
+      }),
+      (document) => document.changeComponent("c2", new ComponentChange({
+        data: { intensity: 4 }
+      }))
+    ]]
+  ];
+
+  for (const [name, steps] of creations) {
+    test(`redoes edits of ${name} after redoing its creation`, () => {
+      const { document, history } = setup();
+      for (const step of steps) {
+        history.record(kScope, null, () => assert.ok(step(document)));
+      }
+      const after = document.tree.toJSON();
+
+      for (const _ of steps) {
+        assert.ok(history.undo(kScope));
+      }
+      for (const _ of steps) {
+        assert.ok(history.redo(kScope));
+      }
+
+      assert.deepEqual(document.tree.toJSON(), after);
+    });
+  }
+
   test("undoes one component field while keeping a peer's edit of another", () => {
     const { document, history } = setup();
     history.record(kScope, null, () => document.changeComponent("light", new ComponentChange({
