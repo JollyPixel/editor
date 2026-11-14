@@ -26,6 +26,39 @@ import type {
   AssetTreeCatalogEvent
 } from "../../src/shell/assets/AssetTreeViewOptions.ts";
 
+export const TREE_RECORDS: AssetRecordData[] = [
+  {
+    id: "tex-b",
+    kind: "pixelart",
+    path: "textures/b.pixelart"
+  },
+  {
+    id: "map-1",
+    kind: "voxelmap",
+    path: "maps/overworld.voxelmap.json"
+  },
+  {
+    id: "readme",
+    kind: "binary",
+    path: "README.bin"
+  },
+  {
+    id: "tex-a",
+    kind: "pixelart",
+    path: "textures/A.pixelart"
+  },
+  {
+    id: "tex-nested",
+    kind: "pixelart",
+    path: "textures/blocks/stone.pixelart"
+  },
+  {
+    id: "map-2",
+    kind: "voxelmap",
+    path: "maps/cave.voxelmap.json"
+  }
+];
+
 export const COMPANION_RECORDS: AssetRecordData[] = [
   {
     id: "map-overworld",

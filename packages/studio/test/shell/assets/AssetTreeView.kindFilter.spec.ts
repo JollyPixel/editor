@@ -9,7 +9,11 @@ import assert from "node:assert/strict";
 import { KindFilter } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import { assetNodeId } from "../../../src/catalog/AssetTreeModel.ts";
+import {
+  assetNodeId,
+  folderNodeId
+} from "../../../src/catalog/AssetTreeModel.ts";
+import { AssetPath } from "../../../src/catalog/AssetPath.ts";
 import type { AssetTreeView } from "../../../src/shell/assets/AssetTreeView.ts";
 import type { KindFilterSource } from "../../../src/shell/assets/AssetTreeViewOptions.ts";
 import { KIND_FILTER_CHANGE } from "../../../src/project/StudioProjectSettings.ts";
@@ -42,6 +46,12 @@ function kindFilters(
   view: AssetTreeView
 ): string[] {
   return view.kindOptions.map((option) => option.value);
+}
+
+function folder(
+  path: string
+): string {
+  return folderNodeId(AssetPath.parse(path));
 }
 
 describe("AssetTreeView kind filter", () => {
@@ -89,5 +99,43 @@ describe("AssetTreeView kind filter", () => {
     view.filter("");
     view.refresh();
     assert.deepEqual(kindFilters(view), ["", "voxelmap"]);
+  });
+
+  test("hides folders without the kind but keeps one created under it", async() => {
+    const catalog = new FakeTreeCatalog([
+      MAP_RECORD,
+      {
+        id: "tex-1",
+        kind: "pixelart",
+        path: "textures/stone.pixelart"
+      }
+    ], ["maps", "textures", "empty"]);
+    const { view, created } = treeView(catalog);
+
+    view.filter("voxelmap");
+    view.refresh();
+    assert.ok(view.model.has(folder("maps")));
+    assert.equal(view.model.has(folder("textures")), false);
+    assert.equal(view.model.has(folder("empty")), false);
+
+    await view.createFolder(AssetPath.parse("maps"));
+    catalog.change();
+    view.refresh();
+    assert.deepEqual(created, [folder("maps/New folder")]);
+    assert.ok(view.model.has(folder("maps/New folder")));
+
+    await view.rename(folder("maps/New folder"), "drafts");
+    catalog.change();
+    view.refresh();
+    assert.ok(view.model.has(folder("maps/drafts")));
+
+    view.filter("voxelmap");
+    view.refresh();
+    assert.equal(view.model.has(folder("maps/drafts")), false);
+
+    view.filter("");
+    view.refresh();
+    assert.ok(view.model.has(folder("empty")));
+    assert.ok(view.model.has(folder("maps/drafts")));
   });
 });

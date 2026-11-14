@@ -84,6 +84,7 @@ export class AssetTreeView {
   #kindOptions: readonly JollyOption<string>[] = [kAllKinds];
   #recordKinds: ReadonlySet<string> = new Set();
   #expanded: ReadonlySet<string>;
+  #createdFolders: ReadonlySet<string> = new Set();
   #selected: readonly string[] = [];
   #pendingLabels: ReadonlyMap<string, string> = new Map();
   #pendingAssets = new PendingAssets();
@@ -182,6 +183,7 @@ export class AssetTreeView {
   ): void {
     this.#kind = kind;
     this.#browserState.assetKind = kind;
+    this.#createdFolders = new Set();
     this.#stale = true;
     this.#onChange();
   }
@@ -241,6 +243,11 @@ export class AssetTreeView {
     }
 
     const nodeId = folderNodeId(path);
+    this.#createdFolders = new Set([
+      ...this.#createdFolders,
+      path.toString()
+    ]);
+    this.#stale = true;
     this.#expandFolder(parent);
     this.#selected = [nodeId];
     this.#onChange();
@@ -633,6 +640,11 @@ export class AssetTreeView {
         nodeId;
     };
     this.#selected = this.#selected.map(rebase);
+    this.#createdFolders = new Set([...this.#createdFolders].map(
+      (folder) => AssetPath.parse(folder)
+        .rebase(relocation.from, relocation.to)
+        .toString()
+    ));
     this.#expand(new Set([
       ...this.#expanded,
       ...[...this.#expanded].map(rebase)
@@ -671,11 +683,14 @@ export class AssetTreeView {
     this.#recordKinds = new Set(records.map((record) => record.kind));
     this.#offerKinds();
 
+    const kind = this.#kinds.has(this.#kind) ? this.#kind : null;
     const model = new AssetTreeModel(records, {
       presenter: this.#kinds,
-      kind: this.#kinds.has(this.#kind) ? this.#kind : null,
+      kind,
       dependencies: this.#catalog.dependencies,
-      folders: folderNames.map((folder) => AssetPath.parse(folder))
+      folders: folderNames
+        .filter((folder) => kind === null || this.#createdFolders.has(folder))
+        .map((folder) => AssetPath.parse(folder))
     });
     this.#model = model;
     this.#selected = this.#selected.filter((nodeId) => model.has(nodeId));

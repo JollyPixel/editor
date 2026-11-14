@@ -55,8 +55,8 @@ export interface AssetDependencies {
 export interface AssetTreeOptions {
   presenter?: AssetKindPresenter;
   /**
-   * Shows only the assets of this kind and their companions; every folder
-   * still shows. Folder relocations and deletions cover every asset under them.
+   * Shows only the assets of this kind, their companions, and the folders on
+   * their paths. Folder relocations and deletions cover every asset under them.
    */
   kind?: string | null;
   dependencies?: AssetDependencies;
@@ -137,7 +137,6 @@ export class AssetTreeModel {
 
     const leaves = new Map<string, AssetLeaf>();
     for (const asset of this.#assets.values()) {
-      this.#folderAt(asset.path.parent);
       const kinds = [asset.kind, this.#ownerLeaf(asset.id)?.kind];
       if (!options.kind || kinds.includes(options.kind)) {
         leaves.set(asset.id, {
