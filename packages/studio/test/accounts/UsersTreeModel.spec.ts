@@ -17,6 +17,7 @@ import {
   UsersTreeModel,
   parseRoleAction
 } from "../../src/accounts/UsersTreeModel.ts";
+import type { ChatAgent } from "../../src/golem/StudioAgentChat.ts";
 
 // CONSTANTS
 const kRoles = ["admin", "member", "spectator"];
@@ -56,6 +57,25 @@ const kRequest: AccessRequest = {
   username: "dave"
 };
 
+function agent(
+  tokenId: string,
+  username: string,
+  ownerId: string,
+  activity: string | null = null
+): ChatAgent {
+  return {
+    clientId: `${tokenId}-client`,
+    tokenId,
+    ownerId,
+    username,
+    color: "#123456",
+    activity: activity === null ? null : {
+      label: activity,
+      assetId: "scene-1"
+    }
+  };
+}
+
 function modelWith(
   requests: readonly AccessRequest[] = []
 ): UsersTreeModel {
@@ -63,7 +83,8 @@ function modelWith(
     kRoles,
     kEntries,
     requests,
-    "a"
+    "a",
+    []
   );
 }
 
@@ -178,7 +199,8 @@ describe("UsersTreeModel", () => {
       kRoles,
       [kOwner, ...kEntries],
       [],
-      "a"
+      "a",
+      []
     );
     const [admin] = model.nodes;
 
@@ -195,7 +217,8 @@ describe("UsersTreeModel", () => {
       kRoles,
       [kOwner, ...kEntries],
       [],
-      kOwner.id
+      kOwner.id,
+      []
     );
 
     assert.deepEqual(
@@ -203,5 +226,67 @@ describe("UsersTreeModel", () => {
       ["role", false, "transfer-ownership", "remove"]
     );
     assert.deepEqual(menuIds(model, kOwner), [false, false, false]);
+  });
+
+  test("lists connected agents first, own first, with owner and activity", () => {
+    const builder = agent("t-a", "Builder", "a");
+    const model = new UsersTreeModel(
+      kRoles,
+      kEntries,
+      [kRequest],
+      "a",
+      [
+        agent("t-c", "Zed", "c"),
+        agent("t-a2", "Scout", "a", "Placing trees · 50%"),
+        builder,
+        agent("t-x", "Ghost", "x")
+      ]
+    );
+    const [agents] = model.nodes;
+
+    assert.deepEqual(
+      model.nodes.map((node) => node.label),
+      ["Agents", "Access requests", "Admin", "Member", "Spectator"]
+    );
+    assert.equal(agents.detail, "4");
+    assert.deepEqual(
+      agents.children?.map((child) => [
+        child.label,
+        child.detail,
+        child.badges?.map((badge) => badge.title)
+      ]),
+      [
+        ["Builder", "alice", undefined],
+        ["Scout", "alice", ["Placing trees · 50%"]],
+        ["Ghost", undefined, undefined],
+        ["Zed", "carol", undefined]
+      ]
+    );
+    assert.deepEqual(model.target(agents.children?.[0].id ?? ""), {
+      type: "agent",
+      agent: builder
+    });
+    assert.equal(modelWith().nodes[0].label, "Admin");
+  });
+
+  test("offers to disconnect only one's own agents, and a non-admin no user action", () => {
+    const own = agent("t-c", "Helper", "c");
+    const others = agent("t-a", "Builder", "a");
+    const model = new UsersTreeModel(
+      kRoles,
+      kEntries,
+      [kRequest],
+      "c",
+      [own, others]
+    );
+
+    assert.deepEqual(
+      model.menu({ type: "agent", agent: own })
+        .map((item) => item !== "separator" && item.id),
+      ["disconnect"]
+    );
+    assert.deepEqual(model.menu({ type: "agent", agent: others }), []);
+    assert.deepEqual(model.menu({ type: "user", entry: kEntries[1] }), []);
+    assert.deepEqual(model.menu({ type: "request", request: kRequest }), []);
   });
 });

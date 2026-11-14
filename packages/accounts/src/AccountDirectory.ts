@@ -69,6 +69,7 @@ export interface AccountDirectoryOptions {
 export type AccountDirectoryEventMap = {
   changed: () => void;
   revoked: (subject: string) => void;
+  disconnected: (subject: string) => void;
   profile: (account: Account) => void;
   activity: (activity: AccountActivity) => void;
 };
@@ -398,6 +399,12 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     subject: string
   ): void {
     this.emit("revoked", subject);
+  }
+
+  disconnect(
+    subject: string
+  ): void {
+    this.emit("disconnected", subject);
   }
 
   record(

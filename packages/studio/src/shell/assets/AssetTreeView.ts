@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { AssetRecordData } from "@jolly-pixel/asset";
 import type {
   JollyOption,
   JollyReparentDetail,
@@ -12,12 +11,9 @@ import {
 import { KindFilter } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
-import {
-  AssetDrop,
-  type ConversionChoice,
-  type ConvertibleFiles
-} from "../../catalog/AssetDrop.ts";
+import { AssetOccupancy } from "../../catalog/AssetOccupancy.ts";
+import { CATALOG_PRESENCE_CHANGE } from "../../catalog/CatalogPresence.ts";
+import { AssetDrop } from "../../catalog/AssetDrop.ts";
 import type {
   AssetKindEntry,
   AssetKindSet
@@ -32,21 +28,26 @@ import {
   AssetTreeModel,
   assetNodeId,
   folderNodeId,
-  type AssetDependencies,
   type AssetLeafData,
   type AssetRelocation,
   type AssetTreeNode
 } from "../../catalog/AssetTreeModel.ts";
 import { PendingAssets } from "../../catalog/PendingAssets.ts";
 import { DroppedFile } from "../../browser/DroppedFile.ts";
-import type { BrowserState } from "../../browser/BrowserState.ts";
 import { KIND_FILTER_CHANGE } from "../../project/StudioProjectSettings.ts";
 import {
   AssetCommands,
-  type AssetCommandCatalog,
-  type ConflictQuestion,
   type RelocationVerb
 } from "./AssetCommands.ts";
+import type {
+  AssetActionPrompts,
+  AssetDropQuestions,
+  AssetTreeCatalog,
+  AssetTreeState,
+  AssetTreeViewOptions,
+  KindFilterSource,
+  OccupancySource
+} from "./AssetTreeViewOptions.ts";
 import { LARGE_FILE_BYTES } from "./fileSize.ts";
 
 // CONSTANTS
@@ -57,92 +58,17 @@ const kAllKinds: JollyOption<string> = {
   icon: "all-kinds"
 };
 
-export type AssetTreeCatalogEvent = "change" | "dependencies";
-
-export interface AssetTreeCatalog extends AssetCommandCatalog {
-  readonly dependencies: AssetDependencies;
-  records(): Iterable<AssetRecordData>;
-  folders(): Iterable<string>;
-  record(
-    assetId: string
-  ): AssetRecordData | undefined;
-  on(
-    event: AssetTreeCatalogEvent,
-    listener: () => void
-  ): unknown;
-  off(
-    event: AssetTreeCatalogEvent,
-    listener: () => void
-  ): unknown;
-}
-
-export type AssetTreeState = Pick<
-  BrowserState,
-  "assetKind" | "expandedFolders"
->;
-
-export interface AssetDeleteChoice {
-  companions: boolean;
-}
-
 interface Upload {
   readonly file: DroppedFile;
   readonly convertTo: AssetKindEntry | null;
   readonly limit: number;
 }
 
-export interface AssetDropQuestions {
-  conversion(
-    files: ConvertibleFiles
-  ): Promise<ConversionChoice | null>;
-  conflicts: ConflictQuestion;
-}
-
-export interface AssetActionPrompts {
-  open(assetId: string): void;
-  rename(nodeId: string): void;
-  /**
-   * `null` when the studio cannot open share links, which hides the action.
-   */
-  share: ((asset: AssetLeafData) => void) | null;
-  confirmDelete(deletion: AssetDeletion): Promise<AssetDeleteChoice | null>;
-  confirmLargeFiles(files: readonly DroppedFile[]): Promise<boolean>;
-  pickFile(accept: readonly string[]): Promise<File | null>;
-}
-
-export interface KindFilterSource extends EventTarget {
-  readonly kindFilter: KindFilter;
-}
-
-export interface AssetTreeViewOptions {
-  catalog: AssetTreeCatalog;
-  kinds: AssetKindSet;
-  /**
-   * The project's kind filter; `null` offers every kind.
-   */
-  kindFilter: KindFilterSource | null;
-  browserState: AssetTreeState;
-  /**
-   * What the actions need from the page: dialogs, inline rename, opening.
-   */
-  prompts: AssetActionPrompts;
-  notifications: Notifier;
-  onChange: () => void;
-  onError: (message: string) => void;
-  /**
-   * Called once a created asset or folder shows in the tree, selected.
-   */
-  onCreated: (nodeId: string) => void;
-  /**
-   * Called once the first file of a drop shows in the tree as an asset.
-   */
-  onImported: (nodeId: string) => void;
-}
-
 export class AssetTreeView {
   #catalog: AssetTreeCatalog;
   #kinds: AssetKindSet;
   #kindFilter: KindFilterSource | null;
+  #presence: OccupancySource | null;
   #browserState: AssetTreeState;
   #prompts: AssetActionPrompts;
   #commands: AssetCommands;
@@ -171,6 +97,7 @@ export class AssetTreeView {
     this.#catalog = options.catalog;
     this.#kinds = options.kinds;
     this.#kindFilter = options.kindFilter;
+    this.#presence = options.presence;
     this.#browserState = options.browserState;
     this.#prompts = options.prompts;
     this.#onChange = options.onChange;
@@ -191,7 +118,15 @@ export class AssetTreeView {
       KIND_FILTER_CHANGE,
       this.#onKindFilterChange
     );
+    this.#presence?.addEventListener(
+      CATALOG_PRESENCE_CHANGE,
+      this.#onPresenceChange
+    );
     this.refresh();
+  }
+
+  get occupancy(): AssetOccupancy {
+    return this.#presence?.occupancy ?? AssetOccupancy.EMPTY;
   }
 
   get sharing(): boolean {
@@ -465,7 +400,10 @@ export class AssetTreeView {
       return;
     }
 
-    const choice = await this.#prompts.confirmDelete(deletion);
+    const choice = await this.#prompts.confirmDelete(
+      deletion,
+      this.occupancy
+    );
     if (choice !== null) {
       await this.#commands.remove(deletion, choice.companions);
     }
@@ -521,6 +459,10 @@ export class AssetTreeView {
     this.#kindFilter?.removeEventListener(
       KIND_FILTER_CHANGE,
       this.#onKindFilterChange
+    );
+    this.#presence?.removeEventListener(
+      CATALOG_PRESENCE_CHANGE,
+      this.#onPresenceChange
     );
   }
 
@@ -648,7 +590,8 @@ export class AssetTreeView {
   #presented(): AssetTreeNode[] {
     return this.#model.present({
       labels: this.#pendingLabels,
-      rows: this.#pendingAssets.rows
+      rows: this.#pendingAssets.rows,
+      occupancy: this.occupancy
     });
   }
 
@@ -776,5 +719,9 @@ export class AssetTreeView {
   readonly #onKindFilterChange = (): void => {
     this.#offerKinds();
     this.#onChange();
+  };
+
+  readonly #onPresenceChange = (): void => {
+    this.#present();
   };
 }

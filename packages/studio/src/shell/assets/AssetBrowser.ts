@@ -32,6 +32,8 @@ import { pickFiles } from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
+import type { AssetOccupant } from "../../catalog/AssetOccupancy.ts";
+import type { CatalogPresence } from "../../catalog/CatalogPresence.ts";
 import type { AssetPath } from "../../catalog/AssetPath.ts";
 import { summarizeSelection } from "../../catalog/AssetSummary.ts";
 import {
@@ -52,11 +54,11 @@ import {
   type PreviewSource
 } from "./AssetPreviewCache.ts";
 import { previewRevision } from "../../catalog/previewRevision.ts";
-import {
-  AssetTreeView,
-  type AssetDropQuestions,
-  type KindFilterSource
-} from "./AssetTreeView.ts";
+import { AssetTreeView } from "./AssetTreeView.ts";
+import type {
+  AssetDropQuestions,
+  KindFilterSource
+} from "./AssetTreeViewOptions.ts";
 import {
   assetMenu,
   newAssetMenu
@@ -75,6 +77,7 @@ export interface AssetBrowserOptions {
   catalog: CatalogClient;
   kinds: AssetKindSet;
   kindFilter: KindFilterSource | null;
+  presence: CatalogPresence | null;
   shares: StudioShareLinks | null;
   browserState: BrowserState;
   notifications: Notifier;
@@ -354,6 +357,7 @@ export class AssetBrowser extends LitElement {
             previewRevision(this.#bound.catalog, assetId))
         )}
         .previews=${this.#previews}
+        .occupants=${this.#selectedOccupants(selection)}
       ></asset-details>
       <jolly-context-menu
         label="Asset actions"
@@ -390,6 +394,7 @@ export class AssetBrowser extends LitElement {
       catalog: options.catalog,
       kinds: options.kinds,
       kindFilter: options.kindFilter,
+      presence: options.presence,
       browserState: options.browserState,
       prompts: {
         open: (assetId) => this.#open(assetId),
@@ -400,10 +405,10 @@ export class AssetBrowser extends LitElement {
             this.#dialogFailed
           );
         },
-        confirmDelete: (deletion) => this.#dialogs
+        confirmDelete: (deletion, occupancy) => this.#dialogs
           .query("asset-delete-dialog")
           .then(
-            (dialog) => dialog.open(deletion),
+            (dialog) => dialog.open(deletion, occupancy),
             (error: unknown) => {
               this.#dialogFailed(error);
 
@@ -431,6 +436,16 @@ export class AssetBrowser extends LitElement {
   ): AssetSelection {
     return this.#view?.selection(nodeIds) ??
       new AssetSelection(AssetTreeModel.EMPTY, []);
+  }
+
+  #selectedOccupants(
+    selection: AssetSelection
+  ): readonly AssetOccupant[] {
+    const { asset } = selection;
+
+    return asset === null || this.#view === null ?
+      [] :
+      this.#view.occupancy.occupants(asset.id);
   }
 
   #open(

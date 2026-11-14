@@ -10,10 +10,8 @@ import { KindFilter } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import { assetNodeId } from "../../../src/catalog/AssetTreeModel.ts";
-import type {
-  AssetTreeView,
-  KindFilterSource
-} from "../../../src/shell/assets/AssetTreeView.ts";
+import type { AssetTreeView } from "../../../src/shell/assets/AssetTreeView.ts";
+import type { KindFilterSource } from "../../../src/shell/assets/AssetTreeViewOptions.ts";
 import { KIND_FILTER_CHANGE } from "../../../src/project/StudioProjectSettings.ts";
 import { FakeTreeCatalog } from "../../helpers/assetTree.ts";
 import {

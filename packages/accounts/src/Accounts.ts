@@ -48,6 +48,7 @@ import {
 import {
   AGENT_TOKEN_VIA,
   agentTokenSubject,
+  type AgentProfile,
   type AgentToken
 } from "./agent/AgentToken.ts";
 import { AgentTokens } from "./agent/AgentTokens.ts";
@@ -307,6 +308,12 @@ export class Accounts implements AuthenticationProvider, Disposable {
     return this.#directory.subscribe("revoked", listener);
   }
 
+  watchDisconnections(
+    listener: (subject: string) => void
+  ): () => void {
+    return this.#directory.subscribe("disconnected", listener);
+  }
+
   watchActivity(
     listener: (activity: AccountActivity) => void
   ): () => void {
@@ -386,8 +393,9 @@ function toAgentIdentity(
       username: token.name,
       peerId: token.id,
       avatar: null,
-      via: AGENT_TOKEN_VIA
-    } satisfies PeerProfileMetadata
+      via: AGENT_TOKEN_VIA,
+      ownerId: owner.id
+    } satisfies PeerProfileMetadata & AgentProfile
   };
 }
 

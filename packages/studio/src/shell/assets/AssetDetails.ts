@@ -10,10 +10,18 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
-import type { IconName } from "@jolly-pixel/ui";
+import type {
+  IconName,
+  PresencePeer
+} from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
+import "@jolly-pixel/ui/elements/presence-stack";
 
 // Import Internal Dependencies
+import {
+  occupantState,
+  type AssetOccupant
+} from "../../catalog/AssetOccupancy.ts";
 import {
   NO_ASSET_SUMMARY,
   type AssetSummary
@@ -25,6 +33,8 @@ import "./AssetPreview.ts";
 
 // CONSTANTS
 const kSelectionIcon: IconName = "file";
+const kMaxOccupants = 4;
+const kNoOccupants: readonly AssetOccupant[] = [];
 
 @customElement("asset-details")
 export class AssetDetails extends LitElement {
@@ -58,13 +68,32 @@ export class AssetDetails extends LitElement {
         flex: 0 0 auto;
       }
 
+      .meta-row {
+        display: flex;
+        align-items: center;
+        gap: var(--jolly-space-2);
+      }
+
       .meta {
+        flex: 1 1 auto;
+        min-width: 0;
         min-height: 1lh;
         margin: 0;
         overflow: hidden;
         color: var(--jolly-text-muted);
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      jolly-presence-stack {
+        flex: 0 0 auto;
+
+        --jolly-presence-stack-size: 18px;
+        --jolly-presence-stack-overlap: 4px;
+      }
+
+      jolly-presence-stack::part(tooltip) {
+        inset-inline: auto 0;
       }
     `
   ];
@@ -75,10 +104,14 @@ export class AssetDetails extends LitElement {
   @property({ attribute: false })
   declare previews: AssetPreviewCache | null;
 
+  @property({ attribute: false })
+  declare occupants: readonly AssetOccupant[];
+
   constructor() {
     super();
     this.summary = NO_ASSET_SUMMARY;
     this.previews = null;
+    this.occupants = kNoOccupants;
   }
 
   override render(): TemplateResult {
@@ -93,7 +126,10 @@ export class AssetDetails extends LitElement {
       </div>
       <section class="card-body" aria-labelledby="asset-details-title">
         ${this.#frame()}
-        ${renderMeta(this.summary)}
+        <div class="meta-row">
+          ${renderMeta(this.summary)}
+          ${this.#occupants()}
+        </div>
       </section>
     `;
   }
@@ -139,11 +175,34 @@ export class AssetDetails extends LitElement {
       `;
   }
 
+  #occupants(): TemplateResult | typeof nothing {
+    if (this.summary.subject !== "asset" || this.occupants.length === 0) {
+      return nothing;
+    }
+
+    return html`
+      <jolly-presence-stack
+        aria-label="Open by"
+        max=${kMaxOccupants}
+        .peers=${this.occupants.map(occupantPeer)}
+      ></jolly-presence-stack>
+    `;
+  }
+
   #open(
     assetId: string
   ): void {
     this.dispatchEvent(assetOpenEvent(assetId));
   }
+}
+
+function occupantPeer(
+  { peer, focused }: AssetOccupant
+): PresencePeer {
+  return {
+    ...peer,
+    activity: occupantState(focused)
+  };
 }
 
 function cardHeading(

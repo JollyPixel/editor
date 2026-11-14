@@ -6,7 +6,10 @@ import type { CreatedAgentTokenReply } from "@jolly-pixel/server";
 import { RemoteState } from "../api/RemoteState.ts";
 import type { AgentTokensClient } from "./AgentTokensClient.ts";
 
-export type AgentTokensSource = Pick<AgentTokensClient, "list" | "create" | "revoke">;
+export type AgentTokensSource = Pick<
+  AgentTokensClient,
+  "list" | "create" | "revoke" | "disconnect"
+>;
 
 export class StudioAgentTokens extends RemoteState {
   #client: AgentTokensSource;
@@ -43,5 +46,11 @@ export class StudioAgentTokens extends RemoteState {
     await this.run(() => this.#client.revoke(tokenId), () => {
       this.#tokens = this.#tokens.filter((token) => token.id !== tokenId);
     });
+  }
+
+  disconnect(
+    tokenId: string
+  ): Promise<void> {
+    return this.#client.disconnect(tokenId);
   }
 }

@@ -82,6 +82,12 @@ rights or `rights` is empty.
 
 Blocks further activity, then requests reauthentication after in-flight work drains.
 
+### `disconnect(subject): void`
+
+Blocks further activity, then closes every connection of `subject` with
+`4401` and the reason `"disconnected"` (`DISCONNECTED_CLOSE_REASON`) after
+in-flight work drains. The client reads it as a refusal and stops reconnecting.
+
 ### `updateProfile(subject, patch): void`
 
 Merges `patch` into the server-owned profile of every connection of `subject`, so

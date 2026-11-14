@@ -20,7 +20,7 @@ interface CreateAgentTokenRoute {
   Body: CreateAgentTokenBody;
 }
 
-interface RevokeAgentTokenRoute {
+interface AgentTokenRoute {
   Params: {
     tokenId: string;
   };
@@ -31,7 +31,12 @@ export async function golemRoutes(
   options: GolemRoutesOptions
 ): Promise<void> {
   const { agentTokens } = options.accounts;
-  const { list, create, revoke } = GOLEM_TOKENS_ROUTES;
+  const {
+    list,
+    create,
+    revoke,
+    disconnect
+  } = GOLEM_TOKENS_ROUTES;
 
   app.route({
     method: list.method,
@@ -57,11 +62,23 @@ export async function golemRoutes(
       return reply.code(201).send(created satisfies CreatedAgentTokenReply);
     }
   });
-  app.route<RevokeAgentTokenRoute>({
+  app.route<AgentTokenRoute>({
     method: revoke.method,
     url: revoke.path,
     handler: (request, reply) => {
       agentTokens.revoke(
+        signedInAccount(request).id,
+        request.params.tokenId
+      );
+
+      return reply.code(204).send();
+    }
+  });
+  app.route<AgentTokenRoute>({
+    method: disconnect.method,
+    url: disconnect.path,
+    handler: (request, reply) => {
+      agentTokens.disconnect(
         signedInAccount(request).id,
         request.params.tokenId
       );

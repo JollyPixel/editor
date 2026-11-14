@@ -11,6 +11,7 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 import type { CatalogShare } from "@jolly-pixel/editor.host";
 import {
   LazyTemplate,
@@ -43,6 +44,7 @@ import type { FileDownload } from "../browser/FileDownload.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
 import { StudioAgentChat } from "../golem/StudioAgentChat.ts";
+import { CatalogPresence } from "../catalog/CatalogPresence.ts";
 import type { GolemChatOpener } from "./golem/golemConsole.ts";
 import "./home/StudioHome.ts";
 import "./account/AccountBadge.ts";
@@ -260,6 +262,7 @@ export class Studio extends LitElement implements GolemChatOpener {
   declare _exportGame: (() => Promise<FileDownload>) | null;
 
   #session: StudioSession | null = null;
+  #presence: CatalogPresence | null = null;
   #scopes: PreferenceScopes | null = null;
   #browserState = new BrowserState();
   #settingsPage = new LazyTemplate(
@@ -345,12 +348,21 @@ export class Studio extends LitElement implements GolemChatOpener {
     this.#user.attach(user);
     this._agentChat?.dispose();
     this._agentChat = user.online ?
-      StudioAgentChat.join(user.client, this.#notifications) :
+      StudioAgentChat.join(
+        user.client,
+        this.#notifications,
+        user.agentTokens
+      ) :
+      null;
+    this.#presence?.dispose();
+    this.#presence = user.online ?
+      new CatalogPresence(user.client.room(CATALOG_ROOM)) :
       null;
     this._assets = {
       catalog,
       kinds: session.kinds,
       kindFilter: user.online ? user.project : null,
+      presence: this.#presence,
       shares: user.online ? user.shares : null,
       browserState: this.#browserState,
       notifications: this.#notifications,
@@ -411,6 +423,8 @@ export class Studio extends LitElement implements GolemChatOpener {
     this.#session = null;
     this._agentChat?.dispose();
     this._agentChat = null;
+    this.#presence?.dispose();
+    this.#presence = null;
     this.#notifications.dispose();
   }
 
@@ -448,6 +462,7 @@ export class Studio extends LitElement implements GolemChatOpener {
               @console-toggle=${this.#toggleConsole}
               @settings-open=${this.#openSettings}
               .user=${user}
+              .agentChat=${this._agentChat}
               .browserState=${this.#browserState}
               @studio-error=${this.#logError}
             ></studio-home>
@@ -509,7 +524,13 @@ export class Studio extends LitElement implements GolemChatOpener {
   };
 
   readonly #onTabsChange = (): void => {
-    if (this.#session?.tabs.active === SETTINGS_TAB_ID) {
+    const tabs = this.#session?.tabs;
+    if (tabs === undefined) {
+      return;
+    }
+
+    this.#presence?.showTabs(tabs.ids(), tabs.active);
+    if (tabs.active === SETTINGS_TAB_ID) {
       void this.#settingsPage.ready().catch((error: unknown) => {
         this.#fail(
           `Settings failed to load: ${errorMessage(error)}`

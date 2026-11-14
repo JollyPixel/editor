@@ -179,17 +179,17 @@ describe("Client — reconnect", () => {
     assert.match(errors[0], /failed to reopen the connection/);
   });
 
-  test("an unauthorized close stops reconnecting", (t) => {
+  test("an unauthorized close stops reconnecting and reports its reason", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
     const { client, sockets } = createReconnectingClient();
     sockets[0].open();
-    let unauthorized = 0;
-    client.on("unauthorized", () => unauthorized++);
+    const reasons: string[] = [];
+    client.on("unauthorized", (reason) => reasons.push(reason));
 
-    sockets[0].serverClose({ code: UNAUTHORIZED_CLOSE_CODE, reason: "unauthorized" });
+    sockets[0].serverClose({ code: UNAUTHORIZED_CLOSE_CODE, reason: "disconnected" });
     t.mock.timers.tick(10_000);
 
-    assert.strictEqual(unauthorized, 1);
+    assert.deepEqual(reasons, ["disconnected"]);
     assert.strictEqual(sockets.length, 1);
   });
 

@@ -24,6 +24,7 @@ import {
   type StudioUser
 } from "../../accounts/StudioUser.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
+import type { StudioAgentChat } from "../../golem/StudioAgentChat.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
@@ -154,6 +155,9 @@ export class StudioHome extends LitElement {
   @property({ attribute: false })
   declare browserState: BrowserState;
 
+  @property({ attribute: false })
+  declare agentChat: StudioAgentChat | null;
+
   @state()
   declare _exporting: boolean;
 
@@ -162,6 +166,7 @@ export class StudioHome extends LitElement {
   constructor() {
     super();
     this.assets = null;
+    this.agentChat = null;
     this.browserState = new BrowserState();
     this._exporting = false;
   }
@@ -196,7 +201,9 @@ export class StudioHome extends LitElement {
           </jolly-pane>
         </jolly-dock>
         <project-readme .options=${this.assets}></project-readme>
-        ${user?.online ? this.#usersDock(user) : nothing}
+        ${user?.online && this.agentChat !== null ?
+          this.#usersDock(user, this.agentChat) :
+          nothing}
       </jolly-dock-layout>
       ${user?.online ?
         nothing :
@@ -205,7 +212,8 @@ export class StudioHome extends LitElement {
   }
 
   #usersDock(
-    user: StudioSignedIn
+    user: StudioSignedIn,
+    agentChat: StudioAgentChat
   ): TemplateResult {
     return html`
       <jolly-dock
@@ -222,6 +230,7 @@ export class StudioHome extends LitElement {
           <studio-users
             .roster=${user.roster}
             .self=${user.account}
+            .agentChat=${agentChat}
           ></studio-users>
         </jolly-pane>
       </jolly-dock>

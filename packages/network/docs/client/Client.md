@@ -57,8 +57,10 @@ Closes the socket and cancels retries.
 ### Reconnecting
 
 Joined rooms lose their client id and peers, then rejoin on reconnect.
-Authentication refusal emits `unauthorized` and stops retries until
-`reconnect()`. Messages sent while refused are dropped; joined rooms rejoin
+Authentication refusal emits `unauthorized` with the close reason and stops
+retries until `reconnect()`. The reason is `"unauthorized"` for a refused
+credential and `"disconnected"` (`DISCONNECTED_CLOSE_REASON`) after
+`server.disconnect(subject)`. Messages sent while refused are dropped; joined rooms rejoin
 with their presence and resume payload, so `CommandSync` resends its pending
 changes.
 

@@ -174,7 +174,7 @@ describe("Server — revocations", () => {
     return {
       id,
       sendFrame: () => void 0,
-      close: (code) => closed.push(`${id}:${code}`)
+      close: (code, reason) => closed.push(`${id}:${code}:${reason}`)
     };
   }
 
@@ -199,7 +199,33 @@ describe("Server — revocations", () => {
     }
     await nextTimer(0);
 
-    assert.deepEqual(closed, ["A1:4001", "A2:4001"]);
+    assert.deepEqual(closed, [
+      "A1:4001:reauthenticate",
+      "A2:4001:reauthenticate"
+    ]);
+  });
+
+  test("a provider's disconnection closes every connection of that subject only as disconnected", async() => {
+    const disconnected = new Set<(subject: string) => void>();
+    const auth: AuthenticationProvider = {
+      authenticate: () => null,
+      watchDisconnections(listener) {
+        disconnected.add(listener);
+
+        return () => disconnected.delete(listener);
+      }
+    };
+    const closed: string[] = [];
+    await using server = new Server({ auth });
+    server.connect(closableClient("A", closed), { subject: "alice", role: "default" });
+    server.connect(closableClient("B", closed), { subject: "bob", role: "default" });
+
+    for (const listener of disconnected) {
+      listener("alice");
+    }
+    await nextTimer(0);
+
+    assert.deepEqual(closed, ["A:4401:disconnected"]);
   });
 
   test("drops the envelopes a revoked connection sends before it closes", async() => {

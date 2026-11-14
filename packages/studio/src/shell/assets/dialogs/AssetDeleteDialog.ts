@@ -20,9 +20,11 @@ import {
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/dialog";
+import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { AssetDeletion } from "../../../catalog/AssetDeletion.ts";
+import { AssetOccupancy } from "../../../catalog/AssetOccupancy.ts";
 
 export interface AssetDeleteConfirmation {
   companions: boolean;
@@ -39,6 +41,18 @@ export class AssetDeleteDialog extends LitElement {
       margin-block: var(--jolly-space-1, 4px) 0;
       padding-inline-start: var(--jolly-space-4, 16px);
       font-family: ui-monospace, monospace;
+    }
+
+    .occupied {
+      display: flex;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
+      margin-block-start: var(--jolly-space-2, 8px);
+      color: var(--jolly-warning);
+    }
+
+    .occupied jolly-icon {
+      flex: 0 0 auto;
     }
 
     jolly-checkbox {
@@ -65,6 +79,8 @@ export class AssetDeleteDialog extends LitElement {
     focus: () => this._cancelButton
   });
 
+  #occupancy = AssetOccupancy.EMPTY;
+
   constructor() {
     super();
     this._deletion = null;
@@ -72,8 +88,10 @@ export class AssetDeleteDialog extends LitElement {
   }
 
   open(
-    deletion: AssetDeletion
+    deletion: AssetDeletion,
+    occupancy: AssetOccupancy
   ): Promise<AssetDeleteConfirmation | null> {
+    this.#occupancy = occupancy;
     this._deletion = deletion;
     this._companions = true;
 
@@ -86,6 +104,9 @@ export class AssetDeleteDialog extends LitElement {
     const companions = deletion?.companions.map(
       (companion) => companion.path.toString()
     ) ?? [];
+    const occupied = this.#occupancy.removalWarning(
+      deletion?.removals(this._companions).map((asset) => asset.id) ?? []
+    );
 
     return html`
       <jolly-dialog
@@ -107,6 +128,12 @@ export class AssetDeleteDialog extends LitElement {
           ></jolly-checkbox>
           <ul>${companions.map((companion) => html`<li>${companion}</li>`)}</ul>
         ` : nothing}
+        ${occupied === null ? nothing : html`
+          <p class="occupied">
+            <jolly-icon name="warning"></jolly-icon>
+            ${occupied}
+          </p>
+        `}
         <jolly-button
           slot="actions"
           data-action="cancel"

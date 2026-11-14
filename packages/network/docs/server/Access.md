@@ -55,7 +55,11 @@ compares digests in constant time.
 ### Revocation
 
 Refusal emits `unauthorized` and stops retries. `server.revoke(subject)` forces
-reauthentication. Use HTTPS/WSS for remote credentials.
+reauthentication. `server.disconnect(subject)` closes the subject's connections
+as refused with the reason `"disconnected"`, so they stay closed until the
+client connects again, with a credential that still works. A provider's optional `watchRevocations(listener)`
+and `watchDisconnections(listener)` report subjects for the server to revoke
+or disconnect. Use HTTPS/WSS for remote credentials.
 
 ### Room admission
 

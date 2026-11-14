@@ -77,6 +77,8 @@ Throws `AssetClosedError` when `asset` is not open on this golem.
 
 Clears the published activity.
 
+The golem also publishes, as its `openAssets` presence on the catalog room, the assets it opened with `open` and the one its activity is on. The studio's asset tree draws them.
+
 ### `peers(): IterableIterator<Peer>`
 
 The people and agents connected to the studio, without the golem itself. Each `Peer` from `@jolly-pixel/network/client` carries its `role`, its `profile` (`username`, `via` for an agent) and its `presence`.
@@ -96,5 +98,7 @@ Closes every open asset, the chat and the socket. `using` calls it.
 ## Revoked tokens
 
 When the owner revokes the token or loses their account, the studio refuses the golem. Every unanswered command then fails with `GolemTokenRefusedError`, and so do every later `apply` and every `open` still waiting for its document.
+
+When the owner disconnects the golem from the studio's Users pane, the same calls fail with `GolemDisconnectedError` instead. The token still works: a new `Golem.connect` joins again.
 
 When the owner only changes role, the golem reconnects with the new role. Commands the new role may not send fail with `CommandDeniedError`.

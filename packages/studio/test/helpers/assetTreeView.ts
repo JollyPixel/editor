@@ -8,10 +8,11 @@ import {
 // Import Internal Dependencies
 import { AssetKindSet } from "../../src/catalog/AssetKindSet.ts";
 import { BrowserState } from "../../src/browser/BrowserState.ts";
-import {
-  AssetTreeView,
-  type KindFilterSource
-} from "../../src/shell/assets/AssetTreeView.ts";
+import { AssetTreeView } from "../../src/shell/assets/AssetTreeView.ts";
+import type {
+  KindFilterSource,
+  OccupancySource
+} from "../../src/shell/assets/AssetTreeViewOptions.ts";
 import type { FakeTreeCatalog } from "./assetTree.ts";
 
 // CONSTANTS
@@ -78,6 +79,7 @@ export interface TreeViewOptions {
   sharing?: boolean;
   picks?: Array<File | null>;
   kindFilter?: KindFilterSource;
+  presence?: OccupancySource;
   acceptLargeFiles?: boolean;
 }
 
@@ -89,6 +91,7 @@ export function treeView(
     sharing = false,
     picks = [],
     kindFilter = null,
+    presence = null,
     acceptLargeFiles = false
   } = options;
   const browserState = new BrowserState(new MemoryStorageAdapter());
@@ -101,6 +104,7 @@ export function treeView(
     catalog,
     kinds: TREE_KINDS,
     kindFilter,
+    presence,
     browserState,
     prompts: {
       open: (assetId) => prompted.push(`open ${assetId}`),

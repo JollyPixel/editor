@@ -9,6 +9,7 @@ export * from "./http/AttachmentDisposition.ts";
 export * from "./http/api.ts";
 export * from "./preferences/PreferenceScopes.ts";
 export * from "./preferences/api.ts";
+export * from "./presence/openAssets.ts";
 export * from "./project/KindFilter.ts";
 export * from "./project/ProjectManifest.ts";
 export * from "./project/ProjectRights.ts";

@@ -22,6 +22,10 @@ export const GOLEM_TOKENS_ROUTES = {
   revoke: {
     method: "DELETE",
     path: ":tokenId"
+  },
+  disconnect: {
+    method: "POST",
+    path: ":tokenId/disconnect"
   }
 } as const satisfies Record<string, ApiRoute>;
 

@@ -3,7 +3,6 @@ import {
   LitElement,
   css,
   html,
-  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -28,6 +27,12 @@ import {
   parseRoleAction,
   type UsersMenuTarget
 } from "../../accounts/UsersTreeModel.ts";
+import {
+  AGENT_CHAT_CHANGE,
+  type ChatAgent,
+  type StudioAgentChat
+} from "../../golem/StudioAgentChat.ts";
+import { ChangeController } from "../ChangeController.ts";
 import { RosterController } from "../RosterController.ts";
 import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 
@@ -66,6 +71,7 @@ export class UsersPane extends LitElement {
   declare _menu: HTMLElementTagNameMap["jolly-context-menu"] | null;
 
   #roster = new RosterController(this);
+  #agentChat = new ChangeController<StudioAgentChat>(this, AGENT_CHAT_CHANGE);
 
   #menuTarget: UsersMenuTarget | null = null;
 
@@ -81,6 +87,12 @@ export class UsersPane extends LitElement {
     this.#roster.attach(roster);
   }
 
+  set agentChat(
+    chat: StudioAgentChat
+  ) {
+    this.#agentChat.attach(chat);
+  }
+
   override render(): TemplateResult {
     const model = this.#model();
 
@@ -93,12 +105,10 @@ export class UsersPane extends LitElement {
         @jolly-toggle-expand=${this.#onToggleExpand}
         @jolly-context-request=${this.#onContextRequest}
       ></jolly-tree>
-      ${model.viewerIsAdmin ? html`
-        <jolly-context-menu
-          label="User actions"
-          @jolly-context-action=${this.#onContextAction}
-        ></jolly-context-menu>
-      ` : nothing}
+      <jolly-context-menu
+        label="User actions"
+        @jolly-context-action=${this.#onContextAction}
+      ></jolly-context-menu>
     `;
   }
 
@@ -112,7 +122,8 @@ export class UsersPane extends LitElement {
       roster.roles,
       roster,
       roster.requests,
-      this.self?.id ?? null
+      this.self?.id ?? null,
+      this.#agentChat.current?.agents ?? []
     );
   }
 
@@ -143,21 +154,18 @@ export class UsersPane extends LitElement {
   ): void => {
     const { id, x, y } = event.detail;
     const model = this.#model();
-    if (
-      !model.viewerIsAdmin ||
-      this._menu === null ||
-      id === null
-    ) {
+    const target = id === null ? undefined : model.target(id);
+    if (this._menu === null || target === undefined) {
       return;
     }
 
-    const target = model.target(id);
-    if (target === undefined) {
+    const items = model.menu(target);
+    if (items.length === 0) {
       return;
     }
 
     this.#menuTarget = target;
-    this._menu.items = model.menu(target);
+    this._menu.items = items;
     this._menu.openAt(x, y);
   };
 
@@ -172,7 +180,23 @@ export class UsersPane extends LitElement {
     else if (target?.type === "request") {
       this.#onRequestAction(target.request, event.detail.id);
     }
+    else if (target?.type === "agent" && event.detail.id === "disconnect") {
+      void this.#disconnect(target.agent);
+    }
   };
+
+  async #disconnect(
+    agent: ChatAgent
+  ): Promise<void> {
+    const confirmed = await showConfirm({
+      title: `Disconnect "${agent.username}"?`,
+      message: "It stays offline until it restarts, and its token keeps working.",
+      confirmLabel: "Disconnect"
+    });
+    if (confirmed) {
+      this.#run(this.#agentChat.attached.disconnect(agent));
+    }
+  }
 
   #onUserAction(
     entry: RosterEntry,

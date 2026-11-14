@@ -20,7 +20,11 @@ import { readChips } from "../helpers/notifications.ts";
 const kAgentProfile = {
   username: "Builder",
   peerId: "token-1",
-  via: "golem"
+  via: "golem",
+  ownerId: "alice-id"
+};
+const kTokens = {
+  disconnect: async() => undefined
 };
 
 function entry(
@@ -38,11 +42,12 @@ function entry(
 }
 
 describe("StudioAgentChat", () => {
-  test("lists the agents in the chat with what they are doing, and no person", () => {
+  test("lists one agent per token with its owner and activity, and no person", () => {
     const harness = chatRoomHarness();
     using chat = new StudioAgentChat(
       new AgentChatClient(harness.room),
-      new NotificationQueue()
+      new NotificationQueue(),
+      kTokens
     );
 
     harness.addPeer("alice", { username: "Alice" });
@@ -53,16 +58,23 @@ describe("StudioAgentChat", () => {
         assetId: "scene-1"
       }
     });
+    harness.addPeer("builder-again", kAgentProfile);
     harness.addPeer("helper", {
       ...kAgentProfile,
-      username: "Helper"
+      username: "Helper",
+      peerId: "token-2"
     });
 
     assert.deepEqual(
-      chat.agents.map(({ username, activity }) => [username, activity]),
+      chat.agents.map(({ username, tokenId, ownerId, activity }) => [
+        username,
+        tokenId,
+        ownerId,
+        activity
+      ]),
       [
-        ["Builder", { label: "Placing trees · 50%", assetId: "scene-1" }],
-        ["Helper", null]
+        ["Builder", "token-1", "alice-id", { label: "Placing trees · 50%", assetId: "scene-1" }],
+        ["Helper", "token-2", "alice-id", null]
       ]
     );
   });
@@ -72,7 +84,8 @@ describe("StudioAgentChat", () => {
     const notifications = new NotificationQueue();
     using chat = new StudioAgentChat(
       new AgentChatClient(harness.room),
-      notifications
+      notifications,
+      kTokens
     );
     harness.history([entry("1", { username: "Alice" }, "Add a tower")]);
 
@@ -91,7 +104,8 @@ describe("StudioAgentChat", () => {
   test("lets only a role that writes in the chat send", () => {
     using reader = new StudioAgentChat(
       new AgentChatClient(chatRoomHarness("read").room),
-      new NotificationQueue()
+      new NotificationQueue(),
+      kTokens
     );
 
     assert.equal(reader.canSay, false);

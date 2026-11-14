@@ -13,8 +13,15 @@ import {
   type PeerActivity
 } from "@jolly-pixel/network";
 import * as network from "@jolly-pixel/network/client";
-import { ProjectManifest } from "@jolly-pixel/server";
-import { AgentChatClient } from "@jolly-pixel/server/client";
+import {
+  ProjectManifest,
+  openAssets,
+  type OpenAssets as OpenAssetsPresence
+} from "@jolly-pixel/server";
+import {
+  AgentChatClient,
+  openAssetsChannel
+} from "@jolly-pixel/server/client";
 
 // Import Internal Dependencies
 import type { GolemAsset } from "../assets/GolemAsset.ts";
@@ -34,6 +41,7 @@ import {
   golemTarget,
   type GolemConnectOptions
 } from "./GolemConnectOptions.ts";
+import { GolemDisconnectedError } from "./errors/GolemDisconnectedError.ts";
 import { GolemTokenRefusedError } from "./errors/GolemTokenRefusedError.ts";
 import { StudioUnreachableError } from "./errors/StudioUnreachableError.ts";
 import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
@@ -97,8 +105,12 @@ export class Golem {
       })
     });
     const revoked = new AbortController();
-    client.on("unauthorized", () => {
-      revoked.abort(new GolemTokenRefusedError());
+    client.on("unauthorized", (reason) => {
+      revoked.abort(
+        reason === network.DISCONNECTED_CLOSE_REASON ?
+          new GolemDisconnectedError() :
+          new GolemTokenRefusedError()
+      );
     });
     const agentChat = AgentChatClient.join(client);
     try {
@@ -137,9 +149,10 @@ export class Golem {
   readonly chat: ChatChannel;
 
   #client: network.Client;
+  #presence: network.PresenceChannel<OpenAssetsPresence>;
   #manifest: ProjectManifest;
   #revoked: AbortSignal;
-  #opened = new OpenAssets();
+  #opened = new OpenAssets(() => this.#publishOpenAssets());
   #activity: ActivityMirror;
 
   constructor(
@@ -147,6 +160,7 @@ export class Golem {
   ) {
     this.url = connection.url;
     this.#client = connection.client;
+    this.#presence = openAssetsChannel(connection.client.room(CATALOG_ROOM));
     this.catalog = connection.catalog;
     this.#manifest = connection.manifest;
     this.chat = new ChatChannel(connection.agentChat);
@@ -211,16 +225,19 @@ export class Golem {
       throw new AssetClosedError(asset.id);
     }
     this.#activity.show(asset, activity);
+    this.#publishOpenAssets();
   }
 
   clearActivity(): void {
     this.#activity.clear();
+    this.#publishOpenAssets();
   }
 
   dispose(): void {
     for (const asset of [...this.assets()]) {
       asset.close();
     }
+    this.#presence.destroy();
     this.catalog.dispose();
     this.chat.dispose();
     this.#client.destroy();
@@ -296,6 +313,12 @@ export class Golem {
   ): void {
     this.#activity.forget(asset);
     this.#opened.forget(asset);
+  }
+
+  #publishOpenAssets(): void {
+    this.#presence.publish(
+      openAssets(this.#opened.heldBy(kAgent), this.#activity.assetId)
+    );
   }
 }
 

@@ -24,7 +24,7 @@ import {
 import type {
   AssetTreeCatalog,
   AssetTreeCatalogEvent
-} from "../../src/shell/assets/AssetTreeView.ts";
+} from "../../src/shell/assets/AssetTreeViewOptions.ts";
 
 export const COMPANION_RECORDS: AssetRecordData[] = [
   {
@@ -102,22 +102,29 @@ export function createCompanionModel(
   });
 }
 
-export function findLabel(
+export function findNode(
   nodes: readonly AssetTreeNode[],
   nodeId: string
-): string | undefined {
+): AssetTreeNode | undefined {
   for (const node of nodes) {
     if (node.id === nodeId) {
-      return node.label;
+      return node;
     }
 
-    const label = findLabel(node.children ?? [], nodeId);
-    if (label !== undefined) {
-      return label;
+    const found = findNode(node.children ?? [], nodeId);
+    if (found !== undefined) {
+      return found;
     }
   }
 
   return undefined;
+}
+
+export function findLabel(
+  nodes: readonly AssetTreeNode[],
+  nodeId: string
+): string | undefined {
+  return findNode(nodes, nodeId)?.label;
 }
 
 export class FakeTreeCatalog implements AssetTreeCatalog {

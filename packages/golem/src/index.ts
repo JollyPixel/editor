@@ -1,5 +1,6 @@
 export * from "./peer/Golem.ts";
 export type { GolemConnectOptions } from "./peer/GolemConnectOptions.ts";
+export * from "./peer/errors/GolemDisconnectedError.ts";
 export * from "./peer/errors/GolemTokenRefusedError.ts";
 export * from "./peer/errors/StudioUnreachableError.ts";
 export * from "./peer/errors/UnknownAssetError.ts";

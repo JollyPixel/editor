@@ -10,6 +10,13 @@ interface OpenedAsset {
 
 export class OpenAssets {
   #opened = new Map<string, OpenedAsset>();
+  #onChange: () => void;
+
+  constructor(
+    onChange: () => void
+  ) {
+    this.#onChange = onChange;
+  }
 
   get(
     assetId: string
@@ -20,6 +27,16 @@ export class OpenAssets {
   * values(): IterableIterator<GolemAsset> {
     for (const { asset } of this.#opened.values()) {
       yield asset;
+    }
+  }
+
+  * heldBy(
+    holder: AssetHolder
+  ): IterableIterator<string> {
+    for (const [assetId, { holders }] of this.#opened) {
+      if (holders.has(holder)) {
+        yield assetId;
+      }
     }
   }
 
@@ -44,6 +61,7 @@ export class OpenAssets {
       this.#opened.set(assetId, opened);
     }
     opened.holders.add(holder);
+    this.#onChange();
 
     return opened.asset;
   }
@@ -53,7 +71,12 @@ export class OpenAssets {
     holder: AssetHolder
   ): void {
     const opened = this.#opened.get(assetId);
-    if (opened?.holders.delete(holder) && opened.holders.size === 0) {
+    if (!opened?.holders.delete(holder)) {
+      return;
+    }
+
+    this.#onChange();
+    if (opened.holders.size === 0) {
       opened.asset.close();
     }
   }
@@ -62,6 +85,7 @@ export class OpenAssets {
     asset: GolemAsset
   ): void {
     this.#opened.delete(asset.id);
+    this.#onChange();
     for (const heldId of [...this.#opened.keys()]) {
       this.release(heldId, asset.id);
     }

@@ -49,4 +49,14 @@ export class AgentTokensClient {
       }
     });
   }
+
+  async disconnect(
+    tokenId: string
+  ): Promise<void> {
+    await this.#endpoint.send(GOLEM_TOKENS_ROUTES.disconnect, {
+      params: {
+        tokenId
+      }
+    });
+  }
 }
