@@ -134,6 +134,7 @@ export class Lantern extends Emitter<
   ): TourRun | null {
     if (
       !this.#autoStart ||
+      this.seen.muted ||
       this.#run !== null ||
       this.#tours.get(tour.id) !== tour ||
       this.seen.has(tour)
@@ -141,7 +142,14 @@ export class Lantern extends Emitter<
       return null;
     }
 
-    return this.start(tour);
+    const run = this.start(tour);
+    run.on("end", (outcome) => {
+      if (outcome === "skipped") {
+        this.seen.mute();
+      }
+    });
+
+    return run;
   }
 
   dispose(): void {

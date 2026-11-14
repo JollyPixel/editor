@@ -121,3 +121,13 @@ is not shared with the project or the other peers in a room.
 *In code:* `lantern.seen` ([`LanternSeen`](./docs/Lantern.md#lanternseen)) and
 `Tour.version`. `seen.forget()`, or `/tour.reset` in the console, makes tours
 unseen.
+
+### Offer
+
+Starting a tour on its own, such as when an editor first loads or a pane
+opens, for a user who has not seen it. Skipping an offered tour stops every
+later offer in this browser: one skip means "no tours". The tours can still be
+started from the toolbar or the console.
+
+*In code:* `lantern.offer()`, and `seen.muted` once an offered run is skipped.
+`seen.unmute()`, or `/tour.reset` without an id, turns offers back on.

@@ -79,17 +79,20 @@ describe("tour console", () => {
     assert.equal(lantern.current, null);
   });
 
-  test("reset forgets one tour, or every tour without an id", async() => {
+  test("reset forgets one tour, or every tour and resumes offers without an id", async() => {
     const { commands, lantern, basics, brushes } = registerTours();
     lantern.seen.record(basics);
     lantern.seen.record(brushes);
+    lantern.seen.mute();
 
     await commands.submit("/tour.reset editor.basics");
     assert.equal(lantern.seen.has(basics), false);
     assert.equal(lantern.seen.has(brushes), true);
+    assert.equal(lantern.seen.muted, true);
 
     await commands.submit("/tour.reset");
     assert.equal(lantern.seen.has(brushes), false);
+    assert.equal(lantern.seen.muted, false);
   });
 
   test("list marks the tours already taken", async() => {
