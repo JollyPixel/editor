@@ -149,6 +149,14 @@ export class BlockEditDialog extends EditingElement {
               preview: this.#shapePreview,
               onChange: this.#onShapeChange
             })}
+            <jolly-checkbox
+              align="end"
+              label="Collidable"
+              description="Blocks physics bodies when the map has collision"
+              description-display="tooltip"
+              .value=${block.collidable}
+              @jolly-change=${this.#onCollidableChange}
+            ></jolly-checkbox>
             ${this.#renderTransparency(block)}
             ${keyed(block.id, html`
               <custom-properties-editor
@@ -260,6 +268,12 @@ export class BlockEditDialog extends EditingElement {
   ): void => {
     this.#applyEdit({ shapeId: event.detail.value });
   };
+
+  #onCollidableChange(
+    event: CustomEvent<JollyChangeDetail<boolean>>
+  ): void {
+    this.#applyEdit({ collidable: event.detail.value });
+  }
 
   #onAlphaModeChange(
     event: CustomEvent<JollyChangeDetail<BlockAlphaMode>>

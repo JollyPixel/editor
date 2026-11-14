@@ -110,13 +110,13 @@ Yields one cube block per tile, in row-major order, with local ids starting at
 `1`. `limit` is the highest local id generated, `255` by default. With an `id`,
 the tile references name that blockset; with a `slot`, block ids are composed
 into it. `map` receives the local id and returns overrides. Generated blocks
-are not collidable unless `map` says so.
+are collidable unless `map` says otherwise.
 
 ```ts
 document.blocks.registerMany(
   blocksFromTileGrid({ id: "terrain", cols: 8, rows: 4 }, {
     limit: 32,
-    map: () => ({ collidable: true })
+    map: (blockId) => ({ name: `Terrain ${blockId}` })
   })
 );
 ```

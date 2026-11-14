@@ -28,11 +28,11 @@ export interface SilhouetteShape {
   ): SilhouetteView;
 }
 
-export interface HighlightSilhouetteOptions {
+export interface SilhouetteAnchorOptions {
   /**
-   * Mesh to outline. The overlay is attached to it.
+   * Object the overlay is attached to.
    */
-  target: THREE.Mesh;
+  target: THREE.Object3D;
   /**
    * @default "#ffffff"
    */
@@ -84,6 +84,13 @@ export interface HighlightSilhouetteOptions {
    * @default false
    */
   xrayDepthWrite?: boolean;
+}
+
+export interface HighlightSilhouetteOptions extends SilhouetteAnchorOptions {
+  /**
+   * Mesh to outline. The overlay is attached to it.
+   */
+  target: THREE.Mesh;
 }
 
 type SilhouetteMesh = THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
@@ -148,7 +155,7 @@ function scaledViewKey(
 }
 
 export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> {
-  #target: THREE.Mesh;
+  #target: THREE.Object3D;
   #shape: SilhouetteShape;
   #viewKey: string;
   #rings: SilhouetteRings;
@@ -161,7 +168,7 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
 
   protected constructor(
     shape: SilhouetteShape,
-    options: HighlightSilhouetteOptions
+    options: SilhouetteAnchorOptions
   ) {
     const {
       target,

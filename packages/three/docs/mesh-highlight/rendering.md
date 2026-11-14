@@ -96,9 +96,12 @@ techniques. `"boxSilhouette"` only accepts a `BoxGeometry` mesh.
 ### HighlightGroupSilhouette
 
 `"silhouette"` on a target that is not a mesh creates a
-`HighlightGroupSilhouette`: one `HighlightMeshSilhouette` per visible mesh
-under the target, the target included. An `InstancedMesh` and the objects of
-other highlight overlays are skipped.
+`HighlightGroupSilhouette` over the visible meshes under the target, the
+target included. An `InstancedMesh` and the objects of other highlight overlays
+are skipped. A single mesh gets its own `HighlightMeshSilhouette`. Several
+meshes share one outline of their convex hull, attached to the target, so
+crossing or touching parts draw no inner lines. Meshes that all lie in one
+plane enclose no hull and keep one outline each.
 
 ```ts
 const silhouette = new HighlightGroupSilhouette({
@@ -113,8 +116,8 @@ silhouette.dispose();
 ```
 
 It takes the `HighlightSilhouette` options with any `Object3D` as `target`.
-`update(cameraWorldPosition)` also outlines meshes added or shown since the
-last call and drops removed or hidden ones. `color`, `opacity`, `linewidth`,
+`update(cameraWorldPosition)` also follows meshes added, shown, removed,
+hidden, moved, or reshaped since the last call. `color`, `opacity`, `linewidth`,
 `xray` and `occludedOpacity` are writable properties.
 
 ### MergedHighlightOverlay

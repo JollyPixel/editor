@@ -66,7 +66,7 @@ export function* blocksFromTileGrid(
         id: composeBlockId(slot, blockId),
         name: `Block ${blockId}`,
         shapeId: "cube",
-        collidable: false,
+        collidable: true,
         properties: {},
         faceTextures: {},
         defaultTexture: {
