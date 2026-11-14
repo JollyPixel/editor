@@ -9,7 +9,7 @@ import {
 import {
   customElement,
   property,
-  state
+  query
 } from "lit/decorators.js";
 import "@jolly-pixel/ui/elements/button";
 
@@ -22,14 +22,12 @@ import {
   AGENT_CHAT_CHANGE,
   type StudioAgentChat
 } from "../../golem/StudioAgentChat.ts";
+import { BrowserState } from "../../browser/BrowserState.ts";
 import type { StudioPlay } from "../../play/StudioPlay.ts";
 import { ChangeController } from "../ChangeController.ts";
-import { StudioErrorEvent } from "../StudioErrorEvent.ts";
+import type { ExportDialog } from "../export/ExportDialog.ts";
+import "../export/ExportDialog.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
-import {
-  askExport,
-  exportFile
-} from "./askExport.ts";
 
 @customElement("studio-header-actions")
 export class HeaderActions extends LitElement {
@@ -64,8 +62,11 @@ export class HeaderActions extends LitElement {
   @property({ attribute: false })
   declare agentChat: StudioAgentChat | null;
 
-  @state()
-  declare _exporting: boolean;
+  @property({ attribute: false })
+  declare browserState: BrowserState;
+
+  @query("studio-export-dialog")
+  declare _exportDialog: ExportDialog;
 
   #user = new ChangeController<StudioUser>(this, STUDIO_USER_CHANGE);
   #chat = new ChangeController<StudioAgentChat>(this, AGENT_CHAT_CHANGE);
@@ -74,7 +75,7 @@ export class HeaderActions extends LitElement {
     super();
     this.play = null;
     this.agentChat = null;
-    this._exporting = false;
+    this.browserState = new BrowserState();
   }
 
   set user(
@@ -110,7 +111,7 @@ export class HeaderActions extends LitElement {
         icon-only
         label="Export"
         title=${user?.online ? "Export" : "Export needs the studio server"}
-        ?disabled=${this._exporting || !canExport}
+        ?disabled=${!canExport}
         @click=${this.#export}
       ></jolly-button>
       <jolly-button
@@ -121,6 +122,9 @@ export class HeaderActions extends LitElement {
         @click=${this.#openSettings}
       ></jolly-button>
       ${this.#golemButton(this.agentChat)}
+      <studio-export-dialog
+        .browserState=${this.browserState}
+      ></studio-export-dialog>
     `;
   }
 
@@ -161,28 +165,14 @@ export class HeaderActions extends LitElement {
 
   readonly #export = async(): Promise<void> => {
     const user = this.#user.current;
-    if (!user?.online || this._exporting) {
+    if (!user?.online) {
       return;
     }
 
-    const target = await askExport(this.play?.defaultScene ?? null);
-    if (target === null) {
-      return;
-    }
-
-    this._exporting = true;
-    try {
-      const download = await exportFile(user, target);
-      download.save();
-    }
-    catch (error) {
-      this.dispatchEvent(
-        StudioErrorEvent.from(error, `Could not export the ${target}`)
-      );
-    }
-    finally {
-      this._exporting = false;
-    }
+    await this._exportDialog.open({
+      user,
+      defaultScene: this.play?.defaultScene ?? null
+    });
   };
 }
 

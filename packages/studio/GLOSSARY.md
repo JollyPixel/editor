@@ -34,9 +34,18 @@ kind handler or editor code.
 ### Header actions
 
 The `<studio-header-actions>` buttons between Play and the account, on every tab:
-Search opens the console, Export asks whether to export the project or the
-game, Settings opens the Settings tab, and the chat button toggles the golem
-chat. Offline, Export is disabled and the chat button is gone.
+Search opens the console, Export opens the export dialog, Settings opens the
+Settings tab, and the chat button toggles the golem chat. Offline, Export is
+disabled and the chat button is gone.
+
+### Export dialog
+
+The `<studio-export-dialog>` the Export action opens. Its tiles are the
+export targets: Web (the game export), Desktop and Android (disabled until
+they are built) and Project (the sources archive). A target the project
+cannot export yet, such as Web without a default scene, says why and links to
+the setting. The dialog reopens on the last target picked in this browser and
+renames the download when the file name field is filled.
 
 ### Home
 
@@ -287,8 +296,8 @@ its errors as notifications.
 
 ### Game export
 
-`GET /api/project/game.zip`, offered as Export game in the Export dialog to a
-role with `studio.$export`, once the project has a default scene. It builds
+`GET /api/project/game.zip`, offered as the Web target of the export dialog
+to a role with `studio.$export`, once the project has a default scene. It builds
 every asset whose kind has a build, fails on the first error, and zips the
 built player as `index.html`, a game manifest starting from the default
 scene, and each artifact at the `builds/` path Play serves it from. A

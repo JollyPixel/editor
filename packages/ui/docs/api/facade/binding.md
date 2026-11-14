@@ -29,7 +29,7 @@ interface BindingOptions<TValue> extends FieldLayoutOptions {
   axisLabels?: Record<string, string>;
   axes?: "xy" | "xz" | "yz";
   axisStyle?: AxisStyle;
-  layout?: "segmented" | "grid";
+  layout?: "segmented" | "grid" | "tiles";
   columns?: number;
   count?: number;
   mode?: "mask" | "index";

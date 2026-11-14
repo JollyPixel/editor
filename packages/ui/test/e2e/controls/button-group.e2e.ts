@@ -102,4 +102,29 @@ test.describe("controls: button group", () => {
     );
     expect(await labelRatio(group)).toBeGreaterThan(0.46);
   });
+
+  test("stacks the icon over the label and shows captions only as tiles", async({ page }) => {
+    const group = row(page, "jolly-button-group", "default");
+    const paint = group.getByRole("radio", { name: "Paint" });
+
+    await group.evaluate((node: HTMLElementTagNameMap["jolly-button-group"]) => {
+      node.options = node.options.map((option) => {
+        return {
+          ...option,
+          caption: `${option.label} caption`
+        };
+      });
+    });
+    await expect(paint.locator(".segment-caption")).toHaveCount(0);
+
+    await group.evaluate((node: HTMLElementTagNameMap["jolly-button-group"]) => {
+      node.layout = "tiles";
+    });
+
+    await expect(paint.locator(".segment-caption")).toHaveText("Paint caption");
+    await expect(paint).toHaveCSS("flex-direction", "column");
+    const icon = await paint.locator("jolly-icon").boundingBox();
+    const label = await paint.locator(".segment-label").boundingBox();
+    expect(icon!.y + icon!.height).toBeLessThanOrEqual(label!.y);
+  });
 });

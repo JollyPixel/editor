@@ -448,12 +448,12 @@ export class Studio extends LitElement implements GolemChatOpener {
           <div class="divider" role="separator"></div>
           <studio-header-actions
             .user=${user}
+            .browserState=${this.#browserState}
             .play=${this._play}
             .agentChat=${this._agentChat}
             @console-toggle=${this.#toggleConsole}
             @settings-open=${this.#openSettings}
             @golem-chat-toggle=${this.#toggleGolemChat}
-            @studio-error=${this.#logError}
           ></studio-header-actions>
           ${account === null ? nothing : html`
             <div class="divider" role="separator"></div>

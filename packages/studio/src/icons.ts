@@ -315,3 +315,67 @@ registerIcon("chat", `
     fill="none"
   />
 `, { tone: "violet" });
+
+registerIcon("web", `
+  <path
+    class="tone-wash"
+    d="M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18Z"
+  />
+  <path
+    class="tone-ink"
+    d="M12 3a9 9 0 1 1 0 18a9 9 0 0 1 0-18ZM3 12h18M12 3c-2.5 2.5-3.5 5.5-3.5 9s1 6.5 3.5 9M12 3c2.5 2.5 3.5 5.5 3.5 9s-1 6.5-3.5 9"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`, { tone: "sky" });
+
+registerIcon("desktop", `
+  <path
+    class="tone-wash"
+    d="M3 4h18v12H3Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 4h18v12H3ZM9 20h6M12 16v4"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`, { tone: "violet" });
+
+registerIcon("mobile", `
+  <path
+    class="tone-wash"
+    d="M7 3h10v18H7Z"
+  />
+  <path
+    class="tone-ink"
+    d="M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM11 18h2"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`, { tone: "lime" });
+
+registerIcon("archive", `
+  <path
+    class="tone-wash"
+    d="M4 9h16v11H4Z"
+  />
+  <path
+    class="tone-ink"
+    d="M3 4h18v5H3ZM4 9v11h16V9M10 13h4"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`, { tone: "amber" });
