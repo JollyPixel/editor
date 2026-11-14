@@ -9,8 +9,7 @@ import {
 import {
   customElement,
   property,
-  query,
-  state
+  query
 } from "lit/decorators.js";
 import {
   AssetPath,
@@ -22,14 +21,12 @@ import "@jolly-pixel/ui/elements/context-menu";
 import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
-import type { FileDownload } from "../../browser/FileDownload.ts";
 import {
   PLAY_CHANGE,
   type StudioPlay
 } from "../../play/StudioPlay.ts";
 import { GENERAL_SECTION } from "../settings/SettingsSections.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
-import { StudioErrorEvent } from "../StudioErrorEvent.ts";
 
 @customElement("studio-play-button")
 export class PlayButton extends LitElement {
@@ -37,29 +34,51 @@ export class PlayButton extends LitElement {
     :host {
       display: inline-flex;
       align-items: center;
-      gap: 1px;
+      border-radius: var(--jolly-radius-md, 6px);
+      overflow: hidden;
+    }
+
+    :host([hidden]) {
+      display: none;
+    }
+
+    jolly-button {
+      --jolly-radius-sm: 0;
+      --jolly-control-height: 24px;
+    }
+
+    [data-action="play"] {
+      width: 76px;
+      font-weight: 600;
+    }
+
+    [data-action="play-menu"] {
+      --jolly-icon-button-size: 20px;
+    }
+
+    [data-action="play-menu"] jolly-icon {
+      --jolly-icon-size: 10px;
+
+      rotate: 90deg;
+      opacity: 0.7;
+    }
+
+    [data-action="play-menu"]:hover jolly-icon {
+      opacity: 1;
     }
   `;
 
   @property({ attribute: false })
   declare play: StudioPlay | null;
 
-  @property({ attribute: false })
-  declare exportGame: (() => Promise<FileDownload>) | null;
-
   @query("jolly-context-menu")
   declare _menu: HTMLElementTagNameMap["jolly-context-menu"] | null;
-
-  @state()
-  declare _exporting: boolean;
 
   #listening: AbortController | null = null;
 
   constructor() {
     super();
     this.play = null;
-    this.exportGame = null;
-    this._exporting = false;
   }
 
   override disconnectedCallback(): void {
@@ -80,11 +99,12 @@ export class PlayButton extends LitElement {
         { signal: this.#listening.signal }
       );
     }
+    this.hidden = this.#target() === null;
   }
 
   override render(): TemplateResult | typeof nothing {
     const play = this.play;
-    const target = play?.defaultScene ?? play?.currentScene ?? null;
+    const target = this.#target();
     if (play === null || target === null) {
       return nothing;
     }
@@ -92,6 +112,7 @@ export class PlayButton extends LitElement {
     return html`
       <jolly-button
         data-action="play"
+        variant="success"
         title=${`Play ${sceneName(target)} (F5)`}
         @click=${() => play.play("game")}
       >
@@ -100,34 +121,49 @@ export class PlayButton extends LitElement {
       </jolly-button>
       <jolly-button
         data-action="play-menu"
+        variant="success"
+        icon-only
+        label="Play options"
         aria-haspopup="menu"
         title="Play options"
         @click=${this.#openMenu}
+        @pointerenter=${this.#onMenuTriggerEnter}
+        @pointerleave=${this.#onMenuTriggerLeave}
       >
         <jolly-icon name="chevron"></jolly-icon>
       </jolly-button>
       <jolly-context-menu
         label="Play"
-        .items=${playMenu(
-          play.defaultScene,
-          play.currentScene,
-          this.#exportState()
-        )}
+        align="end"
+        hover
+        .items=${playMenu(play.defaultScene, play.currentScene)}
         @jolly-context-action=${this.#onAction}
       ></jolly-context-menu>
     `;
   }
 
+  #target(): AssetRecordData | null {
+    return this.play?.defaultScene ?? this.play?.currentScene ?? null;
+  }
+
   readonly #openMenu = (
     event: MouseEvent
   ): void => {
-    const button = event.currentTarget;
-    if (this._menu === null || !(button instanceof HTMLElement)) {
-      return;
+    if (event.currentTarget instanceof HTMLElement) {
+      this._menu?.openBelow(event.currentTarget);
     }
+  };
 
-    const { right, bottom } = button.getBoundingClientRect();
-    this._menu.openAt(right, bottom);
+  readonly #onMenuTriggerEnter = (
+    event: PointerEvent
+  ): void => {
+    this._menu?.onTriggerPointerEnter(event);
+  };
+
+  readonly #onMenuTriggerLeave = (
+    event: PointerEvent
+  ): void => {
+    this._menu?.onTriggerPointerLeave(event);
   };
 
   readonly #onAction = (
@@ -138,62 +174,17 @@ export class PlayButton extends LitElement {
       case "scene":
         this.play?.play(event.detail.id);
         break;
-      case "export":
-        void this.#exportGame();
-        break;
       case "settings":
         this.dispatchEvent(new SettingsOpenEvent(GENERAL_SECTION));
         break;
     }
   };
-
-  #exportState(): GameExportState {
-    if (this.exportGame === null) {
-      return "hidden";
-    }
-
-    return this._exporting ? "busy" : "idle";
-  }
-
-  async #exportGame(): Promise<void> {
-    if (this.exportGame === null || this._exporting) {
-      return;
-    }
-
-    this._exporting = true;
-    try {
-      const download = await this.exportGame();
-      download.save();
-    }
-    catch (error) {
-      this.dispatchEvent(
-        StudioErrorEvent.from(error, "Could not export the game")
-      );
-    }
-    finally {
-      this._exporting = false;
-    }
-  }
 }
 
-export type GameExportState = "hidden" | "idle" | "busy";
-
-export function playMenu(
+function playMenu(
   defaultScene: AssetRecordData | null,
-  currentScene: AssetRecordData | null,
-  gameExport: GameExportState
+  currentScene: AssetRecordData | null
 ): ContextMenuEntry[] {
-  const exportEntries: ContextMenuEntry[] = gameExport === "hidden" ?
-    [] :
-    [
-      {
-        id: "export",
-        label: gameExport === "busy" ? "Exporting game…" : "Export game",
-        icon: "export",
-        disabled: defaultScene === null || gameExport === "busy"
-      }
-    ];
-
   return [
     {
       id: "game",
@@ -210,7 +201,6 @@ export function playMenu(
       disabled: currentScene === null
     },
     "separator",
-    ...exportEntries,
     {
       id: "settings",
       label: "Set default scene…",

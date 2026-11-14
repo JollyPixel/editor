@@ -15,6 +15,7 @@ import {
   SEED_FOLDERS,
   type SeedOptions
 } from "./assets.ts";
+import { StudioHeader } from "./header.ts";
 import { Home } from "./home.ts";
 import { SettingsPage } from "./settings.ts";
 import { ShareLinksPane } from "./shares.ts";
@@ -32,6 +33,7 @@ export class StudioShell {
   readonly tabs: EditorTabs;
   readonly frames: EditorFrames;
   readonly home: Home;
+  readonly header: StudioHeader;
   readonly signIn: SignInDialog;
   readonly account: AccountBadge;
   readonly roster: Roster;
@@ -48,6 +50,7 @@ export class StudioShell {
     this.tabs = new EditorTabs(page);
     this.frames = new EditorFrames(page);
     this.home = new Home(page);
+    this.header = new StudioHeader(page);
     this.signIn = new SignInDialog(page);
     this.account = new AccountBadge(page);
     this.roster = new Roster(page);

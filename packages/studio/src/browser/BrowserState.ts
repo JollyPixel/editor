@@ -13,6 +13,7 @@ export const TABS_STORAGE_KEY = "studio:tabs";
 export const ASSET_KIND_STORAGE_KEY = "studio:asset-kind";
 export const EXPANDED_FOLDERS_STORAGE_KEY = "studio:asset-expanded";
 export const SETTINGS_SECTION_STORAGE_KEY = "studio:settings-section";
+export const EXPORT_TARGET_STORAGE_KEY = "studio:export-target";
 const kNodeIdsSchema = z.array(z.string());
 
 export class BrowserState {
@@ -66,6 +67,21 @@ export class BrowserState {
     this.storage.set(
       SETTINGS_SECTION_STORAGE_KEY,
       id
+    );
+  }
+
+  get exportTarget(): string {
+    return this.storage.get(
+      EXPORT_TARGET_STORAGE_KEY
+    ) ?? "";
+  }
+
+  set exportTarget(
+    name: string
+  ) {
+    this.storage.set(
+      EXPORT_TARGET_STORAGE_KEY,
+      name
     );
   }
 

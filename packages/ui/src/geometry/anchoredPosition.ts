@@ -15,13 +15,15 @@ export interface AnchorRect {
   right: number;
 }
 
+export type AnchorAlign = "center" | "start" | "end";
+
 export interface AnchoredPositionOptions {
   anchor: AnchorRect;
   panel: ViewportSize;
   viewport: ViewportSize;
   gap: number;
   side?: "above" | "below" | "left" | "right";
-  align?: "center" | "start" | "end";
+  align?: AnchorAlign;
 }
 
 export function anchoredPosition({
@@ -103,7 +105,7 @@ function alignedStart(
   start: number,
   end: number,
   size: number,
-  align: "center" | "start" | "end"
+  align: AnchorAlign
 ): number {
   switch (align) {
     case "center":

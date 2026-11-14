@@ -21,6 +21,15 @@ export const buttonGroupStyles = css`
     gap: var(--jolly-space-1, 4px);
   }
 
+  :host([layout="tiles"]) .group {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(var(--jolly-button-group-tile-size, 96px), 1fr)
+    );
+    gap: var(--jolly-space-1, 4px);
+  }
+
   .segment {
     position: relative;
     display: inline-flex;
@@ -40,20 +49,47 @@ export const buttonGroupStyles = css`
     ${fillTransition}
   }
 
-  :host(:not([layout="grid"])) .segment:first-child {
+  :host([layout="segmented"]) .segment:first-child {
     border-radius: var(--jolly-radius-sm, 2px) 0 0 var(--jolly-radius-sm, 2px);
   }
 
-  :host(:not([layout="grid"])) .segment:last-child {
+  :host([layout="segmented"]) .segment:last-child {
     border-radius: 0 var(--jolly-radius-sm, 2px) var(--jolly-radius-sm, 2px) 0;
   }
 
-  :host(:not([layout="grid"])) .segment:only-child {
+  :host([layout="segmented"]) .segment:only-child {
     border-radius: var(--jolly-radius-sm, 2px);
   }
 
   :host([layout="grid"]) .segment {
     border-radius: var(--jolly-radius-sm, 2px);
+  }
+
+  :host([layout="tiles"]) .segment {
+    --jolly-icon-size: var(--jolly-button-group-tile-icon-size, 40px);
+
+    flex-direction: column;
+    gap: var(--jolly-space-1, 4px);
+    height: auto;
+    min-height: var(--jolly-button-group-tile-size, 96px);
+    padding: var(--jolly-space-2, 8px);
+    border-radius: var(--jolly-radius-md, 6px);
+  }
+
+  :host([layout="tiles"]) .segment-label {
+    max-width: 100%;
+    font-weight: 600;
+  }
+
+  .segment-caption {
+    max-width: 100%;
+    color: var(--jolly-text-muted);
+
+    ${truncate}
+  }
+
+  .segment[aria-checked="true"] .segment-caption {
+    color: inherit;
   }
 
   .segment:hover:not(:disabled) {

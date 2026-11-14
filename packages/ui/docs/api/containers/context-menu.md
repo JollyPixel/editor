@@ -1,7 +1,8 @@
 # `jolly-context-menu`
 
-`jolly-context-menu` is a list of actions opened at a point. It holds no
-target: the consumer fills `items` and runs the chosen action.
+`jolly-context-menu` is a list of actions opened at a point or below a
+trigger button. It holds no target: the consumer fills `items` and runs the
+chosen action.
 
 ```ts
 const menu = document.createElement("jolly-context-menu");
@@ -35,6 +36,8 @@ menu.addEventListener("jolly-context-action", (event) => {
 interface ContextMenu {
   items: readonly ContextMenuEntry[]; // property only
   label: string; // accessible name of the menu
+  align: AnchorAlign; // default "start"
+  hover: boolean; // default false, see "Trigger buttons"
 
   readonly open: boolean;
 }
@@ -60,6 +63,9 @@ interface ContextMenuSwatch {
 When one item has an icon or a swatch, every item keeps an icon column. A
 swatch shows a colour choice, such as a material or a palette entry.
 
+`align` lines the menu up with the start, centre or end of its point or
+trigger, as in [`anchoredPosition`](../geometry.md#anchoredposition).
+
 ## Events
 
 ```ts
@@ -68,8 +74,9 @@ interface ContextMenuEvents {
 }
 ```
 
-- Choosing an item closes the menu, returns focus to the element focused when
-  `openAt` ran, then emits. An action that moves focus keeps it.
+- Choosing an item closes the menu, returns focus to the trigger, or to the
+  element focused when `openAt` ran, then emits. An action that moves focus
+  keeps it.
 - Closing without a choice emits nothing.
 - A right-click does not focus its target in every browser. Focus it before
   `openAt` so focus has somewhere to return.
@@ -86,15 +93,41 @@ Opens with the top-left corner at a viewport point.
 - Called while a pointer button is held (Linux fires `contextmenu` on press),
   it shows on release.
 
+### `openBelow(trigger: HTMLElement): void`
+
+Opens below `trigger`, flipping above it when there is no room below. The menu
+follows the trigger on scroll and resize, and otherwise behaves like `openAt`.
+
 ### `close(): void`
 
 Closes the menu.
+
+## Trigger buttons
+
+```ts
+html`<button
+  aria-haspopup="menu"
+  @click=${(event) => menu.openBelow(event.currentTarget)}
+  @pointerenter=${menu.onTriggerPointerEnter}
+  @pointerleave=${menu.onTriggerPointerLeave}
+>Options</button>
+<jolly-context-menu hover align="end"></jolly-context-menu>`;
+```
+
+- With `hover` set, resting on the trigger opens the menu below it, and
+  leaving both the trigger and the menu closes it. Both delays follow
+  [`PopoverController`](../interaction/popover-controller.md#hover).
+- `onTriggerPointerEnter` and `onTriggerPointerLeave` are bound handlers for
+  the trigger. They do nothing while `hover` is off.
+- A hover-opened menu does not take focus. A click on the trigger pins it open
+  and focuses the first enabled item.
 
 ## Keyboard and focus
 
 - The menu is a native `popover="auto"`: a click outside or Escape closes it.
 - It holds an [input layer](../interaction/input-layers.md) while open.
-- Opening focuses the first enabled item. Hovering an item focuses it.
+- `openAt` and `openBelow` focus the first enabled item. Hovering an item
+  focuses it.
 - Up and Down move between enabled items and wrap. Home and End jump to the
   ends.
 - Enter or Space chooses. Tab closes.

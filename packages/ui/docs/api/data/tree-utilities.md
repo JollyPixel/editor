@@ -35,12 +35,14 @@ interface ResolveReparentOptions<TData> {
 ```ts
 new TreeSnapshot<TData>(
   nodes: readonly TreeNode<TData>[],
-  expanded?: ReadonlySet<string>
+  expanded?: ReadonlySet<string>,
+  reserveToggle?: "level" | "tree" // default "level"
 )
 ```
 
 Indexes nodes, parents, depths and visible rows in one traversal. Build one
-when several operations inspect the same tree.
+when several operations inspect the same tree. `reserveToggle` matches the
+[`jolly-tree` property](./tree.md#row-layout) and changes each row's `indent`.
 
 ### `placement(id: string): TreePlacement | undefined`
 
@@ -53,6 +55,13 @@ interface TreePlacement {
 ```
 
 `undefined` for an unknown id.
+
+### `reservesToggle(id: string): boolean`
+
+`true` when the row keeps an empty toggle-width spacer so its label lines up
+with expandable rows. A row that can expand, or an unknown id, returns
+`false`. In `"level"` mode a row reserves when a sibling can expand; in
+`"tree"` mode it reserves when any row of the tree can expand.
 
 ## Functions
 

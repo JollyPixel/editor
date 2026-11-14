@@ -3,7 +3,10 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type { TreeNode } from "../../src/data/tree/contract.ts";
+import type {
+  TreeNode,
+  TreeReserveToggle
+} from "../../src/data/tree/contract.ts";
 import { TreeSnapshot } from "../../src/data/tree/model.ts";
 import {
   TreeRowLayout,
@@ -39,11 +42,15 @@ const kNestedIds = ["root", "open", "leaf", "middle", "last", "tail"];
 
 function createLayout(
   nodes: TreeNode[],
-  expanded: string[] = []
+  expanded: string[] = [],
+  reserveToggle: TreeReserveToggle = "level"
 ): TreeRowLayout {
   const expandedIds = new Set(expanded);
 
-  return new TreeRowLayout(new TreeSnapshot(nodes, expandedIds), expandedIds);
+  return new TreeRowLayout(
+    new TreeSnapshot(nodes, expandedIds, reserveToggle),
+    expandedIds
+  );
 }
 
 function readRails(
@@ -126,5 +133,17 @@ describe("Data.TreeRowLayout", () => {
     assert.equal(tree.spacer("a2a", false), "none");
     assert.equal(folders.spacer("c1", false), "none");
     assert.equal(folders.spacer("missing", false), "none");
+  });
+
+  test("a leaf reserves the toggle width at every level once the tree has a branch", () => {
+    const folders = createLayout(FOLDER_TREE, [], "tree");
+    const flat = createLayout([{ id: "flat", label: "Flat" }], [], "tree");
+    const owners = createLayout(OWNER_TREE.slice(2), [], "tree");
+
+    assert.equal(folders.spacer("c1", false), "inside");
+    assert.equal(folders.spacer("r1", true), "outside");
+    assert.equal(folders.spacer("r2", false), "none");
+    assert.equal(flat.spacer("flat", false), "none");
+    assert.equal(owners.spacer("companion", false), "none");
   });
 });

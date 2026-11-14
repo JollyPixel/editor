@@ -24,6 +24,7 @@ export interface ButtonDefaults {
 export type ButtonVariant =
   | "default"
   | "accent"
+  | "success"
   | "danger";
 
 @customElement("jolly-button")

@@ -81,10 +81,8 @@ export class LightingMenu extends LitElement {
   readonly #open = (
     event: MouseEvent
   ): void => {
-    const button = event.currentTarget;
-    if (button instanceof HTMLElement) {
-      const { left, bottom } = button.getBoundingClientRect();
-      this.menu.openAt(left, bottom);
+    if (event.currentTarget instanceof HTMLElement) {
+      this.menu.openBelow(event.currentTarget);
     }
   };
 

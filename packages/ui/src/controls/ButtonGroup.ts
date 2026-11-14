@@ -17,7 +17,7 @@ import type { JollyOption } from "./types.ts";
 import { RovingFocus } from "../interaction/focus/RovingFocus.ts";
 
 export interface ButtonGroupDefaults {
-  layout: "segmented" | "grid";
+  layout: "segmented" | "grid" | "tiles";
   columns: number;
 }
 
@@ -47,7 +47,7 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
   declare options: JollyOption<TValue>[];
 
   @property({ type: String, reflect: true })
-  declare layout: "segmented" | "grid";
+  declare layout: ButtonGroupDefaults["layout"];
 
   @property({ type: Number })
   declare columns: number;
@@ -115,6 +115,9 @@ export class ButtonGroup<TValue> extends JollyField<TValue> {
           ? nothing
           : html`<jolly-icon name=${option.icon}></jolly-icon>`}
         <span class="segment-label">${option.label}</span>
+        ${this.layout === "tiles" && option.caption !== undefined
+          ? html`<span class="segment-caption">${option.caption}</span>`
+          : nothing}
       </button>
     `;
   }

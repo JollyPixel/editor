@@ -21,6 +21,7 @@ export * from "./theme/DocumentTheme.ts";
 export * from "./geometry/Rect.ts";
 export {
   anchoredPosition,
+  type AnchorAlign,
   type AnchorRect,
   type AnchoredPositionOptions
 } from "./geometry/anchoredPosition.ts";

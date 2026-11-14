@@ -68,6 +68,7 @@ export const CONTEXT_MENU_EXAMPLE = createSimpleExample(
   () => {
     const root = document.createElement("div");
     const menu = document.createElement("jolly-context-menu");
+    menu.id = "row-menu";
     menu.label = "Row actions";
     let target = "";
 
@@ -94,11 +95,42 @@ export const CONTEXT_MENU_EXAMPLE = createSimpleExample(
       root.dataset.result = `${event.detail.id}:${target}`;
     });
 
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "options";
+    trigger.textContent = "Options";
+    trigger.style.display = "block";
+    trigger.style.marginInline = "auto";
+    const triggerMenu = document.createElement("jolly-context-menu");
+    triggerMenu.id = "options-menu";
+    triggerMenu.label = "Options";
+    triggerMenu.align = "end";
+    triggerMenu.hover = true;
+    triggerMenu.items = [
+      {
+        id: "export",
+        label: "Export everything"
+      },
+      {
+        id: "settings",
+        label: "Settings"
+      }
+    ];
+    trigger.addEventListener("click", () => triggerMenu.openBelow(trigger));
+    trigger.addEventListener("pointerenter", triggerMenu.onTriggerPointerEnter);
+    trigger.addEventListener("pointerleave", triggerMenu.onTriggerPointerLeave);
+    triggerMenu.addEventListener("jolly-context-action", (event) => {
+      root.dataset.result = `${event.detail.id}:Options`;
+    });
+
     root.append(
       text("Right-click a row, or focus it and press Shift+F10."),
       text("Wing sits at the right edge, so its submenus open on the left."),
       ...rows,
-      menu
+      text("Options opens below its button on hover or click, aligned to its end."),
+      trigger,
+      menu,
+      triggerMenu
     );
 
     return root;

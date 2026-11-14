@@ -12,6 +12,10 @@ import {
 } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import {
+  iconTone,
+  type IconTone
+} from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/tab";
 import "@jolly-pixel/ui/elements/tabs";
@@ -28,6 +32,7 @@ import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import type { ProjectDrafts } from "../../project/ProjectDrafts.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { cardStyles } from "../cardStyles.ts";
+import { navRowStyles } from "./navRowStyles.ts";
 import {
   SettingsSections,
   type SettingsGroup,
@@ -61,7 +66,7 @@ type ProjectSection = Exclude<
 
 @customElement("studio-settings")
 export class StudioSettings extends LitElement {
-  static override styles = [cardStyles, css`
+  static override styles = [cardStyles, navRowStyles, css`
     :host {
       display: flex;
       gap: var(--studio-gutter);
@@ -114,37 +119,6 @@ export class StudioSettings extends LitElement {
       margin: 0;
       padding: 0 var(--jolly-space-1);
       list-style: none;
-    }
-
-    nav button {
-      display: flex;
-      align-items: center;
-      gap: var(--jolly-space-2);
-      box-sizing: border-box;
-      width: 100%;
-      min-height: 28px;
-      padding: 0 var(--jolly-space-2);
-      border: none;
-      border-radius: var(--jolly-radius-sm);
-      background: none;
-      color: inherit;
-      font: inherit;
-      text-align: start;
-      cursor: pointer;
-    }
-
-    nav button:hover {
-      background: var(--jolly-control-bg-hover);
-    }
-
-    nav button[aria-current="page"] {
-      background: var(--jolly-control-bg-active);
-      font-weight: 600;
-    }
-
-    nav button:focus-visible {
-      outline: 2px solid var(--jolly-focus-ring);
-      outline-offset: -2px;
     }
 
     nav button jolly-icon {
@@ -362,32 +336,41 @@ export class StudioSettings extends LitElement {
           html`<h3 id=${headingId}>${group.label}</h3>`}
         <ul>
           ${group.sections.map((section) => html`
-            <li>
-              <button
-                type="button"
-                data-section=${section.id}
-                aria-current=${section === current ? "page" : nothing}
-                @click=${this.#onSectionClick}
-              >
-                ${section.icon === undefined ?
-                  nothing :
-                  html`<jolly-icon
-                    name=${section.icon}
-                    tone=${section.tone ?? ""}
-                  ></jolly-icon>`}
-                <span>${section.label}</span>
-                ${drafts !== null && section.unsaved?.(drafts) ?
-                  html`<span
-                    class="unsaved"
-                    role="img"
-                    aria-label="Unsaved changes"
-                  ></span>` :
-                  nothing}
-              </button>
-            </li>
+            <li>${this.#sectionButton(section, section === current, drafts)}</li>
           `)}
         </ul>
       </section>
+    `;
+  }
+
+  #sectionButton(
+    section: SettingsSection,
+    current: boolean,
+    drafts: ProjectDrafts | null
+  ): TemplateResult {
+    const tone = sectionTone(section);
+
+    return html`
+      <button
+        class="nav-row"
+        type="button"
+        data-section=${section.id}
+        aria-current=${current ? "page" : nothing}
+        style=${tone === null ? nothing : `--nav-row-tone: var(--jolly-tone-${tone})`}
+        @click=${this.#onSectionClick}
+      >
+        ${section.icon === undefined ?
+          nothing :
+          html`<jolly-icon name=${section.icon} tone=${tone ?? ""}></jolly-icon>`}
+        <span>${section.label}</span>
+        ${drafts !== null && section.unsaved?.(drafts) ?
+          html`<span
+            class="unsaved"
+            role="img"
+            aria-label="Unsaved changes"
+          ></span>` :
+          nothing}
+      </button>
     `;
   }
 
@@ -496,6 +479,16 @@ export class StudioSettings extends LitElement {
         return section satisfies never;
     }
   }
+}
+
+function sectionTone(
+  section: SettingsSection
+): IconTone | null {
+  if (section.tone !== undefined) {
+    return section.tone;
+  }
+
+  return section.icon === undefined ? null : iconTone(section.icon);
 }
 
 declare global {

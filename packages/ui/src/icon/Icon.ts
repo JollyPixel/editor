@@ -75,13 +75,21 @@ export class Icon extends LitElement {
       transition: fill var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
     }
 
-    .tone-ink {
+    .tone-ink,
+    .tone-wash {
       color: color-mix(
         in oklab,
         var(--jolly-icon-tone-color, currentcolor) var(--jolly-icon-tone-mix),
         currentcolor
       );
       transition: color var(--jolly-duration-fast, 100ms) var(--jolly-easing, ease);
+    }
+
+    .tone-wash {
+      fill: light-dark(
+        color-mix(in oklab, currentcolor 20%, transparent),
+        color-mix(in oklab, currentcolor 35%, transparent)
+      );
     }
   `;
 

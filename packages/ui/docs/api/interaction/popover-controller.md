@@ -24,7 +24,7 @@ interface PopoverControllerOptions {
   placeAgainst?: () => AnchorRect | null;
   gap?: number; // default 4
   side?: PopoverSide | (() => PopoverSide); // callback runs on each placement
-  align?: "center" | "start" | "end"; // default "start"
+  align?: AnchorAlign | (() => AnchorAlign); // default "start"
   openOnHover?: { delay?: number; }; // ms, default 200
   closeOnHoverLeave?: { delay?: number; }; // ms, default 200
   claimsInput?: boolean; // default true, holds an input layer while open
@@ -35,9 +35,11 @@ interface PopoverControllerOptions {
 }
 
 type PopoverSide = "above" | "below" | "left" | "right";
+type AnchorAlign = "center" | "start" | "end";
 ```
 
-`claimsInput` holds an [input layer](./input-layers.md).
+`claimsInput` holds an [input layer](./input-layers.md). `AnchorAlign` comes
+from [`anchoredPosition`](../geometry.md#anchoredposition).
 
 ## Members
 
@@ -53,7 +55,7 @@ type PopoverSide = "above" | "below" | "left" | "right";
   `toggle`, which can be a frame late.
 - Each placement sets `--jolly-overlay-origin` to the point nearest the
   anchor's centre, which the overlay motion scales from.
-- Focus returns on close only to an element anchor.
+- Focus returns on close only to an element anchor, before `onClose` runs.
 - When a host update replaces an open popover or its element anchor, the
   controller closes it.
 
@@ -83,7 +85,8 @@ html`<button popovertarget="options"
 - `closeOnHoverLeave`: bind both handlers to the trigger and the popover.
   Entering either one cancels a pending close.
 - Touch pointers, disabled triggers and point anchors do not open on hover.
-- Hover does not move focus. Keyboard focus inside the popover keeps it open.
+- Hover does not move focus. Keyboard focus inside the popover keeps it open
+  until the pointer enters the popover.
 - The first click on the trigger of a hover-opened popover pins it open
   instead of closing it.
 - `show()`, `hide()`, native toggles and disconnection cancel pending hover

@@ -44,6 +44,7 @@ import {
   renderGuides,
   renderIcon,
   renderLabelText,
+  renderStateToggle,
   renderSwatch,
   renderWarning
 } from "./rowTemplates.ts";
@@ -60,6 +61,7 @@ import {
   type TreeIndentGuidesScope,
   type TreeNode,
   type TreeRenameValidator,
+  type TreeReserveToggle,
   type TreeSwatchPosition,
   type TreeToggleStyle
 } from "./contract.ts";
@@ -149,6 +151,12 @@ export class Tree<TData = unknown> extends LitElement
 
   @property({
     reflect: true,
+    attribute: "reserve-toggle"
+  })
+  declare reserveToggle: TreeReserveToggle;
+
+  @property({
+    reflect: true,
     attribute: "swatch-position"
   })
   declare swatchPosition: TreeSwatchPosition;
@@ -223,6 +231,7 @@ export class Tree<TData = unknown> extends LitElement
     this.indentGuides = false;
     this.indentGuidesScope = "all";
     this.toggleStyle = "chevron";
+    this.reserveToggle = "level";
     this.swatchPosition = "end";
     this.acceptDrop = null;
     this.dragOut = null;
@@ -290,6 +299,7 @@ export class Tree<TData = unknown> extends LitElement
     if (
       changed.has("nodes") ||
       changed.has("expanded") ||
+      changed.has("reserveToggle") ||
       !query.equals(this.#filtered.query)
     ) {
       this.#rebuild(query);
@@ -325,7 +335,11 @@ export class Tree<TData = unknown> extends LitElement
     query: SearchQuery
   ): void {
     this.#filtered = new TreeFilter(this.nodes, query);
-    this.#snapshot = new TreeSnapshot(this.#filtered.nodes, this.#expandedIds);
+    this.#snapshot = new TreeSnapshot(
+      this.#filtered.nodes,
+      this.#expandedIds,
+      this.reserveToggle
+    );
     this.#layout = new TreeRowLayout(this.#snapshot, this.#expandedIds);
     this.#layout.follow(this.#selectedIds);
   }
@@ -474,28 +488,8 @@ export class Tree<TData = unknown> extends LitElement
           ${view.swatchPosition === "end" ? renderSwatch(view, this.#onActivateSwatch) : nothing}
           ${renderWarning(view)}
           ${renderBadges(view)}
-          ${view.visible === undefined ? nothing : html`
-            <button
-              class="visible-toggle"
-              type="button"
-              tabindex="-1"
-              data-active=${view.visible ? "true" : "false"}
-              aria-label=${view.visible ? "Hide" : "Show"}
-              aria-pressed=${view.visible ? "true" : "false"}
-              @click=${(event: Event) => this.#onToggleVisible(event, id)}
-            ><jolly-icon name="eye" aria-hidden="true"></jolly-icon></button>
-          `}
-          ${view.locked === undefined ? nothing : html`
-            <button
-              class="lock-toggle"
-              type="button"
-              tabindex="-1"
-              data-active=${view.locked ? "true" : "false"}
-              aria-label=${view.locked ? "Unlock" : "Lock"}
-              aria-pressed=${view.locked ? "true" : "false"}
-              @click=${(event: Event) => this.#onToggleLock(event, id)}
-            ><jolly-icon name="lock" aria-hidden="true"></jolly-icon></button>
-          `}
+          ${renderStateToggle("visible", view.visible, (event) => this.#onToggleVisible(event, id))}
+          ${renderStateToggle("lock", view.locked, (event) => this.#onToggleLock(event, id))}
           ${view.reorderable ? html`
             <button
               class="grip"

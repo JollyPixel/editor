@@ -328,6 +328,7 @@ export class AssetBrowser extends LitElement {
           row-drag
           indent-guides
           toggle-style="box"
+          reserve-toggle="tree"
           activate-on-double-click
           .nodes=${view?.nodes ?? AssetTreeModel.EMPTY.nodes}
           .expanded=${[...view?.expanded ?? []]}
@@ -629,10 +630,9 @@ export class AssetBrowser extends LitElement {
   };
 
   readonly #openNewAssetMenu = (): void => {
-    const anchor = this._newAssetButton.getBoundingClientRect();
     this.#menuTarget = this.#selection();
     this._menu.items = newAssetMenu(this.#kinds);
-    this._menu.openAt(anchor.left, anchor.bottom);
+    this._menu.openBelow(this._newAssetButton);
   };
 
   readonly #onContextAction = (

@@ -7,6 +7,7 @@ import type {
 // Import Internal Dependencies
 import {
   anchoredPosition,
+  type AnchorAlign,
   type AnchorRect
 } from "../geometry/anchoredPosition.ts";
 import { inputLayers } from "../interaction/input/InputLayers.ts";
@@ -42,9 +43,10 @@ export interface PopoverControllerOptions {
    */
   side?: PopoverSide | (() => PopoverSide);
   /**
-   * Alignment perpendicular to the side; defaults to start.
+   * Alignment perpendicular to the side; defaults to start. Callbacks run on
+   * each placement.
    */
-  align?: "center" | "start" | "end";
+  align?: AnchorAlign | (() => AnchorAlign);
   /**
    * Enable hover opening; bind both pointer handlers to the trigger.
    */
@@ -117,6 +119,9 @@ export class PopoverController implements ReactiveController {
   ): void => {
     this.#cancelHover();
     this.#cancelHoverClose();
+    if (event.currentTarget === this.#options.popover()) {
+      this.#pointerInteraction = true;
+    }
     if (
       !this.#options.openOnHover ||
       event.pointerType === "touch"
@@ -245,12 +250,12 @@ export class PopoverController implements ReactiveController {
       this.#activeAnchor = null;
       this.#unlisten();
       this.#endHoverOpen();
-      this.#options.onClose?.();
 
       const anchor = this.#options.anchor();
       if (this.#restoreFocus && anchor instanceof HTMLElement) {
         anchor.focus();
       }
+      this.#options.onClose?.();
     }
 
     this.#host.requestUpdate();
@@ -297,9 +302,8 @@ export class PopoverController implements ReactiveController {
       panel,
       viewport,
       gap: this.#options.gap ?? kDefaultGap,
-      side: typeof this.#options.side === "function" ?
-        this.#options.side() : this.#options.side,
-      align: this.#options.align
+      side: resolve(this.#options.side),
+      align: resolve(this.#options.align)
     }));
     this.#options.onReposition?.();
   }
@@ -469,4 +473,10 @@ export class PopoverController implements ReactiveController {
       true
     );
   }
+}
+
+function resolve<T extends string>(
+  option: T | (() => T) | undefined
+): T | undefined {
+  return typeof option === "function" ? option() : option;
 }

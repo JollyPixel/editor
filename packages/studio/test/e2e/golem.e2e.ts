@@ -42,4 +42,10 @@ test("the golem chat carries a person's message to an agent and its answers back
   await agent.chat.say("Done");
   await expect(page.getByRole("status").filter({ hasText: "Done" }))
     .toBeVisible();
+
+  await studio.header.action("Open the golem chat").click();
+  await expect(chat.root).toBeVisible();
+  await expect(chat.prompt).toBeFocused();
+  await studio.header.action("Close the golem chat").click();
+  await expect(chat.root).toBeHidden();
 });

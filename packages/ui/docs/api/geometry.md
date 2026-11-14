@@ -33,7 +33,8 @@ const { x, y } = anchoredPosition({
 - `side` is the preferred side, `"above"`, `"below"` (default), `"left"` or
   `"right"`. The panel flips to the opposite side when it does not fit there
   and fits on the other one.
-- `align` is `"start"` (default), aligned with the anchor's top or left edge,
-  `"center"`, or `"end"`, aligned with its bottom or right edge.
+- `align` is an `AnchorAlign`: `"start"` (default), aligned with the anchor's
+  top or left edge, `"center"`, or `"end"`, aligned with its bottom or right
+  edge.
 - The result is clamped to the viewport. A panel larger than the viewport
   starts at its edge.
