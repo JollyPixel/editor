@@ -150,7 +150,8 @@ The host already registers these namespaces, so an editor must not reuse them:
 
 `context.lantern` is one `Lantern` per page. Register tours in `mount` and
 release them in `dispose()`. `offer(tour)` starts a tour for users who never
-saw it; offers are off while `navigator.webdriver` is set.
+saw it; offers are off while `navigator.webdriver` is set, and once the user
+skips an offered tour, until `/tour.reset` runs without an id.
 
 ```ts
 const release = context.lantern.register(basics);

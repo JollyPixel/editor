@@ -52,7 +52,7 @@ export function tourConsole(
     }
   });
   namespace.registerCommand("reset", {
-    description: "Mark a tour as not taken, or every tour without an id",
+    description: "Mark a tour as not taken, or every tour and resume offers without an id",
     args: [
       {
         name: "id",
@@ -63,6 +63,9 @@ export function tourConsole(
     execute: ({ id }, ctx) => {
       const tours = id === undefined ? [...lantern] : [lantern.tour(id)];
       lantern.seen.forget(...tours);
+      if (id === undefined) {
+        lantern.seen.unmute();
+      }
       ctx.print(`${tours.length} tour(s) marked as not taken`);
     }
   });

@@ -47,4 +47,15 @@ describe("LanternSeen", () => {
     assert.equal(seen.has(first), false);
     assert.equal(seen.has(second), true);
   });
+
+  test("keeps offers muted in storage until unmuted", () => {
+    const storage = new MemoryStorageAdapter();
+    new LanternSeen(storage).mute();
+
+    const seen = new LanternSeen(storage);
+    assert.equal(seen.muted, true);
+
+    seen.unmute();
+    assert.equal(new LanternSeen(storage).muted, false);
+  });
 });

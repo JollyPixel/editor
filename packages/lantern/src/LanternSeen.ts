@@ -6,6 +6,9 @@ import type { Tour } from "./tour/Tour.ts";
 
 // CONSTANTS
 const kKeyPrefix = "jolly-pixel:lantern:";
+const kMutedKey = "jolly-pixel:lantern-muted";
+const kMuted = "1";
+const kUnmuted = "0";
 
 export class LanternSeen {
   #storage: StorageAdapter;
@@ -14,6 +17,18 @@ export class LanternSeen {
     storage: StorageAdapter
   ) {
     this.#storage = storage;
+  }
+
+  get muted(): boolean {
+    return this.#storage.get(kMutedKey) === kMuted;
+  }
+
+  mute(): void {
+    this.#storage.set(kMutedKey, kMuted);
+  }
+
+  unmute(): void {
+    this.#storage.set(kMutedKey, kUnmuted);
   }
 
   has(

@@ -72,8 +72,11 @@ starts.
 ### `lantern.offer(tour: Tour): TourRun | null`
 
 Starts the tour for someone who has not seen it yet, such as on an editor's first load. Returns
-`null` and starts nothing when `autoStart` is off, another tour is running, the tour is not
-registered, or it is already seen.
+`null` and starts nothing when `autoStart` is off, offers are [muted](#seen-muted-boolean), another
+tour is running, the tour is not registered, or it is already seen.
+
+Skipping an offered tour mutes offers, so one skip declines every tour. Skipping a tour started
+with `start` does not.
 
 ### `lantern.current: TourRun | null`
 
@@ -133,3 +136,14 @@ True when the stored version is equal to or greater than `tour.version`.
 
 Makes the tours unseen again. `StorageAdapter` has no removal, so this stores `"0"`. To forget
 every registered tour: `lantern.seen.forget(...lantern)`.
+
+### `seen.muted: boolean`
+
+True once the user skipped an offered tour. `lantern.offer` then starts nothing. Stored as `"1"`
+under `jolly-pixel:lantern-muted`.
+
+### `seen.mute(): void`
+
+### `seen.unmute(): void`
+
+Lets `lantern.offer` start tours again.

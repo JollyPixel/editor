@@ -108,6 +108,34 @@ describe("Lantern", () => {
     assert.equal(lantern.offer(basics), null);
   });
 
+  test("stops offering every tour once an offered tour is skipped", async() => {
+    const { lantern } = page();
+    lantern.register(basics);
+    lantern.register(brushes);
+    const run = lantern.offer(basics)!;
+    run.skip();
+    await once(run, "end");
+
+    assert.equal(lantern.seen.muted, true);
+    assert.equal(lantern.offer(brushes), null);
+    assert.equal(lantern.start(brushes).tour, brushes);
+  });
+
+  test("keeps offering after a started tour is skipped or an offered tour is finished", async() => {
+    const { lantern } = page();
+    lantern.register(basics);
+    lantern.register(brushes);
+    const started = lantern.start(basics);
+    started.skip();
+    await once(started, "end");
+
+    const offered = lantern.offer(brushes)!;
+    await offered.next();
+
+    assert.equal(lantern.seen.muted, false);
+    assert.equal(lantern.seen.has(brushes), true);
+  });
+
   test("offers nothing while a tour runs, for an unregistered tour, or without autoStart", () => {
     const running = page();
     running.lantern.register(basics);
