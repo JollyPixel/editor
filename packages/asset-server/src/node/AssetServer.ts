@@ -48,7 +48,7 @@ export interface AssetServerOptions {
   root: string;
   handlers?: AnyAssetKindHandler[];
   /**
-   * Documents written when the project holds no file at their path.
+   * Documents written when the project holds no document yet.
    */
   seed?: AssetSeedMap;
   /**
@@ -132,7 +132,7 @@ export class AssetServer implements AsyncDisposable {
           ignore: options.ignore
         })
     );
-    if (seed) {
+    if (seed && (await source.list()).length === 0) {
       await seedAssetSource(source, seed, { handlers });
     }
 

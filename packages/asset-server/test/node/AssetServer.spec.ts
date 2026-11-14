@@ -32,6 +32,13 @@ import { counterProtocols } from "../helpers/protocols.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { recordingClient } from "../helpers/rooms.ts";
 
+// CONSTANTS
+const kUnwatchedBackend = {
+  reconcile: {
+    watch: false
+  }
+};
+
 class StaticExtension extends Extension {
   readonly id: string;
   readonly name = "static";
@@ -65,11 +72,7 @@ describe("AssetServer", () => {
       seed: {
         "counter.counter": () => bytes("0")
       },
-      backend: {
-        reconcile: {
-          watch: false
-        }
-      }
+      backend: kUnwatchedBackend
     });
 
     assert.strictEqual(
@@ -101,11 +104,7 @@ describe("AssetServer", () => {
       seed: {
         "a.blob": () => LARGE_CONTENT
       },
-      backend: {
-        reconcile: {
-          watch: false
-        }
-      },
+      backend: kUnwatchedBackend,
       content: {}
     });
     await using server = await serveContent(assetServer.contentHandler);
@@ -142,11 +141,7 @@ describe("AssetServer", () => {
       seed: {
         "counter.counter": () => bytes("0")
       },
-      backend: {
-        reconcile: {
-          watch: false
-        }
-      }
+      backend: kUnwatchedBackend
     });
 
     assert.strictEqual(
@@ -159,7 +154,7 @@ describe("AssetServer", () => {
     assert.strictEqual(assetServer.backend.catalog.size, 1);
   });
 
-  test("keeps an existing document over its seed", async() => {
+  test("does not seed a root that already holds a document", async() => {
     await using temporary = await tempDirectory();
     await using eventStore = EventStore.persistence.memory();
 
@@ -173,13 +168,10 @@ describe("AssetServer", () => {
       eventStore,
       handlers: [counterHandler()],
       seed: {
-        "counter.counter": () => bytes("0")
+        "counter.counter": () => bytes("0"),
+        "deleted.counter": () => bytes("0")
       },
-      backend: {
-        reconcile: {
-          watch: false
-        }
-      }
+      backend: kUnwatchedBackend
     });
 
     assert.strictEqual(
@@ -188,6 +180,10 @@ describe("AssetServer", () => {
         "utf8"
       ),
       "7"
+    );
+    await assert.rejects(
+      fs.access(path.join(temporary.root, "deleted.counter")),
+      { code: "ENOENT" }
     );
     assert.strictEqual(assetServer.backend.catalog.size, 1);
   });
@@ -203,11 +199,7 @@ describe("AssetServer", () => {
       seed: {
         "counter.counter": () => bytes("0")
       },
-      backend: {
-        reconcile: {
-          watch: false
-        }
-      }
+      backend: kUnwatchedBackend
     });
 
     assert.strictEqual(assetServer.backend.catalog.size, 1);
@@ -228,11 +220,7 @@ describe("AssetServer", () => {
       seed: {
         "a.png": () => bytes("bytes")
       },
-      backend: {
-        reconcile: {
-          watch: false
-        }
-      }
+      backend: kUnwatchedBackend
     });
 
     assert.strictEqual(assetServer.source, source);
@@ -255,11 +243,7 @@ describe("AssetServer", () => {
       source: new MemoryAssetSource(),
       eventStore,
       extensions: [extension],
-      backend: {
-        reconcile: {
-          watch: false
-        }
-      }
+      backend: kUnwatchedBackend
     });
 
     const connectionA = assetServer.network.connect(recordingClient("A"), { subject: "A", role: "default" });
@@ -278,11 +262,7 @@ describe("AssetServer", () => {
       root: "unused",
       source: new MemoryAssetSource(),
       eventStore,
-      backend: {
-        reconcile: {
-          watch: false
-        }
-      }
+      backend: kUnwatchedBackend
     });
     await assetServer.close();
 
