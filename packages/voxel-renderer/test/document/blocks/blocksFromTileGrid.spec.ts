@@ -26,6 +26,7 @@ describe("blocksFromTileGrid", () => {
 
     assert.equal(blocks.length, 8);
     assert.equal(blocks[0].id, 1);
+    assert.ok(blocks.every((block) => block.collidable));
     assert.deepEqual(blocks[0].defaultTexture, {
       blocksetId: "terrain",
       col: 0,
@@ -72,13 +73,13 @@ describe("blocksFromTileGrid", () => {
       map: (blockId) => {
         return {
           name: `Tile ${blockId}`,
-          collidable: true
+          collidable: false
         };
       }
     });
 
     assert.equal(block.name, "Tile 1");
-    assert.equal(block.collidable, true);
+    assert.equal(block.collidable, false);
     assert.deepEqual(block.defaultTexture, {
       blocksetId: "terrain",
       col: 0,

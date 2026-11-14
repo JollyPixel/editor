@@ -118,4 +118,53 @@ describe("PhysicsVoxelCollider.rebuildChunk", () => {
     assert.equal(world.rigidBodies[0].kind, "fixed");
     assert.deepEqual(world.rigidBodies[0].position, { x: 16, y: 0, z: 4 });
   });
+
+  it("moves, turns and scales the chunk with the map placement", () => {
+    const rotation = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      Math.PI / 2
+    );
+    const placement = new THREE.Matrix4().compose(
+      new THREE.Vector3(3, 1, -3),
+      rotation,
+      new THREE.Vector3(2, 2, 2)
+    );
+    const { collider, world } = makeCollider(
+      [makeBlockDef(1, "cube")],
+      placement
+    );
+
+    collider.rebuildChunk(
+      "a",
+      createCollision(makeChunk([[0, 0, 0]]), { x: 16, y: 0, z: 4 })
+    );
+
+    const [body] = world.rigidBodies;
+    const [{ desc }] = world.colliderCalls;
+    assert.deepEqual(
+      Object.values(body.position).map((value) => Math.round(value * 1e6) / 1e6),
+      [11, 1, -35]
+    );
+    assert.ok(
+      new THREE.Quaternion().copy(body.rotation).angleTo(rotation) < 1e-6
+    );
+    assert.deepEqual(desc.translation, { x: 1, y: 1, z: 1 });
+    assert.deepEqual([desc.hx, desc.hy, desc.hz], [1, 1, 1]);
+  });
+
+  it("scales trimesh vertices with the map placement", () => {
+    const { collider, world } = makeCollider(
+      [makeBlockDef(1, "ramp")],
+      new THREE.Matrix4().makeScale(3, 1, 1)
+    );
+
+    collider.rebuildChunk("a", createCollision(makeChunk([[0, 0, 0]])));
+
+    const { vertices } = world.colliderCalls[0].desc;
+    assert.ok(vertices);
+    assert.equal(
+      Math.max(...vertices.filter((_, index) => index % 3 === 0)),
+      3
+    );
+  });
 });

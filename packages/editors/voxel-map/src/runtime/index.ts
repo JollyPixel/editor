@@ -16,6 +16,7 @@ import { VoxelMapLoader } from "./VoxelMapLoader.ts";
 export const VOXEL_MAP_DEFINITION = new VoxelMapDefinition({
   collider: (actor) => (context) => new PhysicsVoxelCollider({
     world: PhysicsSystem.require(actor.world).ownedBodies(actor),
+    placement: actor.transform.global.matrix,
     ...context
   })
 });

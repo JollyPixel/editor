@@ -17,6 +17,7 @@ const map = runtime.world.createActor("map");
 const view = new VoxelView(document, {
   collider: (context) => new PhysicsVoxelCollider({
     world: physicsSystem.ownedBodies(map),
+    placement: map.transform.global.matrix,
     ...context
   })
 });
@@ -27,6 +28,7 @@ const view = new VoxelView(document, {
 ```ts
 interface PhysicsVoxelColliderOptions {
   world: Pick<PhysicsWorld, "createBody">;
+  placement?: Readonly<Matrix4>;
   blockRegistry: BlockRegistry; // from the factory context
   shapeRegistry: BlockShapeRegistry; // from the factory context
 }
@@ -35,10 +37,15 @@ interface PhysicsVoxelColliderOptions {
 The collider only calls `createBody()` on the world, so a test double needs
 nothing else. It attaches `box` and `trimesh` shapes only.
 
+`placement` is the world matrix of the object the chunk meshes hang from, read
+once at construction. Without it the bodies stay at the origin while the
+meshes move. It defaults to the identity matrix.
+
 ## Behaviour
 
-- One fixed body per chunk cell, placed at the cell's `origin`. Collider
-  offsets and trimesh vertices are relative to it.
+- One fixed body per chunk cell, placed at the cell's `origin` transformed by
+  `placement` and turned by its rotation. Collider offsets and trimesh vertices
+  are relative to it and scaled by its scale, box sizes by its absolute scale.
 - Blocks with `collidable: false`, or whose shape's `collisionHint` is
   `"none"`, get no collider.
 - Full cubes are merged into as few boxes as possible; a cell filled in

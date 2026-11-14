@@ -2,7 +2,15 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import type { ContourChain } from "./contourTube.ts";
+import {
+  contourTube,
+  type ContourChain
+} from "./contourTube.ts";
+import type {
+  SilhouetteShape,
+  SilhouetteView
+} from "./HighlightSilhouette.ts";
+import { mergeRings } from "./silhouetteGeometry.ts";
 
 // CONSTANTS
 const kWeldPrecision = 1e4;
@@ -25,7 +33,16 @@ interface EdgeWalk {
   edges: ContourEdge[];
 }
 
-export class MeshContour {
+export function positionVersion(
+  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute
+): number {
+  return "version" in position ? position.version : position.data.version;
+}
+
+export class MeshContour implements SilhouetteShape {
+  static #created = 0;
+
+  #id = MeshContour.#created++;
   #vertices: THREE.Vector3[] = [];
   #faces: ContourFace[] = [];
   #edges: ContourEdge[] = [];
@@ -86,7 +103,29 @@ export class MeshContour {
     }
   }
 
-  contourFrom(
+  viewFrom(
+    localCameraPosition: THREE.Vector3
+  ): SilhouetteView {
+    const edges = this.#contourFrom(localCameraPosition);
+
+    return {
+      key: `contour:${this.#id}:${edges.join(",")}`,
+      build: (rings) => {
+        const chains = this.#chains(edges);
+        const inner = rings.innerThickness > 0 ?
+          [contourTube(chains, { offset: 0, thickness: rings.innerThickness })] :
+          [];
+        const outer = contourTube(chains, {
+          offset: rings.innerThickness,
+          thickness: rings.linewidth
+        });
+
+        return mergeRings(inner, [outer], rings);
+      }
+    };
+  }
+
+  #contourFrom(
     localCameraPosition: THREE.Vector3
   ): number[] {
     const facing = this.#faces.map(
@@ -101,7 +140,7 @@ export class MeshContour {
     });
   }
 
-  chains(
+  #chains(
     contour: readonly number[]
   ): ContourChain[] {
     const edgesAt = new Map<number, ContourEdge[]>();

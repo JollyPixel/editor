@@ -54,6 +54,7 @@ import { PhysicsVoxelCollider } from "@jolly-pixel/voxel.renderer";
 const definition = new VoxelMapDefinition({
   collider: (actor) => (context) => new PhysicsVoxelCollider({
     world: PhysicsSystem.require(actor.world).ownedBodies(actor),
+    placement: actor.transform.global.matrix,
     ...context
   })
 });

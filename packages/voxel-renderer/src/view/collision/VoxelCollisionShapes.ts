@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { ColliderDesc } from "@jolly-pixel/physics";
+import type {
+  ColliderDesc,
+  Vector3Like
+} from "@jolly-pixel/physics";
 
 // Import Internal Dependencies
 import type { VoxelChunkCollision } from "./VoxelCollider.ts";
@@ -26,6 +29,7 @@ import {
 export interface VoxelCollisionShapesOptions {
   blockRegistry: BlockRegistry;
   shapeRegistry: BlockShapeRegistry;
+  scale: Vector3Like;
 }
 
 interface ShapeBounds {
@@ -48,6 +52,7 @@ export class VoxelCollisionShapes {
   #blockRegistry: BlockRegistry;
   #shapeRegistry: BlockShapeRegistry;
   #complements: BlockComplements;
+  #scale: readonly [number, number, number];
 
   #bounds = new Map<string, ShapeBounds>();
   #shapeVersion = -1;
@@ -58,6 +63,7 @@ export class VoxelCollisionShapes {
   ) {
     this.#blockRegistry = options.blockRegistry;
     this.#shapeRegistry = options.shapeRegistry;
+    this.#scale = [options.scale.x, options.scale.y, options.scale.z];
     this.#complements = new BlockComplements({
       blocks: this.#blockRegistry,
       shapes: this.#shapeRegistry
@@ -92,7 +98,7 @@ export class VoxelCollisionShapes {
 
     const colliders = this.#mergeCubes(solids.cubes, chunks[0].size);
     for (const { origin, bounds } of solids.boxes) {
-      const box = boundsBox(origin, bounds);
+      const box = boundsBox(origin, bounds, this.#scale);
       if (box !== null) {
         colliders.push(box);
       }
@@ -101,7 +107,10 @@ export class VoxelCollisionShapes {
       colliders.push({
         shape: {
           type: "trimesh",
-          vertices: new Float32Array(solids.vertices),
+          vertices: Float32Array.from(
+            solids.vertices,
+            (value, index) => value * this.#scale[index % 3]
+          ),
           indices: new Uint32Array(solids.indices)
         }
       });
@@ -252,7 +261,8 @@ export class VoxelCollisionShapes {
     for (const [x, y, z, sx, sy, sz] of mergeCubes(cubes, size, this.#filled)) {
       boxes.push(boxCollider(
         [x + (sx / 2), y + (sy / 2), z + (sz / 2)],
-        [sx / 2, sy / 2, sz / 2]
+        [sx / 2, sy / 2, sz / 2],
+        this.#scale
       ));
     }
 
@@ -262,28 +272,30 @@ export class VoxelCollisionShapes {
 
 function boxCollider(
   center: readonly [number, number, number],
-  halfExtents: readonly [number, number, number]
+  halfExtents: readonly [number, number, number],
+  scale: readonly [number, number, number]
 ): ColliderDesc {
   return {
     shape: {
       type: "box",
       halfExtents: {
-        x: halfExtents[0],
-        y: halfExtents[1],
-        z: halfExtents[2]
+        x: halfExtents[0] * Math.abs(scale[0]),
+        y: halfExtents[1] * Math.abs(scale[1]),
+        z: halfExtents[2] * Math.abs(scale[2])
       }
     },
     offset: {
-      x: center[0],
-      y: center[1],
-      z: center[2]
+      x: center[0] * scale[0],
+      y: center[1] * scale[1],
+      z: center[2] * scale[2]
     }
   };
 }
 
 function boundsBox(
   origin: readonly [number, number, number],
-  bounds: ShapeBounds
+  bounds: ShapeBounds,
+  scale: readonly [number, number, number]
 ): ColliderDesc | null {
   const { min, max } = bounds;
   const hx = (max[0] - min[0]) / 2;
@@ -299,7 +311,8 @@ function boundsBox(
       origin[1] + min[1] + hy,
       origin[2] + min[2] + hz
     ],
-    [hx, hy, hz]
+    [hx, hy, hz],
+    scale
   );
 }
 

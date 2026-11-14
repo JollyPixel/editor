@@ -13,6 +13,7 @@ import type {
 // Import Internal Dependencies
 import {
   PhysicsVoxelCollider,
+  type PhysicsVoxelColliderOptions,
   type VoxelChunkCollision
 } from "../../src/view/collision/index.ts";
 import { VoxelChunk } from "../../src/document/world/index.ts";
@@ -64,7 +65,7 @@ function recordDesc(
 export class RecordedBody implements PhysicsBody {
   readonly kind: BodyKind;
   readonly position: Vector3Like;
-  readonly rotation: QuaternionLike = { x: 0, y: 0, z: 0, w: 1 };
+  readonly rotation: QuaternionLike;
   linearVelocity: Vector3Like = { x: 0, y: 0, z: 0 };
   angularVelocity: Vector3Like = { x: 0, y: 0, z: 0 };
 
@@ -76,6 +77,7 @@ export class RecordedBody implements PhysicsBody {
   ) {
     this.kind = desc.kind;
     this.position = { ...desc.position ?? { x: 0, y: 0, z: 0 } };
+    this.rotation = { ...desc.rotation ?? { x: 0, y: 0, z: 0, w: 1 } };
     this.#world = world;
   }
 
@@ -132,14 +134,16 @@ export class RecordingWorld implements Pick<PhysicsWorld, "createBody"> {
 }
 
 export function makeCollider(
-  blocks: BlockDefinition[] = []
+  blocks: BlockDefinition[] = [],
+  placement?: PhysicsVoxelColliderOptions["placement"]
 ) {
   const world = new RecordingWorld();
   const shapeRegistry = BlockShapeRegistry.createDefault();
   const collider = new PhysicsVoxelCollider({
     world,
     blockRegistry: new BlockRegistry(blocks),
-    shapeRegistry
+    shapeRegistry,
+    placement
   });
 
   return { collider, world, shapeRegistry };
