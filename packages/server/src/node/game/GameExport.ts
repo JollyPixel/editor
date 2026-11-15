@@ -1,18 +1,18 @@
+// Import Node.js Dependencies
+import { Readable } from "node:stream";
+
 // Import Third-party Dependencies
 import type { Account } from "@jolly-pixel/accounts";
 import type { AssetRecord } from "@jolly-pixel/asset";
-import { UnbuildableAssetError } from "@jolly-pixel/asset-server";
-import {
-  zipSync,
-  type Zippable
-} from "fflate";
 
 // Import Internal Dependencies
+import { GameAssets } from "./GameAssets.ts";
 import type { GamePlayer } from "./GamePlayer.ts";
-import { GameBuildError } from "./errors/GameBuildError.ts";
 import { GameExportError } from "./errors/GameExportError.ts";
+import { ZipStream } from "./ZipStream.ts";
 import type { GameBackend } from "./StudioGame.ts";
 import type { StudioProject } from "../project/StudioProject.ts";
+import type { GameExportAssets } from "../../project/api.ts";
 import {
   GAME_MANIFEST_FILE,
   SCENE_KIND,
@@ -46,31 +46,46 @@ export class GameExport {
   }
 
   async export(
-    account: Account
-  ): Promise<Uint8Array> {
+    account: Account,
+    assets: GameExportAssets
+  ): Promise<Readable> {
     this.#project.access.projectRights(account.role).require("export");
     const start = this.#start();
+    const player = await this.#player.files();
 
-    const files: Zippable = Object.fromEntries(await this.#player.files());
-    const records: AssetRecord[] = [];
-    for (const record of this.#backend.catalog.catalog) {
-      const built = await this.#backend.builds.build(record.id.value);
-      if (!built.ok) {
-        if (built.val instanceof UnbuildableAssetError) {
-          continue;
-        }
-
-        throw new GameBuildError(record.path.toString(), built.val);
-      }
-
-      files[artifactSegments(record).join("/")] = built.val.bytes;
-      records.push(record);
-    }
-    files[GAME_MANIFEST_FILE] = new TextEncoder().encode(
-      JSON.stringify(gameManifest(start, records, this.#project.physics))
+    return Readable.from(
+      this.#zip(start, player, new GameAssets(this.#backend, assets)),
+      { objectMode: false }
     );
+  }
 
-    return zipSync(files);
+  async* #zip(
+    start: string,
+    player: Map<string, Uint8Array>,
+    assets: GameAssets
+  ): AsyncGenerator<Uint8Array> {
+    const archive = new ZipStream();
+    for (const [name, bytes] of player) {
+      yield* archive.add(name, bytes);
+    }
+
+    const records: AssetRecord[] = [];
+    for await (const { record, artifact } of assets.builds()) {
+      records.push(record);
+      yield* archive.add(
+        artifactSegments(record).join("/"),
+        artifact.bytes,
+        artifact.type
+      );
+    }
+
+    yield* archive.add(
+      GAME_MANIFEST_FILE,
+      new TextEncoder().encode(
+        JSON.stringify(gameManifest(start, records, this.#project.physics))
+      )
+    );
+    yield* archive.end();
   }
 
   #start(): string {

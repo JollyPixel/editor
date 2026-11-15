@@ -44,9 +44,11 @@ The `<studio-export-dialog>` the Export action opens. Its tiles are the
 export targets: Web (the game export), Desktop and Android (disabled until
 they are built) and Project (the sources archive). A target the project
 cannot export yet, such as Web without a default scene, says why and links to
-the setting. The dialog reopens on the last target picked in this browser and
-renames the download when the file name field is filled. Export closes it and
-shows a loading notification until the download starts or fails.
+the setting. The Web target offers Include every asset, for scripts that load
+an asset no scene uses. The dialog reopens on the last target and asset choice
+picked in this browser and renames the download when the file name field is
+filled. Export closes it and shows a loading notification until the download
+starts or fails.
 
 ### Home
 
@@ -255,7 +257,7 @@ You shows them.
 ### Browser state
 
 What one browser remembers and Settings never shows: open tabs, dock
-layouts, expanded folders, the kind filter.
+layouts, expanded folders, the kind filter, the export target and asset choice.
 
 ### Game manifest
 
@@ -306,10 +308,14 @@ path stops matching once the scene is renamed or moved.
 ### Game export
 
 `GET /api/project/game.zip`, offered as the Web target of the export dialog
-to a role with `studio.$export`, once the project has a default scene. It builds
-every asset whose kind has a build, fails on the first error, and zips the
-built player as `index.html`, a game manifest starting from the default
-scene, and each artifact at the `builds/` path Play serves it from. A
+to a role with `studio.$export`, once the project has a default scene. It
+builds every scene and the assets they reach: their dependencies, the scripts
+a script imports, and the files in a model's folder and its subfolders except
+scripts. With `?assets=all` it builds
+every asset whose kind has a build. It streams the zip as each asset builds:
+the built player as `index.html`, each artifact at the `builds/` path Play
+serves it from, and a game manifest starting from the default scene. A build
+error cuts the download. A
 `jolly-game` meta in the page tells the player to read `game.json` beside it
 instead of the studio API. The game runs from any static HTTP server, not from
 `file://`.

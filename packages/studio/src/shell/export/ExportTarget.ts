@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import type { GameExportAssets } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
@@ -12,10 +13,19 @@ export interface ExportBlocker {
   readonly settingsSection: string;
 }
 
+export interface ExportRequest {
+  readonly fileName: string;
+  readonly assets: GameExportAssets;
+}
+
 export interface ExportTarget {
   readonly name: ExportTargetName;
   readonly label: string;
   readonly summary: string;
+  readonly prunesAssets: boolean;
   blocker(defaultScene: AssetRecordData | null): ExportBlocker | null;
-  download(user: StudioSignedIn): Promise<FileDownload>;
+  download(
+    user: StudioSignedIn,
+    request: ExportRequest
+  ): Promise<FileDownload>;
 }

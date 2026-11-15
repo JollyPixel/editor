@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import * as z from "zod";
 import {
+  GAME_EXPORT_ASSETS,
+  type GameExportAssets
+} from "@jolly-pixel/server";
+import {
   LocalStorageAdapter,
   type StorageAdapter
 } from "@jolly-pixel/ui";
@@ -14,7 +18,9 @@ export const ASSET_KIND_STORAGE_KEY = "studio:asset-kind";
 export const EXPANDED_FOLDERS_STORAGE_KEY = "studio:asset-expanded";
 export const SETTINGS_SECTION_STORAGE_KEY = "studio:settings-section";
 export const EXPORT_TARGET_STORAGE_KEY = "studio:export-target";
+export const EXPORT_ASSETS_STORAGE_KEY = "studio:export-assets";
 const kNodeIdsSchema = z.array(z.string());
+const kExportAssetsSchema = z.enum(GAME_EXPORT_ASSETS).catch("reachable");
 
 export class BrowserState {
   readonly storage: StorageAdapter;
@@ -82,6 +88,21 @@ export class BrowserState {
     this.storage.set(
       EXPORT_TARGET_STORAGE_KEY,
       name
+    );
+  }
+
+  get exportAssets(): GameExportAssets {
+    return kExportAssetsSchema.parse(
+      this.storage.get(EXPORT_ASSETS_STORAGE_KEY)
+    );
+  }
+
+  set exportAssets(
+    assets: GameExportAssets
+  ) {
+    this.storage.set(
+      EXPORT_ASSETS_STORAGE_KEY,
+      assets
     );
   }
 

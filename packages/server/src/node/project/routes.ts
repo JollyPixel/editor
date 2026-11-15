@@ -1,6 +1,12 @@
+// Import Node.js Dependencies
+import type { Readable } from "node:stream";
+
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
-import type { FastifyInstance } from "fastify";
+import type {
+  FastifyInstance,
+  FastifyRequest,
+  FastifySchema
+} from "fastify";
 import { ARCHIVE_MIME_TYPE } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
@@ -9,7 +15,9 @@ import { AttachmentDisposition } from "../../http/AttachmentDisposition.ts";
 import type { ApiRoute } from "../../http/api.ts";
 import {
   PROJECT_ROUTES,
+  gameExportQuerySchema,
   settingsUpdateSchema,
+  type GameExportQuery,
   type ProjectReply,
   type SettingsUpdate
 } from "../../project/api.ts";
@@ -26,9 +34,17 @@ export interface ProjectRoutesOptions {
   settings: ProjectSettings;
 }
 
-interface ProjectDownload {
-  readonly fileName: string;
-  export(account: Account): Promise<Uint8Array>;
+interface QueryRoute<TQuery> {
+  Querystring: TQuery;
+}
+
+interface DownloadRoute<TQuery> {
+  route: ApiRoute;
+  fileName: string;
+  schema?: FastifySchema;
+  body(
+    request: FastifyRequest<QueryRoute<TQuery>>
+  ): Promise<Uint8Array | Readable>;
 }
 
 interface ReplaceSettingsRoute {
@@ -56,8 +72,22 @@ export async function projectRoutes(
       .rights(signedInAccount(request))
       .toJSON()
   });
-  downloadRoute(app, archiveRoute, archive);
-  downloadRoute(app, game, gameExport);
+  downloadRoute(app, {
+    route: archiveRoute,
+    fileName: archive.fileName,
+    body: (request) => archive.export(signedInAccount(request))
+  });
+  downloadRoute<GameExportQuery>(app, {
+    route: game,
+    fileName: gameExport.fileName,
+    schema: {
+      querystring: gameExportQuerySchema
+    },
+    body: (request) => gameExport.export(
+      signedInAccount(request),
+      request.query.assets
+    )
+  });
   app.route({
     method: settingsRoute.method,
     url: settingsRoute.path,
@@ -82,22 +112,19 @@ export async function projectRoutes(
   });
 }
 
-function downloadRoute(
+function downloadRoute<TQuery = unknown>(
   app: FastifyInstance,
-  route: ApiRoute,
-  download: ProjectDownload
+  download: DownloadRoute<TQuery>
 ): void {
-  app.route({
-    method: route.method,
-    url: route.path,
-    handler: async(request, reply) => {
-      const bytes = await download.export(signedInAccount(request));
-      const disposition = new AttachmentDisposition(download.fileName);
+  const disposition = new AttachmentDisposition(download.fileName);
 
-      return reply
-        .type(ARCHIVE_MIME_TYPE)
-        .header("content-disposition", disposition.toString())
-        .send(Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength));
-    }
+  app.route<QueryRoute<TQuery>>({
+    method: download.route.method,
+    url: download.route.path,
+    schema: download.schema,
+    handler: async(request, reply) => reply
+      .type(ARCHIVE_MIME_TYPE)
+      .header("content-disposition", disposition.toString())
+      .send(await download.body(request))
   });
 }

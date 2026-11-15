@@ -3,6 +3,7 @@ import {
   LitElement,
   css,
   html,
+  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -12,12 +13,14 @@ import {
   state
 } from "lit/decorators.js";
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import type { GameExportAssets } from "@jolly-pixel/server";
 import type {
   Dialog,
   JollyChangeDetail
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/text";
 
@@ -60,6 +63,9 @@ export class ExportDialog extends LitElement {
   @state()
   declare _fileName: string;
 
+  @state()
+  declare _assets: GameExportAssets;
+
   @query("jolly-dialog")
   declare _dialog: Dialog;
 
@@ -71,6 +77,7 @@ export class ExportDialog extends LitElement {
     this._defaultScene = null;
     this._target = this.#targets.initial("", null);
     this._fileName = "";
+    this._assets = "reachable";
   }
 
   async open(
@@ -82,6 +89,7 @@ export class ExportDialog extends LitElement {
       defaultScene
     );
     this._fileName = "";
+    this._assets = this.browserState.exportAssets;
 
     await this.updateComplete;
     await this._dialog.showModal();
@@ -122,6 +130,15 @@ export class ExportDialog extends LitElement {
           ?disabled=${!exportable}
           @jolly-input=${this.#onFileNameInput}
         ></jolly-text>
+        ${this._target.prunesAssets ? html`
+          <jolly-checkbox
+            label="Include every asset"
+            title="Also export the assets no scene uses, for scripts that load assets by ID"
+            .value=${this._assets === "all"}
+            ?disabled=${!exportable}
+            @jolly-change=${this.#onAssetsChange}
+          ></jolly-checkbox>
+        ` : nothing}
         <jolly-button
           slot="actions"
           variant="accent"
@@ -156,6 +173,13 @@ export class ExportDialog extends LitElement {
     this._fileName = event.detail.value;
   }
 
+  #onAssetsChange(
+    event: CustomEvent<JollyChangeDetail<boolean>>
+  ): void {
+    this._assets = event.detail.value ? "all" : "reachable";
+    this.browserState.exportAssets = this._assets;
+  }
+
   #openSettings(
     section: string
   ): void {
@@ -165,7 +189,10 @@ export class ExportDialog extends LitElement {
 
   #export(): void {
     this._dialog.close("export");
-    this.dispatchEvent(new ExportStartEvent(this._target, this._fileName));
+    this.dispatchEvent(new ExportStartEvent(this._target, {
+      fileName: this._fileName,
+      assets: this._assets
+    }));
   }
 
   #close(): void {

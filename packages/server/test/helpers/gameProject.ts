@@ -1,10 +1,13 @@
 // Import Third-party Dependencies
 import type { Account } from "@jolly-pixel/accounts";
+import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   binaryAssetKind,
   createAssetBackend,
   textureAssetKind,
-  type AssetBackend
+  type AssetBackend,
+  type AssetKindHandler,
+  type BinaryAssetState
 } from "@jolly-pixel/asset-server";
 import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
@@ -39,6 +42,42 @@ export const GAME_ACCESS = StudioAccess.from({
   accessRequests: false
 }, "project.json");
 
+export function uses(
+  ...references: AssetReferenceData[]
+): string {
+  return JSON.stringify({ uses: references });
+}
+
+function usingKind(
+  kind: string,
+  extension: string
+): AssetKindHandler<BinaryAssetState> {
+  return {
+    ...binaryAssetKind,
+    kind,
+    extensions: { [extension]: "application/json" },
+    dependencies: (state) => (state.bytes.byteLength === 0 ?
+      [] :
+      JSON.parse(new TextDecoder().decode(state.bytes)).uses ?? [])
+  };
+}
+
+function scriptKind(): AssetKindHandler<BinaryAssetState> {
+  return {
+    ...binaryAssetKind,
+    kind: "script",
+    extensions: { ".ts": "text/plain" },
+    build: {
+      type: "text/javascript",
+      build: (state) => (
+        new TextDecoder().decode(state.bytes).includes("lodash") ?
+          Promise.reject(new Error("\"lodash\" cannot be imported")) :
+          Promise.resolve(state.bytes)
+      )
+    }
+  };
+}
+
 export function gameAccount(
   role: string
 ): Account {
@@ -62,26 +101,18 @@ export async function gameProject(): Promise<GameProject> {
     eventStore,
     handlers: [
       textureAssetKind(),
+      usingKind("scene", ".scene.json"),
+      usingKind("blockset", ".blockset.json"),
       {
-        ...binaryAssetKind,
-        kind: "scene",
-        extensions: { ".scene.json": "application/json" }
-      },
-      {
-        ...binaryAssetKind,
-        kind: "voxelmap",
-        extensions: { ".voxelmap.json": "application/json" },
+        ...usingKind("voxelmap", ".voxelmap.json"),
         build: undefined
       },
       {
         ...binaryAssetKind,
-        kind: "script",
-        extensions: { ".ts": "text/plain" },
-        build: {
-          type: "text/javascript",
-          build: () => Promise.reject(new Error("\"lodash\" cannot be imported"))
-        }
-      }
+        kind: "model",
+        extensions: { ".obj": "model/obj" }
+      },
+      scriptKind()
     ],
     reconcile: {
       watch: false

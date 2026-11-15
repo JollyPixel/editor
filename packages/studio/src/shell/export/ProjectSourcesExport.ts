@@ -11,6 +11,7 @@ export class ProjectSourcesExport implements ExportTarget {
   readonly label = "project sources";
   readonly summary = "The project sources, to back up or move to " +
     "another studio.";
+  readonly prunesAssets = false;
 
   blocker(): ExportBlocker | null {
     return null;

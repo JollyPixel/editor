@@ -186,11 +186,11 @@ export class HeaderActions extends LitElement {
       return;
     }
 
-    const { exportTarget, fileName } = event;
+    const { exportTarget, request } = event;
     void runExport(this.notifications, {
       label: exportTarget.label,
-      fileName,
-      download: exportTarget.download(user)
+      fileName: request.fileName,
+      download: exportTarget.download(user, request)
     });
   };
 }

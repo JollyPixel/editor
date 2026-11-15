@@ -1,20 +1,23 @@
 // Import Internal Dependencies
-import type { ExportTarget } from "./ExportTarget.ts";
+import type {
+  ExportRequest,
+  ExportTarget
+} from "./ExportTarget.ts";
 
 // CONSTANTS
 export const EXPORT_START = "export-start";
 
 export class ExportStartEvent extends Event {
   readonly exportTarget: ExportTarget;
-  readonly fileName: string;
+  readonly request: ExportRequest;
 
   constructor(
     exportTarget: ExportTarget,
-    fileName: string
+    request: ExportRequest
   ) {
     super(EXPORT_START);
     this.exportTarget = exportTarget;
-    this.fileName = fileName;
+    this.request = request;
   }
 }
 

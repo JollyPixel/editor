@@ -58,6 +58,7 @@
     "@jolly-pixel/event-store": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
+    "@jolly-pixel/scripting": "workspace:*",
     "@openally/servo": "1.1.0",
     "cookie": "2.0.2",
     "fastify": "5.12.8",
