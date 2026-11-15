@@ -33,6 +33,7 @@ import { openStudioProject } from "./node/studioFiles.ts";
 import { backend } from "./vite/backend.ts";
 import { EditorPageFiles } from "./vite/EditorPageFiles.ts";
 import { editorPages } from "./vite/editorPages.ts";
+import { playerModules } from "./vite/playerModules.ts";
 import { projectContributions } from "./vite/projectContributions.ts";
 import { projectManifest } from "./vite/projectManifest.ts";
 
@@ -81,6 +82,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       projectContributions(project),
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),
+      playerModules(),
       editorPages(
         new EditorPageFiles(project.editors),
         {

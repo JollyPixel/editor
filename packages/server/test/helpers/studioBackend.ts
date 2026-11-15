@@ -6,8 +6,7 @@ import {
 } from "#src/testing/serveBackend.ts";
 import {
   openTestProject,
-  testSeed,
-  UNBUILT_PLAYER
+  testSeed
 } from "./testProject.ts";
 
 export async function serveBackend(
@@ -15,7 +14,6 @@ export async function serveBackend(
 ): Promise<ServedBackend> {
   return listenBackend(await openTestProject(), {
     ...options,
-    seed: await testSeed(),
-    player: UNBUILT_PLAYER
+    seed: await testSeed()
   });
 }

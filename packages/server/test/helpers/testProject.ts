@@ -28,7 +28,6 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { GamePlayer } from "#src/node/game/GamePlayer.ts";
 import { DEFAULT_ACCESS } from "#src/node/project/StudioAccess.ts";
 import { StudioProject } from "#src/node/project/StudioProject.ts";
 
@@ -53,9 +52,6 @@ export const TEST_PROJECT_FILE: ProjectFileData = {
     "@jolly-pixel/asset.voxel-model": {}
   },
   access: DEFAULT_ACCESS
-};
-export const UNBUILT_PLAYER: GamePlayer = {
-  files: () => Promise.reject(new Error("no game player is built in tests"))
 };
 
 export function openTestProject(): Promise<StudioProject> {

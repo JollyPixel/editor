@@ -24,7 +24,10 @@ import {
   StudioApi,
   type TrustProxy
 } from "./http/StudioApi.ts";
-import type { Middleware } from "./http/Middleware.ts";
+import {
+  chainMiddleware,
+  type Middleware
+} from "./http/Middleware.ts";
 import { AssetLog } from "./audit/AssetLog.ts";
 import {
   EditorPageFolders,
@@ -36,8 +39,12 @@ import {
   AUDIT_STATE_IGNORES,
   AuditLog
 } from "./audit/AuditLog.ts";
-import type { GamePlayer } from "./game/GamePlayer.ts";
+import type {
+  GamePlayer,
+  PlayerPageSource
+} from "./game/GamePlayer.ts";
 import { GameExport } from "./game/GameExport.ts";
+import { PlayPage } from "./game/PlayPage.ts";
 import { StudioGame } from "./game/StudioGame.ts";
 import { AgentChatExtension } from "./golem/AgentChatExtension.ts";
 import { ProjectArchive } from "./project/ProjectArchive.ts";
@@ -89,6 +96,11 @@ export interface StudioBackendOptions {
    * The built player that game exports ship.
    */
   player: GamePlayer;
+  /**
+   * The player page `/play/` serves with the import map of the scripts the
+   * account opens.
+   */
+  playPage: PlayerPageSource;
   /**
    * The preference scopes of the shell, which the preferences API accepts
    * besides the scopes of the project editors.
@@ -167,6 +179,10 @@ export class StudioBackend implements AsyncDisposable {
       scope: (identity) => shares.scope(identity)
     }));
 
+    const game = new StudioGame({
+      project,
+      backend: assetServer.backend
+    });
     const api = opening.use(await StudioApi.open({
       accounts,
       shares,
@@ -190,10 +206,7 @@ export class StudioBackend implements AsyncDisposable {
         project,
         backend: assetServer.backend
       }),
-      game: new StudioGame({
-        project,
-        backend: assetServer.backend
-      }),
+      game,
       gameExport: new GameExport({
         project,
         backend: assetServer.backend,
@@ -207,16 +220,27 @@ export class StudioBackend implements AsyncDisposable {
       trustProxy: options.trustProxy
     }));
 
+    const sharePage = new SharePage({
+      shares,
+      editors: project.editors,
+      pages: options.editorPages ?? EditorPageFolders.packages()
+    });
+    const playPage = new PlayPage({
+      page: options.playPage,
+      game,
+      accounts
+    });
+
     return new StudioBackend(
       opening.move(),
       assetServer,
       compression,
-      api,
-      new SharePage({
-        shares,
-        editors: project.editors,
-        pages: options.editorPages ?? EditorPageFolders.packages()
-      })
+      chainMiddleware(
+        assetServer.contentHandler,
+        api.middleware,
+        sharePage.middleware,
+        playPage.middleware
+      )
     );
   }
 
@@ -231,19 +255,12 @@ export class StudioBackend implements AsyncDisposable {
     resources: AsyncDisposableStack,
     assetServer: AssetServer,
     compression: boolean,
-    api: StudioApi,
-    sharePage: SharePage
+    middleware: Middleware
   ) {
     this.#resources = resources;
     this.#assetServer = assetServer;
     this.#compression = compression;
-    this.middleware = (request, response, next) => {
-      assetServer.contentHandler(request, response, () => {
-        api.middleware(request, response, () => {
-          sharePage.middleware(request, response, next);
-        });
-      });
-    };
+    this.middleware = middleware;
   }
 
   attach(

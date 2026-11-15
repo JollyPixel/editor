@@ -15,8 +15,10 @@ import {
 // Import Internal Dependencies
 import { GameBuildError } from "#src/node/game/errors/GameBuildError.ts";
 import { GameExportError } from "#src/node/game/errors/GameExportError.ts";
+import { GamePlayerError } from "#src/node/game/errors/GamePlayerError.ts";
 import { GameExport } from "#src/node/game/GameExport.ts";
 import { StudioGame } from "#src/node/game/StudioGame.ts";
+import { PlayerPage } from "#src/game/PlayerPage.ts";
 import type { PhysicsSection } from "#src/project/api.ts";
 import { ProjectRightRefusedError } from "#src/project/errors/ProjectRightRefusedError.ts";
 import {
@@ -28,7 +30,13 @@ import {
 } from "../../helpers/gameProject.ts";
 
 // CONSTANTS
-const kPlayerPage = "<html><script src=\"./assets/play.js\"></script></html>";
+const kBuiltPage = [
+  "<html><head>",
+  "<script type=\"importmap\">{\"imports\":{\"three\":\"../assets/three.js\"}}</script>",
+  "<script type=\"module\" crossorigin src=\"../assets/play.js\"></script>",
+  "<link rel=\"stylesheet\" href=\"../assets/play.css\">",
+  "</head><body></body></html>"
+].join("\n");
 const kMoonPhysics: PhysicsSection = {
   engine: "rapier",
   gravity: {
@@ -40,7 +48,8 @@ const kMoonPhysics: PhysicsSection = {
 
 function gameExport(
   project: GameProject,
-  start: string | null
+  start: string | null,
+  page = kBuiltPage
 ): GameExport {
   return new GameExport({
     project: {
@@ -51,10 +60,12 @@ function gameExport(
     },
     backend: project.backend,
     player: {
-      files: () => Promise.resolve(new Map([
-        ["index.html", new TextEncoder().encode(kPlayerPage)],
-        ["assets/play.js", new TextEncoder().encode("play()")]
-      ]))
+      bundle: () => Promise.resolve({
+        page,
+        files: new Map([
+          ["assets/play.js", new TextEncoder().encode("play()")]
+        ])
+      })
     }
   });
 }
@@ -115,8 +126,26 @@ describe("GameExport", () => {
     assert.deepEqual(manifest.physics, kMoonPhysics);
     assert.deepEqual(played.physics, kMoonPhysics);
     assert.equal(text(files[decodeURIComponent(grass)]), "png");
-    assert.equal(text(files["index.html"]), kPlayerPage);
+    assert.equal(text(files["index.html"]), [
+      "<html><head><script type=\"importmap\">" +
+      "{\"imports\":{\"three\":\"./assets/three.js\"}}</script>",
+      "<script type=\"module\" crossorigin src=\"./assets/play.js\"></script>",
+      "<link rel=\"stylesheet\" href=\"./assets/play.css\">",
+      "  <meta name=\"jolly-game\" content=\"exported\">",
+      "</head><body></body></html>"
+    ].join("\n"));
     assert.equal(text(files["assets/play.js"]), "play()");
+  });
+
+  test("refuses a built play page it cannot mark as an exported game", async() => {
+    await using project = await gameProject();
+    const scene = await project.create("levels/arena.scene.json", "{}");
+
+    await assert.rejects(
+      gameExport(project, scene, kBuiltPage.replace("</head>", ""))
+        .export(gameAccount("publisher"), "reachable"),
+      GamePlayerError
+    );
   });
 
   test("keeps every scene and what they reach, dropping the other assets unbuilt", async() => {
@@ -177,6 +206,31 @@ describe("GameExport", () => {
       "scripts/Player.ts",
       "scripts/math/vector.ts"
     ]);
+  });
+
+  test("writes scripts as JavaScript beside their project paths, named in the import map", async() => {
+    await using project = await gameProject();
+    const vector = await project.create("scripts/math/vector.ts", "export const zero = 0;");
+    const player = await project.create(
+      "scripts/Player.ts",
+      "import { zero } from \"./math/vector\";"
+    );
+    const scene = await project.create(
+      "levels/arena.scene.json",
+      uses({ id: player, kind: "script" })
+    );
+
+    const files = await unzip(await gameExport(project, scene).export(
+      gameAccount("publisher"),
+      "reachable"
+    ));
+
+    const { artifacts } = JSON.parse(text(files["game.json"])!);
+    const { imports } = PlayerPage.parse(text(files["index.html"])!);
+    assert.equal(text(files["modules/scripts/math/vector.ts.js"]), "export const zero = 0;");
+    assert.equal(text(files["modules/scripts/Player.ts.js"]), "import { zero } from \"./math/vector\";");
+    assert.equal(imports["./modules/scripts/math/vector"], `./${artifacts[vector]}`);
+    assert.equal(imports["./modules/scripts/Player.ts"], `./${artifacts[player]}`);
   });
 
   test("keeps every buildable asset when asked for all of them", async() => {

@@ -66,7 +66,10 @@ function scriptKind(): AssetKindHandler<BinaryAssetState> {
   return {
     ...binaryAssetKind,
     kind: "script",
-    extensions: { ".ts": "text/plain" },
+    extensions: {
+      ".ts": "text/plain",
+      ".js": "text/javascript"
+    },
     build: {
       type: "text/javascript",
       build: (state) => (

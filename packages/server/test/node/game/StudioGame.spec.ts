@@ -91,6 +91,38 @@ describe("StudioGame", () => {
     assert.equal(stale.cacheControl, "no-store");
   });
 
+  test("serves a script's build at its module path, for good only at the current revision", async() => {
+    await using project = await gameProject();
+    const script = await project.create("scripts/my player.ts", "export {};");
+    const revision = project.backend.catalog.record(script)!.revision!;
+
+    const current = await project.game.module(account("player"), "scripts/my player.ts.js", revision);
+    const unversioned = await project.game.module(account("player"), "scripts/my player.ts.js", undefined);
+
+    assert.equal(new TextDecoder().decode(current.bytes), "export {};");
+    assert.equal(current.type, "text/javascript");
+    assert.equal(current.cacheControl, "private, max-age=31536000, immutable");
+    assert.equal(unversioned.cacheControl, "no-store");
+    for (const path of ["scripts/my player.ts", "scripts/my player.js"]) {
+      await assert.rejects(
+        project.game.module(account("player"), path, revision),
+        UnknownAssetError
+      );
+    }
+  });
+
+  test("serves same-named TypeScript and JavaScript scripts each at its own module path", async() => {
+    await using project = await gameProject();
+    await project.create("scripts/util.ts", "export const typed = 1;");
+    await project.create("scripts/util.js", "export const plain = 1;");
+
+    const typed = await project.game.module(account("player"), "scripts/util.ts.js", undefined);
+    const plain = await project.game.module(account("player"), "scripts/util.js.js", undefined);
+
+    assert.equal(new TextDecoder().decode(typed.bytes), "export const typed = 1;");
+    assert.equal(new TextDecoder().decode(plain.bytes), "export const plain = 1;");
+  });
+
   test("hides an asset the account cannot open", async() => {
     await using project = await gameProject();
     const texture = await project.create("textures/grass.png", "png");

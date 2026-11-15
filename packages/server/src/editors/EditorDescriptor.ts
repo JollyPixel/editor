@@ -8,6 +8,10 @@ export const PREVIEW_PAGE_DIR = "preview";
 export const PREVIEW_PAGE_PATH = `${PREVIEW_PAGE_DIR}/${EDITOR_PAGE_FILE}`;
 export const PLAY_PAGE_DIR = "play";
 export const PLAY_PAGE_PATH = `${PLAY_PAGE_DIR}/${EDITOR_PAGE_FILE}`;
+export const PLAY_PAGE_PATHNAMES: ReadonlySet<string> = new Set([
+  `/${PLAY_PAGE_DIR}/`,
+  `/${PLAY_PAGE_PATH}`
+]);
 
 export interface SceneComponentDeclaration {
   type: string;

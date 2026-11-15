@@ -18,10 +18,7 @@ import {
   linkModule,
   moduleUrl
 } from "../modules/linkModule.ts";
-import {
-  ModuleRegistry,
-  THREE_NAMESPACES
-} from "../modules/ModuleRegistry.ts";
+import { ModuleRegistry } from "../modules/ModuleRegistry.ts";
 
 type MaterialFactory = (inputs: Record<string, unknown>) => unknown;
 type UniformInput = THREE.UniformNode<unknown, ShaderUniformValue>;
@@ -32,7 +29,7 @@ interface ShaderExports {
 }
 
 // CONSTANTS
-const kModules = new ModuleRegistry(SHADER_IMPORTS, THREE_NAMESPACES);
+const kModules = new ModuleRegistry(SHADER_IMPORTS);
 
 export class ShaderModule implements Shader {
   static async load(

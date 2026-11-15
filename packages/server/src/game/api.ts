@@ -6,6 +6,7 @@ import type { ApiRoute } from "../http/api.ts";
 
 // CONSTANTS
 export const GAME_URL_PATH = "/api/game/";
+export const GAME_MODULES_DIR = "modules";
 export const GAME_ROUTES = {
   manifest: {
     method: "GET",
@@ -14,6 +15,10 @@ export const GAME_ROUTES = {
   artifact: {
     method: "GET",
     path: "builds/:assetId/:revision/:name"
+  },
+  module: {
+    method: "GET",
+    path: `${GAME_MODULES_DIR}/*`
   }
 } as const satisfies Record<string, ApiRoute>;
 
@@ -30,3 +35,15 @@ export const artifactParamsSchema = z.object({
 });
 
 export type ArtifactParams = z.infer<typeof artifactParamsSchema>;
+
+export const moduleParamsSchema = z.object({
+  "*": z.string().min(1)
+});
+
+export type ModuleParams = z.infer<typeof moduleParamsSchema>;
+
+export const moduleQuerySchema = z.object({
+  revision: z.string().min(1).optional()
+});
+
+export type ModuleQuery = z.infer<typeof moduleQuerySchema>;

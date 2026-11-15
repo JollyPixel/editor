@@ -11,6 +11,10 @@ import {
   StudioBackend,
   type StudioBackendOptions
 } from "../node/StudioBackend.ts";
+import type {
+  GamePlayer,
+  PlayerPageSource
+} from "../node/game/GamePlayer.ts";
 import { ManifestRoute } from "../node/project/ManifestRoute.ts";
 import { StudioAccess } from "../node/project/StudioAccess.ts";
 import { NO_SHELL_PREFERENCES } from "../preferences/PreferenceScopes.ts";
@@ -22,6 +26,10 @@ import {
 
 // CONSTANTS
 export const PASSED_ON_STATUS = 418;
+const kUnbuiltPlayer: GamePlayer & PlayerPageSource = {
+  bundle: () => Promise.reject(new Error("a test backend builds no game")),
+  html: () => Promise.reject(new Error("a test backend builds no player"))
+};
 
 export interface ServedBackend extends AsyncDisposable {
   url: URL;
@@ -46,7 +54,7 @@ export interface ServeBackendOptions extends Pick<
 }
 
 export interface ListenBackendOptions extends ServeBackendOptions, Pick<
-  StudioBackendOptions, "seed" | "player"
+  StudioBackendOptions, "seed"
 > {
   /**
    * @default NO_SHELL_PREFERENCES
@@ -67,7 +75,8 @@ export async function listenBackend(
   const backend = await StudioBackend.open(project, {
     inMemory: true,
     seed: options.seed,
-    player: options.player,
+    player: kUnbuiltPlayer,
+    playPage: kUnbuiltPlayer,
     preferences: options.preferences ?? NO_SHELL_PREFERENCES,
     requestsPerMinute: options.requestsPerMinute,
     trustProxy: options.trustProxy,

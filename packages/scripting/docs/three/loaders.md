@@ -21,32 +21,32 @@ const loaders = [
 ```ts
 class ScriptModuleLoader implements AssetLoader<ScriptModule> {
   constructor(manager: THREE.LoadingManager);
-  load(record: AssetRecord, context: AssetLoadContext): Promise<ScriptModule>;
+  load(record: AssetRecord): Promise<ScriptModule>;
 }
 ```
 
-Fetches the build at the asset path and imports it as a module.
+Imports the URL the manager's URL modifier gives the asset path, with the
+browser's own `import()`. The build is not linked: its imports resolve
+through the import map of the page.
 
-### Modules
+### Import map
 
-Each import of `three`, `three/webgpu`, `three/tsl` or `@jolly-pixel/engine`
-becomes a `data:` module over the game's own copy, so a script extends the
-same `Behavior` class the game runs. Any other bare specifier is refused with
-the [`SCRIPT_IMPORTS`](../ScriptImportPolicy.md) message.
+The page must map each import a script may make:
 
-### Other scripts
+- `three`, `three/webgpu`, `three/tsl` and `@jolly-pixel/engine` to modules
+  that re-export the game's own copy, so a script extends the same
+  `Behavior` class the game runs;
+- each script, under every form a `./` or `../` import may name it, to the
+  URL the URL modifier gives its path. For `player.ts`, the forms are
+  `player`, `player.ts` and `player.js`. A script whose path is the exact
+  form wins over another script's derived form.
 
-A `./` or `../` import names another script asset, resolved against the
-importing script's path. For `./player.js`, the loader tries `./player.js`,
-`./player.js.ts` and `./player.ts`; for `./player`, `./player` and
-`./player.ts`.
+Scripts must be served in their project folder layout under a common
+directory, because a relative import resolves against the URL its script was
+fetched from. Every script that imports another gets the same URL, so a
+script is evaluated once, and scripts may import each other.
 
-- The imported script links first.
-- Every script that imports it links the same `data:` URL, so it is evaluated
-  once.
-- Two scripts that import each other throw a `ScriptImportError` naming both
-  paths. An `import type` breaks the cycle, because the build drops it.
-- A path that names no script asset throws a `ScriptImportError`.
+An import the map does not name fails to load, with the browser's message.
 
 ## ShaderModuleLoader
 
