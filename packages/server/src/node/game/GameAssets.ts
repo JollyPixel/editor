@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/asset-server";
 import {
   SCRIPT_KIND,
-  importedScripts
+  ScriptModules
 } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
@@ -74,10 +74,9 @@ export class GameAssets {
         .flatMap(({ id }) => projection.record(id) ?? [])
     );
     if (record.hasKind(SCRIPT_KIND)) {
-      this.#reach(await importedScripts(
+      this.#reach(await new ScriptModules(projection.catalog).imported(
         record,
-        new TextDecoder().decode(artifact.bytes),
-        projection.catalog
+        new TextDecoder().decode(artifact.bytes)
       ));
     }
     if (record.hasKind(kModelKind)) {

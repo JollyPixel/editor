@@ -5,6 +5,10 @@ import {
   type AssetManifestData,
   type AssetRecord
 } from "@jolly-pixel/asset";
+import {
+  SCRIPT_KIND,
+  ScriptModules
+} from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
 import {
@@ -23,7 +27,6 @@ export const CURRENT_REVISION = "current";
 export const GAME_MANIFEST_FILE = "game.json";
 export const GAME_MANIFEST_META = "jolly-game";
 const kBuildsDir = "builds";
-const kScriptKind = "script";
 
 export interface GameManifestData {
   readonly version: typeof GAME_MANIFEST_VERSION;
@@ -70,21 +73,9 @@ export function scriptImports(
   records: Iterable<AssetRecord>,
   base: string
 ): Record<string, string> {
-  const scripts = new Map<string, AssetRecord>();
-  for (const record of records) {
-    if (record.hasKind(kScriptKind)) {
-      scripts.set(record.path.value, record);
-    }
-  }
-
   const imports: Record<string, string> = {};
-  for (const [path, record] of scripts) {
-    const url = `${base}${artifactUrl(record)}`;
-    for (const specifier of new GameModule(path).specifiers()) {
-      if (GameModule.resolve(specifier, scripts) === path) {
-        imports[`${base}${moduleUrl(specifier)}`] = url;
-      }
-    }
+  for (const [specifier, script] of new ScriptModules(records).entries()) {
+    imports[`${base}${moduleUrl(specifier)}`] = `${base}${artifactUrl(script)}`;
   }
 
   return imports;
@@ -93,7 +84,7 @@ export function scriptImports(
 export function artifactSegments(
   record: AssetRecord
 ): string[] {
-  if (record.hasKind(kScriptKind)) {
+  if (record.hasKind(SCRIPT_KIND)) {
     return new GameModule(record.path.value).segments;
   }
 
@@ -110,7 +101,7 @@ export function artifactSegments(
 function artifactUrl(
   record: AssetRecord
 ): string {
-  return record.hasKind(kScriptKind) ?
+  return record.hasKind(SCRIPT_KIND) ?
     new GameModule(record.path.value)
       .url(record.revision ?? CURRENT_REVISION) :
     artifactSegments(record).map(encodeURIComponent).join("/");

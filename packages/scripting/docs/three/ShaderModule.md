@@ -39,8 +39,9 @@ their defaults: a number, `Color`, `Vector2`, `Vector3`, `Vector4` or
 
 ## loadShader(source: string, name: string): Promise\<ShaderModule\>
 
-Strips the types as [`buildShader`](../build.md) does, then calls `ShaderModule.load`. The editor preview uses it, so the
-preview and the game run the same code.
+Builds `source` with [`buildShader`](../build.md), then calls
+`ShaderModule.load`. The editor preview uses it, so the preview and the game
+run the same build.
 
 ## ShaderModule
 
