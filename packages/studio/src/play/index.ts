@@ -13,7 +13,7 @@ import {
   type Game
 } from "./GameManifestClient.ts";
 import { attachPhysics } from "./gamePhysics.ts";
-import { GameScenes } from "./GameScenes.ts";
+import { PlayerScenes } from "./PlayerScenes.ts";
 import { playLoggerOptions } from "./playLogger.ts";
 import {
   PLAY_ERROR,
@@ -89,20 +89,19 @@ async function play(): Promise<void> {
     worldLogger: playLoggerOptions(warn)
   });
   runtime.manager.setURLModifier(game.resolveURL);
-  const scenes = await GameScenes.load(
-    runtime.world.assetCoordinator,
-    game.start
-  );
-  if (scenes.uses(game.start, usesPhysics)) {
-    await attachPhysics(runtime.world, game.physics);
-  }
+  const scenes = new PlayerScenes({
+    files: runtime.world.assetCoordinator,
+    catalog: game.catalog,
+    components,
+    physics: {
+      uses: usesPhysics,
+      attach: () => attachPhysics(runtime.world, game.physics)
+    }
+  });
+  runtime.world.sceneManager.sceneSource = scenes;
 
   await runtime.load({
-    scene: scenes.scene(
-      game.start,
-      game.catalog.get(game.start).path.name,
-      components
-    )
+    scene: scenes.scene(game.start)
   });
 }
 

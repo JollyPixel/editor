@@ -13,5 +13,6 @@ export {
   type SceneLoadOptions,
   type SceneLoadStatus
 } from "./SceneLoad.ts";
+export type { SceneSource } from "./SceneSource.ts";
 export * from "./SceneGraph.ts";
 export * from "./HeadlessSceneGraph.ts";

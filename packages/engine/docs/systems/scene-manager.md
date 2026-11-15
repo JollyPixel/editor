@@ -27,6 +27,12 @@ coordinator cannot load. A scene with nothing left to load is
 `ready` before `loadScene()` returns. A ready scene replaces the current one
 at the next frame boundary.
 
+A scene that must fetch something before it knows its assets does it in
+`prepare()`. When `prepare()` returns a promise, the load stays `requested`
+until the promise settles, then loads the assets, or fails with the
+rejection. A load cancelled meanwhile loads no asset. The default `prepare()`
+returns nothing, and the assets load at once.
+
 ```ts
 load.status;
 load.completed;
@@ -69,6 +75,34 @@ if (fade.isOpaque) {
 
 `allowActivation()` may come before or after loading finishes. The scene is
 replaced at the next `beginFrame()` once both are done.
+
+## Loading a scene asset
+
+A script that knows a scene only by its asset ID or path asks the scene
+source the game set:
+
+```ts
+const load = this.actor.world.sceneManager.loadSceneAsset("levels/level-2");
+```
+
+`sceneSource` turns the ref into a `Scene`; what a ref may be is up to the
+source. `loadSceneAsset()` then calls `loadScene()` with it and the same
+options, so the returned `SceneLoad` behaves like any other. It throws when no
+source is set or when the source throws. The engine sets no source: the game
+does.
+
+The source returns at once. A scene whose file is not loaded yet fetches it
+in `prepare()`, as a `FileScene` given a loader does:
+
+```ts
+sceneManager.sceneSource = {
+  scene: (ref) => new Systems.FileScene(
+    ref,
+    () => loadJSON<Systems.SceneFile>(`${ref}.scene.json`),
+    { components }
+  )
+};
+```
 
 ## Appending a scene
 
@@ -122,6 +156,10 @@ interface SceneLoadOptions {
   activation?: "automatic" | "manual";
 }
 
+interface SceneSource<TContext> {
+  scene(ref: string): Scene<TContext>;
+}
+
 interface SceneLoad<TContext> {
   readonly scene: Scene<TContext>;
   readonly status: SceneLoadStatus;
@@ -146,9 +184,15 @@ class SceneManager<TContext> {
   readonly currentScene: Scene<TContext> | null;
   readonly sceneLoad: SceneLoad<TContext> | null;
   readonly hasPendingScene: boolean;
+  sceneSource: SceneSource<TContext> | null;
 
   loadScene(
     scene: Scene<TContext>,
+    options?: SceneLoadOptions
+  ): SceneLoad<TContext>;
+
+  loadSceneAsset(
+    ref: string,
     options?: SceneLoadOptions
   ): SceneLoad<TContext>;
 

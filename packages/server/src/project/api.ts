@@ -37,6 +37,15 @@ export const PROJECT_ROUTES = {
     path: "settings"
   }
 } as const satisfies Record<string, ApiRoute>;
+export const GAME_EXPORT_ASSETS = ["reachable", "all"] as const;
+
+export const gameExportQuerySchema = z.object({
+  assets: z.enum(GAME_EXPORT_ASSETS).default("reachable")
+});
+
+export type GameExportAssets = typeof GAME_EXPORT_ASSETS[number];
+export type GameExportQuery = z.infer<typeof gameExportQuerySchema>;
+
 export const SHARE_RIGHT = "studio.$share";
 export const EXPORT_RIGHT = "studio.$export";
 export const SETTINGS_RIGHT = "studio.$settings";

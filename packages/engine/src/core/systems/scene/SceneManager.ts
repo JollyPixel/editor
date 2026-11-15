@@ -17,6 +17,7 @@ import type {
   SceneLoadOptions
 } from "./SceneLoad.ts";
 import type { SceneGraph } from "./SceneGraph.ts";
+import type { SceneSource } from "./SceneSource.ts";
 import type { BackendSceneGraph } from "../SceneBackend.ts";
 
 export type SceneEvents<TContext = WorldDefaultContext> = {
@@ -46,6 +47,7 @@ export class SceneManager<
 > extends Emitter<SceneEvents<TContext>> {
   readonly graph: BackendSceneGraph;
   readonly actors: ActorRegistry<TContext>;
+  sceneSource: SceneSource<TContext> | null = null;
 
   #currentScene: Scene<TContext> | null = null;
   #sceneStartPending = false;
@@ -125,6 +127,17 @@ export class SceneManager<
     return load;
   }
 
+  loadSceneAsset(
+    ref: string,
+    options: SceneLoadOptions = {}
+  ): SceneLoad<TContext> {
+    if (this.sceneSource === null) {
+      throw new Error(`No scene source to load scene "${ref}" from.`);
+    }
+
+    return this.loadScene(this.sceneSource.scene(ref), options);
+  }
+
   appendScene(
     scene: Scene<TContext>,
     options: SceneLoadOptions = {}
@@ -167,27 +180,45 @@ export class SceneManager<
     load: ManagedSceneLoad<TContext>
   ): void {
     try {
-      const coordinator = this.#world!.assetCoordinator;
-      const batch = coordinator.loadBatch(
-        load.scene.assetsToLoad(coordinator),
-        {
-          onProgress: (progress) => load.report(progress)
-        }
-      );
-      load.start(batch.completed, batch.total);
-
-      if (batch.status === "ready") {
-        load.ready();
+      const preparing = load.scene.prepare();
+      if (preparing === undefined) {
+        this.#loadSceneAssets(load);
       }
       else {
-        void batch.done.then(
-          () => load.ready(),
-          (value: unknown) => load.fail(toError(value))
-        );
+        void preparing
+          .then(() => this.#loadSceneAssets(load))
+          .catch((value: unknown) => load.fail(toError(value)));
       }
     }
     catch (value: unknown) {
       load.fail(toError(value));
+    }
+  }
+
+  #loadSceneAssets(
+    load: ManagedSceneLoad<TContext>
+  ): void {
+    if (load.status !== "requested") {
+      return;
+    }
+
+    const coordinator = this.#world!.assetCoordinator;
+    const batch = coordinator.loadBatch(
+      load.scene.assetsToLoad(coordinator),
+      {
+        onProgress: (progress) => load.report(progress)
+      }
+    );
+    load.start(batch.completed, batch.total);
+
+    if (batch.status === "ready") {
+      load.ready();
+    }
+    else {
+      void batch.done.then(
+        () => load.ready(),
+        (value: unknown) => load.fail(toError(value))
+      );
     }
   }
 

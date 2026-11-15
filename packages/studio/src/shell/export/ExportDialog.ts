@@ -13,28 +13,23 @@ import {
   state
 } from "lit/decorators.js";
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import type { GameExportAssets } from "@jolly-pixel/server";
 import type {
   Dialog,
   JollyChangeDetail
 } from "@jolly-pixel/ui";
-import { errorMessage } from "@jolly-pixel/utils";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
+import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/dialog";
-import "@jolly-pixel/ui/elements/message";
 import "@jolly-pixel/ui/elements/text";
 
 // Import Internal Dependencies
-import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
+import { ExportStartEvent } from "./ExportStartEvent.ts";
 import type { ExportTarget } from "./ExportTarget.ts";
 import { ExportTargets } from "./ExportTargets.ts";
-
-export interface ExportRequest {
-  user: StudioSignedIn;
-  defaultScene: AssetRecordData | null;
-}
 
 @customElement("studio-export-dialog")
 export class ExportDialog extends LitElement {
@@ -60,7 +55,7 @@ export class ExportDialog extends LitElement {
   declare browserState: BrowserState;
 
   @state()
-  declare _request: ExportRequest | null;
+  declare _defaultScene: AssetRecordData | null;
 
   @state()
   declare _target: ExportTarget;
@@ -69,10 +64,7 @@ export class ExportDialog extends LitElement {
   declare _fileName: string;
 
   @state()
-  declare _busy: boolean;
-
-  @state()
-  declare _error: string | null;
+  declare _assets: GameExportAssets;
 
   @query("jolly-dialog")
   declare _dialog: Dialog;
@@ -82,47 +74,42 @@ export class ExportDialog extends LitElement {
   constructor() {
     super();
     this.browserState = new BrowserState();
-    this._request = null;
+    this._defaultScene = null;
     this._target = this.#targets.initial("", null);
     this._fileName = "";
-    this._busy = false;
-    this._error = null;
+    this._assets = "reachable";
   }
 
   async open(
-    request: ExportRequest
+    defaultScene: AssetRecordData | null
   ): Promise<void> {
-    this._request = request;
+    this._defaultScene = defaultScene;
     this._target = this.#targets.initial(
       this.browserState.exportTarget,
-      request.defaultScene
+      defaultScene
     );
     this._fileName = "";
-    this._busy = false;
-    this._error = null;
+    this._assets = this.browserState.exportAssets;
 
     await this.updateComplete;
     await this._dialog.showModal();
   }
 
   override render(): TemplateResult {
-    const blocker = this._target.blocker(
-      this._request?.defaultScene ?? null
-    );
-    const exportable = blocker === null && !this._busy;
+    const blocker = this._target.blocker(this._defaultScene);
+    const exportable = blocker === null;
 
     return html`
       <jolly-dialog
         heading="Export"
         icon="export"
-        ?dismissible=${!this._busy}
+        dismissible
       >
         <jolly-button-group
           layout="tiles"
           aria-label="Export target"
           .options=${this.#targets.options()}
           .value=${this._target.name}
-          ?disabled=${this._busy}
           @jolly-change=${this.#onTargetChange}
         ></jolly-button-group>
         <p class="status" role="status">
@@ -143,20 +130,25 @@ export class ExportDialog extends LitElement {
           ?disabled=${!exportable}
           @jolly-input=${this.#onFileNameInput}
         ></jolly-text>
-        ${this._error === null ? nothing : html`
-          <jolly-message tone="danger" role="alert">${this._error}</jolly-message>
-        `}
+        ${this._target.prunesAssets ? html`
+          <jolly-checkbox
+            label="Include every asset"
+            title="Also export the assets no scene uses, for scripts that load assets by ID"
+            .value=${this._assets === "all"}
+            ?disabled=${!exportable}
+            @jolly-change=${this.#onAssetsChange}
+          ></jolly-checkbox>
+        ` : nothing}
         <jolly-button
           slot="actions"
           variant="accent"
           data-action="export"
           ?disabled=${!exportable}
           @click=${this.#export}
-        >${this._busy ? "Exporting…" : "Export"}</jolly-button>
+        >Export</jolly-button>
         <jolly-button
           slot="actions"
           data-action="cancel"
-          ?disabled=${this._busy}
           @click=${this.#close}
         >Cancel</jolly-button>
       </jolly-dialog>
@@ -172,7 +164,6 @@ export class ExportDialog extends LitElement {
     }
 
     this._target = target;
-    this._error = null;
     this.browserState.exportTarget = target.name;
   }
 
@@ -182,6 +173,13 @@ export class ExportDialog extends LitElement {
     this._fileName = event.detail.value;
   }
 
+  #onAssetsChange(
+    event: CustomEvent<JollyChangeDetail<boolean>>
+  ): void {
+    this._assets = event.detail.value ? "all" : "reachable";
+    this.browserState.exportAssets = this._assets;
+  }
+
   #openSettings(
     section: string
   ): void {
@@ -189,25 +187,12 @@ export class ExportDialog extends LitElement {
     this.dispatchEvent(new SettingsOpenEvent(section));
   }
 
-  async #export(): Promise<void> {
-    const request = this._request;
-    if (request === null || this._busy) {
-      return;
-    }
-
-    this._busy = true;
-    this._error = null;
-    try {
-      const download = await this._target.download(request.user);
-      download.renamed(this._fileName).save();
-      this._dialog.close("export");
-    }
-    catch (error) {
-      this._error = `Could not export: ${errorMessage(error)}`;
-    }
-    finally {
-      this._busy = false;
-    }
+  #export(): void {
+    this._dialog.close("export");
+    this.dispatchEvent(new ExportStartEvent(this._target, {
+      fileName: this._fileName,
+      assets: this._assets
+    }));
   }
 
   #close(): void {

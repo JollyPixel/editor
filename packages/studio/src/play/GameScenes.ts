@@ -15,41 +15,37 @@ export interface SceneFileSource {
 }
 
 export class GameScenes implements Systems.ScenePrefabs {
-  static async load(
-    source: SceneFileSource,
-    start: string
-  ): Promise<GameScenes> {
-    const started = new Set<string>();
-    const files = new Map<string, Systems.SceneFile>();
+  #source: SceneFileSource;
+  #files = new Map<string, Systems.SceneFile>();
 
-    async function visit(
-      sceneId: string
-    ): Promise<void> {
-      if (started.has(sceneId)) {
+  constructor(
+    source: SceneFileSource
+  ) {
+    this.#source = source;
+  }
+
+  async load(
+    sceneId: string
+  ): Promise<Systems.SceneFile> {
+    const visited = new Set<string>();
+    const visit = async(id: string): Promise<void> => {
+      if (visited.has(id)) {
         return;
       }
-      started.add(sceneId);
+      visited.add(id);
 
-      const file = await source.load(
-        new AssetReference(sceneId, SceneFileAssetType)
+      const file = await this.#source.load(
+        new AssetReference(id, SceneFileAssetType)
       );
-      files.set(sceneId, file);
+      this.#files.set(id, file);
       await Promise.all(file.actors.flatMap(
         ({ prefab }) => (prefab?.kind === kSceneKind ? [visit(prefab.id)] : [])
       ));
-    }
+    };
 
-    await visit(start);
+    await visit(sceneId);
 
-    return new GameScenes(files);
-  }
-
-  #files: ReadonlyMap<string, Systems.SceneFile>;
-
-  constructor(
-    files: ReadonlyMap<string, Systems.SceneFile>
-  ) {
-    this.#files = files;
+    return this.#loaded(sceneId);
   }
 
   find(
@@ -74,18 +70,6 @@ export class GameScenes implements Systems.ScenePrefabs {
     }
 
     return false;
-  }
-
-  scene(
-    sceneId: string,
-    name: string,
-    components: Systems.ComponentDefinitions
-  ): Systems.FileScene {
-    return new Systems.FileScene(name, this.#loaded(sceneId), {
-      components,
-      prefabs: this,
-      sceneId
-    });
   }
 
   #loaded(

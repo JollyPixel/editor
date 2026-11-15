@@ -4,9 +4,13 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import type { Readable } from "node:stream";
 
 // Import Third-party Dependencies
-import { unzipSync } from "fflate";
+import {
+  unzipSync,
+  type Unzipped
+} from "fflate";
 
 // Import Internal Dependencies
 import { GameBuildError } from "#src/node/game/errors/GameBuildError.ts";
@@ -19,6 +23,7 @@ import {
   GAME_ACCESS,
   gameAccount,
   gameProject,
+  uses,
   type GameProject
 } from "../../helpers/gameProject.ts";
 
@@ -54,18 +59,37 @@ function gameExport(
   });
 }
 
+async function unzip(
+  zip: Readable
+): Promise<Unzipped> {
+  return unzipSync(Buffer.concat(await zip.toArray()));
+}
+
 function text(
   bytes: Uint8Array | undefined
 ): string | undefined {
   return bytes === undefined ? undefined : new TextDecoder().decode(bytes);
 }
 
+function exportedPaths(
+  files: Unzipped
+): string[] {
+  const manifest = JSON.parse(text(files["game.json"])!);
+
+  return manifest.assets.assets
+    .map(({ path }: { path: string; }) => path)
+    .sort();
+}
+
 describe("GameExport", () => {
   test("zips the player, game.json from the default scene and each build at its Play URL", async() => {
     await using project = await gameProject();
-    const scene = await project.create("levels/arena.scene.json", "{}");
     const texture = await project.create("textures/my grass.png", "png");
-    await project.create("maps/overworld.voxelmap.json", "{}");
+    const map = await project.create("maps/overworld.voxelmap.json", "{}");
+    const scene = await project.create(
+      "levels/arena.scene.json",
+      uses({ id: texture, kind: "texture" }, { id: map, kind: "voxelmap" })
+    );
     const exporter = gameExport(project, scene);
     const played = new StudioGame({
       project: {
@@ -75,16 +99,18 @@ describe("GameExport", () => {
       backend: project.backend
     }).manifest(gameAccount("publisher"), scene);
 
-    const files = unzipSync(await exporter.export(gameAccount("publisher")));
+    const files = await unzip(
+      await exporter.export(gameAccount("publisher"), "reachable")
+    );
 
     const manifest = JSON.parse(text(files["game.json"])!);
     const grass = manifest.artifacts[texture];
     assert.equal(exporter.fileName, "Quest-game.zip");
     assert.equal(manifest.start, scene);
-    assert.deepEqual(
-      manifest.assets.assets.map(({ path }: { path: string; }) => path).sort(),
-      ["levels/arena.scene.json", "textures/my grass.png"]
-    );
+    assert.deepEqual(exportedPaths(files), [
+      "levels/arena.scene.json",
+      "textures/my grass.png"
+    ]);
     assert.equal(grass, played.artifacts[texture]);
     assert.deepEqual(manifest.physics, kMoonPhysics);
     assert.deepEqual(played.physics, kMoonPhysics);
@@ -93,12 +119,89 @@ describe("GameExport", () => {
     assert.equal(text(files["assets/play.js"]), "play()");
   });
 
+  test("keeps every scene and what they reach, dropping the other assets unbuilt", async() => {
+    await using project = await gameProject();
+    const grass = await project.create("textures/grass.png", "png");
+    await project.create("textures/unused.png", "png");
+    await project.create("scripts/Broken.ts", "import \"lodash\";");
+    const blockset = await project.create(
+      "maps/overworld.blockset.json",
+      uses({ id: grass, kind: "texture" })
+    );
+    const scene = await project.create(
+      "levels/arena.scene.json",
+      uses({ id: blockset, kind: "blockset" })
+    );
+    await project.create("levels/secret.scene.json", "{}");
+
+    const zip = await gameExport(project, scene).export(
+      gameAccount("publisher"),
+      "reachable"
+    );
+
+    assert.deepEqual(exportedPaths(await unzip(zip)), [
+      "levels/arena.scene.json",
+      "levels/secret.scene.json",
+      "maps/overworld.blockset.json",
+      "textures/grass.png"
+    ]);
+  });
+
+  test("keeps the scripts a script imports and the files under a model's folder", async() => {
+    await using project = await gameProject();
+    await project.create("scripts/math/vector.ts", "export const zero = 0;");
+    const player = await project.create(
+      "scripts/Player.ts",
+      "import { zero } from \"./math/vector.js\";"
+    );
+    const ship = await project.create("models/ship.obj", "o ship");
+    await project.create("models/ship.png", "png");
+    await project.create("models/textures/hull.png", "png");
+    await project.create("models/Spin.ts", "export {};");
+    await project.create("props/crate.png", "png");
+    const scene = await project.create(
+      "levels/arena.scene.json",
+      uses({ id: player, kind: "script" }, { id: ship, kind: "model" })
+    );
+
+    const zip = await gameExport(project, scene).export(
+      gameAccount("publisher"),
+      "reachable"
+    );
+
+    assert.deepEqual(exportedPaths(await unzip(zip)), [
+      "levels/arena.scene.json",
+      "models/ship.obj",
+      "models/ship.png",
+      "models/textures/hull.png",
+      "scripts/Player.ts",
+      "scripts/math/vector.ts"
+    ]);
+  });
+
+  test("keeps every buildable asset when asked for all of them", async() => {
+    await using project = await gameProject();
+    const scene = await project.create("levels/arena.scene.json", "{}");
+    await project.create("textures/unused.png", "png");
+    await project.create("maps/overworld.voxelmap.json", "{}");
+
+    const zip = await gameExport(project, scene).export(
+      gameAccount("publisher"),
+      "all"
+    );
+
+    assert.deepEqual(exportedPaths(await unzip(zip)), [
+      "levels/arena.scene.json",
+      "textures/unused.png"
+    ]);
+  });
+
   test("refuses a role without write on studio.$export", async() => {
     await using project = await gameProject();
     const scene = await project.create("levels/arena.scene.json", "{}");
 
     await assert.rejects(
-      gameExport(project, scene).export(gameAccount("player")),
+      gameExport(project, scene).export(gameAccount("player"), "reachable"),
       ProjectRightRefusedError
     );
   });
@@ -109,19 +212,30 @@ describe("GameExport", () => {
 
     for (const start of [null, texture, "missing"]) {
       await assert.rejects(
-        gameExport(project, start).export(gameAccount("publisher")),
+        gameExport(project, start).export(
+          gameAccount("publisher"),
+          "reachable"
+        ),
         GameExportError
       );
     }
   });
 
-  test("fails on the first asset whose build fails, naming it", async() => {
+  test("stops the zip on the first reached asset whose build fails, naming it", async() => {
     await using project = await gameProject();
-    const scene = await project.create("levels/arena.scene.json", "{}");
-    await project.create("scripts/Player.ts", "import \"lodash\";");
+    const script = await project.create("scripts/Player.ts", "import \"lodash\";");
+    const scene = await project.create(
+      "levels/arena.scene.json",
+      uses({ id: script, kind: "script" })
+    );
+
+    const zip = await gameExport(project, scene).export(
+      gameAccount("publisher"),
+      "reachable"
+    );
 
     await assert.rejects(
-      gameExport(project, scene).export(gameAccount("publisher")),
+      zip.toArray(),
       (error) => error instanceof GameBuildError &&
         error.message === "\"scripts/Player.ts\" cannot be built: \"lodash\" cannot be imported"
     );

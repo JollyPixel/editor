@@ -36,7 +36,7 @@ import {
   AUDIT_STATE_IGNORES,
   AuditLog
 } from "./audit/AuditLog.ts";
-import type { GamePlayer } from "./game/BuiltPlayer.ts";
+import type { GamePlayer } from "./game/GamePlayer.ts";
 import { GameExport } from "./game/GameExport.ts";
 import { StudioGame } from "./game/StudioGame.ts";
 import { AgentChatExtension } from "./golem/AgentChatExtension.ts";

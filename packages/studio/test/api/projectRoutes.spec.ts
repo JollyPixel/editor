@@ -100,7 +100,7 @@ describe("GET /api/project/game.zip", () => {
     const owner = archiveClient(backend, await signedIn(backend, "Alice"));
 
     await assert.rejects(
-      owner.downloadGame(),
+      owner.downloadGame("reachable"),
       {
         name: "ApiRequestError",
         status: 409,

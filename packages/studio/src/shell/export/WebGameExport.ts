@@ -7,6 +7,7 @@ import type { FileDownload } from "../../browser/FileDownload.ts";
 import { GENERAL_SECTION } from "../settings/SettingsSections.ts";
 import type {
   ExportBlocker,
+  ExportRequest,
   ExportTarget
 } from "./ExportTarget.ts";
 
@@ -18,8 +19,10 @@ const kNoDefaultScene: ExportBlocker = {
 
 export class WebGameExport implements ExportTarget {
   readonly name = "web";
+  readonly label = "web game";
   readonly summary = "A game that runs from any static web server, " +
     "not from file://.";
+  readonly prunesAssets = true;
 
   blocker(
     defaultScene: AssetRecordData | null
@@ -28,8 +31,9 @@ export class WebGameExport implements ExportTarget {
   }
 
   download(
-    user: StudioSignedIn
+    user: StudioSignedIn,
+    request: ExportRequest
   ): Promise<FileDownload> {
-    return user.exportGame();
+    return user.exportGame(request.assets);
   }
 }

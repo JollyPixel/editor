@@ -10,6 +10,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { ScriptImportError } from "../imports/errors/ScriptImportError.ts";
+import { scriptAt } from "../imports/importedScripts.ts";
 import { SCRIPT_IMPORTS } from "../imports/importPolicies.ts";
 import { isRelativeSpecifier } from "../imports/ScriptImportPolicy.ts";
 import {
@@ -23,7 +24,6 @@ import {
 } from "../modules/ModuleRegistry.ts";
 
 // CONSTANTS
-const kScriptKind = Engine.SCRIPT_MODULE_ASSET.kind;
 const kModules = new ModuleRegistry(SCRIPT_IMPORTS, {
   ...THREE_NAMESPACES,
   "@jolly-pixel/engine": Engine
@@ -113,28 +113,4 @@ export class ScriptModuleLoader implements AssetLoader<Engine.ScriptModule> {
     }
     this.#waits.set(record.id.value, dependency);
   }
-}
-
-function scriptAt(
-  catalog: AssetCatalog,
-  importer: AssetRecord,
-  specifier: string
-): AssetRecord {
-  const target = importer.path.resolve(specifier).toString();
-  const candidates = [
-    target,
-    `${target}.ts`,
-    target.replace(/\.js$/, ".ts")
-  ];
-
-  for (const candidate of candidates) {
-    const record = catalog.findByPath(candidate);
-    if (record?.hasKind(kScriptKind)) {
-      return record;
-    }
-  }
-
-  throw new ScriptImportError(
-    `"${importer.path}" imports "${specifier}", which is no script of the game.`
-  );
 }

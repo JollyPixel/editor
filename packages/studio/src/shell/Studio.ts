@@ -449,6 +449,7 @@ export class Studio extends LitElement implements GolemChatOpener {
           <studio-header-actions
             .user=${user}
             .browserState=${this.#browserState}
+            .notifications=${this.#notifications}
             .play=${this._play}
             .agentChat=${this._agentChat}
             @console-toggle=${this.#toggleConsole}

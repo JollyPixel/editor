@@ -5,6 +5,7 @@ export * from "./node/editors/EditorPackage.ts";
 export * from "./node/editors/EditorPackages.ts";
 export * from "./node/editors/EditorPageFolders.ts";
 export * from "./node/game/BuiltPlayer.ts";
+export * from "./node/game/GamePlayer.ts";
 export * from "./node/http/Middleware.ts";
 export * from "./node/http/requestPathname.ts";
 export * from "./node/http/serveBuild.ts";

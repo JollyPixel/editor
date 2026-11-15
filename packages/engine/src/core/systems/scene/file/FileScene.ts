@@ -31,11 +31,12 @@ export interface FileSceneOptions {
   sceneId?: string;
 }
 
+export type SceneFileLoad = () => Promise<SceneFile>;
+
 export class FileScene<
   TContext = WorldDefaultContext
 > extends Scene<TContext> {
-  readonly file: SceneFile;
-
+  #file: SceneFile | SceneFileLoad;
   #components: ComponentDefinitions;
   #prefabs: ScenePrefabs;
   #sceneId: string | undefined;
@@ -43,30 +44,45 @@ export class FileScene<
 
   constructor(
     name: string,
-    file: SceneFile,
+    file: SceneFile | SceneFileLoad,
     options: FileSceneOptions
   ) {
-    const {
-      components,
-      prefabs = NO_SCENE_PREFABS,
-      sceneId
-    } = options;
+    super(name);
+    this.#file = file;
+    this.#components = options.components;
+    this.#prefabs = options.prefabs ?? NO_SCENE_PREFABS;
+    this.#sceneId = options.sceneId;
+  }
 
-    super(name, {
-      assets: components.assets({
-        actors: [...expandedSceneActors(file.actors, prefabs, sceneId)]
-      })
+  get file(): SceneFile {
+    if (typeof this.#file === "function") {
+      throw new Error(`Scene "${this.name}" has not loaded its file yet.`);
+    }
+
+    return this.#file;
+  }
+
+  override prepare(): Promise<void> | void {
+    const file = this.#file;
+    if (typeof file !== "function") {
+      return undefined;
+    }
+
+    return file().then((loaded) => {
+      this.#file = loaded;
     });
-    this.file = file;
-    this.#components = components;
-    this.#prefabs = prefabs;
-    this.#sceneId = sceneId;
   }
 
   override assetsToLoad(
     loadable: LoadableAssets
   ): Iterable<AssetReference<unknown>> {
-    return this.assets.filter((reference) => loadable.canLoad(reference));
+    const actors = [
+      ...expandedSceneActors(this.file.actors, this.#prefabs, this.#sceneId)
+    ];
+
+    return Array.from(this.#components.assets({ actors })).filter(
+      (reference) => loadable.canLoad(reference)
+    );
   }
 
   override awake(): void {

@@ -29,6 +29,9 @@
       "path": "../preferences"
     },
     {
+      "path": "../scripting"
+    },
+    {
       "path": "../voxel-renderer"
     }
   ]

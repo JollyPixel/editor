@@ -12,7 +12,11 @@ import {
   type PeerIdentity
 } from "@jolly-pixel/ui";
 import { toPeerProfileMetadata } from "@jolly-pixel/ui/network";
-import type { ProjectSections, ProjectRights } from "@jolly-pixel/server";
+import type {
+  GameExportAssets,
+  ProjectSections,
+  ProjectRights
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { StudioClients } from "../api/StudioClients.ts";
@@ -149,8 +153,10 @@ export class StudioSignedIn extends EventTarget {
     return this.#api.archive.download();
   }
 
-  exportGame(): Promise<FileDownload> {
-    return this.#api.archive.downloadGame();
+  exportGame(
+    assets: GameExportAssets
+  ): Promise<FileDownload> {
+    return this.#api.archive.downloadGame(assets);
   }
 
   auditPages(): AuditPages {

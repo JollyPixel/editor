@@ -48,6 +48,20 @@ imports:
 
 Whether `specifier` starts with `./` or `../`.
 
+## importedScripts(importer, code, catalog): Promise\<AssetRecord[]\>
+
+The scripts the built `code` of `importer` imports by relative path, found in
+`catalog` the way a game loads them: `./x`, `./x.ts` and `./x.js` all name
+`x.ts`. Throws a `ScriptImportError` for a path that names no script.
+
+```ts
+import { importedScripts } from "@jolly-pixel/scripting";
+
+const scripts = await importedScripts(record, code, catalog);
+```
+
+`SCRIPT_KIND` is the asset kind it looks for, `"script"`.
+
 ## ScriptImportError
 
 Extends `Error` with the name `ScriptImportError`.
