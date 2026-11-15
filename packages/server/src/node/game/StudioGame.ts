@@ -8,6 +8,7 @@ import type {
   AssetBuilds,
   CatalogProjection
 } from "@jolly-pixel/asset-server";
+import { SCRIPT_KIND } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
 import { GameBuildError } from "./errors/GameBuildError.ts";
@@ -16,8 +17,10 @@ import { UnknownAssetError } from "../project/errors/UnknownAssetError.ts";
 import {
   SCENE_KIND,
   gameManifest,
+  scriptImports,
   type GameManifestData
 } from "../../game/GameManifest.ts";
+import { GameModule } from "../../game/GameModule.ts";
 
 // CONSTANTS
 const kImmutable = "private, max-age=31536000, immutable";
@@ -61,16 +64,22 @@ export class StudioGame {
 
     return gameManifest(
       start,
-      Array.from(this.#backend.catalog.catalog)
-        .filter((record) => this.#opens(account, record)),
+      this.#records(account),
       this.#project.physics
     );
+  }
+
+  scriptImports(
+    account: Account,
+    base: string
+  ): Record<string, string> {
+    return scriptImports(this.#records(account), base);
   }
 
   async artifact(
     account: Account,
     assetId: string,
-    revision: string
+    revision: string | undefined
   ): Promise<GameArtifact> {
     const record = this.#readable(account, assetId);
     const built = await this.#backend.builds.build(assetId);
@@ -83,6 +92,29 @@ export class StudioGame {
       bytes: built.val.bytes,
       cacheControl: record.revision === revision ? kImmutable : kNoStore
     };
+  }
+
+  async module(
+    account: Account,
+    path: string,
+    revision: string | undefined
+  ): Promise<GameArtifact> {
+    const script = GameModule.parse(path)?.script;
+    const record = script === undefined ?
+      undefined :
+      this.#backend.catalog.catalog.findByPath(script);
+    if (record === undefined || !record.hasKind(SCRIPT_KIND)) {
+      throw new UnknownAssetError(path);
+    }
+
+    return this.artifact(account, record.id.value, revision);
+  }
+
+  #records(
+    account: Account
+  ): AssetRecord[] {
+    return Array.from(this.#backend.catalog.catalog)
+      .filter((record) => this.#opens(account, record));
   }
 
   #readable(

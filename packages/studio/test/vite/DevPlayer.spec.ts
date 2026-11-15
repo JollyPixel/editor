@@ -33,7 +33,7 @@ const kPage = [
 ].join("\n");
 const kBuiltAt = new Date("2026-01-01T00:00:00.000Z");
 const kEditedAt = new Date("2026-01-01T01:00:00.000Z");
-const kScriptSource = /<script type="module" crossorigin src="\.\/([^"]+)"/;
+const kScriptSource = /<script type="module" crossorigin src="\.\.\/([^"]+)"/;
 const kFlavourPackage = {
   name: "flavour",
   type: "module",
@@ -79,18 +79,16 @@ describe("DevPlayer", () => {
 
   afterEach(() => removeTempDir(root));
 
-  test("ships the play page at the root, reading game.json, with the chunk it loads", async() => {
-    const files = await player.files();
+  test("bundles the built play page with the chunk it loads", async() => {
+    const { page, files } = await player.bundle();
 
-    const page = new TextDecoder().decode(files.get("index.html"));
-    assert.match(page, /<meta name="jolly-game" content="exported">/);
     const script = kScriptSource.exec(page)?.[1];
     assert.ok(script !== undefined, page);
     assert.match(new TextDecoder().decode(files.get(script)), /first/);
   });
 
   test("ships a production build from the dev server's development process", async() => {
-    const files = await player.files();
+    const files = (await player.bundle()).files;
 
     const code = Array.from(
       files.values(),
@@ -101,17 +99,17 @@ describe("DevPlayer", () => {
   });
 
   test("builds once while no module of the player changes", async() => {
-    await Promise.all([player.files(), player.files()]);
-    await player.files();
+    await Promise.all([player.bundle(), player.bundle()]);
+    await player.bundle();
 
     assert.equal(builds, 1);
   });
 
   test("rebuilds after a module of the player changes", async() => {
-    await player.files();
+    await player.bundle();
     await writeMain(root, "second edit", kEditedAt);
 
-    const files = await player.files();
+    const files = (await player.bundle()).files;
 
     assert.equal(builds, 2);
     assert.ok(
@@ -123,12 +121,12 @@ describe("DevPlayer", () => {
 
   test("builds again after a failed build", async() => {
     await fs.writeFile(path.join(root, "src", "main.ts"), "document.title = ;");
-    await assert.rejects(player.files());
+    await assert.rejects(player.bundle());
 
     await writeMain(root, "fixed", kEditedAt);
-    const files = await player.files();
+    const { page } = await player.bundle();
 
-    assert.ok(files.has("index.html"));
+    assert.match(page, kScriptSource);
   });
 });
 

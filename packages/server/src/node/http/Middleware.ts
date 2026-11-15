@@ -9,3 +9,22 @@ export type Middleware = (
   response: ServerResponse,
   next: () => void
 ) => void;
+
+export function chainMiddleware(
+  ...middlewares: Middleware[]
+): Middleware {
+  return (request, response, next) => {
+    function run(
+      index: number
+    ): void {
+      if (index === middlewares.length) {
+        next();
+      }
+      else {
+        middlewares[index](request, response, () => run(index + 1));
+      }
+    }
+
+    run(0);
+  };
+}

@@ -23,7 +23,7 @@ Turns the text of a script or shader asset into code a game runs.
 - builds it: scripts are transpiled, shaders lose their types;
 - checks its imports;
 - outlines the `Behavior` classes of a script for the scene inspector;
-- links and loads the build in a game.
+- loads the build in a game.
 
 ## 👀 Usage example
 
@@ -85,7 +85,7 @@ import { loadShader } from "@jolly-pixel/scripting/three";
 ```
 
 - [Loaders](./docs/three/loaders.md): `ScriptModuleLoader`,
-  `ShaderModuleLoader` and how scripts link
+  `ShaderModuleLoader` and the import map scripts load through
 - [`ShaderModule`](./docs/three/ShaderModule.md): the shader module format,
   `loadShader` and materials
 

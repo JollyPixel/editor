@@ -10,7 +10,7 @@ import { javascriptUrl } from "./linkModule.ts";
 const kNamespacesKey = Symbol.for("jolly-pixel.modules");
 const kNamespaces = globalNamespaces();
 
-export const THREE_NAMESPACES: Readonly<Record<string, object>> = {
+const kThreeNamespaces: Readonly<Record<string, object>> = {
   three: THREE,
   "three/webgpu": THREE,
   "three/tsl": TSL
@@ -22,17 +22,16 @@ export class ModuleRegistry {
   #urls = new Map<string, string>();
 
   constructor(
-    policy: ScriptImportPolicy,
-    namespaces: Readonly<Record<string, object>>
+    policy: ScriptImportPolicy
   ) {
     this.#policy = policy;
     this.#namespaces = new Map(
       Array.from(policy.modules, (specifier) => {
-        if (!Object.hasOwn(namespaces, specifier)) {
+        if (!Object.hasOwn(kThreeNamespaces, specifier)) {
           throw new Error(`No module is provided for "${specifier}".`);
         }
 
-        return [specifier, namespaces[specifier]];
+        return [specifier, kThreeNamespaces[specifier]];
       })
     );
   }

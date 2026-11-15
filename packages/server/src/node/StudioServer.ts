@@ -24,7 +24,10 @@ export interface StudioServerOptions {
    * of every project editor under `editors/<name>/`.
    */
   shell: string;
-  backend: Omit<StudioBackendOptions, "editorPages" | "compression" | "player">;
+  backend: Omit<
+    StudioBackendOptions,
+    "editorPages" | "compression" | "player" | "playPage"
+  >;
   /**
    * Host header values accepted on the WebSocket upgrade, besides localhost
    * and IP addresses.
@@ -52,13 +55,15 @@ export class StudioServer implements AsyncDisposable {
       )
     ];
     await Promise.all(pages.map(requireBuiltPage));
+    const player = new BuiltPlayer(options.shell);
 
     return new StudioServer(
       options,
       await StudioBackend.open(options.project, {
         ...options.backend,
         editorPages,
-        player: new BuiltPlayer(options.shell),
+        player,
+        playPage: player,
         compression: options.compression
       })
     );

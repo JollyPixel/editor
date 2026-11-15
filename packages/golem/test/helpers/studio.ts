@@ -9,8 +9,7 @@ import {
 } from "@jolly-pixel/server";
 import {
   DEFAULT_ACCESS,
-  StudioProject,
-  type GamePlayer
+  StudioProject
 } from "@jolly-pixel/server/node";
 import {
   listenBackend,
@@ -22,9 +21,6 @@ import {
 const kAssetsDir = path.join(import.meta.dirname, "..", "..", "..", "assets");
 const kEditorsDir = path.join(import.meta.dirname, "..", "..", "..", "editors");
 const kPassword = "p".repeat(43);
-const kNoPlayer: GamePlayer = {
-  files: () => Promise.reject(new Error("golem tests build no game"))
-};
 
 export interface StudioOptions {
   /**
@@ -62,8 +58,7 @@ export async function serveStudio(
   );
 
   return listenBackend(project, {
-    defaultRole: options.defaultRole,
-    player: kNoPlayer
+    defaultRole: options.defaultRole
   });
 }
 

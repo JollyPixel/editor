@@ -16,8 +16,10 @@ import { studioBackendFiles } from "../node/studioFiles.ts";
 import { DevPlayer } from "./DevPlayer.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
 import { EditorPageInput } from "./EditorPageInput.ts";
+import { playerModules } from "./playerModules.ts";
 import { projectContributions } from "./projectContributions.ts";
 import { ServedEditorPages } from "./ServedEditorPages.ts";
+import { ServedPlayerPage } from "./ServedPlayerPage.ts";
 
 export function backend(
   project: StudioProject,
@@ -37,14 +39,18 @@ export function backend(
           ...await studioBackendFiles(
             new DevPlayer({
               root: server.config.root,
-              plugins: [projectContributions(project)],
+              plugins: [
+                projectContributions(project),
+                playerModules()
+              ],
               logger: server.config.logger
             })
           ),
           editorPages: new ServedEditorPages(
             server,
             EditorPageInput.compiled(server.config.root, project.editors)
-          )
+          ),
+          playPage: new ServedPlayerPage(server)
         }
       );
       server.middlewares.use(opened.middleware);
@@ -69,7 +75,7 @@ export function backend(
 function backendOptions(
   mode: RunMode,
   settings: StudioServerSettings
-): Omit<StudioBackendOptions, "player" | "preferences"> {
+): Omit<StudioBackendOptions, "player" | "playPage" | "preferences"> {
   const { inMemory } = mode.assetServer;
   if (mode.e2e) {
     return {

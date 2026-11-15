@@ -7,14 +7,16 @@ import * as z from "zod";
 
 // Import Internal Dependencies
 import { GamePlayerError } from "./errors/GamePlayerError.ts";
-import {
-  exportedPlayerPage,
-  type GamePlayer
+import type {
+  GamePlayer,
+  PlayerBundle,
+  PlayerPageSource
 } from "./GamePlayer.ts";
 import {
-  EDITOR_PAGE_FILE,
+  PLAY_PAGE_DIR,
   PLAY_PAGE_PATH
 } from "../../editors/EditorDescriptor.ts";
+import { PlayerPage } from "../../game/PlayerPage.ts";
 
 // CONSTANTS
 const kBuildManifest = path.join(".vite", "manifest.json");
@@ -28,7 +30,7 @@ const kBuildManifestSchema = z.record(z.string(), z.object({
 
 type BuildManifest = z.infer<typeof kBuildManifestSchema>;
 
-export class BuiltPlayer implements GamePlayer {
+export class BuiltPlayer implements GamePlayer, PlayerPageSource {
   #directory: string;
 
   constructor(
@@ -37,20 +39,23 @@ export class BuiltPlayer implements GamePlayer {
     this.#directory = directory;
   }
 
-  async files(): Promise<Map<string, Uint8Array>> {
+  html(): Promise<string> {
+    return fs.readFile(path.join(this.#directory, PLAY_PAGE_PATH), "utf8");
+  }
+
+  async bundle(): Promise<PlayerBundle> {
     const manifest = await this.#manifest();
-    const page = await fs.readFile(
-      path.join(this.#directory, PLAY_PAGE_PATH),
-      "utf8"
-    );
-    const files = new Map<string, Uint8Array>([
-      [EDITOR_PAGE_FILE, new TextEncoder().encode(exportedPlayerPage(page))]
-    ]);
-    for (const file of loadedFiles(manifest, PLAY_PAGE_PATH)) {
+    const page = await this.html();
+    const files = new Map<string, Uint8Array>();
+    const entries = [PLAY_PAGE_PATH, ...importedEntries(manifest, page)];
+    for (const file of loadedFiles(manifest, entries)) {
       files.set(file, await fs.readFile(path.join(this.#directory, file)));
     }
 
-    return files;
+    return {
+      page,
+      files
+    };
   }
 
   async #manifest(): Promise<BuildManifest> {
@@ -72,13 +77,26 @@ export class BuiltPlayer implements GamePlayer {
   }
 }
 
+function importedEntries(
+  manifest: BuildManifest,
+  page: string
+): string[] {
+  const imported = new Set(Object.values(PlayerPage.parse(page).imports).map(
+    (url) => path.posix.join(PLAY_PAGE_DIR, url)
+  ));
+
+  return Object.keys(manifest).filter(
+    (key) => imported.has(manifest[key].file)
+  );
+}
+
 function loadedFiles(
   manifest: BuildManifest,
-  entry: string
+  entries: Iterable<string>
 ): Set<string> {
   const files = new Set<string>();
   const visited = new Set<string>();
-  const pending = [entry];
+  const pending = Array.from(entries);
   for (const key of pending) {
     const chunk = manifest[key];
     if (visited.has(key) || chunk === undefined) {

@@ -8,6 +8,10 @@ import {
 
 // Import Internal Dependencies
 import {
+  GameModule,
+  moduleUrl
+} from "./GameModule.ts";
+import {
   physicsSectionSchema,
   type PhysicsSection
 } from "../project/api.ts";
@@ -19,6 +23,7 @@ export const CURRENT_REVISION = "current";
 export const GAME_MANIFEST_FILE = "game.json";
 export const GAME_MANIFEST_META = "jolly-game";
 const kBuildsDir = "builds";
+const kScriptKind = "script";
 
 export interface GameManifestData {
   readonly version: typeof GAME_MANIFEST_VERSION;
@@ -55,15 +60,43 @@ export function gameManifest(
     assets: catalog.toJSON(),
     artifacts: Object.fromEntries(Array.from(
       catalog,
-      (record) => [record.id.value, artifactPath(record)]
+      (record) => [record.id.value, artifactUrl(record)]
     )),
     physics
   };
 }
 
+export function scriptImports(
+  records: Iterable<AssetRecord>,
+  base: string
+): Record<string, string> {
+  const scripts = new Map<string, AssetRecord>();
+  for (const record of records) {
+    if (record.hasKind(kScriptKind)) {
+      scripts.set(record.path.value, record);
+    }
+  }
+
+  const imports: Record<string, string> = {};
+  for (const [path, record] of scripts) {
+    const url = `${base}${artifactUrl(record)}`;
+    for (const specifier of new GameModule(path).specifiers()) {
+      if (GameModule.resolve(specifier, scripts) === path) {
+        imports[`${base}${moduleUrl(specifier)}`] = url;
+      }
+    }
+  }
+
+  return imports;
+}
+
 export function artifactSegments(
   record: AssetRecord
 ): string[] {
+  if (record.hasKind(kScriptKind)) {
+    return new GameModule(record.path.value).segments;
+  }
+
   const { name, extension } = record.path;
 
   return [
@@ -74,8 +107,11 @@ export function artifactSegments(
   ];
 }
 
-function artifactPath(
+function artifactUrl(
   record: AssetRecord
 ): string {
-  return artifactSegments(record).map(encodeURIComponent).join("/");
+  return record.hasKind(kScriptKind) ?
+    new GameModule(record.path.value)
+      .url(record.revision ?? CURRENT_REVISION) :
+    artifactSegments(record).map(encodeURIComponent).join("/");
 }

@@ -266,8 +266,11 @@ catalog of every asset the account opens at its project path, and
 `artifacts`, the URL of each asset's build relative to `game.json`, and the
 project's physics settings. The player
 turns every fetch of a project path into its build URL, so a loader that
-resolves a path, such as a script import, uses project paths. An artifact is
-built on its first request and served for good while its revision is current.
+resolves a path uses project paths. A script's build sits under `modules/` at
+its project path plus `.js`, so its relative imports resolve on their own and
+`util.ts` and `util.js` keep apart.
+An artifact is built on its first request and served for good while its
+revision is current.
 
 ### Physics settings
 
@@ -295,7 +298,11 @@ the scene of the active tab.
 
 The `play/index.html` page that runs a game from its game manifest, in its own
 `jolly-play` window. The shell opens it, reuses it on the next Play, and shows
-its errors as notifications.
+its errors as notifications. The server writes its import map before its
+first module: three.js and the engine resolve to the player's own copy, and
+each script the account opens, under every form a relative import may name
+it, to its build. A script added after the page loaded is missing from the
+map until the next Play.
 
 ### Scene ref
 
@@ -313,9 +320,9 @@ builds every scene and the assets they reach: their dependencies, the scripts
 a script imports, and the files in a model's folder and its subfolders except
 scripts. With `?assets=all` it builds
 every asset whose kind has a build. It streams the zip as each asset builds:
-the built player as `index.html`, each artifact at the `builds/` path Play
-serves it from, and a game manifest starting from the default scene. A build
-error cuts the download. A
+each artifact at the path Play serves it from, the built player as
+`index.html` with an import map of the exported scripts, and a game manifest
+starting from the default scene. A build error cuts the download. A
 `jolly-game` meta in the page tells the player to read `game.json` beside it
 instead of the studio API. The game runs from any static HTTP server, not from
 `file://`.

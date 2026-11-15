@@ -38,25 +38,34 @@ export class GolemChatPane {
   }
 }
 
+export async function agentClient(
+  request: APIRequestContext,
+  baseURL: string,
+  name: string
+): Promise<Client> {
+  const response = await request.post(GOLEM_TOKENS_URL_PATH, {
+    data: { name }
+  });
+  const { value } = createdAgentTokenReplySchema.parse(await response.json());
+  const socketUrl = new URL(DEFAULT_WEBSOCKET_PATH, baseURL);
+  socketUrl.protocol = "ws:";
+
+  return new Client({
+    reconnect: false,
+    socket: () => connectWebSocket({
+      url: socketUrl.href,
+      credential: value
+    })
+  });
+}
+
 export class TestAgent implements Disposable {
   static async connect(
     request: APIRequestContext,
     baseURL: string,
     name: string
   ): Promise<TestAgent> {
-    const response = await request.post(GOLEM_TOKENS_URL_PATH, {
-      data: { name }
-    });
-    const { value } = createdAgentTokenReplySchema.parse(await response.json());
-    const socketUrl = new URL(DEFAULT_WEBSOCKET_PATH, baseURL);
-    socketUrl.protocol = "ws:";
-    const client = new Client({
-      reconnect: false,
-      socket: () => connectWebSocket({
-        url: socketUrl.href,
-        credential: value
-      })
-    });
+    const client = await agentClient(request, baseURL, name);
     const chat = AgentChatClient.join(client);
     await chat.ready;
 

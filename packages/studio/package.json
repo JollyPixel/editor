@@ -41,6 +41,7 @@
   "devDependencies": {
     "@jolly-pixel/cdp": "workspace:*",
     "@jolly-pixel/e2e": "workspace:*",
+    "@jolly-pixel/scripting": "workspace:*",
     "@openally/servo": "1.1.0"
   },
   "dependencies": {

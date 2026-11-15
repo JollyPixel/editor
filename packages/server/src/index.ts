@@ -1,6 +1,7 @@
 export * from "./audit/api.ts";
 export * from "./editors/EditorDescriptor.ts";
 export * from "./game/GameManifest.ts";
+export * from "./game/PlayerPage.ts";
 export * from "./game/api.ts";
 export * from "./golem/api.ts";
 export * from "./golem/chat.ts";

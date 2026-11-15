@@ -10,13 +10,10 @@ import {
   type PluginOption,
   type Rolldown
 } from "vite";
-import {
-  EDITOR_PAGE_FILE,
-  PLAY_PAGE_PATH
-} from "@jolly-pixel/server";
-import {
-  exportedPlayerPage,
-  type GamePlayer
+import { PLAY_PAGE_PATH } from "@jolly-pixel/server";
+import type {
+  GamePlayer,
+  PlayerBundle
 } from "@jolly-pixel/server/node";
 
 // CONSTANTS
@@ -56,14 +53,14 @@ export interface DevPlayerOptions {
 
 export class DevPlayer implements GamePlayer {
   #config: InlineConfig;
-  #page: string;
+  #pageFile: string;
   #current: Promise<PlayerBuild> | null = null;
 
   constructor(
     options: DevPlayerOptions
   ) {
     const { root, plugins, logger } = options;
-    this.#page = path.join(root, PLAY_PAGE_PATH);
+    this.#pageFile = path.join(root, PLAY_PAGE_PATH);
     this.#config = {
       ...kProductionBuild,
       configFile: false,
@@ -76,17 +73,21 @@ export class DevPlayer implements GamePlayer {
       build: {
         write: false,
         rolldownOptions: {
-          input: this.#page
+          input: this.#pageFile
         }
       }
     };
   }
 
-  async files(): Promise<Map<string, Uint8Array>> {
+  async bundle(): Promise<PlayerBundle> {
     const current = this.#fresh(this.#current);
     this.#current = current;
+    const { page, files } = await current;
 
-    return new Map((await current).files);
+    return {
+      page,
+      files: new Map(files)
+    };
   }
 
   async #fresh(
@@ -97,17 +98,18 @@ export class DevPlayer implements GamePlayer {
       return built;
     }
 
-    return PlayerBuild.run(this.#config, this.#page);
+    return PlayerBuild.run(this.#config, this.#pageFile);
   }
 }
 
-class PlayerBuild {
+class PlayerBuild implements PlayerBundle {
+  readonly page: string;
   readonly files: ReadonlyMap<string, Uint8Array>;
   #modules: ReadonlyMap<string, string>;
 
   static async run(
     config: InlineConfig,
-    page: string
+    pageFile: string
   ): Promise<PlayerBuild> {
     const startedAt = Date.now();
     const result = await build(config);
@@ -115,16 +117,23 @@ class PlayerBuild {
       throw new TypeError("the player build returned more than one output");
     }
 
-    const modules = new Set([page]);
-    const files = new Map<string, Uint8Array>();
+    const modules = new Set([pageFile]);
     for (const file of result.output) {
       if (file.type === "chunk") {
         for (const id of file.moduleIds) {
           modules.add(id.split(kQuery)[0]);
         }
       }
-      files.set(...exportedFile(file));
     }
+
+    const files = new Map(result.output.map(
+      (file) => [file.fileName, fileBytes(file)]
+    ));
+    const html = files.get(PLAY_PAGE_PATH);
+    if (html === undefined) {
+      throw new TypeError(`the player build emitted no ${PLAY_PAGE_PATH}`);
+    }
+    files.delete(PLAY_PAGE_PATH);
 
     const fingerprints = await Promise.all(
       Array.from(modules).filter(isProjectSource).map(async(file) => [
@@ -133,13 +142,19 @@ class PlayerBuild {
       ] as const)
     );
 
-    return new PlayerBuild(files, new Map(fingerprints));
+    return new PlayerBuild(
+      new TextDecoder().decode(html),
+      files,
+      new Map(fingerprints)
+    );
   }
 
   constructor(
+    page: string,
     files: ReadonlyMap<string, Uint8Array>,
     modules: ReadonlyMap<string, string>
   ) {
+    this.page = page;
     this.files = files;
     this.#modules = modules;
   }
@@ -154,25 +169,14 @@ class PlayerBuild {
   }
 }
 
-function exportedFile(
+function fileBytes(
   file: Rolldown.OutputChunk | Rolldown.OutputAsset
-): [string, Uint8Array] {
+): Uint8Array {
   const content = file.type === "chunk" ? file.code : file.source;
-  if (file.fileName === PLAY_PAGE_PATH) {
-    const page = typeof content === "string" ?
-      content :
-      new TextDecoder().decode(content);
 
-    return [
-      EDITOR_PAGE_FILE,
-      new TextEncoder().encode(exportedPlayerPage(page))
-    ];
-  }
-
-  return [
-    file.fileName,
-    typeof content === "string" ? new TextEncoder().encode(content) : content
-  ];
+  return typeof content === "string" ?
+    new TextEncoder().encode(content) :
+    content;
 }
 
 function isProjectSource(

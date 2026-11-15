@@ -16,6 +16,8 @@ import {
   build,
   type Rolldown
 } from "vite";
+import { PlayerPage } from "@jolly-pixel/server";
+import { SCRIPT_IMPORTS } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
 import { openStudioProject } from "../../node/studioFiles.ts";
@@ -25,6 +27,7 @@ const kStudioRoot = path.join(import.meta.dirname, "..", "..");
 const kThreeCore = /[\\/]three[\\/]build[\\/]three\.core\.js$/;
 const kUiModule = /[\\/]packages[\\/]ui[\\/]dist[\\/]/;
 const kAtaValidator = /[\\/]ata-validator[\\/]/;
+const kPlayerModule = /[\\/]src[\\/]play[\\/]modules[\\/]/;
 const kPageTag = /<(jolly-[a-z0-9-]+)/g;
 const kDefinedTag = /(?:customElement|customElements\.define)\("(jolly-[a-z0-9-]+)"/g;
 const kHiddenAtStart = [
@@ -54,6 +57,12 @@ function chunksWith(
     .map((chunk) => chunk.fileName);
 }
 
+function isPageEntry(
+  chunk: Rolldown.OutputChunk
+): boolean {
+  return chunk.isEntry && !kPlayerModule.test(chunk.facadeModuleId ?? "");
+}
+
 function definedTags(
   chunks: Iterable<Rolldown.OutputChunk>,
   pattern = /./
@@ -71,6 +80,20 @@ function definedTags(
 
 describe("@jolly-pixel/studio bundle", () => {
   let chunks: Map<string, Rolldown.OutputChunk>;
+
+  function loadedChunks(
+    entry: Rolldown.OutputChunk
+  ): Set<Rolldown.OutputChunk> {
+    const closure = new Set([entry]);
+    for (const chunk of closure) {
+      for (const name of chunk.imports) {
+        closure.add(chunks.get(name)!);
+      }
+    }
+
+    return closure;
+  }
+
   let eager: Map<string, Set<Rolldown.OutputChunk>>;
   let pages: Map<string, string>;
   let editorPages: string[];
@@ -95,17 +118,8 @@ describe("@jolly-pixel/studio bundle", () => {
     );
     eager = new Map(
       [...chunks.values()]
-        .filter((chunk) => chunk.isEntry)
-        .map((entry) => {
-          const closure = new Set([entry]);
-          for (const chunk of closure) {
-            for (const name of chunk.imports) {
-              closure.add(chunks.get(name)!);
-            }
-          }
-
-          return [entry.name, closure];
-        })
+        .filter(isPageEntry)
+        .map((entry) => [entry.name, loadedChunks(entry)])
     );
     pages = new Map(
       result.output.flatMap((file) => (
@@ -122,7 +136,7 @@ describe("@jolly-pixel/studio bundle", () => {
   });
 
   test("compiles the editor pages with the shell into shared chunks", () => {
-    const entries = [...chunks.values()].filter((chunk) => chunk.isEntry);
+    const entries = [...chunks.values()].filter(isPageEntry);
     assert.deepStrictEqual(
       entries.map((entry) => entry.name).sort(),
       ["index", "play", "preview", ...editorPages].sort()
@@ -141,6 +155,25 @@ describe("@jolly-pixel/studio bundle", () => {
       assert.deepStrictEqual(
         chunksWith(eager.get(name)!, kThreeCore),
         chunksWith(eager.get("voxel-map")!, kThreeCore)
+      );
+    }
+  });
+
+  test("maps each module a script may import to a chunk sharing the player's three.js", () => {
+    const { imports } = PlayerPage.parse(pages.get("play")!);
+    const player = chunksWith(eager.get("play")!, kThreeCore);
+
+    assert.deepStrictEqual(
+      Object.keys(imports).sort(),
+      Array.from(SCRIPT_IMPORTS.modules).sort()
+    );
+    for (const [specifier, url] of Object.entries(imports)) {
+      const module = chunks.get(path.posix.join("play", url));
+      assert.ok(module !== undefined, `${specifier} names no chunk`);
+      assert.deepStrictEqual(
+        chunksWith(loadedChunks(module), kThreeCore),
+        player,
+        specifier
       );
     }
   });

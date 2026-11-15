@@ -8,10 +8,7 @@ import { Behavior } from "@jolly-pixel/engine";
 // Import Internal Dependencies
 import { compileScript } from "#src/compiler/node.ts";
 import { readScriptOutline } from "#src/outline/outliner/node.ts";
-import {
-  fakeProgressEvents,
-  scriptGame
-} from "../helpers/ScriptGame.ts";
+import { evaluateScript } from "../helpers/evaluateScript.ts";
 
 interface RegisteredProperty {
   key: string;
@@ -75,15 +72,12 @@ function registeredBehaviors(
 }
 
 describe("script outline against the engine", () => {
-  fakeProgressEvents();
-
   test("lists the behaviors and scene properties the engine registers for the built script", async() => {
     const outline = await readScriptOutline(kScript);
-    const game = scriptGame({
-      "Player.ts": await compileScript(kScript)
-    });
 
-    const registered = registeredBehaviors(await game.load("Player.ts"));
+    const registered = registeredBehaviors(
+      await evaluateScript(await compileScript(kScript))
+    );
 
     assert.deepEqual(
       outline?.behaviors.map(({ name, properties }) => {
