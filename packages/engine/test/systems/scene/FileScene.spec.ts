@@ -3,6 +3,7 @@ import { describe, test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import type { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
@@ -89,6 +90,12 @@ async function loadKeepInstance() {
   return { ...setup, scene };
 }
 
+function declaredAssets(
+  scene: FileScene
+): AssetReference<unknown>[] {
+  return [...scene.assetsToLoad({ canLoad: () => true })];
+}
+
 describe("Systems.FileScene", () => {
   beforeEach(() => {
     Scene.Id.clear();
@@ -99,8 +106,23 @@ describe("Systems.FileScene", () => {
 
     const scene = new FileScene("level", file, { components });
 
-    assert.strictEqual(scene.assets.length, 1);
-    assert.ok(scene.assets[0].equals(assets.reference("knight")));
+    assert.strictEqual(declaredAssets(scene).length, 1);
+    assert.ok(declaredAssets(scene)[0].equals(assets.reference("knight")));
+  });
+
+  test("loads a deferred file when it prepares, then builds its actors from it", async() => {
+    const { sm, assets, components, file } = createModelSetup();
+    const scene = new FileScene("level", async() => file, { components });
+    assert.throws(() => scene.file, /Scene "level" has not loaded its file yet/);
+
+    const load = sm.loadScene(scene);
+    assets.loader.resolve("knight");
+    await load.done;
+    sm.beginFrame();
+
+    const [hero] = sm.tree.children;
+    assert.strictEqual(scene.file, file);
+    assert.strictEqual(hero.findComponent(ModelComponent)!.model, "knight");
   });
 
   test("declares and builds the assets of the scenes its prefabs include", async() => {
@@ -108,7 +130,7 @@ describe("Systems.FileScene", () => {
 
     const [castle] = sm.tree.children;
     const [hero] = castle.children;
-    assert.ok(scene.assets.some((reference) => reference.equals(assets.reference("knight"))));
+    assert.ok(declaredAssets(scene).some((reference) => reference.equals(assets.reference("knight"))));
     assert.strictEqual(hero.findComponent(ModelComponent)!.model, "knight");
   });
 
@@ -135,7 +157,7 @@ describe("Systems.FileScene", () => {
     sm.beginFrame();
 
     const [hero] = sm.tree.children[0].children;
-    assert.ok(scene.assets.some((reference) => reference.equals(assets.reference("mage"))));
+    assert.ok(declaredAssets(scene).some((reference) => reference.equals(assets.reference("mage"))));
     assert.strictEqual(hero.findComponent(ModelComponent)!.model, "mage");
   });
 
@@ -173,7 +195,7 @@ describe("Systems.FileScene", () => {
 
     const [, castle] = sm.tree.children;
     const [back] = castle.children;
-    assert.strictEqual(scene.assets.length, 1);
+    assert.strictEqual(declaredAssets(scene).length, 1);
     assert.deepEqual(back.children, []);
   });
 

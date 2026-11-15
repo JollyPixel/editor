@@ -21,10 +21,10 @@ const kBackends: Record<PhysicsEngine, () => Promise<PhysicsBackend>> = {
 export async function attachPhysics(
   world: EngineWorld,
   physics: PhysicsSection
-): Promise<PhysicsSystem> {
+): Promise<void> {
   const backend = await kBackends[physics.engine]();
 
-  return PhysicsSystem.attach(world, backend, {
+  PhysicsSystem.attach(world, backend, {
     gravity: physics.gravity
   });
 }

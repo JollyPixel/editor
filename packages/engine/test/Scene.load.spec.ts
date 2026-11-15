@@ -2,7 +2,8 @@
 import {
   describe,
   test,
-  beforeEach
+  beforeEach,
+  mock
 } from "node:test";
 import assert from "node:assert/strict";
 import { setImmediate } from "node:timers/promises";
@@ -20,6 +21,14 @@ import {
   ConcreteScene,
   createSceneSetup
 } from "./helpers/scene/sceneSetup.ts";
+
+class PreparingScene extends ConcreteScene {
+  prepared = Promise.withResolvers<void>();
+
+  override prepare(): Promise<void> {
+    return this.prepared.promise;
+  }
+}
 
 describe("Scene", () => {
   beforeEach(() => {
@@ -181,6 +190,91 @@ describe("Scene", () => {
       assert.strictEqual(load.error.failures[0]?.error, error);
       assert.strictEqual(sm.currentScene, null);
       assert.strictEqual(sm.hasPendingScene, false);
+    });
+  });
+
+  describe("prepare", () => {
+    test("keeps the load requested until the scene is prepared, then loads its assets", async() => {
+      const assets = createSceneAssets(["a"]);
+      const { sm } = createSceneSetup(assets);
+      const scene = new PreparingScene("level", {
+        assets: [assets.reference("a")]
+      });
+
+      const load = sm.loadScene(scene);
+      assert.deepStrictEqual([load.status, sm.sceneLoad], ["requested", load]);
+
+      scene.prepared.resolve();
+      await setImmediate();
+      assert.deepStrictEqual([load.status, load.total], ["loading", 1]);
+
+      assets.loader.resolve("a");
+      await load.done;
+      sm.beginFrame();
+      assert.strictEqual(sm.currentScene, scene);
+    });
+
+    test("loads no asset of a replacement cancelled while it prepares", async() => {
+      const assets = createSceneAssets(["a"]);
+      const { sm } = createSceneSetup(assets);
+      const loads = mock.method(assets.loader, "load");
+      const level = new PreparingScene("level", {
+        assets: [assets.reference("a")]
+      });
+      const menu = new ConcreteScene("menu");
+
+      const levelLoad = sm.loadScene(level);
+      sm.loadScene(menu);
+      level.prepared.resolve();
+      await setImmediate();
+      sm.beginFrame();
+
+      assert.strictEqual(levelLoad.status, "cancelled");
+      assert.strictEqual(loads.mock.callCount(), 0);
+      assert.strictEqual(sm.currentScene, menu);
+    });
+
+    test("fails the load with the error the scene fails to prepare with", async() => {
+      const { sm } = createSceneSetup();
+      const scene = new PreparingScene("level");
+      const error = new Error("scene file is missing");
+
+      const load = sm.loadScene(scene);
+      scene.prepared.reject(error);
+      await assert.rejects(load.done, error);
+
+      assert.deepStrictEqual([load.status, load.error], ["failed", error]);
+    });
+  });
+
+  describe("loadSceneAsset", () => {
+    test("loads the scene its source returns for the ref", () => {
+      const { sm } = createSceneSetup();
+      const level = new ConcreteScene("level-2");
+      const refs: string[] = [];
+      sm.sceneSource = {
+        scene: (ref) => {
+          refs.push(ref);
+
+          return level;
+        }
+      };
+
+      const load = sm.loadSceneAsset("levels/level-2");
+      sm.beginFrame();
+
+      assert.deepStrictEqual(refs, ["levels/level-2"]);
+      assert.strictEqual(load.scene, level);
+      assert.strictEqual(sm.currentScene, level);
+    });
+
+    test("throws without a scene source", () => {
+      const { sm } = createSceneSetup();
+
+      assert.throws(
+        () => sm.loadSceneAsset("level-2"),
+        /No scene source to load scene "level-2" from/
+      );
     });
   });
 });

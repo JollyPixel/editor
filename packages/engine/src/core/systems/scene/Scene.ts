@@ -65,6 +65,8 @@ export abstract class Scene<
     return this.assets;
   }
 
+  prepare(): Promise<void> | void { }
+
   awake(): void { }
 
   start(): void { }

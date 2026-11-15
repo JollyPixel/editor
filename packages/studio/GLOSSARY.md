@@ -271,10 +271,10 @@ built on its first request and served for good while its revision is current.
 
 The `physics` section of the project file, set in Settings › Project ›
 General: the physics engine (Rapier, the only one for now) and the gravity,
-`y = -9.81` by default. The player loads the engine only when a scene it loads
-at start, prefabs included, holds a component that uses physics: a RigidBody,
-or a voxel map with Collision on. A RigidBody a script adds to a game without
-physics throws.
+`y = -9.81` by default. The player loads the engine before the first scene,
+prefabs included, that holds a component that uses physics: a RigidBody, or a
+voxel map with Collision on. A RigidBody a script adds while no loaded scene
+uses physics throws.
 
 ### Snapshot settings
 
@@ -294,6 +294,14 @@ the scene of the active tab.
 The `play/index.html` page that runs a game from its game manifest, in its own
 `jolly-play` window. The shell opens it, reuses it on the next Play, and shows
 its errors as notifications.
+
+### Scene ref
+
+What a script passes to `sceneManager.loadSceneAsset` to switch scenes: a
+scene's asset ID, or its project path with or without `.scene.json`
+(`levels/level-2`). The player looks it up in the game manifest's catalog,
+then loads the scene and its prefabs, reusing the files already loaded. A
+path stops matching once the scene is renamed or moved.
 
 ### Game export
 

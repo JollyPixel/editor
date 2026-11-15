@@ -322,12 +322,14 @@ interface MissingComponentAsset {
 ## FileScene
 
 ```ts
+type SceneFileLoad = () => Promise<SceneFile>;
+
 class FileScene<TContext> extends Scene<TContext> {
   readonly file: SceneFile;
 
   constructor(
     name: string,
-    file: SceneFile,
+    file: SceneFile | SceneFileLoad,
     options: {
       components: ComponentDefinitions;
       prefabs?: ScenePrefabs;
@@ -339,14 +341,16 @@ class FileScene<TContext> extends Scene<TContext> {
 }
 ```
 
-- Its `assets` are the definitions' assets. With `prefabs`, they
-  include the assets of every actor its instances expand, overridden slots
-  included, so `prefabs` must find each of those scenes when the `FileScene`
-  is constructed.
-- Its `assetsToLoad` keeps the `assets` the world's `assetCoordinator` can
-  load, so [`SceneManager`](scene-manager.md) loads only those. A component
-  whose asset is missing from the catalog, of another kind than its slot, or
+- Given a `SceneFileLoad`, `prepare()` calls it, so
+  [`SceneManager`](scene-manager.md#loading-a-scene) loads the file before
+  the assets. Reading `file` before then throws.
+- Its `assetsToLoad` returns the definitions' assets that the world's
+  `assetCoordinator` can load. With `prefabs`, they include the assets of
+  every actor its instances expand, overridden slots included, so `prefabs`
+  must find each of those scenes when the scene loads. A component whose
+  asset is missing from the catalog, of another kind than its slot, or
   without a loader is skipped with a warning instead of failing the load.
+  Its `assets` stay empty.
 - `sceneId` is the asset id of `file`. Pass it so a prefab cycle back to this
   scene stops at once, as in the editor, instead of one level down.
 - `awake()` builds the actors in play mode and applies the environment.

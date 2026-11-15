@@ -9,24 +9,7 @@ effort: S is a day, M a few days, L a week, XL several weeks. Each step ends
 with the touched workspaces' tests, `pnpm run typecheck` and `pnpm run lint`
 green.
 
-## 1. Switch scenes from a script (M)
-
-**Spec.** A script can load another scene asset by ID: the game fetches the
-scene and its prefabs, then calls `sceneManager.loadScene`. Today the player's
-`GameScenes` only knows the start scene and its prefabs, so a game has one
-level.
-
-**Plan.**
-
-1. Expose the scene loading of `GameScenes` to scripts. Open: where the API
-   lives (runtime or engine) and its name; the player registers the
-   implementation.
-2. `GameScenes.load` becomes callable per scene, sharing the files already
-   loaded. The player attaches physics before the first loaded scene whose
-   components use it.
-3. Unit test: load a second scene that shares a prefab with the first.
-
-## 2. Export size (M, then L)
+## 1. Export size (M, then L)
 
 **Spec.** Step 1: the export streams, so memory holds about one artifact at a
 time instead of the whole zip. Step 2: the export holds only the assets the
@@ -41,12 +24,12 @@ Today `GameExport` builds every buildable asset and zips them in memory with
 1. Stream with fflate's `Zip` into the reply as each asset builds. A build
    error after the first bytes are sent aborts the response, so the export
    checks the default scene and the player before it starts streaming.
-2. After topic 1: compute the closure from the default scene, every scene a
-   script can switch to, prefabs, component slots and script imports. Until
-   scripts declare the scenes they load, "every scene" is the only safe
-   answer, so the closure drops unused non-scene assets only.
+2. Compute the closure from the default scene, every scene, prefabs,
+   component slots and script imports. A script switches scenes with a
+   [scene ref](./GLOSSARY.md#scene-ref) string the export cannot read, so
+   every scene stays and the closure drops unused non-scene assets only.
 
-## 3. Script import cycles (L)
+## 2. Script import cycles (L)
 
 **Spec.** Scripts that import each other by value play, online and in an
 export. Each script loads from a real URL instead of a `data:` module, so its
@@ -74,7 +57,7 @@ in Firefox, and the page route avoids depending on a polyfill.
 6. Tests: the map for a catalog, and a unit test of the HTML injection. Two scripts importing each other need a real browser: one e2e
    in the player suite.
 
-## 4. Offline Play and export (XL, after 3)
+## 3. Offline Play and export (XL, after 2)
 
 **Spec.** The offline and static studios show Play and Export game. The game
 runs from the in-browser back-end with the same player code as online.
@@ -86,7 +69,7 @@ build in Node only. Shaders already build in the browser (SWC strip-only).
 **Plan.**
 
 1. A service worker scoped to `/play/` answers the player page (with the
-   import map of topic 3), `game.json` and `builds/*` by asking the opener
+   import map of topic 2), `game.json` and `builds/*` by asking the opener
    window through the clients API and a `MessageChannel`. The opener's
    offline back-end builds the artifact. The first load is not controlled by
    the worker, so the player reloads once after it activates. Service workers
