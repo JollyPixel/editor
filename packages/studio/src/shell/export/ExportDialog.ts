@@ -3,7 +3,6 @@ import {
   LitElement,
   css,
   html,
-  nothing,
   type TemplateResult
 } from "lit";
 import {
@@ -17,24 +16,17 @@ import type {
   Dialog,
   JollyChangeDetail
 } from "@jolly-pixel/ui";
-import { errorMessage } from "@jolly-pixel/utils";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/dialog";
-import "@jolly-pixel/ui/elements/message";
 import "@jolly-pixel/ui/elements/text";
 
 // Import Internal Dependencies
-import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
+import { ExportStartEvent } from "./ExportStartEvent.ts";
 import type { ExportTarget } from "./ExportTarget.ts";
 import { ExportTargets } from "./ExportTargets.ts";
-
-export interface ExportRequest {
-  user: StudioSignedIn;
-  defaultScene: AssetRecordData | null;
-}
 
 @customElement("studio-export-dialog")
 export class ExportDialog extends LitElement {
@@ -60,19 +52,13 @@ export class ExportDialog extends LitElement {
   declare browserState: BrowserState;
 
   @state()
-  declare _request: ExportRequest | null;
+  declare _defaultScene: AssetRecordData | null;
 
   @state()
   declare _target: ExportTarget;
 
   @state()
   declare _fileName: string;
-
-  @state()
-  declare _busy: boolean;
-
-  @state()
-  declare _error: string | null;
 
   @query("jolly-dialog")
   declare _dialog: Dialog;
@@ -82,47 +68,40 @@ export class ExportDialog extends LitElement {
   constructor() {
     super();
     this.browserState = new BrowserState();
-    this._request = null;
+    this._defaultScene = null;
     this._target = this.#targets.initial("", null);
     this._fileName = "";
-    this._busy = false;
-    this._error = null;
   }
 
   async open(
-    request: ExportRequest
+    defaultScene: AssetRecordData | null
   ): Promise<void> {
-    this._request = request;
+    this._defaultScene = defaultScene;
     this._target = this.#targets.initial(
       this.browserState.exportTarget,
-      request.defaultScene
+      defaultScene
     );
     this._fileName = "";
-    this._busy = false;
-    this._error = null;
 
     await this.updateComplete;
     await this._dialog.showModal();
   }
 
   override render(): TemplateResult {
-    const blocker = this._target.blocker(
-      this._request?.defaultScene ?? null
-    );
-    const exportable = blocker === null && !this._busy;
+    const blocker = this._target.blocker(this._defaultScene);
+    const exportable = blocker === null;
 
     return html`
       <jolly-dialog
         heading="Export"
         icon="export"
-        ?dismissible=${!this._busy}
+        dismissible
       >
         <jolly-button-group
           layout="tiles"
           aria-label="Export target"
           .options=${this.#targets.options()}
           .value=${this._target.name}
-          ?disabled=${this._busy}
           @jolly-change=${this.#onTargetChange}
         ></jolly-button-group>
         <p class="status" role="status">
@@ -143,20 +122,16 @@ export class ExportDialog extends LitElement {
           ?disabled=${!exportable}
           @jolly-input=${this.#onFileNameInput}
         ></jolly-text>
-        ${this._error === null ? nothing : html`
-          <jolly-message tone="danger" role="alert">${this._error}</jolly-message>
-        `}
         <jolly-button
           slot="actions"
           variant="accent"
           data-action="export"
           ?disabled=${!exportable}
           @click=${this.#export}
-        >${this._busy ? "Exporting…" : "Export"}</jolly-button>
+        >Export</jolly-button>
         <jolly-button
           slot="actions"
           data-action="cancel"
-          ?disabled=${this._busy}
           @click=${this.#close}
         >Cancel</jolly-button>
       </jolly-dialog>
@@ -172,7 +147,6 @@ export class ExportDialog extends LitElement {
     }
 
     this._target = target;
-    this._error = null;
     this.browserState.exportTarget = target.name;
   }
 
@@ -189,25 +163,9 @@ export class ExportDialog extends LitElement {
     this.dispatchEvent(new SettingsOpenEvent(section));
   }
 
-  async #export(): Promise<void> {
-    const request = this._request;
-    if (request === null || this._busy) {
-      return;
-    }
-
-    this._busy = true;
-    this._error = null;
-    try {
-      const download = await this._target.download(request.user);
-      download.renamed(this._fileName).save();
-      this._dialog.close("export");
-    }
-    catch (error) {
-      this._error = `Could not export: ${errorMessage(error)}`;
-    }
-    finally {
-      this._busy = false;
-    }
+  #export(): void {
+    this._dialog.close("export");
+    this.dispatchEvent(new ExportStartEvent(this._target, this._fileName));
   }
 
   #close(): void {

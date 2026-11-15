@@ -11,6 +11,10 @@ import {
   property,
   query
 } from "lit/decorators.js";
+import {
+  NotificationQueue,
+  type Notifier
+} from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 
 // Import Internal Dependencies
@@ -27,6 +31,8 @@ import type { StudioPlay } from "../../play/StudioPlay.ts";
 import { ChangeController } from "../ChangeController.ts";
 import type { ExportDialog } from "../export/ExportDialog.ts";
 import "../export/ExportDialog.ts";
+import type { ExportStartEvent } from "../export/ExportStartEvent.ts";
+import { runExport } from "../export/runExport.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
 
 @customElement("studio-header-actions")
@@ -65,6 +71,9 @@ export class HeaderActions extends LitElement {
   @property({ attribute: false })
   declare browserState: BrowserState;
 
+  @property({ attribute: false })
+  declare notifications: Notifier;
+
   @query("studio-export-dialog")
   declare _exportDialog: ExportDialog;
 
@@ -76,6 +85,7 @@ export class HeaderActions extends LitElement {
     this.play = null;
     this.agentChat = null;
     this.browserState = new BrowserState();
+    this.notifications = new NotificationQueue();
   }
 
   set user(
@@ -124,6 +134,7 @@ export class HeaderActions extends LitElement {
       ${this.#golemButton(this.agentChat)}
       <studio-export-dialog
         .browserState=${this.browserState}
+        @export-start=${this.#startExport}
       ></studio-export-dialog>
     `;
   }
@@ -164,14 +175,22 @@ export class HeaderActions extends LitElement {
   };
 
   readonly #export = async(): Promise<void> => {
+    await this._exportDialog.open(this.play?.defaultScene ?? null);
+  };
+
+  readonly #startExport = (
+    event: ExportStartEvent
+  ): void => {
     const user = this.#user.current;
     if (!user?.online) {
       return;
     }
 
-    await this._exportDialog.open({
-      user,
-      defaultScene: this.play?.defaultScene ?? null
+    const { exportTarget, fileName } = event;
+    void runExport(this.notifications, {
+      label: exportTarget.label,
+      fileName,
+      download: exportTarget.download(user)
     });
   };
 }

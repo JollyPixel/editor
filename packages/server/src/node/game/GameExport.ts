@@ -8,7 +8,7 @@ import {
 } from "fflate";
 
 // Import Internal Dependencies
-import type { GamePlayer } from "./BuiltPlayer.ts";
+import type { GamePlayer } from "./GamePlayer.ts";
 import { GameBuildError } from "./errors/GameBuildError.ts";
 import { GameExportError } from "./errors/GameExportError.ts";
 import type { GameBackend } from "./StudioGame.ts";

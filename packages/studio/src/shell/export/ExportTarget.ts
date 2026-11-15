@@ -14,6 +14,7 @@ export interface ExportBlocker {
 
 export interface ExportTarget {
   readonly name: ExportTargetName;
+  readonly label: string;
   readonly summary: string;
   blocker(defaultScene: AssetRecordData | null): ExportBlocker | null;
   download(user: StudioSignedIn): Promise<FileDownload>;

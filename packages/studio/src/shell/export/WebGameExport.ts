@@ -18,6 +18,7 @@ const kNoDefaultScene: ExportBlocker = {
 
 export class WebGameExport implements ExportTarget {
   readonly name = "web";
+  readonly label = "web game";
   readonly summary = "A game that runs from any static web server, " +
     "not from file://.";
 

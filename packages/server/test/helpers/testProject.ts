@@ -28,7 +28,7 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import type { GamePlayer } from "#src/node/game/BuiltPlayer.ts";
+import type { GamePlayer } from "#src/node/game/GamePlayer.ts";
 import { DEFAULT_ACCESS } from "#src/node/project/StudioAccess.ts";
 import { StudioProject } from "#src/node/project/StudioProject.ts";
 

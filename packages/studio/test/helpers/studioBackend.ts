@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { StudioServerSettings } from "@jolly-pixel/server/node";
+import {
+  BuiltPlayer,
+  StudioServerSettings
+} from "@jolly-pixel/server/node";
 import {
   listenBackend,
   type ServeBackendOptions,
@@ -8,6 +11,7 @@ import {
 
 // Import Internal Dependencies
 import {
+  STUDIO_SHELL_DIR,
   openStudioProject,
   studioBackendFiles
 } from "../../node/studioFiles.ts";
@@ -22,6 +26,6 @@ export async function serveBackend(
 
   return listenBackend(project, {
     ...options,
-    ...await studioBackendFiles()
+    ...await studioBackendFiles(new BuiltPlayer(STUDIO_SHELL_DIR))
   });
 }

@@ -7,16 +7,16 @@
   editor.host, network, server, asset-server or an asset package, rebuild it,
   or run `pnpm run build:deps` to rebuild them all.
   `pnpm run dev:editors` watches ui, editor.host and the pixel-art lib.
-- Game export ships the player from `dist/`, in dev too: run
-  `pnpm run build:hosted` after changing `src/play/` or a runtime
-  contribution, or the zip holds a stale player.
 - Editors and kinds under `packages/editors` and `packages/assets` resolve by
   name from those folders (`openStudioProject` in `node/studioFiles.ts`). Add
   one to `package.json` only when studio code imports it, so the `^...` filter
   skips the others: rebuild with `build:deps`.
-- Open the project with `openStudioProject` and take the backend's seed,
-  player and shell preferences from `studioBackendFiles`: a bare
-  `StudioProject.open` gets no package folders and an empty template.
+- Open the project with `openStudioProject` and take the backend's seed and
+  shell preferences from `studioBackendFiles`: a bare `StudioProject.open`
+  gets no package folders and an empty template.
+- Game export ships the player from `dist/` (`BuiltPlayer`), except under
+  `pnpm dev`: `vite/DevPlayer.ts` builds it from the sources on the first
+  export and again once a module it imports changes.
 - On Windows, a recursive `fs.watch` fires `change` when a file is read. A
   watcher must compare mtime and size before treating an event as a rebuild,
   as `vite/DistSnapshot.ts` does.

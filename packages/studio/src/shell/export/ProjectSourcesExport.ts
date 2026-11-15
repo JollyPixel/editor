@@ -8,6 +8,7 @@ import type {
 
 export class ProjectSourcesExport implements ExportTarget {
   readonly name = "project";
+  readonly label = "project sources";
   readonly summary = "The project sources, to back up or move to " +
     "another studio.";
 

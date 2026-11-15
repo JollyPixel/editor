@@ -9,9 +9,9 @@ import type {
   ProjectFileOpenOptions
 } from "@jolly-pixel/asset-server/node";
 import {
-  BuiltPlayer,
   StudioProject,
   StudioServerSettings,
+  type GamePlayer,
   type StudioBackendOptions
 } from "@jolly-pixel/server/node";
 
@@ -66,12 +66,14 @@ export async function studioSeed(): Promise<AssetSeedMap> {
   return createStudioSeed(await fs.readFile(kBlocksetFile));
 }
 
-export async function studioBackendFiles(): Promise<
+export async function studioBackendFiles(
+  player: GamePlayer
+): Promise<
   Pick<StudioBackendOptions, "seed" | "player" | "preferences">
 > {
   return {
     seed: await studioSeed(),
-    player: new BuiltPlayer(STUDIO_SHELL_DIR),
+    player,
     preferences: SHELL_PREFERENCES
   };
 }

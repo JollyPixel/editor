@@ -13,7 +13,6 @@ import {
   type UserConfig
 } from "vite";
 import {
-  createProjectContributionsPlugin,
   createProjectFileWatchPlugin,
   createProjectKindsPlugin
 } from "@jolly-pixel/asset-server/node";
@@ -34,6 +33,7 @@ import { openStudioProject } from "./node/studioFiles.ts";
 import { backend } from "./vite/backend.ts";
 import { EditorPageFiles } from "./vite/EditorPageFiles.ts";
 import { editorPages } from "./vite/editorPages.ts";
+import { projectContributions } from "./vite/projectContributions.ts";
 import { projectManifest } from "./vite/projectManifest.ts";
 
 // CONSTANTS
@@ -78,10 +78,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     plugins: [
       mode.plugins(),
       createProjectKindsPlugin(project.kinds),
-      createProjectContributionsPlugin(
-        project.kinds,
-        Array.from(project.editors, (editor) => editor.package)
-      ),
+      projectContributions(project),
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),
       editorPages(

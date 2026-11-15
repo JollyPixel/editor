@@ -8,16 +8,16 @@ import * as z from "zod";
 // Import Internal Dependencies
 import { GamePlayerError } from "./errors/GamePlayerError.ts";
 import {
+  exportedPlayerPage,
+  type GamePlayer
+} from "./GamePlayer.ts";
+import {
   EDITOR_PAGE_FILE,
   PLAY_PAGE_PATH
 } from "../../editors/EditorDescriptor.ts";
-import { GAME_MANIFEST_META } from "../../game/GameManifest.ts";
 
 // CONSTANTS
 const kBuildManifest = path.join(".vite", "manifest.json");
-const kParentReference = /\b(src|href)="\.\.\//g;
-const kHeadEnd = "</head>";
-const kGameMeta = `<meta name="${GAME_MANIFEST_META}" content="exported">`;
 const kBuildManifestSchema = z.record(z.string(), z.object({
   file: z.string(),
   imports: z.array(z.string()).optional(),
@@ -27,10 +27,6 @@ const kBuildManifestSchema = z.record(z.string(), z.object({
 }));
 
 type BuildManifest = z.infer<typeof kBuildManifestSchema>;
-
-export interface GamePlayer {
-  files(): Promise<Map<string, Uint8Array>>;
-}
 
 export class BuiltPlayer implements GamePlayer {
   #directory: string;
@@ -48,7 +44,7 @@ export class BuiltPlayer implements GamePlayer {
       "utf8"
     );
     const files = new Map<string, Uint8Array>([
-      [EDITOR_PAGE_FILE, new TextEncoder().encode(exportedPage(page))]
+      [EDITOR_PAGE_FILE, new TextEncoder().encode(exportedPlayerPage(page))]
     ]);
     for (const file of loadedFiles(manifest, PLAY_PAGE_PATH)) {
       files.set(file, await fs.readFile(path.join(this.#directory, file)));
@@ -74,20 +70,6 @@ export class BuiltPlayer implements GamePlayer {
 
     return kBuildManifestSchema.parse(JSON.parse(text));
   }
-}
-
-function exportedPage(
-  page: string
-): string {
-  if (page.search(kParentReference) === -1 || !page.includes(kHeadEnd)) {
-    throw new GamePlayerError(
-      `the built ${PLAY_PAGE_PATH} loads nothing from ../ or has no ${kHeadEnd}`
-    );
-  }
-
-  return page
-    .replace(kParentReference, "$1=\"./")
-    .replace(kHeadEnd, `  ${kGameMeta}\n${kHeadEnd}`);
 }
 
 function loadedFiles(

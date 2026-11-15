@@ -13,8 +13,10 @@ import {
 
 // Import Internal Dependencies
 import { studioBackendFiles } from "../node/studioFiles.ts";
+import { DevPlayer } from "./DevPlayer.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
 import { EditorPageInput } from "./EditorPageInput.ts";
+import { projectContributions } from "./projectContributions.ts";
 import { ServedEditorPages } from "./ServedEditorPages.ts";
 
 export function backend(
@@ -32,7 +34,13 @@ export function backend(
         project,
         {
           ...backendOptions(mode, settings),
-          ...await studioBackendFiles(),
+          ...await studioBackendFiles(
+            new DevPlayer({
+              root: server.config.root,
+              plugins: [projectContributions(project)],
+              logger: server.config.logger
+            })
+          ),
           editorPages: new ServedEditorPages(
             server,
             EditorPageInput.compiled(server.config.root, project.editors)

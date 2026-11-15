@@ -45,7 +45,8 @@ export targets: Web (the game export), Desktop and Android (disabled until
 they are built) and Project (the sources archive). A target the project
 cannot export yet, such as Web without a default scene, says why and links to
 the setting. The dialog reopens on the last target picked in this browser and
-renames the download when the file name field is filled.
+renames the download when the file name field is filled. Export closes it and
+shows a loading notification until the download starts or fails.
 
 ### Home
 
