@@ -1,12 +1,13 @@
 // Import Third-party Dependencies
 import {
-  StudioServer,
-  StudioServerSettings
+  JollyServer,
+  ServerSettings
 } from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
 import {
   openStudioProject,
+  STUDIO_ROOT,
   STUDIO_SHELL_DIR,
   studioSeed
 } from "./studioFiles.ts";
@@ -15,12 +16,14 @@ import { SHELL_PREFERENCES } from "../shared/preferences.ts";
 // CONSTANTS
 const kShutdownSignals = ["SIGINT", "SIGTERM"] as const;
 
-const settings = StudioServerSettings.parse(process.env);
-const project = await openStudioProject({
-  settings
-});
-const server = await StudioServer.open({
-  project,
+const settings = ServerSettings.parse(process.env);
+const hosting = settings.hosting(STUDIO_ROOT);
+const server = await JollyServer.open({
+  hosting,
+  openProject: (root) => openStudioProject({
+    settings,
+    root
+  }),
   shell: STUDIO_SHELL_DIR,
   allowedHosts: settings.allowedHosts,
   compression: settings.compression,
@@ -35,7 +38,7 @@ const server = await StudioServer.open({
   }
 });
 const url = await server.listen(settings.port, settings.host);
-console.info(`Studio for "${project.file.root}" listening on ${url}`);
+console.info(`Studio listening on ${url}, its state in "${hosting.state}"`);
 
 for (const signal of kShutdownSignals) {
   process.once(signal, () => {

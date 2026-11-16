@@ -102,7 +102,7 @@ adapter and adds no domain logic.
 |---|---|
 | Node client | `network.Client` + `connectWebSocket({ url, credential })` from `@jolly-pixel/network/client`; `packages/e2e/src/editor/catalog.ts` already does it |
 | Credential check | `Accounts.authenticate` reads the handshake credential as a share link token today |
-| Rights | `StudioAccess` builds a `RightsTable` from the project file's `access` roles |
+| Rights | `ProjectAccess` builds a `RightsTable` from the project file's `access` roles |
 | Asset discovery | `CatalogClient.connect(client)` on the `asset-catalog` room |
 | Room per asset | `"<kind>:<assetId>"` |
 | Headless documents | every kind's `<kind>DocumentKind().syncDocument(room)` returns a `SyncedDocument` (`ready`, `document`, `pendingChanges`); the scene, voxel-map and script client entries import in Node |

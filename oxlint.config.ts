@@ -180,7 +180,7 @@ export default defineConfig(typescriptConfig({
             patterns: [
               {
                 group: ["fastify", "@fastify/*"],
-                message: "Only a concern's node/routes.ts, src/http/node/ and StudioApi speak Fastify."
+                message: "Only a concern's node/routes.ts, src/http/node/ and ServerApi speak Fastify."
               }
             ]
           }
@@ -191,7 +191,7 @@ export default defineConfig(typescriptConfig({
       files: [
         "packages/server/src/*/node/routes.ts",
         "packages/server/src/http/node/**",
-        "packages/server/src/server/node/StudioApi.ts"
+        "packages/server/src/server/node/ServerApi.ts"
       ],
       rules: {
         "no-restricted-imports": "off"

@@ -12,7 +12,7 @@
   one to `package.json` only when studio code imports it, so the `^...` filter
   skips the others: rebuild with `build:deps`.
 - Open the project with `openStudioProject` and take the backend's seed and
-  shell preferences from `studioBackendFiles`: a bare `StudioProject.open`
+  shell preferences from `studioBackendFiles`: a bare `Project.open`
   gets no package folders and an empty template.
 - Game export ships the player from `dist/` (`BuiltPlayer`), except under
   `pnpm dev`: `vite/DevPlayer.ts` builds it from the sources on the first

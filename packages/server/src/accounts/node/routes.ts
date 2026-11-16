@@ -25,9 +25,11 @@ import type {
 // Import Internal Dependencies
 import {
   authenticate,
+  sessionAccount,
   signedInAccount
 } from "../../http/node/authentication.ts";
 import { ApiError } from "../../http/node/errors/ApiError.ts";
+import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 
 // CONSTANTS
 const kAvatarBodySchema = z.instanceof(Uint8Array);
@@ -37,7 +39,11 @@ const kRevalidate = "no-cache";
 
 export interface AccountsRoutesOptions {
   accounts: Accounts;
-  realm: AccountsRealm;
+  realm: RequestScoped<AccountsRealm>;
+}
+
+export interface ServerAccountsRoutesOptions {
+  accounts: Accounts;
 }
 
 interface RegisterRoute {
@@ -70,10 +76,10 @@ export async function accountsRoutes(
   const {
     register,
     login,
+    join,
     logout,
     me,
-    replaceAvatar,
-    avatar
+    replaceAvatar
   } = ACCOUNTS_ROUTES;
 
   app.route<RegisterRoute>({
@@ -83,7 +89,7 @@ export async function accountsRoutes(
       body: registrationBodySchema
     },
     handler: async(request, reply) => {
-      const registration = await realm.register(
+      const registration = await realm(request).register(
         request.body,
         requester(request)
       );
@@ -99,10 +105,32 @@ export async function accountsRoutes(
     schema: {
       body: credentialsBodySchema
     },
-    handler: async(request, reply) => sendSignIn(
-      reply,
-      await realm.login(request.body, requester(request))
-    )
+    handler: async(request, reply): Promise<AccountReply> => {
+      const { account, cookie } = await accounts.login(
+        request.body,
+        requester(request)
+      );
+      reply.header("set-cookie", cookie);
+
+      return {
+        account: realm(request).admit(account.id)
+      };
+    }
+  });
+  app.route({
+    method: join.method,
+    url: join.path,
+    handler: (request, reply) => {
+      const joined = realm(request).join(
+        sessionAccount(accounts, request).id
+      );
+
+      return joined.status === "pending" ?
+        reply.code(202).send() :
+        reply.code(201).send({
+          account: joined.account
+        } satisfies AccountReply);
+    }
   });
   app.route({
     method: logout.method,
@@ -115,34 +143,13 @@ export async function accountsRoutes(
   app.route({
     method: me.method,
     url: me.path,
-    preParsing: signedIn,
     handler: (request): AccountReply => {
       return {
-        account: signedInAccount(request)
+        account: realm(request).admit(sessionAccount(accounts, request).id)
       };
     }
   });
-  app.route<AvatarRoute>({
-    method: avatar.method,
-    url: avatar.path,
-    handler: (request, reply) => {
-      const stored = accounts.avatar(request.params.accountId);
-      if (stored === null) {
-        throw new ApiError(404, "not-found", "the account has no avatar");
-      }
-      const version = request.query[AVATAR_VERSION_PARAM];
-
-      return reply
-        .header("content-type", kAvatarContentType)
-        .header(
-          "cache-control",
-          version === stored.hash ? kImmutable : kRevalidate
-        )
-        .header("cross-origin-resource-policy", "same-origin")
-        .header("x-content-type-options", "nosniff")
-        .send(stored.bytes);
-    }
-  });
+  avatarRoute(app, accounts);
 
   await app.register(async(avatarUpload) => {
     avatarUpload.addContentTypeParser(
@@ -171,6 +178,69 @@ export async function accountsRoutes(
         };
       }
     });
+  });
+}
+
+export async function serverAccountsRoutes(
+  app: FastifyInstance,
+  options: ServerAccountsRoutesOptions
+): Promise<void> {
+  const { accounts } = options;
+  const { login, logout } = ACCOUNTS_ROUTES;
+
+  app.route<LoginRoute>({
+    method: login.method,
+    url: login.path,
+    schema: {
+      body: credentialsBodySchema
+    },
+    handler: async(request, reply) => {
+      const signIn = await accounts.login(request.body, requester(request));
+
+      return reply
+        .header("set-cookie", signIn.cookie)
+        .send({
+          account: signIn.account
+        });
+    }
+  });
+  app.route({
+    method: logout.method,
+    url: logout.path,
+    handler: (request, reply) => reply
+      .code(204)
+      .header("set-cookie", accounts.signOut(requester(request)))
+      .send()
+  });
+  avatarRoute(app, accounts);
+}
+
+function avatarRoute(
+  app: FastifyInstance,
+  accounts: Accounts
+): void {
+  const { avatar } = ACCOUNTS_ROUTES;
+
+  app.route<AvatarRoute>({
+    method: avatar.method,
+    url: avatar.path,
+    handler: (request, reply) => {
+      const stored = accounts.avatar(request.params.accountId);
+      if (stored === null) {
+        throw new ApiError(404, "not-found", "the account has no avatar");
+      }
+      const version = request.query[AVATAR_VERSION_PARAM];
+
+      return reply
+        .header("content-type", kAvatarContentType)
+        .header(
+          "cache-control",
+          version === stored.hash ? kImmutable : kRevalidate
+        )
+        .header("cross-origin-resource-policy", "same-origin")
+        .header("x-content-type-options", "nosniff")
+        .send(stored.bytes);
+    }
   });
 }
 

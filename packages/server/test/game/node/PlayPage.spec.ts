@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { PlayPage } from "#src/game/node/PlayPage.ts";
-import { StudioGame } from "#src/game/node/StudioGame.ts";
+import { ProjectGame } from "#src/game/node/ProjectGame.ts";
 import { PlayerPage } from "#src/game/PlayerPage.ts";
 import { DEFAULT_PHYSICS } from "#src/project/ProjectSections.ts";
 import {
@@ -27,7 +27,7 @@ const kPage = "<html><head><script type=\"importmap\">" +
 const kSessionCookie = "session=player";
 
 function servePlayPage(
-  game: StudioGame,
+  game: ProjectGame,
   html = () => Promise.resolve(kPage)
 ): Promise<PagesServer> {
   const page = new PlayPage({
@@ -50,7 +50,7 @@ describe("PlayPage", () => {
     await using project = await gameProject();
     const script = await project.create("scripts/Player.ts", "export {};");
     const scene = await project.create("levels/arena.scene.json", "{}");
-    const game = new StudioGame({
+    const game = new ProjectGame({
       project: {
         access: GAME_ACCESS,
         physics: DEFAULT_PHYSICS
@@ -76,7 +76,7 @@ describe("PlayPage", () => {
   test("lists no script without a session, and passes other pages on", async() => {
     await using project = await gameProject();
     await project.create("scripts/Player.ts", "export {};");
-    await using server = await servePlayPage(new StudioGame({
+    await using server = await servePlayPage(new ProjectGame({
       project: {
         access: GAME_ACCESS,
         physics: DEFAULT_PHYSICS
@@ -94,7 +94,7 @@ describe("PlayPage", () => {
   test("answers a page it cannot read with a 500 that names no internals", async() => {
     await using project = await gameProject();
     await using server = await servePlayPage(
-      new StudioGame({
+      new ProjectGame({
         project: {
           access: GAME_ACCESS,
           physics: DEFAULT_PHYSICS

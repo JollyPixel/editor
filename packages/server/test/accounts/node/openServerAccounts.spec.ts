@@ -1,4 +1,5 @@
 // Import Node.js Dependencies
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
   describe,
@@ -17,16 +18,17 @@ import {
 import { EditorPackages } from "#src/editors/node/EditorPackages.ts";
 import {
   openProjectRealm,
-  openStudioAccounts
-} from "#src/accounts/node/openStudioAccounts.ts";
-import { StudioProject } from "#src/project/node/StudioProject.ts";
+  openServerAccounts
+} from "#src/accounts/node/openServerAccounts.ts";
+import { Project } from "#src/project/node/Project.ts";
 
 // CONSTANTS
 const kAccessRequests = {
   access: {
-    accessRequests: true
+    join: "request"
   }
 };
+const kProjectId = randomUUID();
 const kDigest = "p".repeat(43);
 const kRequester = {
   address: "203.0.113.7",
@@ -37,10 +39,11 @@ const kRequester = {
 function project(
   root: string,
   document: Record<string, unknown> = {}
-): StudioProject {
-  return new StudioProject(
+): Project {
+  return new Project(
     new ProjectFile(root, {
       ...document,
+      id: kProjectId,
       version: 1
     }),
     new EditorPackages([]),
@@ -50,8 +53,8 @@ function project(
 
 describe("openProjectRealm", () => {
   test("takes the roles and the default role of the project", async() => {
-    using accounts = await openStudioAccounts(
-      project(path.resolve("/studio")),
+    using accounts = await openServerAccounts(
+      path.resolve("/studio"),
       { inMemory: true }
     );
     const realm = openProjectRealm(accounts, project(path.resolve("/studio")));
@@ -61,8 +64,8 @@ describe("openProjectRealm", () => {
   });
 
   test("lets the host override the role of new accounts", async() => {
-    using accounts = await openStudioAccounts(
-      project(path.resolve("/studio")),
+    using accounts = await openServerAccounts(
+      path.resolve("/studio"),
       { inMemory: true }
     );
     const realm = openProjectRealm(
@@ -77,7 +80,7 @@ describe("openProjectRealm", () => {
 
   test("holds later registrations for approval when the project takes access requests", async() => {
     const studio = project(path.resolve("/studio"), kAccessRequests);
-    using accounts = await openStudioAccounts(studio, { inMemory: true });
+    using accounts = await openServerAccounts(studio.file.root, { inMemory: true });
     const realm = openProjectRealm(accounts, studio);
 
     const owner = await realm.register({
@@ -89,7 +92,7 @@ describe("openProjectRealm", () => {
       password: kDigest
     }, kRequester);
 
-    assert.equal(realm.join, "request");
+    assert.equal(realm.joinMode, "request");
     assert.deepEqual(
       [owner.status, requester.status],
       ["active", "pending"]
@@ -97,15 +100,15 @@ describe("openProjectRealm", () => {
   });
 });
 
-describe("openStudioAccounts", () => {
+describe("openServerAccounts", () => {
   test("warns that registration is open while no master password is set", async() => {
     const warnings: string[] = [];
     const logger = {
       warn: (message: string) => warnings.push(message)
     };
 
-    using _open = await openStudioAccounts(
-      project(path.resolve("/studio")),
+    using _open = await openServerAccounts(
+      path.resolve("/studio"),
       {
         inMemory: true,
         masterPassword: "",
@@ -115,8 +118,8 @@ describe("openStudioAccounts", () => {
     assert.equal(warnings.length, 1);
     assert.match(warnings[0], /JOLLY_MASTER_PASSWORD is not set/);
 
-    using _guarded = await openStudioAccounts(
-      project(path.resolve("/studio")),
+    using _guarded = await openServerAccounts(
+      path.resolve("/studio"),
       {
         inMemory: true,
         masterPassword: "open sesame",
@@ -126,17 +129,17 @@ describe("openStudioAccounts", () => {
     assert.equal(warnings.length, 1);
   });
 
-  test("names the session cookie after the project root", async() => {
-    using first = await openStudioAccounts(
-      project(path.resolve("/studio/a")),
+  test("names the session cookie after the server state folder", async() => {
+    using first = await openServerAccounts(
+      path.resolve("/studio/a"),
       { inMemory: true }
     );
-    using again = await openStudioAccounts(
-      project(path.resolve("/studio/a")),
+    using again = await openServerAccounts(
+      path.resolve("/studio/a"),
       { inMemory: true }
     );
-    using other = await openStudioAccounts(
-      project(path.resolve("/studio/b")),
+    using other = await openServerAccounts(
+      path.resolve("/studio/b"),
       { inMemory: true }
     );
 

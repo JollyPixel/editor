@@ -103,10 +103,13 @@ function activityTarget(
 ): Pick<EventStore.AppendInput, "assetType" | "assetId"> {
   switch (activity.type) {
     case "registered":
+    case "joined":
     case "approved":
+    case "invited":
     case "denied":
     case "owner-transferred":
     case "removed":
+    case "deleted":
     case "role-changed":
       return {
         assetType: "account",

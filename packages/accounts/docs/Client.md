@@ -25,7 +25,11 @@ Creates an account in the project the server serves, signs it in and resolves to
 
 ### `login(username, password)`
 
-Signs in and resolves to the `Member`. Rejects with `account-pending` while an admin has not approved the account's request, and with `membership-required` when the account does not belong to the project.
+Signs in and resolves to the `Member`. Rejects with `account-pending` while an admin has not approved the account's request, and with `membership-required` when the account does not belong to the project. Both rejections leave the account signed in on the server, ready for [`join()`](#join).
+
+### `join()`
+
+Enters the signed-in account into the project and resolves to a `RegistrationResult`, as [`register`](#registerusername-password-options) does. Rejects with `invitation-required` when the project takes members on invitation only, and with `unauthenticated` without a session.
 
 ### `logout()`
 
@@ -33,7 +37,7 @@ Closes the session.
 
 ### `me()`
 
-The signed-in `Member`, or `null` without a valid session or outside the project.
+The signed-in `Member`, or `null` without a valid session. Rejects with `membership-required` or `account-pending` for an account signed in on the server but not a member of the project.
 
 ### `replaceAvatar(image)`
 
@@ -42,6 +46,10 @@ Uploads a `Blob` as the signed-in account's avatar and resolves to the `Member`,
 ## `prehashPassword(username, password)`
 
 PBKDF2-SHA-256 with `PREHASH_ITERATIONS` (600,000) iterations, salted with `jolly-pixel:v1:` followed by the username's `key`. It resolves to 32 bytes in base64url. `AccountsClient` sends this instead of the password, so the plaintext never reaches the server or its logs.
+
+## `credentialsBody(username, password)`
+
+Resolves to the `CredentialsBody` that `POST login` expects: the normalized username and the [pre-hashed](#prehashpasswordusername-password) password. Throws `InvalidUsernameError` for a username `Username.parse` refuses.
 
 ## `AccountsRoster`
 
@@ -84,6 +92,14 @@ Resolves once the access request is deleted. The account stays on the server.
 ### `remove(username)`
 
 Resolves once the account no longer belongs to the project. The account stays on the server.
+
+### `invite(username, role)`
+
+Resolves once the existing account named `username` is a member of the project with `role`, its access request approved if it had one.
+
+### `deleteAccount(username)`
+
+Resolves once the account named `username` is gone from the server, for the server owner only.
 
 ### `transferOwnership(username)`
 

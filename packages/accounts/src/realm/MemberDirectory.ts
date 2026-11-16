@@ -99,7 +99,7 @@ export class MemberDirectory extends Emitter<MemberDirectoryEventMap>
     return this.#roles;
   }
 
-  get join(): JoinMode {
+  get joinMode(): JoinMode {
     return this.#join;
   }
 
@@ -182,29 +182,72 @@ export class MemberDirectory extends Emitter<MemberDirectoryEventMap>
     credentials: Credentials,
     address: string
   ): Promise<Member> {
-    return this.admit(
-      await this.#accounts.login(credentials, address)
-    );
+    const account = await this.#accounts.login(credentials, address);
+
+    return this.admit(account.id);
   }
 
   admit(
-    account: AccountEntity
+    accountId: string
   ): Member {
-    if (account.owner) {
-      return this.#toMember(account, null);
+    const member = this.member(accountId);
+    if (member !== null) {
+      return member;
     }
     const membership = this.#database.memberships.find(
       this.realmId,
-      account.id
+      accountId
     );
-    if (membership === null) {
-      throw new MembershipRequiredError();
-    }
-    if (membership.pending) {
-      throw new AccountPendingError();
+
+    throw membership?.pending === true ?
+      new AccountPendingError() :
+      new MembershipRequiredError();
+  }
+
+  join(
+    accountId: string
+  ): RegistrationResult {
+    const { account, membership, joined } = this.#database.transaction(() => {
+      const joining = this.#database.accounts.byId(accountId);
+      if (joining === null) {
+        throw new AccountChangeRefusedError(
+          `no account has the id "${accountId}"`
+        );
+      }
+      const existing = joining.owner ?
+        null :
+        this.#database.memberships.find(this.realmId, accountId);
+      if (joining.owner || existing !== null) {
+        return {
+          account: joining,
+          membership: existing,
+          joined: false
+        };
+      }
+
+      return {
+        account: joining,
+        membership: this.#enroll(accountId),
+        joined: true
+      };
+    });
+    const pending = membership?.pending === true;
+    if (joined) {
+      this.#changed({
+        type: "joined",
+        actorId: account.id,
+        accountId: account.id,
+        username: account.username,
+        pending
+      });
     }
 
-    return this.#toMember(account, membership);
+    return pending ?
+      { status: "pending" } :
+      {
+        status: "active",
+        account: this.#toMember(account, membership)
+      };
   }
 
   member(
@@ -354,6 +397,66 @@ export class MemberDirectory extends Emitter<MemberDirectoryEventMap>
     for (const subject of subjects) {
       this.revoke(subject);
     }
+
+    return this.#accounts.toAccount(account);
+  }
+
+  invite(
+    actorId: string,
+    username: Username,
+    role: string
+  ): Member {
+    const { account, membership } = this.#database.transaction(() => {
+      this.#assertAdmin(actorId);
+      this.#assertDeclared(role);
+      const target = this.#database.accounts.named(username);
+      if (target === null) {
+        throw new AccountChangeRefusedError(
+          `no account is named "${username.value}"`
+        );
+      }
+      target.assertNotOwner();
+      const existing = this.#database.memberships.find(
+        this.realmId,
+        target.id
+      );
+      if (existing !== null && !existing.pending) {
+        throw new AccountChangeRefusedError(
+          `"${username.value}" is already a member`
+        );
+      }
+      const invited = existing === null ?
+        Membership.active(this.realmId, target.id, role) :
+        existing.approved(role);
+      this.#database.memberships.save(invited);
+
+      return {
+        account: target,
+        membership: invited
+      };
+    });
+    this.#changed({
+      type: "invited",
+      actorId,
+      accountId: account.id,
+      username: account.username,
+      role
+    });
+
+    return this.#toMember(account, membership);
+  }
+
+  deleteAccount(
+    actorId: string,
+    username: Username
+  ): Account {
+    const account = this.#accounts.deleteAccount(actorId, username);
+    this.record({
+      type: "deleted",
+      actorId,
+      accountId: account.id,
+      username: account.username
+    });
 
     return this.#accounts.toAccount(account);
   }

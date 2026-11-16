@@ -6,20 +6,20 @@ import {
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import type { StudioProject } from "./StudioProject.ts";
+import type { Project } from "./Project.ts";
 
 // CONSTANTS
 const kArchiveExtension = ".zip";
 
 export interface ProjectArchiveOptions {
-  project: Pick<StudioProject, "access" | "name">;
+  project: Pick<Project, "access" | "name">;
   backend: ArchiveBackend;
 }
 
 export class ProjectArchive {
   readonly fileName: string;
 
-  #project: Pick<StudioProject, "access">;
+  #project: Pick<Project, "access">;
   #backend: ArchiveBackend;
 
   constructor(

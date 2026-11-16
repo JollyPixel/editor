@@ -50,7 +50,11 @@ Throws an `Error` while a realm with the same `id` is open. Disposing the realm 
 
 Signs an account in server-wide, whatever project it belongs to. `body` is a `CredentialsBody`, `{ username, password }`, and `requester` is a `Requester`, `{ address, secure, headers }`: the client address the throttle counts against, whether the request came over TLS, which makes the cookie `Secure`, and the request headers. Behind a reverse proxy, the host decides which forwarded address to trust.
 
-Resolves to `{ account, cookie }`, where `cookie` is the `Set-Cookie` value of the new session, or throws `InvalidCredentialsError` or `AccountsThrottledError`, whose `retryAfterMs` gives the wait. A project page signs in with [`AccountsRealm.login`](#loginbody-requester-1) instead.
+Resolves to `{ account, cookie }`, where `cookie` is the `Set-Cookie` value of the new session, or throws `InvalidCredentialsError` or `AccountsThrottledError`, whose `retryAfterMs` gives the wait. A project's [`POST login`](#post-login) then checks the account with [`AccountsRealm.admit`](#admitaccountid).
+
+### `memberships(accountId)`
+
+The account's memberships in every realm of the database, oldest first, as `{ realmId, role, pending }`. The owner has none: it belongs to every realm. A server lists an account's projects with it without opening them.
 
 ### `signOut(requester)`
 
@@ -96,7 +100,15 @@ The first account of the server becomes its owner. Later ones follow the realm's
 
 ### `login(body, requester)`
 
-Signs in for [`POST login`](#post-login). Resolves to `{ account, cookie }` with the `Member`, or throws `InvalidCredentialsError`, `AccountsThrottledError`, `AccountPendingError` while the account's request waits, or `MembershipRequiredError` for an account outside the realm. Neither of the last two opens a session.
+Signs a member in. Resolves to `{ account, cookie }` with the `Member`, or throws `InvalidCredentialsError`, `AccountsThrottledError`, `AccountPendingError` while the account's request waits, or `MembershipRequiredError` for an account outside the realm. Neither of the last two opens a session.
+
+### `join(accountId)`
+
+Enters a signed-in account into the realm for [`POST join`](#post-join), following the `join` mode as [`register`](#registerbody-requester) does: `{ status: "active", account }` under `"open"`, `{ status: "pending" }` under `"request"`, and `InvitationRequiredError` under `"invite"`. A member, the owner, or an account whose request already waits gets its current standing back, and nothing changes.
+
+### `admit(accountId)`
+
+The account as a `Member` of the realm, for the owner and an active member. Throws `AccountPendingError` while its request waits, or `MembershipRequiredError` for an account outside the realm.
 
 ### `signedIn(headers)`
 
@@ -177,15 +189,15 @@ Calls `listener` with an `AccountActivity` after each change made in the realm, 
 
 ```ts
 type AccountActivity =
-  | { type: "registered"; actorId; accountId; username; pending: boolean }
-  | { type: "approved"; actorId; accountId; username; role }
-  | { type: "denied" | "owner-transferred" | "removed"; actorId; accountId; username }
+  | { type: "registered" | "joined"; actorId; accountId; username; pending: boolean }
+  | { type: "approved" | "invited"; actorId; accountId; username; role }
+  | { type: "denied" | "owner-transferred" | "removed" | "deleted"; actorId; accountId; username }
   | { type: "role-changed"; actorId; accountId; username; from; to }
   | { type: "share-link-created" | "share-link-revoked"; actorId; linkId; assetId }
   | { type: "agent-token-created" | "agent-token-revoked"; actorId; tokenId; name };
 ```
 
-A registration is its own actor. A share link that expires reports nothing.
+A registration and a join are their own actor. A share link that expires reports nothing.
 
 ### `watchProfiles(listener)`
 
@@ -217,7 +229,7 @@ Replaces the roles. Later role changes and approvals check the new ones, a store
 
 `renamed` maps old role names to new ones. Every member and access request of the realm that stores an old name moves to the new one, and each moved account is [revoked](#watchrevocationslistener). Throws `AccountChangeRefusedError`, before changing anything, when an old name is still in `roles` or a new name is not.
 
-### `join`
+### `joinMode`
 
 The current [`JoinMode`](./Accounts.md#joinmode).
 
@@ -374,9 +386,13 @@ Errors answer `{ code, message }`, where `code` is an `AccountsFailureCode`. Bes
 
 ### `POST login`
 
-`{ username, password }` sets a new session cookie and answers 200 with `{ account }`, or 401 `invalid-credentials`. With the right password, an account whose request waits answers 403 `account-pending` and an account outside the project 403 `membership-required`, both without a cookie; a wrong password still answers 401, so neither tells a guesser anything new. An attempt counts against both the username and the client address before its password is checked, so parallel requests cannot exceed `throttle.attempts`. Past the limit, the route answers 429 `throttled` with `Retry-After`, and the refused attempt counts for nothing. A success clears the username's count and gives the address its attempt back.
+`{ username, password }` sets a new session cookie and answers 200 with `{ account }`, or 401 `invalid-credentials`. With the right password, an account whose request waits answers 403 `account-pending` and an account outside the project 403 `membership-required`, both with the server-wide session cookie, so the account can [join](#post-join) without signing in again. An attempt counts against both the username and the client address before its password is checked, so parallel requests cannot exceed `throttle.attempts`. Past the limit, the route answers 429 `throttled` with `Retry-After`, and the refused attempt counts for nothing. A success clears the username's count and gives the address its attempt back.
 
 Anyone can lock a username out for `throttle.windowMs` by failing its login `throttle.attempts` times.
+
+### `POST join`
+
+Enters the session's account into the project, following its join mode: 201 with `{ account }` under `"open"`, 202 with no body under `"request"`, 403 `invitation-required` under `"invite"`, and 429 `access-requests-full` past `maxRequests`. Without a session it answers 401 `unauthenticated`.
 
 ### `POST logout`
 
@@ -384,7 +400,7 @@ Closes the session, clears the cookie, revokes the account's open connections an
 
 ### `GET me`
 
-Answers `{ account }` for the session, or 401 `unauthenticated`.
+Answers `{ account }` for the session, 403 `account-pending` or `membership-required` for a session whose account is not a member of the project, or 401 `unauthenticated` without one.
 
 ### `PUT avatar`
 
@@ -418,6 +434,8 @@ Commands carry a `requestId` and are answered with `accounts:applied` or `accoun
 - `accounts:approve` with `username` and `role`, for an access request
 - `accounts:deny` with `username`, which deletes an access request and keeps the account
 - `accounts:remove` with `username`, which drops the membership with the member's share links and agent tokens in the realm, and keeps the account
+- `accounts:invite` with `username` and `role`, which makes an existing account a member, or approves its access request with that role
+- `accounts:delete` with `username`, from the owner only, which deletes the account from every realm with its sessions, avatar, preferences, share links and agent tokens, and revokes them
 - `accounts:transfer-ownership` with `username`, from the owner only, to a member of the realm. The previous owner becomes an admin of every realm in the database and every open one
 
-The room answers commands only when the sender is an admin of the realm now, or the owner for a transfer, whatever role its socket connected with and whatever the rights table allows. A sender who is not is refused before the target is looked up. `role` must be declared. `assign-role`, `remove` and `transfer-ownership` refuse an access request and an account outside the realm like an unknown one, `approve` and `deny` refuse anything but an access request, and the owner's role cannot be changed nor the owner removed. Assigning a role or removing a member [revokes](#watchrevocationslistener) its open connections, and a transfer revokes those of the new owner.
+The room answers commands only when the sender is an admin of the realm now, or the owner for a transfer or a deletion, whatever role its socket connected with and whatever the rights table allows. A sender who is not is refused before the target is looked up. `role` must be declared. `invite` refuses an unknown account, the owner and a member. `assign-role`, `remove` and `transfer-ownership` refuse an access request and an account outside the realm like an unknown one, `approve` and `deny` refuse anything but an access request, and the owner's role cannot be changed nor the owner removed. Assigning a role or removing a member [revokes](#watchrevocationslistener) its open connections, and a transfer revokes those of the new owner.

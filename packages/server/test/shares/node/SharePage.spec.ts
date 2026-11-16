@@ -87,7 +87,8 @@ describe("SharePage", () => {
     );
     assert.deepEqual(JSON.parse(launch?.[1] ?? "null"), {
       target: "map-1",
-      credential: harness.token
+      credential: harness.token,
+      socket: "../ws-sync"
     });
     assert.ok(head.indexOf(LAUNCH_ELEMENT_ID) < head.indexOf("./assets/index.js"));
   });

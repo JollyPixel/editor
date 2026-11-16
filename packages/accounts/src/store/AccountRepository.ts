@@ -123,6 +123,12 @@ export class AccountRepository implements Iterable<AccountEntity> {
     }
   }
 
+  delete(
+    id: string
+  ): void {
+    this.#db.run("DELETE FROM users WHERE id = ?", id);
+  }
+
   * [Symbol.iterator](): IterableIterator<AccountEntity> {
     const rows = this.#db.all<AccountRow>(
       `SELECT ${kAccountColumns} FROM ${kAccountTables} ORDER BY users.created_at, users.rowid`

@@ -12,7 +12,7 @@ import {
   ProjectManifest
 } from "../ProjectManifest.ts";
 import { kindOptionSections } from "./kindOptionSections.ts";
-import type { StudioProject } from "./StudioProject.ts";
+import type { Project } from "./Project.ts";
 import { requestPathname } from "../../http/node/requestPathname.ts";
 
 export class ManifestRoute {
@@ -20,7 +20,7 @@ export class ManifestRoute {
   readonly middleware: Middleware;
 
   constructor(
-    project: StudioProject
+    project: Project
   ) {
     this.source = JSON.stringify(new ProjectManifest({
       editors: project.editors.descriptors(),

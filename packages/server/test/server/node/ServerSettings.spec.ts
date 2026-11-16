@@ -11,15 +11,15 @@ import {
   DEFAULT_HOST,
   DEFAULT_PORT,
   DEFAULT_PROJECT_DIR,
-  StudioServerSettings
-} from "#src/server/node/StudioServerSettings.ts";
+  ServerSettings
+} from "#src/server/node/ServerSettings.ts";
 
 // CONSTANTS
 const kBase = path.resolve("/studio");
 
-describe("StudioServerSettings", () => {
+describe("ServerSettings", () => {
   test("defaults to a loopback server that trusts no proxy and compresses its sockets", () => {
-    const settings = StudioServerSettings.parse({
+    const settings = ServerSettings.parse({
       PORT: "",
       JOLLY_TRUST_PROXY: " "
     });
@@ -32,7 +32,7 @@ describe("StudioServerSettings", () => {
   });
 
   test("turns socket compression off with JOLLY_SOCKET_COMPRESSION=false", () => {
-    const settings = StudioServerSettings.parse({
+    const settings = ServerSettings.parse({
       JOLLY_SOCKET_COMPRESSION: "false"
     });
 
@@ -40,7 +40,7 @@ describe("StudioServerSettings", () => {
   });
 
   test("reads the port, the host and the allowed hosts", () => {
-    const settings = StudioServerSettings.parse({
+    const settings = ServerSettings.parse({
       PORT: "8080",
       HOST: "0.0.0.0",
       JOLLY_ALLOWED_HOSTS: "studio.example.com, ,play.example.com"
@@ -61,7 +61,7 @@ describe("StudioServerSettings", () => {
     ["127.0.0.1, 10.0.0.0/8", ["127.0.0.1", "10.0.0.0/8"]]
   ] as const) {
     test(`reads JOLLY_TRUST_PROXY="${value}"`, () => {
-      const settings = StudioServerSettings.parse({
+      const settings = ServerSettings.parse({
         JOLLY_TRUST_PROXY: value
       });
 
@@ -72,7 +72,7 @@ describe("StudioServerSettings", () => {
   test("defaults the project root to the project folder of the base", () => {
     for (const env of [{}, { JOLLY_PROJECT: "  " }]) {
       assert.strictEqual(
-        StudioServerSettings.parse(env).projectRoot(kBase),
+        ServerSettings.parse(env).projectRoot(kBase),
         path.join(kBase, DEFAULT_PROJECT_DIR)
       );
     }
@@ -82,19 +82,54 @@ describe("StudioServerSettings", () => {
     const absolute = path.resolve("/games/demo");
 
     assert.strictEqual(
-      StudioServerSettings.parse({ JOLLY_PROJECT: "../game" }).projectRoot(kBase),
+      ServerSettings.parse({ JOLLY_PROJECT: "../game" }).projectRoot(kBase),
       path.resolve(kBase, "../game")
     );
     assert.strictEqual(
-      StudioServerSettings.parse({ JOLLY_PROJECT: absolute }).projectRoot(kBase),
+      ServerSettings.parse({ JOLLY_PROJECT: absolute }).projectRoot(kBase),
       absolute
     );
   });
 
+  test("hosts the projects of JOLLY_PROJECTS under their slugs, its state beside them", () => {
+    const hosting = ServerSettings.parse({
+      JOLLY_PROJECTS: "games"
+    }).hosting(kBase);
+
+    assert.equal(hosting.state, path.join(kBase, "games", ".jollypixel"));
+    assert.deepEqual(hosting.mount.locate("/p/castle/api/"), {
+      slug: "castle",
+      pathname: "/api/"
+    });
+    assert.equal(hosting.mount.locate("/api/projects"), null);
+  });
+
+  test("mounts the single project of JOLLY_PROJECT at the root", () => {
+    const hosting = ServerSettings.parse({
+      JOLLY_PROJECT: "castle"
+    }).hosting(kBase);
+
+    assert.equal(hosting.state, path.join(kBase, "castle", ".jollypixel"));
+    assert.deepEqual(hosting.mount.locate("/api/"), {
+      slug: "castle",
+      pathname: "/api/"
+    });
+  });
+
+  test("refuses JOLLY_PROJECTS together with JOLLY_PROJECT", () => {
+    assert.throws(
+      () => ServerSettings.parse({
+        JOLLY_PROJECT: "castle",
+        JOLLY_PROJECTS: "games"
+      }),
+      /not both/
+    );
+  });
+
   test("reads the master password", () => {
-    assert.equal(StudioServerSettings.parse({}).masterPassword, undefined);
+    assert.equal(ServerSettings.parse({}).masterPassword, undefined);
     assert.equal(
-      StudioServerSettings.parse({
+      ServerSettings.parse({
         JOLLY_MASTER_PASSWORD: "open sesame"
       }).masterPassword,
       "open sesame"
@@ -103,7 +138,7 @@ describe("StudioServerSettings", () => {
 
   test("rejects a port that is not a TCP port", () => {
     assert.throws(
-      () => StudioServerSettings.parse({ PORT: "70000" }),
+      () => ServerSettings.parse({ PORT: "70000" }),
       /PORT/
     );
   });

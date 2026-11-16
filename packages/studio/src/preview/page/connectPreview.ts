@@ -7,7 +7,11 @@ import {
   type ShellCatalog,
   type ShellChannel
 } from "@jolly-pixel/editor.host";
-import { Client } from "@jolly-pixel/network/client";
+import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
+import {
+  Client,
+  connectWebSocket
+} from "@jolly-pixel/network/client";
 import {
   GUEST_USERNAME,
   peerIdentity
@@ -47,6 +51,9 @@ export async function connectPreview(
   const client = new Client({
     profile: toPeerProfileMetadata(identity, {
       observer: true
+    }),
+    socket: () => connectWebSocket({
+      url: new URL(`..${DEFAULT_WEBSOCKET_PATH}`, document.baseURI)
     })
   });
   shell.renewWhenRefused(client);

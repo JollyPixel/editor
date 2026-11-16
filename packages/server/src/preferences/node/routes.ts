@@ -4,6 +4,7 @@ import { InvalidPreferencesError } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import { signedInAccount } from "../../http/node/authentication.ts";
+import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 import { domainFailures } from "../../http/node/apiFailure.ts";
 import { UnknownScopeError } from "./errors/UnknownScopeError.ts";
 import type { StoredPreferences } from "./StoredPreferences.ts";
@@ -21,7 +22,7 @@ export const preferencesFailures = domainFailures([
 ]);
 
 export interface PreferencesRoutesOptions {
-  preferences: StoredPreferences;
+  preferences: RequestScoped<StoredPreferences>;
 }
 
 interface ReplacePreferencesRoute {
@@ -35,13 +36,14 @@ export async function preferencesRoutes(
   app: FastifyInstance,
   options: PreferencesRoutesOptions
 ): Promise<void> {
-  const { preferences } = options;
   const { list, replace } = PREFERENCES_ROUTES;
 
   app.route({
     method: list.method,
     url: list.path,
-    handler: (request) => preferences.list(signedInAccount(request))
+    handler: (request) => options.preferences(request).list(
+      signedInAccount(request)
+    )
   });
   app.route<ReplacePreferencesRoute>({
     method: replace.method,
@@ -50,7 +52,7 @@ export async function preferencesRoutes(
     schema: {
       body: preferenceOverridesSchema
     },
-    handler: (request) => preferences.replace(
+    handler: (request) => options.preferences(request).replace(
       signedInAccount(request),
       request.params.scope,
       request.body

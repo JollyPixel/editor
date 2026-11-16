@@ -139,11 +139,20 @@ export class UsersTreeModel {
   #userMenu(
     entry: RosterEntry
   ): ContextMenuEntry[] {
-    const transfer: ContextMenuEntry[] = this.#viewer?.owner === true && !entry.owner ?
+    const ownerActions = this.#viewer?.owner === true && !entry.owner;
+    const transfer: ContextMenuEntry[] = ownerActions ?
       [{
         id: "transfer-ownership",
-        label: "Transfer ownership",
+        label: "Transfer server ownership",
         icon: "crown"
+      }] :
+      [];
+    const deletion: ContextMenuEntry[] = ownerActions ?
+      [{
+        id: "delete-account",
+        label: "Delete account",
+        icon: "trash",
+        intent: "danger"
       }] :
       [];
 
@@ -164,11 +173,12 @@ export class UsersTreeModel {
       ...transfer,
       {
         id: "remove",
-        label: "Remove account",
-        icon: "trash",
+        label: "Remove from project",
+        icon: "sign-out",
         intent: "danger",
         disabled: entry.owner || this.#isViewer(entry)
-      }
+      },
+      ...deletion
     ];
   }
 

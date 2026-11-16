@@ -18,7 +18,9 @@ import {
   name,
   registration
 } from "../helpers/accounts.ts";
+import { agentTokenSubject } from "#src/agent/AgentToken.ts";
 import { Membership } from "#src/realm/Membership.ts";
+import { shareLinkSubject } from "#src/share/ShareLinks.ts";
 import { AccountChangeRefusedError } from "#src/node.ts";
 
 describe("MemberDirectory.remove", () => {
@@ -128,5 +130,75 @@ describe("MemberDirectory changes", () => {
     ]);
     assert.equal(owner.owner, true);
     assert.equal(members.member(carol.id), null);
+  });
+});
+
+describe("MemberDirectory.invite", () => {
+  test("makes an account a member, or approves its pending request, with the role", () => {
+    using database = databaseWith("Alice", "Bob", "Carol");
+    const [alice, bob, carol] = database.accounts;
+    addMembership(database, Membership.request(OTHER_REALM, carol.id, "member"));
+    const members = createMembers(database, { realmId: OTHER_REALM });
+
+    members.invite(alice.id, name("bob"), "member");
+    members.invite(alice.id, name("carol"), "spectator");
+
+    assert.equal(members.member(bob.id)?.role, "member");
+    assert.equal(members.member(carol.id)?.role, "spectator");
+    assert.throws(
+      () => members.invite(alice.id, name("bob"), "spectator"),
+      /already a member/
+    );
+  });
+
+  test("refuses an actor that is not an admin, and an unknown account", () => {
+    using database = databaseWith("Alice", "Bob");
+    const [alice, bob] = database.accounts;
+    const members = createMembers(database, { realmId: OTHER_REALM });
+
+    assert.throws(
+      () => members.invite(bob.id, name("bob"), "member"),
+      AccountChangeRefusedError
+    );
+    assert.throws(
+      () => members.invite(alice.id, name("dave"), "member"),
+      AccountChangeRefusedError
+    );
+  });
+});
+
+describe("MemberDirectory.deleteAccount", () => {
+  test("lets the owner delete an account everywhere, revoking it, its links and its agents", () => {
+    using database = databaseWith("Alice", "Bob");
+    const [alice, bob] = database.accounts;
+    addMembership(database, Membership.active(OTHER_REALM, bob.id, "member"));
+    const token = insertAgentToken(database, bob.id, OTHER_REALM);
+    const link = insertShareLink(database, REALM, bob.id);
+    const members = createMembers(database);
+    const revoked: string[] = [];
+    members.on("revoked", (subject) => revoked.push(subject));
+
+    members.deleteAccount(alice.id, name("bob"));
+
+    assert.equal(database.accounts.size, 1);
+    assert.equal(database.memberships.find(OTHER_REALM, bob.id), null);
+    assert.deepEqual(revoked.sort(), [
+      agentTokenSubject(token.id),
+      bob.id,
+      shareLinkSubject(link.id)
+    ].sort());
+  });
+
+  test("refuses an admin who does not own the server", () => {
+    using database = databaseWith("Alice", "Bob", "Carol");
+    const [alice, bob] = database.accounts;
+    const members = createMembers(database);
+    members.assignRole(alice.id, name("bob"), "admin");
+
+    assert.throws(
+      () => members.deleteAccount(bob.id, name("carol")),
+      AccountChangeRefusedError
+    );
+    assert.equal(database.accounts.size, 3);
   });
 });

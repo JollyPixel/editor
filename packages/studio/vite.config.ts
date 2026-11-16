@@ -24,9 +24,10 @@ import {
   PLAY_PAGE_DIR,
   PLAY_PAGE_PATH,
   PREVIEW_PAGE_DIR,
-  PREVIEW_PAGE_PATH
+  PREVIEW_PAGE_PATH,
+  PROJECTS_PAGE_DIR
 } from "@jolly-pixel/server";
-import { StudioServerSettings } from "@jolly-pixel/server/node";
+import { ServerSettings } from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
 import { openStudioProject } from "./node/studioFiles.ts";
@@ -52,7 +53,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     env,
     { port: PORTS.studio }
   );
-  const settings = StudioServerSettings.parse(process.env);
+  const settings = ServerSettings.parse(process.env);
   const project = await openStudioProject({
     inMemory: mode.assetServer.inMemory,
     settings
@@ -89,7 +90,8 @@ export default defineConfig(async(env): Promise<UserConfig> => {
           shellPages: {
             index: "index.html",
             [PREVIEW_PAGE_DIR]: PREVIEW_PAGE_PATH,
-            [PLAY_PAGE_DIR]: PLAY_PAGE_PATH
+            [PLAY_PAGE_DIR]: PLAY_PAGE_PATH,
+            [PROJECTS_PAGE_DIR]: `${PROJECTS_PAGE_DIR}/index.html`
           }
         }
       ),

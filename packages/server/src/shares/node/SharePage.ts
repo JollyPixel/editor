@@ -3,6 +3,7 @@ import type { IncomingMessage } from "node:http";
 
 // Import Third-party Dependencies
 import { launchElement } from "@jolly-pixel/asset-server";
+import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import { EDITOR_PAGES_PATH } from "../../editors/EditorDescriptor.ts";
@@ -13,15 +14,16 @@ import type { EditorPageSource } from "../../editors/node/EditorPageFolders.ts";
 import type { EditorPackages } from "../../editors/node/EditorPackages.ts";
 import { readPathname } from "../../http/node/requestPathname.ts";
 import { sendHtml } from "../../http/node/sendHtml.ts";
-import type { StudioShares } from "./StudioShares.ts";
+import type { ProjectShares } from "./ProjectShares.ts";
 
 // CONSTANTS
+const kProjectRoot = "..";
 const kNotFoundPage = "<!doctype html><html lang=\"en\"><head>" +
   "<meta charset=\"utf-8\"><title>Link unavailable</title></head>" +
   "<body><p>This share link has expired or was revoked.</p></body></html>";
 
 export interface SharePageOptions {
-  shares: StudioShares;
+  shares: ProjectShares;
   editors: EditorPackages;
   pages: EditorPageSource;
 }
@@ -29,7 +31,7 @@ export interface SharePageOptions {
 export class SharePage {
   readonly middleware: Middleware;
 
-  #shares: StudioShares;
+  #shares: ProjectShares;
   #editors: EditorPackages;
   #pages: EditorPageSource;
 
@@ -68,10 +70,11 @@ export class SharePage {
 
     return insertInHead(
       await this.#pages.html(editor),
-      `<base href="../${EDITOR_PAGES_PATH}${editor.name}/">` +
+      `<base href="${kProjectRoot}/${EDITOR_PAGES_PATH}${editor.name}/">` +
       launchElement({
         target: shared.assetId,
-        credential: token
+        credential: token,
+        socket: `${kProjectRoot}${DEFAULT_WEBSOCKET_PATH}`
       })
     );
   }

@@ -11,8 +11,8 @@ import type { GamePlayer } from "./GamePlayer.ts";
 import { GameExportError } from "./errors/GameExportError.ts";
 import { GamePlayerError } from "./errors/GamePlayerError.ts";
 import { ZipStream } from "./ZipStream.ts";
-import type { GameBackend } from "./StudioGame.ts";
-import type { StudioProject } from "../../project/node/StudioProject.ts";
+import type { GameBackend } from "./ProjectGame.ts";
+import type { Project } from "../../project/node/Project.ts";
 import type { GameExportAssets } from "../api.ts";
 import {
   EDITOR_PAGE_FILE,
@@ -37,7 +37,7 @@ const kParentAddress = /^\.\.\//;
 const kGameMeta = `<meta name="${GAME_MANIFEST_META}" content="exported">`;
 
 export interface GameExportOptions {
-  project: Pick<StudioProject, "access" | "game" | "name" | "physics">;
+  project: Pick<Project, "access" | "game" | "name" | "physics">;
   backend: GameBackend;
   player: GamePlayer;
 }
@@ -45,7 +45,7 @@ export interface GameExportOptions {
 export class GameExport {
   readonly fileName: string;
 
-  #project: Pick<StudioProject, "access" | "game" | "name" | "physics">;
+  #project: Pick<Project, "access" | "game" | "name" | "physics">;
   #backend: GameBackend;
   #player: GamePlayer;
 

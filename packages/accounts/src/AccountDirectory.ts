@@ -33,6 +33,7 @@ import { MasterPassword } from "./registration/MasterPassword.ts";
 import { Membership } from "./realm/Membership.ts";
 import type { PasswordDigest } from "./session/PasswordDigest.ts";
 import { agentTokenSubject } from "./agent/AgentToken.ts";
+import { shareLinkSubject } from "./share/ShareLinks.ts";
 import type { AccountsDatabase } from "./store/AccountsDatabase.ts";
 
 // CONSTANTS
@@ -198,6 +199,43 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap> {
     }
 
     return owner;
+  }
+
+  deleteAccount(
+    actorId: string,
+    username: Username
+  ): AccountEntity {
+    const { account, subjects } = this.database.transaction(() => {
+      this.#actor(actorId).assertOwner();
+      const target = this.database.accounts.named(username);
+      if (target === null) {
+        throw new AccountChangeRefusedError(
+          `no account is named "${username.value}"`
+        );
+      }
+      target.assertNotOwner();
+      const revoked = [
+        target.id,
+        ...this.database.shareLinks
+          .idsCreatedBy(target.id)
+          .map((linkId) => shareLinkSubject(linkId)),
+        ...this.database.agentTokens
+          .liveIdsOwnedBy(target.id)
+          .map((tokenId) => agentTokenSubject(tokenId))
+      ];
+      this.database.accounts.delete(target.id);
+
+      return {
+        account: target,
+        subjects: revoked
+      };
+    });
+    this.emit("changed");
+    for (const subject of subjects) {
+      this.revoke(subject);
+    }
+
+    return account;
   }
 
   async replaceAvatar(

@@ -6,6 +6,7 @@ import type {
 
 // Import Internal Dependencies
 import { signedInAccount } from "../../http/node/authentication.ts";
+import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 import { domainFailures } from "../../http/node/apiFailure.ts";
 import { downloadRoute } from "../../http/node/downloadRoute.ts";
 import {
@@ -26,8 +27,8 @@ import { GameExportError } from "./errors/GameExportError.ts";
 import type { GameExport } from "./GameExport.ts";
 import type {
   GameArtifact,
-  StudioGame
-} from "./StudioGame.ts";
+  ProjectGame
+} from "./ProjectGame.ts";
 
 export const gameFailures = domainFailures([
   [GameBuildError, 422, "build-failed"],
@@ -35,8 +36,8 @@ export const gameFailures = domainFailures([
 ]);
 
 export interface GameRoutesOptions {
-  game: StudioGame;
-  gameExport: GameExport;
+  game: RequestScoped<ProjectGame>;
+  gameExport: RequestScoped<GameExport>;
 }
 
 interface ManifestRoute {
@@ -56,7 +57,6 @@ export async function gameRoutes(
   app: FastifyInstance,
   options: GameRoutesOptions
 ): Promise<void> {
-  const { game, gameExport } = options;
   const {
     manifest,
     artifact,
@@ -70,7 +70,7 @@ export async function gameRoutes(
     schema: {
       querystring: gameQuerySchema
     },
-    handler: (request) => game.manifest(
+    handler: (request) => options.game(request).manifest(
       signedInAccount(request),
       request.query.start
     )
@@ -86,7 +86,7 @@ export async function gameRoutes(
     },
     handler: async(request, reply) => sendArtifact(
       reply,
-      await game.artifact(
+      await options.game(request).artifact(
         signedInAccount(request),
         request.params.assetId,
         request.params.revision
@@ -105,7 +105,7 @@ export async function gameRoutes(
     },
     handler: async(request, reply) => sendArtifact(
       reply,
-      await game.module(
+      await options.game(request).module(
         signedInAccount(request),
         request.params["*"],
         request.query.revision
@@ -114,11 +114,11 @@ export async function gameRoutes(
   });
   downloadRoute<GameExportQuery>(app, {
     route: exportRoute,
-    fileName: gameExport.fileName,
+    fileName: (request) => options.gameExport(request).fileName,
     schema: {
       querystring: gameExportQuerySchema
     },
-    body: (request) => gameExport.export(
+    body: (request) => options.gameExport(request).export(
       signedInAccount(request),
       request.query.assets
     )

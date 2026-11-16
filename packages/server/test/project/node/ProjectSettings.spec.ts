@@ -157,7 +157,7 @@ describe("ProjectSettings", () => {
     assert.equal(harness.project.access.projectRights("spectator").allows("export"), false);
   });
 
-  test("holds the next registrations for approval once access requests are on", async() => {
+  test("applies a new join mode to the realm", async() => {
     await using harness = await settingsHarness();
     const admin = await harness.register("Alice");
     const { access } = harness.settings.read(admin);
@@ -166,12 +166,12 @@ describe("ProjectSettings", () => {
     await harness.update(admin, "access", {
       access: {
         ...access,
-        accessRequests: true
+        join: "invite"
       },
       renamedRoles: {}
     });
 
-    assert.equal(harness.realm.join, "request");
+    assert.equal(harness.realm.joinMode, "invite");
   });
 
   test("a renamed role keeps its accounts, revoked once", async() => {

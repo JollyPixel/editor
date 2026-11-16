@@ -25,17 +25,17 @@ import {
   SHARES_URL_PATH,
   createdShareReplySchema
 } from "#src/shares/api.ts";
-import { StudioAccess } from "#src/project/node/StudioAccess.ts";
+import { ProjectAccess } from "#src/project/node/ProjectAccess.ts";
 import {
-  StudioShares,
+  ProjectShares,
   type SharedCatalog
-} from "#src/shares/node/StudioShares.ts";
+} from "#src/shares/node/ProjectShares.ts";
 import type { Browser } from "#src/testing.ts";
 
 export interface ShareAccounts extends Disposable {
   realm: AccountsRealm;
   owner: Member;
-  shares: StudioShares;
+  shares: ProjectShares;
 }
 
 export async function shareAccounts(
@@ -61,10 +61,10 @@ export async function shareAccounts(
   return {
     realm,
     owner: registration.account,
-    shares: new StudioShares({
+    shares: new ProjectShares({
       realm,
       project: {
-        access: StudioAccess.read({ version: 1 }, "project.json")
+        access: ProjectAccess.read({ version: 1 }, "project.json")
       },
       catalog: sharedCatalog(closures)
     }),

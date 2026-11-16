@@ -41,6 +41,6 @@
 
 - Any room writer can write a file anywhere the source does not ignore. Pass
   `resolver.ignoreGlobs(...)` as `AssetServer`'s `ignore`, as studio's
-  `StudioProject.assetIgnores()` does: it reserves the root `package.json`,
+  `Project.assetIgnores()` does: it reserves the root `package.json`,
   whose name a Node or Vite self-reference would resolve as a kind, and every
   local package (`./kinds/foo`) inside the project.

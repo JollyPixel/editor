@@ -201,7 +201,7 @@ Opens each editor in a new browser, waits as long as `perf:open` settles, then m
 $ node perf/serve/profile.ts --seconds 240 --heap
 ```
 
-Starts the hosted `StudioServer` in-process on port 3004 with the in-memory back-end and accounts of `dev:e2e` (`vite/e2eBackend.ts`), and CPU-profiles it for `--seconds` through the Node inspector; `--heap` also samples its allocations. Build the studio shell first (`pnpm exec vite build`), stop `dev:e2e`, and run `perf:open --modes online` against it in a second terminal. The profile lands in `--out` (default `perf-results/server.cpuprofile`); node frames resolve to their workspace package without source maps.
+Starts the hosted `JollyServer` in-process on port 3004 with the in-memory back-end and accounts of `dev:e2e` (`vite/e2eBackend.ts`), and CPU-profiles it for `--seconds` through the Node inspector; `--heap` also samples its allocations. Build the studio shell first (`pnpm exec vite build`), stop `dev:e2e`, and run `perf:open --modes online` against it in a second terminal. The profile lands in `--out` (default `perf-results/server.cpuprofile`); node frames resolve to their workspace package without source maps.
 
 ### Chrome traces
 

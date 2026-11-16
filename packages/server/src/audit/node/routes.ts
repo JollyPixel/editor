@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 
 // Import Internal Dependencies
 import { signedInAccount } from "../../http/node/authentication.ts";
+import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 import type { AuditFeed } from "./AuditFeed.ts";
 import {
   AUDIT_ROUTES,
@@ -11,7 +12,7 @@ import {
 } from "../api.ts";
 
 export interface AuditRoutesOptions {
-  feed: AuditFeed;
+  feed: RequestScoped<AuditFeed>;
 }
 
 interface AuditPageRoute {
@@ -30,7 +31,7 @@ export async function auditRoutes(
     schema: {
       querystring: auditQuerySchema
     },
-    handler: (request) => options.feed.page(
+    handler: (request) => options.feed(request).page(
       signedInAccount(request),
       request.query
     )

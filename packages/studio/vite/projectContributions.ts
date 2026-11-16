@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import type { Plugin } from "vite";
 import { createProjectContributionsPlugin } from "@jolly-pixel/asset-server/node";
-import type { StudioProject } from "@jolly-pixel/server/node";
+import type { Project } from "@jolly-pixel/server/node";
 
 export function projectContributions(
-  project: StudioProject
+  project: Project
 ): Plugin {
   return createProjectContributionsPlugin(
     project.kinds,

@@ -14,7 +14,7 @@ import { PackageResolver } from "@jolly-pixel/asset-server/node";
 // Import Internal Dependencies
 import { EditorPackage } from "#src/editors/node/EditorPackage.ts";
 import { EditorPackages } from "#src/editors/node/EditorPackages.ts";
-import { StudioProject } from "#src/project/node/StudioProject.ts";
+import { Project } from "#src/project/node/Project.ts";
 import { FIRST_PARTY_PACKAGES } from "../../helpers/testProject.ts";
 import {
   PackageRoots,
@@ -135,7 +135,7 @@ describe("EditorPackages", () => {
         "@jolly-pixel/editor.voxel-model",
         "@jolly-pixel/editor.pixel-art"
       ],
-      StudioProject.resolver(await kRoots.create(), FIRST_PARTY_PACKAGES)
+      Project.resolver(await kRoots.create(), FIRST_PARTY_PACKAGES)
     );
 
     assert.deepEqual(voxelMap.kinds, ["voxelmap"]);

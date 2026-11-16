@@ -28,8 +28,8 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { DEFAULT_ACCESS } from "#src/project/node/StudioAccess.ts";
-import { StudioProject } from "#src/project/node/StudioProject.ts";
+import { DEFAULT_ACCESS } from "#src/project/node/ProjectAccess.ts";
+import { Project } from "#src/project/node/Project.ts";
 
 // CONSTANTS
 const kPackagesDir = path.join(import.meta.dirname, "..", "..", "..");
@@ -54,8 +54,8 @@ export const TEST_PROJECT_FILE: ProjectFileData = {
   access: DEFAULT_ACCESS
 };
 
-export function openTestProject(): Promise<StudioProject> {
-  return StudioProject.open(
+export function openTestProject(): Promise<Project> {
+  return Project.open(
     path.join(import.meta.dirname, "..", "project"),
     {
       inMemory: true,

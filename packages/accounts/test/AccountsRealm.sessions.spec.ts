@@ -25,6 +25,7 @@ import type { CredentialsBody } from "#src/index.ts";
 import {
   AccountPendingError,
   InvalidCredentialsError,
+  InvitationRequiredError,
   MembershipRequiredError,
   type Requester
 } from "#src/node.ts";
@@ -84,6 +85,29 @@ describe("AccountsRealm.login", () => {
       account
     );
     assert.equal(other.signedIn({ cookie: cookie.split(";")[0] }), null);
+  });
+});
+
+describe("AccountsRealm.join", () => {
+  test("enters a signed-in account the way the realm admits newcomers", async() => {
+    using accounts = createAccounts();
+    const home = createRealm(accounts, { join: "open" });
+    await home.register(credentials("Alice"), kRequester);
+    const registered = await home.register(credentials("Bob"), kRequester);
+    assert.ok(registered.status === "active");
+    const bob = registered.account;
+    const open = createRealm(accounts, { join: "open" }, "open-realm");
+    const requested = createRealm(accounts, { join: "request" }, "request-realm");
+    const invited = createRealm(accounts, { join: "invite" }, "invite-realm");
+
+    const joined = open.join(bob.id);
+
+    assert.equal(joined.status, "active");
+    assert.deepEqual(open.join(bob.id), joined);
+    assert.deepEqual(requested.join(bob.id), { status: "pending" });
+    assert.throws(() => requested.admit(bob.id), AccountPendingError);
+    assert.throws(() => invited.join(bob.id), InvitationRequiredError);
+    assert.throws(() => invited.admit(bob.id), MembershipRequiredError);
   });
 });
 

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as z from "zod";
+import { JOIN_MODES } from "@jolly-pixel/accounts";
 import { DEFAULT_SNAPSHOT_POLICY } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
@@ -14,7 +15,7 @@ export const accessSectionSchema = z.object({
     z.string().min(1),
     z.record(z.string().min(1), rightSchema)
   ),
-  accessRequests: z.boolean()
+  join: z.enum(JOIN_MODES)
 });
 
 export const kindFilterSchema = z.object({

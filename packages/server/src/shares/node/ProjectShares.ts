@@ -14,7 +14,7 @@ import type { PeerIdentity } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import type { ShareLifetime } from "../ShareLifetime.ts";
-import type { StudioProject } from "../../project/node/StudioProject.ts";
+import type { Project } from "../../project/node/Project.ts";
 import { UnknownAssetError } from "../../project/node/errors/UnknownAssetError.ts";
 
 export interface SharedCatalog {
@@ -31,19 +31,19 @@ export interface SharedAsset {
   readonly kind: string;
 }
 
-export interface StudioSharesOptions {
+export interface ProjectSharesOptions {
   realm: AccountsRealm;
-  project: Pick<StudioProject, "access">;
+  project: Pick<Project, "access">;
   catalog: SharedCatalog;
 }
 
-export class StudioShares {
+export class ProjectShares {
   #realm: AccountsRealm;
-  #project: Pick<StudioProject, "access">;
+  #project: Pick<Project, "access">;
   #catalog: SharedCatalog;
 
   constructor(
-    options: StudioSharesOptions
+    options: ProjectSharesOptions
   ) {
     this.#realm = options.realm;
     this.#project = options.project;

@@ -7,6 +7,10 @@ export interface LaunchPayload {
    * Sent as the WebSocket credential in place of the session cookie.
    */
   credential?: string;
+  /**
+   * URL of the project's WebSocket, relative to the page's URL.
+   */
+  socket?: string;
 }
 
 export function serializeLaunch(

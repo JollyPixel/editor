@@ -71,7 +71,10 @@ describe("/api/project/settings", () => {
       manageAccess: true
     });
     assert.equal(settings.name, "project");
-    assert.deepEqual(settings.access, DEFAULT_ACCESS);
+    assert.deepEqual(settings.access, {
+      ...DEFAULT_ACCESS,
+      join: "open"
+    });
     assert.deepEqual((await member.rights()).toJSON(), {
       share: true,
       export: true,

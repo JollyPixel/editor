@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   ADDRESS,
+  OTHER_REALM,
   REALM,
   ROLES,
   createDirectory,
@@ -195,6 +196,25 @@ describe("AccountsExtension commands", () => {
     });
 
     await roster.assignRole("bob", "member");
+  });
+
+  test("invites an account into the realm and deletes another from the server", async() => {
+    using database = databaseWith("Alice", "Bob", "Carol");
+    const [alice] = database.accounts;
+    await using server = rosterServer(
+      createMembers(database, { realmId: OTHER_REALM })
+    );
+    const roster = await server.connect({
+      role: "admin",
+      subject: alice.id
+    });
+
+    const invited = nextChange(roster);
+    await roster.invite("bob", "member");
+    assert.deepEqual(summary(await invited), ["Alice:admin:on", "Bob:member:off"]);
+
+    await roster.deleteAccount("carol");
+    assert.equal(database.accounts.size, 2);
   });
 
   test("transfers ownership from the owner to another account", async() => {

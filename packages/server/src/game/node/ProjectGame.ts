@@ -12,7 +12,7 @@ import { SCRIPT_KIND } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
 import { GameBuildError } from "./errors/GameBuildError.ts";
-import type { StudioProject } from "../../project/node/StudioProject.ts";
+import type { Project } from "../../project/node/Project.ts";
 import { UnknownAssetError } from "../../project/node/errors/UnknownAssetError.ts";
 import {
   SCENE_KIND,
@@ -31,8 +31,8 @@ export interface GameBackend {
   readonly builds: AssetBuilds;
 }
 
-export interface StudioGameOptions {
-  project: Pick<StudioProject, "access" | "physics">;
+export interface ProjectGameOptions {
+  project: Pick<Project, "access" | "physics">;
   backend: GameBackend;
 }
 
@@ -42,12 +42,12 @@ export interface GameArtifact {
   readonly cacheControl: string;
 }
 
-export class StudioGame {
-  #project: Pick<StudioProject, "access" | "physics">;
+export class ProjectGame {
+  #project: Pick<Project, "access" | "physics">;
   #backend: GameBackend;
 
   constructor(
-    options: StudioGameOptions
+    options: ProjectGameOptions
   ) {
     this.#project = options.project;
     this.#backend = options.backend;

@@ -57,17 +57,7 @@ export interface WebsocketCompressionOptions {
   threshold?: number;
 }
 
-export interface WebsocketTransportOptions {
-  /**
-   * WebSocket upgrade path, matched exactly against the request pathname.
-   * Upgrades on other paths are left to other listeners, such as Vite HMR.
-   */
-  path: string;
-  /**
-   * HTTP server whose "upgrade" events are handled.
-   * Closing it terminates every connected client.
-   */
-  httpServer: HttpServer | Http2SecureServer;
+export interface WebsocketTransportBaseOptions {
   /**
    * Server that authenticates upgrades and receives client connections,
    * messages and disconnects. Its logger is reused by the transport.
@@ -114,24 +104,43 @@ export interface WebsocketTransportOptions {
   heartbeatMs?: number;
 }
 
+export interface WebsocketListeningOptions extends WebsocketTransportBaseOptions {
+  /**
+   * WebSocket upgrade path, matched exactly against the request pathname.
+   * Upgrades on other paths are left to other listeners, such as Vite HMR.
+   */
+  path: string;
+  /**
+   * HTTP server whose "upgrade" events are handled.
+   * Closing it terminates every connected client.
+   */
+  httpServer: HttpServer | Http2SecureServer;
+}
+
+export interface WebsocketHandedOptions extends WebsocketTransportBaseOptions {
+  path?: undefined;
+  httpServer?: undefined;
+}
+
+export type WebsocketTransportOptions =
+  | WebsocketListeningOptions
+  | WebsocketHandedOptions;
+
 export class WebsocketTransport implements Disposable {
   #server: Server;
-  #httpServer: HttpServer | Http2SecureServer;
   #logger: Logger;
-  #path: string;
   #wss: WebSocketServer;
   #policy: HandshakePolicy;
   #maxBufferedBytes: number;
   #heartbeat: ReturnType<typeof setInterval> | null = null;
   #connections = new Set<WebsocketConnection>();
   #writes = new WriteBatch();
+  #detach = (): void => undefined;
 
   constructor(
     options: WebsocketTransportOptions
   ) {
     const {
-      path,
-      httpServer,
       server,
       compression = false,
       allowedHosts,
@@ -141,9 +150,7 @@ export class WebsocketTransport implements Disposable {
       heartbeatMs = kDefaultHeartbeatMs
     } = options;
     this.#server = server;
-    this.#httpServer = httpServer;
     this.#logger = server.logger;
-    this.#path = path;
     this.#policy = new HandshakePolicy({
       allowedHosts,
       allowedOrigins
@@ -165,15 +172,6 @@ export class WebsocketTransport implements Disposable {
       (error) => this.#logger.withError(error).error("server error")
     );
 
-    httpServer.on(
-      "upgrade",
-      this.#onUpgrade
-    );
-    httpServer.once(
-      "close",
-      this.#onHttpServerClose
-    );
-
     if (heartbeatMs > 0) {
       this.#heartbeat = setInterval(
         () => this.#probe(),
@@ -182,22 +180,16 @@ export class WebsocketTransport implements Disposable {
       this.#heartbeat.unref();
     }
 
-    this.#logger.info(`WebSocket transport listening on ${path}`);
+    if (options.httpServer !== undefined) {
+      this.#detach = this.#listen(options.httpServer, options.path);
+    }
   }
 
-  #onUpgrade = (
+  handleUpgrade(
     req: IncomingMessage,
     socket: Duplex,
     head: Buffer
-  ): void => {
-    const queryIndex = (req.url ?? "").indexOf("?");
-    const pathname = queryIndex === -1
-      ? req.url
-      : req.url?.slice(0, queryIndex);
-    if (pathname !== this.#path) {
-      return;
-    }
-
+  ): void {
     function destroySocket(): void {
       socket.destroy();
     }
@@ -247,7 +239,7 @@ export class WebsocketTransport implements Disposable {
           );
         });
       });
-  };
+  }
 
   async #authenticate(
     req: IncomingMessage,
@@ -277,19 +269,32 @@ export class WebsocketTransport implements Disposable {
     });
   }
 
-  #onHttpServerClose = (): void => {
-    this[Symbol.dispose]();
-  };
+  #listen(
+    httpServer: HttpServer | Http2SecureServer,
+    path: string
+  ): () => void {
+    const upgrade = (
+      req: IncomingMessage,
+      socket: Duplex,
+      head: Buffer
+    ): void => {
+      if (requestPath(req) === path) {
+        this.handleUpgrade(req, socket, head);
+      }
+    };
+    const close = (): void => this[Symbol.dispose]();
+    httpServer.on("upgrade", upgrade);
+    httpServer.once("close", close);
+    this.#logger.info(`WebSocket transport listening on ${path}`);
+
+    return () => {
+      httpServer.off("upgrade", upgrade);
+      httpServer.off("close", close);
+    };
+  }
 
   [Symbol.dispose](): void {
-    this.#httpServer.off(
-      "upgrade",
-      this.#onUpgrade
-    );
-    this.#httpServer.off(
-      "close",
-      this.#onHttpServerClose
-    );
+    this.#detach();
     if (this.#heartbeat !== null) {
       clearInterval(this.#heartbeat);
       this.#heartbeat = null;
@@ -349,6 +354,14 @@ export class WebsocketTransport implements Disposable {
         .error("client socket error")
     );
   }
+}
+
+function requestPath(
+  req: IncomingMessage
+): string | undefined {
+  const queryIndex = (req.url ?? "").indexOf("?");
+
+  return queryIndex === -1 ? req.url : req.url?.slice(0, queryIndex);
 }
 
 function toFrame(

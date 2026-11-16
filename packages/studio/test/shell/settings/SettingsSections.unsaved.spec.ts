@@ -59,7 +59,7 @@ function setup() {
       roles: {
         member: {}
       },
-      accessRequests: false
+      join: "open"
     },
     ...DEFAULT_PROJECT_SECTIONS
   });
@@ -83,7 +83,7 @@ describe("SettingsSections unsaved marks", () => {
 
     assert.deepEqual(unsaved(), []);
 
-    drafts.section("access").edit(access.withAccessRequests(true));
+    drafts.section("access").edit(access.withJoin("request"));
     assert.deepEqual(unsaved(), ["project-general"]);
 
     drafts.section("access").edit(access.addRole("editor"));

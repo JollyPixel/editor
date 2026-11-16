@@ -17,7 +17,9 @@ import {
   ACCOUNTS_APPLIED,
   ACCOUNTS_APPROVE,
   ACCOUNTS_ASSIGN_ROLE,
+  ACCOUNTS_DELETE,
   ACCOUNTS_DENY,
+  ACCOUNTS_INVITE,
   ACCOUNTS_REJECTED,
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROOM,
@@ -144,6 +146,19 @@ export class AccountsExtension extends Extension<AccountsCommand> {
         break;
       case ACCOUNTS_REMOVE:
         this.#directory.remove(
+          actorId,
+          username
+        );
+        break;
+      case ACCOUNTS_INVITE:
+        this.#directory.invite(
+          actorId,
+          username,
+          command.role
+        );
+        break;
+      case ACCOUNTS_DELETE:
+        this.#directory.deleteAccount(
           actorId,
           username
         );

@@ -45,17 +45,17 @@ export const auditAssetSchema = z.object({
 
 export const auditAccountActivitySchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("registered"),
+    type: z.enum(["registered", "joined"]),
     username: z.string(),
     pending: z.boolean()
   }),
   z.object({
-    type: z.literal("approved"),
+    type: z.enum(["approved", "invited"]),
     username: z.string(),
     role: z.string()
   }),
   z.object({
-    type: z.enum(["denied", "owner-transferred", "removed"]),
+    type: z.enum(["denied", "owner-transferred", "removed", "deleted"]),
     username: z.string()
   }),
   z.object({

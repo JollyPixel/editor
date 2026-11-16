@@ -61,3 +61,29 @@ describe("Accounts.realm", () => {
     assert.equal(createRealm(accounts).id, REALM);
   });
 });
+
+describe("Accounts.memberships", () => {
+  test("lists an account's memberships in every realm, requests marked pending", async() => {
+    using accounts = createAccounts();
+    const home = createRealm(accounts, { join: "open" });
+    const other = createRealm(accounts, { join: "request" }, OTHER_REALM);
+    await home.register({ username: "Alice", password: PASSWORD.value }, kRequester);
+    const bob = await home.register({ username: "Bob", password: PASSWORD.value }, kRequester);
+    assert.ok(bob.status === "active");
+
+    other.join(bob.account.id);
+
+    assert.deepEqual(accounts.memberships(bob.account.id), [
+      {
+        realmId: REALM,
+        role: "spectator",
+        pending: false
+      },
+      {
+        realmId: OTHER_REALM,
+        role: "spectator",
+        pending: true
+      }
+    ]);
+  });
+});

@@ -15,7 +15,7 @@ import {
 
 // Import Internal Dependencies
 import { requestStatus } from "../../helpers/rawRequest.ts";
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 
 // CONSTANTS
 const kPng = Buffer.from(

@@ -11,15 +11,15 @@ import { RightsTable } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import {
   DEFAULT_ACCESS,
-  StudioAccess
-} from "#src/project/node/StudioAccess.ts";
+  ProjectAccess
+} from "#src/project/node/ProjectAccess.ts";
 
 // CONSTANTS
 const kSource = "project.json";
 
-describe("StudioAccess.read", () => {
+describe("ProjectAccess.read", () => {
   test("applies the default roles to a project without an access section", () => {
-    const access = StudioAccess.read({ version: 1 }, kSource);
+    const access = ProjectAccess.read({ version: 1 }, kSource);
 
     assert.equal(access.roles.defaultRole, "spectator");
     assert.deepEqual(Object.keys(access.rights), [
@@ -28,22 +28,22 @@ describe("StudioAccess.read", () => {
       ...Object.keys(DEFAULT_ACCESS.roles)
     ]);
     assert.deepEqual([...access.roles], ["admin", "member", "spectator"]);
-    assert.equal(access.accessRequests, false);
+    assert.equal(access.join, "request");
   });
 
-  test("reads whether registering without the master password requests access", () => {
-    const access = StudioAccess.read({
+  test("reads how accounts join the project", () => {
+    const access = ProjectAccess.read({
       access: {
-        accessRequests: true
+        join: "invite"
       }
     }, kSource);
 
-    assert.equal(access.accessRequests, true);
+    assert.equal(access.join, "invite");
     assert.equal(access.roles.defaultRole, "spectator");
   });
 
   test("reads declared roles and their rule order", () => {
-    const access = StudioAccess.read({
+    const access = ProjectAccess.read({
       access: {
         defaultRole: "viewer",
         roles: {
@@ -66,7 +66,7 @@ describe("StudioAccess.read", () => {
   test("refuses to let a project declare a built-in role", () => {
     for (const role of ["admin", "guest"]) {
       assert.throws(
-        () => StudioAccess.read({
+        () => ProjectAccess.read({
           access: {
             roles: {
               [role]: { "*": "read" },
@@ -82,15 +82,15 @@ describe("StudioAccess.read", () => {
   for (const { right, allows } of [
     {
       right: "studio.$share",
-      allows: (access: StudioAccess, role: string) => access.projectRights(role).allows("share")
+      allows: (access: ProjectAccess, role: string) => access.projectRights(role).allows("share")
     },
     {
       right: "studio.$export",
-      allows: (access: StudioAccess, role: string) => access.projectRights(role).allows("export")
+      allows: (access: ProjectAccess, role: string) => access.projectRights(role).allows("export")
     }
   ]) {
     test(`grants ${right} only to roles with write on it`, () => {
-      const access = StudioAccess.read({
+      const access = ProjectAccess.read({
         access: {
           roles: {
             ...DEFAULT_ACCESS.roles,
@@ -112,7 +112,7 @@ describe("StudioAccess.read", () => {
   }
 
   test("counts studio.$settings and studio.$audit only for admins and roles naming them", () => {
-    const access = StudioAccess.read({
+    const access = ProjectAccess.read({
       access: {
         roles: {
           ...DEFAULT_ACCESS.roles,
@@ -143,7 +143,7 @@ describe("StudioAccess.read", () => {
   });
 
   test("keeps guests out of the catalog and accounts rooms, read-only elsewhere", () => {
-    const access = StudioAccess.read({ version: 1 }, kSource);
+    const access = ProjectAccess.read({ version: 1 }, kSource);
     const table = new RightsTable(access.rights, access.roles.defaultRole);
 
     assert.deepEqual(
@@ -162,7 +162,7 @@ describe("StudioAccess.read", () => {
   test("refuses a default role that names no declared role", () => {
     for (const defaultRole of ["editor", "admin"]) {
       assert.throws(
-        () => StudioAccess.read({
+        () => ProjectAccess.read({
           access: {
             defaultRole,
             roles: {
@@ -177,7 +177,7 @@ describe("StudioAccess.read", () => {
 
   test("refuses an unknown right", () => {
     assert.throws(
-      () => StudioAccess.read({
+      () => ProjectAccess.read({
         access: {
           roles: {
             spectator: { "*": "admin" }

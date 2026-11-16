@@ -4,10 +4,10 @@ import type {
   Plugin
 } from "vite";
 import { PROJECT_MANIFEST_FILE } from "@jolly-pixel/server";
-import { ManifestRoute, type StudioProject } from "@jolly-pixel/server/node";
+import { ManifestRoute, type Project } from "@jolly-pixel/server/node";
 
 export function projectManifest(
-  project: StudioProject
+  project: Project
 ): Plugin {
   const route = new ManifestRoute(project);
 
@@ -28,7 +28,7 @@ export function projectManifest(
 }
 
 function logPackages(
-  project: StudioProject,
+  project: Project,
   logger: Pick<Logger, "info">
 ): void {
   for (const editor of project.editors) {

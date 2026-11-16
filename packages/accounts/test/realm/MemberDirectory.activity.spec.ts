@@ -209,7 +209,7 @@ describe("MemberDirectory.replaceJoin", () => {
     members.replaceJoin("open");
     const result = await members.register(registration("Bob"), ADDRESS);
 
-    assert.equal(members.join, "open");
+    assert.equal(members.joinMode, "open");
     assert.equal(result.status, "active");
   });
 });

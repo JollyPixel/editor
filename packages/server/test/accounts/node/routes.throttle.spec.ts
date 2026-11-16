@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { prehashPassword, Username } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 
 async function postLogin(
   url: URL,

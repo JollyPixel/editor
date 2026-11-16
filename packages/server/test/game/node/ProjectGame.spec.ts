@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { GameBuildError } from "#src/game/node/errors/GameBuildError.ts";
-import { StudioGame } from "#src/game/node/StudioGame.ts";
+import { ProjectGame } from "#src/game/node/ProjectGame.ts";
 import { DEFAULT_PHYSICS } from "#src/project/ProjectSections.ts";
 import { UnknownAssetError } from "#src/project/node/errors/UnknownAssetError.ts";
 import {
@@ -18,14 +18,14 @@ import {
 } from "../../helpers/gameProject.ts";
 
 interface GameProject extends OpenedProject {
-  readonly game: StudioGame;
+  readonly game: ProjectGame;
 }
 
 async function gameProject(): Promise<GameProject> {
   const project = await openGameProject();
 
   return Object.assign(project, {
-    game: new StudioGame({
+    game: new ProjectGame({
       project: {
         access: GAME_ACCESS,
         physics: DEFAULT_PHYSICS
@@ -35,7 +35,7 @@ async function gameProject(): Promise<GameProject> {
   });
 }
 
-describe("StudioGame", () => {
+describe("ProjectGame", () => {
   test("lists every asset the account opens, with the path of its build", async() => {
     await using project = await gameProject();
     const scene = await project.create("levels/arena.scene.json", "{}");

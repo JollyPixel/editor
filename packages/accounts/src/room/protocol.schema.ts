@@ -10,7 +10,9 @@ import {
   ACCOUNTS_APPLIED,
   ACCOUNTS_APPROVE,
   ACCOUNTS_ASSIGN_ROLE,
+  ACCOUNTS_DELETE,
   ACCOUNTS_DENY,
+  ACCOUNTS_INVITE,
   ACCOUNTS_REJECTED,
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROSTER,
@@ -52,6 +54,17 @@ export const accountsCommandProtocol = new MessageProtocol(
     }),
     z.object({
       type: z.literal(ACCOUNTS_REMOVE),
+      requestId: z.string(),
+      username: z.string()
+    }),
+    z.object({
+      type: z.literal(ACCOUNTS_INVITE),
+      requestId: z.string(),
+      username: z.string(),
+      role: z.string()
+    }),
+    z.object({
+      type: z.literal(ACCOUNTS_DELETE),
       requestId: z.string(),
       username: z.string()
     }),

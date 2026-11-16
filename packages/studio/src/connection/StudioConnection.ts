@@ -10,7 +10,11 @@ import {
   HOST_PARAMS,
   withOfflineFallback
 } from "@jolly-pixel/editor.host";
-import { Client } from "@jolly-pixel/network/client";
+import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
+import {
+  Client,
+  connectWebSocket
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { StudioSignedIn } from "../accounts/StudioSignedIn.ts";
@@ -47,7 +51,12 @@ async function connectOnline(): Promise<StudioConnection> {
     accounts,
     signIn: () => signIn(accounts),
     api: StudioClients.at(document.baseURI),
-    connect: (profile) => new Client({ profile }),
+    connect: (profile) => new Client({
+      profile,
+      socket: () => connectWebSocket({
+        url: new URL(`.${DEFAULT_WEBSOCKET_PATH}`, document.baseURI)
+      })
+    }),
     reload: () => location.reload()
   });
 

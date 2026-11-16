@@ -5,14 +5,18 @@ import {
 } from "vite";
 import type { RunMode } from "@jolly-pixel/e2e";
 import {
-  StudioBackend,
-  type StudioBackendOptions,
-  type StudioProject,
-  type StudioServerSettings
+  ServerBackend,
+  type ServerBackendOptions,
+  type Project,
+  type ServerSettings
 } from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
-import { studioBackendFiles } from "../node/studioFiles.ts";
+import {
+  openStudioProject,
+  STUDIO_ROOT,
+  studioBackendFiles
+} from "../node/studioFiles.ts";
 import { DevPlayer } from "./DevPlayer.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
 import { EditorPageInput } from "./EditorPageInput.ts";
@@ -22,19 +26,29 @@ import { ServedEditorPages } from "./ServedEditorPages.ts";
 import { ServedPlayerPage } from "./ServedPlayerPage.ts";
 
 export function backend(
-  project: StudioProject,
+  project: Project,
   mode: RunMode,
-  settings: StudioServerSettings
+  settings: ServerSettings
 ): Plugin {
-  let opened: StudioBackend | null = null;
+  let opened: ServerBackend | null = null;
 
   return {
     name: "studio-backend",
     apply: "serve",
     async configureServer(server) {
-      opened = await StudioBackend.open(
-        project,
+      const hosting = settings.hosting(STUDIO_ROOT);
+      opened = await ServerBackend.open(
         {
+          hosting,
+          openProject: async(root) => (
+            root === project.file.root ?
+              project :
+              openStudioProject({
+                settings,
+                root,
+                inMemory: mode.assetServer.inMemory
+              })
+          ),
           ...backendOptions(mode, settings),
           ...await studioBackendFiles(
             new DevPlayer({
@@ -50,15 +64,14 @@ export function backend(
             server,
             EditorPageInput.compiled(server.config.root, project.editors)
           ),
-          playPage: new ServedPlayerPage(server)
+          playPage: new ServedPlayerPage(server),
+          allowedHosts: server.config.server.allowedHosts
         }
       );
       server.middlewares.use(opened.middleware);
 
       if (server.httpServer !== null) {
-        opened.attach(server.httpServer, {
-          allowedHosts: server.config.server.allowedHosts
-        });
+        opened.attach(server.httpServer);
       }
     },
     closeBundle: {
@@ -74,8 +87,11 @@ export function backend(
 
 function backendOptions(
   mode: RunMode,
-  settings: StudioServerSettings
-): Omit<StudioBackendOptions, "player" | "playPage" | "preferences"> {
+  settings: ServerSettings
+): Omit<
+  ServerBackendOptions,
+  "hosting" | "openProject" | "player" | "playPage" | "preferences"
+> {
   const { inMemory } = mode.assetServer;
   if (mode.e2e) {
     return {

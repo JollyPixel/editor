@@ -67,6 +67,12 @@ export interface SignIn {
   cookie: string;
 }
 
+export interface AccountMembership {
+  realmId: string;
+  role: string;
+  pending: boolean;
+}
+
 export class Accounts implements Disposable {
   static async open(
     options: AccountsOpenOptions
@@ -130,6 +136,20 @@ export class Accounts implements Disposable {
     accountId: string
   ): Account | null {
     return this.#directory.account(accountId);
+  }
+
+  memberships(
+    accountId: string
+  ): AccountMembership[] {
+    return this.#database.memberships
+      .ofAccount(accountId)
+      .map((membership) => {
+        return {
+          realmId: membership.realmId,
+          role: membership.role,
+          pending: membership.pending
+        };
+      });
   }
 
   async login(

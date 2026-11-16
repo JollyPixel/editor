@@ -17,7 +17,7 @@ import { GameBuildError } from "#src/game/node/errors/GameBuildError.ts";
 import { GameExportError } from "#src/game/node/errors/GameExportError.ts";
 import { GamePlayerError } from "#src/game/node/errors/GamePlayerError.ts";
 import { GameExport } from "#src/game/node/GameExport.ts";
-import { StudioGame } from "#src/game/node/StudioGame.ts";
+import { ProjectGame } from "#src/game/node/ProjectGame.ts";
 import { PlayerPage } from "#src/game/PlayerPage.ts";
 import type { PhysicsSection } from "#src/project/ProjectSections.ts";
 import { ProjectRightRefusedError } from "#src/project/errors/ProjectRightRefusedError.ts";
@@ -102,7 +102,7 @@ describe("GameExport", () => {
       uses({ id: texture, kind: "texture" }, { id: map, kind: "voxelmap" })
     );
     const exporter = gameExport(project, scene);
-    const played = new StudioGame({
+    const played = new ProjectGame({
       project: {
         access: GAME_ACCESS,
         physics: kMoonPhysics

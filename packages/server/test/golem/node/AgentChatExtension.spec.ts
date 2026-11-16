@@ -14,7 +14,7 @@ import {
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 import {
   signedInSocket,
   type Browser,

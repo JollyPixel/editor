@@ -17,8 +17,7 @@ import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 import { InvalidPasswordError } from "../session/errors/InvalidPasswordError.ts";
 import type { RegisterOptions } from "../registration/RegisterOptions.ts";
 import type { RegistrationResult } from "../registration/RegistrationResult.ts";
-import { Username } from "../account/Username.ts";
-import { prehashPassword } from "./prehashPassword.ts";
+import { credentialsBody } from "./credentialsBody.ts";
 
 // CONSTANTS
 export const MIN_PASSWORD_LENGTH = 8;
@@ -63,7 +62,7 @@ export class AccountsClient {
         `a password has at least ${MIN_PASSWORD_LENGTH} characters`
       );
     }
-    const credentials = await this.#credentials(username, password);
+    const credentials = await credentialsBody(username, password);
     const response = await this.#request("register", {
       ...credentials,
       masterPassword: options.masterPassword
@@ -86,8 +85,22 @@ export class AccountsClient {
   ): Promise<Member> {
     return this.#account(
       "login",
-      await this.#credentials(username, password)
+      await credentialsBody(username, password)
     );
+  }
+
+  async join(): Promise<RegistrationResult> {
+    const response = await this.#request("join");
+    if (response.status === kAccepted) {
+      return {
+        status: "pending"
+      };
+    }
+
+    return {
+      status: "active",
+      account: await accountFrom(response)
+    };
   }
 
   async logout(): Promise<void> {
@@ -118,18 +131,6 @@ export class AccountsClient {
     }
 
     return this.#account("replaceAvatar", image);
-  }
-
-  async #credentials(
-    username: string,
-    password: string
-  ): Promise<CredentialsBody> {
-    const parsed = Username.parse(username);
-
-    return {
-      username: parsed.value,
-      password: await prehashPassword(parsed, password)
-    };
   }
 
   async #account(

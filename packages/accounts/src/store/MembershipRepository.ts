@@ -55,6 +55,16 @@ export class MembershipRepository {
     ).map(toMembership);
   }
 
+  ofAccount(
+    accountId: string
+  ): Membership[] {
+    return this.#db.all<MembershipRow>(
+      `SELECT ${kColumns} FROM memberships WHERE user_id = ?
+       ORDER BY created_at, rowid`,
+      accountId
+    ).map(toMembership);
+  }
+
   pendingSize(
     realmId: string
   ): number {

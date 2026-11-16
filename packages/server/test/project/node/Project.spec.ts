@@ -14,8 +14,8 @@ import { PROJECT_FILE_PATH } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import {
   DEFAULT_PROJECT_FILE,
-  StudioProject
-} from "#src/project/node/StudioProject.ts";
+  Project
+} from "#src/project/node/Project.ts";
 import {
   FIRST_PARTY_PACKAGES,
   TEST_PROJECT_FILE
@@ -69,7 +69,7 @@ async function installEditorPackage(
   return directory;
 }
 
-describe("StudioProject", () => {
+describe("Project", () => {
   after(async() => {
     await Promise.all(kRoots.map((root) => removeTempDir(root)));
   });
@@ -118,7 +118,7 @@ describe("StudioProject", () => {
         }
       });
 
-      const project = await StudioProject.open(root, {
+      const project = await Project.open(root, {
         packages: FIRST_PARTY_PACKAGES
       });
       const [editorA, localEditor] = project.editors;
@@ -146,7 +146,7 @@ describe("StudioProject", () => {
 
     test("writes and opens the template when the project file is missing", async() => {
       const root = await createRoot();
-      const project = await StudioProject.open(root, {
+      const project = await Project.open(root, {
         packages: FIRST_PARTY_PACKAGES,
         template: TEST_PROJECT_FILE
       });
@@ -155,7 +155,10 @@ describe("StudioProject", () => {
         JSON.parse(
           await fs.readFile(path.join(root, PROJECT_FILE_PATH), "utf8")
         ),
-        TEST_PROJECT_FILE
+        {
+          ...TEST_PROJECT_FILE,
+          id: project.id
+        }
       );
       assert.deepEqual(
         project.editors.descriptors().map((editor) => editor.name),
@@ -169,26 +172,32 @@ describe("StudioProject", () => {
 
     test("opens the default project in memory without touching the root", async() => {
       const root = await createRoot();
-      const project = await StudioProject.open(root, {
+      const project = await Project.open(root, {
         inMemory: true,
         packages: FIRST_PARTY_PACKAGES
       });
 
-      assert.deepEqual(project.file.data, DEFAULT_PROJECT_FILE);
+      assert.deepEqual(project.file.data, {
+        ...DEFAULT_PROJECT_FILE,
+        id: project.id
+      });
       assert.deepEqual(await fs.readdir(root), []);
     });
 
-    test("never overwrites an existing project file", async() => {
+    test("adds only an id to an existing project file, once", async() => {
       const root = await createRoot();
       const file = await writeProjectFile(root, {
         version: 1
       });
 
-      const project = await StudioProject.open(root);
+      const project = await Project.open(root);
+      const reopened = await Project.open(root);
 
-      assert.deepEqual([...project.editors], []);
-      assert.deepEqual(project.kinds.packages, []);
-      assert.strictEqual(await fs.readFile(file, "utf8"), "{\"version\":1}");
+      assert.equal(reopened.id, project.id);
+      assert.deepEqual(JSON.parse(await fs.readFile(file, "utf8")), {
+        version: 1,
+        id: project.id
+      });
     });
 
     test("names a missing editor package", async() => {
@@ -199,7 +208,7 @@ describe("StudioProject", () => {
       });
 
       await assert.rejects(
-        StudioProject.open(root),
+        Project.open(root),
         {
           name: "TypeError",
           message: "Cannot locate the package \"@jolly-pixel/missing-editor\"."
@@ -217,7 +226,7 @@ describe("StudioProject", () => {
       });
 
       await assert.rejects(
-        StudioProject.open(root),
+        Project.open(root),
         {
           name: "TypeError",
           message: "Cannot load the kind package \"@jolly-pixel/missing-kind\"."
@@ -237,7 +246,7 @@ describe("StudioProject", () => {
       });
 
       await assert.rejects(
-        StudioProject.open(root, {
+        Project.open(root, {
           packages: FIRST_PARTY_PACKAGES
         }),
         (error) => error instanceof TypeError && error.message.startsWith(
@@ -258,7 +267,7 @@ describe("StudioProject", () => {
         }
       });
 
-      const { kindFilter } = await StudioProject.open(root, {
+      const { kindFilter } = await Project.open(root, {
         packages: FIRST_PARTY_PACKAGES
       });
       assert.deepEqual(kindFilter.hidden, ["voxelmodel"]);
@@ -272,7 +281,7 @@ describe("StudioProject", () => {
       });
 
       await assert.rejects(
-        StudioProject.open(root),
+        Project.open(root),
         (error) => error instanceof TypeError &&
           error.message.startsWith(`"${file}" is invalid:`)
       );

@@ -88,6 +88,15 @@ export class ShareLinkRepository {
     return row === undefined ? null : toShareLink(row);
   }
 
+  idsCreatedBy(
+    accountId: string
+  ): string[] {
+    return this.#db.all<Pick<ShareLinkRow, "id">>(
+      "SELECT id FROM share_links WHERE created_by = ?",
+      accountId
+    ).map((row) => row.id);
+  }
+
   deleteCreatedBy(
     realmId: string,
     accountId: string

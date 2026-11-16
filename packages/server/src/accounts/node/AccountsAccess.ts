@@ -7,18 +7,22 @@ import {
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
-import type { StudioAccess } from "../../project/node/StudioAccess.ts";
+import type { ProjectAccess } from "../../project/node/ProjectAccess.ts";
 
 export interface AccountsPolicy {
   /**
    * Role of new accounts, in place of the project's `access.defaultRole`.
    */
   defaultRole?: string;
+  /**
+   * How accounts join, in place of the project's `access.join`.
+   */
+  join?: JoinMode;
 }
 
 export class AccountsAccess {
   static resolve(
-    access: StudioAccess,
+    access: ProjectAccess,
     policy: AccountsPolicy
   ): AccountsAccess {
     return new AccountsAccess(access, policy);
@@ -28,7 +32,7 @@ export class AccountsAccess {
   readonly join: JoinMode;
 
   private constructor(
-    access: StudioAccess,
+    access: ProjectAccess,
     policy: AccountsPolicy
   ) {
     this.roles = policy.defaultRole === undefined ?
@@ -37,7 +41,7 @@ export class AccountsAccess {
         roles: access.roles,
         defaultRole: policy.defaultRole
       });
-    this.join = access.accessRequests ? "request" : "open";
+    this.join = policy.join ?? access.join;
   }
 
   openRealm(

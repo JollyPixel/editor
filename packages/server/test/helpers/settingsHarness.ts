@@ -17,7 +17,7 @@ import {
 // Import Internal Dependencies
 import { AuditLog } from "#src/audit/node/AuditLog.ts";
 import { ProjectSettings } from "#src/project/node/ProjectSettings.ts";
-import type { StudioProject } from "#src/project/node/StudioProject.ts";
+import type { Project } from "#src/project/node/Project.ts";
 import type {
   ProjectSettingsReply,
   SettingsSectionBody,
@@ -31,7 +31,7 @@ const kPassword = "p".repeat(43);
 
 export interface SettingsHarness extends AsyncDisposable {
   settings: ProjectSettings;
-  project: StudioProject;
+  project: Project;
   realm: AccountsRealm;
   audit: AuditLog;
   voxelMapChunkSize(): number;

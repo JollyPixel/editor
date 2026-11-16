@@ -120,12 +120,12 @@ describe("MemberDirectory.admit", () => {
     const [alice, bob] = database.accounts;
     const members = createMembers(database, { realmId: OTHER_REALM });
 
-    assert.equal(members.admit(alice).role, "admin");
-    assert.throws(() => members.admit(bob), MembershipRequiredError);
+    assert.equal(members.admit(alice.id).role, "admin");
+    assert.throws(() => members.admit(bob.id), MembershipRequiredError);
     addMembership(database, Membership.request(OTHER_REALM, bob.id, "member"));
-    assert.throws(() => members.admit(bob), AccountPendingError);
+    assert.throws(() => members.admit(bob.id), AccountPendingError);
     addMembership(database, Membership.active(OTHER_REALM, bob.id, "member"));
-    assert.equal(members.admit(bob).role, "member");
+    assert.equal(members.admit(bob.id).role, "member");
   });
 });
 

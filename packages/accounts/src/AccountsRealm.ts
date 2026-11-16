@@ -37,6 +37,7 @@ import type {
 } from "./http/routes.schema.ts";
 import type { JoinMode } from "./realm/JoinMode.ts";
 import type { MemberDirectory } from "./realm/MemberDirectory.ts";
+import type { RegistrationResult } from "./registration/RegistrationResult.ts";
 import { AccountsExtension } from "./room/AccountsExtension.ts";
 import type { CookieSessions } from "./session/CookieSessions.ts";
 import {
@@ -107,8 +108,8 @@ export class AccountsRealm implements AuthenticationProvider, Disposable {
     return this.#members.roles;
   }
 
-  get join(): JoinMode {
-    return this.#members.join;
+  get joinMode(): JoinMode {
+    return this.#members.joinMode;
   }
 
   replaceRoles(
@@ -169,6 +170,18 @@ export class AccountsRealm implements AuthenticationProvider, Disposable {
     );
 
     return this.#signIn(member, requester);
+  }
+
+  admit(
+    accountId: string
+  ): Member {
+    return this.#members.admit(accountId);
+  }
+
+  join(
+    accountId: string
+  ): RegistrationResult {
+    return this.#members.join(accountId);
   }
 
   signedIn(

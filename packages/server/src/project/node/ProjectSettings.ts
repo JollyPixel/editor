@@ -17,11 +17,11 @@ import {
 import type { SettingsChange } from "../../audit/node/AuditEntry.ts";
 import type { AuditLog } from "../../audit/node/AuditLog.ts";
 import { kindOptionSections } from "./kindOptionSections.ts";
-import { StudioAccess } from "./StudioAccess.ts";
+import { ProjectAccess } from "./ProjectAccess.ts";
 import type {
   ProjectValueSection,
-  StudioProject
-} from "./StudioProject.ts";
+  Project
+} from "./Project.ts";
 import {
   settingsSectionSchema,
   type AccessChange,
@@ -65,7 +65,7 @@ type SectionHandlers = {
 type SettingsBackend = Pick<AssetBackend, "kinds" | "replaceSnapshotPolicy">;
 
 export interface ProjectSettingsOptions {
-  project: StudioProject;
+  project: Project;
   realm: AccountsRealm;
   /**
    * The policy the realm was opened with.
@@ -78,7 +78,7 @@ export interface ProjectSettingsOptions {
 }
 
 export class ProjectSettings {
-  #project: StudioProject;
+  #project: Project;
   #realm: AccountsRealm;
   #accountsPolicy: AccountsPolicy;
   #server: Pick<Server, "replaceRights" | "revoke">;
@@ -298,7 +298,7 @@ export class ProjectSettings {
   #planAccess(
     change: AccessChange
   ): SettingsPlan | null {
-    const next = StudioAccess.from(change.access, "access");
+    const next = ProjectAccess.from(change.access, "access");
     const before = this.#project.access.toJSON();
     const after = next.toJSON();
     if (isDeepStrictEqual(before, after)) {

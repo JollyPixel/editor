@@ -1,4 +1,5 @@
 // Import Node.js Dependencies
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 
 // Import Third-party Dependencies
@@ -17,8 +18,8 @@ import { EditorPackages } from "../../editors/node/EditorPackages.ts";
 import { PrivateFiles } from "./PrivateFiles.ts";
 import {
   DEFAULT_ACCESS,
-  StudioAccess
-} from "./StudioAccess.ts";
+  ProjectAccess
+} from "./ProjectAccess.ts";
 import {
   DEFAULT_PROJECT_SECTIONS,
   projectSectionsSchema,
@@ -37,8 +38,11 @@ export const DEFAULT_PROJECT_FILE: ProjectFileData = {
 const kEditorsSchema = z.object({
   editors: z.array(z.string().min(1)).default([])
 });
+const kIdSchema = z.object({
+  id: z.uuid()
+});
 
-export interface StudioProjectOpenOptions extends ProjectFileOpenOptions {
+export interface ProjectOpenOptions extends ProjectFileOpenOptions {
   /**
    * Where the editors and kinds of the project file resolve when the project
    * does not install them.
@@ -55,11 +59,11 @@ export interface StudioProjectOpenOptions extends ProjectFileOpenOptions {
 export type ProjectValueSection = "game" | "physics" | "snapshot";
 
 interface ParsedSections extends Pick<ProjectSections, ProjectValueSection> {
-  access: StudioAccess;
+  access: ProjectAccess;
   kindFilter: KindFilter;
 }
 
-export class StudioProject {
+export class Project {
   readonly file: ProjectFile;
   readonly editors: EditorPackages;
   readonly kinds: ProjectKinds;
@@ -75,10 +79,18 @@ export class StudioProject {
     return new PackageResolver(root, packages);
   }
 
+  static findId(
+    file: ProjectFile
+  ): string | null {
+    const parsed = kIdSchema.safeParse(file.data);
+
+    return parsed.success ? parsed.data.id : null;
+  }
+
   static async open(
     root: string,
-    options: StudioProjectOpenOptions = {}
-  ): Promise<StudioProject> {
+    options: ProjectOpenOptions = {}
+  ): Promise<Project> {
     const {
       packages,
       template = DEFAULT_PROJECT_FILE,
@@ -89,10 +101,15 @@ export class StudioProject {
       template,
       fileOptions
     );
+    if (Project.findId(file) === null) {
+      await file.replace({
+        id: randomUUID()
+      });
+    }
 
-    const resolver = StudioProject.resolver(file.root, packages);
+    const resolver = Project.resolver(file.root, packages);
     const { editors } = parseFile(kEditorsSchema, file);
-    const project = new StudioProject(
+    const project = new Project(
       file,
       await EditorPackages.read(editors, resolver),
       await ProjectKinds.load(file, { resolver })
@@ -116,6 +133,10 @@ export class StudioProject {
     );
   }
 
+  get id(): string {
+    return parseFile(kIdSchema, this.file).id;
+  }
+
   get name(): string {
     return path.basename(this.file.root);
   }
@@ -127,7 +148,7 @@ export class StudioProject {
     ]);
   }
 
-  get access(): StudioAccess {
+  get access(): ProjectAccess {
     return this.#parsed().access;
   }
 
@@ -164,7 +185,7 @@ export class StudioProject {
     );
 
     return {
-      access: StudioAccess.read(this.file.data, this.file.path),
+      access: ProjectAccess.read(this.file.data, this.file.path),
       kindFilter: new KindFilter(
         sections.kindFilter.hidden.filter((kind) => known.has(kind))
       ),

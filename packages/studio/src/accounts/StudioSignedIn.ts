@@ -1,6 +1,8 @@
 // Import Third-party Dependencies
 import {
+  AccountsRequestError,
   AccountsRoster,
+  type AccountsFailureCode,
   type Member,
   type AccountsClient
 } from "@jolly-pixel/accounts";
@@ -28,6 +30,12 @@ import { StudioProjectSettings } from "../project/StudioProjectSettings.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
 import { SessionRenewal } from "./SessionRenewal.ts";
 import { STUDIO_USER_CHANGE } from "./StudioUser.ts";
+
+// CONSTANTS
+const kOutsiderCodes: ReadonlySet<AccountsFailureCode> = new Set([
+  "membership-required",
+  "account-pending"
+]);
 
 export type StudioAccountsClient = Pick<
   AccountsClient,
@@ -58,7 +66,8 @@ export class StudioSignedIn extends EventTarget {
   static async open(
     options: StudioSignInOptions
   ): Promise<StudioSignedIn> {
-    const account = await options.accounts.me() ?? await options.signIn();
+    const account = await signedInMember(options.accounts) ??
+      await options.signIn();
     const [preferences, rights, sections] = await Promise.all([
       AccountPreferences.load({
         accountId: account.id,
@@ -177,5 +186,23 @@ export class StudioSignedIn extends EventTarget {
     finally {
       this.#reload();
     }
+  }
+}
+
+async function signedInMember(
+  accounts: StudioAccountsClient
+): Promise<Member | null> {
+  try {
+    return await accounts.me();
+  }
+  catch (error) {
+    if (
+      error instanceof AccountsRequestError &&
+      kOutsiderCodes.has(error.code)
+    ) {
+      return null;
+    }
+
+    throw error;
   }
 }

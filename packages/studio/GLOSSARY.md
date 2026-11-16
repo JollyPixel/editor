@@ -15,8 +15,10 @@ The app. One studio process opens exactly one project.
 ### Project
 
 An asset root on disk plus its configuration, `.jollypixel/project.json`,
-which lists its editor packages and kind packages. The `JOLLY_PROJECT`
-environment variable picks it, defaulting to `packages/studio/project/`.
+which lists its editor packages and kind packages, and its `id`. The
+`JOLLY_PROJECT` environment variable picks it, defaulting to
+`packages/studio/project/`; `JOLLY_PROJECTS` picks a folder of them instead,
+each served under `/p/<slug>/`, its folder name.
 Its packages resolve from its own `node_modules` before the studio's.
 
 ### Seed

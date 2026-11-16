@@ -10,7 +10,7 @@ import { AssetRoom } from "@jolly-pixel/asset";
 import type { PeerIdentity } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { StudioShares } from "#src/shares/node/StudioShares.ts";
+import type { ProjectShares } from "#src/shares/node/ProjectShares.ts";
 import {
   guestUpgrade,
   shareAccounts,
@@ -50,7 +50,7 @@ async function sharesHarness(): Promise<SharesHarness> {
 }
 
 function admitted(
-  shares: StudioShares,
+  shares: ProjectShares,
   identity: PeerIdentity
 ): string[] {
   const rooms = [
@@ -65,7 +65,7 @@ function admitted(
   return rooms.filter((room) => shares.admits(identity, room));
 }
 
-describe("StudioShares.admits", () => {
+describe("ProjectShares.admits", () => {
   test("admits a guest to the catalog view and the rooms of its closure only", async() => {
     using harness = await sharesHarness();
 

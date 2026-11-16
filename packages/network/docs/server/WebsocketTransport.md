@@ -28,9 +28,28 @@ compressed only when its sender passes `{ compress: true }`
 since media such as PNG or Opus barely shrinks. It decodes the credential offered by
 [`connectWebSocket`](../client/connectWebSocket.md) into `request.credential`.
 
+Without `httpServer` and `path`, the transport listens to nothing and takes
+the upgrades another listener hands to `handleUpgrade`.
+
 Messages sent to one socket during an event loop turn leave in a single write
 once the turn ends, so a broadcast costs one write per recipient rather than
 one per message.
+
+## `handleUpgrade(request, socket, head)`
+
+Runs the handshake checks, authenticates, and connects the socket, for an
+upgrade whose path the caller already matched. A server hosting several
+networks reads the path in its own `upgrade` listener and hands each upgrade to
+the transport of the matching network.
+
+```ts
+const transport = new WebsocketTransport({ server });
+httpServer.on("upgrade", (request, socket, head) => {
+  if (request.url === "/projects/a/ws-sync") {
+    transport.handleUpgrade(request, socket, head);
+  }
+});
+```
 
 ## `[Symbol.dispose]()`
 

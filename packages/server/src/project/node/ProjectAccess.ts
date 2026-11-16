@@ -3,7 +3,8 @@ import * as z from "zod";
 import {
   ACCOUNTS_ROOM,
   ADMIN_ROLE,
-  GUEST_ROLE
+  GUEST_ROLE,
+  type JoinMode
 } from "@jolly-pixel/accounts";
 import { AccountRoles } from "@jolly-pixel/accounts/node";
 import { CATALOG_ROOM } from "@jolly-pixel/asset-server";
@@ -55,8 +56,8 @@ export const DEFAULT_ACCESS = {
       "*": "read"
     }
   },
-  accessRequests: false
-} as const satisfies StudioAccessData;
+  join: "request"
+} as const satisfies ProjectAccessData;
 
 const kAccessSectionSchema = z.object({
   access: z.object({
@@ -64,19 +65,17 @@ const kAccessSectionSchema = z.object({
       DEFAULT_ACCESS.defaultRole
     ),
     roles: accessSectionSchema.shape.roles.default(DEFAULT_ACCESS.roles),
-    accessRequests: accessSectionSchema.shape.accessRequests.default(
-      DEFAULT_ACCESS.accessRequests
-    )
+    join: accessSectionSchema.shape.join.default(DEFAULT_ACCESS.join)
   }).optional()
 });
 
-export type StudioAccessData = AccessSection;
+export type ProjectAccessData = AccessSection;
 
-export class StudioAccess {
+export class ProjectAccess {
   static read(
     document: unknown,
     source: string
-  ): StudioAccess {
+  ): ProjectAccess {
     const section = kAccessSectionSchema.safeParse(document);
     if (!section.success) {
       throw new InvalidSettingsError(
@@ -84,16 +83,16 @@ export class StudioAccess {
       );
     }
 
-    return StudioAccess.from(
+    return ProjectAccess.from(
       section.data.access ?? DEFAULT_ACCESS,
       source
     );
   }
 
   static from(
-    data: StudioAccessData,
+    data: ProjectAccessData,
     source: string
-  ): StudioAccess {
+  ): ProjectAccess {
     for (const role of BUILT_IN_ROLES) {
       if (Object.hasOwn(data.roles, role)) {
         throw new InvalidSettingsError(
@@ -107,7 +106,7 @@ export class StudioAccess {
       );
     }
 
-    return new StudioAccess(
+    return new ProjectAccess(
       structuredClone(data),
       new AccountRoles({
         roles: Object.keys(data.roles),
@@ -118,13 +117,13 @@ export class StudioAccess {
 
   readonly rights: RightsMap;
   readonly roles: AccountRoles;
-  readonly accessRequests: boolean;
+  readonly join: JoinMode;
 
-  #data: StudioAccessData;
+  #data: ProjectAccessData;
   #table: RightsTable;
 
   private constructor(
-    data: StudioAccessData,
+    data: ProjectAccessData,
     roles: AccountRoles
   ) {
     this.rights = {
@@ -133,7 +132,7 @@ export class StudioAccess {
       ...structuredClone(data.roles)
     };
     this.roles = roles;
-    this.accessRequests = data.accessRequests;
+    this.join = data.join;
     this.#data = data;
     this.#table = new RightsTable(this.rights, roles.defaultRole);
   }
@@ -160,7 +159,7 @@ export class StudioAccess {
     return this.#table.check(role, `${room}.${JOIN_EVENT}`) === "write";
   }
 
-  toJSON(): StudioAccessData {
+  toJSON(): ProjectAccessData {
     return structuredClone(this.#data);
   }
 

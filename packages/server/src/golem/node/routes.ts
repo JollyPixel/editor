@@ -4,6 +4,7 @@ import type { AccountsRealm } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
 import { signedInAccount } from "../../http/node/authentication.ts";
+import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 import {
   GOLEM_TOKENS_ROUTES,
   createAgentTokenBodySchema,
@@ -13,7 +14,7 @@ import {
 } from "../api.ts";
 
 export interface GolemRoutesOptions {
-  realm: AccountsRealm;
+  realm: RequestScoped<AccountsRealm>;
 }
 
 interface CreateAgentTokenRoute {
@@ -30,7 +31,6 @@ export async function golemRoutes(
   app: FastifyInstance,
   options: GolemRoutesOptions
 ): Promise<void> {
-  const { agentTokens } = options.realm;
   const {
     list,
     create,
@@ -43,7 +43,9 @@ export async function golemRoutes(
     url: list.path,
     handler: (request): AgentTokensReply => {
       return {
-        tokens: agentTokens.ownedBy(signedInAccount(request).id)
+        tokens: options.realm(request).agentTokens.ownedBy(
+          signedInAccount(request).id
+        )
       };
     }
   });
@@ -54,7 +56,7 @@ export async function golemRoutes(
       body: createAgentTokenBodySchema
     },
     handler: (request, reply) => {
-      const created = agentTokens.create({
+      const created = options.realm(request).agentTokens.create({
         ownerId: signedInAccount(request).id,
         name: request.body.name
       });
@@ -66,7 +68,7 @@ export async function golemRoutes(
     method: revoke.method,
     url: revoke.path,
     handler: (request, reply) => {
-      agentTokens.revoke(
+      options.realm(request).agentTokens.revoke(
         signedInAccount(request).id,
         request.params.tokenId
       );
@@ -78,7 +80,7 @@ export async function golemRoutes(
     method: disconnect.method,
     url: disconnect.path,
     handler: (request, reply) => {
-      agentTokens.disconnect(
+      options.realm(request).agentTokens.disconnect(
         signedInAccount(request).id,
         request.params.tokenId
       );

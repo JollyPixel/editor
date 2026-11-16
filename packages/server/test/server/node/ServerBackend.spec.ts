@@ -25,7 +25,7 @@ import {
   createShareLink,
   guestSocket
 } from "../../helpers/shares.ts";
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 import { browser } from "#src/testing.ts";
 import { auditPageSchema } from "#src/audit/api.ts";
 import {
@@ -37,7 +37,7 @@ import {
 const kPassword = "p".repeat(43);
 const kTimeoutMs = 5_000;
 
-describe("StudioBackend", () => {
+describe("ServerBackend", () => {
   test("a share link's guest reads only the closure of its asset", async() => {
     await using backend = await serveBackend();
     const owner = browser(new URL(`.${ACCOUNTS_URL_PATH}`, backend.url));

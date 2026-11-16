@@ -5,26 +5,35 @@ import path from "node:path";
 
 // Import Internal Dependencies
 import { EditorPageFolders } from "../../editors/node/EditorPageFolders.ts";
-import { chainMiddleware } from "../../http/node/Middleware.ts";
-import { ManifestRoute } from "../../project/node/ManifestRoute.ts";
 import { BuiltPlayer } from "../../game/node/BuiltPlayer.ts";
-import type { StudioProject } from "../../project/node/StudioProject.ts";
+import type { Project } from "../../project/node/Project.ts";
+import type { ProjectHosting } from "../../projects/node/ProjectHosting.ts";
 import { serveBuild } from "../../http/node/serveBuild.ts";
 import {
-  StudioBackend,
-  type StudioBackendOptions
-} from "./StudioBackend.ts";
+  ServerBackend,
+  type ServerBackendOptions
+} from "./ServerBackend.ts";
 
-export interface StudioServerOptions {
-  project: StudioProject;
+export interface JollyServerOptions {
+  hosting: ProjectHosting;
+  /**
+   * Opens the project found at a root of the hosting's registry.
+   */
+  openProject: (root: string) => Promise<Project>;
   /**
    * Folder of the built studio shell, holding its `index.html` and the page
    * of every project editor under `editors/<name>/`.
    */
   shell: string;
   backend: Omit<
-    StudioBackendOptions,
-    "editorPages" | "compression" | "player" | "playPage"
+    ServerBackendOptions,
+    | "hosting"
+    | "openProject"
+    | "editorPages"
+    | "compression"
+    | "allowedHosts"
+    | "player"
+    | "playPage"
   >;
   /**
    * Host header values accepted on the WebSocket upgrade, besides localhost
@@ -40,52 +49,47 @@ export interface StudioServerOptions {
   compression?: boolean;
 }
 
-export class StudioServer implements AsyncDisposable {
+export class JollyServer implements AsyncDisposable {
   static async open(
-    options: StudioServerOptions
-  ): Promise<StudioServer> {
+    options: JollyServerOptions
+  ): Promise<JollyServer> {
     const editorPages = EditorPageFolders.shell(options.shell);
-    const pages = [
-      path.join(options.shell, "index.html"),
-      ...Array.from(
-        options.project.editors,
-        (editor) => editorPages.index(editor)
-      )
-    ];
-    await Promise.all(pages.map(requireBuiltPage));
+    await requireBuiltPage(path.join(options.shell, "index.html"));
     const player = new BuiltPlayer(options.shell);
 
-    return new StudioServer(
+    return new JollyServer(
       options,
-      await StudioBackend.open(options.project, {
+      await ServerBackend.open({
         ...options.backend,
+        hosting: options.hosting,
+        openProject: async(root) => {
+          const project = await options.openProject(root);
+          await requireEditorPages(project, editorPages);
+
+          return project;
+        },
         editorPages,
         player,
         playPage: player,
-        compression: options.compression
+        compression: options.compression,
+        allowedHosts: options.allowedHosts ?? []
       })
     );
   }
 
-  #backend: StudioBackend;
+  #backend: ServerBackend;
   #http: http.Server;
 
   private constructor(
-    options: StudioServerOptions,
-    backend: StudioBackend
+    options: JollyServerOptions,
+    backend: ServerBackend
   ) {
     this.#backend = backend;
-    const routes = chainMiddleware(
-      backend.middleware,
-      new ManifestRoute(options.project).middleware
-    );
     const shell = serveBuild(options.shell);
     this.#http = http.createServer((request, response) => {
-      routes(request, response, () => shell(request, response));
+      backend.middleware(request, response, () => shell(request, response));
     });
-    backend.attach(this.#http, {
-      allowedHosts: options.allowedHosts ?? []
-    });
+    backend.attach(this.#http);
   }
 
   async listen(
@@ -118,6 +122,30 @@ export class StudioServer implements AsyncDisposable {
     this.#http.closeAllConnections();
     await this.#backend[Symbol.asyncDispose]();
     await closed;
+  }
+}
+
+async function requireEditorPages(
+  project: Project,
+  pages: EditorPageFolders
+): Promise<void> {
+  const built = await Promise.all(
+    Array.from(project.editors, async(editor) => {
+      try {
+        await fs.access(pages.index(editor));
+
+        return null;
+      }
+      catch {
+        return editor.name;
+      }
+    })
+  );
+  const missing = built.filter((name) => name !== null);
+  if (missing.length > 0) {
+    throw new Error(
+      `the studio build lacks the editors ${missing.join(", ")}`
+    );
   }
 }
 

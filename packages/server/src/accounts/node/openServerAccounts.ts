@@ -1,9 +1,9 @@
 // Import Node.js Dependencies
 import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
 import path from "node:path";
 
 // Import Third-party Dependencies
-import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
 import {
   Accounts,
   IN_MEMORY_LOCATION,
@@ -17,8 +17,8 @@ import {
   AccountsAccess,
   type AccountsPolicy
 } from "./AccountsAccess.ts";
-import type { StudioProject } from "../../project/node/StudioProject.ts";
-import { MASTER_PASSWORD_ENV } from "../../server/node/StudioServerSettings.ts";
+import type { Project } from "../../project/node/Project.ts";
+import { MASTER_PASSWORD_ENV } from "../../server/node/ServerSettings.ts";
 
 // CONSTANTS
 const kDatabaseFile = "accounts.db";
@@ -30,9 +30,9 @@ export const ACCOUNTS_STATE_IGNORES = [
   `${kDatabaseFile}-shm`
 ];
 
-export interface StudioAccountsOptions extends AccountsPolicy {
+export interface ServerAccountsOptions {
   /**
-   * Keeps accounts in memory instead of the project state directory.
+   * Keeps accounts in memory instead of the server state folder.
    * @default false
    */
   inMemory?: boolean;
@@ -45,18 +45,17 @@ export interface StudioAccountsOptions extends AccountsPolicy {
   /**
    * Warned when no master password is set and registration is open.
    */
-  logger?: StudioAccountsLogger;
+  logger?: ServerAccountsLogger;
 }
 
-export interface StudioAccountsLogger {
+export interface ServerAccountsLogger {
   warn(message: string): void;
 }
 
-export async function openStudioAccounts(
-  project: StudioProject,
-  options: StudioAccountsOptions = {}
+export async function openServerAccounts(
+  state: string,
+  options: ServerAccountsOptions = {}
 ): Promise<Accounts> {
-  const { root } = project.file;
   const masterPassword = options.masterPassword === "" ?
     undefined :
     options.masterPassword;
@@ -67,12 +66,16 @@ export async function openStudioAccounts(
     );
   }
 
+  if (options.inMemory !== true) {
+    await fs.mkdir(state, { recursive: true });
+  }
+
   return Accounts.open({
     location: options.inMemory ?
       IN_MEMORY_LOCATION :
-      path.join(root, STATE_DIRECTORY, kDatabaseFile),
+      path.join(state, kDatabaseFile),
     cookie: new SessionCookie({
-      name: hashCookieName(root)
+      name: hashCookieName(state)
     }),
     throttle: options.throttle,
     masterPassword
@@ -81,19 +84,19 @@ export async function openStudioAccounts(
 
 export function openProjectRealm(
   accounts: Accounts,
-  project: StudioProject,
+  project: Project,
   policy: AccountsPolicy = {}
 ): AccountsRealm {
   return AccountsAccess
     .resolve(project.access, policy)
-    .openRealm(accounts, path.resolve(project.file.root));
+    .openRealm(accounts, project.id);
 }
 
 function hashCookieName(
-  root: string
+  state: string
 ): string {
   const digest = createHash("sha256")
-    .update(path.resolve(root))
+    .update(path.resolve(state))
     .digest("hex");
 
   return kCookiePrefix + digest.slice(0, 12);

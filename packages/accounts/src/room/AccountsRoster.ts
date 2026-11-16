@@ -11,7 +11,9 @@ import { AccountsRejectedError } from "./errors/AccountsRejectedError.ts";
 import {
   ACCOUNTS_APPROVE,
   ACCOUNTS_ASSIGN_ROLE,
+  ACCOUNTS_DELETE,
   ACCOUNTS_DENY,
+  ACCOUNTS_INVITE,
   ACCOUNTS_REJECTED,
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROOM,
@@ -120,6 +122,26 @@ export class AccountsRoster extends Emitter<
   ): Promise<void> {
     return this.#request({
       type: ACCOUNTS_REMOVE,
+      username
+    });
+  }
+
+  invite(
+    username: string,
+    role: string
+  ): Promise<void> {
+    return this.#request({
+      type: ACCOUNTS_INVITE,
+      username,
+      role
+    });
+  }
+
+  deleteAccount(
+    username: string
+  ): Promise<void> {
+    return this.#request({
+      type: ACCOUNTS_DELETE,
       username
     });
   }

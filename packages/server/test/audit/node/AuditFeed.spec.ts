@@ -21,7 +21,7 @@ import {
   type AuditFeedQuery
 } from "#src/audit/node/AuditFeed.ts";
 import { AuditLog } from "#src/audit/node/AuditLog.ts";
-import { StudioAccess } from "#src/project/node/StudioAccess.ts";
+import { ProjectAccess } from "#src/project/node/ProjectAccess.ts";
 import type { AuditRow } from "#src/audit/api.ts";
 
 // CONSTANTS
@@ -31,14 +31,14 @@ const kUsernames: Record<string, string> = {
   bob: "Bob"
 };
 const kAuditor = "auditor";
-const kAccess = StudioAccess.from({
+const kAccess = ProjectAccess.from({
   defaultRole: kAuditor,
   roles: {
     [kAuditor]: {
       "studio.$audit": "read"
     }
   },
-  accessRequests: false
+  join: "open"
 }, "audit test");
 const kAdmin: Member = {
   id: "alice",
