@@ -32,16 +32,7 @@ export function sceneWithActors(
 ): Systems.SceneFile {
   return {
     version: 1,
-    environment: {
-      background: null,
-      environment: {
-        kind: "none",
-        intensity: 1
-      },
-      fog: {
-        kind: "none"
-      }
-    },
+    environment: null,
     actors
   };
 }

@@ -10,5 +10,6 @@ export * from "./SceneBackend.ts";
 export * from "./WorldTime.ts";
 export * from "./Timers.ts";
 export * from "./scene/index.ts";
+export * from "./environment/index.ts";
 export * from "./rendering/index.ts";
 export * from "./generators/IntegerIncrement.ts";

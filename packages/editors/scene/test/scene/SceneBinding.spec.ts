@@ -7,7 +7,6 @@ import * as THREE from "three";
 import {
   ComponentChange,
   SceneDocument,
-  SceneEnvironment,
   type SceneEnvironmentJSON
 } from "@jolly-pixel/asset.scene/client";
 
@@ -135,8 +134,8 @@ describe("SceneBinding", () => {
     const oldId = document.addActor({ name: "Old" })!;
     const { binding, sceneManager, environments } = createProbeBinding(document);
     const foggy: SceneEnvironmentJSON = {
-      ...SceneEnvironment.create(),
-      fog: { kind: "exp2", color: "#ffffff", density: 0.1 }
+      id: "foggy",
+      kind: "environment"
     };
 
     document.load({

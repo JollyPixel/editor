@@ -5,8 +5,6 @@ import {
   type SceneChange,
   type SceneComponentJSON,
   type SceneDocument,
-  type SceneEnvironmentJSON,
-  type SceneEnvironmentPatch,
   type SceneTransformJSON,
   type SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
@@ -19,7 +17,7 @@ import type { SceneBinding } from "../scene/SceneBinding.ts";
 
 export type SceneDraftView = Pick<
   SceneBinding,
-  "previewEnvironment" | "previewTransform" | "previewComponent"
+  "previewTransform" | "previewComponent"
 >;
 
 export interface SceneDraftOptions {
@@ -33,10 +31,8 @@ export type SceneDraftEvents = {
 };
 
 export class SceneDraft extends Emitter<SceneDraftEvents> {
-  #document: SceneDocument;
   #view: SceneDraftView;
   #writes: SceneDraftOptions["writes"];
-  #environment: SceneEnvironmentPatch = {};
   #transforms = new Map<string, SceneTransformPatch>();
   #components = new Map<string, ComponentChange>();
   #unsubscribe: (() => void)[];
@@ -45,20 +41,12 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
     options: SceneDraftOptions
   ) {
     super();
-    this.#document = options.document;
     this.#view = options.view;
     this.#writes = options.writes;
     this.#unsubscribe = [
       options.document.subscribe("change", (change) => this.#settle(change)),
       options.document.subscribe("reset", () => this.#discard())
     ];
-  }
-
-  environment(): SceneEnvironmentJSON {
-    return {
-      ...this.#document.tree.environment,
-      ...this.#environment
-    };
   }
 
   transform(
@@ -81,17 +69,6 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
     };
   }
 
-  editEnvironment(
-    patch: SceneEnvironmentPatch
-  ): void {
-    this.#environment = {
-      ...this.#environment,
-      ...patch
-    };
-    this.#view.previewEnvironment(this.#environment);
-    this.emit("change");
-  }
-
   editTransform(
     id: string,
     patch: SceneTransformPatch
@@ -111,16 +88,6 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
   ): void {
     this.#components.set(id, change);
     this.#view.previewComponent(id, change);
-    this.emit("change");
-  }
-
-  commitEnvironment(
-    patch: SceneEnvironmentPatch
-  ): void {
-    this.#environment = {};
-    if (!this.#document.changeEnvironment(patch)) {
-      this.#view.previewEnvironment({});
-    }
     this.emit("change");
   }
 
@@ -165,9 +132,6 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
     { command }: SceneChange
   ): void {
     switch (command.action) {
-      case "environment-changed":
-        this.#environment = {};
-        break;
       case "actor-transformed":
         this.#transforms.delete(command.id);
         break;
@@ -184,7 +148,6 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
   }
 
   #discard(): void {
-    this.#environment = {};
     this.#transforms.clear();
     this.#components.clear();
   }

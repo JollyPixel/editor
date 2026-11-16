@@ -56,6 +56,7 @@ each frame.
   - [SceneManager](./docs/systems/scene-manager.md) — the ECS world manager that owns the actor tree and drives
     per-frame lifecycle (awake → start → update → destroy).
     - [Scene graph](./docs/systems/scene-graph.md) — the backend port that mirrors actors into a renderer scene.
+    - [Environment](./docs/systems/environment.md) — the sky, lights, fog and tone mapping a scene renders in, with built-in presets.
   - [Logger](./docs/systems/logger.md): leveled, namespaced logging and timed steps.
 - [Asset](./docs/asset.md) — lazy-loading asset pipeline with a
   registry of loaders, a queue, and a cache.

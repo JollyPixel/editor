@@ -15,6 +15,11 @@ import { PeerRoster } from "@jolly-pixel/ui/network";
 import { RoomGrants } from "@jolly-pixel/network/client";
 import { describeSkippedStep } from "@jolly-pixel/history";
 import type { AssetLeases, EditorArchives } from "@jolly-pixel/editor.host";
+import {
+  environmentOpener,
+  PreviewEnvironment,
+  type EnvironmentCatalog
+} from "@jolly-pixel/asset.environment/client";
 import type {
   SyncedVoxelMap,
   VoxelMapRoom
@@ -74,7 +79,6 @@ import {
   type BlocksetCatalog
 } from "../features/blocksets/MapBlocksets.ts";
 import { openBlockset } from "../viewer/openBlockset.ts";
-import { SceneLighting } from "../scene/environment/SceneLighting.ts";
 import { SceneEnvironment } from "../scene/environment/SceneEnvironment.ts";
 import { EditorCamera } from "../scene/camera/EditorCamera.ts";
 import { PivotClick } from "../scene/camera/PivotClick.ts";
@@ -116,7 +120,7 @@ export interface EditorSceneSession {
   room: VoxelMapRoom;
   map: SyncedVoxelMap;
   identity: PeerIdentity;
-  catalog: BlocksetCatalog;
+  catalog: BlocksetCatalog & EnvironmentCatalog;
   assets: AssetLeases;
   archives: EditorArchives;
 }
@@ -158,11 +162,7 @@ export class EditorScene extends Systems.Scene {
       roomEnvironment
     } = this.#options;
     const world = this.world;
-    const scene = world.sceneManager.graph.scene;
     const layerVisibility = new LayerVisibilityStore();
-
-    const lighting = new SceneLighting(world.renderer.source);
-    scene.add(...lighting.lights);
 
     const camera = new EditorCamera({
       world,
@@ -187,11 +187,14 @@ export class EditorScene extends Systems.Scene {
       });
 
     const pageTheme = new DocumentTheme();
+    const preview = new PreviewEnvironment({
+      catalog: session.catalog,
+      open: environmentOpener(session)
+    });
     const environment = new SceneEnvironment({
-      renderer: world.renderer,
-      scene,
-      lighting,
+      world,
       roomEnvironment,
+      preview,
       chunks: view.lighting,
       casters: view,
       theme: pageTheme.mode
@@ -222,6 +225,10 @@ export class EditorScene extends Systems.Scene {
     }
     applyView(state.view.settings);
     this.#environment = environment;
+    const unfollowPreview = preview.subscribe("change", () => {
+      applyView(state.view.settings);
+      world.invalidate();
+    });
     function invalidateShadows(): void {
       environment.invalidateShadows();
     }
@@ -507,6 +514,8 @@ export class EditorScene extends Systems.Scene {
       bindToolExit(keyboard, state.tool),
       () => camera.dispose(),
       () => environment.dispose(),
+      unfollowPreview,
+      () => preview.dispose(),
       () => world.renderer.off("compiled", invalidateShadows),
       releaseBlockPresence,
       releaseLayerPresence,
@@ -549,6 +558,7 @@ export class EditorScene extends Systems.Scene {
       localBrush,
       blocksets,
       materials,
+      environment: preview,
       archives: session.archives,
       focusPoint: () => camera.focusPoint(view.root),
       pointAt: (clientX, clientY) => camera.pointAt(

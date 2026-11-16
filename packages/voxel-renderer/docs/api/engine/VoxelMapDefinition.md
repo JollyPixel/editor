@@ -19,18 +19,20 @@ const components = new Systems.ComponentDefinitions().register(
 interface VoxelMapSettings {
   castShadow: boolean;
   receiveShadow: boolean;
+  ambientOcclusion: number;
   collision: boolean;
   layers: Readonly<Record<string, boolean>>;
 }
 ```
 
 `castShadow` and `receiveShadow` default to `false` and set the same flags on
-`view.lighting`. `collision` defaults to `false`, see [collision](#collision). `layers` maps a layer name to a visibility that overrides the
+`view.lighting`. `ambientOcclusion` defaults to `0` and sets
+`view.lighting.ambientOcclusion`, which clamps it to `0..1`. `collision` defaults to `false`, see [collision](#collision). `layers` maps a layer name to a visibility that overrides the
 map's own; a layer left out keeps the map's value. A missing or mistyped field
 falls back to its default, and a non-boolean layer entry is dropped.
 
-`apply()` patches a live component: it sets both shadow flags and replaces the
-layer overrides.
+`apply()` patches a live component: it sets both shadow flags and the ambient
+occlusion, and replaces the layer overrides.
 
 ## Collision
 

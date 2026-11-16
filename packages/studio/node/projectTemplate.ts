@@ -8,6 +8,7 @@ import { TEXTURE_SIZE } from "../shared/seed.ts";
 export const STUDIO_PROJECT_FILE: ProjectFileData = {
   version: 1,
   editors: [
+    "@jolly-pixel/editor.environment",
     "@jolly-pixel/editor.model",
     "@jolly-pixel/editor.pixel-art",
     "@jolly-pixel/editor.scene",
@@ -18,6 +19,7 @@ export const STUDIO_PROJECT_FILE: ProjectFileData = {
     "@jolly-pixel/editor.voxel-model"
   ],
   kinds: {
+    "@jolly-pixel/asset.environment": {},
     "@jolly-pixel/asset.font": {},
     "@jolly-pixel/asset.model": {},
     "@jolly-pixel/asset.pixel-art": {

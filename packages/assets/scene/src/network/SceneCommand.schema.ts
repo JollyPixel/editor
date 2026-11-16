@@ -9,13 +9,13 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import type { JSONValue } from "./types.ts";
+import { SCENE_ENVIRONMENT_KIND } from "../asset/scene.ts";
 
 // CONSTANTS
 const kIdSchema = z.string().check(z.minLength(1));
 const kNullableIdSchema = z.nullable(kIdSchema);
 const kBeforeIdSchema = z.optional(kIdSchema);
 const kPathSchema = z.string().check(z.regex(/^[^/]+(?:\/[^/]+)*$/));
-const kHexColorSchema = z.string().check(z.regex(/^#[0-9a-fA-F]{6}$/));
 
 const kJSONValueSchema: z.ZodMiniType<JSONValue> = z.lazy(() => z.union([
   z.string(),
@@ -103,38 +103,10 @@ export const sceneActorSchema = z.object({
   anchor: z.optional(sceneAnchorSchema)
 });
 
-export const sceneFogSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("none")
-  }),
-  z.object({
-    kind: z.literal("linear"),
-    color: kHexColorSchema,
-    near: z.number().check(z.minimum(0)),
-    far: z.number().check(z.minimum(0))
-  }),
-  z.object({
-    kind: z.literal("exp2"),
-    color: kHexColorSchema,
-    density: z.number().check(z.minimum(0))
-  })
-]);
-
-const kEnvironmentShape = {
-  background: z.nullable(kHexColorSchema),
-  environment: z.object({
-    kind: z.enum(["none", "room"]),
-    intensity: z.number().check(z.minimum(0))
-  }),
-  fog: sceneFogSchema
-};
-
-export const sceneEnvironmentSchema = z.object(kEnvironmentShape);
-
-export const sceneEnvironmentPatchSchema = minProperties(
-  z.partial(z.strictObject(kEnvironmentShape)),
-  1
-);
+export const sceneEnvironmentSchema = z.nullable(z.object({
+  id: kIdSchema,
+  kind: z.literal(SCENE_ENVIRONMENT_KIND)
+}));
 
 export const sceneSnapshotSchema = z.object({
   environment: sceneEnvironmentSchema,
@@ -207,7 +179,7 @@ export const sceneCommandSchema = z.discriminatedUnion("action", [
     }))
   }),
   commandVariant("environment-changed", {
-    environment: sceneEnvironmentPatchSchema
+    environment: sceneEnvironmentSchema
   })
 ]);
 

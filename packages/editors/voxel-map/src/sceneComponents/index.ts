@@ -25,6 +25,11 @@ const kVoxelMap: SceneComponentKind<VoxelMapSettings> = {
   form: () => [
     kRows.boolean(["castShadow"], "Cast shadow"),
     kRows.boolean(["receiveShadow"], "Receive shadow"),
+    kRows.number(["ambientOcclusion"], "Ambient occlusion", {
+      min: 0,
+      max: 1,
+      step: 0.05
+    }),
     kRows.boolean(["collision"], "Collision")
   ],
   anchorAsset: "map",

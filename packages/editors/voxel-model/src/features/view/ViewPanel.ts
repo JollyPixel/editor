@@ -15,6 +15,8 @@ import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/fields";
+import "@jolly-pixel/ui/elements/select";
+import type { PreviewEnvironment } from "@jolly-pixel/asset.environment/client";
 
 // Import Internal Dependencies
 import {
@@ -58,6 +60,7 @@ const kKeyLightOptions: JollyOption<KeyLightPreset>[] = [
 
 export interface ViewEditing {
   view: ViewSettingsStore;
+  environment: PreviewEnvironment;
 }
 
 export class ViewPanel extends LitElement {
@@ -84,8 +87,9 @@ export class ViewPanel extends LitElement {
     }
   `;
 
-  #editing = new SubscriptionController<ViewEditing>(this, ({ view }) => [
-    view.subscribe("change", () => this.requestUpdate())
+  #editing = new SubscriptionController<ViewEditing>(this, ({ view, environment }) => [
+    view.subscribe("change", () => this.requestUpdate()),
+    environment.subscribe("change", () => this.requestUpdate())
   ]);
 
   attach(
@@ -95,11 +99,14 @@ export class ViewPanel extends LitElement {
   }
 
   override render(): TemplateResult | typeof nothing {
-    const settings = this.#editing.current?.view.settings;
-    if (settings === undefined) {
+    const editing = this.#editing.current;
+    if (editing === null) {
       return nothing;
     }
 
+    const { settings } = editing.view;
+    const { environment } = editing;
+    const { linked } = environment;
     const lit = isLit(settings);
 
     return html`
@@ -111,7 +118,18 @@ export class ViewPanel extends LitElement {
         .open=${false}
       >
         <jolly-fields>
+          <jolly-select
+            label="Environment"
+            description="Preview the model in one of the project environments"
+            description-display="tooltip"
+            .options=${environment.options()}
+            .value=${environment.value}
+            @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => {
+              environment.choose(event.detail.value);
+            }}
+          ></jolly-select>
           <jolly-button-group
+            ?disabled=${linked}
             label="Lighting"
             description=${kLightingHelp}
             description-display="tooltip"
@@ -125,7 +143,7 @@ export class ViewPanel extends LitElement {
             description-display="tooltip"
             .options=${kKeyLightOptions}
             .value=${settings.keyLight}
-            ?disabled=${!lit}
+            ?disabled=${!lit || linked}
             @jolly-change=${this.#bind("keyLight")}
           ></jolly-button-group>
           <div class="toggles">

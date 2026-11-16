@@ -122,13 +122,13 @@ describe("scene room", () => {
     assert.equal(serverTree(server).has("A"), false);
   });
 
-  test("refuses an environment patch with a malformed color", async() => {
+  test("refuses an environment that is not an environment asset", async() => {
     const server = await createRoom();
 
     await assert.rejects(() => server.receive("A", networkCommand({
       action: "environment-changed",
-      environment: { background: "red" }
-    }, { clientId: "A" })), TypeError);
+      environment: { id: "level", kind: "scene" }
+    } as never, { clientId: "A" })), TypeError);
   });
 
   test("converges when a peer removes the parent of a pending local actor", async() => {

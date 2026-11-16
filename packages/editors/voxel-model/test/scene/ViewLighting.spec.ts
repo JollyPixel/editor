@@ -4,26 +4,67 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Preferences } from "@jolly-pixel/preferences";
-import * as THREE from "three";
+import { Systems } from "@jolly-pixel/engine";
+import * as THREE from "three/webgpu";
+import {
+  EnvironmentDocument,
+  PreviewEnvironment
+} from "@jolly-pixel/asset.environment/client";
 
 // Import Internal Dependencies
 import { ViewLighting } from "#src/scene/ViewLighting.ts";
 import { ViewSettingsStore } from "#src/state/index.ts";
 
+function createPreview(): PreviewEnvironment {
+  const night = new EnvironmentDocument();
+  const { version: _version, ...sections } = Systems.ENVIRONMENT_PRESETS.night;
+  night.change(sections);
+
+  return new PreviewEnvironment({
+    catalog: {
+      records: () => [
+        { id: "night", kind: "environment", path: "Night.environment.json" }
+      ],
+      subscribe: () => () => undefined
+    },
+    open: (assetId) => (
+      assetId === "night" ? { document: night, release: () => undefined } : null
+    )
+  });
+}
+
 function createHarness() {
-  const scene = new THREE.Scene();
+  const graph = new Systems.ThreeSceneGraph();
+  const { scene } = graph;
   const view = new ViewSettingsStore(new Preferences());
   const environment = new THREE.RenderTarget();
+  const world = {
+    logger: new Systems.Logger(),
+    renderer: {
+      source: {
+        toneMapping: THREE.NoToneMapping,
+        toneMappingExposure: 1
+      }
+    },
+    sceneManager: { graph },
+    invalidate: () => undefined
+  };
+  const room = {
+    createRenderTarget: () => environment
+  };
+  const preview = createPreview();
   const lighting = new ViewLighting({
-    scene,
+    world: world as unknown as Systems.World<THREE.WebGPURenderer, any>,
     view,
-    environment,
+    room: room as unknown as Systems.BakedRoomEnvironment,
+    preview,
     casters: () => [],
     theme: "dark"
   });
 
   return {
     scene,
+    preview,
     view,
     environment,
     lighting
@@ -59,7 +100,7 @@ describe("ViewLighting", () => {
     assert.ok(lighting.key.intensity < litKey);
   });
 
-  test("paints a studio sky that follows the theme and an outdoor sky that follows the key light", () => {
+  test("paints a studio sky that follows the theme and the shared outdoor sky by day", () => {
     const { scene, view, lighting } = createHarness();
     const darkStudio = scene.backgroundNode;
 
@@ -68,11 +109,10 @@ describe("ViewLighting", () => {
 
     view.update({ lighting: "day" });
     const daySky = scene.backgroundNode;
+    assert.notEqual(daySky, darkStudio);
     lighting.theme = "dark";
-    assert.equal(scene.backgroundNode, daySky);
-
     view.update({ keyLight: "top" });
-    assert.notEqual(scene.backgroundNode, daySky);
+    assert.equal(scene.backgroundNode, daySky);
   });
 
   test("warms the key light by day", () => {
@@ -103,13 +143,28 @@ describe("ViewLighting", () => {
     assert.ok(lighting.fill.position.x > 0);
   });
 
-  test("keeps the environment map attached and silences it while reflections are off", () => {
+  test("detaches the environment map while reflections are off", () => {
     const { scene, view, environment } = createHarness();
-    assert.ok(scene.environmentIntensity > 0);
 
     view.update({ reflections: false });
+    assert.equal(scene.environment, null);
 
+    view.update({ reflections: true });
     assert.ok(scene.environment === environment.texture);
-    assert.equal(scene.environmentIntensity, 0);
+  });
+
+  test("lights the view with a previewed project environment until the preset is chosen again", () => {
+    const { scene, preview, view, lighting } = createHarness();
+    const studioSky = scene.backgroundNode;
+
+    preview.choose("night");
+    assert.notEqual(scene.backgroundNode, studioSky);
+    assert.equal(lighting.fill.intensity, 0);
+
+    view.update({ lighting: "day" });
+    assert.ok(lighting.key.color.b > lighting.key.color.r);
+
+    preview.choose("");
+    assert.ok(lighting.key.color.r > lighting.key.color.b);
   });
 });

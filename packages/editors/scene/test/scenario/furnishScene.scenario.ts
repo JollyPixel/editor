@@ -115,23 +115,13 @@ const kDimmedLamp: SceneActorRow = {
   ...kLampInstance,
   overrides: ["Bulb"]
 };
-const kFog = {
-  kind: "linear",
-  color: "#c8d2dc",
-  near: 10,
-  far: 100
-} as const;
 const kSeedActors = [kCamera, kSun, kSky];
 const kFurnishedActors = [kCamera, kSun, kMeshedSky, kMovedCrate, kLid];
 
 const kBlank: SceneExpectation = {
   open: kRoom,
   scenes: { [kRoom]: kSeedActors },
-  environment: {
-    background: null,
-    environment: { kind: "none", intensity: 1 },
-    fog: { kind: "none" }
-  },
+  environment: null,
   assets: []
 };
 const kCrated: SceneExpectation = {
@@ -150,15 +140,8 @@ const kMeshed: SceneExpectation = {
   ...kBlank,
   scenes: { [kRoom]: kFurnishedActors }
 };
-const kFoggy: SceneExpectation = {
-  ...kMeshed,
-  environment: {
-    ...kMeshed.environment,
-    fog: kFog
-  }
-};
 const kLampPlaced: SceneExpectation = {
-  ...kFoggy,
+  ...kMeshed,
   scenes: {
     [kRoom]: [...kFurnishedActors, kLampInstance],
     [kLamp]: [kShade, kBulb]
@@ -284,16 +267,6 @@ new Scenario<ScenePage, SceneExpectation>({
         await scene.dragRow("Box mesh", "Hemisphere light", "above");
       },
       expected: kMeshed
-    },
-    {
-      id: "environment",
-      title: "fill the room with linear fog",
-      play: async(scene) => {
-        await scene.openPane("Scene");
-        await scene.environmentSelect("Fog").selectOption({ label: "Linear" });
-        await scene.openPane("Inspector");
-      },
-      expected: kFoggy
     },
     {
       id: "prefab",

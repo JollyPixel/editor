@@ -86,7 +86,16 @@ export class VoxelRenderer extends ActorComponent {
     deltaTime: number
   ): void {
     this.#sampleFocus();
+    this.#followEnvironment();
     this.view.tick(deltaTime);
+  }
+
+  #followEnvironment(): void {
+    const voxel = this.actor.world.sceneManager.graph.environment?.voxel;
+    if (voxel !== undefined) {
+      this.view.lighting.blockLightFalloff = voxel.blockLightFalloff;
+      this.view.lighting.shadowFill = voxel.shadowFill;
+    }
   }
 
   #sampleFocus(): void {

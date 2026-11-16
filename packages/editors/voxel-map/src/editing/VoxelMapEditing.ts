@@ -4,6 +4,7 @@ import type {
   VoxelWorldJSON
 } from "@jolly-pixel/voxel.renderer";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
+import type { PreviewEnvironment } from "@jolly-pixel/asset.environment/client";
 import type {
   Box3,
   Vector3Like
@@ -43,6 +44,7 @@ export interface VoxelMapEditing {
   localBrush: LocalBrush;
   blocksets: MapBlocksets;
   materials: MapMaterials;
+  environment: PreviewEnvironment;
   archives: EditorArchives;
   focusPoint(): Vector3Like;
   pointAt(

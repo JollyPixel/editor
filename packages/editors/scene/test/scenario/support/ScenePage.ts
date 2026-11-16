@@ -8,7 +8,6 @@ import type { Vector3Like } from "three";
 import type { SceneActorView } from "@jolly-pixel/asset.scene/client";
 import {
   dialog,
-  selectField,
   textField
 } from "@jolly-pixel/e2e";
 import {
@@ -282,12 +281,6 @@ export class ScenePage {
       .click();
     await picker.getByRole("button", { name: "Pick" }).click();
     await expect(picker).toBeHidden();
-  }
-
-  environmentSelect(
-    label: string
-  ): Locator {
-    return selectField(this.page.locator("jolly-scene-environment"), label);
   }
 
   async expand(

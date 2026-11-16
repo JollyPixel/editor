@@ -10,6 +10,7 @@ import {
 
 export * from "./audio.ts";
 export * from "./sceneFile.ts";
+export * from "./environmentFile.ts";
 export * from "./texture.ts";
 export * from "./createDefaultAssetLoaders.ts";
 export {

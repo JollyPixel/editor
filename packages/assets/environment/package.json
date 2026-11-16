@@ -1,0 +1,51 @@
+{
+  "name": "@jolly-pixel/asset.environment",
+  "description": "Environment assets",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/network/client.d.ts",
+      "default": "./dist/network/client.js"
+    }
+  },
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
+    "test-types": "tstyche --tsconfig ./test/tsconfig.json",
+    "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
+    "lint": "oxlint src test",
+    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JollyPixel/editor.git",
+    "directory": "packages/assets/environment"
+  },
+  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "test": "test"
+  },
+  "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/history": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@openally/emitt": "1.1.0",
+    "zod": "4.6.7"
+  }
+}

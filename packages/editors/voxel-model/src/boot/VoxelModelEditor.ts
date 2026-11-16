@@ -14,6 +14,7 @@ import {
   type ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
 import { voxelAnimationDocumentKind } from "@jolly-pixel/asset.voxel-animation/client";
+import { environmentOpener } from "@jolly-pixel/asset.environment/client";
 import {
   EditorRuntime,
   followKeyBindings,
@@ -126,6 +127,10 @@ export class VoxelModelEditor {
       pixels: texture.document,
       animationSets: sessionAnimationSets(session, kAnimationKind),
       view: new ViewSettingsStore(context.preferences),
+      environments: {
+        catalog: session.catalog,
+        open: environmentOpener(session)
+      },
       archives: context.archives,
       roomEnvironment,
       preferences: context.preferences,

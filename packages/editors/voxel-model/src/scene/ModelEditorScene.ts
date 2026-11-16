@@ -14,6 +14,10 @@ import {
   type FieldLockSource
 } from "@jolly-pixel/ui";
 import type { EditorArchives } from "@jolly-pixel/editor.host";
+import {
+  PreviewEnvironment,
+  type PreviewEnvironmentOptions
+} from "@jolly-pixel/asset.environment/client";
 import type {
   ModelDocument,
   VoxelModelRoom
@@ -84,6 +88,7 @@ export interface ModelEditorSceneOptions {
   animationSets: AnimationSetSource;
   archives: EditorArchives;
   view: ViewSettingsStore;
+  environments: PreviewEnvironmentOptions;
   roomEnvironment: Systems.BakedRoomEnvironment | null;
   preferences: Preferences;
   keyBindings: KeyBindingSettings<ModelAction>;
@@ -115,6 +120,7 @@ export interface ModelEditing {
   fields: FieldLockSource;
   previews: MaterialPreviews;
   view: ViewSettingsStore;
+  environment: PreviewEnvironment;
   shortcuts: ShortcutLabels<ModelAction>;
   teleportToPeer(clientId: string): void;
   frameBlocks(uuids: Iterable<string>): void;
@@ -208,11 +214,12 @@ export class ModelEditorScene extends Systems.Scene {
     });
 
     const pageTheme = new DocumentTheme();
+    const environment = new PreviewEnvironment(this.#options.environments);
     const lighting = new ViewLighting({
-      scene,
+      world: this.world,
       view,
-      environment: this.#options.roomEnvironment
-        ?.createRenderTarget(this.world.renderer.source) ?? null,
+      room: this.#options.roomEnvironment,
+      preview: environment,
       casters: () => blocks.visibleMeshes(),
       theme: pageTheme.mode
     });
@@ -331,6 +338,7 @@ export class ModelEditorScene extends Systems.Scene {
       () => collaboration.dispose(),
       () => textures.dispose(),
       () => lighting.dispose(),
+      () => environment.dispose(),
       () => this.world.renderer.off("compiled", invalidateShadow),
       unfollowLit,
       () => blocks.dispose(),
@@ -365,6 +373,7 @@ export class ModelEditorScene extends Systems.Scene {
       fields: collaboration.fields,
       previews,
       view,
+      environment,
       shortcuts: new ShortcutLabels(
         this.#options.keyboardLayout,
         this.#options.keyBindings

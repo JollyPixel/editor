@@ -15,6 +15,8 @@ import {
   ModelAssetLoader,
   ModelAssetType
 } from "./model.ts";
+import { EnvironmentFileAssetLoader } from "./environmentFile.ts";
+import { ENVIRONMENT_ASSET } from "../../core/systems/environment/EnvironmentFile.ts";
 import {
   SceneFileAssetLoader,
   SceneFileAssetType
@@ -39,6 +41,7 @@ export function createDefaultAssetLoaders(
   return new AssetLoaderRegistry()
     .register(ModelAssetType, new ModelAssetLoader(manager))
     .register(SceneFileAssetType, new SceneFileAssetLoader(manager))
+    .register(ENVIRONMENT_ASSET, new EnvironmentFileAssetLoader(manager))
     .register(FontAssetType, new FontAssetLoader(manager))
     .register(AUDIO_ASSET, new AudioAssetLoader(manager))
     .register(TEXTURE_ASSET, new TextureAssetLoader(manager, {

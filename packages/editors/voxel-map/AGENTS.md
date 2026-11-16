@@ -17,6 +17,9 @@
   action has a handler.
 - A Lit child never reads an injected property in its constructor, only from
   `connectedCallback` on.
+- Bloom comes from the View panel's Glow toggle (`EditorCamera.glow`). The
+  camera always sets its own post-processing, which wins over the graph's, so
+  a previewed environment's `glow` section has no effect here.
 
 ## Testing
 

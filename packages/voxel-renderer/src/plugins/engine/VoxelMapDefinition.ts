@@ -16,6 +16,7 @@ import {
 export interface VoxelMapSettings {
   castShadow: boolean;
   receiveShadow: boolean;
+  ambientOcclusion: number;
   collision: boolean;
   layers: Readonly<Record<string, boolean>>;
 }
@@ -32,6 +33,7 @@ export type VoxelMapAssets = {
 export const VOXEL_MAP_DEFAULTS = {
   castShadow: false,
   receiveShadow: false,
+  ambientOcclusion: 0,
   collision: false,
   layers: {}
 } as const satisfies VoxelMapSettings;
@@ -67,6 +69,10 @@ export class VoxelMapDefinition implements Systems.ComponentDefinition<
       receiveShadow: fields.boolean(
         "receiveShadow",
         VOXEL_MAP_DEFAULTS.receiveShadow
+      ),
+      ambientOcclusion: fields.number(
+        "ambientOcclusion",
+        VOXEL_MAP_DEFAULTS.ambientOcclusion
       ),
       collision: fields.boolean(
         "collision",
@@ -107,6 +113,7 @@ export class VoxelMapDefinition implements Systems.ComponentDefinition<
 
     lighting.castShadow = data.castShadow;
     lighting.receiveShadow = data.receiveShadow;
+    lighting.ambientOcclusion = data.ambientOcclusion;
     for (const layerName of [...layerVisibility.overrides.keys()]) {
       if (!Object.hasOwn(data.layers, layerName)) {
         layerVisibility.reset(layerName);

@@ -35,7 +35,9 @@ export function restoreSceneImages(
     for (const actor of before.actors) {
       entries.set(actor.id, actor);
     }
-    environment = before.environment ?? environment;
+    if (before.environment !== undefined) {
+      environment = before.environment;
+    }
   }
   const order = images.at(0)?.order ?? [...entries.keys()];
 

@@ -26,6 +26,7 @@ const kMap = { id: "map-1", kind: "voxelmap" };
 const kTexture = { id: "texture-1", kind: "pixelart" };
 const kScene = { id: "scene-2", kind: "scene" };
 const kCookie = { id: "texture-2", kind: "pixelart" };
+const kDusk = { id: "dusk-1", kind: "environment" } as const;
 
 function encodeJSON(
   value: unknown
@@ -109,30 +110,48 @@ describe("scene kind assets", () => {
         prefab: kScene,
         overrides: { components: { "room/lamp": { assets: { cookie: kCookie, glow: null } } } }
       })
-    ])));
+    ], kDusk)));
   }
 
-  test("lists each filled asset slot, override slot and prefab reference once as a dependency", () => {
+  test("lists its environment and each slot and prefab reference once as a dependency", () => {
     assert.deepEqual(
       sceneAssetKind().dependencies?.(referencingState()),
-      [kMap, kTexture, kScene, kCookie]
+      [kDusk, kMap, kTexture, kScene, kCookie]
     );
   });
 
   test("rebinds referenced asset ids", () => {
     const state = referencingState();
     sceneAssetKind().rebind?.(state, new Map([
+      ["dusk-1", "dusk-2"],
       ["map-1", "map-2"],
       ["scene-2", "scene-3"],
       ["texture-2", "texture-3"]
     ]));
 
     assert.deepEqual(state.dependencies(), [
+      { id: "dusk-2", kind: "environment" },
       { id: "map-2", kind: "voxelmap" },
       kTexture,
       { id: "scene-3", kind: "scene" },
       { id: "texture-3", kind: "pixelart" }
     ]);
+  });
+});
+
+describe("scene kind commands", () => {
+  test("replays a stored inline environment change as the default environment", () => {
+    const state = loadInto(encodeJSON(sceneFile([], kDusk)));
+    const { commands } = sceneAssetKind();
+    assert.ok(commands?.upcast);
+    const stored = commands.upcast({
+      action: "environment-changed",
+      environment: { fog: { kind: "none" } }
+    });
+
+    commands.apply(state, stored as never);
+
+    assert.equal(state.snapshot().environment, null);
   });
 });
 

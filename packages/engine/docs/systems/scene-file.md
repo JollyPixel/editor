@@ -36,7 +36,7 @@ Nothing is registered by default: a game ships only the definitions it uses.
 ```ts
 interface SceneFile {
   version: 1;
-  environment: SceneEnvironmentFile;
+  environment: { id: string; kind: "environment"; } | null;
   actors: SceneActorFile[];
 }
 
@@ -68,18 +68,11 @@ interface SceneComponentFile {
   assets: Record<string, AssetReferenceData | null>;
 }
 
-interface SceneEnvironmentFile {
-  background: ColorJSON | null;
-  environment: { kind: "none" | "room"; intensity: number; };
-  fog:
-    | { kind: "none"; }
-    | { kind: "linear"; color: ColorJSON; near: number; far: number; }
-    | { kind: "exp2"; color: ColorJSON; density: number; };
-}
-
 type ColorJSON = string; // "#rrggbb"
 ```
 
+- `environment` references an [environment](environment.md) asset; `null`
+  renders the `default` preset.
 - `actors` is in tree order: an actor follows its parent, and siblings follow
   their display order.
 - Ids are unique within one file. A built actor takes its file id as its
@@ -351,10 +344,14 @@ class FileScene<TContext> extends Scene<TContext> {
   asset is missing from the catalog, of another kind than its slot, or
   without a loader is skipped with a warning instead of failing the load.
   Its `assets` stay empty.
+- `assetsToLoad` also returns the referenced environment when the
+  coordinator can load it. When it cannot, the scene renders the `default`
+  preset.
 - `sceneId` is the asset id of `file`. Pass it so a prefab cycle back to this
   scene stops at once, as in the editor, instead of one level down.
 - `awake()` builds the actors in play mode and applies the environment.
-- `destroy()` resets the background, fog and environment map.
+- `destroy()` disposes the environment, as described in
+  [Environment](environment.md#threesceneenvironment).
 
 ## Saving a running scene
 
@@ -561,21 +558,6 @@ into a `SceneTransformFile`, rotation in degrees.
 
 Composes the local matrix `writeSceneTransform` would give a transform, into
 `target` or a new matrix.
-
-## Scene environment
-
-`world.sceneManager.graph.createEnvironment(world)` returns the backend's
-`SceneEnvironment`, which `FileScene` uses for the file's `environment`. The
-headless graph ignores it. The three.js one, `ThreeSceneEnvironment`, writes
-to the graph's `THREE.Scene`:
-
-- `apply(file)` sets the background color, the fog and the environment
-  intensity.
-- The `room` environment is
-  [BakedRoomEnvironment](baked-room-environment.md). It loads in the
-  background; the map is set once it
-  arrives and the world is invalidated. A failed load logs a warning.
-- `dispose()` clears the background, fog and environment map.
 
 ## Built-in definitions
 

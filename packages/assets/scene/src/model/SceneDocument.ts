@@ -28,7 +28,7 @@ import type {
   SceneAnchorJSON,
   SceneCommand,
   SceneComponentJSON,
-  SceneEnvironmentPatch,
+  SceneEnvironmentJSON,
   SceneSnapshot,
   SceneTransformJSON,
   SceneTransformPatch
@@ -266,7 +266,7 @@ export class SceneDocument extends CommandDocument<
   }
 
   changeEnvironment(
-    environment: SceneEnvironmentPatch
+    environment: SceneEnvironmentJSON
   ): boolean {
     return this.commit({
       action: "environment-changed",

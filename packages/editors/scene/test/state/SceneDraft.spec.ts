@@ -5,8 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import {
   ComponentChange,
-  SceneDocument,
-  SceneEnvironment
+  SceneDocument
 } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
@@ -20,7 +19,7 @@ import {
 function createDraft(
   document: SceneDocument
 ) {
-  const { binding, environments } = createProbeBinding(document);
+  const { binding } = createProbeBinding(document);
   const draft = new SceneDraft({
     document,
     view: binding,
@@ -29,7 +28,6 @@ function createDraft(
 
   return {
     binding,
-    environments,
     draft
   };
 }
@@ -113,25 +111,5 @@ describe("SceneDraft", () => {
     draft.commitComponent("probe", new ComponentChange({ data: { label: "c" } }));
     assert.deepEqual(stored().data, { label: "c" });
     assert.deepEqual(draft.component(stored()).data, { label: "c" });
-  });
-
-  test("previews an environment edit without storing it and discards it when the document resets", () => {
-    const document = new SceneDocument();
-    const stored = document.tree.environment;
-    const { draft, environments } = createDraft(document);
-
-    draft.editEnvironment({ background: "#ff0000" });
-    assert.deepEqual(environments.at(-1), {
-      ...stored,
-      background: "#ff0000"
-    });
-    assert.deepEqual(document.tree.environment, stored);
-
-    document.load({
-      environment: SceneEnvironment.create(),
-      actors: []
-    });
-
-    assert.deepEqual(draft.environment(), document.tree.environment);
   });
 });

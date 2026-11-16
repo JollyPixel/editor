@@ -70,7 +70,7 @@ export class SceneFootprint {
   }
 
   readonly actors: readonly SceneActorView[];
-  readonly environment: SceneEnvironmentView | null;
+  readonly environment: SceneEnvironmentView | undefined;
   readonly #command: SceneCommand;
   readonly #containers: readonly (string | null)[];
 
@@ -78,7 +78,7 @@ export class SceneFootprint {
     command: SceneCommand,
     actors: readonly SceneActorView[] = [],
     touched: readonly (string | null)[] = [],
-    environment: SceneEnvironmentView | null = null
+    environment?: SceneEnvironmentView
   ) {
     this.actors = actors;
     this.environment = environment;

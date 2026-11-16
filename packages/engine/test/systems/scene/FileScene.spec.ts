@@ -17,6 +17,10 @@ import {
   type ComponentDefinition,
   type ScenePrefabFile
 } from "../../../src/core/systems/scene/file/index.ts";
+import {
+  ENVIRONMENT_PRESETS,
+  type EnvironmentFile
+} from "../../../src/core/systems/environment/index.ts";
 import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
 import {
@@ -38,10 +42,18 @@ class ModelComponent extends ActorComponent {
   }
 }
 
+// CONSTANTS
+const kDusk: EnvironmentFile = {
+  ...ENVIRONMENT_PRESETS.default,
+  sky: { kind: "color", color: "#ff0000" },
+  fog: { kind: "linear", color: "#ffffff", near: 2, far: 40 },
+  glow: { strength: 1, radius: 0.4 }
+};
+
 function createModelSetup(
   logger?: Logger
 ) {
-  const assets = createSceneAssets(["knight", "mage"]);
+  const assets = createSceneAssets(["knight", "mage"], { dusk: kDusk });
   const { type } = assets.reference("knight");
   const definition: ComponentDefinition<null, ModelComponent, { model: string; }> = {
     type: "Model",
@@ -60,10 +72,7 @@ function createModelSetup(
         ]
       })
     ],
-    {
-      background: "#ff0000",
-      fog: { kind: "linear", color: "#ffffff", near: 2, far: 40 }
-    }
+    { id: "dusk", kind: "environment" }
   );
 
   return { ...createSceneSetup(assets, logger), assets, components, file };
@@ -101,13 +110,15 @@ describe("Systems.FileScene", () => {
     Scene.Id.clear();
   });
 
-  test("declares the assets of its components", () => {
+  test("declares the assets of its components and its environment", () => {
     const { assets, components, file } = createModelSetup();
 
     const scene = new FileScene("level", file, { components });
+    const [model, environment] = declaredAssets(scene);
 
-    assert.strictEqual(declaredAssets(scene).length, 1);
-    assert.ok(declaredAssets(scene)[0].equals(assets.reference("knight")));
+    assert.strictEqual(declaredAssets(scene).length, 2);
+    assert.ok(model.equals(assets.reference("knight")));
+    assert.deepEqual(environment.toJSON(), file.environment);
   });
 
   test("loads a deferred file when it prepares, then builds its actors from it", async() => {
@@ -248,7 +259,7 @@ describe("Systems.FileScene", () => {
     });
   }
 
-  test("applies its environment and resets it when unloaded", async() => {
+  test("applies its referenced environment and resets it when unloaded", async() => {
     const { sm, assets, components, file } = createModelSetup();
     const scene = new FileScene("level", file, { components });
     const load = sm.loadScene(scene);
@@ -263,10 +274,12 @@ describe("Systems.FileScene", () => {
     assert.strictEqual(background.getHexString(), "ff0000");
     assert.ok(fog instanceof THREE.Fog);
     assert.deepEqual([fog.near, fog.far], [2, 40]);
+    assert.strictEqual(typeof sm.graph.postProcessing, "function");
 
     sm.unloadScene(scene);
 
     assert.strictEqual(threeScene.background, null);
     assert.strictEqual(threeScene.fog, null);
+    assert.strictEqual(sm.graph.postProcessing, null);
   });
 });

@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
+import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import { VoxelRenderer } from "../../../src/plugins/engine/VoxelRenderer.ts";
@@ -44,6 +45,20 @@ describe("VoxelRenderer", () => {
     assert.strictEqual(renderer.view.root.parent, null);
     assert.strictEqual(dispose.mock.callCount(), 1);
     assert.strictEqual(actor.components.has(renderer), false);
+  });
+
+  it("shades block light as the scene environment asks", (context) => {
+    const actor = makeActor();
+    const renderer = new VoxelRenderer(actor);
+    context.mock.method(renderer.view, "tick", () => void 0);
+
+    actor.world.sceneManager.graph.environment = Systems.ENVIRONMENT_PRESETS.night;
+    renderer.update(0);
+
+    assert.strictEqual(renderer.view.lighting.blockLightFalloff, "focused");
+    assert.strictEqual(renderer.view.lighting.shadowFill, 1);
+
+    renderer.destroy();
   });
 
   it("builds and disposes its own document from the document options", (context) => {

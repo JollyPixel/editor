@@ -17,11 +17,9 @@ import {
   pow,
   smoothstep,
   step,
+  uniform,
   vec3
 } from "three/tsl";
-
-// Import Internal Dependencies
-import type { SkyBackdrop } from "./SkyBackdrop.ts";
 
 // CONSTANTS
 const kHorizon = "#1d2846";
@@ -43,8 +41,6 @@ const kGlowSharpness = 6;
 const kGlowStrength = 0.06;
 
 export class NightSky {
-  static readonly backdrop: SkyBackdrop = "dark";
-
   readonly node: THREE.Node;
 
   constructor(
@@ -53,7 +49,7 @@ export class NightSky {
     this.node = Fn(() => {
       const direction = normalize(positionLocal).toVar();
       const up = direction.y;
-      const facing = dot(direction, vec3(moonDirection)).toVar();
+      const facing = dot(direction, uniform(moonDirection)).toVar();
 
       const lower = mix(
         color(kHorizon),

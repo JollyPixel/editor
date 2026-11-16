@@ -87,6 +87,7 @@ describe("VoxelMapDefinition", () => {
       {
         castShadow: false,
         receiveShadow: false,
+        ambientOcclusion: 0,
         collision: false,
         layers: {}
       }
@@ -108,6 +109,7 @@ describe("VoxelMapDefinition", () => {
     const probe = makeMapSource();
     const { renderer, resolved } = createMap(probe.source, {
       castShadow: true,
+      ambientOcclusion: 0.75,
       layers: { Roof: false }
     });
     assert.ok(renderer);
@@ -117,6 +119,7 @@ describe("VoxelMapDefinition", () => {
     assert.deepStrictEqual(probe.attached, [renderer.view]);
     assert.strictEqual(renderer.view.lighting.castShadow, true);
     assert.strictEqual(renderer.view.lighting.receiveShadow, false);
+    assert.strictEqual(renderer.view.lighting.ambientOcclusion, 0.75);
     assert.deepStrictEqual(
       [...renderer.view.layerVisibility.overrides],
       [["Roof", false]]
@@ -155,10 +158,11 @@ describe("VoxelMapDefinition", () => {
     assert.deepStrictEqual(colliding, [actors[0]]);
   });
 
-  it("apply replaces the layer overrides and shadow flags", () => {
+  it("apply replaces the layer overrides, shadow flags and ambient occlusion", () => {
     const { definition, renderer } = createMap(makeMapSource().source, {
       castShadow: true,
       receiveShadow: true,
+      ambientOcclusion: 0.5,
       layers: { Ground: false, Roof: false }
     });
     assert.ok(renderer);
@@ -169,6 +173,7 @@ describe("VoxelMapDefinition", () => {
 
     assert.strictEqual(renderer.view.lighting.castShadow, false);
     assert.strictEqual(renderer.view.lighting.receiveShadow, false);
+    assert.strictEqual(renderer.view.lighting.ambientOcclusion, 0);
     assert.deepStrictEqual(
       [...renderer.view.layerVisibility.overrides],
       [["Roof", true]]

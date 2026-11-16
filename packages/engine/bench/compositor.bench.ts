@@ -30,10 +30,10 @@ const suite = defineSuite("engine / CameraCompositor#render", (bench) => {
 
   bench
     .add("one fullscreen camera", () => {
-      single.render(scene, canvas);
+      single.render(scene, canvas, null);
     })
     .add("three cameras with viewports", () => {
-      split.render(scene, canvas);
+      split.render(scene, canvas, null);
     });
 });
 

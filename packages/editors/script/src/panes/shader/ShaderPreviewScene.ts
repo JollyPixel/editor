@@ -54,24 +54,9 @@ export class ShaderPreviewScene extends Systems.Scene {
 
   override awake(): void {
     const { world } = this;
-    const scene = world.sceneManager.graph.scene;
-
-    const hemisphere = new THREE.HemisphereLight("#dfe8ff", "#3b3328", 1.2);
-    const key = new THREE.DirectionalLight("#ffffff", 2);
-    key.position.set(4, 8, 5);
-    scene.add(hemisphere, key);
 
     const environment = world.sceneManager.graph.createEnvironment(world);
-    environment.apply({
-      background: null,
-      environment: {
-        kind: "room",
-        intensity: 0.6
-      },
-      fog: {
-        kind: "none"
-      }
-    });
+    environment.apply(Systems.ENVIRONMENT_PRESETS.studio);
 
     this.#camera = world
       .createActor("preview-camera")
@@ -80,7 +65,6 @@ export class ShaderPreviewScene extends Systems.Scene {
     this.#present();
 
     const teardown = this.#teardown;
-    teardown.defer(() => scene.remove(hemisphere, key));
     teardown.defer(() => environment.dispose());
     teardown.defer(world.keepAlive(() => this.#shader !== null));
     teardown.defer(followCameraPreferences(this.#camera, this.#options.preferences));

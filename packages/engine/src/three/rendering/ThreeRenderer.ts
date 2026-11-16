@@ -265,7 +265,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents> implements Rende
       return;
     }
 
-    this.#compositor.render(graph.scene, canvas);
+    this.#compositor.render(graph.scene, canvas, graph.postProcessing);
     this.emit("draw", { source: this.webGPURenderer });
   }
 

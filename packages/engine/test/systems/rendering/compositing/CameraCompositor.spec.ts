@@ -29,7 +29,7 @@ describe("Systems.Rendering.CameraCompositor", () => {
       compositor.add(component);
     }
 
-    compositor.render(scene, canvas);
+    compositor.render(scene, canvas, null);
 
     return renderer;
   }
@@ -56,7 +56,7 @@ describe("Systems.Rendering.CameraCompositor", () => {
     compositor.add(second);
 
     first.depth = 2;
-    compositor.render(scene, canvas);
+    compositor.render(scene, canvas, null);
 
     assert.deepStrictEqual(
       renderer.render.mock.calls.map((call) => call.arguments[1]),

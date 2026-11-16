@@ -2,7 +2,6 @@
 import type { NetworkCommandHeader } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import { SceneEnvironment } from "#src/model/changes/SceneEnvironment.ts";
 import { SceneTransform } from "#src/model/changes/SceneTransform.ts";
 import {
   SceneTree,
@@ -12,6 +11,7 @@ import type { SceneFile } from "#src/asset/scene.ts";
 import type {
   AssetReferenceJSON,
   JSONObject,
+  SceneEnvironmentJSON,
   SceneActorJSON,
   SceneCommand,
   SceneComponentJSON,
@@ -50,20 +50,22 @@ export function component(
 }
 
 export function snapshot(
-  actors: SceneActorJSON[]
+  actors: SceneActorJSON[],
+  environment: SceneEnvironmentJSON = null
 ): SceneSnapshot {
   return {
-    environment: SceneEnvironment.create(),
+    environment,
     actors
   };
 }
 
 export function sceneFile(
-  actors: SceneActorJSON[]
+  actors: SceneActorJSON[],
+  environment: SceneEnvironmentJSON = null
 ): SceneFile {
   return {
     version: 1,
-    ...snapshot(actors)
+    ...snapshot(actors, environment)
   };
 }
 

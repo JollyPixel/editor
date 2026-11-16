@@ -7,7 +7,10 @@ import {
 } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
-import { SceneLighting } from "../../scene/environment/SceneLighting.ts";
+import {
+  STUDIO_AMBIENT,
+  STUDIO_SUN
+} from "../../scene/environment/viewEnvironments.ts";
 
 // CONSTANTS
 const kCameraFov = 45;
@@ -46,7 +49,14 @@ export class PreviewStage {
   ) {
     this.#renderer = options.renderer;
     this.#environmentMap = options.environmentMap;
-    this.#scene.add(...new SceneLighting().lights);
+    const sun = new THREE.DirectionalLight(STUDIO_SUN.color, STUDIO_SUN.intensity);
+    sun.position.set(10, 20, 10);
+    const ambient = new THREE.HemisphereLight(
+      STUDIO_AMBIENT.skyColor,
+      STUDIO_AMBIENT.groundColor,
+      STUDIO_AMBIENT.intensity
+    );
+    this.#scene.add(ambient, sun);
     this.#camera.position.set(0, 0, kCameraZ);
   }
 

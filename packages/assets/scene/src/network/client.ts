@@ -3,6 +3,7 @@ export * from "./sceneDocumentKind.ts";
 export * from "../model/index.ts";
 export {
   SCENE_ASSET,
+  SCENE_ENVIRONMENT_KIND,
   SCENE_EXTENSION,
   SCENE_KIND,
   SCENE_SELECTION_PRESENCE_KEY
