@@ -27,6 +27,13 @@ interface ShaderExports {
   uniforms: ShaderUniformValues;
 }
 
+// CONSTANTS
+const kFrameNodes: ReadonlySet<THREE.Node> = new Set([
+  TSL.time,
+  TSL.deltaTime,
+  TSL.frameId
+]);
+
 export class ShaderModule implements Shader {
   static async load(
     code: string,
@@ -79,6 +86,7 @@ export class ShaderModule implements Shader {
 
 export class ShaderModuleMaterial implements ShadedMaterial {
   readonly material: THREE.NodeMaterial;
+  readonly animated: boolean;
 
   #inputs: ReadonlyMap<string, UniformInput>;
 
@@ -87,6 +95,7 @@ export class ShaderModuleMaterial implements ShadedMaterial {
     inputs: ReadonlyMap<string, UniformInput>
   ) {
     this.material = material;
+    this.animated = readsFrameNodes(material);
     this.#inputs = inputs;
   }
 
@@ -100,6 +109,30 @@ export class ShaderModuleMaterial implements ShadedMaterial {
       }
     }
   }
+}
+
+function readsFrameNodes(
+  material: THREE.NodeMaterial
+): boolean {
+  const pending = Object.values(material).filter(isNode);
+  const visited = new Set<THREE.Node>();
+  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+    if (kFrameNodes.has(node)) {
+      return true;
+    }
+    if (!visited.has(node)) {
+      visited.add(node);
+      pending.push(...node.getChildren());
+    }
+  }
+
+  return false;
+}
+
+function isNode(
+  value: unknown
+): value is THREE.Node {
+  return value instanceof THREE.Node;
 }
 
 async function linkImports(

@@ -86,6 +86,9 @@ export class MeshRenderer<
         this.#shading.material
       );
     this.addTeardown(() => this.#surface.dispose());
+    if (this.#shading?.animated) {
+      this.addTeardown(actor.world.keepAlive(() => true));
+    }
   }
 
   get threeMesh(): THREE.Mesh<THREE.BufferGeometry, THREE.Material> {

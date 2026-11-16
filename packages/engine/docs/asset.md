@@ -143,9 +143,14 @@ interface Shader {
 
 interface ShadedMaterial {
   readonly material: THREE.Material;
+  readonly animated: boolean;
   assign(values: Readonly<Record<string, ShaderUniformValue>>): void;
 }
 ```
+
+`animated` is true when the material changes every frame, such as one that
+reads `time`. `MeshRenderer` and `ModelRenderer` keep the world rendering
+while they hold an animated material.
 
 `createMaterial` builds a new material on each call; a uniform missing from
 `values` keeps its default. `assign` changes the uniforms it is given on that

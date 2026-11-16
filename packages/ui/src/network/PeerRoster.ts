@@ -2,7 +2,6 @@
 import { html } from "lit";
 import type {
   Room,
-  RoomPeerEvent,
   RoomPeerPresenceEvent
 } from "@jolly-pixel/network/client";
 
@@ -10,6 +9,7 @@ import type {
 import type { LogQueue } from "../feedback/LogQueue.ts";
 import type { PresencePeer } from "../peer/PresencePeer.ts";
 import {
+  groupPeers,
   peerActivityLabel,
   roomPeers
 } from "./peerProfile.ts";
@@ -29,25 +29,34 @@ export class PeerRoster {
   ) => void;
   #log: LogQueue | undefined;
   #known = new Map<string, PresencePeer>();
+  #people: ReadonlyMap<string, PresencePeer> = new Map();
 
-  #publish = (): void => {
+  #publish = (): ReadonlyMap<string, PresencePeer> => {
+    const previous = this.#people;
     const peers = roomPeers(this.#room);
     this.#known = new Map(peers.map((peer) => [peer.clientId, peer]));
-    this.#publishPeers(peers);
+    this.#people = groupPeers(peers);
+    this.#publishPeers([...this.#people.values()]);
+
+    return previous;
   };
 
-  #onPeerJoined = (
-    event: RoomPeerEvent
-  ): void => {
-    this.#publish();
-    this.#announce(event.clientId, "joined");
+  #onPeerJoined = (): void => {
+    const before = this.#publish();
+    for (const [key, person] of this.#people) {
+      if (!before.has(key)) {
+        this.#announce(person, "joined");
+      }
+    }
   };
 
-  #onPeerLeft = (
-    event: RoomPeerEvent
-  ): void => {
-    this.#announce(event.clientId, "left");
-    this.#publish();
+  #onPeerLeft = (): void => {
+    const before = this.#publish();
+    for (const [key, person] of before) {
+      if (!this.#people.has(key)) {
+        this.#announce(person, "left");
+      }
+    }
   };
 
   #onPeerPresence = (
@@ -87,20 +96,16 @@ export class PeerRoster {
     this.#room.off("peer-presence", this.#onPeerPresence);
 
     this.#known.clear();
+    this.#people = new Map();
     this.#publishPeers([]);
   }
 
   #announce(
-    clientId: string,
+    person: PresencePeer,
     verb: "joined" | "left"
   ): void {
-    const peer = this.#known.get(clientId);
-    if (this.#log === undefined || peer === undefined || peer.self === true) {
-      return;
-    }
-
-    this.#log.push(html`<b style="color: ${peer.color}">${
-      peer.displayName
+    this.#log?.push(html`<b style="color: ${person.color}">${
+      person.displayName
     }</b> has ${verb}`);
   }
 }

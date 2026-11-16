@@ -37,6 +37,22 @@ export default function material(inputs) {
 }
 `;
 
+const kRipples = `import { color, mix, sin, time, uv } from "three/tsl";
+import { MeshBasicNodeMaterial } from "three/webgpu";
+
+export const uniforms = { speed: 1 };
+
+export default function material({ speed }) {
+  const material = new MeshBasicNodeMaterial({ transparent: true });
+  const phase = uv().x.add(uv().y);
+  const wave = sin(phase.mul(8).add(time.mul(speed))).mul(0.5).add(0.5);
+  material.colorNode = mix(color("#2468b4"), color("#4fd1c5"), phase);
+  material.opacityNode = phase.mul(wave);
+
+  return material;
+}
+`;
+
 describe("loadShader", () => {
   test("builds a new node material from a TypeScript TSL module on each call", async() => {
     const shader = await loadShader(kWater, kName);
@@ -60,6 +76,14 @@ describe("loadShader", () => {
     assert.strictEqual(second.tint.value.getHexString(), "2f6fd6");
     assert.notStrictEqual(first.tint, second.tint);
     assert.notStrictEqual(first.tint.value, shader.uniforms.tint);
+  });
+
+  test("marks a material animated when any of its nodes reads time", async() => {
+    const ripples = await loadShader(kRipples, kName);
+    const water = await loadShader(kWater, kName);
+
+    assert.strictEqual(ripples.createMaterial().animated, true);
+    assert.strictEqual(water.createMaterial().animated, false);
   });
 
   test("assigns new uniform values to a live material, leaving the others", async() => {

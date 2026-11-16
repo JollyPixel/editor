@@ -90,11 +90,25 @@ jolly-scope {
   outline: none;
 }
 
-#shader-preview jolly-select {
+#shader-preview .preview-controls {
   position: absolute;
   inset-block-start: var(--jolly-space-2);
   inset-inline-start: var(--jolly-space-2);
+  display: flex;
+  gap: var(--jolly-space-2);
+}
+
+#shader-preview jolly-select {
+  border-radius: var(--jolly-radius-sm);
+  background: var(--jolly-surface-raised);
+}
+
+#shader-preview .preview-geometry {
   width: 14ch;
+}
+
+#shader-preview .preview-size {
+  width: 8ch;
 }
 
 #shader-preview jolly-shader-output {

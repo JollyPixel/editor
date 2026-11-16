@@ -3,8 +3,10 @@ export * from "./PeerMarkTracker.ts";
 export * from "./PeerRoster.ts";
 export {
   formatPeerActivity,
+  localPeer,
   markedPeers,
   peerProfileColor,
+  personKey,
   toPeerProfileMetadata,
   toPresencePeer,
   type PeerProfileOptions

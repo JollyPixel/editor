@@ -25,6 +25,7 @@ describe("shaderUniformRows", () => {
       createMaterial: () => {
         return {
           material: new THREE.MeshBasicMaterial(),
+          animated: false,
           assign: () => undefined
         };
       }

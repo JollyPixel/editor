@@ -63,6 +63,17 @@ such as `"link"`, becomes the badge "via link". The member's `presence`
 gives the `activity`, parsed with `parsePeerActivity` from
 `@jolly-pixel/network` and formatted with `formatPeerActivity`.
 
+### `localPeer(room): PresencePeer`
+
+The room's own connection as a `PresencePeer`, built like `toPresencePeer`
+from `room.clientId` and `room.profile`, with `self: true`.
+
+### `personKey(peer): string`
+
+The person behind a connection, from any object with a `clientId` and an
+optional `peerId`: the `peerId`, or the `clientId` without one. A signed-in
+account shares one `peerId` across its tabs; a guest gets a new one per tab.
+
 ### `formatPeerActivity(activity: PeerActivity): string`
 
 A peer activity as one line: the label, followed by " · 40%" when it has a

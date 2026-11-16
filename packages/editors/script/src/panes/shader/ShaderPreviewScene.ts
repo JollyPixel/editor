@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
 import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
 import {
+  MESH_GEOMETRY_DEFAULTS,
   MeshRenderer,
   OrbitFlyCamera,
   Systems,
   type Actor,
   type MeshGeometry,
+  type MeshGeometryKind,
   type Shader
 } from "@jolly-pixel/engine";
 import type { EditorContext } from "@jolly-pixel/editor.host";
@@ -14,12 +16,17 @@ import * as THREE from "three/webgpu";
 
 export interface ShaderPreviewSceneOptions {
   preferences: EditorContext["preferences"];
-  geometry: MeshGeometry;
+  geometry: MeshGeometryKind;
 }
 
 export interface ShaderBuild {
   fragment: string;
   vertex: string;
+}
+
+interface PreviewShape {
+  geometry: MeshGeometry;
+  rotation: THREE.Euler;
 }
 
 // CONSTANTS
@@ -36,11 +43,22 @@ const kCameraPreset = {
   pivotNudgeStep: 0.25,
   pivotMarkerSize: 0.05
 } as const;
+const kStanding = new THREE.Euler();
+const kPlaneShape: PreviewShape = {
+  geometry: {
+    ...MESH_GEOMETRY_DEFAULTS.plane,
+    width: 6,
+    height: 6
+  },
+  rotation: new THREE.Euler(-Math.PI / 2, 0, 0)
+};
 
 export class ShaderPreviewScene extends Systems.Scene {
-  #options: ShaderPreviewSceneOptions;
+  #preferences: EditorContext["preferences"];
   #teardown = new Teardown();
   #actor: Actor | null = null;
+  #shape: PreviewShape;
+  #size = 1;
   #camera: OrbitFlyCamera | null = null;
   #renderer: MeshRenderer<unknown> | null = null;
   #shader: Shader | null = null;
@@ -49,7 +67,8 @@ export class ShaderPreviewScene extends Systems.Scene {
     options: ShaderPreviewSceneOptions
   ) {
     super("shader-preview");
-    this.#options = options;
+    this.#preferences = options.preferences;
+    this.#shape = previewShape(options.geometry);
   }
 
   override awake(): void {
@@ -66,8 +85,7 @@ export class ShaderPreviewScene extends Systems.Scene {
 
     const teardown = this.#teardown;
     teardown.defer(() => environment.dispose());
-    teardown.defer(world.keepAlive(() => this.#shader !== null));
-    teardown.defer(followCameraPreferences(this.#camera, this.#options.preferences));
+    teardown.defer(followCameraPreferences(this.#camera, this.#preferences));
   }
 
   async build(
@@ -106,10 +124,29 @@ export class ShaderPreviewScene extends Systems.Scene {
   }
 
   reshape(
-    geometry: MeshGeometry
+    geometry: MeshGeometryKind
   ): void {
-    this.#options.geometry = geometry;
-    this.#present();
+    this.#shape = previewShape(geometry);
+    this.#renderer?.configure({
+      geometry: this.#shape.geometry
+    });
+    this.#place();
+  }
+
+  rescale(
+    size: number
+  ): void {
+    const camera = this.#camera;
+    if (camera !== null) {
+      const ratio = size / this.#size;
+      camera.worldScale = size;
+      camera.teleport({
+        position: camera.camera.getWorldPosition(new THREE.Vector3()).multiplyScalar(ratio),
+        quaternion: camera.camera.getWorldQuaternion(new THREE.Quaternion())
+      });
+    }
+    this.#size = size;
+    this.#place();
   }
 
   #present(): void {
@@ -119,9 +156,24 @@ export class ShaderPreviewScene extends Systems.Scene {
 
     this.#renderer?.destroy();
     this.#renderer = this.#actor.addComponentAndGet(MeshRenderer, {
-      geometry: this.#options.geometry,
+      geometry: this.#shape.geometry,
       shader: this.#shader
     });
+    this.#place();
+  }
+
+  #place(): void {
+    if (this.#actor === null) {
+      return;
+    }
+
+    const { local } = this.#actor.transform;
+    local.eulerAngles = this.#shape.rotation;
+    local.scale = {
+      x: this.#size,
+      y: this.#size,
+      z: this.#size
+    };
     this.world.invalidate();
   }
 
@@ -130,4 +182,17 @@ export class ShaderPreviewScene extends Systems.Scene {
     this.#renderer?.destroy();
     super.destroy();
   }
+}
+
+function previewShape(
+  kind: MeshGeometryKind
+): PreviewShape {
+  if (kind === "plane") {
+    return kPlaneShape;
+  }
+
+  return {
+    geometry: MESH_GEOMETRY_DEFAULTS[kind],
+    rotation: kStanding
+  };
 }
