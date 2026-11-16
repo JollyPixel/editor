@@ -43,7 +43,7 @@ const roster = new PeerRoster({
 - `jolly-presence-stack` is a row of avatars for a viewport corner.
   `jolly-presence` is the same list with names, for a panel.
 - The local peer comes first, then remote peers by `clientId`, so every client
-  shows the same order.
+  shows the same order. A person with several tabs open appears once.
 - With a `LogQueue` as `log`, the roster writes a "has joined" or "has left"
   line to a `jolly-log`.
 - With `selectable`, clicking a remote avatar emits `jolly-peer-select`. What

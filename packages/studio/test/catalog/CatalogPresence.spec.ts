@@ -45,6 +45,20 @@ describe("CatalogPresence", () => {
     assert.deepEqual(occupants(presence.occupancy, "scene-1"), ["Builder (editing)"]);
   });
 
+  test("leaves out the other connections of the local person", () => {
+    const harness = chatRoomHarness("write", { username: "Ada", peerId: "ada" });
+    using presence = new CatalogPresence(harness.room);
+
+    harness.addPeer("other-tab", { username: "Ada", peerId: "ada" }, {
+      [OPEN_ASSETS_KEY]: { open: ["map-1"], focused: "map-1" }
+    });
+    harness.addPeer("bob", { username: "Bob", peerId: "bob" }, {
+      [OPEN_ASSETS_KEY]: { open: ["map-1"], focused: null }
+    });
+
+    assert.deepEqual(occupants(presence.occupancy, "map-1"), ["Bob"]);
+  });
+
   test("follows a peer that changes tabs or leaves", () => {
     const harness = chatRoomHarness();
     using presence = new CatalogPresence(harness.room);

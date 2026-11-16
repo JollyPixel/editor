@@ -34,10 +34,15 @@ const roster = new PeerRoster({
 
 - `peers` lists the local peer first (`self: true`), then remote peers by
   `clientId`.
+- `peers` lists each person once, grouped by
+  [`personKey`](./peer/identity.md#personkey-peer-string). The
+  local person's other tabs fold into the `self` entry. A remote person keeps
+  their lowest `clientId` and the activity of the first tab that reports one.
 - Republishes on `sync`, `peer-joined`, `peer-left` and `peer-profile`,
   and on `peer-presence` only when a remote peer's activity label changed.
-- With `log`, pushes a "has joined" or "has left" entry per remote peer.
-  Peers already present at `sync`, and observers, are not announced.
+- With `log`, pushes a "has joined" entry for a person's first tab and a
+  "has left" entry after their last one. Peers already present at `sync`,
+  observers, and the local person's other tabs are not announced.
 - `dispose()` unsubscribes and publishes an empty list.
 
 ## `PeerMarkTracker`

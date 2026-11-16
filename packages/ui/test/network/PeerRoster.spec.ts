@@ -8,64 +8,13 @@ import {
   test
 } from "node:test";
 
-// Import Third-party Dependencies
-import { render } from "lit";
-
 // Import Internal Dependencies
-import { LogQueue } from "../../src/feedback/LogQueue.ts";
-import type { PresencePeer } from "../../src/peer/PresencePeer.ts";
-import { PeerRoster } from "../../src/network/PeerRoster.ts";
 import { peerProfileColor } from "../../src/network/peerProfile.ts";
 import {
-  createRoomHarness,
-  type RoomHarness
-} from "../helpers/network/roomHarness.ts";
-
-// CONSTANTS
-const kLocalProfile = {
-  username: "Ada",
-  peerId: "local-peer"
-};
-
-interface RosterHarness extends RoomHarness {
-  roster: PeerRoster;
-  log: LogQueue;
-  peers: () => readonly PresencePeer[];
-}
-
-function createHarness(
-  options: { log?: boolean; } = {}
-): RosterHarness {
-  const harness = createRoomHarness(kLocalProfile);
-  const log = new LogQueue();
-  let peers: readonly PresencePeer[] = [];
-
-  const roster = new PeerRoster({
-    room: harness.room,
-    publish: (next) => {
-      peers = next;
-    },
-    log: options.log === false ? undefined : log
-  });
-
-  return {
-    ...harness,
-    roster,
-    log,
-    peers: () => peers
-  };
-}
-
-function readMessages(
-  log: LogQueue
-): string[] {
-  return log.entries.map((entry) => {
-    const container = document.createElement("div");
-    render(entry.content, container);
-
-    return container.textContent?.trim() ?? "";
-  });
-}
+  LOCAL_PROFILE,
+  createRosterHarness,
+  readMessages
+} from "../helpers/network/rosterHarness.ts";
 
 describe("PeerRoster", () => {
   beforeEach(() => {
@@ -77,13 +26,13 @@ describe("PeerRoster", () => {
   });
 
   test("publishes the local peer alone, keyed by its connection, before anyone joins", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
 
     assert.deepStrictEqual(harness.peers(), [
       {
         clientId: harness.room.clientId,
         displayName: "Ada",
-        color: peerProfileColor("ignored", kLocalProfile),
+        color: peerProfileColor("ignored", LOCAL_PROFILE),
         peerId: "local-peer",
         avatar: undefined,
         self: true
@@ -92,7 +41,7 @@ describe("PeerRoster", () => {
   });
 
   test("lists the members carried by the join sync", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "a" } });
 
     harness.emit("sync");
@@ -102,7 +51,7 @@ describe("PeerRoster", () => {
   });
 
   test("keeps the local peer first and sorts the remote ones", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-z", { profile: { username: "Zoe", peerId: "z" } });
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "a" } });
 
@@ -119,7 +68,7 @@ describe("PeerRoster", () => {
   });
 
   test("colors a peer from its stamped peerId, not its connection id", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "shared" } });
 
     harness.emit("peer-joined", { clientId: "client-a" });
@@ -131,7 +80,7 @@ describe("PeerRoster", () => {
   });
 
   test("keys a remote avatar on the stamped peerId and carries its image", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", {
       profile: {
         username: "Alan",
@@ -147,7 +96,7 @@ describe("PeerRoster", () => {
   });
 
   test("leaves the peerId and avatar of an unstamped peer to the presence defaults", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", { profile: {} });
 
     harness.emit("peer-joined", { clientId: "client-a" });
@@ -157,7 +106,7 @@ describe("PeerRoster", () => {
   });
 
   test("reads a peer that joined without an identity as a guest", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", { profile: {} });
 
     harness.emit("peer-joined", { clientId: "client-a" });
@@ -166,7 +115,7 @@ describe("PeerRoster", () => {
   });
 
   test("drops a peer that left", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "a" } });
     harness.emit("peer-joined", { clientId: "client-a" });
 
@@ -177,7 +126,7 @@ describe("PeerRoster", () => {
   });
 
   test("announces a peer that joined", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "a" } });
 
     harness.emit("peer-joined", { clientId: "client-a" });
@@ -186,10 +135,10 @@ describe("PeerRoster", () => {
   });
 
   test("leaves an observer out of the roster and never announces it", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("preview", {
       profile: {
-        ...kLocalProfile,
+        ...LOCAL_PROFILE,
         observer: true
       }
     });
@@ -206,7 +155,7 @@ describe("PeerRoster", () => {
   });
 
   test("announces a peer that left under its last known name", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "a" } });
     harness.emit("peer-joined", { clientId: "client-a" });
 
@@ -220,7 +169,7 @@ describe("PeerRoster", () => {
   });
 
   test("says nothing for the members carried by the join sync", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "a" } });
 
     harness.emit("sync");
@@ -229,7 +178,7 @@ describe("PeerRoster", () => {
   });
 
   test("says nothing about the local peer", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
 
     harness.emit("peer-joined", { clientId: harness.room.clientId });
 
@@ -237,7 +186,7 @@ describe("PeerRoster", () => {
   });
 
   test("tracks peers without a log", () => {
-    const harness = createHarness({ log: false });
+    const harness = createRosterHarness({ log: false });
     harness.addPeer("client-a", { profile: { username: "Alan", peerId: "a" } });
 
     harness.emit("peer-joined", { clientId: "client-a" });
@@ -246,7 +195,7 @@ describe("PeerRoster", () => {
   });
 
   test("empties the roster and unsubscribes on dispose", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness();
 
     harness.roster.dispose();
 

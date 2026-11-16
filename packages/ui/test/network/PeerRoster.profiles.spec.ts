@@ -6,40 +6,12 @@ import {
 } from "node:test";
 
 // Import Internal Dependencies
-import type { PresencePeer } from "../../src/peer/PresencePeer.ts";
-import { PeerRoster } from "../../src/network/PeerRoster.ts";
 import { peerProfileColor } from "../../src/network/peerProfile.ts";
-import {
-  createRoomHarness,
-  type RoomHarness
-} from "../helpers/network/roomHarness.ts";
-
-interface ProfileHarness extends RoomHarness {
-  peers: () => readonly PresencePeer[];
-}
-
-function createHarness(): ProfileHarness {
-  const harness = createRoomHarness({
-    username: "Ada",
-    peerId: "local-peer"
-  });
-  let peers: readonly PresencePeer[] = [];
-  new PeerRoster({
-    room: harness.room,
-    publish: (next) => {
-      peers = next;
-    }
-  });
-
-  return {
-    ...harness,
-    peers: () => peers
-  };
-}
+import { createRosterHarness } from "../helpers/network/rosterHarness.ts";
 
 describe("PeerRoster profiles", () => {
   test("follows the local username and avatar of the profile the room admitted", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness({ log: false });
 
     harness.admitProfile({
       username: "Ada Lovelace",
@@ -60,7 +32,7 @@ describe("PeerRoster profiles", () => {
   });
 
   test("republishes a remote peer whose profile changed", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness({ log: false });
     harness.addPeer("client-a", {
       profile: {
         username: "Alan",
@@ -86,7 +58,7 @@ describe("PeerRoster profiles", () => {
   });
 
   test("colors the local peer from the peer id the room admitted, as remote peers do", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness({ log: false });
 
     harness.admitProfile({
       username: "Guest",
@@ -103,7 +75,7 @@ describe("PeerRoster profiles", () => {
   });
 
   test("republishes on a presence change only when a peer's activity changed", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness({ log: false });
     const profile = {
       username: "Builder",
       peerId: "b"
@@ -137,7 +109,7 @@ describe("PeerRoster profiles", () => {
   });
 
   test("badges every peer that joined through a share link, the local one included", () => {
-    const harness = createHarness();
+    const harness = createRosterHarness({ log: false });
     const guest = {
       username: "Guest",
       peerId: "guest-peer",
@@ -145,7 +117,12 @@ describe("PeerRoster profiles", () => {
       via: "link"
     };
     harness.admitProfile(guest);
-    harness.addPeer("client-g", { profile: guest });
+    harness.addPeer("client-g", {
+      profile: {
+        ...guest,
+        peerId: "other-guest-peer"
+      }
+    });
     harness.addPeer("client-a", {
       profile: {
         username: "Alan",

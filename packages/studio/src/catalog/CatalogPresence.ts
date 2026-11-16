@@ -8,7 +8,11 @@ import {
   type OpenAssets
 } from "@jolly-pixel/server";
 import { openAssetsChannel } from "@jolly-pixel/server/client";
-import { toPresencePeer } from "@jolly-pixel/ui/network";
+import {
+  localPeer,
+  personKey,
+  toPresencePeer
+} from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import {
@@ -59,11 +63,17 @@ export class CatalogPresence extends EventTarget implements Disposable {
   }
 
   readonly #refresh = (): void => {
+    const local = personKey(localPeer(this.#room));
     const visits: AssetVisit[] = [];
     for (const [clientId, assets] of this.#channel.values) {
       const member = this.#room.peers.get(clientId);
-      if (member !== undefined) {
-        visits.push([toPresencePeer(member), assets]);
+      if (member === undefined) {
+        continue;
+      }
+
+      const peer = toPresencePeer(member);
+      if (personKey(peer) !== local) {
+        visits.push([peer, assets]);
       }
     }
     this.#occupancy = new AssetOccupancy(visits);

@@ -4,6 +4,7 @@ import type {
   PresencePeer,
   TreeBadge
 } from "@jolly-pixel/ui";
+import { personKey } from "@jolly-pixel/ui/network";
 
 // CONSTANTS
 const kMaxBadges = 3;
@@ -42,8 +43,11 @@ export class AssetOccupancy {
         }
       }
     }
-    for (const occupants of this.#byAsset.values()) {
-      occupants.sort(compareOccupants);
+    for (const [assetId, occupants] of this.#byAsset) {
+      this.#byAsset.set(
+        assetId,
+        onePerPerson(occupants.sort(compareOccupants))
+      );
     }
   }
 
@@ -110,4 +114,20 @@ function compareOccupants(
 ): number {
   return Number(right.focused) - Number(left.focused) ||
     left.peer.displayName.localeCompare(right.peer.displayName);
+}
+
+function onePerPerson(
+  occupants: AssetOccupant[]
+): AssetOccupant[] {
+  const seen = new Set<string>();
+
+  return occupants.filter(({ peer }) => {
+    const key = personKey(peer);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+
+    return true;
+  });
 }

@@ -21,6 +21,16 @@ function peer(
   };
 }
 
+function aliceTab(
+  clientId: string
+): PresencePeer {
+  return {
+    ...peer("Alice"),
+    clientId,
+    peerId: "alice"
+  };
+}
+
 describe("AssetOccupancy", () => {
   test("badges three occupants at most, faded where the asset is not focused", () => {
     const occupancy = new AssetOccupancy([
@@ -45,6 +55,26 @@ describe("AssetOccupancy", () => {
       }
     ]);
     assert.deepEqual(occupancy.badges("model-1"), []);
+  });
+
+  test("lists a person once per asset across connections, editing when any connection focuses it", () => {
+    const occupancy = new AssetOccupancy([
+      [aliceTab("tab-1"), { open: ["map-1", "model-1"], focused: null }],
+      [aliceTab("tab-2"), { open: ["map-1"], focused: "map-1" }]
+    ]);
+
+    assert.deepEqual(occupancy.badges("map-1"), [
+      {
+        color: "var(--alice)",
+        title: "Alice · Editing"
+      }
+    ]);
+    assert.deepEqual(occupancy.badges("model-1"), [
+      {
+        color: "color-mix(in oklab, var(--alice) 40%, transparent)",
+        title: "Alice · Open"
+      }
+    ]);
   });
 
   test("warns before a removal with the name of each occupant, once", () => {

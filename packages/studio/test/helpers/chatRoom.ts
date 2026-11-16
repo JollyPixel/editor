@@ -36,7 +36,8 @@ export interface ChatRoomHarness {
 }
 
 export function chatRoomHarness(
-  sayRight: Right = "write"
+  sayRight: Right = "write",
+  profile: PeerMetadata = {}
 ): ChatRoomHarness {
   const peers = new Map<string, Peer>();
   const published: PeerMetadata[] = [];
@@ -54,7 +55,7 @@ export function chatRoomHarness(
     id: "agent-chat",
     clientId: "local",
     peers,
-    profile: {},
+    profile,
     role: "member",
     rights: {},
     access: "write",

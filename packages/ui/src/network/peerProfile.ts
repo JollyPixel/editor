@@ -102,18 +102,49 @@ export function remotePeers(
   );
 }
 
-export function roomPeers(
-  room: Pick<Room, "clientId" | "profile" | "peers">
-): PresencePeer[] {
-  const local: PresencePeer = {
+export function localPeer(
+  room: Pick<Room, "clientId" | "profile">
+): PresencePeer {
+  return {
     ...toPresencePeer({
       clientId: room.clientId ?? "",
       profile: room.profile
     }),
     self: true
   };
+}
 
-  return [local, ...remotePeers(room)];
+export function roomPeers(
+  room: Pick<Room, "clientId" | "profile" | "peers">
+): PresencePeer[] {
+  return [localPeer(room), ...remotePeers(room)];
+}
+
+export function personKey(
+  peer: Pick<PresencePeer, "clientId" | "peerId">
+): string {
+  return peer.peerId ?? peer.clientId;
+}
+
+export function groupPeers(
+  peers: Iterable<PresencePeer>
+): Map<string, PresencePeer> {
+  const people = new Map<string, PresencePeer>();
+  for (const peer of peers) {
+    const key = personKey(peer);
+    const person = people.get(key);
+    if (person === undefined) {
+      people.set(key, peer);
+    }
+    else if (person.activity === undefined && peer.activity !== undefined) {
+      people.set(key, {
+        ...person,
+        activity: peer.activity
+      });
+    }
+  }
+
+  return people;
 }
 
 export function markedPeers<TValue>(
@@ -135,5 +166,8 @@ function profileColor(
   clientId: string,
   profile: PeerProfile
 ): string {
-  return peerColor(profile.peerId ?? clientId);
+  return peerColor(personKey({
+    clientId,
+    peerId: profile.peerId
+  }));
 }
