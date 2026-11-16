@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { FastifyInstance } from "fastify";
-import type { Accounts } from "@jolly-pixel/accounts/node";
+import type { AccountsRealm } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
 import { signedInAccount } from "../../http/node/authentication.ts";
@@ -13,7 +13,7 @@ import {
 } from "../api.ts";
 
 export interface GolemRoutesOptions {
-  accounts: Accounts;
+  realm: AccountsRealm;
 }
 
 interface CreateAgentTokenRoute {
@@ -30,7 +30,7 @@ export async function golemRoutes(
   app: FastifyInstance,
   options: GolemRoutesOptions
 ): Promise<void> {
-  const { agentTokens } = options.accounts;
+  const { agentTokens } = options.realm;
   const {
     list,
     create,

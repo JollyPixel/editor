@@ -9,12 +9,15 @@ import { DatabaseSync } from "node:sqlite";
 
 // Import Internal Dependencies
 import {
-  createDirectory,
+  REALM,
+  addMembership,
+  createMembers,
   insertAccount,
   name
 } from "../helpers/accounts.ts";
 import { AccountEntity } from "#src/account/AccountEntity.ts";
 import { AgentTokens } from "#src/agent/AgentTokens.ts";
+import { Membership } from "#src/realm/Membership.ts";
 import { AgentTokenNotFoundError } from "#src/agent/errors/AgentTokenNotFoundError.ts";
 import { AgentTokenRefusedError } from "#src/agent/errors/AgentTokenRefusedError.ts";
 import { SessionToken } from "#src/session/SessionToken.ts";
@@ -36,17 +39,18 @@ function harness(): Harness {
   const alice = insertAccount(database, AccountEntity.claim(name("Alice")));
   const bob = insertAccount(
     database,
-    AccountEntity.register(name("Bob"), "member")
+    AccountEntity.register(name("Bob"))
   );
-  const directory = createDirectory(database);
+  addMembership(database, Membership.active(REALM, bob.id, "member"));
+  const members = createMembers(database);
   const revoked: string[] = [];
-  directory.on("revoked", (subject) => revoked.push(subject));
+  members.on("revoked", (subject) => revoked.push(subject));
   const disconnected: string[] = [];
-  directory.on("disconnected", (subject) => disconnected.push(subject));
+  members.on("disconnected", (subject) => disconnected.push(subject));
 
   return {
     sqlite,
-    tokens: new AgentTokens(database.agentTokens, directory),
+    tokens: new AgentTokens(database.agentTokens, members),
     revoked,
     disconnected,
     alice: alice.id,

@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 
 // Import Internal Dependencies
-import type { AccountDirectory } from "../AccountDirectory.ts";
+import type { MemberDirectory } from "../realm/MemberDirectory.ts";
 import { SessionToken } from "../session/SessionToken.ts";
 import type { AgentTokenRepository } from "../store/AgentTokenRepository.ts";
 import {
@@ -34,14 +34,14 @@ export interface CreatedAgentToken {
 
 export class AgentTokens {
   #repository: AgentTokenRepository;
-  #directory: AccountDirectory;
+  #members: MemberDirectory;
 
   constructor(
     repository: AgentTokenRepository,
-    directory: AccountDirectory
+    members: MemberDirectory
   ) {
     this.#repository = repository;
-    this.#directory = directory;
+    this.#members = members;
   }
 
   create(
@@ -55,8 +55,8 @@ export class AgentTokens {
         `an agent token name has 1 to ${AGENT_TOKEN_NAME_MAX_LENGTH} characters`
       );
     }
-    if (this.#directory.account(creation.ownerId) === null) {
-      throw new AgentTokenRefusedError("the owner has no account");
+    if (this.#members.member(creation.ownerId) === null) {
+      throw new AgentTokenRefusedError("the owner is not a member");
     }
 
     const value = SessionToken.mint();
@@ -66,8 +66,8 @@ export class AgentTokens {
       name: name.data,
       createdAt: Date.now()
     };
-    this.#repository.insert(token, value);
-    this.#directory.record({
+    this.#repository.insert(this.#members.realmId, token, value);
+    this.#members.record({
       type: "agent-token-created",
       actorId: token.ownerId,
       tokenId: token.id,
@@ -85,7 +85,9 @@ export class AgentTokens {
   ): AgentToken | null {
     const token = SessionToken.parse(value);
 
-    return token === null ? null : this.#repository.live(token);
+    return token === null ?
+      null :
+      this.#repository.live(this.#members.realmId, token);
   }
 
   bySubject(
@@ -93,26 +95,33 @@ export class AgentTokens {
   ): AgentToken | null {
     const tokenId = agentTokenId(subject);
 
-    return tokenId === null ? null : this.#repository.byId(tokenId);
+    return tokenId === null ?
+      null :
+      this.#repository.byId(this.#members.realmId, tokenId);
   }
 
   ownedBy(
     ownerId: string
   ): AgentToken[] {
-    return this.#repository.ownedBy(ownerId);
+    return this.#repository.ownedBy(this.#members.realmId, ownerId);
   }
 
   revoke(
     ownerId: string,
     tokenId: string
   ): AgentToken {
-    const token = this.#repository.revoke(tokenId, ownerId, Date.now());
+    const token = this.#repository.revoke(
+      this.#members.realmId,
+      tokenId,
+      ownerId,
+      Date.now()
+    );
     if (token === null) {
       throw new AgentTokenNotFoundError();
     }
 
-    this.#directory.revoke(agentTokenSubject(token.id));
-    this.#directory.record({
+    this.#members.revoke(agentTokenSubject(token.id));
+    this.#members.record({
       type: "agent-token-revoked",
       actorId: ownerId,
       tokenId: token.id,
@@ -126,14 +135,12 @@ export class AgentTokens {
     ownerId: string,
     tokenId: string
   ): AgentToken {
-    const token = this.#repository
-      .ownedBy(ownerId)
-      .find((owned) => owned.id === tokenId);
+    const token = this.ownedBy(ownerId).find((owned) => owned.id === tokenId);
     if (token === undefined) {
       throw new AgentTokenNotFoundError();
     }
 
-    this.#directory.disconnect(agentTokenSubject(token.id));
+    this.#members.disconnect(agentTokenSubject(token.id));
 
     return token;
   }

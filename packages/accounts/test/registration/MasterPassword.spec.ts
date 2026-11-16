@@ -11,7 +11,7 @@ import {
   activeAccount,
   createAccounts,
   createDatabase,
-  createDirectory,
+  createMembers,
   databaseWith,
   registration
 } from "../helpers/accounts.ts";
@@ -25,74 +25,46 @@ const kSecret = "open sesame";
 const kWrongSecret = "guess";
 
 describe("master password", () => {
-  test("makes the first account give it before it becomes admin", async() => {
+  test("makes the first account give it before it owns the server", async() => {
     using database = createDatabase();
-    const directory = createDirectory(database, {
-      masterPassword: {
-        secret: kSecret
-      }
+    const members = createMembers(database, {
+      masterPassword: kSecret
     });
 
     await assert.rejects(
-      directory.register(registration("Mallory"), ADDRESS),
+      members.register(registration("Mallory"), ADDRESS),
       MasterPasswordRequiredError
     );
     await assert.rejects(
-      directory.register(registration("Mallory", kWrongSecret), ADDRESS),
+      members.register(registration("Mallory", kWrongSecret), ADDRESS),
       InvalidMasterPasswordError
     );
     const alice = await activeAccount(
-      directory.register(registration("Alice", kSecret), ADDRESS)
+      members.register(registration("Alice", kSecret), ADDRESS)
     );
 
-    assert.equal(alice.role, "admin");
-    assert.deepEqual(
-      [...directory].map((account) => account.username),
-      ["Alice"]
-    );
+    assert.deepEqual([alice.role, alice.owner], ["admin", true]);
+    assert.equal(database.accounts.size, 1);
   });
 
-  test("lets later accounts register without it, but not with a wrong one", async() => {
+  test("leaves later registrations to the join policy, whatever they give", async() => {
     using database = databaseWith("Alice");
-    const directory = createDirectory(database, {
-      masterPassword: {
-        secret: kSecret
-      }
+    const members = createMembers(database, {
+      masterPassword: kSecret,
+      join: "request"
     });
 
-    const bob = await activeAccount(
-      directory.register(registration("Bob"), ADDRESS)
-    );
-    const carol = await activeAccount(
-      directory.register(registration("Carol", kSecret), ADDRESS)
-    );
+    const results = [
+      await members.register(registration("Bob"), ADDRESS),
+      await members.register(registration("Carol", kSecret), ADDRESS),
+      await members.register(registration("Dave", kWrongSecret), ADDRESS)
+    ];
 
-    assert.equal(bob.role, "spectator");
-    assert.equal(carol.role, "spectator");
-    await assert.rejects(
-      directory.register(registration("Dave", kWrongSecret), ADDRESS),
-      InvalidMasterPasswordError
-    );
-  });
-
-  test("turns a registration without it into an access request with accessRequests", async() => {
-    using database = databaseWith("Alice");
-    const directory = createDirectory(database, {
-      masterPassword: {
-        secret: kSecret,
-        accessRequests: true
-      }
-    });
-
-    const bob = await directory.register(registration("Bob"), ADDRESS);
-    const carol = await activeAccount(
-      directory.register(registration("Carol", kSecret), ADDRESS)
-    );
-
-    assert.deepEqual(bob, {
-      status: "pending"
-    });
-    assert.equal(carol.role, "spectator");
+    assert.deepEqual(results, [
+      { status: "pending" },
+      { status: "pending" },
+      { status: "pending" }
+    ]);
   });
 
   test("refuses an empty secret", () => {
@@ -100,9 +72,7 @@ describe("master password", () => {
 
     assert.throws(
       () => createAccounts(database, {
-        masterPassword: {
-          secret: ""
-        }
+        masterPassword: ""
       }),
       RangeError
     );

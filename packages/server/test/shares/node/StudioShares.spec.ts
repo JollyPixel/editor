@@ -27,7 +27,7 @@ async function sharesHarness(): Promise<SharesHarness> {
   const setup = await shareAccounts({
     "map-1": ["map-1", "blockset-1"]
   });
-  const link = setup.accounts.shareLinks.create({
+  const link = setup.realm.shareLinks.create({
     assetId: "map-1",
     createdBy: setup.owner.id,
     expiresAt: null
@@ -41,7 +41,7 @@ async function sharesHarness(): Promise<SharesHarness> {
       role: "member"
     },
     guest() {
-      const identity = setup.accounts.authenticate(guestUpgrade(link.token));
+      const identity = setup.realm.authenticate(guestUpgrade(link.token));
       assert.ok(identity !== null);
 
       return identity;
@@ -88,7 +88,7 @@ describe("StudioShares.admits", () => {
     using harness = await sharesHarness();
     const guest = harness.guest();
 
-    harness.accounts.shareLinks.revoke(harness.owner.id, harness.linkId);
+    harness.realm.shareLinks.revoke(harness.owner.id, harness.linkId);
 
     assert.deepEqual(admitted(harness.shares, guest), []);
   });

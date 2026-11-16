@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type {
-  Account,
+  Member,
   ShareLink
 } from "@jolly-pixel/accounts";
 import {
   Accounts,
-  AccountRoles
+  AccountRoles,
+  type AccountsRealm
 } from "@jolly-pixel/accounts/node";
 import { AssetKind } from "@jolly-pixel/asset";
 import {
@@ -32,21 +33,22 @@ import {
 import type { Browser } from "#src/testing.ts";
 
 export interface ShareAccounts extends Disposable {
-  accounts: Accounts;
-  owner: Account;
+  realm: AccountsRealm;
+  owner: Member;
   shares: StudioShares;
 }
 
 export async function shareAccounts(
   closures: Record<string, string[]>
 ): Promise<ShareAccounts> {
-  const accounts = await Accounts.open({
+  const accounts = await Accounts.open({});
+  const realm = accounts.realm("project", {
     roles: new AccountRoles({
       roles: ["member", "spectator"],
       defaultRole: "member"
     })
   });
-  const registration = await accounts.register({
+  const registration = await realm.register({
     username: "Alice",
     password: "p".repeat(43)
   }, {
@@ -57,10 +59,10 @@ export async function shareAccounts(
   assert.ok(registration.status === "active");
 
   return {
-    accounts,
+    realm,
     owner: registration.account,
     shares: new StudioShares({
-      accounts,
+      realm,
       project: {
         access: StudioAccess.read({ version: 1 }, "project.json")
       },

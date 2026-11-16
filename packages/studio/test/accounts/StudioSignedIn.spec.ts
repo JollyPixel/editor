@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import { UNAUTHORIZED_CLOSE_CODE } from "@jolly-pixel/network";
 import {
   Client,
@@ -30,7 +30,7 @@ import { StudioClients } from "../../src/api/StudioClients.ts";
 import { AccountPreferences } from "../../src/preferences/AccountPreferences.ts";
 
 // CONSTANTS
-const kAlice: Account = {
+const kAlice: Member = {
   id: "alice-id",
   username: "alice",
   role: "member",

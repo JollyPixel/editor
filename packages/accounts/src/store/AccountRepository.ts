@@ -13,8 +13,6 @@ import type { SqliteDatabase } from "./SqliteDatabase.ts";
 const kAccountColumns = [
   "users.id",
   "users.username",
-  "users.role",
-  "users.status",
   "avatars.hash AS avatarHash",
   "ownership.user_id IS NOT NULL AS owner"
 ].join(", ");
@@ -54,12 +52,6 @@ export class AccountRepository implements Iterable<AccountEntity> {
   get size(): number {
     return this.#db.get<CountRow>(
       "SELECT COUNT(*) AS count FROM users"
-    )?.count ?? 0;
-  }
-
-  get pendingSize(): number {
-    return this.#db.get<CountRow>(
-      "SELECT COUNT(*) AS count FROM users WHERE status = 'pending'"
     )?.count ?? 0;
   }
 
@@ -107,51 +99,19 @@ export class AccountRepository implements Iterable<AccountEntity> {
     hash: PasswordHash
   ): void {
     this.#db.run(
-      `INSERT INTO users (id, username, username_key, digest, salt, role, status, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, username, username_key, digest, salt, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
       account.id,
       account.username,
       username.key,
       hash.digest,
       hash.salt,
-      account.role,
-      account.status,
       Date.now()
     );
-    this.#saveOwnership(account);
+    this.save(account);
   }
 
   save(
-    account: AccountEntity
-  ): void {
-    this.#db.run(
-      "UPDATE users SET role = ?, status = ? WHERE id = ?",
-      account.role,
-      account.status,
-      account.id
-    );
-    this.#saveOwnership(account);
-  }
-
-  delete(
-    id: string
-  ): void {
-    this.#db.run(
-      "DELETE FROM users WHERE id = ?",
-      id
-    );
-  }
-
-  * [Symbol.iterator](): IterableIterator<AccountEntity> {
-    const rows = this.#db.all<AccountRow>(
-      `SELECT ${kAccountColumns} FROM ${kAccountTables} ORDER BY users.created_at, users.rowid`
-    );
-    for (const row of rows) {
-      yield rehydrate(row);
-    }
-  }
-
-  #saveOwnership(
     account: AccountEntity
   ): void {
     if (account.owner) {
@@ -160,6 +120,15 @@ export class AccountRepository implements Iterable<AccountEntity> {
          ON CONFLICT (singleton) DO UPDATE SET user_id = excluded.user_id`,
         account.id
       );
+    }
+  }
+
+  * [Symbol.iterator](): IterableIterator<AccountEntity> {
+    const rows = this.#db.all<AccountRow>(
+      `SELECT ${kAccountColumns} FROM ${kAccountTables} ORDER BY users.created_at, users.rowid`
+    );
+    for (const row of rows) {
+      yield rehydrate(row);
     }
   }
 }

@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   ADMIN_ROLE,
-  type Account
+  type Member
 } from "@jolly-pixel/accounts";
 import { SNAPSHOT_ACTOR } from "@jolly-pixel/asset-server";
 
@@ -40,13 +40,13 @@ const kAccess = StudioAccess.from({
   },
   accessRequests: false
 }, "audit test");
-const kAdmin: Account = {
+const kAdmin: Member = {
   id: "alice",
   username: "Alice",
   role: ADMIN_ROLE,
   owner: true
 };
-const kAuditorAccount: Account = {
+const kAuditorAccount: Member = {
   id: "bob",
   username: "Bob",
   role: kAuditor,

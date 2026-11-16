@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import type {
   ContextMenuEntry,
   ContextMenuItem
@@ -26,7 +26,7 @@ const kActions: readonly ContextMenuEntry[] = [
 ];
 
 export function accountMenu(
-  account: Account
+  account: Member
 ): ContextMenuEntry[] {
   const role = account.owner ? kOwnerLabel : roleLabel(account.role);
   const header: ContextMenuItem = {

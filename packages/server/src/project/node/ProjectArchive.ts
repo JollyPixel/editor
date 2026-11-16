@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import {
   exportAssetArchive,
   type ArchiveBackend
@@ -31,7 +31,7 @@ export class ProjectArchive {
   }
 
   async export(
-    account: Account
+    account: Member
   ): Promise<Uint8Array> {
     this.#project.access.projectRights(account.role).require("export");
 

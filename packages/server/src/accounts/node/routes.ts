@@ -17,8 +17,9 @@ import {
 } from "@jolly-pixel/accounts";
 import type {
   Accounts,
-  Requester,
-  SignIn
+  AccountsRealm,
+  MemberSignIn,
+  Requester
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
@@ -36,6 +37,7 @@ const kRevalidate = "no-cache";
 
 export interface AccountsRoutesOptions {
   accounts: Accounts;
+  realm: AccountsRealm;
 }
 
 interface RegisterRoute {
@@ -63,8 +65,8 @@ export async function accountsRoutes(
   app: FastifyInstance,
   options: AccountsRoutesOptions
 ): Promise<void> {
-  const { accounts } = options;
-  const signedIn = authenticate(accounts);
+  const { accounts, realm } = options;
+  const signedIn = authenticate(realm);
   const {
     register,
     login,
@@ -81,7 +83,7 @@ export async function accountsRoutes(
       body: registrationBodySchema
     },
     handler: async(request, reply) => {
-      const registration = await accounts.register(
+      const registration = await realm.register(
         request.body,
         requester(request)
       );
@@ -99,7 +101,7 @@ export async function accountsRoutes(
     },
     handler: async(request, reply) => sendSignIn(
       reply,
-      await accounts.login(request.body, requester(request))
+      await realm.login(request.body, requester(request))
     )
   });
   app.route({
@@ -159,11 +161,13 @@ export async function accountsRoutes(
       },
       preParsing: signedIn,
       handler: async(request): Promise<AccountReply> => {
+        const { id, role } = signedInAccount(request);
+
         return {
-          account: await accounts.replaceAvatar(
-            signedInAccount(request).id,
-            request.body
-          )
+          account: {
+            ...await accounts.replaceAvatar(id, request.body),
+            role
+          }
         };
       }
     });
@@ -182,7 +186,7 @@ function requester(
 
 function sendSignIn(
   reply: FastifyReply,
-  signIn: SignIn
+  signIn: MemberSignIn
 ): FastifyReply {
   return reply
     .header("set-cookie", signIn.cookie)

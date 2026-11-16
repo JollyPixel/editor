@@ -2,7 +2,7 @@
 import { Readable } from "node:stream";
 
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import type { AssetRecord } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -59,7 +59,7 @@ export class GameExport {
   }
 
   async export(
-    account: Account,
+    account: Member,
     assets: GameExportAssets
   ): Promise<Readable> {
     this.#project.access.projectRights(account.role).require("export");

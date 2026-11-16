@@ -9,44 +9,37 @@ import assert from "node:assert/strict";
 import {
   ADDRESS,
   createAccounts,
-  createDirectory,
+  createMembers,
+  createRealm,
   databaseWith,
   databaseWithRetiredRole,
   insertAgentToken,
   name,
   registration,
   requestAccess
-} from "./helpers/accounts.ts";
+} from "../helpers/accounts.ts";
 import type { AccountActivity } from "#src/index.ts";
 import {
   AccountChangeRefusedError,
   AccountRoles
 } from "#src/node.ts";
 
-// CONSTANTS
-const kMasterPassword = {
-  secret: "open sesame",
-  accessRequests: true
-};
-
-describe("AccountDirectory activity", () => {
+describe("MemberDirectory activity", () => {
   test("reports each account change with the account that made it", async() => {
-    const directory = createDirectory(undefined, {
-      masterPassword: kMasterPassword
-    });
+    const members = createMembers();
     const activities: AccountActivity[] = [];
-    directory.subscribe("activity", (activity) => activities.push(activity));
+    members.subscribe("activity", (activity) => activities.push(activity));
 
-    await directory.register(registration("Alice", "open sesame"), ADDRESS);
-    await directory.register(registration("Bob"), ADDRESS);
-    await directory.register(registration("Carol"), ADDRESS);
-    const [alice] = directory;
-    directory.approve(alice.id, name("bob"), "member");
-    directory.deny(alice.id, name("carol"));
-    directory.assignRole(alice.id, name("bob"), "spectator");
-    directory.transferOwnership(alice.id, name("bob"));
+    await members.register(registration("Alice"), ADDRESS);
+    await members.register(registration("Bob"), ADDRESS);
+    await members.register(registration("Carol"), ADDRESS);
+    const [alice] = members;
+    members.approve(alice.id, name("bob"), "member");
+    members.deny(alice.id, name("carol"));
+    members.assignRole(alice.id, name("bob"), "spectator");
+    members.transferOwnership(alice.id, name("bob"));
 
-    const [, bob] = directory;
+    const [, bob] = members;
     assert.deepEqual(
       activities.map(({ type }) => type),
       [
@@ -84,15 +77,16 @@ describe("AccountDirectory activity", () => {
     using database = databaseWith("Alice", "Bob");
     const [alice, bob] = database.accounts;
     using accounts = createAccounts(database);
+    const realm = createRealm(accounts);
     const activities: AccountActivity[] = [];
-    accounts.watchActivity((activity) => activities.push(activity));
+    realm.watchActivity((activity) => activities.push(activity));
 
-    const link = accounts.shareLinks.create({
+    const link = realm.shareLinks.create({
       assetId: "asset-a",
       createdBy: bob.id,
       expiresAt: null
     });
-    accounts.shareLinks.revoke(alice.id, link.id);
+    realm.shareLinks.revoke(alice.id, link.id);
 
     assert.deepEqual(activities, [
       {
@@ -114,14 +108,15 @@ describe("AccountDirectory activity", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     using accounts = createAccounts(database);
+    const realm = createRealm(accounts);
     const activities: AccountActivity[] = [];
-    accounts.watchActivity((activity) => activities.push(activity));
+    realm.watchActivity((activity) => activities.push(activity));
 
-    const { token } = accounts.agentTokens.create({
+    const { token } = realm.agentTokens.create({
       ownerId: alice.id,
       name: "Builder"
     });
-    accounts.agentTokens.revoke(alice.id, token.id);
+    realm.agentTokens.revoke(alice.id, token.id);
 
     assert.deepEqual(activities, [
       {
@@ -140,37 +135,37 @@ describe("AccountDirectory activity", () => {
   });
 });
 
-describe("AccountDirectory.replaceRoles", () => {
+describe("MemberDirectory.replaceRoles", () => {
   test("declares the new roles and reads a retired one as the new default", () => {
     using database = databaseWithRetiredRole();
     const [alice, bob] = database.accounts;
-    const directory = createDirectory(database);
+    const members = createMembers(database);
     let changes = 0;
-    directory.subscribe("changed", () => changes++);
+    members.subscribe("changed", () => changes++);
 
-    directory.replaceRoles(new AccountRoles({
+    members.replaceRoles(new AccountRoles({
       roles: ["editor", "viewer"],
       defaultRole: "viewer"
     }));
-    directory.assignRole(alice.id, name("bob"), "viewer");
+    members.assignRole(alice.id, name("bob"), "viewer");
 
     assert.equal(changes, 2);
-    assert.equal(directory.account(bob.id)?.role, "viewer");
-    assert.deepEqual([...directory.roles], ["admin", "editor", "viewer"]);
+    assert.equal(members.member(bob.id)?.role, "viewer");
+    assert.deepEqual([...members.roles], ["admin", "editor", "viewer"]);
   });
 
-  test("moves the accounts and requests of a renamed role and revokes them with their agents", () => {
+  test("moves the members and requests of a renamed role and revokes them with their agents", () => {
     using database = databaseWith("Alice", "Bob");
     const [alice, bob] = database.accounts;
     const bobAgent = insertAgentToken(database, bob.id);
     const carol = requestAccess(database, "Carol");
-    const directory = createDirectory(database);
+    const members = createMembers(database);
     const revoked: string[] = [];
     let changes = 0;
-    directory.subscribe("revoked", (subject) => revoked.push(subject));
-    directory.subscribe("changed", () => changes++);
+    members.subscribe("revoked", (subject) => revoked.push(subject));
+    members.subscribe("changed", () => changes++);
 
-    directory.replaceRoles(
+    members.replaceRoles(
       new AccountRoles({
         roles: ["member", "viewer"],
         defaultRole: "viewer"
@@ -178,8 +173,8 @@ describe("AccountDirectory.replaceRoles", () => {
       new Map([["spectator", "viewer"]])
     );
 
-    assert.deepEqual(directory.holders("viewer"), [bob.id, carol.id]);
-    assert.equal(directory.account(alice.id)?.role, "admin");
+    assert.deepEqual(members.holders("viewer"), [bob.id, carol.id]);
+    assert.equal(members.member(alice.id)?.role, "admin");
     assert.deepEqual(revoked, [bob.id, `agent:${bobAgent.id}`, carol.id]);
     assert.equal(changes, 1);
   });
@@ -187,55 +182,46 @@ describe("AccountDirectory.replaceRoles", () => {
   test("refuses a rename from a declared role or to an undeclared one", () => {
     using database = databaseWith("Alice", "Bob");
     const [, bob] = database.accounts;
-    const directory = createDirectory(database);
+    const members = createMembers(database);
     const roles = new AccountRoles({
       roles: ["member", "spectator"],
       defaultRole: "member"
     });
 
     assert.throws(
-      () => directory.replaceRoles(roles, new Map([["spectator", "member"]])),
+      () => members.replaceRoles(roles, new Map([["spectator", "member"]])),
       AccountChangeRefusedError
     );
     assert.throws(
-      () => directory.replaceRoles(roles, new Map([["editor", "viewer"]])),
+      () => members.replaceRoles(roles, new Map([["editor", "viewer"]])),
       AccountChangeRefusedError
     );
-    assert.equal(directory.account(bob.id)?.role, "spectator");
-    assert.equal(directory.roles.has("viewer"), false);
+    assert.equal(members.member(bob.id)?.role, "spectator");
+    assert.equal(members.roles.has("viewer"), false);
   });
 });
 
-describe("AccountDirectory.replaceAccessRequests", () => {
-  test("turns a registration without the master password into an active account", async() => {
+describe("MemberDirectory.replaceJoin", () => {
+  test("applies the new policy to the next registration", async() => {
     using database = databaseWith("Alice");
-    const directory = createDirectory(database, {
-      masterPassword: kMasterPassword
-    });
+    const members = createMembers(database);
 
-    directory.replaceAccessRequests(false);
-    const result = await directory.register(registration("Bob"), ADDRESS);
+    members.replaceJoin("open");
+    const result = await members.register(registration("Bob"), ADDRESS);
 
-    assert.equal(directory.accessRequests, false);
+    assert.equal(members.join, "open");
     assert.equal(result.status, "active");
   });
-
-  test("refuses to turn them on without a master password", () => {
-    const directory = createDirectory();
-
-    assert.throws(() => directory.replaceAccessRequests(true), TypeError);
-    assert.equal(directory.accessRequests, false);
-  });
 });
 
-describe("AccountDirectory.holders", () => {
-  test("lists the accounts and requests that store a role", () => {
+describe("MemberDirectory.holders", () => {
+  test("lists the members and requests of the realm that store a role", () => {
     using database = databaseWith("Alice", "Bob");
     const [, bob] = database.accounts;
     const carol = requestAccess(database, "Carol");
-    const directory = createDirectory(database);
+    const members = createMembers(database);
 
-    assert.deepEqual(directory.holders("spectator"), [bob.id, carol.id]);
-    assert.deepEqual(directory.holders("member"), []);
+    assert.deepEqual(members.holders("spectator"), [bob.id, carol.id]);
+    assert.deepEqual(members.holders("member"), []);
   });
 });

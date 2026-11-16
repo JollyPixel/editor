@@ -22,29 +22,44 @@ The name as typed, after normalization. It is what peers see.
 interface Account {
   id: string;
   username: string;
-  role: string;
   owner: boolean;
   avatar?: string;
 }
 ```
 
-`id` is a random UUID. The network server uses it as the peer `subject`, so the event store records it as the actor, and as the profile `peerId`, so a user keeps one presence colour everywhere. `role` is the effective role: a role that is no longer declared reads as the default one.
+An identity on the server, whatever project it belongs to. `accountSchema` parses one.
 
-`owner` is `true` for exactly one account once the first one registers. The owner is always an admin, no one can change its role or remove it, and only the owner hands ownership to another account.
+`id` is a random UUID. The network server uses it as the peer `subject`, so the event store records it as the actor, and as the profile `peerId`, so a user keeps one presence colour everywhere.
+
+`owner` is `true` for exactly one account once the first one registers: the owner of the server. It is an admin of every project, no one can change its role or remove it, and only the owner hands ownership to another account.
 
 `avatar` is the same-origin path of the uploaded avatar, `/api/accounts/<id>/avatar?v=<hash>`, absent until the account uploads one. It changes with the image, so it can be cached for good. `AVATAR_MAX_BYTES` (2 MiB) is the largest upload.
 
+## `Member`
+
+An `Account` with the `role` it holds in one project. `memberSchema` parses one. `role` is the effective role: a role the project no longer declares reads as its default one, and the owner is always `"admin"`.
+
 ## `RosterEntry`
 
-An `Account` with `online`, true while one of its studio shells is in the `accounts` room.
+A `Member` with `online`, true while one of its studio shells is in the `accounts` room.
 
 ## `AccessRequest`
 
-A registration waiting for an admin's approval: `{ id, username }`. Only admins receive them, through `AccountsRoster.requests`.
+A request to join a project, waiting for an admin's approval: `{ id, username }`. Only admins receive them, through `AccountsRoster.requests`.
+
+## `JoinMode`
+
+How a project takes new members, one of `JOIN_MODES`:
+
+- `"request"`: a registration creates an access request that the project's admins approve or deny.
+- `"open"`: a registration becomes a member with the default role at once.
+- `"invite"`: a registration is refused with `invitation-required`.
+
+The first account of a server registers under any mode, since it owns the server.
 
 ## `ADMIN_ROLE`
 
-`"admin"`. Always a role: `AccountRoles` adds it, and the first registered account gets it along with ownership.
+`"admin"`. Always a role: `AccountRoles` adds it, and the owner holds it in every project.
 
 ## `GUEST_ROLE`
 
@@ -76,7 +91,7 @@ interface AgentToken {
 }
 ```
 
-A credential that lets a local AI agent join the project as a peer, with the role of the account `ownerId`. `name` is the peer name the agent shows, and `createdAt` is epoch milliseconds. The value of the credential is not part of it. `agentTokenSchema` parses one and `agentTokenNameSchema` a name (1 to 32 characters once trimmed, `AGENT_TOKEN_NAME_MAX_LENGTH`). An agent is named `"Golem"` (`AGENT_TOKEN_DEFAULT_NAME`) unless its token says otherwise. Its peer subject is `agent:<token id>`: `agentTokenSubject(tokenId)` builds it, and `agentTokenId(subject)` reads the id back, or returns `null` for any other subject.
+A credential that lets a local AI agent join one project as a peer, with the role the account `ownerId` holds there. `name` is the peer name the agent shows, and `createdAt` is epoch milliseconds. The value of the credential is not part of it. `agentTokenSchema` parses one and `agentTokenNameSchema` a name (1 to 32 characters once trimmed, `AGENT_TOKEN_NAME_MAX_LENGTH`). An agent is named `"Golem"` (`AGENT_TOKEN_DEFAULT_NAME`) unless its token says otherwise. Its peer subject is `agent:<token id>`: `agentTokenSubject(tokenId)` builds it, and `agentTokenId(subject)` reads the id back, or returns `null` for any other subject.
 
 ## `AgentProfile`
 
@@ -93,4 +108,4 @@ The profile of a connected agent: the name and id of its token, `via: "golem"` (
 
 ## `AccountsError`
 
-The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the host picks one when it answers. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError`, `AccessRequestsFullError`, `ShareLinkNotFoundError`, `ShareLinkRefusedError`, `AgentTokenNotFoundError` and `AgentTokenRefusedError` extend it, and so do `InvalidCredentialsError` and `AccountsThrottledError`, exported from `@jolly-pixel/accounts/node`. `ACCOUNTS_ERROR_CODES` lists the codes.
+The base of every error an account rule throws. It carries a `code`, an `AccountsErrorCode`, and no HTTP status: the host picks one when it answers. `InvalidUsernameError`, `InvalidPasswordError`, `InvalidAvatarError`, `UsernameTakenError`, `MasterPasswordRequiredError`, `InvalidMasterPasswordError`, `AccountPendingError`, `AccessRequestsFullError`, `InvitationRequiredError`, `MembershipRequiredError`, `ShareLinkNotFoundError`, `ShareLinkRefusedError`, `AgentTokenNotFoundError` and `AgentTokenRefusedError` extend it, and so do `InvalidCredentialsError` and `AccountsThrottledError`, exported from `@jolly-pixel/accounts/node`. `ACCOUNTS_ERROR_CODES` lists the codes.

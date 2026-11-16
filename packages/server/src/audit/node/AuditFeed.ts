@@ -3,6 +3,7 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import {
   agentTokenId,
   type Account,
+  type Member,
   type AccountActivity,
   type AgentToken
 } from "@jolly-pixel/accounts";
@@ -76,7 +77,7 @@ export class AuditFeed {
   }
 
   async page(
-    viewer: Account,
+    viewer: Member,
     query: AuditFeedQuery
   ): Promise<AuditPage> {
     const rights = this.#project.access.projectRights(viewer.role);

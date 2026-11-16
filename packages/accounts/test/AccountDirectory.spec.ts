@@ -8,39 +8,74 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   ADDRESS,
+  OTHER_REALM,
   PASSWORD,
+  REALM,
   WRONG_PASSWORD,
-  activeAccount,
+  addMembership,
   createDirectory,
   databaseWith,
+  insertAccount,
   insertAgentToken,
-  name,
-  registration
+  name
 } from "./helpers/accounts.ts";
 import { solidPng } from "./helpers/avatar/images.ts";
+import type { AccountDirectory } from "#src/AccountDirectory.ts";
+import { AccountEntity } from "#src/account/AccountEntity.ts";
 import { InvalidCredentialsError } from "#src/auth/errors/InvalidCredentialsError.ts";
-import { AccountChangeRefusedError } from "#src/node.ts";
-import { InvalidAvatarError } from "#src/index.ts";
+import { Membership } from "#src/realm/Membership.ts";
+import {
+  AccountChangeRefusedError,
+  UsernameTakenError
+} from "#src/node.ts";
+import {
+  InvalidAvatarError,
+  type Account
+} from "#src/index.ts";
 
-describe("AccountDirectory sign-in", () => {
-  test("logs in under any casing with the password the account registered with", async() => {
+async function insert(
+  directory: AccountDirectory,
+  username: string
+): Promise<AccountEntity> {
+  return directory.insert(name(username), await directory.hash(PASSWORD));
+}
+
+describe("AccountDirectory.insert", () => {
+  test("makes the first account the owner and refuses a username that differs only by case", async() => {
     const directory = createDirectory();
 
-    const registered = await activeAccount(
-      directory.register(registration("Alice"), ADDRESS)
-    );
+    const alice = await insert(directory, "Alice");
+    const bob = await insert(directory, "Bob");
+
+    assert.equal(alice.owner, true);
+    assert.equal(bob.owner, false);
+    await assert.rejects(insert(directory, "aLICE"), UsernameTakenError);
+    assert.equal(directory.database.accounts.size, 2);
+  });
+});
+
+describe("AccountDirectory.login", () => {
+  test("logs in under any casing with the password the account registered with", async() => {
+    const directory = createDirectory();
+    const alice = await insert(directory, "Alice");
+
     const logged = await directory.login({
       username: name("alice"),
       password: PASSWORD
     }, ADDRESS);
 
-    assert.deepEqual(logged, registered);
-    assert.deepEqual(directory.account(registered.id), registered);
+    assert.deepEqual(logged, alice);
+    assert.deepEqual(directory.account(alice.id), {
+      id: alice.id,
+      username: "Alice",
+      owner: true,
+      avatar: undefined
+    });
   });
 
   test("refuses a wrong password and an unknown username alike", async() => {
     const directory = createDirectory();
-    await directory.register(registration("Alice"), ADDRESS);
+    await insert(directory, "Alice");
 
     await assert.rejects(
       directory.login({
@@ -59,76 +94,90 @@ describe("AccountDirectory sign-in", () => {
   });
 });
 
-describe("AccountDirectory changes", () => {
-  test("emits changed after a registration, a role change and a removal", async() => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-    const directory = createDirectory(database);
-    let changes = 0;
-    directory.on("changed", () => {
-      changes++;
-    });
-
-    await directory.register(registration("Bob"), ADDRESS);
-    directory.assignRole(alice.id, name("bob"), "member");
-    directory.remove(alice.id, name("bob"));
-
-    assert.equal(changes, 3);
-  });
-
-  test("emits nothing for a refused role change", () => {
+describe("AccountDirectory.transferOwnership", () => {
+  test("hands ownership over and keeps the previous owner admin of every known and open realm", () => {
     using database = databaseWith("Alice", "Bob");
-    const [alice] = database.accounts;
+    const [alice, bob] = database.accounts;
+    const carol = insertAccount(database, AccountEntity.register(name("Carol")));
+    addMembership(database, Membership.active("third", carol.id, "member"));
     const directory = createDirectory(database);
-    let changes = 0;
-    directory.on("changed", () => {
-      changes++;
-    });
+    directory.openRealm(OTHER_REALM);
 
-    assert.throws(
-      () => directory.assignRole(alice.id, name("bob"), "editor"),
-      AccountChangeRefusedError
-    );
-    assert.equal(changes, 0);
+    const owner = directory.transferOwnership(alice.id, name("bob"));
+
+    assert.equal(owner.id, bob.id);
+    assert.equal(directory.account(bob.id)?.owner, true);
+    assert.equal(directory.account(alice.id)?.owner, false);
+    for (const realmId of [REALM, OTHER_REALM, "third"]) {
+      assert.deepEqual(
+        database.memberships.find(realmId, alice.id),
+        Membership.active(realmId, alice.id, "admin")
+      );
+    }
   });
 
-  test("revokes the account and its agents on a role change, a removal and an ownership transfer", () => {
-    using database = databaseWith("Alice", "Bob", "Carol", "Dave");
-    const [alice, bob, carol, dave] = database.accounts;
-    const bobAgent = insertAgentToken(database, bob.id);
-    const daveAgent = insertAgentToken(database, dave.id);
+  test("revokes the new owner and its agents in every realm", () => {
+    using database = databaseWith("Alice", "Bob");
+    const [alice, bob] = database.accounts;
+    const agents = [
+      insertAgentToken(database, bob.id),
+      insertAgentToken(database, bob.id, OTHER_REALM)
+    ];
     const directory = createDirectory(database);
     const revoked: string[] = [];
-    const stop = directory.subscribe("revoked", (accountId) => revoked.push(accountId));
+    directory.subscribe("revoked", (subject) => revoked.push(subject));
 
-    directory.assignRole(alice.id, name("bob"), "member");
-    directory.remove(alice.id, name("bob"));
-    const owner = directory.transferOwnership(alice.id, name("dave"));
-    stop();
-    directory.remove(alice.id, name("carol"));
+    directory.transferOwnership(alice.id, name("bob"));
 
     assert.deepEqual(revoked, [
       bob.id,
-      `agent:${bobAgent.id}`,
-      bob.id,
-      `agent:${bobAgent.id}`,
-      dave.id,
-      `agent:${daveAgent.id}`
+      ...agents.map((agent) => `agent:${agent.id}`)
     ]);
-    assert.equal(owner.owner, true);
-    assert.equal(directory.account(carol.id), null);
+  });
+
+  test("refuses an actor that is not the owner, and the owner as target", () => {
+    using database = databaseWith("Alice", "Bob", "Carol");
+    const [alice, bob] = database.accounts;
+    const directory = createDirectory(database);
+
+    assert.throws(
+      () => directory.transferOwnership(bob.id, name("carol")),
+      {
+        name: "AccountChangeRefusedError",
+        message: "only the owner transfers ownership"
+      }
+    );
+    assert.throws(
+      () => directory.transferOwnership(alice.id, name("alice")),
+      AccountChangeRefusedError
+    );
+    assert.equal(directory.account(alice.id)?.owner, true);
+  });
+});
+
+describe("AccountDirectory.openRealm", () => {
+  test("refuses a realm that is already open until it closes", () => {
+    const directory = createDirectory();
+
+    directory.openRealm(REALM);
+
+    assert.throws(() => directory.openRealm(REALM), Error);
+    directory.closeRealm(REALM);
+    directory.openRealm(REALM);
   });
 });
 
 describe("AccountDirectory.replaceAvatar", () => {
-  test("encodes the image, stores it and emits changed", async() => {
+  test("encodes the image, stores it and emits changed and the new profile", async() => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
     const directory = createDirectory(database);
+    const profiles: Account[] = [];
     let changes = 0;
     directory.on("changed", () => {
       changes++;
     });
+    directory.on("profile", (account) => profiles.push(account));
 
     const account = await directory.replaceAvatar(alice.id, await solidPng(8, 8));
 
@@ -137,7 +186,8 @@ describe("AccountDirectory.replaceAvatar", () => {
       account.avatar,
       `/api/accounts/${alice.id}/avatar?v=${directory.avatar(alice.id)?.hash}`
     );
-    assert.deepEqual([...directory], [account]);
+    assert.deepEqual(profiles, [account]);
+    assert.deepEqual(directory.account(alice.id), account);
   });
 
   test("refuses an undecodable image without emitting", async() => {
@@ -155,5 +205,14 @@ describe("AccountDirectory.replaceAvatar", () => {
     );
     assert.equal(changes, 0);
     assert.equal(directory.avatar(alice.id), null);
+  });
+
+  test("refuses an unknown account", async() => {
+    const directory = createDirectory();
+
+    await assert.rejects(
+      directory.replaceAvatar("nobody", await solidPng(8, 8)),
+      AccountChangeRefusedError
+    );
   });
 });

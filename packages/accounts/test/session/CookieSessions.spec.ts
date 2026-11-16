@@ -16,7 +16,6 @@ import {
   openSession
 } from "../helpers/accounts.ts";
 import type { AccountDirectory } from "#src/AccountDirectory.ts";
-import type { Account } from "#src/index.ts";
 import { CookieSessions } from "#src/session/CookieSessions.ts";
 import {
   SessionCookie,
@@ -36,16 +35,6 @@ function createSessions(
     sessions: new CookieSessions(database.sessions, directory, cookie),
     directory
   };
-}
-
-function signedIn(
-  directory: AccountDirectory,
-  accountId: string
-): Account {
-  const account = directory.account(accountId);
-  assert.ok(account);
-
-  return account;
 }
 
 function headers(
@@ -68,13 +57,12 @@ function cookieHeader(
 }
 
 describe("CookieSessions", () => {
-  test("issues an HttpOnly strict cookie that resolves to its account", () => {
+  test("issues an HttpOnly strict cookie that resolves to its account id", () => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
-    const { sessions, directory } = createSessions(database);
-    const account = signedIn(directory, alice.id);
+    const { sessions } = createSessions(database);
 
-    const issued = sessions.open(account, true);
+    const issued = sessions.open(alice.id, true);
     const setCookie = parseSetCookie(issued);
 
     assert.equal(setCookie.name, "jolly_session");
@@ -83,8 +71,8 @@ describe("CookieSessions", () => {
     assert.equal(setCookie.sameSite, "strict");
     assert.equal(setCookie.maxAge, 30 * 24 * 60 * 60);
     assert.deepEqual(
-      sessions.account(headers(`theme=dark; ${cookieHeader(issued)}`)),
-      account
+      sessions.accountId(headers(`theme=dark; ${cookieHeader(issued)}`)),
+      alice.id
     );
   });
 
@@ -92,18 +80,18 @@ describe("CookieSessions", () => {
     t.mock.timers.enable({ apis: ["Date"] });
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
-    const { sessions, directory } = createSessions(
+    const { sessions } = createSessions(
       database,
       new SessionCookie({ ttlMs: 2_000 })
     );
 
-    const issued = sessions.open(signedIn(directory, alice.id), false);
+    const issued = sessions.open(alice.id, false);
 
     assert.equal(parseSetCookie(issued).maxAge, 2);
     t.mock.timers.tick(1_999);
-    assert.notEqual(sessions.account(headers(cookieHeader(issued))), null);
+    assert.notEqual(sessions.accountId(headers(cookieHeader(issued))), null);
     t.mock.timers.tick(1);
-    assert.equal(sessions.account(headers(cookieHeader(issued))), null);
+    assert.equal(sessions.accountId(headers(cookieHeader(issued))), null);
   });
 
   test("ignores the cookie of a request from another origin", () => {
@@ -112,8 +100,8 @@ describe("CookieSessions", () => {
     const { sessions } = createSessions(database);
     const cookie = `jolly_session=${openSession(database, alice.id)}`;
 
-    assert.equal(sessions.account(headers(cookie, "http://evil.example")), null);
-    assert.notEqual(sessions.account(headers(cookie, "http://studio.local")), null);
+    assert.equal(sessions.accountId(headers(cookie, "http://evil.example")), null);
+    assert.notEqual(sessions.accountId(headers(cookie, "http://studio.local")), null);
   });
 
   test("reads only the cookie it is configured with", () => {
@@ -125,17 +113,17 @@ describe("CookieSessions", () => {
     );
     const token = openSession(database, alice.id);
 
-    assert.equal(sessions.account(headers(`jolly_session=${token}`)), null);
-    assert.notEqual(sessions.account(headers(`project_session=${token}`)), null);
+    assert.equal(sessions.accountId(headers(`jolly_session=${token}`)), null);
+    assert.notEqual(sessions.accountId(headers(`project_session=${token}`)), null);
   });
 
-  test("resolves no account without a cookie or for a malformed or unknown token", () => {
+  test("resolves no account id without a cookie or for a malformed or unknown token", () => {
     using database = databaseWith("Alice");
     const { sessions } = createSessions(database);
 
-    assert.equal(sessions.account(headers()), null);
-    assert.equal(sessions.account(headers("jolly_session=hunter2")), null);
-    assert.equal(sessions.account(headers(`jolly_session=${"x".repeat(43)}`)), null);
+    assert.equal(sessions.accountId(headers()), null);
+    assert.equal(sessions.accountId(headers("jolly_session=hunter2")), null);
+    assert.equal(sessions.accountId(headers(`jolly_session=${"x".repeat(43)}`)), null);
   });
 
   test("closes the session, revokes its account once and clears the cookie", () => {
@@ -151,7 +139,7 @@ describe("CookieSessions", () => {
 
     assert.equal(cleared.maxAge, 0);
     assert.equal(cleared.value, "");
-    assert.equal(sessions.account(cookie), null);
+    assert.equal(sessions.accountId(cookie), null);
     assert.deepEqual(revoked, [alice.id]);
   });
 });

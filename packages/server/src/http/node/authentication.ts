@@ -4,15 +4,15 @@ import type {
   FastifyRequest,
   RequestPayload
 } from "fastify";
-import type { Account } from "@jolly-pixel/accounts";
-import type { Accounts } from "@jolly-pixel/accounts/node";
+import type { Member } from "@jolly-pixel/accounts";
+import type { AccountsRealm } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
 import { ApiError } from "./errors/ApiError.ts";
 
 declare module "fastify" {
   interface FastifyRequest {
-    account: Account | null;
+    account: Member | null;
   }
 }
 
@@ -23,10 +23,10 @@ export type AuthenticateHook = (
 ) => Promise<RequestPayload>;
 
 export function authenticate(
-  accounts: Accounts
+  realm: AccountsRealm
 ): AuthenticateHook {
   return async(request, _reply, payload) => {
-    request.account = accounts.signedIn(request.headers);
+    request.account = realm.signedIn(request.headers);
     signedInAccount(request);
 
     return payload;
@@ -35,7 +35,7 @@ export function authenticate(
 
 export function signedInAccount(
   request: FastifyRequest
-): Account {
+): Member {
   if (request.account === null) {
     throw new ApiError(401, "unauthenticated", "no valid session");
   }

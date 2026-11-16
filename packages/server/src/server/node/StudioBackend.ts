@@ -17,6 +17,7 @@ import { WebsocketTransport } from "@jolly-pixel/network/node";
 // Import Internal Dependencies
 import {
   ACCOUNTS_STATE_IGNORES,
+  openProjectRealm,
   openStudioAccounts,
   type StudioAccountsOptions
 } from "../../accounts/node/openStudioAccounts.ts";
@@ -132,12 +133,15 @@ export class StudioBackend implements AsyncDisposable {
       ...options.accounts,
       inMemory: options.inMemory
     }));
+    const realm = opening.use(
+      openProjectRealm(accounts, project, options.accounts)
+    );
     const audit = opening.use(await AuditLog.open(
       options.inMemory ?
         null :
         path.join(project.file.root, STATE_DIRECTORY, AUDIT_DATABASE_FILE)
     ));
-    opening.defer(accounts.watchActivity((activity) => {
+    opening.defer(realm.watchActivity((activity) => {
       audit.recordAccount(activity).catch((error: unknown) => {
         console.error(error);
       });
@@ -151,10 +155,10 @@ export class StudioBackend implements AsyncDisposable {
       seed: options.seed,
       roomGraceMs: kRoomGraceMs,
       rights: project.access.rights,
-      defaultRole: accounts.roles.defaultRole,
-      auth: accounts,
+      defaultRole: realm.roles.defaultRole,
+      auth: realm,
       extensions: [
-        accounts.extension,
+        realm.extension,
         new AgentChatExtension()
       ],
       backend: {
@@ -171,7 +175,7 @@ export class StudioBackend implements AsyncDisposable {
     });
     opening.defer(() => assetServer.close());
     const shares = new StudioShares({
-      accounts,
+      realm,
       project,
       catalog: assetServer.backend.catalog
     });
@@ -186,10 +190,11 @@ export class StudioBackend implements AsyncDisposable {
     });
     const api = opening.use(await StudioApi.open({
       accounts,
+      realm,
       shares,
       settings: new ProjectSettings({
         project,
-        accounts,
+        realm,
         server: assetServer.network,
         backend: assetServer.backend,
         audit,
@@ -200,7 +205,7 @@ export class StudioBackend implements AsyncDisposable {
         assets: new AssetLog(assetServer.eventStore),
         audit,
         account: (accountId) => accounts.account(accountId),
-        agentToken: (subject) => accounts.agentTokens.bySubject(subject),
+        agentToken: (subject) => realm.agentTokens.bySubject(subject),
         assetPath: (assetId) => assetServer.backend.catalog.record(assetId)?.path.toString()
       }),
       archive: new ProjectArchive({
@@ -232,7 +237,7 @@ export class StudioBackend implements AsyncDisposable {
     const playPage = new PlayPage({
       page: options.playPage,
       game,
-      accounts
+      realm
     });
 
     return new StudioBackend(

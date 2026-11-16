@@ -1,4 +1,5 @@
 export * from "./Accounts.ts";
+export * from "./AccountsRealm.ts";
 export * from "./auth/AccountRoles.ts";
 export * from "./store/AccountsDatabase.ts";
 export * from "./avatar/AvatarImage.ts";
@@ -20,9 +21,10 @@ export type {
 } from "./agent/AgentTokens.ts";
 export * from "./session/SessionCookie.ts";
 export * from "./session/origin.ts";
-export type { MasterPasswordOptions } from "./registration/MasterPassword.ts";
 export * from "./registration/errors/MasterPasswordRequiredError.ts";
 export * from "./registration/errors/InvalidMasterPasswordError.ts";
 export * from "./registration/errors/AccountPendingError.ts";
 export * from "./registration/errors/AccessRequestsFullError.ts";
+export * from "./realm/errors/InvitationRequiredError.ts";
+export * from "./realm/errors/MembershipRequiredError.ts";
 export type { PreferenceOverrides } from "./store/PreferenceRepository.ts";

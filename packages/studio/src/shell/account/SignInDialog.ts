@@ -16,7 +16,7 @@ import {
   InvalidPasswordError,
   InvalidUsernameError,
   MIN_PASSWORD_LENGTH,
-  type Account,
+  type Member,
   type AccountsClient,
   type AccountsFailureCode
 } from "@jolly-pixel/accounts";
@@ -32,6 +32,8 @@ const kRequestMessages: Partial<Record<AccountsFailureCode, string>> = {
   "invalid-master-password": "Wrong master password.",
   "account-pending": "Your access request awaits an admin's approval.",
   "access-requests-full": "Too many access requests await approval. Try again later.",
+  "invitation-required": "This project takes new members on invitation only.",
+  "membership-required": "This account is not a member of this project.",
   throttled: "Too many failed attempts. Try again later."
 };
 const kMasterPasswordCodes = new Set<AccountsFailureCode>([
@@ -130,7 +132,7 @@ export class SignInDialog extends LitElement {
   declare _masterPassword: HTMLInputElement | null;
 
   #accounts: AccountsClient | null = null;
-  #settle: ((signedIn: Account) => void) | null = null;
+  #settle: ((signedIn: Member) => void) | null = null;
 
   constructor() {
     super();
@@ -143,7 +145,7 @@ export class SignInDialog extends LitElement {
 
   async open(
     accounts: AccountsClient
-  ): Promise<Account> {
+  ): Promise<Member> {
     this.#accounts = accounts;
     this._error = globalThis.crypto?.subtle === undefined ?
       "Signing in needs HTTPS or localhost." :
@@ -152,7 +154,7 @@ export class SignInDialog extends LitElement {
     const {
       promise,
       resolve
-    } = Promise.withResolvers<Account>();
+    } = Promise.withResolvers<Member>();
     this.#settle = resolve;
 
     await this.updateComplete;
@@ -335,7 +337,7 @@ export class SignInDialog extends LitElement {
   }
 
   #resolve(
-    signedIn: Account
+    signedIn: Member
   ): void {
     const settle = this.#settle;
     this.#settle = null;

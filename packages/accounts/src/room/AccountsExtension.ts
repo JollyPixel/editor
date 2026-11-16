@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { AccountDirectory } from "../AccountDirectory.ts";
+import type { MemberDirectory } from "../realm/MemberDirectory.ts";
 import { Username } from "../account/Username.ts";
 import { AccountChangeRefusedError } from "../account/errors/AccountChangeRefusedError.ts";
 import { InvalidUsernameError } from "../account/errors/InvalidUsernameError.ts";
@@ -33,12 +33,12 @@ export class AccountsExtension extends Extension<AccountsCommand> {
   readonly name = ACCOUNTS_ROOM;
   readonly protocols: MessageProtocols = accountsProtocols;
 
-  #directory: AccountDirectory;
+  #directory: MemberDirectory;
   #members = new Map<string, string>();
   #room: RoomBroadcast | null = null;
 
   constructor(
-    directory: AccountDirectory
+    directory: MemberDirectory
   ) {
     super();
     this.#directory = directory;

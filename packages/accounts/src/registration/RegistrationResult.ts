@@ -1,10 +1,10 @@
 // Import Internal Dependencies
-import type { Account } from "../account/Account.ts";
+import type { Member } from "../account/Account.ts";
 
 export type RegistrationResult =
   | {
     status: "active";
-    account: Account;
+    account: Member;
   }
   | {
     status: "pending";

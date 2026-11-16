@@ -15,7 +15,10 @@ import {
 
 // Import Internal Dependencies
 import { EditorPackages } from "#src/editors/node/EditorPackages.ts";
-import { openStudioAccounts } from "#src/accounts/node/openStudioAccounts.ts";
+import {
+  openProjectRealm,
+  openStudioAccounts
+} from "#src/accounts/node/openStudioAccounts.ts";
 import { StudioProject } from "#src/project/node/StudioProject.ts";
 
 // CONSTANTS
@@ -45,68 +48,56 @@ function project(
   );
 }
 
-describe("openStudioAccounts", () => {
+describe("openProjectRealm", () => {
   test("takes the roles and the default role of the project", async() => {
     using accounts = await openStudioAccounts(
       project(path.resolve("/studio")),
       { inMemory: true }
     );
+    const realm = openProjectRealm(accounts, project(path.resolve("/studio")));
 
-    assert.deepEqual([...accounts.roles], ["admin", "member", "spectator"]);
-    assert.equal(accounts.roles.defaultRole, "spectator");
+    assert.deepEqual([...realm.roles], ["admin", "member", "spectator"]);
+    assert.equal(realm.roles.defaultRole, "spectator");
   });
 
   test("lets the host override the role of new accounts", async() => {
     using accounts = await openStudioAccounts(
       project(path.resolve("/studio")),
-      {
-        inMemory: true,
-        defaultRole: "member"
-      }
+      { inMemory: true }
+    );
+    const realm = openProjectRealm(
+      accounts,
+      project(path.resolve("/studio")),
+      { defaultRole: "member" }
     );
 
-    assert.deepEqual([...accounts.roles], ["admin", "member", "spectator"]);
-    assert.equal(accounts.roles.defaultRole, "member");
+    assert.deepEqual([...realm.roles], ["admin", "member", "spectator"]);
+    assert.equal(realm.roles.defaultRole, "member");
   });
 
-  test("holds a registration without the master password for approval", async() => {
-    using accounts = await openStudioAccounts(
-      project(path.resolve("/studio"), kAccessRequests),
-      {
-        inMemory: true,
-        masterPassword: "open sesame"
-      }
-    );
+  test("holds later registrations for approval when the project takes access requests", async() => {
+    const studio = project(path.resolve("/studio"), kAccessRequests);
+    using accounts = await openStudioAccounts(studio, { inMemory: true });
+    const realm = openProjectRealm(accounts, studio);
 
-    const owner = await accounts.register({
+    const owner = await realm.register({
       username: "Alice",
-      password: kDigest,
-      masterPassword: "open sesame"
+      password: kDigest
     }, kRequester);
-    const requester = await accounts.register({
+    const requester = await realm.register({
       username: "Bob",
       password: kDigest
     }, kRequester);
 
+    assert.equal(realm.join, "request");
     assert.deepEqual(
       [owner.status, requester.status],
       ["active", "pending"]
     );
   });
+});
 
-  test("refuses an empty master password when the project takes access requests", async() => {
-    await assert.rejects(
-      openStudioAccounts(
-        project(path.resolve("/studio"), kAccessRequests),
-        {
-          inMemory: true,
-          masterPassword: ""
-        }
-      ),
-      /sets accessRequests but JOLLY_MASTER_PASSWORD is not set/
-    );
-  });
-
+describe("openStudioAccounts", () => {
   test("warns that registration is open while no master password is set", async() => {
     const warnings: string[] = [];
     const logger = {
@@ -117,6 +108,7 @@ describe("openStudioAccounts", () => {
       project(path.resolve("/studio")),
       {
         inMemory: true,
+        masterPassword: "",
         logger
       }
     );

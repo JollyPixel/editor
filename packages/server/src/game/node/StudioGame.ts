@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import {
   AssetRoom,
   type AssetRecord
@@ -54,7 +54,7 @@ export class StudioGame {
   }
 
   manifest(
-    account: Account,
+    account: Member,
     start: string
   ): GameManifestData {
     const scene = this.#readable(account, start);
@@ -70,14 +70,14 @@ export class StudioGame {
   }
 
   scriptImports(
-    account: Account,
+    account: Member,
     base: string
   ): Record<string, string> {
     return scriptImports(this.#records(account), base);
   }
 
   async artifact(
-    account: Account,
+    account: Member,
     assetId: string,
     revision: string | undefined
   ): Promise<GameArtifact> {
@@ -95,7 +95,7 @@ export class StudioGame {
   }
 
   async module(
-    account: Account,
+    account: Member,
     path: string,
     revision: string | undefined
   ): Promise<GameArtifact> {
@@ -111,14 +111,14 @@ export class StudioGame {
   }
 
   #records(
-    account: Account
+    account: Member
   ): AssetRecord[] {
     return Array.from(this.#backend.catalog.catalog)
       .filter((record) => this.#opens(account, record));
   }
 
   #readable(
-    account: Account,
+    account: Member,
     assetId: string
   ): AssetRecord {
     const record = this.#backend.catalog.record(assetId);
@@ -130,7 +130,7 @@ export class StudioGame {
   }
 
   #opens(
-    account: Account,
+    account: Member,
     record: AssetRecord
   ): boolean {
     return this.#project.access.opens(

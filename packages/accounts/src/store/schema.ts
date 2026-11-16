@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import { ADMIN_ROLE } from "../account/Account.ts";
+// CONSTANTS
+export const SCHEMA_VERSION = 2;
 
 export const SQL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
@@ -8,8 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
   username_key TEXT NOT NULL UNIQUE,
   digest BLOB NOT NULL,
   salt BLOB NOT NULL,
-  role TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('active', 'pending')),
   created_at INTEGER NOT NULL
 ) STRICT;
 
@@ -26,14 +24,20 @@ CREATE TABLE IF NOT EXISTS ownership (
   user_id TEXT NOT NULL REFERENCES users (id) ON DELETE RESTRICT
 ) STRICT;
 
-INSERT OR IGNORE INTO ownership (singleton, user_id)
-  SELECT 1, id FROM users
-  WHERE role = '${ADMIN_ROLE}' AND status = 'active'
-  ORDER BY created_at, rowid
-  LIMIT 1;
+CREATE TABLE IF NOT EXISTS memberships (
+  realm_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  role TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('active', 'pending')),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (realm_id, user_id)
+) STRICT;
+
+CREATE INDEX IF NOT EXISTS memberships_by_user ON memberships (user_id);
 
 CREATE TABLE IF NOT EXISTS share_links (
   id TEXT PRIMARY KEY,
+  realm_id TEXT NOT NULL,
   token TEXT NOT NULL UNIQUE,
   asset_id TEXT NOT NULL,
   created_by TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -41,10 +45,12 @@ CREATE TABLE IF NOT EXISTS share_links (
   expires_at INTEGER
 ) STRICT;
 
+CREATE INDEX IF NOT EXISTS share_links_by_realm ON share_links (realm_id);
 CREATE INDEX IF NOT EXISTS share_links_by_creator ON share_links (created_by);
 
 CREATE TABLE IF NOT EXISTS agent_tokens (
   id TEXT PRIMARY KEY,
+  realm_id TEXT NOT NULL,
   token_hash BLOB NOT NULL UNIQUE,
   owner_id TEXT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -66,4 +72,6 @@ CREATE TABLE IF NOT EXISTS preferences (
   overrides TEXT NOT NULL,
   PRIMARY KEY (user_id, scope)
 ) STRICT;
+
+PRAGMA user_version = ${SCHEMA_VERSION};
 `;

@@ -13,7 +13,7 @@ import {
 } from "lit/decorators.js";
 import type {
   AccessRequest,
-  Account,
+  Member,
   AccountsRoster,
   RosterEntry
 } from "@jolly-pixel/accounts";
@@ -62,7 +62,7 @@ export class UsersPane extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare self: Account | null;
+  declare self: Member | null;
 
   @state()
   declare _collapsed: ReadonlySet<string>;

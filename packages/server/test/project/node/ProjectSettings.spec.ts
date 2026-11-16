@@ -147,8 +147,8 @@ describe("ProjectSettings", () => {
     });
 
     assert.deepEqual(harness.revoked, [spectator.id]);
-    assert.equal(harness.accounts.roles.defaultRole, "reviewer");
-    assert.deepEqual(roleNames(harness.accounts.roles), [
+    assert.equal(harness.realm.roles.defaultRole, "reviewer");
+    assert.deepEqual(roleNames(harness.realm.roles), [
       "admin",
       "member",
       "spectator",
@@ -157,24 +157,21 @@ describe("ProjectSettings", () => {
     assert.equal(harness.project.access.projectRights("spectator").allows("export"), false);
   });
 
-  test("refuses access requests without a master password and leaves the access unchanged", async() => {
+  test("holds the next registrations for approval once access requests are on", async() => {
     await using harness = await settingsHarness();
     const admin = await harness.register("Alice");
     const { access } = harness.settings.read(admin);
     assert.ok(access !== undefined);
 
-    await assert.rejects(
-      harness.update(admin, "access", {
-        access: {
-          ...access,
-          accessRequests: true
-        },
-        renamedRoles: {}
-      }),
-      InvalidSettingsError
-    );
-    assert.deepEqual(harness.project.access.toJSON(), access);
-    assert.deepEqual(await harness.audit.store.reader.listAll(), []);
+    await harness.update(admin, "access", {
+      access: {
+        ...access,
+        accessRequests: true
+      },
+      renamedRoles: {}
+    });
+
+    assert.equal(harness.realm.join, "request");
   });
 
   test("a renamed role keeps its accounts, revoked once", async() => {
@@ -184,7 +181,7 @@ describe("ProjectSettings", () => {
     const { access } = harness.settings.read(admin);
     assert.ok(access !== undefined);
     const accountsRevoked: string[] = [];
-    harness.accounts.watchRevocations(
+    harness.realm.watchRevocations(
       (subject) => accountsRevoked.push(subject)
     );
 
@@ -202,8 +199,8 @@ describe("ProjectSettings", () => {
       }
     });
 
-    assert.equal(harness.accounts.account(bob.id)?.role, "viewer");
-    assert.deepEqual(roleNames(harness.accounts.roles), [
+    assert.equal(harness.realm.member(bob.id)?.role, "viewer");
+    assert.deepEqual(roleNames(harness.realm.roles), [
       "admin",
       "member",
       "viewer"
@@ -235,6 +232,6 @@ describe("ProjectSettings", () => {
       InvalidSettingsError
     );
     assert.deepEqual(harness.project.access.toJSON(), access);
-    assert.equal(harness.accounts.account(bob.id)?.role, "spectator");
+    assert.equal(harness.realm.member(bob.id)?.role, "spectator");
   });
 });

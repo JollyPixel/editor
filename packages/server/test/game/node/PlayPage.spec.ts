@@ -35,7 +35,7 @@ function servePlayPage(
       html
     },
     game,
-    accounts: {
+    realm: {
       signedIn: (headers) => (headers.cookie === kSessionCookie ?
         gameAccount("player") :
         null)

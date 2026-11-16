@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   binaryAssetKind,
@@ -83,7 +83,7 @@ function scriptKind(): AssetKindHandler<BinaryAssetState> {
 
 export function gameAccount(
   role: string
-): Account {
+): Member {
   return {
     id: role,
     username: role,

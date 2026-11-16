@@ -8,6 +8,7 @@ import {
   Accounts,
   IN_MEMORY_LOCATION,
   SessionCookie,
+  type AccountsRealm,
   type AccountsThrottleOptions
 } from "@jolly-pixel/accounts/node";
 
@@ -37,6 +38,11 @@ export interface StudioAccountsOptions extends AccountsPolicy {
   inMemory?: boolean;
   throttle?: AccountsThrottleOptions;
   /**
+   * Secret the first account gives to register. Without it, anyone who
+   * reaches the server first owns it.
+   */
+  masterPassword?: string;
+  /**
    * Warned when no master password is set and registration is open.
    */
   logger?: StudioAccountsLogger;
@@ -51,15 +57,13 @@ export async function openStudioAccounts(
   options: StudioAccountsOptions = {}
 ): Promise<Accounts> {
   const { root } = project.file;
-  const access = AccountsAccess.resolve(
-    project.access,
-    options,
-    project.file.path
-  );
-  if (access.masterPassword === undefined) {
+  const masterPassword = options.masterPassword === "" ?
+    undefined :
+    options.masterPassword;
+  if (masterPassword === undefined) {
     options.logger?.warn(
       `${MASTER_PASSWORD_ENV} is not set: anyone who reaches this server ` +
-      "can register, and the first account becomes admin"
+      "can register, and the first account owns it"
     );
   }
 
@@ -67,13 +71,22 @@ export async function openStudioAccounts(
     location: options.inMemory ?
       IN_MEMORY_LOCATION :
       path.join(root, STATE_DIRECTORY, kDatabaseFile),
-    roles: access.roles,
     cookie: new SessionCookie({
       name: hashCookieName(root)
     }),
     throttle: options.throttle,
-    masterPassword: access.masterPassword
+    masterPassword
   });
+}
+
+export function openProjectRealm(
+  accounts: Accounts,
+  project: StudioProject,
+  policy: AccountsPolicy = {}
+): AccountsRealm {
+  return AccountsAccess
+    .resolve(project.access, policy)
+    .openRealm(accounts, path.resolve(project.file.root));
 }
 
 function hashCookieName(

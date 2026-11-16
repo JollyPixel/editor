@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   AVATAR_MAX_BYTES,
   AccountsRequestError,
-  type Account,
+  type Member,
   type RegistrationResult
 } from "@jolly-pixel/accounts";
 
@@ -26,7 +26,7 @@ const kPng = Buffer.from(
 
 function activeAccount(
   result: RegistrationResult
-): Account {
+): Member {
   assert.ok(result.status === "active");
 
   return result.account;

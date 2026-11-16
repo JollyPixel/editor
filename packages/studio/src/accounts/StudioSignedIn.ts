@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   AccountsRoster,
-  type Account,
+  type Member,
   type AccountsClient
 } from "@jolly-pixel/accounts";
 import type { PeerMetadata } from "@jolly-pixel/network";
@@ -39,7 +39,7 @@ export interface StudioSignInOptions {
   /**
    * Asks the user to sign in, when the session cookie holds no account.
    */
-  signIn: () => Promise<Account>;
+  signIn: () => Promise<Member>;
   api: StudioClients;
   /**
    * Opens the shell's connection, joined with the account's peer profile.
@@ -84,14 +84,14 @@ export class StudioSignedIn extends EventTarget {
   readonly renewal: SessionRenewal;
   readonly project: StudioProjectSettings;
 
-  #account: Account;
+  #account: Member;
   #accounts: StudioAccountsClient;
   #api: StudioClients;
   #preferences: AccountPreferences;
   #reload: () => void;
 
   constructor(
-    account: Account,
+    account: Member,
     options: StudioSignedInOptions
   ) {
     super();
@@ -125,7 +125,7 @@ export class StudioSignedIn extends EventTarget {
     });
   }
 
-  get account(): Account {
+  get account(): Member {
     return this.#account;
   }
 

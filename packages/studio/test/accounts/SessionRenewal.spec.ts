@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import {
@@ -15,13 +15,13 @@ import {
 } from "../../src/accounts/SessionRenewal.ts";
 
 // CONSTANTS
-const kAlice: Account = {
+const kAlice: Member = {
   id: "alice-id",
   username: "alice",
   role: "default",
   owner: false
 };
-const kBob: Account = {
+const kBob: Member = {
   ...kAlice,
   id: "bob-id",
   username: "bob"
@@ -64,7 +64,7 @@ describe("SessionRenewal", () => {
   });
 
   test("asks to sign in once for refusals that arrive while it is renewing", async() => {
-    const signedIn = Promise.withResolvers<Account>();
+    const signedIn = Promise.withResolvers<Member>();
     let signIns = 0;
     const probe = new RenewalProbe({
       signIn: () => {

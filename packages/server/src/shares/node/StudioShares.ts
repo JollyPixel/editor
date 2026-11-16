@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
 import {
   GUEST_ROLE,
-  type Account,
+  type Member,
   type ShareLink
 } from "@jolly-pixel/accounts";
-import type { Accounts } from "@jolly-pixel/accounts/node";
+import type { AccountsRealm } from "@jolly-pixel/accounts/node";
 import {
   AssetRoom,
   type AssetKind
@@ -32,32 +32,32 @@ export interface SharedAsset {
 }
 
 export interface StudioSharesOptions {
-  accounts: Accounts;
+  realm: AccountsRealm;
   project: Pick<StudioProject, "access">;
   catalog: SharedCatalog;
 }
 
 export class StudioShares {
-  #accounts: Accounts;
+  #realm: AccountsRealm;
   #project: Pick<StudioProject, "access">;
   #catalog: SharedCatalog;
 
   constructor(
     options: StudioSharesOptions
   ) {
-    this.#accounts = options.accounts;
+    this.#realm = options.realm;
     this.#project = options.project;
     this.#catalog = options.catalog;
   }
 
   list(
-    account: Account
+    account: Member
   ): ShareLink[] {
-    return this.#accounts.shareLinks.visibleTo(account.id);
+    return this.#realm.shareLinks.visibleTo(account.id);
   }
 
   create(
-    account: Account,
+    account: Member,
     assetId: string,
     lifetime: ShareLifetime
   ): ShareLink {
@@ -66,7 +66,7 @@ export class StudioShares {
       throw new UnknownAssetError(assetId);
     }
 
-    return this.#accounts.shareLinks.create({
+    return this.#realm.shareLinks.create({
       assetId,
       createdBy: account.id,
       expiresAt: lifetime.expiresAt(Date.now())
@@ -74,16 +74,16 @@ export class StudioShares {
   }
 
   revoke(
-    account: Account,
+    account: Member,
     linkId: string
   ): void {
-    this.#accounts.shareLinks.revoke(account.id, linkId);
+    this.#realm.shareLinks.revoke(account.id, linkId);
   }
 
   opened(
     token: string
   ): SharedAsset | null {
-    const link = this.#accounts.shareLinks.find(token);
+    const link = this.#realm.shareLinks.find(token);
     if (link === null) {
       return null;
     }
@@ -105,7 +105,7 @@ export class StudioShares {
       return null;
     }
 
-    return this.#accounts.shareLinks.bySubject(identity.subject)?.assetId ??
+    return this.#realm.shareLinks.bySubject(identity.subject)?.assetId ??
       null;
   }
 

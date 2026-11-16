@@ -2,7 +2,6 @@
 import type { IncomingHttpHeaders } from "node:http";
 
 // Import Internal Dependencies
-import type { Account } from "../account/Account.ts";
 import type { AccountDirectory } from "../AccountDirectory.ts";
 import type { SessionRepository } from "../store/SessionRepository.ts";
 import type { SessionCookie } from "./SessionCookie.ts";
@@ -25,13 +24,13 @@ export class CookieSessions {
   }
 
   open(
-    account: Account,
+    accountId: string,
     secure: boolean
   ): string {
     const token = SessionToken.mint();
     this.#sessions.open(
       token,
-      account.id,
+      accountId,
       Date.now() + this.cookie.ttlMs
     );
 
@@ -41,17 +40,14 @@ export class CookieSessions {
     );
   }
 
-  account(
+  accountId(
     headers: IncomingHttpHeaders
-  ): Account | null {
+  ): string | null {
     const token = this.cookie.read(headers);
-    const accountId = token === null
+
+    return token === null
       ? null
       : this.#sessions.owner(token);
-
-    return accountId === null
-      ? null
-      : this.#directory.account(accountId);
   }
 
   close(

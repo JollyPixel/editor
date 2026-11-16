@@ -45,8 +45,8 @@ async function pageHarness(): Promise<PageHarness> {
   const setup = await shareAccounts({
     "map-1": ["map-1"]
   });
-  const { accounts, owner, shares } = setup;
-  const link = accounts.shareLinks.create({
+  const { realm, owner, shares } = setup;
+  const link = realm.shareLinks.create({
     assetId: "map-1",
     createdBy: owner.id,
     expiresAt: null
@@ -60,7 +60,7 @@ async function pageHarness(): Promise<PageHarness> {
 
   return {
     token: link.token,
-    revoke: () => accounts.shareLinks.revoke(owner.id, link.id),
+    revoke: () => realm.shareLinks.revoke(owner.id, link.id),
     fetch: (pathname) => server.fetch(pathname),
     async [Symbol.asyncDispose]() {
       await server[Symbol.asyncDispose]();

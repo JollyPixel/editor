@@ -2,7 +2,7 @@
 import {
   AccountsClient,
   ACCOUNTS_URL_PATH,
-  type Account
+  type Member
 } from "@jolly-pixel/accounts";
 import {
   CATALOG_TIMEOUT_MS,
@@ -68,7 +68,7 @@ async function connectOffline(): Promise<StudioConnection> {
 
 async function signIn(
   accounts: AccountsClient
-): Promise<Account> {
+): Promise<Member> {
   const dialog = document.createElement("studio-sign-in");
   (document.querySelector("jolly-scope") ?? document.body).append(dialog);
   try {

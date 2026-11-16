@@ -9,7 +9,8 @@ import type * as z from "zod";
 import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
 import {
   isCrossOrigin,
-  type Accounts
+  type Accounts,
+  type AccountsRealm
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
@@ -67,6 +68,7 @@ export type TrustProxy = boolean | string | string[];
 
 export interface StudioApiOptions {
   accounts: Accounts;
+  realm: AccountsRealm;
   shares: StudioShares;
   archive: ProjectArchive;
   gameExport: GameExport;
@@ -140,10 +142,11 @@ export class StudioApi implements AsyncDisposable {
     });
     await app.register(accountsRoutes, {
       prefix: ACCOUNTS_URL_PATH,
-      accounts: options.accounts
+      accounts: options.accounts,
+      realm: options.realm
     });
     await app.register(async(signedIn) => {
-      signedIn.addHook("preParsing", authenticate(options.accounts));
+      signedIn.addHook("preParsing", authenticate(options.realm));
 
       await signedIn.register(sharesRoutes, {
         prefix: SHARES_URL_PATH,
@@ -151,7 +154,7 @@ export class StudioApi implements AsyncDisposable {
       });
       await signedIn.register(golemRoutes, {
         prefix: GOLEM_TOKENS_URL_PATH,
-        accounts: options.accounts
+        realm: options.realm
       });
       await signedIn.register(projectRoutes, {
         prefix: PROJECT_URL_PATH,
