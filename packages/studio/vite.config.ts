@@ -22,9 +22,7 @@ import {
 } from "@jolly-pixel/e2e";
 import {
   PLAY_PAGE_DIR,
-  PLAY_PAGE_PATH,
   PREVIEW_PAGE_DIR,
-  PREVIEW_PAGE_PATH,
   PROJECTS_PAGE_DIR
 } from "@jolly-pixel/server";
 import { ServerSettings } from "@jolly-pixel/server/node";
@@ -84,18 +82,17 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),
       playerModules(),
+      mode.serve && backend(project, mode, settings),
       editorPages(
         new EditorPageFiles(project.editors),
         {
-          shellPages: {
-            index: "index.html",
-            [PREVIEW_PAGE_DIR]: PREVIEW_PAGE_PATH,
-            [PLAY_PAGE_DIR]: PLAY_PAGE_PATH,
-            [PROJECTS_PAGE_DIR]: `${PROJECTS_PAGE_DIR}/index.html`
-          }
+          shellPages: [
+            PREVIEW_PAGE_DIR,
+            PLAY_PAGE_DIR,
+            PROJECTS_PAGE_DIR
+          ]
         }
-      ),
-      mode.serve && backend(project, mode, settings)
+      )
     ]
   };
 });

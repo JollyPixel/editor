@@ -17,8 +17,9 @@
 - Game export ships the player from `dist/` (`BuiltPlayer`), except under
   `pnpm dev`: `vite/DevPlayer.ts` builds it from the sources on the first
   export and again once a module it imports changes.
-- The back-end serves `/play/`, not Vite (`vite/ServedPlayerPage.ts` under
-  `pnpm dev`), to write the scripts into the player's import map. A bare
+- The back-end serves `/play/`, not Vite, to write the scripts into the
+  player's import map: the `backend` plugin stays before `editorPages`, whose
+  middleware also answers `/play/`. A bare
   specifier a script may import needs a module in `src/play/modules/` and an
   entry in `PLAYER_MODULES` (`vite/playerModules.ts`).
 - On Windows, a recursive `fs.watch` fires `change` when a file is read. A

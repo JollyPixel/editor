@@ -2,54 +2,55 @@
 import path from "node:path";
 
 // Import Third-party Dependencies
-import {
-  normalizePath,
-  type Plugin
-} from "vite";
+import type { Plugin } from "vite";
 
 // Import Internal Dependencies
-import { EditorPageInput } from "./EditorPageInput.ts";
 import type { EditorPageFiles } from "./EditorPageFiles.ts";
 import type { EditorPagesWatcher } from "./EditorPagesWatcher.ts";
-import { ServedEditorPages } from "./ServedEditorPages.ts";
+import {
+  PageInput,
+  virtualPages
+} from "./PageInput.ts";
+import { ServedPages } from "./ServedPages.ts";
 
 // CONSTANTS
-const kHtmlFile = /\.html$/;
-const kShellPages = {
-  index: "index.html"
-};
+const kIndexPage = "index.html";
 const kUiModule = /[\\/](?:packages|@jolly-pixel)[\\/]ui[\\/]dist[\\/]/;
 
 export interface EditorPagesPluginOptions {
   /**
-   * Studio pages bundled next to the editor pages, by entry name, relative to
-   * the Vite root.
-   * @default { index: "index.html" }
+   * Routes of the studio pages bundled next to the shell and the editor
+   * pages. The page of route `play` is `pages/play.html`, served at `play/`.
+   * @default []
    */
-  shellPages?: Readonly<Record<string, string>>;
+  shellPages?: Iterable<string>;
 }
 
 export function editorPages(
   pages: EditorPageFiles,
   options: EditorPagesPluginOptions = {}
 ): Plugin {
-  const { shellPages = kShellPages } = options;
+  const { shellPages = [] } = options;
   let outDir: string;
   let watcher: EditorPagesWatcher | null = null;
-  const inputs = new Map<string, EditorPageInput>();
+  const inputs = new Map<string, PageInput>();
 
   return {
     name: "studio-editor-pages",
     config(config, env) {
       const root = path.resolve(config.root ?? "");
-      for (const input of EditorPageInput.compiled(root, pages.editors)) {
+      const compiled = [
+        ...PageInput.editors(root, pages.editors),
+        ...Array.from(shellPages, (route) => PageInput.shell(root, route))
+      ];
+      for (const input of compiled) {
         inputs.set(input.id, input);
       }
       if (env.command === "serve") {
         return {
           optimizeDeps: {
             entries: [
-              ...Object.values(shellPages),
+              kIndexPage,
               ...Array.from(inputs.values(), (input) => input.entry)
             ]
           }
@@ -60,11 +61,7 @@ export function editorPages(
         build: {
           rolldownOptions: {
             input: {
-              ...Object.fromEntries(
-                Object.entries(shellPages).map(
-                  ([name, page]) => [name, path.join(root, page)]
-                )
-              ),
+              index: path.join(root, kIndexPage),
               ...Object.fromEntries(
                 Array.from(inputs.values(), (input) => [input.name, input.id])
               )
@@ -95,27 +92,10 @@ export function editorPages(
         config.build.outDir
       );
     },
-    resolveId: {
-      filter: {
-        id: kHtmlFile
-      },
-      handler(id) {
-        const normalized = normalizePath(id);
-
-        return inputs.has(normalized) ? normalized : null;
-      }
-    },
-    load: {
-      filter: {
-        id: kHtmlFile
-      },
-      handler(id) {
-        return inputs.get(id)?.load() ?? null;
-      }
-    },
+    ...virtualPages(inputs),
     configureServer(server) {
       server.middlewares.use(
-        new ServedEditorPages(server, inputs.values()).middleware
+        new ServedPages(server, inputs.values()).middleware
       );
       server.middlewares.use(
         pages.middleware

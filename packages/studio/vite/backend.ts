@@ -4,6 +4,7 @@ import {
   type Plugin
 } from "vite";
 import type { RunMode } from "@jolly-pixel/e2e";
+import { PLAY_PAGE_DIR } from "@jolly-pixel/server";
 import {
   ServerBackend,
   type ServerBackendOptions,
@@ -19,11 +20,10 @@ import {
 } from "../node/studioFiles.ts";
 import { DevPlayer } from "./DevPlayer.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
-import { EditorPageInput } from "./EditorPageInput.ts";
+import { PageInput } from "./PageInput.ts";
 import { playerModules } from "./playerModules.ts";
 import { projectContributions } from "./projectContributions.ts";
-import { ServedEditorPages } from "./ServedEditorPages.ts";
-import { ServedPlayerPage } from "./ServedPlayerPage.ts";
+import { ServedPages } from "./ServedPages.ts";
 
 export function backend(
   project: Project,
@@ -37,6 +37,11 @@ export function backend(
     apply: "serve",
     async configureServer(server) {
       const hosting = settings.hosting(STUDIO_ROOT);
+      const { root } = server.config;
+      const pages = new ServedPages(server, [
+        ...PageInput.editors(root, project.editors),
+        PageInput.shell(root, PLAY_PAGE_DIR)
+      ]);
       opened = await ServerBackend.open(
         {
           hosting,
@@ -52,7 +57,7 @@ export function backend(
           ...backendOptions(mode, settings),
           ...await studioBackendFiles(
             new DevPlayer({
-              root: server.config.root,
+              root,
               plugins: [
                 projectContributions(project),
                 playerModules()
@@ -60,11 +65,10 @@ export function backend(
               logger: server.config.logger
             })
           ),
-          editorPages: new ServedEditorPages(
-            server,
-            EditorPageInput.compiled(server.config.root, project.editors)
-          ),
-          playPage: new ServedPlayerPage(server),
+          editorPages: pages,
+          playPage: {
+            html: () => pages.render(PLAY_PAGE_DIR)
+          },
           allowedHosts: server.config.server.allowedHosts
         }
       );

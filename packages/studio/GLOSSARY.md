@@ -149,7 +149,7 @@ Each one runs `editor.host` with its own client, session and runtime.
 
 ### Preview frame
 
-The hidden `preview/index.html` frame that renders the 3D kinds listed in
+The hidden `preview/` frame (`pages/preview.html`) that renders the 3D kinds listed in
 `jollypixel.preview` into PNG previews, one asset at a time, from the scene
 contributions. It joins asset rooms as an observer and never writes.
 
@@ -298,7 +298,7 @@ the scene of the active tab.
 
 ### Player
 
-The `play/index.html` page that runs a game from its game manifest, in its own
+The `play/` page (`pages/play.html`) that runs a game from its game manifest, in its own
 `jolly-play` window. The shell opens it, reuses it on the next Play, and shows
 its errors as notifications. The server writes its import map before its
 first module: three.js and the engine resolve to the player's own copy, and

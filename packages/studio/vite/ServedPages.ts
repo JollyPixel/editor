@@ -3,7 +3,7 @@ import type {
   Connect,
   ViteDevServer
 } from "vite";
-import { EDITOR_PAGE_FILE, EDITOR_PAGES_PREFIX } from "@jolly-pixel/server";
+import { EDITOR_PAGE_FILE, EDITOR_PAGES_DIR } from "@jolly-pixel/server";
 import {
   EditorPageFolders,
   type EditorPageSource,
@@ -12,35 +12,46 @@ import {
 } from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
-import type { EditorPageInput } from "./EditorPageInput.ts";
+import type { PageInput } from "./PageInput.ts";
 
-export class ServedEditorPages implements EditorPageSource {
+export class ServedPages implements EditorPageSource {
   readonly #server: ViteDevServer;
   readonly #built = EditorPageFolders.packages();
-  readonly #inputs = new Map<string, EditorPageInput>();
-  readonly #routes = new Map<string, EditorPageInput>();
+  readonly #inputs = new Map<string, PageInput>();
+  readonly #urls = new Map<string, PageInput>();
 
   constructor(
     server: ViteDevServer,
-    inputs: Iterable<EditorPageInput>
+    inputs: Iterable<PageInput>
   ) {
     this.#server = server;
     for (const input of inputs) {
-      const url = `${EDITOR_PAGES_PREFIX}${input.name}/`;
-      this.#inputs.set(input.name, input);
-      this.#routes.set(url, input);
-      this.#routes.set(`${url}${EDITOR_PAGE_FILE}`, input);
+      const url = `/${input.route}/`;
+      this.#inputs.set(input.route, input);
+      this.#urls.set(url, input);
+      this.#urls.set(`${url}${EDITOR_PAGE_FILE}`, input);
     }
   }
 
   html(
     editor: PageEditor
   ): Promise<string> {
-    const input = this.#inputs.get(editor.name);
+    const input = this.#inputs.get(`${EDITOR_PAGES_DIR}/${editor.name}`);
 
     return input === undefined ?
       this.#built.html(editor) :
       this.#compile(input);
+  }
+
+  async render(
+    route: string
+  ): Promise<string> {
+    const input = this.#inputs.get(route);
+    if (input === undefined) {
+      throw new Error(`No studio page is served at "/${route}/".`);
+    }
+
+    return this.#compile(input);
   }
 
   readonly middleware: Connect.NextHandleFunction = (
@@ -49,7 +60,7 @@ export class ServedEditorPages implements EditorPageSource {
     next
   ) => {
     const pathname = readPathname(request);
-    const input = pathname === null ? undefined : this.#routes.get(pathname);
+    const input = pathname === null ? undefined : this.#urls.get(pathname);
     if (input === undefined) {
       next();
 
@@ -65,10 +76,10 @@ export class ServedEditorPages implements EditorPageSource {
   };
 
   async #compile(
-    input: EditorPageInput
+    input: PageInput
   ): Promise<string> {
     return this.#server.transformIndexHtml(
-      `${EDITOR_PAGES_PREFIX}${input.name}/`,
+      `/${input.route}/`,
       await input.loadServed()
     );
   }

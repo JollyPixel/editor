@@ -17,6 +17,7 @@ import {
 } from "../../accounts/node/openServerAccounts.ts";
 import type { Middleware } from "../../http/node/Middleware.ts";
 import { requestPathname } from "../../http/node/requestPathname.ts";
+import { PROJECT_PAGES_PREFIX } from "../../projects/api.ts";
 import type { Project } from "../../project/node/Project.ts";
 import { UnknownProjectError } from "../../projects/node/errors/UnknownProjectError.ts";
 import { ProjectUnavailableError } from "../../projects/node/errors/ProjectUnavailableError.ts";
@@ -168,7 +169,7 @@ export class ServerBackend implements AsyncDisposable {
         }
       }
       else if (location.pathname === "") {
-        redirectToFolder(request, response, pathname);
+        redirectToFolder(request, response, location.slug);
       }
       else if (location.pathname.startsWith(API_URL_PATH)) {
         api.route(request, response);
@@ -251,10 +252,13 @@ function requestSearch(
 function redirectToFolder(
   request: IncomingMessage,
   response: ServerResponse,
-  pathname: string
+  slug: string
 ): void {
   response.statusCode = 308;
-  response.setHeader("location", `${pathname}/${requestSearch(request)}`);
+  response.setHeader(
+    "location",
+    `${PROJECT_PAGES_PREFIX}${slug}/${requestSearch(request)}`
+  );
   response.end();
 }
 

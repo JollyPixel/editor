@@ -4,6 +4,7 @@ import {
   test
 } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
 import path from "node:path";
 
 // Import Third-party Dependencies
@@ -15,15 +16,29 @@ import {
 } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { EditorPageInput } from "../../vite/EditorPageInput.ts";
-import { ServedEditorPages } from "../../vite/ServedEditorPages.ts";
+import { PageInput } from "../../vite/PageInput.ts";
+import { ServedPages } from "../../vite/ServedPages.ts";
 import { writeEditorPage } from "../helpers/editorPages.ts";
 import {
   createTempDir,
   removeTempDir
 } from "../helpers/tempDir.ts";
 
-describe("ServedEditorPages", () => {
+function createViteServer(
+  root: string
+) {
+  return createServer({
+    root,
+    configFile: false,
+    logLevel: "silent",
+    appType: "custom",
+    server: {
+      middlewareMode: true
+    }
+  });
+}
+
+describe("ServedPages", () => {
   test("hands a share page the compiled source page, or the built one", async() => {
     const root = await createTempDir("studio-root-");
     const editor = await createTempDir("studio-editor-page-");
@@ -37,20 +52,12 @@ describe("ServedEditorPages", () => {
     const built = voxelMapEditor(dist, {
       name: "built"
     });
-    const vite = await createServer({
-      root,
-      configFile: false,
-      logLevel: "silent",
-      appType: "custom",
-      server: {
-        middlewareMode: true
-      }
-    });
+    const vite = await createViteServer(root);
 
     try {
-      const pages = new ServedEditorPages(
+      const pages = new ServedPages(
         vite,
-        EditorPageInput.compiled(root, [compiled, built])
+        PageInput.editors(root, [compiled, built])
       );
 
       const html = await pages.html(compiled);
@@ -63,6 +70,30 @@ describe("ServedEditorPages", () => {
       await removeTempDir(editor);
       await removeTempDir(root);
       await removeTempDir(path.dirname(dist));
+    }
+  });
+
+  test("renders a shell page from pages/ with root URLs for the files it loads", async() => {
+    const root = await createTempDir("studio-root-");
+    await fs.mkdir(path.join(root, "pages"));
+    await fs.writeFile(
+      path.join(root, "pages", "play.html"),
+      "<link rel=\"stylesheet\" href=\"../main.css\">" +
+      "<script type=\"module\" src=\"../src/play/index.ts\"></script>"
+    );
+    const vite = await createViteServer(root);
+
+    try {
+      const pages = new ServedPages(vite, [PageInput.shell(root, "play")]);
+
+      const html = await pages.render("play");
+      assert.match(html, /href="\/main\.css"/);
+      assert.match(html, /src="\/src\/play\/index\.ts"/);
+      await assert.rejects(pages.render("preview"), /"\/preview\/"/);
+    }
+    finally {
+      await vite.close();
+      await removeTempDir(root);
     }
   });
 });

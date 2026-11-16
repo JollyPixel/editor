@@ -62,10 +62,10 @@ describe("DevPlayer", () => {
 
   beforeEach(async() => {
     root = await createTempDir("studio-dev-player-");
-    await fs.mkdir(path.join(root, "play"));
+    await fs.mkdir(path.join(root, "pages"));
     await fs.mkdir(path.join(root, "src"));
-    await fs.writeFile(path.join(root, "play", "index.html"), kPage);
-    await fs.utimes(path.join(root, "play", "index.html"), kBuiltAt, kBuiltAt);
+    await fs.writeFile(path.join(root, "pages", "play.html"), kPage);
+    await fs.utimes(path.join(root, "pages", "play.html"), kBuiltAt, kBuiltAt);
     await writeMain(root, "first", kBuiltAt);
     await writeFlavourPackage(root);
 
