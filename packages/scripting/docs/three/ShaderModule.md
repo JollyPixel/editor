@@ -65,6 +65,12 @@ its default. Colors and vectors are cloned.
 
 ### material: THREE.NodeMaterial
 
+### animated: boolean
+
+True when a node slot of the material, such as `colorNode`, reads `time`,
+`deltaTime` or `frameId` from `three/tsl`. A node used only inside an `Fn`
+body is not seen.
+
 ### assign(values: ShaderUniformValues): void
 
 Updates the uniforms of a live material. Names the shader does not declare are

@@ -67,7 +67,8 @@ Its data also takes `uniforms` (`ModelData`) and it has a second asset slot,
 `shader`, read as for [MeshDefinition](#meshdefinition). `ModelRenderer`
 then takes `shader` and `uniforms` options: it builds one material and gives
 it to every mesh of its model copy, and disposes it with the component. The
-source model's materials are left alone.
+source model's materials are left alone. An `animated` material keeps the
+world rendering, as for `MeshRenderer`.
 
 ## SpriteRenderer
 
@@ -230,7 +231,9 @@ interface MeshRendererOptions {
 The constructor also takes `shader?: Shader | null` (`null` by default) and
 `uniforms?: ShaderUniformValues` (`{}`). The renderer calls
 `shader.createMaterial(uniforms)` once, renders with the returned material and
-disposes it with the component. The `material` settings are still kept and
+disposes it with the component. When that material is `animated`, the
+renderer calls `world.keepAlive` until it is destroyed, so a world that renders
+on demand keeps drawing it. The `material` settings are still kept and
 captured, but the shader material ignores them. `threeMesh.material` is typed
 `THREE.Material` for that reason, and `shader` returns the shader or `null`.
 

@@ -18,7 +18,10 @@
         <section id="shader-preview" hidden>
           <div class="shader-viewport">
             <canvas tabindex="-1"></canvas>
-            <jolly-select aria-label="Preview geometry" title="Preview geometry"></jolly-select>
+            <div class="preview-controls">
+              <jolly-select class="preview-geometry" aria-label="Preview geometry" title="Preview geometry"></jolly-select>
+              <jolly-select class="preview-size" aria-label="Preview size" title="Preview size"></jolly-select>
+            </div>
           </div>
           <jolly-shader-output></jolly-shader-output>
         </section>

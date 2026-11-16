@@ -7,6 +7,7 @@ import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { type Actor, ActorComponent } from "../../../../core/actor/index.ts";
 import type { Model } from "../../../assets/model.ts";
 import type {
+  ShadedMaterial,
   Shader,
   ShaderUniformValues
 } from "../../../assets/shader.ts";
@@ -75,7 +76,7 @@ export class ModelRenderer<
   #receiveShadow: boolean | undefined;
   #shader: Shader | null;
   #uniforms: ShaderUniformValues;
-  #material: THREE.Material | null = null;
+  #shading: ShadedMaterial | null = null;
   #mixer: THREE.AnimationMixer | null = null;
 
   animation = new ModelAnimation<TClipName>(() => {
@@ -121,14 +122,17 @@ export class ModelRenderer<
     }
 
     this.group = cloneSkinned(object) as THREE.Group<THREE.Object3DEventMap>;
-    const material = this.#shader?.createMaterial(this.#uniforms).material ?? null;
-    this.#material = material;
+    const shading = this.#shader?.createMaterial(this.#uniforms) ?? null;
+    this.#shading = shading;
+    if (shading?.animated) {
+      this.addTeardown(this.actor.world.keepAlive(() => true));
+    }
     this.group.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.castShadow = this.#castShadow ?? child.castShadow;
         child.receiveShadow = this.#receiveShadow ?? child.receiveShadow;
-        if (material !== null) {
-          child.material = material;
+        if (shading !== null) {
+          child.material = shading.material;
         }
       }
     });
@@ -155,7 +159,7 @@ export class ModelRenderer<
     this.#mixer?.stopAllAction();
     this.#mixer?.uncacheRoot(this.group);
     this.group?.removeFromParent();
-    this.#material?.dispose();
-    this.#material = null;
+    this.#shading?.material.dispose();
+    this.#shading = null;
   }
 }

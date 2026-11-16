@@ -16,8 +16,7 @@ import {
   type SceneMode
 } from "../../../src/core/systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../../src/core/systems/scene/file/SceneFile.ts";
-import { SceneManager } from "../../../src/core/systems/scene/SceneManager.ts";
-import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
+import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
 
 // CONSTANTS
 const kModelReference: AssetReferenceData = {
@@ -45,7 +44,7 @@ function createModel(
   model: Model | null = spinningModel(),
   shader: Shader | null = null
 ) {
-  const actor = new Actor({ sceneManager: new SceneManager(new ThreeSceneGraph()) } as any, {
+  const actor = new Actor(createSceneSetup().world as any, {
     name: "model"
   });
   const definition = new ModelDefinition();
@@ -105,6 +104,7 @@ describe("Components.ModelDefinition shader slot", () => {
       createMaterial: () => {
         return {
           material,
+          animated: false,
           assign: () => undefined
         };
       }
@@ -120,5 +120,26 @@ describe("Components.ModelDefinition shader slot", () => {
 
     assert.deepEqual([...materials], [material]);
     assert.strictEqual(disposed, true);
+  });
+
+  test("keeps frames alive while an animated shader material lives", () => {
+    const renderer = createModel("edit", {}, spinningModel(), {
+      uniforms: {},
+      createMaterial: () => {
+        return {
+          material: new THREE.MeshBasicMaterial(),
+          animated: true,
+          assign: () => undefined
+        };
+      }
+    })!;
+    const { keepAlives } = renderer.actor.world as unknown as {
+      keepAlives: ReadonlySet<() => boolean>;
+    };
+
+    assert.deepEqual([...keepAlives].map((keepAlive) => keepAlive()), [true]);
+
+    renderer.destroy();
+    assert.strictEqual(keepAlives.size, 0);
   });
 });

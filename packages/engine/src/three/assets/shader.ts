@@ -29,6 +29,10 @@ export type ShaderUniformKind = ShaderUniformDescription["kind"];
 
 export interface ShadedMaterial {
   readonly material: THREE.Material;
+  /**
+   * The material changes every frame, as when it reads `time`.
+   */
+  readonly animated: boolean;
 
   assign(
     values: ShaderUniformValues

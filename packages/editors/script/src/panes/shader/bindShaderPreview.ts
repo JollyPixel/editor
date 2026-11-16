@@ -4,10 +4,7 @@ import {
   EditorRuntime,
   type EditorContext
 } from "@jolly-pixel/editor.host";
-import {
-  MESH_GEOMETRY_DEFAULTS,
-  type MeshGeometryKind
-} from "@jolly-pixel/engine";
+import type { MeshGeometryKind } from "@jolly-pixel/engine";
 import {
   readDetail,
   type JollyChangeDetail,
@@ -58,6 +55,14 @@ const kGeometries: JollyOption<MeshGeometryKind>[] = [
     label: "Capsule"
   }
 ];
+const kSizes: JollyOption<number>[] = [1, 2, 4, 8, 16].map((size) => {
+  return {
+    value: size,
+    label: `×${size}`
+  };
+});
+
+type PreviewSelect = HTMLElementTagNameMap["jolly-select"];
 
 export async function bindShaderPreview(
   options: ShaderPreviewOptions
@@ -65,8 +70,9 @@ export async function bindShaderPreview(
   const { view, document, name, context } = options;
   const canvas = view.querySelector("canvas");
   const output = view.querySelector("jolly-shader-output");
-  const geometry = view.querySelector("jolly-select");
-  if (canvas === null || output === null || geometry === null) {
+  const geometry = view.querySelector<PreviewSelect>("jolly-select.preview-geometry");
+  const size = view.querySelector<PreviewSelect>("jolly-select.preview-size");
+  if (canvas === null || output === null || geometry === null || size === null) {
     throw new Error("bindShaderPreview: the page is missing a shader preview pane.");
   }
 
@@ -84,15 +90,16 @@ export async function bindShaderPreview(
     teardown.defer(() => editorRuntime.dispose());
     const scene = new ShaderPreviewScene({
       preferences: context.preferences,
-      geometry: MESH_GEOMETRY_DEFAULTS.sphere
+      geometry: "sphere"
     });
     await editorRuntime.load(scene);
 
-    const reshape = reshapeOnChange(scene);
-    geometry.options = kGeometries;
-    geometry.value = "sphere";
-    geometry.addEventListener("jolly-change", reshape);
-    teardown.defer(() => geometry.removeEventListener("jolly-change", reshape));
+    teardown.defer(
+      bindSelect(geometry, kGeometries, "sphere", (kind) => scene.reshape(kind))
+    );
+    teardown.defer(
+      bindSelect(size, kSizes, 1, (scale) => scene.rescale(scale))
+    );
 
     const compilation = new ShaderCompilation({
       document,
@@ -123,13 +130,25 @@ export async function bindShaderPreview(
   }
 }
 
-function reshapeOnChange(
-  scene: ShaderPreviewScene
-): (event: Event) => void {
-  return (event) => {
-    const detail = readDetail<JollyChangeDetail<MeshGeometryKind>>(event);
+function bindSelect<TValue>(
+  select: PreviewSelect,
+  options: JollyOption<TValue>[],
+  initial: TValue,
+  apply: (value: TValue) => void
+): () => void {
+  function onChange(
+    event: Event
+  ): void {
+    const detail = readDetail<JollyChangeDetail<TValue>>(event);
     if (detail !== null) {
-      scene.reshape(MESH_GEOMETRY_DEFAULTS[detail.value]);
+      select.value = detail.value;
+      apply(detail.value);
     }
-  };
+  }
+
+  select.options = options;
+  select.value = initial;
+  select.addEventListener("jolly-change", onChange);
+
+  return () => select.removeEventListener("jolly-change", onChange);
 }

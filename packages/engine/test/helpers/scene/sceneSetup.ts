@@ -44,12 +44,21 @@ export function createSceneSetup(
   logger = new Logger()
 ) {
   const sm = new SceneManager(new ThreeSceneGraph());
+  const keepAlives = new Set<() => boolean>();
   const world = {
     logger,
     sceneManager: sm,
     assetCoordinator: assets.coordinator,
     renderer: {
       source: null
+    },
+    keepAlives,
+    keepAlive(
+      predicate: () => boolean
+    ) {
+      keepAlives.add(predicate);
+
+      return () => keepAlives.delete(predicate);
     },
     invalidate: mock.fn(),
     createActor(name: string) {

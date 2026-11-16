@@ -53,11 +53,12 @@ function createMesh(
     }
   );
 
-  return { actor, definition, component };
+  return { world, actor, definition, component };
 }
 
 function recordingShader(
-  uniforms: ShaderUniformValues = {}
+  uniforms: ShaderUniformValues = {},
+  animated = false
 ) {
   const calls: ShaderUniformValues[] = [];
   const assigned: ShaderUniformValues[] = [];
@@ -69,6 +70,7 @@ function recordingShader(
 
       return {
         material,
+        animated,
         assign: (next) => assigned.push(next)
       };
     }
@@ -214,6 +216,17 @@ describe("Components.MeshDefinition shader slot", () => {
     assert.strictEqual(component.threeMesh.material, material);
     assert.strictEqual(component.threeMesh.castShadow, true);
     assert.deepEqual(assigned, [{ speed: 1 }]);
+  });
+
+  test("keeps frames alive while an animated shader material lives, not for a static one", () => {
+    const animated = createMesh({}, { shader: recordingShader({}, true).shader });
+    const still = createMesh({}, { shader: recordingShader().shader });
+
+    assert.deepEqual([...animated.world.keepAlives].map((keepAlive) => keepAlive()), [true]);
+    assert.strictEqual(still.world.keepAlives.size, 0);
+
+    animated.component.destroy();
+    assert.strictEqual(animated.world.keepAlives.size, 0);
   });
 
   test("disposes the shader material with the component", () => {
