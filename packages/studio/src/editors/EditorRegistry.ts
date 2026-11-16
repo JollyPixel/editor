@@ -16,6 +16,11 @@ import {
 // CONSTANTS
 const kTargetParam = "target";
 
+export type RegisteredEditor = Pick<
+  EditorDescriptor,
+  "name" | "package" | "kinds"
+>;
+
 export interface EditorRegistryOptions {
   /**
    * Parameters added to every page URL, before the target.
@@ -30,7 +35,7 @@ export interface EditorRegistryOptions {
 
 export class EditorRegistry {
   #kinds = new Map<string, AssetKindEntry>();
-  #editors = new Map<string, EditorDescriptor>();
+  #editors = new Map<string, RegisteredEditor>();
   #query: Readonly<Record<string, string>>;
   #prefix: string;
   #maxContentBytes: number;
@@ -68,7 +73,7 @@ export class EditorRegistry {
   }
 
   registerEditor(
-    editor: EditorDescriptor
+    editor: RegisteredEditor
   ): this {
     for (const kind of editor.kinds) {
       const registered = this.#editors.get(kind);
@@ -79,7 +84,7 @@ export class EditorRegistry {
       }
     }
 
-    const descriptor: EditorDescriptor = {
+    const descriptor: RegisteredEditor = {
       name: editor.name,
       package: editor.package,
       kinds: [...editor.kinds]
@@ -101,7 +106,7 @@ export class EditorRegistry {
 
   findEditor(
     kind: string
-  ): EditorDescriptor | undefined {
+  ): RegisteredEditor | undefined {
     return this.#editors.get(kind);
   }
 

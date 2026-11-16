@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   AttachmentDisposition,
+  GAME_ROUTES,
   PROJECT_ROUTES,
   type ApiRoute,
   type GameExportAssets
@@ -22,7 +23,7 @@ const kProjectDownload: ArchiveDownload = {
   stopped: "The download stopped before its end."
 };
 const kGameDownload: ArchiveDownload = {
-  route: PROJECT_ROUTES.game,
+  route: GAME_ROUTES.export,
   fallbackFileName: "game.zip",
   stopped: "The export stopped before its end, most likely on an asset " +
     "that fails to build: Play the game to see which one."
@@ -35,31 +36,35 @@ interface ArchiveDownload {
 }
 
 export class ProjectArchiveClient {
-  #endpoint: ApiEndpoint;
+  #project: ApiEndpoint;
+  #game: ApiEndpoint;
 
   constructor(
-    options: ApiEndpointOptions
+    project: ApiEndpointOptions,
+    game: ApiEndpointOptions
   ) {
-    this.#endpoint = new ApiEndpoint(options);
+    this.#project = new ApiEndpoint(project);
+    this.#game = new ApiEndpoint(game);
   }
 
   download(): Promise<FileDownload> {
-    return this.#download(kProjectDownload);
+    return this.#download(this.#project, kProjectDownload);
   }
 
   downloadGame(
     assets: GameExportAssets
   ): Promise<FileDownload> {
-    return this.#download(kGameDownload, {
+    return this.#download(this.#game, kGameDownload, {
       query: { assets }
     });
   }
 
   async #download(
+    endpoint: ApiEndpoint,
     download: ArchiveDownload,
     request: ApiRequest = {}
   ): Promise<FileDownload> {
-    const response = await this.#endpoint.send(download.route, request);
+    const response = await endpoint.send(download.route, request);
     const disposition = AttachmentDisposition.parse(
       response.headers.get("content-disposition")
     );

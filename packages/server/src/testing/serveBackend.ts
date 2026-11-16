@@ -10,15 +10,15 @@ import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 import {
   StudioBackend,
   type StudioBackendOptions
-} from "../node/StudioBackend.ts";
+} from "../server/node/StudioBackend.ts";
 import type {
   GamePlayer,
   PlayerPageSource
-} from "../node/game/GamePlayer.ts";
-import { ManifestRoute } from "../node/project/ManifestRoute.ts";
-import { StudioAccess } from "../node/project/StudioAccess.ts";
+} from "../game/node/GamePlayer.ts";
+import { chainMiddleware } from "../http/node/Middleware.ts";
+import { ManifestRoute } from "../project/node/ManifestRoute.ts";
 import { NO_SHELL_PREFERENCES } from "../preferences/PreferenceScopes.ts";
-import type { StudioProject } from "../node/project/StudioProject.ts";
+import type { StudioProject } from "../project/node/StudioProject.ts";
 import {
   browser,
   type Browser
@@ -67,10 +67,12 @@ export async function listenBackend(
   options: ListenBackendOptions
 ): Promise<ServedBackend> {
   if (options.accessRequests === true) {
-    project.replaceAccess(StudioAccess.from({
-      ...project.access.toJSON(),
-      accessRequests: true
-    }, "project.json"));
+    await project.file.replace({
+      access: {
+        ...project.access.toJSON(),
+        accessRequests: true
+      }
+    });
   }
   const backend = await StudioBackend.open(project, {
     inMemory: true,
@@ -87,13 +89,14 @@ export async function listenBackend(
       masterPassword: options.masterPassword
     }
   });
-  const manifest = new ManifestRoute(project);
+  const routes = chainMiddleware(
+    backend.middleware,
+    new ManifestRoute(project).middleware
+  );
   const server = http.createServer((request, response) => {
-    backend.middleware(request, response, () => {
-      manifest.middleware(request, response, () => {
-        response.statusCode = PASSED_ON_STATUS;
-        response.end();
-      });
+    routes(request, response, () => {
+      response.statusCode = PASSED_ON_STATUS;
+      response.end();
     });
   });
   backend.attach(server);

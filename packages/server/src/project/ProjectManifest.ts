@@ -4,24 +4,17 @@ import * as z from "zod";
 import type { LoadedAssetKind } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import type { EditorDescriptor } from "../editors/EditorDescriptor.ts";
+import {
+  editorDescriptorSchema,
+  type EditorDescriptor
+} from "../editors/EditorDescriptor.ts";
 import type { EditorPreferenceScopes } from "../preferences/PreferenceScopes.ts";
 import { SceneComponentTypes } from "./SceneComponentTypes.ts";
 
 // CONSTANTS
 export const PROJECT_MANIFEST_FILE = "project-manifest.json";
 const kProjectManifestSchema = z.object({
-  editors: z.array(z.object({
-    name: z.string(),
-    package: z.string(),
-    kinds: z.array(z.string()),
-    preferences: z.array(z.unknown()).default([]),
-    sharedPreferences: z.array(z.unknown()).default([]),
-    sceneComponents: z.array(z.object({
-      type: z.string(),
-      assets: z.record(z.string(), z.string())
-    })).default([])
-  })),
+  editors: z.array(editorDescriptorSchema),
   kinds: z.array(z.object({
     kind: z.string(),
     label: z.string(),
@@ -122,7 +115,7 @@ export class ProjectManifest implements ProjectManifestData {
 
   sceneComponents(): SceneComponentTypes {
     return new SceneComponentTypes(
-      this.editors.flatMap((editor) => editor.sceneComponents ?? [])
+      this.editors.flatMap((editor) => editor.sceneComponents)
     );
   }
 
@@ -131,8 +124,8 @@ export class ProjectManifest implements ProjectManifestData {
       yield {
         name: editor.name,
         kinds: editor.kinds,
-        scopes: parseScopes(editor.preferences ?? []),
-        shared: parseScopes(editor.sharedPreferences ?? [])
+        scopes: parseScopes(editor.preferences),
+        shared: parseScopes(editor.sharedPreferences)
       };
     }
   }

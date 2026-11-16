@@ -89,6 +89,7 @@ export interface EventReader {
   get(assetId: string, eventVersion: number): Promise<Event | undefined>;
   list(assetId: string, fromVersion?: number): Promise<Event[]>;
   listAll(options?: ListAllOptions): Promise<Event[]>;
+  iterateAll(options?: IterateAllOptions): AsyncIterableIterator<Event>;
   listFromCheckpoints(options: ListFromCheckpointsOptions): Promise<Event[]>;
 }
 
@@ -100,6 +101,8 @@ export interface ListAllOptions {
   newestFirst?: boolean;
 }
 
+export type IterateAllOptions = Omit<ListAllOptions, "limit">;
+
 export interface ListFromCheckpointsOptions {
   checkpointEventTypes: readonly string[];
   eventTypePrefix?: string;
@@ -109,6 +112,10 @@ export interface ListFromCheckpointsOptions {
 
 `list` follows `eventVersion` order, the other reads follow `eventId` order.
 `fromVersion` is exclusive.
+
+`iterateAll` yields what `listAll` would return, but reads it 200 events at a
+time and fetches the next page only when the caller asks for more. Breaking
+out of the loop stops the reads.
 
 `listFromCheckpoints` returns, for each asset, its newest
 [checkpoint](../GLOSSARY.md#checkpoint) and every event after it. An asset

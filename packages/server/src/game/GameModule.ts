@@ -25,8 +25,8 @@ export class GameModule {
     this.#file = `${script}${kModuleExtension}`;
   }
 
-  get segments(): string[] {
-    return [GAME_MODULES_DIR, ...this.#file.split("/")];
+  get file(): string {
+    return `${GAME_MODULES_DIR}/${this.#file}`;
   }
 
   url(

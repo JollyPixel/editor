@@ -12,7 +12,7 @@ export class EditorPrefetch {
   readonly #pages: URL[];
 
   constructor(
-    editors: Iterable<EditorDescriptor>,
+    editors: Iterable<Pick<EditorDescriptor, "name">>,
     base: string | URL
   ) {
     this.#pages = Array.from(

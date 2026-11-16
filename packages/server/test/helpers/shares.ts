@@ -24,11 +24,11 @@ import {
   SHARES_URL_PATH,
   createdShareReplySchema
 } from "#src/shares/api.ts";
-import { StudioAccess } from "#src/node/project/StudioAccess.ts";
+import { StudioAccess } from "#src/project/node/StudioAccess.ts";
 import {
   StudioShares,
   type SharedCatalog
-} from "#src/node/shares/StudioShares.ts";
+} from "#src/shares/node/StudioShares.ts";
 import type { Browser } from "#src/testing.ts";
 
 export interface ShareAccounts extends Disposable {

@@ -12,9 +12,9 @@ import {
 } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
-import { AuditLog } from "#src/node/audit/AuditLog.ts";
-import { ProjectSettings } from "#src/node/project/ProjectSettings.ts";
-import type { StudioProject } from "#src/node/project/StudioProject.ts";
+import { AuditLog } from "#src/audit/node/AuditLog.ts";
+import { ProjectSettings } from "#src/project/node/ProjectSettings.ts";
+import type { StudioProject } from "#src/project/node/StudioProject.ts";
 import type {
   ProjectSettingsReply,
   SettingsSectionBody,

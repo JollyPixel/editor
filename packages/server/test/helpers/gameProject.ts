@@ -13,7 +13,7 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import { StudioAccess } from "#src/node/project/StudioAccess.ts";
+import { StudioAccess } from "#src/project/node/StudioAccess.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {

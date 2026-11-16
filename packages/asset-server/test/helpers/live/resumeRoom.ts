@@ -80,6 +80,9 @@ export function resumeRoom(
           (event) => event.eventVersion > from
         ),
         listAll: async() => [],
+        async* iterateAll() {
+          yield* [];
+        },
         listFromCheckpoints: async() => []
       },
       ...options

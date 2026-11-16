@@ -28,7 +28,7 @@ All streams share one **event log**, which numbers every event with an
 given.
 
 *In code:* `assetId`, `eventVersion`, `eventId`. `reader.list` reads one
-stream, `reader.listAll` the whole log.
+stream, `reader.listAll` and `reader.iterateAll` the whole log.
 
 ## Trimming history
 

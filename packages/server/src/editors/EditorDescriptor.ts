@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import * as z from "zod";
+
 // CONSTANTS
 export const EDITOR_PAGES_DIR = "editors";
 export const EDITOR_PAGES_PATH = `${EDITOR_PAGES_DIR}/`;
@@ -13,33 +16,21 @@ export const PLAY_PAGE_PATHNAMES: ReadonlySet<string> = new Set([
   `/${PLAY_PAGE_PATH}`
 ]);
 
-export interface SceneComponentDeclaration {
-  type: string;
-  /**
-   * The asset kind each asset slot takes, by slot name.
-   */
-  assets: Readonly<Record<string, string>>;
-}
+export const sceneComponentDeclarationSchema = z.object({
+  type: z.string(),
+  assets: z.record(z.string(), z.string())
+});
 
-export interface EditorDescriptor {
-  name: string;
-  /**
-   * The npm package the editor comes from.
-   */
-  package: string;
-  kinds: readonly string[];
-  /**
-   * Descriptors of the preference scopes the editor declares, as
-   * `PreferenceScope.toJSON` writes them.
-   */
-  preferences?: readonly unknown[];
-  /**
-   * Descriptors of the scopes another editor declares and this one reads too.
-   */
-  sharedPreferences?: readonly unknown[];
-  /**
-   * The scene components the editor's package declares in
-   * `jollypixel.sceneComponents`.
-   */
-  sceneComponents?: readonly SceneComponentDeclaration[];
-}
+export const editorDescriptorSchema = z.object({
+  name: z.string(),
+  package: z.string(),
+  kinds: z.array(z.string()),
+  preferences: z.array(z.unknown()).default([]),
+  sharedPreferences: z.array(z.unknown()).default([]),
+  sceneComponents: z.array(sceneComponentDeclarationSchema).default([])
+});
+
+export type SceneComponentDeclaration = z.infer<
+  typeof sceneComponentDeclarationSchema
+>;
+export type EditorDescriptor = z.infer<typeof editorDescriptorSchema>;

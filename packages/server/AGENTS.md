@@ -2,13 +2,20 @@
 
 ## Boundaries
 
-- The root entry (`src/index.ts`) and its concern folders are browser-safe:
-  the studio shell bundles them, and lint refuses `node:` builtins and
-  `src/node/` imports there. Node.js code lives in `src/node/`, test helpers
-  in `src/testing/`.
-- A concern keeps its contract in `src/<concern>/` and its server code in
-  `src/node/<concern>/`. `src/node/http/` holds only the Fastify app and its
-  error mapping.
+- A concern lives in `src/<concern>/`. Its root files are browser-safe (the
+  studio shell bundles them through `src/index.ts`): `api.ts` holds only the
+  route table and the request and reply schemas, model files hold the rest.
+  Its Node.js code lives in `src/<concern>/node/`. Lint refuses `node:`
+  builtins and `node/` imports outside `node/` folders and `src/testing/`.
+- In a concern's `node/`, `routes.ts` is the HTTP edge: it calls the domain
+  objects and exports the table mapping their errors to statuses. Page
+  middlewares (`SharePage`, `PlayPage`, `ManifestRoute`) are the other edge.
+  Lint lets only `routes.ts`, `src/http/node/` and `StudioApi` import Fastify.
+- `src/http/` is the transport shared by every concern: the wire contract in
+  `api.ts`, and in `node/` authentication, the error fallback, downloads and
+  the middleware helpers. It imports no other concern.
+- `src/server/node/` only assembles: `StudioBackend`, `StudioServer`,
+  `StudioServerSettings` and `StudioApi`, the Fastify app.
 - The server never locates files relative to itself and ships no editor list.
   Its caller passes the shell folder, the project template, the seed, the
   game player, the shell's preference scopes and the package folders; the
@@ -17,8 +24,8 @@
 - Only `StudioServerSettings` reads environment variables. Everything else
   takes typed options, such as the accounts' `masterPassword`.
 - A new API surface is a route table in `src/<concern>/api.ts` plus a Fastify
-  plugin in `src/node/<concern>/routes.ts`, registered in
-  `src/node/http/StudioApi.ts`.
+  plugin in `src/<concern>/node/routes.ts`. `src/server/node/StudioApi.ts`
+  registers the plugin and its failure table.
 - Test helpers another workspace needs go in `src/testing/` (the `./testing`
   entry); helpers only this package's specs use stay in `test/helpers/`.
 

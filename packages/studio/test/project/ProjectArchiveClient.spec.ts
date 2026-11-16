@@ -10,19 +10,29 @@ import { ProjectArchiveClient } from "../../src/project/ProjectArchiveClient.ts"
 
 // CONSTANTS
 const kProjectUrl = "http://studio.test/api/project/";
+const kGameUrl = "http://studio.test/api/game/";
 
 function gameServer(
   body: () => ReadableStream<Uint8Array>
 ): { client: ProjectArchiveClient; urls: URL[]; } {
   const urls: URL[] = [];
-  const client = new ProjectArchiveClient({
-    url: kProjectUrl,
-    fetch: (input) => {
-      urls.push(new URL(String(input)));
+  function respond(
+    input: RequestInfo | URL
+  ): Promise<Response> {
+    urls.push(new URL(String(input)));
 
-      return Promise.resolve(new Response(body()));
+    return Promise.resolve(new Response(body()));
+  }
+  const client = new ProjectArchiveClient(
+    {
+      url: kProjectUrl,
+      fetch: respond
+    },
+    {
+      url: kGameUrl,
+      fetch: respond
     }
-  });
+  );
 
   return {
     client,

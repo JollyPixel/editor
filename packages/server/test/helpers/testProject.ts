@@ -28,8 +28,8 @@ import {
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
-import { DEFAULT_ACCESS } from "#src/node/project/StudioAccess.ts";
-import { StudioProject } from "#src/node/project/StudioProject.ts";
+import { DEFAULT_ACCESS } from "#src/project/node/StudioAccess.ts";
+import { StudioProject } from "#src/project/node/StudioProject.ts";
 
 // CONSTANTS
 const kPackagesDir = path.join(import.meta.dirname, "..", "..", "..");
