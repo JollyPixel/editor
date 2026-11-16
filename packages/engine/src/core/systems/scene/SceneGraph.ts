@@ -9,7 +9,7 @@ import type {
   World,
   WorldAudio
 } from "../World.ts";
-import type { SceneEnvironmentFile } from "./file/SceneFile.ts";
+import type { EnvironmentFile } from "../environment/EnvironmentFile.ts";
 
 export interface ActorNode {
   attach(
@@ -47,7 +47,7 @@ export const DETACHED_ACTOR_NODE: ActorNode = Object.freeze({
 
 export interface SceneEnvironment {
   apply(
-    file: SceneEnvironmentFile
+    file: Readonly<EnvironmentFile>
   ): void;
   dispose(): void;
 }

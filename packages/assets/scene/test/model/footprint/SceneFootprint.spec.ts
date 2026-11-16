@@ -68,8 +68,8 @@ describe("SceneFootprint.conflictRefs", () => {
       ["component-asset:c:map"]
     ],
     [
-      { action: "environment-changed", environment: { background: null, fog: { kind: "none" } } },
-      ["environment:background", "environment:fog"]
+      { action: "environment-changed", environment: { id: "dusk", kind: "environment" } },
+      ["environment"]
     ],
     [{ action: "actor-removed", id: "A" }, actorKeys("A")]
   ];

@@ -3,7 +3,6 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import { randomId } from "@jolly-pixel/asset.common";
 
 // Import Internal Dependencies
-import { SceneEnvironment } from "../model/changes/SceneEnvironment.ts";
 import { SceneTransform } from "../model/changes/SceneTransform.ts";
 import type {
   JSONObject,
@@ -19,6 +18,7 @@ export const SCENE_COMMAND = "scene.command";
 export const SCENE_EXTENSION = ".scene.json";
 export const SCENE_FILE_VERSION = 1;
 export const SCENE_SELECTION_PRESENCE_KEY = "actor";
+export const SCENE_ENVIRONMENT_KIND = "environment";
 const kCameraPosition = { x: 0, y: 2, z: 6 };
 const kCameraPitch = -Math.atan2(kCameraPosition.y, kCameraPosition.z) * 180 / Math.PI;
 
@@ -36,7 +36,7 @@ export type SceneFile = SceneSnapshot & {
 export function createSceneFile(): SceneFile {
   return {
     version: SCENE_FILE_VERSION,
-    environment: SceneEnvironment.create(),
+    environment: null,
     actors: [
       seedActor("Main Camera", "Camera", { projectionMode: "perspective" }, {
         position: kCameraPosition,

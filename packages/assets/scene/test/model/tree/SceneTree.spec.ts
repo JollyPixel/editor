@@ -217,15 +217,13 @@ describe("SceneTree.apply", () => {
     assert.deepEqual(tree.component("c")?.assets, { map, texture: null });
   });
 
-  test("patches the environment fields a command names", () => {
+  test("replaces the environment a command names", () => {
     const tree = loadedTree([]);
+    const dusk = { id: "dusk", kind: "environment" } as const;
 
-    tree.apply({ action: "environment-changed", environment: { background: "#102030" } });
+    tree.apply({ action: "environment-changed", environment: dusk });
 
-    assert.deepEqual(tree.environment, {
-      ...loadedTree([]).environment,
-      background: "#102030"
-    });
+    assert.deepEqual(tree.environment, dusk);
   });
 });
 

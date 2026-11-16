@@ -1,5 +1,9 @@
 // Import Third-party Dependencies
 import {
+  ENVIRONMENT_ASSET,
+  environmentOpener
+} from "@jolly-pixel/asset.environment/client";
+import {
   SCENE_KIND,
   sceneDocumentKind,
   type SceneDocument
@@ -92,7 +96,7 @@ export class SceneEditor {
       const assetSlots = new SessionAssetSlots({
         session,
         sceneId,
-        descriptors: PROJECT_COMPONENTS.descriptors,
+        descriptors: [...PROJECT_COMPONENTS.descriptors, ENVIRONMENT_ASSET],
         open: context.shell === null ?
           null :
           (assetId, reveal) => context.shell?.openAsset(assetId, reveal)
@@ -102,6 +106,7 @@ export class SceneEditor {
         document: target.document,
         room: target.room,
         openScene: (assetId) => session.assets.open(kSceneKind, assetId),
+        openEnvironment: environmentOpener(session),
         session,
         components: PROJECT_COMPONENTS,
         assetSlots,

@@ -1,7 +1,6 @@
 // Import Internal Dependencies
 import { ComponentChange } from "../changes/ComponentChange.ts";
 import { OverrideChange } from "../changes/OverrideChange.ts";
-import { SceneEnvironment } from "../changes/SceneEnvironment.ts";
 import { SceneTransform } from "../changes/SceneTransform.ts";
 import { SceneValueRef } from "./SceneValueRef.ts";
 import type {
@@ -43,9 +42,7 @@ export function sceneWriteRefs(
       );
     }
     case "environment-changed":
-      return SceneEnvironment.patch(command.environment).fields().map(
-        (field) => SceneValueRef.environment(field)
-      );
+      return [SceneValueRef.environment()];
     case "actor-added":
     case "actor-removed":
     case "actor-moved":

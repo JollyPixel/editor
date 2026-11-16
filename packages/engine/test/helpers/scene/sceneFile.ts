@@ -14,8 +14,8 @@ import {
 import type {
   JSONObject,
   SceneActorFile,
+  EnvironmentReferenceData,
   SceneComponentFile,
-  SceneEnvironmentFile,
   SceneFile
 } from "../../../src/core/systems/scene/file/SceneFile.ts";
 
@@ -54,16 +54,11 @@ export function createComponentFile(
 
 export function createSceneFile(
   actors: SceneActorFile[],
-  environment: Partial<SceneEnvironmentFile> = {}
+  environment: EnvironmentReferenceData | null = null
 ): SceneFile {
   return {
     version: 1,
-    environment: {
-      background: null,
-      environment: { kind: "none", intensity: 1 },
-      fog: { kind: "none" },
-      ...environment
-    },
+    environment,
     actors
   };
 }

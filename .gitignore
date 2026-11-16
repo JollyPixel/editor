@@ -156,6 +156,7 @@ packages/editors/sound/assets/
 packages/editors/script/assets/
 packages/editors/model/assets/
 packages/editors/texture/assets/
+packages/editors/environment/assets/
 packages/studio/project/
 
 # Pixel-art editor page served by the studio

@@ -2,18 +2,23 @@
 import {
   LitElement,
   html,
-  css
+  css,
+  type PropertyValues
 } from "lit";
 import {
   customElement,
   property
 } from "lit/decorators.js";
+import type { PreviewEnvironment } from "@jolly-pixel/asset.environment/client";
 import {
   FieldBinding,
+  SubscriptionController,
+  type JollyChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/checkbox";
+import "@jolly-pixel/ui/elements/select";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../editing/VoxelMapEditing.ts";
@@ -61,13 +66,37 @@ export class MapConfigPanel extends LitElement {
   #shadows = this.#viewBinding("shadows");
   #blockLight = this.#viewBinding("blockLight");
   #glow = this.#viewBinding("glow");
+  #environment = new SubscriptionController<PreviewEnvironment>(this, (environment) => [
+    environment.subscribe("change", () => this.requestUpdate())
+  ]);
+
+  override willUpdate(
+    changed: PropertyValues<this>
+  ): void {
+    if (changed.has("editing")) {
+      this.#environment.attach(this.editing.environment);
+    }
+  }
 
   override render() {
+    const environment = this.editing.environment;
+
     return html`
+      <jolly-select
+        label="Environment"
+        description="Preview the map in one of the project environments"
+        description-display="tooltip"
+        .options=${environment.options()}
+        .value=${environment.value}
+        @jolly-change=${(event: CustomEvent<JollyChangeDetail<string>>) => {
+          environment.choose(event.detail.value);
+        }}
+      ></jolly-select>
       <jolly-button-group
         aria-label="Lighting"
         .options=${kLightingOptions}
         .value=${this.#lighting.value}
+        ?disabled=${environment.linked}
         @jolly-change=${this.#lighting.commit}
       ></jolly-button-group>
       <div class="toggles">

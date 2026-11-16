@@ -34,6 +34,7 @@ import {
   sceneCommandProtocol,
   sceneSnapshotSchema
 } from "../network/SceneCommand.schema.ts";
+import { upcastSceneCommand } from "../network/upcastSceneCommand.ts";
 import type {
   SceneCommand,
   SceneNetworkCommand,
@@ -169,6 +170,7 @@ export function sceneAssetKind(): AssetKindHandler<
     commands: {
       eventType: SCENE_COMMAND,
       protocol: sceneCommandProtocol,
+      upcast: upcastSceneCommand,
 
       apply(state, command) {
         state.applyCommand(command);

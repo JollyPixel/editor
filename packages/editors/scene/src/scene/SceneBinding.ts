@@ -16,7 +16,6 @@ import {
   type SceneComponentView,
   type SceneDocument,
   type SceneEnvironmentJSON,
-  type SceneEnvironmentPatch,
   type SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
 import { Emitter } from "@openally/emitt";
@@ -213,16 +212,6 @@ export class SceneBinding
         this.#pickTargets.delete(object);
       }
     };
-  }
-
-  previewEnvironment(
-    patch: SceneEnvironmentPatch
-  ): void {
-    this.#environment.apply({
-      ...this.#document.tree.environment,
-      ...patch
-    });
-    this.#world.invalidate();
   }
 
   previewTransform(

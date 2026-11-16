@@ -1,13 +1,9 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
-import type { Node } from "three/webgpu";
+import * as THREE from "three/webgpu";
+import { Systems } from "@jolly-pixel/engine";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
-import {
-  DaySky,
-  NightSky,
-  StudioSky,
-  type SkyConstructor
-} from "@jolly-pixel/three";
+import { StudioSky } from "@jolly-pixel/three";
+import type { PreviewEnvironment } from "@jolly-pixel/asset.environment/client";
 
 // Import Internal Dependencies
 import {
@@ -22,118 +18,101 @@ import {
   type ShadowCaster
 } from "./KeyLightShadow.ts";
 
+type OutdoorLighting = Exclude<LightingMode, "flat" | "studio">;
+
 // CONSTANTS
 const kKeyPositions: Record<KeyLightPreset, THREE.Vector3Tuple> = {
   "front-left": [-4, 6, 5],
   "front-right": [4, 6, 5],
   top: [0.5, 8, 1]
 };
-const kReflectionIntensity = 0.5;
-
-interface LightingPreset {
-  backdrop: SkyConstructor | null;
-  sky: THREE.ColorRepresentation;
-  ground: THREE.ColorRepresentation;
-  hemisphere: number;
-  keyColor: THREE.ColorRepresentation;
-  key: number;
-  fillColor: THREE.ColorRepresentation;
-  fill: number;
-}
-
-const kStudio: LightingPreset = {
-  backdrop: null,
-  sky: "#dceaff",
-  ground: "#151820",
-  hemisphere: 0.35,
-  keyColor: "#ffffff",
-  key: 1.6,
-  fillColor: "#cfd8ff",
-  fill: 0.3
-};
-const kPresets: Record<LightingMode, LightingPreset> = {
-  flat: kStudio,
-  studio: kStudio,
-  day: {
-    backdrop: DaySky,
-    sky: "#bcd6f2",
-    ground: "#8a7454",
-    hemisphere: 0.8,
-    keyColor: "#ffd9a3",
-    key: 1.9,
-    fillColor: "#bcd6f2",
-    fill: 0.15
+const kStudioFill = 0.3;
+const kStudioFillColor = "#cfd8ff";
+const kStudioKey = 1.6;
+const kStudio: Systems.EnvironmentFile = {
+  ...Systems.ENVIRONMENT_PRESETS.default,
+  ambient: {
+    skyColor: "#dceaff",
+    groundColor: "#151820",
+    intensity: 0.35
   },
-  night: {
-    backdrop: NightSky,
-    sky: "#41507a",
-    ground: "#06070b",
-    hemisphere: 0.2,
-    keyColor: "#a9bcff",
-    key: 0.45,
-    fillColor: "#55628c",
-    fill: 0.08
+  reflections: {
+    kind: "room",
+    intensity: 0.5
   }
+};
+const kOutdoor: Readonly<
+  Record<OutdoorLighting, Readonly<Systems.EnvironmentFile>>
+> = {
+  day: Systems.ENVIRONMENT_PRESETS.day,
+  night: Systems.ENVIRONMENT_PRESETS.night
 };
 
 export interface ViewLightingOptions {
-  scene: THREE.Scene;
+  world: Systems.World<THREE.WebGPURenderer, any>;
   view: ViewSettingsStore;
-  environment: THREE.RenderTarget | null;
+  preview: Pick<PreviewEnvironment, "linked" | "resolve" | "subscribe">;
+  room: Systems.BakedRoomEnvironment | null;
   casters: () => Iterable<ShadowCaster>;
   theme: ResolvedThemeMode;
 }
 
 export class ViewLighting {
-  readonly hemisphere = new THREE.HemisphereLight();
-  readonly key = new THREE.DirectionalLight();
-  readonly fill = new THREE.DirectionalLight();
+  readonly key: THREE.DirectionalLight;
+  readonly fill = new THREE.DirectionalLight(kStudioFillColor);
   readonly shadow: KeyLightShadow;
 
   #scene: THREE.Scene;
+  #environment: Systems.ThreeSceneEnvironment;
   #view: ViewSettingsStore;
-  #environment: THREE.RenderTarget | null;
+  #preview: ViewLightingOptions["preview"];
   #theme: ResolvedThemeMode;
-  #studioSkies = new Map<ResolvedThemeMode, Node>();
-  #outdoorSkies = new Map<`${LightingMode}:${KeyLightPreset}`, Node>();
-  #unfollow: () => void;
+  #sunDirection = new THREE.Vector3();
+  #unfollow: Array<() => void>;
 
   #apply = (
     settings: ViewSettings
   ): void => {
-    const preset = kPresets[settings.lighting];
+    this.#environment.apply(
+      this.#preview.resolve(presetEnvironment(settings), settings)
+    );
+
     const [x, y, z] = kKeyPositions[settings.keyLight];
-    this.shadow.aim([x, y, z]);
     this.fill.position.set(-x, y * 0.5, -z);
+    this.fill.intensity = !this.#preview.linked && isStudio(settings.lighting) ?
+      kStudioFill :
+      0;
 
-    this.#scene.backgroundNode = this.#sky(settings);
-    this.hemisphere.color.set(preset.sky);
-    this.hemisphere.groundColor.set(preset.ground);
-    this.hemisphere.intensity = preset.hemisphere;
-    this.key.color.set(preset.keyColor);
-    this.key.intensity = preset.key;
-    this.fill.color.set(preset.fillColor);
-    this.fill.intensity = preset.fill;
-
+    const direction = this.#environment.copySunDirectionTo(this.#sunDirection);
+    this.shadow.aim(direction.toArray());
+    this.shadow.invalidate();
     this.shadow.enabled = settings.shadows && isLit(settings);
-    this.#scene.environmentIntensity = settings.reflections ? kReflectionIntensity : 0;
   };
 
   constructor(
     options: ViewLightingOptions
   ) {
-    this.#scene = options.scene;
+    const { world } = options;
+    const { graph } = world.sceneManager;
+    this.#scene = graph.scene;
+    this.#environment = new Systems.ThreeSceneEnvironment(graph, world, {
+      room: options.room
+    });
+    this.#environment.fallbackSky = new StudioSky(options.theme).node;
+    this.key = this.#environment.sun;
     this.#view = options.view;
-    this.#environment = options.environment;
+    this.#preview = options.preview;
     this.#theme = options.theme;
     this.shadow = new KeyLightShadow({
       light: this.key,
       casters: options.casters
     });
 
-    this.#scene.environment = this.#environment?.texture ?? null;
-    this.#scene.add(this.hemisphere, this.key, this.fill);
-    this.#unfollow = this.#view.follow(this.#apply);
+    this.#scene.add(this.fill);
+    this.#unfollow = [
+      this.#view.follow(this.#apply),
+      this.#preview.subscribe("change", () => this.#apply(this.#view.settings))
+    ];
   }
 
   get theme(): ResolvedThemeMode {
@@ -143,40 +122,48 @@ export class ViewLighting {
   set theme(
     theme: ResolvedThemeMode
   ) {
-    this.#theme = theme;
-    this.#scene.backgroundNode = this.#sky(this.#view.settings);
+    if (theme !== this.#theme) {
+      this.#theme = theme;
+      this.#environment.fallbackSky = new StudioSky(theme).node;
+    }
   }
 
   dispose(): void {
-    this.#unfollow();
-    this.#scene.remove(this.hemisphere, this.key, this.fill);
-    this.#scene.backgroundNode = null;
-    this.#scene.environment = null;
-    this.#environment?.dispose();
-  }
-
-  #sky(
-    settings: ViewSettings
-  ): Node {
-    const { backdrop } = kPresets[settings.lighting];
-    if (backdrop === null) {
-      let studio = this.#studioSkies.get(this.#theme);
-      if (studio === undefined) {
-        studio = new StudioSky(this.#theme).node;
-        this.#studioSkies.set(this.#theme, studio);
-      }
-
-      return studio;
+    for (const unfollow of this.#unfollow) {
+      unfollow();
     }
-
-    const key = `${settings.lighting}:${settings.keyLight}` as const;
-    let outdoor = this.#outdoorSkies.get(key);
-    if (outdoor === undefined) {
-      const direction = new THREE.Vector3(...kKeyPositions[settings.keyLight]);
-      outdoor = new backdrop(direction.normalize()).node;
-      this.#outdoorSkies.set(key, outdoor);
-    }
-
-    return outdoor;
+    this.#scene.remove(this.fill);
+    this.#environment.dispose();
   }
+}
+
+function isStudio(
+  lighting: LightingMode
+): lighting is Exclude<LightingMode, OutdoorLighting> {
+  return lighting === "flat" || lighting === "studio";
+}
+
+function presetEnvironment(
+  settings: ViewSettings
+): Readonly<Systems.EnvironmentFile> {
+  return isStudio(settings.lighting) ?
+    studioEnvironment(settings.keyLight) :
+    kOutdoor[settings.lighting];
+}
+
+function studioEnvironment(
+  keyLight: KeyLightPreset
+): Systems.EnvironmentFile {
+  const [x, y, z] = kKeyPositions[keyLight];
+  const horizontal = Math.hypot(x, z);
+
+  return {
+    ...kStudio,
+    sun: {
+      color: "#ffffff",
+      intensity: kStudioKey,
+      azimuth: THREE.MathUtils.radToDeg(Math.atan2(x, z)),
+      elevation: THREE.MathUtils.radToDeg(Math.atan2(y, horizontal))
+    }
+  };
 }

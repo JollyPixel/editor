@@ -48,6 +48,10 @@ export function createSceneSetup(
     logger,
     sceneManager: sm,
     assetCoordinator: assets.coordinator,
+    renderer: {
+      source: null
+    },
+    invalidate: mock.fn(),
     createActor(name: string) {
       return new Actor(this as any, { name });
     }

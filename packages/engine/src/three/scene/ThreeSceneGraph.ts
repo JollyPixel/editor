@@ -9,6 +9,7 @@ import type {
   Vector3
 } from "../../core/math.ts";
 import type { World } from "../../core/systems/World.ts";
+import type { EnvironmentFile } from "../../core/systems/environment/EnvironmentFile.ts";
 import type {
   ActorNode,
   SceneEnvironment,
@@ -143,6 +144,7 @@ export class ThreeActorNode implements ActorNode {
 export class ThreeSceneGraph implements SceneGraph {
   readonly scene: THREE.Scene;
   postProcessing: PostProcessing | null = null;
+  environment: Readonly<EnvironmentFile> | null = null;
 
   constructor(
     scene: THREE.Scene = new THREE.Scene()

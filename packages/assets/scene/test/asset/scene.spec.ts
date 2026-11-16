@@ -65,22 +65,32 @@ describe("scene file codec", () => {
     assert.equal("visible" in stored.actors[0], false);
     assert.deepEqual(stored.actors[1].transform, { position: { x: 1, y: 0, z: 0 } });
     assert.equal(stored.actors[1].visible, false);
-    assert.equal("glow" in stored.environment, false);
+    assert.equal("environment" in stored, false);
   });
 
   test("decodes the stored form back to the full file", () => {
     assert.deepEqual(SCENE_FILE.decode(SCENE_FILE.encode(file)), file);
   });
 
-  test("keeps a glow through the stored form", () => {
-    const glowing = {
-      ...file,
+  test("keeps an environment reference through the stored form", () => {
+    const lit = sceneFile(file.actors, { id: "dusk", kind: "environment" });
+
+    assert.deepEqual(SCENE_FILE.decode(SCENE_FILE.encode(lit)), lit);
+  });
+
+  test("reads a scene stored with an inline environment as the default environment", () => {
+    const stored = {
+      version: 1,
       environment: {
-        ...file.environment,
-        glow: { strength: 1.5, radius: 0.4 }
-      }
+        background: null,
+        environment: { kind: "room", intensity: 1 },
+        fog: { kind: "none" }
+      },
+      actors: []
     };
 
-    assert.deepEqual(SCENE_FILE.decode(SCENE_FILE.encode(glowing)), glowing);
+    const decoded = SCENE_FILE.decode(new TextEncoder().encode(JSON.stringify(stored)));
+
+    assert.equal(decoded.environment, null);
   });
 });

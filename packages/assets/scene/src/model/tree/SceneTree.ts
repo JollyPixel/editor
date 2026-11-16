@@ -25,7 +25,6 @@ import {
   type OverrideCommand
 } from "../changes/OverrideChange.ts";
 import { ownedCopy } from "../ownedCopy.ts";
-import { SceneEnvironment } from "../changes/SceneEnvironment.ts";
 import { SceneTransform } from "../changes/SceneTransform.ts";
 import {
   actorReferences,
@@ -74,7 +73,7 @@ export class SceneTree {
     canContain: (actor) => !isPrefabInstance(actor)
   });
   #owners = new ComponentOwners();
-  #environment: SceneEnvironmentView = SceneEnvironment.create();
+  #environment: SceneEnvironmentView = null;
   #sceneId: string | null;
 
   constructor(
@@ -198,6 +197,13 @@ export class SceneTree {
 
   references(): AssetReferenceJSON[] {
     const references = new Map<string, AssetReferenceJSON>();
+    if (this.#environment !== null) {
+      const { id, kind } = this.#environment;
+      references.set(`${kind}:${id}`, {
+        id,
+        kind
+      });
+    }
     for (const actor of this.#actors.scan()) {
       for (const { id, kind } of actorReferences(actor)) {
         references.set(`${kind}:${id}`, {
@@ -215,6 +221,12 @@ export class SceneTree {
   ): void {
     for (const id of this.actorIds()) {
       this.#actors.update(id, (actor) => rebindActor(actor, idMap));
+    }
+    if (this.#environment !== null) {
+      this.#environment = {
+        ...this.#environment,
+        id: idMap.get(this.#environment.id) ?? this.#environment.id
+      };
     }
   }
 
@@ -398,7 +410,7 @@ export class SceneTree {
         break;
 
       case "environment-changed":
-        this.#environment = SceneEnvironment.patch(command.environment).applyTo(this.#environment);
+        this.#environment = command.environment;
         break;
     }
   }
@@ -417,14 +429,14 @@ export class SceneTree {
     }
 
     this.clear();
-    this.#environment = structuredClone(snapshot.environment);
+    this.#environment = snapshot.environment;
     this.#insert(snapshot.actors, undefined);
   }
 
   clear(): void {
     this.#actors.clear();
     this.#owners.clear();
-    this.#environment = SceneEnvironment.create();
+    this.#environment = null;
   }
 
   toJSON(): SceneSnapshot {

@@ -87,7 +87,8 @@ describe("scene history", () => {
       cookie: { id: "texture-1", kind: "pixelart" }
     })],
     ["changing the environment", (document) => document.changeEnvironment({
-      fog: { kind: "exp2", color: "#ffffff", density: 0.1 }
+      id: "dusk",
+      kind: "environment"
     })],
     ["overriding and unsetting fields of an inner actor", (document) => document.override(
       OverrideChange.actor({

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { AssetReference } from "@jolly-pixel/asset";
+import { AssetReference } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import {
@@ -13,6 +13,11 @@ import { SceneInstance } from "./live/SceneInstance.ts";
 import { captureSceneActors } from "./live/sceneCapture.ts";
 import type { SceneFile } from "./SceneFile.ts";
 import type { SceneEnvironment } from "../SceneGraph.ts";
+import {
+  ENVIRONMENT_ASSET,
+  type EnvironmentFile
+} from "../../environment/EnvironmentFile.ts";
+import { ENVIRONMENT_PRESETS } from "../../environment/EnvironmentPresets.ts";
 import {
   expandedSceneActors,
   NO_SCENE_PREFABS,
@@ -80,7 +85,15 @@ export class FileScene<
       ...expandedSceneActors(this.file.actors, this.#prefabs, this.#sceneId)
     ];
 
-    return Array.from(this.#components.assets({ actors })).filter(
+    const references: AssetReference<unknown>[] = [
+      ...this.#components.assets({ actors })
+    ];
+    const environment = this.#environmentReference();
+    if (environment !== null) {
+      references.push(environment);
+    }
+
+    return references.filter(
       (reference) => loadable.canLoad(reference)
     );
   }
@@ -101,19 +114,41 @@ export class FileScene<
       this.world
     );
     this.#environment.apply(
-      this.file.environment
+      this.#environmentFile()
     );
   }
 
   capture(): SceneFile {
     return {
       version: 1,
-      environment: structuredClone(this.file.environment),
+      environment: this.file.environment === null ?
+        null :
+        { ...this.file.environment },
       actors: captureSceneActors(
         this.world.sceneManager.tree,
         this.#components
       )
     };
+  }
+
+  #environmentReference(): AssetReference<EnvironmentFile> | null {
+    const { environment } = this.file;
+
+    return environment === null ?
+      null :
+      AssetReference.parse(environment, ENVIRONMENT_ASSET);
+  }
+
+  #environmentFile(): Readonly<EnvironmentFile> {
+    const reference = this.#environmentReference();
+    if (
+      reference === null ||
+      !this.world.assetCoordinator.canLoad(reference)
+    ) {
+      return ENVIRONMENT_PRESETS.default;
+    }
+
+    return this.world.assetCoordinator.get(reference);
   }
 
   override destroy(): void {

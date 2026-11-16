@@ -51,3 +51,10 @@ The view's [frame requests](../core/VoxelView.md#frame-requests) call
 `world.invalidate()` and then `options.requestFrame` when given. The component
 keeps the world rendering while `view.pendingRebuilds` is above zero, so an
 on-demand runtime needs no extra wiring.
+
+## Scene environment
+
+On each update, the component copies the scene graph's
+`environment.voxel.blockLightFalloff` and `voxel.shadowFill` to
+`view.lighting`, so the environment wins over values set on the lighting.
+Without an environment the lighting keeps its options. See the engine's environment documentation for the file.

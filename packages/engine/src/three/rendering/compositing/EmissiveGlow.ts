@@ -11,8 +11,8 @@ import { bloom } from "three/addons/tsl/display/BloomNode.js";
 // Import Internal Dependencies
 import type { PostProcessing } from "./PostProcessing.ts";
 import type {
-  SceneGlowFile
-} from "../../../core/systems/scene/file/SceneFile.ts";
+  EnvironmentGlowFile
+} from "../../../core/systems/environment/EnvironmentFile.ts";
 
 export class EmissiveGlow {
   readonly #strength = uniform(1);
@@ -33,7 +33,7 @@ export class EmissiveGlow {
   };
 
   apply(
-    glow: Readonly<SceneGlowFile>
+    glow: Readonly<EnvironmentGlowFile>
   ): PostProcessing {
     this.#strength.value = glow.strength;
     this.#radius.value = glow.radius;

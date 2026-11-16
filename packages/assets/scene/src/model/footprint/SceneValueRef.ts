@@ -5,7 +5,6 @@ import {
 } from "../changes/OverrideChange.ts";
 import type { SceneTreeReader } from "../tree/SceneTree.ts";
 import type {
-  SceneEnvironmentField,
   SceneTransformField
 } from "../../network/types.ts";
 
@@ -69,10 +68,8 @@ export class SceneValueRef {
     );
   }
 
-  static environment(
-    field: SceneEnvironmentField
-  ): SceneValueRef {
-    return new SceneValueRef(`environment:${field}`, (tree) => tree.environment[field]);
+  static environment(): SceneValueRef {
+    return new SceneValueRef("environment", (tree) => tree.environment);
   }
 
   static override(

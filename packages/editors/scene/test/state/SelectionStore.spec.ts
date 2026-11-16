@@ -3,10 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import {
-  SceneDocument,
-  SceneEnvironment
-} from "@jolly-pixel/asset.scene/client";
+import { SceneDocument } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
 import { SelectionStore } from "../../src/state/SelectionStore.ts";
@@ -24,7 +21,7 @@ describe("SelectionStore", () => {
     assert.deepEqual(selection.ids, [second]);
 
     document.load({
-      environment: SceneEnvironment.create(),
+      environment: null,
       actors: []
     });
     assert.deepEqual(selection.ids, []);

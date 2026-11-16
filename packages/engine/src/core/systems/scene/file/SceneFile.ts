@@ -89,37 +89,16 @@ export interface SceneActorFile {
   anchor?: SceneAnchorFile;
 }
 
-export type SceneEnvironmentKind = "none" | "room";
-
-export type SceneFogFile =
-  | { kind: "none"; }
-  | { kind: "linear"; color: ColorJSON; near: number; far: number; }
-  | { kind: "exp2"; color: ColorJSON; density: number; };
-
-export interface SceneGlowFile {
-  strength: number;
-  /**
-   * From 0 to 1.
-   */
-  radius: number;
-}
-
-export interface SceneEnvironmentFile {
-  background: ColorJSON | null;
-  environment: {
-    kind: SceneEnvironmentKind;
-    intensity: number;
-  };
-  fog: SceneFogFile;
-  /**
-   * Blooms emissive surfaces. Left out or `null` draws no bloom.
-   */
-  glow?: SceneGlowFile | null;
+export interface EnvironmentReferenceData extends AssetReferenceData {
+  readonly kind: "environment";
 }
 
 export interface SceneFile {
   version: 1;
-  environment: SceneEnvironmentFile;
+  /**
+   * The environment the scene renders in. `null` renders the default preset.
+   */
+  environment: EnvironmentReferenceData | null;
   /**
    * Every actor in tree order: an actor follows its parent and siblings
    * follow their display order.

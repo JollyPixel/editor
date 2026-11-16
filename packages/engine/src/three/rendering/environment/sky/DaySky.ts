@@ -10,11 +10,9 @@ import {
   positionLocal,
   pow,
   smoothstep,
+  uniform,
   vec3
 } from "three/tsl";
-
-// Import Internal Dependencies
-import type { SkyBackdrop } from "./SkyBackdrop.ts";
 
 // CONSTANTS
 const kHorizon = "#f4dcc0";
@@ -25,8 +23,6 @@ const kGlowSharpness = 12;
 const kGlowStrength = 0.55;
 
 export class DaySky {
-  static readonly backdrop: SkyBackdrop = "light";
-
   readonly node: THREE.Node;
 
   constructor(
@@ -34,7 +30,7 @@ export class DaySky {
   ) {
     const direction = normalize(positionLocal);
     const up = direction.y;
-    const glow = pow(max(dot(direction, vec3(sunDirection)), 0), float(kGlowSharpness))
+    const glow = pow(max(dot(direction, uniform(sunDirection)), 0), float(kGlowSharpness))
       .mul(kGlowStrength);
     const lower = mix(
       color(kHorizon),

@@ -32,7 +32,7 @@ interface ActorNode {
 }
 
 interface SceneEnvironment {
-  apply(file: SceneEnvironmentFile): void;
+  apply(file: Readonly<EnvironmentFile>): void;
   dispose(): void;
 }
 

@@ -12,7 +12,8 @@ export const PORTS = {
   sound: 3010,
   script: 3011,
   model: 3012,
-  texture: 3013
+  texture: 3013,
+  environment: 3014
 } as const;
 
 export function baseUrl(

@@ -14,6 +14,10 @@ import type {
   SceneDocument,
   SceneRoom
 } from "@jolly-pixel/asset.scene/client";
+import {
+  EnvironmentLink,
+  type EnvironmentOpener
+} from "@jolly-pixel/asset.environment/client";
 import { Teardown } from "@jolly-pixel/utils";
 import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
 import type { Preferences } from "@jolly-pixel/preferences";
@@ -22,7 +26,10 @@ import type { LogQueue } from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { SceneBinding } from "./SceneBinding.ts";
+import {
+  SceneBinding,
+  type SceneEnvironmentTarget
+} from "./SceneBinding.ts";
 import { EditAssets } from "./EditAssets.ts";
 import {
   PrefabScenes,
@@ -76,6 +83,7 @@ export interface SceneEditorSceneOptions {
   document: SceneDocument;
   room: SceneRoom;
   openScene: SceneLeaser;
+  openEnvironment: EnvironmentOpener;
   session: SceneAssetContext;
   components: SceneComponents;
   assetSlots: SceneAssetSlots;
@@ -128,8 +136,16 @@ export class SceneEditorScene extends Systems.Scene {
       .addComponentAndGet(OrbitFlyCamera, kCameraPreset);
     const history = createSceneHistory(document);
     teardown.defer(() => history.dispose());
-    const environment = world.sceneManager.graph.createEnvironment(world);
-    teardown.defer(() => environment.dispose());
+    const shown = world.sceneManager.graph.createEnvironment(world);
+    teardown.defer(() => shown.dispose());
+    const link = new EnvironmentLink(this.#options.openEnvironment, (file) => {
+      shown.apply(file ?? Systems.ENVIRONMENT_PRESETS.default);
+      world.invalidate();
+    });
+    teardown.defer(() => link.dispose());
+    const environment: SceneEnvironmentTarget = {
+      apply: (reference) => link.link(reference?.id ?? null)
+    };
     const assets = new EditAssets(components, this.#options.session, {
       loaded: () => binding.rebuild()
     });

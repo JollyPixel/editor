@@ -9,7 +9,10 @@ import {
   sceneEnvironmentSchema,
   sceneTransformSchema
 } from "../network/SceneCommand.schema.ts";
-import type { SceneActorJSON } from "../network/types.ts";
+import type {
+  SceneActorJSON,
+  SceneEnvironmentJSON
+} from "../network/types.ts";
 import {
   SCENE_FILE_VERSION,
   type SceneFile
@@ -21,13 +24,15 @@ const kCompactActorSchema = z.extend(sceneActorSchema, {
   transform: z.optional(z.partial(sceneTransformSchema))
 });
 
-const kCompactEnvironmentSchema = z.extend(sceneEnvironmentSchema, {
-  glow: z.optional(sceneEnvironmentSchema.shape.glow)
+const kInlineEnvironmentSchema = z.object({
+  fog: z.unknown()
 });
 
 export const compactSceneFileSchema = z.object({
   version: z.literal(SCENE_FILE_VERSION),
-  environment: kCompactEnvironmentSchema,
+  environment: z.optional(
+    z.union([sceneEnvironmentSchema, kInlineEnvironmentSchema])
+  ),
   actors: z.array(kCompactActorSchema)
 });
 
@@ -37,11 +42,11 @@ type CompactSceneActor = CompactSceneFile["actors"][number];
 export function compactSceneFile(
   file: SceneFile
 ): CompactSceneFile {
-  const { glow, ...environment } = file.environment;
+  const { environment, ...rest } = file;
 
   return {
-    ...file,
-    environment: glow === null ? environment : file.environment,
+    ...rest,
+    ...environment === null ? {} : { environment },
     actors: file.actors.map(compactActor)
   };
 }
@@ -51,12 +56,17 @@ export function expandSceneFile(
 ): SceneFile {
   return {
     ...compact,
-    environment: {
-      ...compact.environment,
-      glow: compact.environment.glow ?? null
-    },
+    environment: expandEnvironment(compact.environment),
     actors: compact.actors.map(expandActor)
   };
+}
+
+function expandEnvironment(
+  environment: CompactSceneFile["environment"]
+): SceneEnvironmentJSON {
+  return environment !== undefined && environment !== null && "id" in environment ?
+    environment :
+    null;
 }
 
 function compactActor(
