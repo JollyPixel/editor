@@ -72,8 +72,12 @@ function accountAction(
   switch (activity.type) {
     case "registered":
       return activity.pending ? "requested access" : "registered";
+    case "joined":
+      return activity.pending ? "asked to join" : "joined";
     case "approved":
       return `approved ${activity.username} as ${activity.role}`;
+    case "invited":
+      return `added ${activity.username} as ${activity.role}`;
     case "denied":
       return `denied ${activity.username}`;
     case "role-changed":
@@ -82,6 +86,8 @@ function accountAction(
       return `made ${activity.username} the owner`;
     case "removed":
       return `removed ${activity.username}`;
+    case "deleted":
+      return `deleted the account of ${activity.username}`;
     case "share-link-created":
       return `created a share link to ${assetLabel(activity.asset)}`;
     case "share-link-revoked":

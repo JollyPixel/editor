@@ -1,10 +1,10 @@
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
-import type { Accounts } from "@jolly-pixel/accounts/node";
+import type { Member } from "@jolly-pixel/accounts";
+import type { AccountsRealm } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
 import type { PlayerPageSource } from "./GamePlayer.ts";
-import type { StudioGame } from "./StudioGame.ts";
+import type { ProjectGame } from "./ProjectGame.ts";
 import type { Middleware } from "../../http/node/Middleware.ts";
 import { readPathname } from "../../http/node/requestPathname.ts";
 import { sendHtml } from "../../http/node/sendHtml.ts";
@@ -20,15 +20,15 @@ const kFailedPage = "<!doctype html><html lang=\"en\"><head>" +
 
 export interface PlayPageOptions {
   page: PlayerPageSource;
-  game: Pick<StudioGame, "scriptImports">;
-  accounts: Pick<Accounts, "signedIn">;
+  game: Pick<ProjectGame, "scriptImports">;
+  realm: Pick<AccountsRealm, "signedIn">;
 }
 
 export class PlayPage {
   readonly middleware: Middleware;
 
   #page: PlayerPageSource;
-  #game: Pick<StudioGame, "scriptImports">;
+  #game: Pick<ProjectGame, "scriptImports">;
 
   constructor(
     options: PlayPageOptions
@@ -43,7 +43,7 @@ export class PlayPage {
         return;
       }
 
-      this.render(options.accounts.signedIn(request.headers)).then(
+      this.render(options.realm.signedIn(request.headers)).then(
         (html) => sendHtml(response, 200, html),
         () => sendHtml(response, 500, kFailedPage)
       );
@@ -51,7 +51,7 @@ export class PlayPage {
   }
 
   async render(
-    account: Account | null
+    account: Member | null
   ): Promise<string> {
     const page = PlayerPage.parse(await this.#page.html());
 

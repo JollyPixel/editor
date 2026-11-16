@@ -3,6 +3,7 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import {
   agentTokenId,
   type Account,
+  type Member,
   type AccountActivity,
   type AgentToken
 } from "@jolly-pixel/accounts";
@@ -19,7 +20,7 @@ import {
   type AuditDraftRow
 } from "./AuditRows.ts";
 import { AuditTimeline } from "./AuditTimeline.ts";
-import type { StudioProject } from "../../project/node/StudioProject.ts";
+import type { Project } from "../../project/node/Project.ts";
 import {
   ACCOUNTS_CATEGORY,
   type AuditAccountActivity,
@@ -41,7 +42,7 @@ const kSystemNames: Readonly<Record<string, string>> = {
 };
 
 export interface AuditFeedOptions {
-  project: Pick<StudioProject, "access">;
+  project: Pick<Project, "access">;
   assets: AssetLog;
   audit: AuditLog;
   account: (accountId: string) => Account | null;
@@ -57,7 +58,7 @@ export interface AuditFeedQuery extends AuditQuery {
 }
 
 export class AuditFeed {
-  #project: Pick<StudioProject, "access">;
+  #project: Pick<Project, "access">;
   #assets: AssetLog;
   #audit: AuditLog;
   #account: (accountId: string) => Account | null;
@@ -76,7 +77,7 @@ export class AuditFeed {
   }
 
   async page(
-    viewer: Account,
+    viewer: Member,
     query: AuditFeedQuery
   ): Promise<AuditPage> {
     const rights = this.#project.access.projectRights(viewer.role);
@@ -261,12 +262,14 @@ export class AuditFeed {
           name: activity.name
         };
       case "registered":
+      case "joined":
         return {
           type: activity.type,
           username: activity.username,
           pending: activity.pending
         };
       case "approved":
+      case "invited":
         return {
           type: activity.type,
           username: activity.username,

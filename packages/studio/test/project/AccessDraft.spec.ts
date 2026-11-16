@@ -19,7 +19,7 @@ const kAccess = {
       "*": "read"
     }
   },
-  accessRequests: false
+  join: "open"
 } as const;
 
 describe("AccessDraft", () => {

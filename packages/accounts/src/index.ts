@@ -17,8 +17,10 @@ export {
   type RegistrationBody
 } from "./http/routes.schema.ts";
 export * from "./account/Username.ts";
+export * from "./realm/JoinMode.ts";
 export * from "./client/AccountsClient.ts";
 export * from "./client/prehashPassword.ts";
+export * from "./client/credentialsBody.ts";
 export type { RegisterOptions } from "./registration/RegisterOptions.ts";
 export type { RegistrationResult } from "./registration/RegistrationResult.ts";
 export * from "./room/AccountsRoster.ts";

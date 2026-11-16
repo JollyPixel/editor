@@ -1,17 +1,17 @@
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 
 export interface SessionRenewalOptions {
   accountId: string;
-  currentAccount: () => Promise<Account | null>;
-  signIn: () => Promise<Account>;
+  currentAccount: () => Promise<Member | null>;
+  signIn: () => Promise<Member>;
   reload: () => void;
 }
 
 export class SessionRenewal {
   #accountId: string;
-  #currentAccount: () => Promise<Account | null>;
-  #signIn: () => Promise<Account>;
+  #currentAccount: () => Promise<Member | null>;
+  #signIn: () => Promise<Member>;
   #reload: () => void;
   #listeners = new Set<() => void>();
   #renewing: Promise<void> | null = null;
@@ -42,7 +42,7 @@ export class SessionRenewal {
   }
 
   async #renew(): Promise<void> {
-    let account: Account;
+    let account: Member;
     try {
       account = await this.#currentAccount() ?? await this.#signIn();
     }

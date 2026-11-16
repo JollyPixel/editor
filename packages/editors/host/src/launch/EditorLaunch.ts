@@ -16,8 +16,14 @@ const kTargetSchema = z.string().check(
 );
 const kLaunchSchema = z.object({
   target: kTargetSchema,
-  credential: z.optional(z.string().check(z.minLength(1)))
+  credential: z.optional(z.string().check(z.minLength(1))),
+  socket: z.optional(z.string().check(z.minLength(1)))
 });
+
+export interface ShareCredential {
+  token: string;
+  socket: string | null;
+}
 
 export class EditorLaunch {
   static parse(
@@ -25,14 +31,21 @@ export class EditorLaunch {
     shell: ShellChannel | null = null
   ): EditorLaunch | undefined {
     const parsed = kLaunchSchema.safeParse(value);
+    if (!parsed.success) {
+      return undefined;
+    }
+    const { target, credential, socket } = parsed.data;
 
-    return parsed.success ?
-      new EditorLaunch(
-        new AssetId(parsed.data.target),
-        shell,
-        parsed.data.credential ?? null
-      ) :
-      undefined;
+    return new EditorLaunch(
+      new AssetId(target),
+      shell,
+      credential === undefined ?
+        null :
+        {
+          token: credential,
+          socket: socket ?? null
+        }
+    );
   }
 
   static fromTarget(
@@ -95,13 +108,13 @@ export class EditorLaunch {
 
   readonly target: AssetId;
   readonly shell: ShellChannel | null;
-  readonly credential: string | null;
+  readonly credential: ShareCredential | null;
   readonly tag: string | null;
 
   constructor(
     target: AssetId,
     shell: ShellChannel | null = null,
-    credential: string | null = null,
+    credential: ShareCredential | null = null,
     tag: string | null = null
   ) {
     this.target = target;

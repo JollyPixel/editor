@@ -16,7 +16,7 @@ import {
   browser,
   type ServedBackend
 } from "#src/testing.ts";
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 
 // CONSTANTS
 const kPassword = "p".repeat(43);

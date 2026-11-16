@@ -2,7 +2,7 @@
 import { randomUUID } from "node:crypto";
 
 // Import Internal Dependencies
-import type { AccountDirectory } from "../AccountDirectory.ts";
+import type { MemberDirectory } from "../realm/MemberDirectory.ts";
 import { SessionToken } from "../session/SessionToken.ts";
 import type { ShareLinkRepository } from "../store/ShareLinkRepository.ts";
 import type { ShareLink } from "./ShareLink.ts";
@@ -30,15 +30,15 @@ export function shareLinkSubject(
 
 export class ShareLinks implements Disposable {
   #repository: ShareLinkRepository;
-  #directory: AccountDirectory;
+  #members: MemberDirectory;
   #expiry: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     repository: ShareLinkRepository,
-    directory: AccountDirectory
+    members: MemberDirectory
   ) {
     this.#repository = repository;
-    this.#directory = directory;
+    this.#members = members;
     this.#scheduleExpiry();
   }
 
@@ -49,8 +49,8 @@ export class ShareLinks implements Disposable {
     if (creation.expiresAt !== null && creation.expiresAt <= now) {
       throw new RangeError("a share link must expire in the future");
     }
-    if (this.#directory.account(creation.createdBy) === null) {
-      throw new ShareLinkRefusedError("the creator has no account");
+    if (this.#members.member(creation.createdBy) === null) {
+      throw new ShareLinkRefusedError("the creator is not a member");
     }
 
     const link: ShareLink = {
@@ -61,9 +61,9 @@ export class ShareLinks implements Disposable {
       createdAt: now,
       expiresAt: creation.expiresAt
     };
-    this.#repository.insert(link);
+    this.#repository.insert(this.#members.realmId, link);
     this.#scheduleExpiry();
-    this.#directory.record({
+    this.#members.record({
       type: "share-link-created",
       actorId: link.createdBy,
       linkId: link.id,
@@ -78,7 +78,7 @@ export class ShareLinks implements Disposable {
   ): ShareLink | null {
     return SessionToken.parse(token) === null ?
       null :
-      this.#repository.byToken(token, Date.now());
+      this.#repository.byToken(this.#members.realmId, token, Date.now());
   }
 
   bySubject(
@@ -89,6 +89,7 @@ export class ShareLinks implements Disposable {
     }
 
     return this.#repository.byId(
+      this.#members.realmId,
       subject.slice(kSubjectPrefix.length),
       Date.now()
     );
@@ -97,9 +98,9 @@ export class ShareLinks implements Disposable {
   visibleTo(
     actorId: string
   ): ShareLink[] {
-    const links = this.#repository.live(Date.now());
+    const links = this.#repository.live(this.#members.realmId, Date.now());
 
-    return this.#directory.isAdmin(actorId) ?
+    return this.#members.isAdmin(actorId) ?
       links :
       links.filter((link) => link.createdBy === actorId);
   }
@@ -108,19 +109,23 @@ export class ShareLinks implements Disposable {
     actorId: string,
     linkId: string
   ): ShareLink {
-    const link = this.#repository.byId(linkId, Date.now());
+    const link = this.#repository.byId(
+      this.#members.realmId,
+      linkId,
+      Date.now()
+    );
     if (link === null) {
       throw new ShareLinkNotFoundError();
     }
-    if (link.createdBy !== actorId && !this.#directory.isAdmin(actorId)) {
+    if (link.createdBy !== actorId && !this.#members.isAdmin(actorId)) {
       throw new ShareLinkRefusedError(
         "only its creator or an admin revokes a share link"
       );
     }
 
     this.#repository.delete(linkId);
-    this.#directory.revoke(shareLinkSubject(linkId));
-    this.#directory.record({
+    this.#members.revoke(shareLinkSubject(linkId));
+    this.#members.record({
       type: "share-link-revoked",
       actorId,
       linkId,
@@ -139,7 +144,7 @@ export class ShareLinks implements Disposable {
 
   #scheduleExpiry(): void {
     this[Symbol.dispose]();
-    const next = this.#repository.nextExpiry();
+    const next = this.#repository.nextExpiry(this.#members.realmId);
     if (next === null) {
       return;
     }
@@ -153,8 +158,12 @@ export class ShareLinks implements Disposable {
   }
 
   #expire(): void {
-    for (const link of this.#repository.deleteExpired(Date.now())) {
-      this.#directory.revoke(shareLinkSubject(link.id));
+    const expired = this.#repository.deleteExpired(
+      this.#members.realmId,
+      Date.now()
+    );
+    for (const link of expired) {
+      this.#members.revoke(shareLinkSubject(link.id));
     }
     this.#scheduleExpiry();
   }

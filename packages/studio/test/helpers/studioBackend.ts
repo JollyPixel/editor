@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   BuiltPlayer,
-  StudioServerSettings
+  ServerSettings
 } from "@jolly-pixel/server/node";
 import {
   listenBackend,
@@ -21,7 +21,7 @@ export async function serveBackend(
 ): Promise<ServedBackend> {
   const project = await openStudioProject({
     inMemory: true,
-    settings: StudioServerSettings.parse({})
+    settings: ServerSettings.parse({})
   });
 
   return listenBackend(project, {

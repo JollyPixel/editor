@@ -6,13 +6,13 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import { accountMenu } from "../../../src/shell/account/accountMenu.ts";
 
 function readHeader(
-  account: Account
+  account: Member
 ): unknown {
   return accountMenu(account)[0];
 }

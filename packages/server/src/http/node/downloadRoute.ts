@@ -19,7 +19,9 @@ interface QueryRoute<TQuery> {
 
 interface DownloadRoute<TQuery> {
   route: ApiRoute;
-  fileName: string;
+  fileName(
+    request: FastifyRequest<QueryRoute<TQuery>>
+  ): string;
   schema?: FastifySchema;
   body(
     request: FastifyRequest<QueryRoute<TQuery>>
@@ -30,15 +32,16 @@ export function downloadRoute<TQuery = unknown>(
   app: FastifyInstance,
   download: DownloadRoute<TQuery>
 ): void {
-  const disposition = new AttachmentDisposition(download.fileName);
-
   app.route<QueryRoute<TQuery>>({
     method: download.route.method,
     url: download.route.path,
     schema: download.schema,
     handler: async(request, reply) => reply
       .type(ARCHIVE_MIME_TYPE)
-      .header("content-disposition", disposition.toString())
+      .header(
+        "content-disposition",
+        new AttachmentDisposition(download.fileName(request)).toString()
+      )
       .send(await download.body(request))
   });
 }

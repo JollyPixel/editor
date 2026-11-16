@@ -11,16 +11,14 @@ import {
 } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
-import type { AccountActivity } from "./AccountActivity.ts";
-import type {
-  AccessRequest,
-  Account
+import {
+  ADMIN_ROLE,
+  type Account
 } from "./account/Account.ts";
 import { AccountEntity } from "./account/AccountEntity.ts";
 import type { Username } from "./account/Username.ts";
 import { AccountChangeRefusedError } from "./account/errors/AccountChangeRefusedError.ts";
 import { UsernameTakenError } from "./account/errors/UsernameTakenError.ts";
-import type { AccountRoles } from "./auth/AccountRoles.ts";
 import {
   AccountsThrottle,
   type AccountsThrottleOptions
@@ -31,57 +29,41 @@ import {
   type StoredAvatar
 } from "./avatar/AvatarImage.ts";
 import { avatarPath } from "./http/routes.ts";
-import {
-  MasterPassword,
-  type MasterPasswordOptions
-} from "./registration/MasterPassword.ts";
-import { AccessRequestsFullError } from "./registration/errors/AccessRequestsFullError.ts";
-import { AccountPendingError } from "./registration/errors/AccountPendingError.ts";
-import type { RegisterOptions } from "./registration/RegisterOptions.ts";
-import type { RegistrationResult } from "./registration/RegistrationResult.ts";
+import { MasterPassword } from "./registration/MasterPassword.ts";
+import { Membership } from "./realm/Membership.ts";
 import type { PasswordDigest } from "./session/PasswordDigest.ts";
-import { shareLinkSubject } from "./share/ShareLinks.ts";
 import { agentTokenSubject } from "./agent/AgentToken.ts";
+import { shareLinkSubject } from "./share/ShareLinks.ts";
 import type { AccountsDatabase } from "./store/AccountsDatabase.ts";
 
 // CONSTANTS
 const kDefaultMaxConcurrentHashes = 2;
-const kDefaultMaxAccessRequests = 20;
 
 export interface Credentials {
   username: Username;
   password: PasswordDigest;
 }
 
-export interface Registration extends Credentials {
-  options: RegisterOptions;
-}
-
 export interface AccountDirectoryOptions {
   database: AccountsDatabase;
-  roles: AccountRoles;
   throttle?: AccountsThrottleOptions;
   maxConcurrentHashes?: number;
-  masterPassword?: MasterPasswordOptions;
-  maxAccessRequests?: number;
+  masterPassword?: string;
 }
 
 export type AccountDirectoryEventMap = {
   changed: () => void;
   revoked: (subject: string) => void;
-  disconnected: (subject: string) => void;
   profile: (account: Account) => void;
-  activity: (activity: AccountActivity) => void;
 };
 
-export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
-  implements Iterable<Account> {
-  #roles: AccountRoles;
-  #database: AccountsDatabase;
+export class AccountDirectory extends Emitter<AccountDirectoryEventMap> {
+  readonly database: AccountsDatabase;
+
   #throttle: AccountsThrottle;
   #hashes: Mutex;
   #masterPassword: MasterPassword | null;
-  #maxAccessRequests: number;
+  #realms = new Set<string>();
   #dummyHash: Promise<PasswordHash> | null = null;
 
   constructor(
@@ -89,8 +71,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   ) {
     super();
 
-    this.#database = options.database;
-    this.#roles = options.roles;
+    this.database = options.database;
     this.#throttle = new AccountsThrottle(options.throttle);
     this.#hashes = new Mutex({
       concurrency: options.maxConcurrentHashes ?? kDefaultMaxConcurrentHashes
@@ -98,51 +79,68 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     this.#masterPassword = options.masterPassword === undefined ?
       null :
       new MasterPassword(options.masterPassword);
-    this.#maxAccessRequests = options.maxAccessRequests ??
-      kDefaultMaxAccessRequests;
   }
 
-  async register(
-    registration: Registration,
-    address: string
-  ): Promise<RegistrationResult> {
-    const { username, password, options } = registration;
+  get claimed(): boolean {
+    return this.database.accounts.size > 0;
+  }
 
+  openRealm(
+    realmId: string
+  ): void {
+    if (this.#realms.has(realmId)) {
+      throw new Error(`the realm "${realmId}" is already open`);
+    }
+    this.#realms.add(realmId);
+  }
+
+  closeRealm(
+    realmId: string
+  ): void {
+    this.#realms.delete(realmId);
+  }
+
+  async admitRegistration(
+    masterPassword: string | undefined,
+    address: string
+  ): Promise<void> {
     await this.#throttle.reserveRegistration(address);
-    const status = this.#masterPassword?.admit(
-      options.masterPassword,
-      this.#database.accounts.size === 0
-    ) ?? "active";
-    const hash = await this.#hashing(
+    if (!this.claimed) {
+      this.#masterPassword?.assertGiven(masterPassword);
+    }
+  }
+
+  hash(
+    password: PasswordDigest
+  ): Promise<PasswordHash> {
+    return this.#hashing(
       () => hashPassword(password.value)
     );
-    const account = status === "pending" ?
-      this.#requestAccess(username, hash) :
-      this.#register(username, hash);
-    this.#changed({
-      type: "registered",
-      actorId: account.id,
-      accountId: account.id,
-      username: account.username,
-      pending: account.pending
-    });
+  }
 
-    return status === "pending" ?
-      { status } :
-      {
-        status,
-        account: this.#account(account)
-      };
+  insert(
+    username: Username,
+    hash: PasswordHash
+  ): AccountEntity {
+    if (this.database.accounts.named(username) !== null) {
+      throw new UsernameTakenError(username.value);
+    }
+    const account = this.claimed ?
+      AccountEntity.register(username) :
+      AccountEntity.claim(username);
+    this.database.accounts.insert(account, username, hash);
+
+    return account;
   }
 
   async login(
     credentials: Credentials,
     address: string
-  ): Promise<Account> {
+  ): Promise<AccountEntity> {
     const { username, password } = credentials;
 
     await this.#throttle.reserveLogin(username, address);
-    const stored = this.#database.accounts.credentials(username);
+    const stored = this.database.accounts.credentials(username);
     const hash = stored?.hash ?? await this.#dummy();
     const valid = await this.#hashing(
       () => verifyPassword(password.value, hash)
@@ -154,221 +152,90 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
       username,
       address
     );
-    if (stored.account.pending) {
-      throw new AccountPendingError();
-    }
 
-    return this.#account(stored.account);
-  }
-
-  get roles(): AccountRoles {
-    return this.#roles;
-  }
-
-  get accessRequests(): boolean {
-    return this.#masterPassword?.accessRequests ?? false;
-  }
-
-  replaceRoles(
-    roles: AccountRoles,
-    renamed: ReadonlyMap<string, string> = new Map()
-  ): void {
-    for (const [from, to] of renamed) {
-      if (roles.has(from) || !roles.has(to)) {
-        throw new AccountChangeRefusedError(
-          `the "${from}" role cannot be renamed to "${to}"`
-        );
-      }
-    }
-    const moved = this.#database.transaction(() => {
-      const accounts = [...this.#database.accounts].flatMap((account) => {
-        const role = renamed.get(account.role);
-
-        return role === undefined ? [] : [account.withRole(role)];
-      });
-      for (const account of accounts) {
-        this.#database.accounts.save(account);
-      }
-
-      return accounts;
-    });
-    this.#roles = roles;
-    this.emit("changed");
-    for (const account of moved) {
-      this.#revokeAccount(account.id);
-    }
-  }
-
-  replaceAccessRequests(
-    enabled: boolean
-  ): void {
-    if (this.#masterPassword === null) {
-      if (enabled) {
-        throw new TypeError("access requests need a master password");
-      }
-
-      return;
-    }
-    this.#masterPassword.accessRequests = enabled;
-  }
-
-  holders(
-    role: string
-  ): string[] {
-    const ids: string[] = [];
-    for (const account of this.#database.accounts) {
-      if (account.role === role) {
-        ids.push(account.id);
-      }
-    }
-
-    return ids;
+    return stored.account;
   }
 
   account(
     id: string
   ): Account | null {
-    const account = this.#database.accounts.byId(id);
+    const account = this.database.accounts.byId(id);
 
-    return account === null ? null : this.#account(account);
-  }
-
-  isAdmin(
-    accountId: string
-  ): boolean {
-    return this.#database.accounts.byId(accountId)?.isAdmin === true;
-  }
-
-  assignRole(
-    actorId: string,
-    username: Username,
-    role: string
-  ): Account {
-    const { account, from } = this.#database.transaction(() => {
-      this.#actor(actorId).assertAdmin();
-      this.#assertDeclared(role);
-      const target = this.#existingAccount(username);
-      target.assertNotOwner();
-      const changed = target.withRole(role);
-      this.#database.accounts.save(changed);
-
-      return {
-        account: changed,
-        from: target.role
-      };
-    });
-    this.#changed({
-      type: "role-changed",
-      actorId,
-      accountId: account.id,
-      username: account.username,
-      from,
-      to: role
-    });
-    this.#revokeAccount(account.id);
-
-    return this.#account(account);
-  }
-
-  approve(
-    actorId: string,
-    username: Username,
-    role: string
-  ): Account {
-    const account = this.#database.transaction(() => {
-      this.#actor(actorId).assertAdmin();
-      this.#assertDeclared(role);
-      const approved = this.#existingRequest(username).approved(role);
-      this.#database.accounts.save(approved);
-
-      return approved;
-    });
-    this.#changed({
-      type: "approved",
-      actorId,
-      accountId: account.id,
-      username: account.username,
-      role
-    });
-
-    return this.#account(account);
-  }
-
-  deny(
-    actorId: string,
-    username: Username
-  ): void {
-    const request = this.#database.transaction(() => {
-      this.#actor(actorId).assertAdmin();
-      const denied = this.#existingRequest(username);
-      this.#database.accounts.delete(denied.id);
-
-      return denied;
-    });
-    this.#changed({
-      type: "denied",
-      actorId,
-      accountId: request.id,
-      username: request.username
-    });
-  }
-
-  remove(
-    actorId: string,
-    username: Username
-  ): Account {
-    const { account, subjects } = this.#database.transaction(() => {
-      this.#actor(actorId).assertAdmin();
-      const removed = this.#existingAccount(username);
-      removed.assertNotOwner();
-      const revoked = [
-        ...this.#accountSubjects(removed.id),
-        ...this.#database.shareLinks
-          .deleteCreatedBy(removed.id)
-          .map((link) => shareLinkSubject(link.id))
-      ];
-      this.#database.accounts.delete(removed.id);
-
-      return {
-        account: removed,
-        subjects: revoked
-      };
-    });
-    this.#changed({
-      type: "removed",
-      actorId,
-      accountId: account.id,
-      username: account.username
-    });
-    for (const subject of subjects) {
-      this.revoke(subject);
-    }
-
-    return this.#account(account);
+    return account === null ? null : this.toAccount(account);
   }
 
   transferOwnership(
     actorId: string,
     username: Username
-  ): Account {
-    const owner = this.#database.transaction(() => {
-      this.#actor(actorId).assertOwner();
-      const target = this.#existingAccount(username);
+  ): AccountEntity {
+    const owner = this.database.transaction(() => {
+      const actor = this.#actor(actorId);
+      actor.assertOwner();
+      const target = this.database.accounts.named(username);
+      if (target === null) {
+        throw new AccountChangeRefusedError(
+          `no account is named "${username.value}"`
+        );
+      }
       target.assertNotOwner();
-      const transferred = target.promotedToOwner();
-      this.#database.accounts.save(transferred);
+      const realms = new Set([
+        ...this.database.memberships.realmIds(),
+        ...this.#realms
+      ]);
+      for (const realmId of realms) {
+        this.database.memberships.save(
+          Membership.active(realmId, actor.id, ADMIN_ROLE)
+        );
+      }
+      const transferred = target.withOwnership(true);
+      this.database.accounts.save(transferred);
 
       return transferred;
     });
-    this.#changed({
-      type: "owner-transferred",
-      actorId,
-      accountId: owner.id,
-      username: owner.username
-    });
-    this.#revokeAccount(owner.id);
+    this.emit("changed");
+    this.revoke(owner.id);
+    for (const tokenId of this.database.agentTokens.liveIdsOwnedBy(owner.id)) {
+      this.revoke(agentTokenSubject(tokenId));
+    }
 
-    return this.#account(owner);
+    return owner;
+  }
+
+  deleteAccount(
+    actorId: string,
+    username: Username
+  ): AccountEntity {
+    const { account, subjects } = this.database.transaction(() => {
+      this.#actor(actorId).assertOwner();
+      const target = this.database.accounts.named(username);
+      if (target === null) {
+        throw new AccountChangeRefusedError(
+          `no account is named "${username.value}"`
+        );
+      }
+      target.assertNotOwner();
+      const revoked = [
+        target.id,
+        ...this.database.shareLinks
+          .idsCreatedBy(target.id)
+          .map((linkId) => shareLinkSubject(linkId)),
+        ...this.database.agentTokens
+          .liveIdsOwnedBy(target.id)
+          .map((tokenId) => agentTokenSubject(tokenId))
+      ];
+      this.database.accounts.delete(target.id);
+
+      return {
+        account: target,
+        subjects: revoked
+      };
+    });
+    this.emit("changed");
+    for (const subject of subjects) {
+      this.revoke(subject);
+    }
+
+    return account;
   }
 
   async replaceAvatar(
@@ -376,13 +243,13 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     image: Uint8Array
   ): Promise<Account> {
     const avatar = await AvatarImage.encode(image);
-    const account = this.#database.transaction(() => {
+    const account = this.database.transaction(() => {
       const changed = this.#actor(accountId).withAvatar(avatar.hash);
-      this.#database.avatars.replace(accountId, avatar);
+      this.database.avatars.replace(accountId, avatar);
 
       return changed;
     });
-    const replaced = this.#account(account);
+    const replaced = this.toAccount(account);
     this.emit("changed");
     this.emit("profile", replaced);
 
@@ -392,7 +259,7 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
   avatar(
     accountId: string
   ): StoredAvatar | null {
-    return this.#database.avatars.find(accountId);
+    return this.database.avatars.find(accountId);
   }
 
   revoke(
@@ -401,159 +268,28 @@ export class AccountDirectory extends Emitter<AccountDirectoryEventMap>
     this.emit("revoked", subject);
   }
 
-  disconnect(
-    subject: string
-  ): void {
-    this.emit("disconnected", subject);
-  }
-
-  record(
-    activity: AccountActivity
-  ): void {
-    this.emit("activity", activity);
-  }
-
-  * [Symbol.iterator](): IterableIterator<Account> {
-    for (const account of this.#database.accounts) {
-      if (!account.pending) {
-        yield this.#account(account);
-      }
-    }
-  }
-
-  * requests(): IterableIterator<AccessRequest> {
-    for (const account of this.#database.accounts) {
-      if (account.pending) {
-        yield {
-          id: account.id,
-          username: account.username
-        };
-      }
-    }
-  }
-
-  #register(
-    username: Username,
-    hash: PasswordHash
-  ): AccountEntity {
-    return this.#database.transaction(() => {
-      this.#assertAvailable(username);
-      const account = this.#database.accounts.size === 0 ?
-        AccountEntity.claim(username) :
-        AccountEntity.register(username, this.#roles.defaultRole);
-      this.#database.accounts.insert(account, username, hash);
-
-      return account;
-    });
-  }
-
-  #requestAccess(
-    username: Username,
-    hash: PasswordHash
-  ): AccountEntity {
-    return this.#database.transaction(() => {
-      if (this.#database.accounts.pendingSize >= this.#maxAccessRequests) {
-        throw new AccessRequestsFullError(this.#maxAccessRequests);
-      }
-      this.#assertAvailable(username);
-      const request = AccountEntity.request(username, this.#roles.defaultRole);
-      this.#database.accounts.insert(request, username, hash);
-
-      return request;
-    });
-  }
-
-  #revokeAccount(
-    accountId: string
-  ): void {
-    for (const subject of this.#accountSubjects(accountId)) {
-      this.revoke(subject);
-    }
-  }
-
-  #accountSubjects(
-    accountId: string
-  ): string[] {
-    return [
-      accountId,
-      ...this.#database.agentTokens
-        .ownedBy(accountId)
-        .map((token) => agentTokenSubject(token.id))
-    ];
-  }
-
-  #changed(
-    activity: AccountActivity
-  ): void {
-    this.emit("changed");
-    this.record(activity);
-  }
-
-  #assertAvailable(
-    username: Username
-  ): void {
-    if (this.#database.accounts.named(username) !== null) {
-      throw new UsernameTakenError(username.value);
-    }
-  }
-
-  #actor(
-    id: string
-  ): AccountEntity {
-    const account = this.#database.accounts.byId(id);
-    if (account === null) {
-      throw new AccountChangeRefusedError(`no account has the id "${id}"`);
-    }
-
-    return account;
-  }
-
-  #existingAccount(
-    username: Username
-  ): AccountEntity {
-    const account = this.#database.accounts.named(username);
-    if (account === null || account.pending) {
-      throw new AccountChangeRefusedError(
-        `no account is named "${username.value}"`
-      );
-    }
-
-    return account;
-  }
-
-  #existingRequest(
-    username: Username
-  ): AccountEntity {
-    const account = this.#database.accounts.named(username);
-    if (account === null || !account.pending) {
-      throw new AccountChangeRefusedError(
-        `no access request is named "${username.value}"`
-      );
-    }
-
-    return account;
-  }
-
-  #assertDeclared(
-    role: string
-  ): void {
-    if (!this.#roles.has(role)) {
-      throw new AccountChangeRefusedError(`"${role}" is not a role`);
-    }
-  }
-
-  #account(
+  toAccount(
     account: AccountEntity
   ): Account {
     return {
       id: account.id,
       username: account.username,
-      role: this.#roles.effective(account.role),
       owner: account.owner,
       avatar: account.avatarHash === null ?
         undefined :
         avatarPath(account.id, account.avatarHash)
     };
+  }
+
+  #actor(
+    id: string
+  ): AccountEntity {
+    const account = this.database.accounts.byId(id);
+    if (account === null) {
+      throw new AccountChangeRefusedError(`no account has the id "${id}"`);
+    }
+
+    return account;
   }
 
   #dummy(): Promise<PasswordHash> {

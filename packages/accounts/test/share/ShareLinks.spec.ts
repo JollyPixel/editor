@@ -7,20 +7,21 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import {
-  createDirectory,
+  OTHER_REALM,
+  createMembers,
   databaseWith,
   name
 } from "../helpers/accounts.ts";
+import type { MemberDirectory } from "#src/realm/MemberDirectory.ts";
 import { SessionToken } from "#src/session/SessionToken.ts";
 import { ShareLinks } from "#src/share/ShareLinks.ts";
 import { ShareLinkNotFoundError } from "#src/share/errors/ShareLinkNotFoundError.ts";
 import { ShareLinkRefusedError } from "#src/share/errors/ShareLinkRefusedError.ts";
 import type { AccountsDatabase } from "#src/store/AccountsDatabase.ts";
-import type { AccountDirectory } from "#src/AccountDirectory.ts";
 
 interface Harness extends Disposable {
   database: AccountsDatabase;
-  directory: AccountDirectory;
+  members: MemberDirectory;
   links: ShareLinks;
   revoked: string[];
   ids: string[];
@@ -28,14 +29,14 @@ interface Harness extends Disposable {
 
 function harness(): Harness {
   const database = databaseWith("Alice", "Bob", "Carol");
-  const directory = createDirectory(database);
-  const links = new ShareLinks(database.shareLinks, directory);
+  const members = createMembers(database);
+  const links = new ShareLinks(database.shareLinks, members);
   const revoked: string[] = [];
-  directory.on("revoked", (subject) => revoked.push(subject));
+  members.on("revoked", (subject) => revoked.push(subject));
 
   return {
     database,
-    directory,
+    members,
     links,
     revoked,
     ids: [...database.accounts].map((account) => account.id),
@@ -146,7 +147,7 @@ describe("ShareLinks", () => {
     ]);
   });
 
-  test("removing an account revokes the links it created", () => {
+  test("removing a member revokes the links it created", () => {
     using h = harness();
     const [alice, bob] = h.ids;
     const link = h.links.create({
@@ -155,9 +156,37 @@ describe("ShareLinks", () => {
       expiresAt: null
     });
 
-    h.directory.remove(alice, name("Bob"));
+    h.members.remove(alice, name("Bob"));
 
     assert.equal(h.links.find(link.token), null);
     assert.deepEqual(h.revoked, [bob, `share:${link.id}`]);
+    assert.throws(
+      () => h.links.create({
+        assetId: "map-1",
+        createdBy: bob,
+        expiresAt: null
+      }),
+      {
+        name: "ShareLinkRefusedError",
+        message: "the creator is not a member"
+      }
+    );
+  });
+
+  test("keeps the links of another realm out of reach", () => {
+    using h = harness();
+    const [alice] = h.ids;
+    const other = createMembers(h.database, { realmId: OTHER_REALM });
+    using otherLinks = new ShareLinks(h.database.shareLinks, other);
+    const link = otherLinks.create({
+      assetId: "map-1",
+      createdBy: alice,
+      expiresAt: null
+    });
+
+    assert.equal(h.links.find(link.token), null);
+    assert.equal(h.links.bySubject(`share:${link.id}`), null);
+    assert.deepEqual(h.links.visibleTo(alice), []);
+    assert.throws(() => h.links.revoke(alice, link.id), ShareLinkNotFoundError);
   });
 });

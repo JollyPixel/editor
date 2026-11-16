@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type { AccountDirectory } from "../AccountDirectory.ts";
+import type { MemberDirectory } from "../realm/MemberDirectory.ts";
 import { Username } from "../account/Username.ts";
 import { AccountChangeRefusedError } from "../account/errors/AccountChangeRefusedError.ts";
 import { InvalidUsernameError } from "../account/errors/InvalidUsernameError.ts";
@@ -17,7 +17,9 @@ import {
   ACCOUNTS_APPLIED,
   ACCOUNTS_APPROVE,
   ACCOUNTS_ASSIGN_ROLE,
+  ACCOUNTS_DELETE,
   ACCOUNTS_DENY,
+  ACCOUNTS_INVITE,
   ACCOUNTS_REJECTED,
   ACCOUNTS_REMOVE,
   ACCOUNTS_ROOM,
@@ -33,12 +35,12 @@ export class AccountsExtension extends Extension<AccountsCommand> {
   readonly name = ACCOUNTS_ROOM;
   readonly protocols: MessageProtocols = accountsProtocols;
 
-  #directory: AccountDirectory;
+  #directory: MemberDirectory;
   #members = new Map<string, string>();
   #room: RoomBroadcast | null = null;
 
   constructor(
-    directory: AccountDirectory
+    directory: MemberDirectory
   ) {
     super();
     this.#directory = directory;
@@ -144,6 +146,19 @@ export class AccountsExtension extends Extension<AccountsCommand> {
         break;
       case ACCOUNTS_REMOVE:
         this.#directory.remove(
+          actorId,
+          username
+        );
+        break;
+      case ACCOUNTS_INVITE:
+        this.#directory.invite(
+          actorId,
+          username,
+          command.role
+        );
+        break;
+      case ACCOUNTS_DELETE:
+        this.#directory.deleteAccount(
           actorId,
           username
         );

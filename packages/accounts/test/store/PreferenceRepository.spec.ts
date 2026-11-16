@@ -33,14 +33,4 @@ describe("PreferenceRepository", () => {
 
     assert.equal(database.preferences.findAll(alice.id).size, 0);
   });
-
-  test("drops the preferences of a deleted account", () => {
-    using database = databaseWith("Alice", "Bob");
-    const [, bob] = database.accounts;
-
-    database.preferences.replace(bob.id, "studio", { theme: "dark" });
-    database.accounts.delete(bob.id);
-
-    assert.equal(database.preferences.findAll(bob.id).size, 0);
-  });
 });

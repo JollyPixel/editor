@@ -1,13 +1,16 @@
 // Import Third-party Dependencies
-import type { StudioBackendOptions } from "@jolly-pixel/server/node";
+import type { ServerBackendOptions } from "@jolly-pixel/server/node";
 
 // CONSTANTS
 export const E2E_BACKEND_OPTIONS = {
   requestsPerMinute: 100_000,
-  accounts: {
+  accountsPolicy: {
     defaultRole: "member",
+    join: "open"
+  },
+  accounts: {
     throttle: {
       registrations: 1_000
     }
   }
-} as const satisfies Partial<StudioBackendOptions>;
+} as const satisfies Partial<ServerBackendOptions>;

@@ -14,7 +14,7 @@ import type {
   ServeBackendOptions,
   ServedBackend
 } from "#src/testing.ts";
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 import {
   SHARES_URL_PATH,
   type CreatedShareReply,

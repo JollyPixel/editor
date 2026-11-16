@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import * as EventStore from "@jolly-pixel/event-store";
 import {
   ADMIN_ROLE,
-  type Account
+  type Member
 } from "@jolly-pixel/accounts";
 import { SNAPSHOT_ACTOR } from "@jolly-pixel/asset-server";
 
@@ -21,7 +21,7 @@ import {
   type AuditFeedQuery
 } from "#src/audit/node/AuditFeed.ts";
 import { AuditLog } from "#src/audit/node/AuditLog.ts";
-import { StudioAccess } from "#src/project/node/StudioAccess.ts";
+import { ProjectAccess } from "#src/project/node/ProjectAccess.ts";
 import type { AuditRow } from "#src/audit/api.ts";
 
 // CONSTANTS
@@ -31,22 +31,22 @@ const kUsernames: Record<string, string> = {
   bob: "Bob"
 };
 const kAuditor = "auditor";
-const kAccess = StudioAccess.from({
+const kAccess = ProjectAccess.from({
   defaultRole: kAuditor,
   roles: {
     [kAuditor]: {
       "studio.$audit": "read"
     }
   },
-  accessRequests: false
+  join: "open"
 }, "audit test");
-const kAdmin: Account = {
+const kAdmin: Member = {
   id: "alice",
   username: "Alice",
   role: ADMIN_ROLE,
   owner: true
 };
-const kAuditorAccount: Account = {
+const kAuditorAccount: Member = {
   id: "bob",
   username: "Bob",
   role: kAuditor,

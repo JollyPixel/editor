@@ -1,20 +1,20 @@
 export type AccountActivity =
   | {
-    type: "registered";
+    type: "registered" | "joined";
     actorId: string;
     accountId: string;
     username: string;
     pending: boolean;
   }
   | {
-    type: "approved";
+    type: "approved" | "invited";
     actorId: string;
     accountId: string;
     username: string;
     role: string;
   }
   | {
-    type: "denied" | "owner-transferred" | "removed";
+    type: "denied" | "owner-transferred" | "removed" | "deleted";
     actorId: string;
     accountId: string;
     username: string;

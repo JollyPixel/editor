@@ -8,7 +8,11 @@ import assert from "node:assert/strict";
 // Import Internal Dependencies
 import {
   ADDRESS,
+  OTHER_REALM,
+  REALM,
+  ROLES,
   createDirectory,
+  createMembers,
   databaseWith,
   name,
   registration,
@@ -19,6 +23,7 @@ import {
   nextChange,
   rosterServer
 } from "../helpers/room/rosterServer.ts";
+import { MemberDirectory } from "#src/realm/MemberDirectory.ts";
 import {
   AccountsRejectedError,
   type AccountsRoster,
@@ -44,7 +49,7 @@ describe("AccountsExtension roster", () => {
   test("pushes every account, its role and whether it is online to any member", async() => {
     using database = databaseWith("Alice", "Bob");
     const [alice] = database.accounts;
-    await using server = rosterServer(createDirectory(database));
+    await using server = rosterServer(createMembers(database));
 
     const roster = await server.connect({
       role: "spectator",
@@ -58,7 +63,7 @@ describe("AccountsExtension roster", () => {
   test("follows peers joining and leaving", async() => {
     using database = databaseWith("Alice", "Bob");
     const [alice, bob] = database.accounts;
-    await using server = rosterServer(createDirectory(database));
+    await using server = rosterServer(createMembers(database));
     const aliceRoster = await server.connect({
       role: "admin",
       subject: alice.id
@@ -79,7 +84,7 @@ describe("AccountsExtension roster", () => {
   test("pushes a registration made outside the room", async() => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
-    const directory = createDirectory(database);
+    const directory = createMembers(database, { join: "open" });
     await using server = rosterServer(directory);
     const roster = await server.connect({
       role: "admin",
@@ -95,15 +100,19 @@ describe("AccountsExtension roster", () => {
   test("pushes the path of a new avatar", async() => {
     using database = databaseWith("Alice");
     const [alice] = database.accounts;
-    const directory = createDirectory(database);
-    await using server = rosterServer(directory);
+    const accounts = createDirectory(database);
+    await using server = rosterServer(new MemberDirectory({
+      realmId: REALM,
+      accounts,
+      roles: ROLES
+    }));
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
     });
 
     const changed = nextChange(roster);
-    const { avatar } = await directory.replaceAvatar(alice.id, await solidPng(8, 8));
+    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
 
     assert.equal((await changed)[0].avatar, avatar);
   });
@@ -112,7 +121,7 @@ describe("AccountsExtension roster", () => {
     using database = databaseWith("Alice", "Bob");
     const [alice, bob] = database.accounts;
     requestAccess(database, "Carol");
-    await using server = rosterServer(createDirectory(database));
+    await using server = rosterServer(createMembers(database));
 
     const adminRoster = await server.connect({
       role: "admin",
@@ -135,7 +144,7 @@ describe("AccountsExtension commands", () => {
     const [alice] = database.accounts;
     requestAccess(database, "Bob");
     requestAccess(database, "Carol");
-    await using server = rosterServer(createDirectory(database));
+    await using server = rosterServer(createMembers(database));
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
@@ -155,7 +164,7 @@ describe("AccountsExtension commands", () => {
   test("assigns a declared role and removes an account", async() => {
     using database = databaseWith("Alice", "Bob", "Carol");
     const [alice] = database.accounts;
-    await using server = rosterServer(createDirectory(database));
+    await using server = rosterServer(createMembers(database));
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
@@ -178,7 +187,7 @@ describe("AccountsExtension commands", () => {
   }, async() => {
     using database = databaseWith("Alice", "Bob");
     const [alice, bob] = database.accounts;
-    const directory = createDirectory(database);
+    const directory = createMembers(database);
     directory.assignRole(alice.id, name("bob"), "admin");
     await using server = rosterServer(directory);
     const roster = await server.connect({
@@ -189,10 +198,29 @@ describe("AccountsExtension commands", () => {
     await roster.assignRole("bob", "member");
   });
 
+  test("invites an account into the realm and deletes another from the server", async() => {
+    using database = databaseWith("Alice", "Bob", "Carol");
+    const [alice] = database.accounts;
+    await using server = rosterServer(
+      createMembers(database, { realmId: OTHER_REALM })
+    );
+    const roster = await server.connect({
+      role: "admin",
+      subject: alice.id
+    });
+
+    const invited = nextChange(roster);
+    await roster.invite("bob", "member");
+    assert.deepEqual(summary(await invited), ["Alice:admin:on", "Bob:member:off"]);
+
+    await roster.deleteAccount("carol");
+    assert.equal(database.accounts.size, 2);
+  });
+
   test("transfers ownership from the owner to another account", async() => {
     using database = databaseWith("Alice", "Bob");
     const [alice] = database.accounts;
-    await using server = rosterServer(createDirectory(database));
+    await using server = rosterServer(createMembers(database));
     const roster = await server.connect({
       role: "admin",
       subject: alice.id
@@ -210,7 +238,7 @@ describe("AccountsExtension commands", () => {
   test("rejects a command from a peer that is not an admin", async() => {
     using database = databaseWith("Alice", "Bob");
     const [, bob] = database.accounts;
-    await using server = rosterServer(createDirectory(database));
+    await using server = rosterServer(createMembers(database));
     const roster = await server.connect({
       role: "member",
       subject: bob.id
@@ -229,7 +257,7 @@ describe("AccountsExtension authorization", () => {
   test("reads the current role of a sender whose connection is not revoked", async() => {
     using database = databaseWith("Alice", "Bob", "Carol");
     const [alice, bob] = database.accounts;
-    const directory = createDirectory(database);
+    const directory = createMembers(database);
     directory.assignRole(alice.id, name("bob"), "admin");
     await using server = rosterServer(directory, false);
     const roster = await server.connect({

@@ -13,7 +13,7 @@ import {
 } from "lit/decorators.js";
 import type {
   AccessRequest,
-  Account,
+  Member,
   AccountsRoster,
   RosterEntry
 } from "@jolly-pixel/accounts";
@@ -62,7 +62,7 @@ export class UsersPane extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare self: Account | null;
+  declare self: Member | null;
 
   @state()
   declare _collapsed: ReadonlySet<string>;
@@ -212,6 +212,9 @@ export class UsersPane extends LitElement {
     else if (actionId === "transfer-ownership") {
       void this.#transferOwnership(entry);
     }
+    else if (actionId === "delete-account") {
+      void this.#deleteAccount(entry);
+    }
   }
 
   #onRequestAction(
@@ -231,8 +234,8 @@ export class UsersPane extends LitElement {
     entry: RosterEntry
   ): Promise<void> {
     const confirmed = await showConfirm({
-      title: `Remove "${entry.username}"?`,
-      message: "The account and its sessions will be deleted.",
+      title: `Remove "${entry.username}" from this project?`,
+      message: "Their account stays, with their other projects.",
       confirmLabel: "Remove",
       danger: true
     });
@@ -246,12 +249,27 @@ export class UsersPane extends LitElement {
   ): Promise<void> {
     const confirmed = await showConfirm({
       title: `Make "${entry.username}" the owner?`,
-      message: "They become an admin, and only they can give ownership back. You stay an admin.",
+      message: "They own the server and every project, and only they can give " +
+        "ownership back. You stay an admin of every project.",
       confirmLabel: "Transfer",
       danger: true
     });
     if (confirmed) {
       this.#run(this.#roster.attached.transferOwnership(entry.username));
+    }
+  }
+
+  async #deleteAccount(
+    entry: RosterEntry
+  ): Promise<void> {
+    const confirmed = await showConfirm({
+      title: `Delete the account "${entry.username}"?`,
+      message: "It leaves every project, with its sessions, share links and agent tokens.",
+      confirmLabel: "Delete",
+      danger: true
+    });
+    if (confirmed) {
+      this.#run(this.#roster.attached.deleteAccount(entry.username));
     }
   }
 

@@ -325,7 +325,7 @@ export class Golem {
 function studioSocketUrl(
   studioUrl: URL
 ): string {
-  const url = new URL(DEFAULT_WEBSOCKET_PATH, studioUrl);
+  const url = new URL(`.${DEFAULT_WEBSOCKET_PATH}`, studioUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
 
   return url.href;

@@ -23,7 +23,7 @@ import { ASSET_KINDS } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
 import { EditorPackages } from "#src/editors/node/EditorPackages.ts";
-import { StudioProject } from "#src/project/node/StudioProject.ts";
+import { Project } from "#src/project/node/Project.ts";
 import {
   createTempDir,
   removeTempDir
@@ -45,8 +45,8 @@ const kServedPaths = [
 
 function voxelMapProject(
   root: string
-): StudioProject {
-  return new StudioProject(
+): Project {
+  return new Project(
     new ProjectFile(root, {
       version: 1
     }),
@@ -84,7 +84,7 @@ async function loadingAllowed(
   );
 }
 
-describe("StudioProject.privateFiles", () => {
+describe("Project.privateFiles", () => {
   let tempDir: string;
 
   before(async() => {

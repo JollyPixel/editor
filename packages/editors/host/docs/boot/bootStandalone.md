@@ -55,7 +55,8 @@ The page picks the first case that applies:
    profile as a guest, with no socket.
 2. An injected launch with a `credential` (a studio `/view/<token>` share
    link) opens the target read-only, with no username prompt and no offline
-   fallback.
+   fallback. Its socket goes to the launch's `socket` URL, resolved against the
+   page's URL, when the launch names one.
 3. `forceOffline` or the `?offline` [query parameter](../params/QueryParams.md#host-parameters)
    mounts offline at once.
 4. Otherwise the page mounts online. When the catalog does not answer

@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/server";
 import {
   DEFAULT_ACCESS,
-  StudioProject
+  Project
 } from "@jolly-pixel/server/node";
 import {
   listenBackend,
@@ -32,7 +32,7 @@ export interface StudioOptions {
 export async function serveStudio(
   options: StudioOptions = {}
 ): Promise<ServedBackend> {
-  const project = await StudioProject.open(
+  const project = await Project.open(
     path.join(import.meta.dirname, "..", "project"),
     {
       inMemory: true,

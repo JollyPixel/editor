@@ -1,7 +1,9 @@
 // Import Third-party Dependencies
 import {
+  AccountsRequestError,
   AccountsRoster,
-  type Account,
+  type AccountsFailureCode,
+  type Member,
   type AccountsClient
 } from "@jolly-pixel/accounts";
 import type { PeerMetadata } from "@jolly-pixel/network";
@@ -29,6 +31,12 @@ import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
 import { SessionRenewal } from "./SessionRenewal.ts";
 import { STUDIO_USER_CHANGE } from "./StudioUser.ts";
 
+// CONSTANTS
+const kOutsiderCodes: ReadonlySet<AccountsFailureCode> = new Set([
+  "membership-required",
+  "account-pending"
+]);
+
 export type StudioAccountsClient = Pick<
   AccountsClient,
   "me" | "replaceAvatar" | "logout"
@@ -39,7 +47,7 @@ export interface StudioSignInOptions {
   /**
    * Asks the user to sign in, when the session cookie holds no account.
    */
-  signIn: () => Promise<Account>;
+  signIn: () => Promise<Member>;
   api: StudioClients;
   /**
    * Opens the shell's connection, joined with the account's peer profile.
@@ -58,7 +66,8 @@ export class StudioSignedIn extends EventTarget {
   static async open(
     options: StudioSignInOptions
   ): Promise<StudioSignedIn> {
-    const account = await options.accounts.me() ?? await options.signIn();
+    const account = await signedInMember(options.accounts) ??
+      await options.signIn();
     const [preferences, rights, sections] = await Promise.all([
       AccountPreferences.load({
         accountId: account.id,
@@ -84,14 +93,14 @@ export class StudioSignedIn extends EventTarget {
   readonly renewal: SessionRenewal;
   readonly project: StudioProjectSettings;
 
-  #account: Account;
+  #account: Member;
   #accounts: StudioAccountsClient;
   #api: StudioClients;
   #preferences: AccountPreferences;
   #reload: () => void;
 
   constructor(
-    account: Account,
+    account: Member,
     options: StudioSignedInOptions
   ) {
     super();
@@ -125,7 +134,7 @@ export class StudioSignedIn extends EventTarget {
     });
   }
 
-  get account(): Account {
+  get account(): Member {
     return this.#account;
   }
 
@@ -177,5 +186,23 @@ export class StudioSignedIn extends EventTarget {
     finally {
       this.#reload();
     }
+  }
+}
+
+async function signedInMember(
+  accounts: StudioAccountsClient
+): Promise<Member | null> {
+  try {
+    return await accounts.me();
+  }
+  catch (error) {
+    if (
+      error instanceof AccountsRequestError &&
+      kOutsiderCodes.has(error.code)
+    ) {
+      return null;
+    }
+
+    throw error;
   }
 }

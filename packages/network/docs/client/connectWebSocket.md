@@ -15,12 +15,14 @@ const client = new Client({
 
 ```ts
 interface WebSocketConnectOptions {
-  url?: string;
+  url?: string | URL;
   credential?: string;
 }
 ```
 
-Default URL uses the page host and `/ws-sync`; supply it explicitly in Node.
+Default URL uses the page host and `/ws-sync`; supply it explicitly in Node,
+or under a path prefix. An `http:` or `https:` URL becomes `ws:` or `wss:`, so
+`new URL("./ws-sync", document.baseURI)` works as is.
 The socket receives binary frames as `ArrayBuffer`.
 The `credential` travels in the WebSocket handshake, where the transport
 decodes it for the [authentication provider](../server/Access.md#authentication).

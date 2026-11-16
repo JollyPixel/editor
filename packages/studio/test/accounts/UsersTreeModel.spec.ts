@@ -212,7 +212,7 @@ describe("UsersTreeModel", () => {
     assert.deepEqual(menuIds(model, kEntries[1]), ["role", false, "remove"]);
   });
 
-  test("offers the owner to transfer ownership to any other account", () => {
+  test("offers the owner to transfer ownership to, or delete, any other account", () => {
     const model = new UsersTreeModel(
       kRoles,
       [kOwner, ...kEntries],
@@ -223,7 +223,7 @@ describe("UsersTreeModel", () => {
 
     assert.deepEqual(
       menuIds(model, kEntries[1]),
-      ["role", false, "transfer-ownership", "remove"]
+      ["role", false, "transfer-ownership", "remove", "delete-account"]
     );
     assert.deepEqual(menuIds(model, kOwner), [false, false, false]);
   });

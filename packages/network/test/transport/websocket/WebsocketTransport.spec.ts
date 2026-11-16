@@ -2,8 +2,10 @@
 import { once } from "node:events";
 import {
   createServer,
+  type IncomingMessage,
   type Server as HttpServer
 } from "node:http";
+import type { Duplex } from "node:stream";
 import {
   after,
   before,
@@ -113,6 +115,32 @@ describe("WebsocketTransport + Client (integration)", () => {
     assert.deepEqual(left, [extension.clients[1].id]);
 
     clientA.destroy();
+  });
+
+  test("connects an upgrade that another listener hands over", async() => {
+    const server = new Server();
+    const extension = new RecordingExtension("test-ns");
+    server.register(extension);
+    using transport = new WebsocketTransport({ server });
+    function handOver(
+      request: IncomingMessage,
+      socket: Duplex,
+      head: Buffer
+    ): void {
+      if (request.url === "/projects/a/ws") {
+        transport.handleUpgrade(request, socket, head);
+      }
+    }
+    httpServer.on("upgrade", handOver);
+
+    const client = new Client({
+      socket: () => connectWebSocket({ url: `ws://127.0.0.1:${port}/projects/a/ws` })
+    });
+    client.room("test-ns").join();
+
+    await waitFor(() => extension.connected.length === 1);
+    client.destroy();
+    httpServer.off("upgrade", handOver);
   });
 
   test("negotiates permessage-deflate only when compression is enabled", async() => {

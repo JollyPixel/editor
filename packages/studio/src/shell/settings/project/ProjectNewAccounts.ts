@@ -13,10 +13,11 @@ import {
 } from "lit/decorators.js";
 import type {
   AccessRequest,
-  AccountsRoster
+  AccountsRoster,
+  JoinMode
 } from "@jolly-pixel/accounts";
+import type { JollyOption } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
-import "@jolly-pixel/ui/elements/checkbox";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/select";
 import "@jolly-pixel/ui/elements/separator";
@@ -29,6 +30,22 @@ import { RosterController } from "../../RosterController.ts";
 import { StudioErrorEvent } from "../../StudioErrorEvent.ts";
 import { settingsStyles } from "../settingsStyles.ts";
 import { SettingsEditEvent } from "../SettingsEditEvent.ts";
+
+// CONSTANTS
+const kJoinOptions: JollyOption<JoinMode>[] = [
+  {
+    value: "request",
+    label: "Ask an admin"
+  },
+  {
+    value: "open",
+    label: "Join at once"
+  },
+  {
+    value: "invite",
+    label: "By invitation"
+  }
+];
 
 @customElement("studio-project-new-accounts")
 export class ProjectNewAccounts extends LitElement {
@@ -89,15 +106,17 @@ export class ProjectNewAccounts extends LitElement {
             this.#edit(value.withDefaultRole(event.detail.value));
           }}
         ></jolly-select>
-        <jolly-checkbox
-          data-field="access-requests"
-          label="Access requests"
-          description="Registering without the master password asks an admin first"
-          .value=${value.accessRequests}
-          @jolly-change=${(event: CustomEvent<{ value: boolean; }>) => {
-            this.#edit(value.withAccessRequests(event.detail.value));
+        <jolly-select
+          data-field="join"
+          label="Joining"
+          description="What happens when an account enters the project"
+          description-display="tooltip"
+          .options=${kJoinOptions}
+          .value=${value.join}
+          @jolly-change=${(event: CustomEvent<{ value: JoinMode; }>) => {
+            this.#edit(value.withJoin(event.detail.value));
           }}
-        ></jolly-checkbox>
+        ></jolly-select>
         ${this.#requests()}
       </section>
     `;

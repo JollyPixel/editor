@@ -2,8 +2,11 @@
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
-import { Accounts } from "@jolly-pixel/accounts/node";
+import type { Member } from "@jolly-pixel/accounts";
+import {
+  Accounts,
+  type AccountsRealm
+} from "@jolly-pixel/accounts/node";
 import type { SnapshotPolicy } from "@jolly-pixel/asset-server";
 import { AssetServer } from "@jolly-pixel/asset-server/node";
 import {
@@ -14,7 +17,7 @@ import {
 // Import Internal Dependencies
 import { AuditLog } from "#src/audit/node/AuditLog.ts";
 import { ProjectSettings } from "#src/project/node/ProjectSettings.ts";
-import type { StudioProject } from "#src/project/node/StudioProject.ts";
+import type { Project } from "#src/project/node/Project.ts";
 import type {
   ProjectSettingsReply,
   SettingsSectionBody,
@@ -28,43 +31,45 @@ const kPassword = "p".repeat(43);
 
 export interface SettingsHarness extends AsyncDisposable {
   settings: ProjectSettings;
-  project: StudioProject;
-  accounts: Accounts;
+  project: Project;
+  realm: AccountsRealm;
   audit: AuditLog;
   voxelMapChunkSize(): number;
   revoked: string[];
   snapshotPolicies: SnapshotPolicy[];
-  register(username: string): Promise<Account>;
+  register(username: string): Promise<Member>;
   update<TName extends SettingsSectionName>(
-    account: Account,
+    account: Member,
     section: TName,
     body: SettingsSectionBody<TName>
   ): Promise<ProjectSettingsReply>;
   updateAll(
-    account: Account,
+    account: Member,
     sections: SettingsUpdateSections
   ): Promise<ProjectSettingsReply>;
 }
 
 export async function settingsHarness(): Promise<SettingsHarness> {
   const project = await openTestProject();
-  const accounts = await Accounts.open({
-    roles: project.access.roles
+  const accounts = await Accounts.open({});
+  const realm = accounts.realm("project", {
+    roles: project.access.roles,
+    join: "open"
   });
   const assetServer = await AssetServer.open({
     root: project.file.root,
     inMemory: true,
     handlers: project.kinds.handlers(),
     rights: project.access.rights,
-    defaultRole: accounts.roles.defaultRole,
-    auth: accounts
+    defaultRole: realm.roles.defaultRole,
+    auth: realm
   });
   const audit = await AuditLog.open(null);
   const revoked: string[] = [];
   const snapshotPolicies: SnapshotPolicy[] = [];
   const settings = new ProjectSettings({
     project,
-    accounts,
+    realm,
     server: {
       replaceRights: (rights, defaultRole) => assetServer.network.replaceRights(
         rights,
@@ -85,7 +90,7 @@ export async function settingsHarness(): Promise<SettingsHarness> {
     audit
   });
   function updateAll(
-    account: Account,
+    account: Member,
     sections: SettingsUpdateSections
   ): Promise<ProjectSettingsReply> {
     return settings.replace(account, {
@@ -96,7 +101,7 @@ export async function settingsHarness(): Promise<SettingsHarness> {
 
   return {
     project,
-    accounts,
+    realm,
     audit,
     revoked,
     snapshotPolicies,
@@ -112,7 +117,7 @@ export async function settingsHarness(): Promise<SettingsHarness> {
       return state.world.chunkSize;
     },
     async register(username) {
-      const registration = await accounts.register({
+      const registration = await realm.register({
         username,
         password: kPassword
       }, {

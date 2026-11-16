@@ -23,3 +23,4 @@ export * from "./project/errors/ProjectRightRefusedError.ts";
 export * from "./project/errors/UnknownComponentError.ts";
 export * from "./shares/ShareLifetime.ts";
 export * from "./shares/api.ts";
+export * from "./projects/api.ts";

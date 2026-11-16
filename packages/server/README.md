@@ -15,16 +15,20 @@ Consumers load the built `dist/` output, so run
 
 ## 💡 About
 
-The back-end of one JollyPixel project: its asset server, accounts, share
-links, audit log, game builds and the `/api/` routes, served over HTTP and
-WebSocket.
+The back-end of JollyPixel projects: one project at `/`, or a folder of them
+under `/p/<slug>/`. Accounts belong to the server; each project brings its
+asset server, members, share links, audit log, game builds and `/api/` routes,
+served over HTTP and WebSocket. A project opens on its first request and
+closes after 10 minutes without one.
 
 - `@jolly-pixel/server` holds what the browser and the server share: route
   tables, request and reply schemas, the project and editor manifests and the
   registry of preference scopes. It imports no Node.js builtin.
-- `@jolly-pixel/server/node` holds the server itself: `StudioProject`,
-  `StudioBackend` (middleware to mount in another HTTP server, such as Vite's)
-  and `StudioServer` (a standalone HTTP server that also serves a built shell).
+- `@jolly-pixel/server/node` holds the server itself: `Project`,
+  `ProjectHosting` (which projects the server hosts and where its own state
+  lives), `ServerBackend` (middleware and an `upgrade` listener to mount in
+  another HTTP server, such as Vite's) and `JollyServer` (a standalone HTTP
+  server that also serves a built shell).
 - `@jolly-pixel/server/testing` serves a backend on a free port, signs
   requests in with a cookie jar and builds editor page fixtures, for the
   server's specs and the studio's.
@@ -33,7 +37,7 @@ The server reads nothing next to its own files and ships no editor list. The
 caller decides where the editor and kind packages resolve from, which project
 file a new project starts with, which assets seed it, which built shell to
 serve, which preference scopes that shell declares and which player game
-exports ship. `StudioServerSettings` is the only reader of environment
+exports ship. `ServerSettings` is the only reader of environment
 variables.
 
 ## 👀 Usage example
@@ -41,24 +45,25 @@ variables.
 ```ts
 import { NO_SHELL_PREFERENCES } from "@jolly-pixel/server";
 import {
-  StudioProject,
-  StudioServer
+  JollyServer,
+  Project,
+  ProjectHosting
 } from "@jolly-pixel/server/node";
 
-const project = await StudioProject.open("./my-game", {
-  packages: {
-    searchFolders: ["./packages/assets", "./packages/editors"]
-  },
-  template: {
-    version: 1,
-    editors: ["@jolly-pixel/editor.voxel-map"],
-    kinds: {
-      "@jolly-pixel/asset.voxel-map": {}
+const server = await JollyServer.open({
+  hosting: ProjectHosting.folder("./games"),
+  openProject: (root) => Project.open(root, {
+    packages: {
+      searchFolders: ["./packages/assets", "./packages/editors"]
+    },
+    template: {
+      version: 1,
+      editors: ["@jolly-pixel/editor.voxel-map"],
+      kinds: {
+        "@jolly-pixel/asset.voxel-map": {}
+      }
     }
-  }
-});
-const server = await StudioServer.open({
-  project,
+  }),
   shell: "./studio/dist",
   backend: {
     preferences: NO_SHELL_PREFERENCES

@@ -1,14 +1,13 @@
 // Import Third-party Dependencies
+import type { JoinMode } from "@jolly-pixel/accounts";
 import {
   AccountRoles,
   type Accounts,
-  type MasterPasswordOptions
+  type AccountsRealm
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
-import { InvalidSettingsError } from "../../project/node/errors/InvalidSettingsError.ts";
-import type { StudioAccess } from "../../project/node/StudioAccess.ts";
-import { MASTER_PASSWORD_ENV } from "../../server/node/StudioServerSettings.ts";
+import type { ProjectAccess } from "../../project/node/ProjectAccess.ts";
 
 export interface AccountsPolicy {
   /**
@@ -16,42 +15,25 @@ export interface AccountsPolicy {
    */
   defaultRole?: string;
   /**
-   * Secret that registers without approval. Without it, anyone who reaches
-   * the server can register.
+   * How accounts join, in place of the project's `access.join`.
    */
-  masterPassword?: string;
+  join?: JoinMode;
 }
 
 export class AccountsAccess {
   static resolve(
-    access: StudioAccess,
-    policy: AccountsPolicy,
-    source: string
+    access: ProjectAccess,
+    policy: AccountsPolicy
   ): AccountsAccess {
-    const secret = policy.masterPassword;
-    if (secret === undefined || secret === "") {
-      if (access.accessRequests) {
-        throw new InvalidSettingsError(
-          `"${source}" sets accessRequests but ${MASTER_PASSWORD_ENV} is not set`
-        );
-      }
-
-      return new AccountsAccess(access, policy, undefined);
-    }
-
-    return new AccountsAccess(access, policy, {
-      secret,
-      accessRequests: access.accessRequests
-    });
+    return new AccountsAccess(access, policy);
   }
 
   readonly roles: AccountRoles;
-  readonly masterPassword: MasterPasswordOptions | undefined;
+  readonly join: JoinMode;
 
   private constructor(
-    access: StudioAccess,
-    policy: AccountsPolicy,
-    masterPassword: MasterPasswordOptions | undefined
+    access: ProjectAccess,
+    policy: AccountsPolicy
   ) {
     this.roles = policy.defaultRole === undefined ?
       access.roles :
@@ -59,16 +41,24 @@ export class AccountsAccess {
         roles: access.roles,
         defaultRole: policy.defaultRole
       });
-    this.masterPassword = masterPassword;
+    this.join = policy.join ?? access.join;
+  }
+
+  openRealm(
+    accounts: Accounts,
+    realmId: string
+  ): AccountsRealm {
+    return accounts.realm(realmId, {
+      roles: this.roles,
+      join: this.join
+    });
   }
 
   applyTo(
-    accounts: Accounts,
+    realm: AccountsRealm,
     renamed: ReadonlyMap<string, string>
   ): void {
-    accounts.replaceRoles(this.roles, renamed);
-    accounts.replaceAccessRequests(
-      this.masterPassword?.accessRequests ?? false
-    );
+    realm.replaceRoles(this.roles, renamed);
+    realm.replaceJoin(this.join);
   }
 }

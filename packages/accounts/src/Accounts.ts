@@ -1,61 +1,25 @@
 // Import Node.js Dependencies
-import { randomUUID } from "node:crypto";
 import type { IncomingHttpHeaders } from "node:http";
 
-// Import Third-party Dependencies
-import {
-  GUEST_USERNAME,
-  type AuthenticationProvider,
-  type AuthenticationRequest,
-  type PeerIdentity,
-  type PeerMetadata,
-  type PeerProfileMetadata
-} from "@jolly-pixel/network";
-
 // Import Internal Dependencies
-import type { AccountActivity } from "./AccountActivity.ts";
+import type { Account } from "./account/Account.ts";
+import { AccountDirectory } from "./AccountDirectory.ts";
 import {
-  GUEST_ROLE,
-  type Account
-} from "./account/Account.ts";
-import { Username } from "./account/Username.ts";
-import {
-  AccountDirectory,
-  type Credentials
-} from "./AccountDirectory.ts";
-import type { AccountRoles } from "./auth/AccountRoles.ts";
+  AccountsRealm,
+  type AccountsRealmOptions
+} from "./AccountsRealm.ts";
 import type { AccountsThrottleOptions } from "./auth/AccountsThrottle.ts";
+import { parseCredentials } from "./auth/parseCredentials.ts";
 import type { StoredAvatar } from "./avatar/AvatarImage.ts";
-import type {
-  CredentialsBody,
-  RegistrationBody
-} from "./http/routes.schema.ts";
+import type { CredentialsBody } from "./http/routes.schema.ts";
+import { MemberDirectory } from "./realm/MemberDirectory.ts";
 import { AccountsDatabase } from "./store/AccountsDatabase.ts";
 import type { PreferenceOverrides } from "./store/PreferenceRepository.ts";
-import { PasswordDigest } from "./session/PasswordDigest.ts";
 import { SessionCookie } from "./session/SessionCookie.ts";
 import { CookieSessions } from "./session/CookieSessions.ts";
-import { AccountsExtension } from "./room/AccountsExtension.ts";
-import type { MasterPasswordOptions } from "./registration/MasterPassword.ts";
-import {
-  SHARE_LINK_VIA,
-  type ShareLink
-} from "./share/ShareLink.ts";
-import {
-  ShareLinks,
-  shareLinkSubject
-} from "./share/ShareLinks.ts";
-import {
-  AGENT_TOKEN_VIA,
-  agentTokenSubject,
-  type AgentProfile,
-  type AgentToken
-} from "./agent/AgentToken.ts";
-import { AgentTokens } from "./agent/AgentTokens.ts";
 
 export interface AccountsOptions {
   database: AccountsDatabase;
-  roles: AccountRoles;
   /**
    * @default new SessionCookie()
    */
@@ -67,16 +31,10 @@ export interface AccountsOptions {
    */
   maxConcurrentHashes?: number;
   /**
-   * Secret the first registration must give. With `accessRequests`, a later
-   * registration without it creates an access request. Without it,
-   * registration is open.
+   * Secret the first registration must give. Without it, the first account
+   * to register owns the server.
    */
-  masterPassword?: MasterPasswordOptions;
-  /**
-   * Access requests allowed to wait at once.
-   * @default 20
-   */
-  maxAccessRequests?: number;
+  masterPassword?: string;
 }
 
 export interface AccountsOpenOptions extends Omit<AccountsOptions, "database"> {
@@ -109,15 +67,13 @@ export interface SignIn {
   cookie: string;
 }
 
-export type SignInRegistration =
-  | (SignIn & {
-    status: "active";
-  })
-  | {
-    status: "pending";
-  };
+export interface AccountMembership {
+  realmId: string;
+  role: string;
+  pending: boolean;
+}
 
-export class Accounts implements AuthenticationProvider, Disposable {
+export class Accounts implements Disposable {
   static async open(
     options: AccountsOpenOptions
   ): Promise<Accounts> {
@@ -133,13 +89,11 @@ export class Accounts implements AuthenticationProvider, Disposable {
   }
 
   readonly cookie: SessionCookie;
-  readonly extension: AccountsExtension;
-  readonly shareLinks: ShareLinks;
-  readonly agentTokens: AgentTokens;
 
   #database: AccountsDatabase;
   #directory: AccountDirectory;
   #sessions: CookieSessions;
+  #realms = new Set<AccountsRealm>();
 
   constructor(
     options: AccountsOptions
@@ -147,11 +101,9 @@ export class Accounts implements AuthenticationProvider, Disposable {
     this.#database = options.database;
     this.#directory = new AccountDirectory({
       database: options.database,
-      roles: options.roles,
       throttle: options.throttle,
       maxConcurrentHashes: options.maxConcurrentHashes,
-      masterPassword: options.masterPassword,
-      maxAccessRequests: options.maxAccessRequests
+      masterPassword: options.masterPassword
     });
     this.#sessions = new CookieSessions(
       options.database.sessions,
@@ -159,42 +111,25 @@ export class Accounts implements AuthenticationProvider, Disposable {
       options.cookie ?? new SessionCookie()
     );
     this.cookie = this.#sessions.cookie;
-    this.extension = new AccountsExtension(this.#directory);
-    this.shareLinks = new ShareLinks(
-      options.database.shareLinks,
-      this.#directory
-    );
-    this.agentTokens = new AgentTokens(
-      options.database.agentTokens,
-      this.#directory
-    );
   }
 
-  get roles(): AccountRoles {
-    return this.#directory.roles;
-  }
+  realm(
+    id: string,
+    options: AccountsRealmOptions
+  ): AccountsRealm {
+    const realm = new AccountsRealm({
+      members: new MemberDirectory({
+        ...options,
+        realmId: id,
+        accounts: this.#directory
+      }),
+      sessions: this.#sessions,
+      database: this.#database,
+      closed: () => this.#realms.delete(realm)
+    });
+    this.#realms.add(realm);
 
-  get accessRequests(): boolean {
-    return this.#directory.accessRequests;
-  }
-
-  replaceRoles(
-    roles: AccountRoles,
-    renamed?: ReadonlyMap<string, string>
-  ): void {
-    this.#directory.replaceRoles(roles, renamed);
-  }
-
-  replaceAccessRequests(
-    enabled: boolean
-  ): void {
-    this.#directory.replaceAccessRequests(enabled);
-  }
-
-  holders(
-    role: string
-  ): string[] {
-    return this.#directory.holders(role);
+    return realm;
   }
 
   account(
@@ -203,27 +138,18 @@ export class Accounts implements AuthenticationProvider, Disposable {
     return this.#directory.account(accountId);
   }
 
-  async register(
-    body: RegistrationBody,
-    requester: Requester
-  ): Promise<SignInRegistration> {
-    const registration = await this.#directory.register(
-      {
-        ...parseCredentials(body),
-        options: {
-          masterPassword: body.masterPassword
-        }
-      },
-      requester.address
-    );
-    if (registration.status === "pending") {
-      return registration;
-    }
-
-    return {
-      status: "active",
-      ...this.#signIn(registration.account, requester)
-    };
+  memberships(
+    accountId: string
+  ): AccountMembership[] {
+    return this.#database.memberships
+      .ofAccount(accountId)
+      .map((membership) => {
+        return {
+          realmId: membership.realmId,
+          role: membership.role,
+          pending: membership.pending
+        };
+      });
   }
 
   async login(
@@ -235,7 +161,10 @@ export class Accounts implements AuthenticationProvider, Disposable {
       requester.address
     );
 
-    return this.#signIn(account, requester);
+    return {
+      account: this.#directory.toAccount(account),
+      cookie: this.#sessions.open(account.id, requester.secure)
+    };
   }
 
   signOut(
@@ -247,7 +176,9 @@ export class Accounts implements AuthenticationProvider, Disposable {
   signedIn(
     headers: IncomingHttpHeaders
   ): Account | null {
-    return this.#sessions.account(headers);
+    const accountId = this.#sessions.accountId(headers);
+
+    return accountId === null ? null : this.#directory.account(accountId);
   }
 
   replaceAvatar(
@@ -277,134 +208,10 @@ export class Accounts implements AuthenticationProvider, Disposable {
     this.#database.preferences.replace(accountId, scope, overrides);
   }
 
-  authenticate(
-    request: AuthenticationRequest
-  ): PeerIdentity | null {
-    const { credential } = request;
-    if (credential !== undefined) {
-      const link = this.shareLinks.find(credential);
-      if (link !== null) {
-        return toGuestIdentity(link);
-      }
-
-      return this.#agentIdentity(credential);
-    }
-
-    const account = this.signedIn(request.headers);
-    if (account === null) {
-      return null;
-    }
-
-    return {
-      subject: account.id,
-      role: account.role,
-      profile: toPeerProfile(account)
-    };
-  }
-
-  watchRevocations(
-    listener: (accountId: string) => void
-  ): () => void {
-    return this.#directory.subscribe("revoked", listener);
-  }
-
-  watchDisconnections(
-    listener: (subject: string) => void
-  ): () => void {
-    return this.#directory.subscribe("disconnected", listener);
-  }
-
-  watchActivity(
-    listener: (activity: AccountActivity) => void
-  ): () => void {
-    return this.#directory.subscribe("activity", listener);
-  }
-
-  watchProfiles(
-    listener: (accountId: string, profile: PeerMetadata) => void
-  ): () => void {
-    return this.#directory.subscribe(
-      "profile",
-      (account) => listener(account.id, toPeerProfile(account))
-    );
-  }
-
   [Symbol.dispose](): void {
-    this.shareLinks[Symbol.dispose]();
-    this.extension.dispose();
+    for (const realm of this.#realms) {
+      realm[Symbol.dispose]();
+    }
     this.#database.close();
   }
-
-  #agentIdentity(
-    credential: string
-  ): PeerIdentity | null {
-    const token = this.agentTokens.find(credential);
-    if (token === null) {
-      return null;
-    }
-    const owner = this.#directory.account(token.ownerId);
-
-    return owner === null ? null : toAgentIdentity(token, owner);
-  }
-
-  #signIn(
-    account: Account,
-    requester: Requester
-  ): SignIn {
-    return {
-      account,
-      cookie: this.#sessions.open(account, requester.secure)
-    };
-  }
-}
-
-function parseCredentials(
-  body: CredentialsBody
-): Credentials {
-  return {
-    username: Username.parse(body.username),
-    password: PasswordDigest.parse(body.password)
-  };
-}
-
-function toGuestIdentity(
-  link: ShareLink
-): PeerIdentity {
-  return {
-    subject: shareLinkSubject(link.id),
-    role: GUEST_ROLE,
-    profile: {
-      username: GUEST_USERNAME,
-      peerId: randomUUID(),
-      avatar: null,
-      via: SHARE_LINK_VIA
-    } satisfies PeerProfileMetadata
-  };
-}
-
-function toAgentIdentity(
-  token: AgentToken,
-  owner: Account
-): PeerIdentity {
-  return {
-    subject: agentTokenSubject(token.id),
-    role: owner.role,
-    profile: {
-      username: token.name,
-      peerId: token.id,
-      avatar: null,
-      via: AGENT_TOKEN_VIA,
-      ownerId: owner.id
-    } satisfies PeerProfileMetadata & AgentProfile
-  };
-}
-
-function toPeerProfile(
-  account: Account
-): PeerProfileMetadata {
-  return {
-    username: account.username,
-    peerId: account.id,
-    avatar: account.avatar ?? null
-  };
 }

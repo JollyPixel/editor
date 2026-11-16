@@ -10,7 +10,7 @@ import {
   customElement,
   property
 } from "lit/decorators.js";
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import type { Preferences } from "@jolly-pixel/preferences";
 import type { PreferenceScopes } from "@jolly-pixel/server";
 import "@jolly-pixel/ui/elements/avatar";
@@ -62,7 +62,7 @@ export class AccountSettings extends LitElement {
   `];
 
   @property({ attribute: false })
-  declare account: Account | null;
+  declare account: Member | null;
 
   @property({ attribute: false })
   declare preferences: Preferences | null;

@@ -1,4 +1,5 @@
 // Import Node.js Dependencies
+import { randomUUID } from "node:crypto";
 import { once } from "node:events";
 import fs from "node:fs/promises";
 import http from "node:http";
@@ -21,7 +22,7 @@ import {
 } from "../editors/node/EditorPackage.ts";
 import { EditorPackages } from "../editors/node/EditorPackages.ts";
 import type { Middleware } from "../http/node/Middleware.ts";
-import { StudioProject } from "../project/node/StudioProject.ts";
+import { Project } from "../project/node/Project.ts";
 import { PASSED_ON_STATUS } from "./serveBackend.ts";
 
 // CONSTANTS
@@ -88,9 +89,10 @@ export function voxelMapProject(
   root: string,
   dist: string,
   editor: VoxelMapEditorOptions = {}
-): StudioProject {
-  return new StudioProject(
+): Project {
+  return new Project(
     new ProjectFile(root, {
+      id: randomUUID(),
       version: 1
     }, {
       inMemory: true
@@ -104,7 +106,7 @@ export function voxelMapProject(
         descriptors: ASSET_KINDS.descriptors,
         handlers: ASSET_KINDS.handlers()
       })
-    ], StudioProject.resolver(root, {
+    ], Project.resolver(root, {
       fallbacks: [kPackageRoot]
     }))
   );

@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 
 // Import Internal Dependencies
 import { signedInAccount } from "../../http/node/authentication.ts";
+import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 import { ShareLifetime } from "../ShareLifetime.ts";
 import {
   SHARES_ROUTES,
@@ -11,10 +12,10 @@ import {
   type CreatedShareReply,
   type ShareLinksReply
 } from "../api.ts";
-import type { StudioShares } from "./StudioShares.ts";
+import type { ProjectShares } from "./ProjectShares.ts";
 
 export interface SharesRoutesOptions {
-  shares: StudioShares;
+  shares: RequestScoped<ProjectShares>;
 }
 
 interface CreateShareRoute {
@@ -31,7 +32,6 @@ export async function sharesRoutes(
   app: FastifyInstance,
   options: SharesRoutesOptions
 ): Promise<void> {
-  const { shares } = options;
   const { list, create, revoke } = SHARES_ROUTES;
 
   app.route({
@@ -39,7 +39,9 @@ export async function sharesRoutes(
     url: list.path,
     handler: (request): ShareLinksReply => {
       return {
-        links: shares.list(signedInAccount(request))
+        links: options.shares(request).list(
+          signedInAccount(request)
+        )
       };
     }
   });
@@ -50,7 +52,7 @@ export async function sharesRoutes(
       body: createShareBodySchema
     },
     handler: (request, reply) => {
-      const link = shares.create(
+      const link = options.shares(request).create(
         signedInAccount(request),
         request.body.assetId,
         new ShareLifetime(request.body.lifetime)
@@ -65,7 +67,10 @@ export async function sharesRoutes(
     method: revoke.method,
     url: revoke.path,
     handler: (request, reply) => {
-      shares.revoke(signedInAccount(request), request.params.linkId);
+      options.shares(request).revoke(
+        signedInAccount(request),
+        request.params.linkId
+      );
 
       return reply.code(204).send();
     }

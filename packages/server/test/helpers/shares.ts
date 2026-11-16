@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type {
-  Account,
+  Member,
   ShareLink
 } from "@jolly-pixel/accounts";
 import {
   Accounts,
-  AccountRoles
+  AccountRoles,
+  type AccountsRealm
 } from "@jolly-pixel/accounts/node";
 import { AssetKind } from "@jolly-pixel/asset";
 import {
@@ -24,29 +25,30 @@ import {
   SHARES_URL_PATH,
   createdShareReplySchema
 } from "#src/shares/api.ts";
-import { StudioAccess } from "#src/project/node/StudioAccess.ts";
+import { ProjectAccess } from "#src/project/node/ProjectAccess.ts";
 import {
-  StudioShares,
+  ProjectShares,
   type SharedCatalog
-} from "#src/shares/node/StudioShares.ts";
+} from "#src/shares/node/ProjectShares.ts";
 import type { Browser } from "#src/testing.ts";
 
 export interface ShareAccounts extends Disposable {
-  accounts: Accounts;
-  owner: Account;
-  shares: StudioShares;
+  realm: AccountsRealm;
+  owner: Member;
+  shares: ProjectShares;
 }
 
 export async function shareAccounts(
   closures: Record<string, string[]>
 ): Promise<ShareAccounts> {
-  const accounts = await Accounts.open({
+  const accounts = await Accounts.open({});
+  const realm = accounts.realm("project", {
     roles: new AccountRoles({
       roles: ["member", "spectator"],
       defaultRole: "member"
     })
   });
-  const registration = await accounts.register({
+  const registration = await realm.register({
     username: "Alice",
     password: "p".repeat(43)
   }, {
@@ -57,12 +59,12 @@ export async function shareAccounts(
   assert.ok(registration.status === "active");
 
   return {
-    accounts,
+    realm,
     owner: registration.account,
-    shares: new StudioShares({
-      accounts,
+    shares: new ProjectShares({
+      realm,
       project: {
-        access: StudioAccess.read({ version: 1 }, "project.json")
+        access: ProjectAccess.read({ version: 1 }, "project.json")
       },
       catalog: sharedCatalog(closures)
     }),

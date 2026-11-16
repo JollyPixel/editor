@@ -11,6 +11,7 @@ import {
   WRONG_PASSWORD,
   createDatabase,
   createDirectory,
+  createMembers,
   databaseWith,
   name,
   registration
@@ -41,19 +42,20 @@ describe("AccountDirectory throttle", () => {
 
   test("throttles registrations from one address", async() => {
     using database = createDatabase();
-    const directory = createDirectory(database, {
+    const members = createMembers(database, {
+      join: "open",
       throttle: {
         registrations: 2
       }
     });
 
-    await directory.register(registration("Alice"), ADDRESS);
-    await directory.register(registration("Bob"), ADDRESS);
+    await members.register(registration("Alice"), ADDRESS);
+    await members.register(registration("Bob"), ADDRESS);
     await assert.rejects(
-      directory.register(registration("Carol"), ADDRESS),
+      members.register(registration("Carol"), ADDRESS),
       AccountsThrottledError
     );
-    await directory.register(registration("Carol"), "198.51.100.1");
+    await members.register(registration("Carol"), "198.51.100.1");
     assert.equal(database.accounts.size, 3);
   });
 });

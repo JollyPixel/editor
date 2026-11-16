@@ -7,15 +7,15 @@ one editor page per tab. Terms are defined in the [glossary](./GLOSSARY.md).
 
 ```mermaid
 flowchart TB
-    File[".jollypixel/project.json"] --> Project["StudioProject"]
+    File[".jollypixel/project.json"] --> Project["Project"]
     Project --> Kinds["kind packages"]
     Project --> Editors["editor packages"]
-    Kinds --> Backend["StudioBackend<br/>asset server, accounts, /api/"]
+    Kinds --> Backend["ServerBackend<br/>asset server, accounts, /api/"]
     Editors --> Manifest["project manifest + editor pages"]
 ```
 
 - The project file lists the editors and kinds. Only the server writes it.
-- `vite/backend` mounts the back-end in dev, `StudioServer` when hosted. The static build has none and starts offline.
+- `vite/backend` mounts the back-end in dev, `JollyServer` when hosted. The static build has none and starts offline.
 - The back-end lives in `@jolly-pixel/server`. The studio passes it the shell, the project template, the seed and the package folders from `node/studioFiles.ts`.
 - Code: `node/`, `vite/`.
 
@@ -52,7 +52,7 @@ flowchart TB
 ```mermaid
 flowchart TB
     Cookie["session cookie"] --> Accounts["Accounts<br/>role per account"]
-    AccessFile["access section"] --> Access["StudioAccess<br/>rights table"]
+    AccessFile["access section"] --> Access["ProjectAccess<br/>rights table"]
     Accounts --> Access
     Share["share link guest"] --> Rooms["asset rooms"]
     Access --> Rooms
@@ -86,6 +86,6 @@ flowchart TB
 
 - Both paths resolve the scene's `virtual:jolly-pixel/contributions/scene` against the studio's project.
 - A page without source HTML is served from its built folder; in dev, a rebuild of that folder reloads the editor's tabs.
-- The preview frame page, `preview/index.html` (`src/preview/`), is built with the shell and reads the same scene contributions to render 3D asset previews.
+- The studio's other pages live in `pages/`: `pages/<route>.html` is served and built at `<route>/index.html`, like a compiled editor page. The preview frame page, `pages/preview.html` (`src/preview/`), reads the same scene contributions to render 3D asset previews.
 - `test/vite/studio.bundle.spec.ts` guards the shared chunks.
 - Code: `vite/editorPages.ts`, and `@jolly-pixel/server` for the editor packages. See [hosting](./docs/hosting.md).

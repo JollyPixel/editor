@@ -148,7 +148,8 @@ describe("editorPages", () => {
 
   function buildStudio(
     pages: EditorPageFiles,
-    outDir: string
+    outDir: string,
+    shellPages: string[] = []
   ) {
     return build({
       root,
@@ -158,9 +159,26 @@ describe("editorPages", () => {
       build: {
         outDir
       },
-      plugins: [editorPages(pages)]
+      plugins: [editorPages(pages, { shellPages })]
     });
   }
+
+  test("builds a shell page from pages/ into the folder of its route", async() => {
+    const outDir = path.join(root, "shell");
+    await fs.mkdir(path.join(root, "pages"), { recursive: true });
+    await fs.writeFile(
+      path.join(root, "pages", "about.html"),
+      "<script type=\"module\" src=\"../main.ts\"></script>"
+    );
+
+    await buildStudio(voxelMapPages(dist), outDir, ["about"]);
+    const scripts = await readScripts(path.join(outDir, "about", "index.html"));
+
+    assert.ok(scripts.length > 0);
+    assert.ok(
+      scripts.every((script) => script.startsWith(path.join(outDir, "assets")))
+    );
+  });
 
   test("compiles an editor page with the shell into shared chunks", async() => {
     const editor = await createTempDir("studio-editor-page-");
@@ -212,7 +230,7 @@ describe("editorPages", () => {
     try {
       await assert.rejects(
         buildStudio(voxelMapPages(dist, page), path.join(root, "rejected")),
-        /"\/src\/index\.ts": editor pages use relative URLs/
+        /"\/src\/index\.ts": studio pages use relative URLs/
       );
     }
     finally {

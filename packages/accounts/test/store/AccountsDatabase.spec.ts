@@ -38,23 +38,20 @@ describe("AccountsDatabase.open", () => {
 });
 
 describe("AccountsDatabase", () => {
-  test("makes the oldest active admin the owner of a database written without one", () => {
-    const db = new SqliteDatabase(
+  test("refuses a database written with an older schema, and reopens its own", () => {
+    using db = new SqliteDatabase(
       new DatabaseSync(":memory:")
     );
-    const before = new AccountsDatabase(db);
-    const alice = insertAccount(before, AccountEntity.claim(name("Alice")));
-    for (const username of ["Bob", "Carol"]) {
-      insertAccount(before, AccountEntity.register(name(username), "admin"));
-    }
-    db.exec("DROP TABLE ownership");
-    db.run("UPDATE users SET role = 'member' WHERE id = ?", alice.id);
+    db.exec("CREATE TABLE users (id TEXT PRIMARY KEY, role TEXT NOT NULL)");
 
-    using database = new AccountsDatabase(db);
-
-    assert.deepEqual(
-      [...database.accounts].map(({ username, owner }) => [username, owner]),
-      [["Alice", false], ["Bob", true], ["Carol", false]]
+    assert.throws(
+      () => new AccountsDatabase(db),
+      /schema version 0 .* delete it/
     );
+    db.exec("DROP TABLE users");
+    const created = new AccountsDatabase(db);
+    insertAccount(created, AccountEntity.claim(name("Alice")));
+
+    assert.equal(new AccountsDatabase(db).accounts.size, 1);
   });
 });

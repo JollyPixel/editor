@@ -12,6 +12,10 @@ export const ACCOUNTS_ROUTES = {
     method: "POST",
     path: "login"
   },
+  join: {
+    method: "POST",
+    path: "join"
+  },
   logout: {
     method: "POST",
     path: "logout"

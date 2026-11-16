@@ -94,13 +94,17 @@ describe("EditorLaunch", () => {
     test("reads the target and credential of a share link page", async() => {
       document.head.insertAdjacentHTML("beforeend", launchElement({
         target: "map-1",
-        credential: "</script>token"
+        credential: "</script>token",
+        socket: "../../ws-sync"
       }));
 
       const launch = await new InjectedLaunchSource().read();
 
       assert.equal(launch?.target.value, "map-1");
-      assert.equal(launch?.credential, "</script>token");
+      assert.deepEqual(launch?.credential, {
+        token: "</script>token",
+        socket: "../../ws-sync"
+      });
       assert.equal(EditorLaunch.parse({ target: "map-1" })?.credential, null);
       assert.equal(EditorLaunch.parse({ target: "map-1", credential: "" }), undefined);
     });

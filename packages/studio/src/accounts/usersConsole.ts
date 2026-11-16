@@ -88,8 +88,28 @@ export function usersConsole(
     }
   });
 
+  namespace.registerCommand("invite", {
+    description: "Make an existing account a member of this project with a role",
+    args: [
+      {
+        name: "user",
+        type: "string",
+        required: true
+      },
+      {
+        name: "role",
+        type: "string",
+        required: true
+      }
+    ],
+    execute: async({ user, role }, ctx) => {
+      await roster.invite(user, role);
+      ctx.print(`${user} joined as ${role}`);
+    }
+  });
+
   namespace.registerCommand("remove", {
-    description: "Delete an account and its sign-in sessions",
+    description: "Remove an account from this project; the account stays",
     args: [
       {
         name: "user",
@@ -104,7 +124,7 @@ export function usersConsole(
   });
 
   namespace.registerCommand("transfer", {
-    description: "Make another account the owner, for the owner only; you stay an admin",
+    description: "Make another account the server owner, for the owner only; you stay an admin",
     args: [
       {
         name: "user",
@@ -115,6 +135,21 @@ export function usersConsole(
     execute: async({ user }, ctx) => {
       await roster.transferOwnership(user);
       ctx.print(`${user} is now the owner`);
+    }
+  });
+
+  namespace.registerCommand("delete", {
+    description: "Delete an account from every project, for the server owner only",
+    args: [
+      {
+        name: "user",
+        type: "string",
+        required: true
+      }
+    ],
+    execute: async({ user }, ctx) => {
+      await roster.deleteAccount(user);
+      ctx.print(`${user} deleted`);
     }
   });
 

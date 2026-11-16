@@ -2,7 +2,7 @@
 import * as z from "zod";
 
 // Import Internal Dependencies
-import { accountSchema } from "../account/Account.ts";
+import { memberSchema } from "../account/Account.ts";
 import { ACCOUNTS_ERROR_CODES } from "../account/errors/AccountsError.ts";
 import { ACCOUNTS_REQUEST_ERROR_CODES } from "./routes.ts";
 
@@ -16,7 +16,7 @@ export const registrationBodySchema = credentialsBodySchema.extend({
 });
 
 export const accountReplySchema = z.object({
-  account: accountSchema
+  account: memberSchema
 });
 
 export const failureReplySchema = z.object({

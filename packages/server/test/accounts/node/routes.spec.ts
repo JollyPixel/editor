@@ -14,7 +14,7 @@ import {
 // Import Internal Dependencies
 import { requestStatus } from "../../helpers/rawRequest.ts";
 import { PASSED_ON_STATUS } from "#src/testing.ts";
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 
 // CONSTANTS
 const kDigest = "p".repeat(43);
@@ -158,10 +158,10 @@ describe("accountsRoutes", () => {
     assert.equal(alice.status, "active");
   });
 
-  test("answers an access request without a cookie and refuses its sign-in", async() => {
+  test("signs a pending account in server-wide while the project refuses it", async() => {
     await using server = await serveBackend({
       masterPassword: kSecret,
-      accessRequests: true
+      join: "request"
     });
     await server.browser().client.register("Alice", "correct horse", {
       masterPassword: kSecret
@@ -176,7 +176,12 @@ describe("accountsRoutes", () => {
       (error: AccountsRequestError) => error.status === 403 &&
         error.code === "account-pending"
     );
-    assert.equal(cookies.size, 0);
+    assert.equal(cookies.size, 1);
+    await assert.rejects(
+      client.me(),
+      (error: AccountsRequestError) => error.status === 403 &&
+        error.code === "account-pending"
+    );
   });
 
   test("refuses a request from another origin", async() => {

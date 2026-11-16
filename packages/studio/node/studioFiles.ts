@@ -9,10 +9,10 @@ import type {
   ProjectFileOpenOptions
 } from "@jolly-pixel/asset-server/node";
 import {
-  StudioProject,
-  StudioServerSettings,
+  Project,
+  ServerSettings,
   type GamePlayer,
-  type StudioBackendOptions
+  type ServerBackendOptions
 } from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
@@ -39,21 +39,26 @@ const kBlocksetFile = path.join(
 
 export interface StudioProjectOptions extends ProjectFileOpenOptions {
   /**
-   * @default StudioServerSettings.parse(process.env)
+   * @default settings.projectRoot(STUDIO_ROOT)
    */
-  settings?: StudioServerSettings;
+  root?: string;
+  /**
+   * @default ServerSettings.parse(process.env)
+   */
+  settings?: ServerSettings;
 }
 
 export function openStudioProject(
   options: StudioProjectOptions = {}
-): Promise<StudioProject> {
+): Promise<Project> {
   const {
-    settings = StudioServerSettings.parse(process.env),
+    settings = ServerSettings.parse(process.env),
+    root = settings.projectRoot(STUDIO_ROOT),
     ...fileOptions
   } = options;
 
-  return StudioProject.open(
-    settings.projectRoot(STUDIO_ROOT),
+  return Project.open(
+    root,
     {
       ...fileOptions,
       packages: kPackages,
@@ -69,7 +74,7 @@ export async function studioSeed(): Promise<AssetSeedMap> {
 export async function studioBackendFiles(
   player: GamePlayer
 ): Promise<
-  Pick<StudioBackendOptions, "seed" | "player" | "preferences">
+  Pick<ServerBackendOptions, "seed" | "player" | "preferences">
 > {
   return {
     seed: await studioSeed(),

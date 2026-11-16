@@ -11,7 +11,7 @@ import {
   property,
   query
 } from "lit/decorators.js";
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import "@jolly-pixel/ui/elements/avatar";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/context-menu";
@@ -55,7 +55,7 @@ export class AccountBadge extends LitElement {
   `;
 
   @property({ attribute: false })
-  declare account: Account | null;
+  declare account: Member | null;
 
   @property({ attribute: false })
   declare avatar: string;

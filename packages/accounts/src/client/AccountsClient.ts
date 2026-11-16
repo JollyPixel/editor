@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import {
   AVATAR_MAX_BYTES,
-  type Account
+  type Member
 } from "../account/Account.ts";
 import {
   ACCOUNTS_ROUTES,
@@ -17,8 +17,7 @@ import { AccountsRequestError } from "./errors/AccountsRequestError.ts";
 import { InvalidPasswordError } from "../session/errors/InvalidPasswordError.ts";
 import type { RegisterOptions } from "../registration/RegisterOptions.ts";
 import type { RegistrationResult } from "../registration/RegistrationResult.ts";
-import { Username } from "../account/Username.ts";
-import { prehashPassword } from "./prehashPassword.ts";
+import { credentialsBody } from "./credentialsBody.ts";
 
 // CONSTANTS
 export const MIN_PASSWORD_LENGTH = 8;
@@ -63,7 +62,7 @@ export class AccountsClient {
         `a password has at least ${MIN_PASSWORD_LENGTH} characters`
       );
     }
-    const credentials = await this.#credentials(username, password);
+    const credentials = await credentialsBody(username, password);
     const response = await this.#request("register", {
       ...credentials,
       masterPassword: options.masterPassword
@@ -83,11 +82,25 @@ export class AccountsClient {
   async login(
     username: string,
     password: string
-  ): Promise<Account> {
+  ): Promise<Member> {
     return this.#account(
       "login",
-      await this.#credentials(username, password)
+      await credentialsBody(username, password)
     );
+  }
+
+  async join(): Promise<RegistrationResult> {
+    const response = await this.#request("join");
+    if (response.status === kAccepted) {
+      return {
+        status: "pending"
+      };
+    }
+
+    return {
+      status: "active",
+      account: await accountFrom(response)
+    };
   }
 
   async logout(): Promise<void> {
@@ -97,7 +110,7 @@ export class AccountsClient {
     }
   }
 
-  async me(): Promise<Account | null> {
+  async me(): Promise<Member | null> {
     const response = await this.#request("me");
     if (response.status === kUnauthorized) {
       return null;
@@ -108,7 +121,7 @@ export class AccountsClient {
 
   async replaceAvatar(
     image: Blob
-  ): Promise<Account> {
+  ): Promise<Member> {
     if (image.size > AVATAR_MAX_BYTES) {
       throw new AccountsRequestError(
         413,
@@ -120,22 +133,10 @@ export class AccountsClient {
     return this.#account("replaceAvatar", image);
   }
 
-  async #credentials(
-    username: string,
-    password: string
-  ): Promise<CredentialsBody> {
-    const parsed = Username.parse(username);
-
-    return {
-      username: parsed.value,
-      password: await prehashPassword(parsed, password)
-    };
-  }
-
   async #account(
     route: AccountsRouteName,
     body: RequestBody
-  ): Promise<Account> {
+  ): Promise<Member> {
     return accountFrom(
       await this.#request(route, body)
     );
@@ -183,7 +184,7 @@ function requestBody(
 
 async function accountFrom(
   response: Response
-): Promise<Account> {
+): Promise<Member> {
   if (!response.ok) {
     throw await requestError(response);
   }

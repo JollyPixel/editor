@@ -16,7 +16,7 @@ import {
   InvalidPasswordError,
   InvalidUsernameError,
   MIN_PASSWORD_LENGTH,
-  type Account,
+  type Member,
   type AccountsClient,
   type AccountsFailureCode
 } from "@jolly-pixel/accounts";
@@ -32,6 +32,8 @@ const kRequestMessages: Partial<Record<AccountsFailureCode, string>> = {
   "invalid-master-password": "Wrong master password.",
   "account-pending": "Your access request awaits an admin's approval.",
   "access-requests-full": "Too many access requests await approval. Try again later.",
+  "invitation-required": "This project takes new members on invitation only.",
+  "membership-required": "This account is not a member of this project.",
   throttled: "Too many failed attempts. Try again later."
 };
 const kMasterPasswordCodes = new Set<AccountsFailureCode>([
@@ -39,8 +41,32 @@ const kMasterPasswordCodes = new Set<AccountsFailureCode>([
   "invalid-master-password"
 ]);
 const kRequestSent = "Request sent. Sign in once an admin approves it.";
+const kJoinNotice = "You are signed in, but not a member of this project yet.";
+const kModeLabels: Record<SignInMode, ModeLabels> = {
+  login: {
+    heading: "Sign in",
+    switchTo: "Create an account",
+    submit: "Sign in"
+  },
+  register: {
+    heading: "Create an account",
+    switchTo: "I have an account",
+    submit: "Create account"
+  },
+  join: {
+    heading: "Join this project",
+    switchTo: "Use another account",
+    submit: "Join"
+  }
+};
 
-export type SignInMode = "login" | "register";
+export type SignInMode = "login" | "register" | "join";
+
+interface ModeLabels {
+  heading: string;
+  switchTo: string;
+  submit: string;
+}
 
 @customElement("studio-sign-in")
 export class SignInDialog extends LitElement {
@@ -121,16 +147,16 @@ export class SignInDialog extends LitElement {
   declare _dialog: Dialog;
 
   @query("input[name=username]")
-  declare _username: HTMLInputElement;
+  declare _username: HTMLInputElement | null;
 
   @query("input[name=password]")
-  declare _password: HTMLInputElement;
+  declare _password: HTMLInputElement | null;
 
   @query("input[name=master-password]")
   declare _masterPassword: HTMLInputElement | null;
 
   #accounts: AccountsClient | null = null;
-  #settle: ((signedIn: Account) => void) | null = null;
+  #settle: ((signedIn: Member) => void) | null = null;
 
   constructor() {
     super();
@@ -143,31 +169,37 @@ export class SignInDialog extends LitElement {
 
   async open(
     accounts: AccountsClient
-  ): Promise<Account> {
+  ): Promise<Member> {
     this.#accounts = accounts;
     this._error = globalThis.crypto?.subtle === undefined ?
       "Signing in needs HTTPS or localhost." :
       null;
+    if (await isOutsider(accounts)) {
+      this._mode = "join";
+      this._notice = kJoinNotice;
+    }
 
     const {
       promise,
       resolve
-    } = Promise.withResolvers<Account>();
+    } = Promise.withResolvers<Member>();
     this.#settle = resolve;
 
     await this.updateComplete;
     await this._dialog.showModal();
-    this._username.focus();
+    this._username?.focus();
 
     return promise;
   }
 
   override render(): TemplateResult {
     const register = this._mode === "register";
+    const join = this._mode === "join";
+    const labels = kModeLabels[this._mode];
 
     return html`
       <jolly-dialog
-        heading=${register ? "Create an account" : "Sign in"}
+        heading=${labels.heading}
         .dismissible=${false}
       >
         <form
@@ -176,6 +208,35 @@ export class SignInDialog extends LitElement {
           @submit=${this.#onSubmit}
           @keydown=${this.#onKeyDown}
         >
+          ${join ? nothing : this.#credentialFields(register)}
+          ${this._notice === null ? nothing : html`
+            <p class="sign-in-notice" role="status">${this._notice}</p>
+          `}
+          ${this._error === null ? nothing : html`
+            <p class="sign-in-error" role="alert">${this._error}</p>
+          `}
+        </form>
+        <jolly-button
+          slot="actions"
+          data-action="switch"
+          ?disabled=${this._pending}
+          @click=${this.#switchMode}
+        >${labels.switchTo}</jolly-button>
+        <jolly-button
+          slot="actions"
+          variant="accent"
+          data-action="submit"
+          ?disabled=${this._pending}
+          @click=${this.#submit}
+        >${labels.submit}</jolly-button>
+      </jolly-dialog>
+    `;
+  }
+
+  #credentialFields(
+    register: boolean
+  ): TemplateResult {
+    return html`
           <label>
             <span>Username</span>
             <input
@@ -216,31 +277,13 @@ export class SignInDialog extends LitElement {
               @click=${this.#askMasterPassword}
             >I have the master password</button>
           ` : nothing}
-          ${this._notice === null ? nothing : html`
-            <p class="sign-in-notice" role="status">${this._notice}</p>
-          `}
-          ${this._error === null ? nothing : html`
-            <p class="sign-in-error" role="alert">${this._error}</p>
-          `}
-        </form>
-        <jolly-button
-          slot="actions"
-          data-action="switch"
-          ?disabled=${this._pending}
-          @click=${this.#switchMode}
-        >${register ? "I have an account" : "Create an account"}</jolly-button>
-        <jolly-button
-          slot="actions"
-          variant="accent"
-          data-action="submit"
-          ?disabled=${this._pending}
-          @click=${this.#submit}
-        >${register ? "Create account" : "Sign in"}</jolly-button>
-      </jolly-dialog>
     `;
   }
 
-  #switchMode(): void {
+  async #switchMode(): Promise<void> {
+    if (this._mode === "join") {
+      await this.#accounts?.logout();
+    }
     this._mode = this._mode === "login" ? "register" : "login";
     this._error = null;
     this._notice = null;
@@ -273,47 +316,84 @@ export class SignInDialog extends LitElement {
     if (accounts === null || this._pending) {
       return;
     }
-    const fields = [
-      this._username,
-      this._password,
-      this._masterPassword
-    ];
-    if (!fields.every((field) => field?.reportValidity() ?? true)) {
+    if (this._mode === "join") {
+      await this.#attempt(() => this.#join(accounts));
+
+      return;
+    }
+    const username = this._username;
+    const password = this._password;
+    const fields = [username, password, this._masterPassword];
+    if (
+      username === null ||
+      password === null ||
+      !fields.every((field) => field?.reportValidity() ?? true)
+    ) {
       return;
     }
 
+    const refusal = await this.#attempt(() => (
+      this._mode === "register" ?
+        this.#register(accounts, username.value, password.value) :
+        this.#login(accounts, username.value, password.value)
+    ));
+    if (
+      refusal instanceof AccountsRequestError &&
+      kMasterPasswordCodes.has(refusal.code)
+    ) {
+      this._masterPasswordAsked = true;
+      await this.updateComplete;
+      this._masterPassword?.select();
+    }
+  }
+
+  async #attempt(
+    action: () => Promise<void>
+  ): Promise<unknown> {
     this._pending = true;
     this._error = null;
     this._notice = null;
-    let masterPasswordRefused = false;
     try {
-      const username = this._username.value;
-      const password = this._password.value;
-      if (this._mode === "register") {
-        await this.#register(accounts, username, password);
-      }
-      else {
-        this.#resolve(await accounts.login(username, password));
-      }
+      await action();
+
+      return null;
     }
     catch (error) {
-      if (isPending(error)) {
+      if (isOutsiderError(error)) {
+        this._mode = "join";
+        this._notice = kJoinNotice;
+      }
+      else if (isPending(error)) {
         this._notice = describeError(error);
       }
       else {
         this._error = describeError(error);
       }
-      masterPasswordRefused = error instanceof AccountsRequestError &&
-        kMasterPasswordCodes.has(error.code);
+
+      return error;
     }
     finally {
       this._pending = false;
     }
+  }
 
-    if (masterPasswordRefused) {
-      this._masterPasswordAsked = true;
-      await this.updateComplete;
-      this._masterPassword?.select();
+  async #login(
+    accounts: AccountsClient,
+    username: string,
+    password: string
+  ): Promise<void> {
+    this.#resolve(await accounts.login(username, password));
+  }
+
+  async #join(
+    accounts: AccountsClient
+  ): Promise<void> {
+    const joined = await accounts.join();
+    if (joined.status === "active") {
+      this.#resolve(joined.account);
+    }
+    else {
+      this._notice = kRequestSent;
     }
   }
 
@@ -335,13 +415,33 @@ export class SignInDialog extends LitElement {
   }
 
   #resolve(
-    signedIn: Account
+    signedIn: Member
   ): void {
     const settle = this.#settle;
     this.#settle = null;
     this.#accounts = null;
     this._dialog.close("confirm");
     settle?.(signedIn);
+  }
+}
+
+function isOutsiderError(
+  error: unknown
+): boolean {
+  return error instanceof AccountsRequestError &&
+    error.code === "membership-required";
+}
+
+async function isOutsider(
+  accounts: AccountsClient
+): Promise<boolean> {
+  try {
+    await accounts.me();
+
+    return false;
+  }
+  catch (error) {
+    return isOutsiderError(error);
   }
 }
 

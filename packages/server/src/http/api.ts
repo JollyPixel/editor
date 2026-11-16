@@ -14,7 +14,8 @@ const kApiFailureCodes = [
   "role-in-use",
   "stale-settings",
   "build-failed",
-  "not-exportable"
+  "not-exportable",
+  "project-unavailable"
 ] as const;
 
 export type ApiFailureCode = typeof kApiFailureCodes[number];

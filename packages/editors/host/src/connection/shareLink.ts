@@ -7,6 +7,7 @@ import { connectWebSocket } from "@jolly-pixel/network/client";
 import { showChoice } from "@jolly-pixel/ui/elements/dialog";
 
 // Import Internal Dependencies
+import type { ShareCredential } from "../launch/EditorLaunch.ts";
 import { guestConnection } from "./guest.ts";
 import type { StandaloneConnection } from "./StandaloneConnection.ts";
 
@@ -14,10 +15,14 @@ import type { StandaloneConnection } from "./StandaloneConnection.ts";
 const kReload = "reload";
 
 export function shareLinkConnection(
-  credential: string
+  credential: ShareCredential
 ): StandaloneConnection {
+  const { token, socket } = credential;
   const connection = guestConnection(
-    () => connectWebSocket({ credential })
+    () => connectWebSocket({
+      url: socket === null ? undefined : new URL(socket, location.href),
+      credential: token
+    })
   );
   connection.client.on("unauthorized", () => {
     void showLinkEnded();

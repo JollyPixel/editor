@@ -8,50 +8,25 @@ Each step ends with `pnpm --filter @jolly-pixel/server test`,
 
 ## Next steps
 
-### 1. Several projects in one server
+### 1. Per-project contributions in Vite dev
 
-One process serves one project today. `StudioBackend.open(project, options)`
-opens everything at once, and the studio's `docs/hosting.md` asks for one
-process per project behind a router. The goal is one server that hosts
-several projects and opens each on demand, which a desktop app also needs.
-The studio stays the front of one project.
+Vite dev with `JOLLY_PROJECTS` builds its player and kind modules from the
+studio's own project, so a project with other kind packages plays with the
+wrong contributions in dev. The hosted build is unaffected.
 
-`StudioBackend` mixes two levels that have to come apart first:
+### 2. Browser tests for the multi-project pages
 
-- **Server level.** The HTTP listener and the WebSocket transport, the
-  accounts with their sessions and preferences, and the shell with its editor
-  pages.
-- **Project level.** The asset server and its rooms, `project.json`, the
-  access section with its roles and rights, the audit log, share links, the
-  game build and export, and the archive.
+The projects page, the "Join this project" dialog and the Users pane actions
+(remove from project, delete account, transfer ownership) have no browser
+test yet; the server specs cover their routes.
 
-Single-project hosting then becomes a server with one entry, and must keep
-working unchanged.
+### 3. Unavailable projects on the projects page
 
-The exports still carry the `Studio` prefix of the workspace they came from
-(`StudioProject`, `StudioBackend`, `StudioServer`, `StudioAccess`,
-`StudioShares`, `StudioGame`). Rename them when this
-split decides which level each one belongs to, not before, so each name
-changes once.
+The projects page marks a project unavailable only when its `project.json`
+cannot be read. Other opening failures, such as an editor the shell lacks or a
+duplicate `id`, show only on the project's own pages.
 
-Questions to settle before building:
+### 4. Project management from the projects page
 
-- **Accounts.** `accounts.db` sits in each project's state folder, next to
-  `audit.db`, and holds accounts, sessions, preferences and share links. The
-  session cookie name is a hash of the project root. Moving accounts to the
-  server level means roles, which `project.json` defines per project, point
-  at server-wide accounts. Share links stay per project, since they name an
-  asset. Existing projects need their `accounts.db` merged or kept.
-- **Addressing.** Routes move under a project, such as `/api/projects/:id/`,
-  or a host picks the project. The socket either stays one `/ws-sync` path
-  with project-scoped room names, or gets one path per project.
-- **Editors.** `project.json` lists the editors, but a built shell compiles
-  the pages of the editors it was built with, and `StudioServer.open`
-  refuses a project whose editor page is missing. Either the server's editor
-  set becomes the union of its projects, or a project may only list editors
-  the server ships.
-- **Lifetime.** Rooms live in memory and each project keeps SQLite files
-  open. Projects open on the first request and close after an idle delay,
-  as rooms already close five minutes after their last client leaves.
-- **Registry.** How the server finds its projects: a folder of projects, a
-  list in a server file, or folders a desktop app adds at run time.
+Deleting a project, renaming its slug and importing an archive as a new
+project happen on disk while the server is stopped.

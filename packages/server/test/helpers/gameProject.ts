@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   binaryAssetKind,
@@ -13,7 +13,7 @@ import { MemoryAssetSource } from "@jolly-pixel/asset-source";
 import * as EventStore from "@jolly-pixel/event-store";
 
 // Import Internal Dependencies
-import { StudioAccess } from "#src/project/node/StudioAccess.ts";
+import { ProjectAccess } from "#src/project/node/ProjectAccess.ts";
 
 // CONSTANTS
 const kActor: EventStore.Actor = {
@@ -21,7 +21,7 @@ const kActor: EventStore.Actor = {
   id: "alice"
 };
 
-export const GAME_ACCESS = StudioAccess.from({
+export const GAME_ACCESS = ProjectAccess.from({
   defaultRole: "player",
   roles: {
     player: {
@@ -39,7 +39,7 @@ export const GAME_ACCESS = StudioAccess.from({
       "*": "read"
     }
   },
-  accessRequests: false
+  join: "open"
 }, "project.json");
 
 export function uses(
@@ -83,7 +83,7 @@ function scriptKind(): AssetKindHandler<BinaryAssetState> {
 
 export function gameAccount(
   role: string
-): Account {
+): Member {
   return {
     id: role,
     username: role,

@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { JoinMode } from "@jolly-pixel/accounts";
 import type { Right } from "@jolly-pixel/network";
 import {
   BUILT_IN_ROLES,
@@ -53,8 +54,8 @@ export class AccessDraft {
     return this.#section.defaultRole;
   }
 
-  get accessRequests(): boolean {
-    return this.#section.accessRequests;
+  get join(): JoinMode {
+    return this.#section.join;
   }
 
   rules(
@@ -160,10 +161,10 @@ export class AccessDraft {
     return this.#with({ defaultRole: role });
   }
 
-  withAccessRequests(
-    enabled: boolean
+  withJoin(
+    join: JoinMode
   ): AccessDraft {
-    return this.#with({ accessRequests: enabled });
+    return this.#with({ join });
   }
 
   toJSON(): AccessSection {

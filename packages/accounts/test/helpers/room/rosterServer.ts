@@ -10,7 +10,7 @@ import {
   AccountsRoster,
   type RosterEntry
 } from "#src/index.ts";
-import type { AccountDirectory } from "#src/AccountDirectory.ts";
+import type { MemberDirectory } from "#src/realm/MemberDirectory.ts";
 import { AccountsExtension } from "#src/room/AccountsExtension.ts";
 
 export interface Peer {
@@ -25,7 +25,7 @@ export interface RosterServer extends AsyncDisposable {
 }
 
 export function rosterServer(
-  directory: AccountDirectory,
+  directory: MemberDirectory,
   revocations = true
 ): RosterServer {
   const peers: Peer[] = [];

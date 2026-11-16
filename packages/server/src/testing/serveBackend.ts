@@ -3,22 +3,24 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 
 // Import Third-party Dependencies
-import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
+import {
+  ACCOUNTS_URL_PATH,
+  type JoinMode
+} from "@jolly-pixel/accounts";
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
 import {
-  StudioBackend,
-  type StudioBackendOptions
-} from "../server/node/StudioBackend.ts";
+  ServerBackend,
+  type ServerBackendOptions
+} from "../server/node/ServerBackend.ts";
 import type {
   GamePlayer,
   PlayerPageSource
 } from "../game/node/GamePlayer.ts";
-import { chainMiddleware } from "../http/node/Middleware.ts";
-import { ManifestRoute } from "../project/node/ManifestRoute.ts";
 import { NO_SHELL_PREFERENCES } from "../preferences/PreferenceScopes.ts";
-import type { StudioProject } from "../project/node/StudioProject.ts";
+import type { Project } from "../project/node/Project.ts";
+import { ProjectHosting } from "../projects/node/ProjectHosting.ts";
 import {
   browser,
   type Browser
@@ -39,7 +41,7 @@ export interface ServedBackend extends AsyncDisposable {
 }
 
 export interface ServeBackendOptions extends Pick<
-  StudioBackendOptions, "requestsPerMinute" | "trustProxy" | "compression"
+  ServerBackendOptions, "requestsPerMinute" | "trustProxy" | "compression"
 > {
   /**
    * @default "member"
@@ -47,34 +49,37 @@ export interface ServeBackendOptions extends Pick<
   defaultRole?: string;
   masterPassword?: string;
   /**
-   * @default false
+   * @default "open"
    */
-  accessRequests?: boolean;
-  throttle?: NonNullable<StudioBackendOptions["accounts"]>["throttle"];
+  join?: JoinMode;
+  throttle?: NonNullable<ServerBackendOptions["accounts"]>["throttle"];
 }
 
 export interface ListenBackendOptions extends ServeBackendOptions, Pick<
-  StudioBackendOptions, "seed"
+  ServerBackendOptions, "seed"
 > {
   /**
    * @default NO_SHELL_PREFERENCES
    */
-  preferences?: StudioBackendOptions["preferences"];
+  preferences?: ServerBackendOptions["preferences"];
 }
 
 export async function listenBackend(
-  project: StudioProject,
+  project: Project,
   options: ListenBackendOptions
 ): Promise<ServedBackend> {
-  if (options.accessRequests === true) {
+  const { join = "open" } = options;
+  if (project.access.join !== join) {
     await project.file.replace({
       access: {
         ...project.access.toJSON(),
-        accessRequests: true
+        join
       }
     });
   }
-  const backend = await StudioBackend.open(project, {
+  const backend = await ServerBackend.open({
+    hosting: ProjectHosting.single(project.file.root),
+    openProject: async() => project,
     inMemory: true,
     seed: options.seed,
     player: kUnbuiltPlayer,
@@ -83,18 +88,16 @@ export async function listenBackend(
     requestsPerMinute: options.requestsPerMinute,
     trustProxy: options.trustProxy,
     compression: options.compression,
+    accountsPolicy: {
+      defaultRole: options.defaultRole ?? "member"
+    },
     accounts: {
-      defaultRole: options.defaultRole ?? "member",
       throttle: options.throttle,
       masterPassword: options.masterPassword
     }
   });
-  const routes = chainMiddleware(
-    backend.middleware,
-    new ManifestRoute(project).middleware
-  );
   const server = http.createServer((request, response) => {
-    routes(request, response, () => {
+    backend.middleware(request, response, () => {
       response.statusCode = PASSED_ON_STATUS;
       response.end();
     });

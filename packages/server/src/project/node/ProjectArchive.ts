@@ -1,25 +1,25 @@
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
+import type { Member } from "@jolly-pixel/accounts";
 import {
   exportAssetArchive,
   type ArchiveBackend
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import type { StudioProject } from "./StudioProject.ts";
+import type { Project } from "./Project.ts";
 
 // CONSTANTS
 const kArchiveExtension = ".zip";
 
 export interface ProjectArchiveOptions {
-  project: Pick<StudioProject, "access" | "name">;
+  project: Pick<Project, "access" | "name">;
   backend: ArchiveBackend;
 }
 
 export class ProjectArchive {
   readonly fileName: string;
 
-  #project: Pick<StudioProject, "access">;
+  #project: Pick<Project, "access">;
   #backend: ArchiveBackend;
 
   constructor(
@@ -31,7 +31,7 @@ export class ProjectArchive {
   }
 
   async export(
-    account: Account
+    account: Member
   ): Promise<Uint8Array> {
     this.#project.access.projectRights(account.role).require("export");
 

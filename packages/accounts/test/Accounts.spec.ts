@@ -5,231 +5,85 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import {
-  type AuthenticationRequest,
-  type PeerMetadata
-} from "@jolly-pixel/network";
-
 // Import Internal Dependencies
 import {
   ADDRESS,
+  OTHER_REALM,
+  PASSWORD,
+  REALM,
   createAccounts,
-  databaseWith,
-  databaseWithRetiredRole,
-  insertAgentToken,
-  openSession
+  createRealm
 } from "./helpers/accounts.ts";
-import { solidPng } from "./helpers/avatar/images.ts";
-import { parseAgentProfile } from "#src/agent/AgentToken.ts";
+import type { Requester } from "#src/node.ts";
 
-function upgrade(
-  cookie?: string,
-  credential?: string
-): AuthenticationRequest {
-  return {
-    clientId: "client",
-    url: "/ws-sync",
-    headers: {
-      host: "studio.local",
-      origin: "http://studio.local",
-      ...(cookie === undefined ? {} : { cookie })
-    },
-    defaultRole: "spectator",
-    credential
-  };
-}
+// CONSTANTS
+const kRequester: Requester = {
+  address: ADDRESS,
+  secure: false,
+  headers: {}
+};
 
-describe("Accounts.authenticate — share links", () => {
-  test("identifies a share link token as a guest with a peer id per connection", () => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-    using accounts = createAccounts(database);
-    const link = accounts.shareLinks.create({
-      assetId: "map-1",
-      createdBy: alice.id,
-      expiresAt: null
-    });
+describe("Accounts.login", () => {
+  test("signs an account in server-wide, whatever realm it belongs to", async() => {
+    using accounts = createAccounts();
+    const realm = createRealm(accounts, { join: "open" });
+    await realm.register({ username: "Alice", password: PASSWORD.value }, kRequester);
+    await realm.register({ username: "Bob", password: PASSWORD.value }, kRequester);
 
-    const first = accounts.authenticate(upgrade(undefined, link.token));
-    const second = accounts.authenticate(upgrade(undefined, link.token));
-
-    assert.ok(first !== null && second !== null);
-    assert.deepEqual(
+    const { account, cookie } = await accounts.login(
       {
-        ...first,
-        profile: {
-          ...first.profile,
-          peerId: "<random>"
-        }
+        username: "bob",
+        password: PASSWORD.value
+      },
+      kRequester
+    );
+
+    assert.deepEqual(
+      [account.username, account.owner, "role" in account],
+      ["Bob", false, false]
+    );
+    assert.deepEqual(
+      accounts.signedIn({ cookie: cookie.split(";")[0] }),
+      account
+    );
+  });
+});
+
+describe("Accounts.realm", () => {
+  test("opens each realm once until it is disposed", () => {
+    using accounts = createAccounts();
+    const realm = createRealm(accounts);
+    createRealm(accounts, {}, OTHER_REALM);
+
+    assert.throws(() => createRealm(accounts), Error);
+    realm[Symbol.dispose]();
+
+    assert.equal(createRealm(accounts).id, REALM);
+  });
+});
+
+describe("Accounts.memberships", () => {
+  test("lists an account's memberships in every realm, requests marked pending", async() => {
+    using accounts = createAccounts();
+    const home = createRealm(accounts, { join: "open" });
+    const other = createRealm(accounts, { join: "request" }, OTHER_REALM);
+    await home.register({ username: "Alice", password: PASSWORD.value }, kRequester);
+    const bob = await home.register({ username: "Bob", password: PASSWORD.value }, kRequester);
+    assert.ok(bob.status === "active");
+
+    other.join(bob.account.id);
+
+    assert.deepEqual(accounts.memberships(bob.account.id), [
+      {
+        realmId: REALM,
+        role: "spectator",
+        pending: false
       },
       {
-        subject: `share:${link.id}`,
-        role: "guest",
-        profile: {
-          username: "Guest",
-          peerId: "<random>",
-          avatar: null,
-          via: "link"
-        }
+        realmId: OTHER_REALM,
+        role: "spectator",
+        pending: true
       }
-    );
-    assert.notEqual(first.profile?.peerId, second.profile?.peerId);
-  });
-
-  test("refuses an unknown token even beside a valid session cookie", () => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-    using accounts = createAccounts(database);
-    const cookie = `jolly_session=${openSession(database, alice.id)}`;
-
-    assert.equal(accounts.authenticate(upgrade(cookie, "unknown")), null);
-  });
-});
-
-describe("Accounts.authenticate — agent tokens", () => {
-  test("identifies an agent token by its name with the current role of its owner", () => {
-    using database = databaseWith("Alice", "Bob");
-    const [, bob] = database.accounts;
-    using accounts = createAccounts(database);
-    const { token, value } = accounts.agentTokens.create({
-      ownerId: bob.id,
-      name: "Builder"
-    });
-
-    const identity = accounts.authenticate(upgrade(undefined, value));
-
-    assert.deepEqual(identity, {
-      subject: `agent:${token.id}`,
-      role: "spectator",
-      profile: {
-        username: "Builder",
-        peerId: token.id,
-        avatar: null,
-        via: "golem",
-        ownerId: bob.id
-      }
-    });
-    const profile = identity?.profile ?? {};
-    assert.deepEqual(parseAgentProfile(profile), {
-      username: "Builder",
-      peerId: token.id,
-      via: "golem",
-      ownerId: bob.id
-    });
-    assert.equal(parseAgentProfile({ ...profile, via: "link" }), null);
-
-    database.accounts.save(bob.withRole("member"));
-
-    assert.equal(
-      accounts.authenticate(upgrade(undefined, value))?.role,
-      "member"
-    );
-  });
-
-  test("refuses a revoked token", () => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-    using accounts = createAccounts(database);
-    const { token, value } = accounts.agentTokens.create({
-      ownerId: alice.id
-    });
-
-    accounts.agentTokens.revoke(alice.id, token.id);
-
-    assert.equal(accounts.authenticate(upgrade(undefined, value)), null);
-  });
-});
-
-describe("Accounts.authenticate", () => {
-  test("identifies the account of a session cookie", () => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-    using accounts = createAccounts(database);
-
-    assert.deepEqual(
-      accounts.authenticate(upgrade(`jolly_session=${openSession(database, alice.id)}`)),
-      {
-        subject: alice.id,
-        role: "admin",
-        profile: {
-          username: "Alice",
-          peerId: alice.id,
-          avatar: null
-        }
-      }
-    );
-    assert.equal(accounts.authenticate(upgrade()), null);
-  });
-
-  test("points the profile at the uploaded avatar", async() => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-    using accounts = createAccounts(database);
-    const token = openSession(database, alice.id);
-    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
-
-    assert.equal(
-      accounts.authenticate(upgrade(`jolly_session=${token}`))?.profile?.avatar,
-      avatar
-    );
-  });
-
-  test("connects an account whose role left the table with the default role", () => {
-    using database = databaseWithRetiredRole();
-    const [, bob] = database.accounts;
-    using accounts = createAccounts(database);
-
-    assert.equal(
-      accounts.authenticate(upgrade(`jolly_session=${openSession(database, bob.id)}`))?.role,
-      "spectator"
-    );
-  });
-});
-
-describe("Accounts.watchRevocations", () => {
-  test("revokes the account that signs out, not its agents", async() => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-    insertAgentToken(database, alice.id);
-    using accounts = createAccounts(database);
-    const revoked: string[] = [];
-    const stop = accounts.watchRevocations((accountId) => revoked.push(accountId));
-
-    accounts.signOut({
-      address: ADDRESS,
-      secure: false,
-      headers: {
-        cookie: `jolly_session=${openSession(database, alice.id)}`
-      }
-    });
-    stop();
-
-    assert.deepEqual(revoked, [alice.id]);
-  });
-});
-
-describe("Accounts.watchProfiles", () => {
-  test("reports the profile of an account whose avatar changed, until stopped", async() => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-    using accounts = createAccounts(database);
-    const changes: [string, PeerMetadata][] = [];
-    const stop = accounts.watchProfiles(
-      (accountId, profile) => changes.push([accountId, profile])
-    );
-
-    const { avatar } = await accounts.replaceAvatar(alice.id, await solidPng(8, 8));
-    stop();
-    await accounts.replaceAvatar(alice.id, await solidPng(4, 4));
-
-    assert.deepEqual(changes, [[
-      alice.id,
-      {
-        username: "Alice",
-        peerId: alice.id,
-        avatar
-      }
-    ]]);
+    ]);
   });
 });

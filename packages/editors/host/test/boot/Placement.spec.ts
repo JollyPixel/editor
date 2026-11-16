@@ -114,7 +114,10 @@ describe("Placement toolbar", () => {
     },
     {
       title: "a share link offers neither",
-      launch: new EditorLaunch(new AssetId("map"), null, "token"),
+      launch: new EditorLaunch(new AssetId("map"), null, {
+        token: "token",
+        socket: null
+      }),
       offline: null,
       hasTargets: false,
       hasTags: false

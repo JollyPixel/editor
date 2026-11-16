@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 
 // Import Internal Dependencies
 import { signedInAccount } from "../../http/node/authentication.ts";
+import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 import { domainFailures } from "../../http/node/apiFailure.ts";
 import { downloadRoute } from "../../http/node/downloadRoute.ts";
 import {
@@ -31,8 +32,8 @@ export const projectFailures = domainFailures([
 ]);
 
 export interface ProjectRoutesOptions {
-  archive: ProjectArchive;
-  settings: ProjectSettings;
+  archive: RequestScoped<ProjectArchive>;
+  settings: RequestScoped<ProjectSettings>;
 }
 
 interface ReplaceSettingsRoute {
@@ -43,7 +44,6 @@ export async function projectRoutes(
   app: FastifyInstance,
   options: ProjectRoutesOptions
 ): Promise<void> {
-  const { archive, settings } = options;
   const {
     rights,
     archive: archiveRoute,
@@ -55,24 +55,28 @@ export async function projectRoutes(
   app.route({
     method: rights.method,
     url: rights.path,
-    handler: (request): ProjectReply => settings
+    handler: (request): ProjectReply => options.settings(request)
       .rights(signedInAccount(request))
       .toJSON()
   });
   downloadRoute(app, {
     route: archiveRoute,
-    fileName: archive.fileName,
-    body: (request) => archive.export(signedInAccount(request))
+    fileName: (request) => options.archive(request).fileName,
+    body: (request) => options.archive(request).export(
+      signedInAccount(request)
+    )
   });
   app.route({
     method: settingsRoute.method,
     url: settingsRoute.path,
-    handler: (request) => settings.read(signedInAccount(request))
+    handler: (request) => options.settings(request).read(
+      signedInAccount(request)
+    )
   });
   app.route({
     method: sections.method,
     url: sections.path,
-    handler: () => settings.sections()
+    handler: (request) => options.settings(request).sections()
   });
   app.route<ReplaceSettingsRoute>({
     method: replaceSettings.method,
@@ -81,7 +85,7 @@ export async function projectRoutes(
     schema: {
       body: settingsUpdateSchema
     },
-    handler: (request) => settings.replace(
+    handler: (request) => options.settings(request).replace(
       signedInAccount(request),
       request.body
     )

@@ -17,6 +17,8 @@ const kErrorStatuses: Record<AccountsErrorCode, number> = {
   "invalid-master-password": 403,
   "account-pending": 403,
   "access-requests-full": 429,
+  "invitation-required": 403,
+  "membership-required": 403,
   "invalid-credentials": 401,
   "invalid-avatar": 422,
   throttled: 429,

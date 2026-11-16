@@ -1,6 +1,5 @@
 // Import Node.js Dependencies
 import fs from "node:fs/promises";
-import path from "node:path";
 
 // Import Third-party Dependencies
 import {
@@ -10,11 +9,20 @@ import {
   type PluginOption,
   type Rolldown
 } from "vite";
-import { PLAY_PAGE_PATH } from "@jolly-pixel/server";
+import {
+  PLAY_PAGE_DIR,
+  PLAY_PAGE_PATH
+} from "@jolly-pixel/server";
 import type {
   GamePlayer,
   PlayerBundle
 } from "@jolly-pixel/server/node";
+
+// Import Internal Dependencies
+import {
+  PageInput,
+  virtualPages
+} from "./PageInput.ts";
 
 // CONSTANTS
 const kVirtualModule = "\0";
@@ -40,7 +48,7 @@ const kProductionBuild = {
 
 export interface DevPlayerOptions {
   /**
-   * The studio root, holding `play/index.html`.
+   * The studio root, holding `pages/play.html`.
    */
   root: string;
   /**
@@ -60,7 +68,8 @@ export class DevPlayer implements GamePlayer {
     options: DevPlayerOptions
   ) {
     const { root, plugins, logger } = options;
-    this.#pageFile = path.join(root, PLAY_PAGE_PATH);
+    const page = PageInput.shell(root, PLAY_PAGE_DIR);
+    this.#pageFile = page.source;
     this.#config = {
       ...kProductionBuild,
       configFile: false,
@@ -69,11 +78,17 @@ export class DevPlayer implements GamePlayer {
       publicDir: false,
       logLevel: "warn",
       customLogger: logger,
-      plugins,
+      plugins: [
+        {
+          name: "studio-player-page",
+          ...virtualPages(new Map([[page.id, page]]))
+        },
+        ...plugins
+      ],
       build: {
         write: false,
         rolldownOptions: {
-          input: this.#pageFile
+          input: page.id
         }
       }
     };

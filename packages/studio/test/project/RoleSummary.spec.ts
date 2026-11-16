@@ -23,7 +23,7 @@ const kDraft = AccessDraft.from({
       "*": "read"
     }
   },
-  accessRequests: false
+  join: "open"
 })
   .renameRole("member", "editor")
   .addRole("reviewer");

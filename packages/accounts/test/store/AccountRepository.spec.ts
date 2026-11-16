@@ -9,10 +9,8 @@ import assert from "node:assert/strict";
 import {
   FIXED_HASH,
   databaseWith,
-  name,
-  requestAccess
+  name
 } from "../helpers/accounts.ts";
-import { SessionToken } from "#src/session/SessionToken.ts";
 
 // CONSTANTS
 const kAvatar = {
@@ -36,16 +34,14 @@ describe("AccountRepository reads", () => {
     assert.equal(database.accounts.credentials(name("carol")), null);
   });
 
-  test("lists accounts oldest first and counts the pending ones apart", () => {
-    using database = databaseWith("Alice", "Bob");
-    requestAccess(database, "Carol");
+  test("lists accounts oldest first with the owner", () => {
+    using database = databaseWith("Alice", "Bob", "Carol");
 
     assert.deepEqual(
-      [...database.accounts].map(({ username, owner, pending }) => [username, owner, pending]),
-      [["Alice", true, false], ["Bob", false, false], ["Carol", false, true]]
+      [...database.accounts].map(({ username, owner }) => [username, owner]),
+      [["Alice", true], ["Bob", false], ["Carol", false]]
     );
     assert.equal(database.accounts.size, 3);
-    assert.equal(database.accounts.pendingSize, 1);
   });
 
   test("names the stored avatar hash on every read of the account", () => {
@@ -62,48 +58,15 @@ describe("AccountRepository reads", () => {
 });
 
 describe("AccountRepository writes", () => {
-  test("saves the role and status of an account", () => {
-    using database = databaseWith("Alice");
-    const bob = requestAccess(database, "Bob");
-
-    database.accounts.save(bob.approved("member"));
-
-    assert.deepEqual(database.accounts.byId(bob.id), bob.approved("member"));
-  });
-
   test("moves the single ownership to the account saved as owner", () => {
     using database = databaseWith("Alice", "Bob");
     const [, bob] = database.accounts;
 
-    database.accounts.save(bob.promotedToOwner());
+    database.accounts.save(bob.withOwnership(true));
 
     assert.deepEqual(
       [...database.accounts].map(({ owner }) => owner),
       [false, true]
-    );
-  });
-
-  test("deletes an account with its sessions and avatar", () => {
-    using database = databaseWith("Alice", "Bob");
-    const [, bob] = database.accounts;
-    const token = SessionToken.mint();
-    database.sessions.open(token, bob.id, Number.MAX_SAFE_INTEGER);
-    database.avatars.replace(bob.id, kAvatar);
-
-    database.accounts.delete(bob.id);
-
-    assert.equal(database.accounts.byId(bob.id), null);
-    assert.equal(database.sessions.owner(token), null);
-    assert.equal(database.avatars.find(bob.id), null);
-  });
-
-  test("refuses to delete the owner while it holds ownership", () => {
-    using database = databaseWith("Alice");
-    const [alice] = database.accounts;
-
-    assert.throws(
-      () => database.accounts.delete(alice.id),
-      /FOREIGN KEY/
     );
   });
 });

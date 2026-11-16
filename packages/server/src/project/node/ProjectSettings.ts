@@ -3,8 +3,8 @@ import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 
 // Import Third-party Dependencies
-import type { Account } from "@jolly-pixel/accounts";
-import type { Accounts } from "@jolly-pixel/accounts/node";
+import type { Member } from "@jolly-pixel/accounts";
+import type { AccountsRealm } from "@jolly-pixel/accounts/node";
 import type { AssetBackend } from "@jolly-pixel/asset-server";
 import type { KindPackage } from "@jolly-pixel/asset-server/node";
 import type { Server } from "@jolly-pixel/network";
@@ -17,11 +17,11 @@ import {
 import type { SettingsChange } from "../../audit/node/AuditEntry.ts";
 import type { AuditLog } from "../../audit/node/AuditLog.ts";
 import { kindOptionSections } from "./kindOptionSections.ts";
-import { StudioAccess } from "./StudioAccess.ts";
+import { ProjectAccess } from "./ProjectAccess.ts";
 import type {
   ProjectValueSection,
-  StudioProject
-} from "./StudioProject.ts";
+  Project
+} from "./Project.ts";
 import {
   settingsSectionSchema,
   type AccessChange,
@@ -65,10 +65,10 @@ type SectionHandlers = {
 type SettingsBackend = Pick<AssetBackend, "kinds" | "replaceSnapshotPolicy">;
 
 export interface ProjectSettingsOptions {
-  project: StudioProject;
-  accounts: Accounts;
+  project: Project;
+  realm: AccountsRealm;
   /**
-   * The policy the accounts were opened with.
+   * The policy the realm was opened with.
    * @default {}
    */
   accountsPolicy?: AccountsPolicy;
@@ -78,8 +78,8 @@ export interface ProjectSettingsOptions {
 }
 
 export class ProjectSettings {
-  #project: StudioProject;
-  #accounts: Accounts;
+  #project: Project;
+  #realm: AccountsRealm;
   #accountsPolicy: AccountsPolicy;
   #server: Pick<Server, "replaceRights" | "revoke">;
   #backend: SettingsBackend;
@@ -110,7 +110,7 @@ export class ProjectSettings {
     options: ProjectSettingsOptions
   ) {
     this.#project = options.project;
-    this.#accounts = options.accounts;
+    this.#realm = options.realm;
     this.#accountsPolicy = options.accountsPolicy ?? {};
     this.#server = options.server;
     this.#backend = options.backend;
@@ -125,13 +125,13 @@ export class ProjectSettings {
   }
 
   rights(
-    account: Account
+    account: Member
   ): ProjectRights {
     return this.#project.access.projectRights(account.role);
   }
 
   read(
-    account: Account
+    account: Member
   ): ProjectSettingsReply {
     const rights = this.rights(account);
     rights.require("readSettings");
@@ -162,7 +162,7 @@ export class ProjectSettings {
   }
 
   replace(
-    account: Account,
+    account: Member,
     update: SettingsUpdate
   ): Promise<ProjectSettingsReply> {
     return this.#serialize(account, async() => {
@@ -298,7 +298,7 @@ export class ProjectSettings {
   #planAccess(
     change: AccessChange
   ): SettingsPlan | null {
-    const next = StudioAccess.from(change.access, "access");
+    const next = ProjectAccess.from(change.access, "access");
     const before = this.#project.access.toJSON();
     const after = next.toJSON();
     if (isDeepStrictEqual(before, after)) {
@@ -309,8 +309,7 @@ export class ProjectSettings {
     this.#assertRemovable(before, after, renamed);
     const accountsAccess = AccountsAccess.resolve(
       next,
-      this.#accountsPolicy,
-      "access"
+      this.#accountsPolicy
     );
 
     return {
@@ -324,14 +323,14 @@ export class ProjectSettings {
           next.rights,
           accountsAccess.roles.defaultRole
         );
-        accountsAccess.applyTo(this.#accounts, renamed);
+        accountsAccess.applyTo(this.#realm, renamed);
         const moved = new Set(renamed.values());
         for (const role of Object.keys(after.roles)) {
           if (
             !moved.has(role) &&
             !isDeepStrictEqual(before.roles[role], after.roles[role])
           ) {
-            for (const accountId of this.#accounts.holders(role)) {
+            for (const accountId of this.#realm.holders(role)) {
               this.#server.revoke(accountId);
             }
           }
@@ -349,7 +348,7 @@ export class ProjectSettings {
       if (Object.hasOwn(after.roles, role)) {
         continue;
       }
-      if (!renamed.has(role) && this.#accounts.holders(role).length > 0) {
+      if (!renamed.has(role) && this.#realm.holders(role).length > 0) {
         throw new RoleInUseError(role, "an account holds it");
       }
       if (this.#accountsPolicy.defaultRole === role) {
@@ -367,7 +366,7 @@ export class ProjectSettings {
   }
 
   async #serialize(
-    account: Account,
+    account: Member,
     task: () => Promise<void>
   ): Promise<ProjectSettingsReply> {
     const run = this.#writes.then(task);

@@ -9,13 +9,13 @@ import assert from "node:assert/strict";
 import {
   AVATAR_MAX_BYTES,
   AccountsRequestError,
-  type Account,
+  type Member,
   type RegistrationResult
 } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import { requestStatus } from "../../helpers/rawRequest.ts";
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 
 // CONSTANTS
 const kPng = Buffer.from(
@@ -26,7 +26,7 @@ const kPng = Buffer.from(
 
 function activeAccount(
   result: RegistrationResult
-): Account {
+): Member {
   assert.ok(result.status === "active");
 
   return result.account;

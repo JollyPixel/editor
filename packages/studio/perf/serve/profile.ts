@@ -11,7 +11,10 @@ import {
   HEAP_SAMPLING
 } from "@jolly-pixel/cdp";
 import { PORTS } from "@jolly-pixel/e2e";
-import { StudioServer } from "@jolly-pixel/server/node";
+import {
+  JollyServer,
+  ProjectHosting
+} from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
 import {
@@ -33,8 +36,9 @@ const { values: args } = parseArgs({
 const project = await openStudioProject({
   inMemory: true
 });
-const server = await StudioServer.open({
-  project,
+const server = await JollyServer.open({
+  hosting: ProjectHosting.single(project.file.root),
+  openProject: async() => project,
   shell: STUDIO_SHELL_DIR,
   backend: {
     inMemory: true,

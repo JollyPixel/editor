@@ -10,7 +10,7 @@ import type {
   Browser,
   ServedBackend
 } from "#src/testing.ts";
-import { serveBackend } from "../../helpers/studioBackend.ts";
+import { serveBackend } from "../../helpers/serverBackend.ts";
 import {
   GOLEM_TOKENS_URL_PATH,
   agentTokensReplySchema,
