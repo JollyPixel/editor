@@ -12,13 +12,12 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { SourceError } from "../compiler/errors/SourceError.ts";
-import { SHADER_IMPORTS } from "../imports/importPolicies.ts";
 import {
   importModule,
   linkModule,
   moduleUrl
 } from "../modules/linkModule.ts";
-import { ModuleRegistry } from "../modules/ModuleRegistry.ts";
+import { shaderModuleUrl } from "./shaderModuleUrl.ts";
 
 type MaterialFactory = (inputs: Record<string, unknown>) => unknown;
 type UniformInput = THREE.UniformNode<unknown, ShaderUniformValue>;
@@ -27,9 +26,6 @@ interface ShaderExports {
   factory: MaterialFactory;
   uniforms: ShaderUniformValues;
 }
-
-// CONSTANTS
-const kModules = new ModuleRegistry(SHADER_IMPORTS);
 
 export class ShaderModule implements Shader {
   static async load(
@@ -110,7 +106,7 @@ async function linkImports(
   code: string
 ): Promise<string> {
   try {
-    return await linkModule(code, (specifier) => kModules.url(specifier));
+    return await linkModule(code, shaderModuleUrl);
   }
   catch (cause) {
     throw SourceError.thrown(cause, null);

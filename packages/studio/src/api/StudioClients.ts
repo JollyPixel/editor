@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   AUDIT_URL_PATH,
+  GAME_URL_PATH,
   GOLEM_TOKENS_URL_PATH,
   PREFERENCES_URL_PATH,
   PROJECT_URL_PATH,
@@ -30,7 +31,7 @@ export class StudioClients {
 
     return new StudioClients({
       shares: new ShareLinksClient(endpoint(SHARES_URL_PATH)),
-      archive: new ProjectArchiveClient(project),
+      archive: new ProjectArchiveClient(project, endpoint(GAME_URL_PATH)),
       project: new ProjectSettingsClient(project),
       audit: new AuditClient(endpoint(AUDIT_URL_PATH)),
       preferences: new PreferencesClient(endpoint(PREFERENCES_URL_PATH)),

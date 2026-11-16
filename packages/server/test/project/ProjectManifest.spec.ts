@@ -141,7 +141,8 @@ describe("ProjectManifest", () => {
                 }
               }
             }
-          ]
+          ],
+          sceneComponents: []
         }
       ],
       kinds: [],

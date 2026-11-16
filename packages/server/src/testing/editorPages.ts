@@ -18,13 +18,10 @@ import { ASSET_KINDS } from "@jolly-pixel/asset.voxel-map";
 import {
   EditorPackage,
   type EditorPage
-} from "../node/editors/EditorPackage.ts";
-import { EditorPackages } from "../node/editors/EditorPackages.ts";
-import type { Middleware } from "../node/http/Middleware.ts";
-import { StudioAccess } from "../node/project/StudioAccess.ts";
-import { StudioProject } from "../node/project/StudioProject.ts";
-import { DEFAULT_PROJECT_SECTIONS } from "../project/api.ts";
-import { KindFilter } from "../project/KindFilter.ts";
+} from "../editors/node/EditorPackage.ts";
+import { EditorPackages } from "../editors/node/EditorPackages.ts";
+import type { Middleware } from "../http/node/Middleware.ts";
+import { StudioProject } from "../project/node/StudioProject.ts";
 import { PASSED_ON_STATUS } from "./serveBackend.ts";
 
 // CONSTANTS
@@ -109,12 +106,7 @@ export function voxelMapProject(
       })
     ], StudioProject.resolver(root, {
       fallbacks: [kPackageRoot]
-    })),
-    {
-      ...DEFAULT_PROJECT_SECTIONS,
-      access: StudioAccess.read({}, "project.json"),
-      kindFilter: KindFilter.NONE
-    }
+    }))
   );
 }
 

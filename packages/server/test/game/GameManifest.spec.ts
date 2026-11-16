@@ -44,16 +44,6 @@ describe("scriptImports", () => {
     });
   });
 
-  test("resolves a path to the script at that exact path before another script's form", () => {
-    const imports = scriptImports([
-      record("typed", "script", "util.ts"),
-      record("plain", "script", "util.js")
-    ], "./");
-
-    assert.equal(imports["./modules/util.js"], "./modules/util.js.js?revision=plain-rev");
-    assert.equal(imports["./modules/util"], "./modules/util.ts.js?revision=typed-rev");
-  });
-
   test("escapes the URL delimiters a project path may hold", () => {
     const imports = scriptImports([
       record("odd", "script", "100%/why?#1.ts")

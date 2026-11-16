@@ -71,6 +71,8 @@ export interface ListAllOptions {
   newestFirst?: boolean;
 }
 
+export type IterateAllOptions = Omit<ListAllOptions, "limit">;
+
 export interface EventWriter {
   append(
     input: AppendInput
@@ -158,6 +160,10 @@ export interface EventReader {
   listAll(
     options?: ListAllOptions
   ): Promise<Event[]>;
+
+  iterateAll(
+    options?: IterateAllOptions
+  ): AsyncIterableIterator<Event>;
 
   listFromCheckpoints(
     options: ListFromCheckpointsOptions

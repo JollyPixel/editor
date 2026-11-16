@@ -314,7 +314,7 @@ path stops matching once the scene is renamed or moved.
 
 ### Game export
 
-`GET /api/project/game.zip`, offered as the Web target of the export dialog
+`GET /api/game/export`, offered as the Web target of the export dialog
 to a role with `studio.$export`, once the project has a default scene. It
 builds every scene and the assets they reach: their dependencies, the scripts
 a script imports, and the files in a model's folder and its subfolders except

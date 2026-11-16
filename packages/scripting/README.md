@@ -73,6 +73,8 @@ import { buildScript } from "@jolly-pixel/scripting";
 - [Build](./docs/build.md): `buildScript`, `buildShader` and `SourceError`
 - [`ScriptImportPolicy`](./docs/ScriptImportPolicy.md): `SCRIPT_IMPORTS`,
   `SHADER_IMPORTS` and `ScriptImportError`
+- [`ScriptModules`](./docs/ScriptModules.md): the script a relative import
+  names, and `SCRIPT_KIND`
 - [`readScriptOutline`](./docs/readScriptOutline.md): the outline and its
   schemas
 

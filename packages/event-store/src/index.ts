@@ -14,6 +14,7 @@ export type {
   EventType,
   EventWriter,
   Event,
+  IterateAllOptions,
   ListAllOptions,
   ListFromCheckpointsOptions,
   RejectionListener,

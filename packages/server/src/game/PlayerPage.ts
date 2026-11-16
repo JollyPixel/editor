@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
 import * as z from "zod";
 
+// Import Internal Dependencies
+import { insertInHead } from "../http/insertInHead.ts";
+
 // CONSTANTS
 const kImportMapStart = "<script type=\"importmap\">";
 const kScriptEnd = "</script>";
-const kHeadStart = /<head(?:\s[^>]*)?>/i;
 const kImportMapSchema = z.object({
   imports: z.record(z.string(), z.string()).default({})
 });
@@ -58,14 +60,10 @@ export class PlayerPage {
 
     const map = JSON.stringify({ imports: this.imports })
       .replaceAll("<", "\\u003c");
-    const tag = `<script type="importmap">${map}</script>`;
-    const head = kHeadStart.exec(this.#html);
-    if (head === null) {
-      return `${tag}${this.#html}`;
-    }
 
-    const end = head.index + head[0].length;
-
-    return `${this.#html.slice(0, end)}${tag}${this.#html.slice(end)}`;
+    return insertInHead(
+      this.#html,
+      `<script type="importmap">${map}</script>`
+    );
   }
 }

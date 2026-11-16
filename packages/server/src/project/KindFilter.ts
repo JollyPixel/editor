@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import type { KindFilterSection } from "./api.ts";
+import type { KindFilterSection } from "./ProjectSections.ts";
 
 export class KindFilter {
   static readonly NONE = new KindFilter([]);

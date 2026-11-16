@@ -43,7 +43,7 @@ export interface EventJournal {
   close(): void;
 }
 
-export interface EventLog extends EventReader {
+export interface EventLog extends Omit<EventReader, "iterateAll"> {
   readonly tags: TagLog;
   insert(
     input: AppendInput

@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
+import { SCRIPT_KIND } from "@jolly-pixel/scripting";
+
+export { SCRIPT_KIND };
 
 // CONSTANTS
-export const SCRIPT_KIND = "script";
 export const SCRIPT_COMMAND = "script.command";
 export const SCRIPT_EXTENSION = ".ts";
 export const SCRIPT_CONTENT_TYPES = {

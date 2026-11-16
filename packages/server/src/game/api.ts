@@ -19,8 +19,21 @@ export const GAME_ROUTES = {
   module: {
     method: "GET",
     path: `${GAME_MODULES_DIR}/*`
+  },
+  export: {
+    method: "GET",
+    path: "export"
   }
 } as const satisfies Record<string, ApiRoute>;
+
+export const GAME_EXPORT_ASSETS = ["reachable", "all"] as const;
+
+export const gameExportQuerySchema = z.object({
+  assets: z.enum(GAME_EXPORT_ASSETS).default("reachable")
+});
+
+export type GameExportAssets = typeof GAME_EXPORT_ASSETS[number];
+export type GameExportQuery = z.infer<typeof gameExportQuerySchema>;
 
 export const gameQuerySchema = z.object({
   start: z.string().min(1)

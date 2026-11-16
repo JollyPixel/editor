@@ -330,7 +330,7 @@ with every listed page inlined.
   refused.
 
 `@jolly-pixel/server` serves `/api/golem/tokens` (create, list own, revoke
-own) from `src/golem/api.ts` and `src/node/golem/routes.ts`.
+own) from `src/golem/api.ts` and `src/golem/node/routes.ts`.
 
 ### Agents Settings page
 

@@ -10,7 +10,7 @@ import { typescriptConfig } from "@openally/config.oxlint";
 
 // CONSTANTS
 const kUiElements = readdirSync(new URL("./packages/ui/src/elements", import.meta.url))
-  .map((file) => file.replace(/\.ts$/, ""));
+  .map((file: string) => file.replace(/\.ts$/, ""));
 const kAssetServerLayers = ["common", "model", "storage", "catalog", "live", "client", "node"];
 
 function assetServerLayer(
@@ -145,7 +145,23 @@ export default defineConfig(typescriptConfig({
             patterns: [
               {
                 group: ["three", "three/*", "**/three/**"],
-                message: "The engine core stays renderer-agnostic: three.js math comes from core/math.ts, the rest lives in src/three/."
+                message: "The engine core stays renderer-agnostic: three.js math comes from" +
+                  "core/math.ts, the rest lives in src/three/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      files: ["packages/server/src/**"],
+      rules: {
+        "no-restricted-imports": [
+          "error", {
+            patterns: [
+              {
+                group: ["node:*", "@jolly-pixel/*/node", "**/node/**", "**/testing/**"],
+                message: "The server root entry is browser-safe: Node.js code lives in a node/ folder."
               }
             ]
           }
@@ -154,20 +170,31 @@ export default defineConfig(typescriptConfig({
     },
     {
       files: [
-        "packages/server/src/index.ts",
-        "packages/server/src/{audit,editors,game,http,preferences,project,shares}/**"
+        "packages/server/src/{node,testing}.ts",
+        "packages/server/src/testing/**",
+        "packages/server/src/*/node/**"
       ],
       rules: {
         "no-restricted-imports": [
           "error", {
             patterns: [
               {
-                group: ["node:*", "@jolly-pixel/*/node", "**/node/**", "**/testing/**"],
-                message: "The server root entry is browser-safe: Node.js code lives in src/node/."
+                group: ["fastify", "@fastify/*"],
+                message: "Only a concern's node/routes.ts, src/http/node/ and StudioApi speak Fastify."
               }
             ]
           }
         ]
+      }
+    },
+    {
+      files: [
+        "packages/server/src/*/node/routes.ts",
+        "packages/server/src/http/node/**",
+        "packages/server/src/server/node/StudioApi.ts"
+      ],
+      rules: {
+        "no-restricted-imports": "off"
       }
     },
     {

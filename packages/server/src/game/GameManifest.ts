@@ -5,6 +5,10 @@ import {
   type AssetManifestData,
   type AssetRecord
 } from "@jolly-pixel/asset";
+import {
+  SCRIPT_KIND,
+  ScriptModules
+} from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
 import {
@@ -14,7 +18,7 @@ import {
 import {
   physicsSectionSchema,
   type PhysicsSection
-} from "../project/api.ts";
+} from "../project/ProjectSections.ts";
 
 // CONSTANTS
 export const GAME_MANIFEST_VERSION = 1;
@@ -23,7 +27,17 @@ export const CURRENT_REVISION = "current";
 export const GAME_MANIFEST_FILE = "game.json";
 export const GAME_MANIFEST_META = "jolly-game";
 const kBuildsDir = "builds";
-const kScriptKind = "script";
+
+export interface ArtifactPath {
+  /**
+   * Path of the build in an exported game, from its root.
+   */
+  readonly file: string;
+  /**
+   * URL of the build, relative to `game.json`.
+   */
+  readonly url: string;
+}
 
 export interface GameManifestData {
   readonly version: typeof GAME_MANIFEST_VERSION;
@@ -60,7 +74,7 @@ export function gameManifest(
     assets: catalog.toJSON(),
     artifacts: Object.fromEntries(Array.from(
       catalog,
-      (record) => [record.id.value, artifactUrl(record)]
+      (record) => [record.id.value, artifactPath(record).url]
     )),
     physics
   };
@@ -70,48 +84,37 @@ export function scriptImports(
   records: Iterable<AssetRecord>,
   base: string
 ): Record<string, string> {
-  const scripts = new Map<string, AssetRecord>();
-  for (const record of records) {
-    if (record.hasKind(kScriptKind)) {
-      scripts.set(record.path.value, record);
-    }
-  }
-
   const imports: Record<string, string> = {};
-  for (const [path, record] of scripts) {
-    const url = `${base}${artifactUrl(record)}`;
-    for (const specifier of new GameModule(path).specifiers()) {
-      if (GameModule.resolve(specifier, scripts) === path) {
-        imports[`${base}${moduleUrl(specifier)}`] = url;
-      }
-    }
+  for (const [specifier, script] of new ScriptModules(records).entries()) {
+    imports[`${base}${moduleUrl(specifier)}`] = `${base}${artifactPath(script).url}`;
   }
 
   return imports;
 }
 
-export function artifactSegments(
+export function artifactPath(
   record: AssetRecord
-): string[] {
-  if (record.hasKind(kScriptKind)) {
-    return new GameModule(record.path.value).segments;
+): ArtifactPath {
+  const revision = record.revision ?? CURRENT_REVISION;
+  if (record.hasKind(SCRIPT_KIND)) {
+    const module = new GameModule(record.path.value);
+
+    return {
+      file: module.file,
+      url: module.url(revision)
+    };
   }
 
   const { name, extension } = record.path;
-
-  return [
+  const segments = [
     kBuildsDir,
     record.id.value,
-    record.revision ?? CURRENT_REVISION,
+    revision,
     `${name}${extension}`
   ];
-}
 
-function artifactUrl(
-  record: AssetRecord
-): string {
-  return record.hasKind(kScriptKind) ?
-    new GameModule(record.path.value)
-      .url(record.revision ?? CURRENT_REVISION) :
-    artifactSegments(record).map(encodeURIComponent).join("/");
+  return {
+    file: segments.join("/"),
+    url: segments.map(encodeURIComponent).join("/")
+  };
 }

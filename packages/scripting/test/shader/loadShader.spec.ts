@@ -6,7 +6,10 @@ import assert from "node:assert/strict";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { SourceError } from "@jolly-pixel/scripting";
+import {
+  SHADER_IMPORTS,
+  SourceError
+} from "@jolly-pixel/scripting";
 import { loadShader } from "@jolly-pixel/scripting/three";
 
 // CONSTANTS
@@ -70,6 +73,20 @@ describe("loadShader", () => {
     assert.strictEqual(inputs.speed.value, 3);
     assert.strictEqual(inputs.tint.value.getHexString(), "ff0000");
     assert.notStrictEqual(inputs.tint.value, tint);
+  });
+
+  test("links every module SHADER_IMPORTS allows", async() => {
+    const imports = Array.from(
+      SHADER_IMPORTS.modules,
+      (specifier, index) => `import * as m${index} from "${specifier}";`
+    );
+    const shader = await loadShader([
+      ...imports,
+      "import { MeshBasicNodeMaterial } from \"three/webgpu\";",
+      "export default () => new MeshBasicNodeMaterial();"
+    ].join("\n"), kName);
+
+    assert.ok(shader.createMaterial().material instanceof THREE.MeshBasicNodeMaterial);
   });
 
   test("refuses a module it cannot turn into a node material, at the faulty line", async() => {

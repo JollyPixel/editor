@@ -15,12 +15,16 @@ import type {
   EventReader,
   EventTag,
   EventTags,
+  IterateAllOptions,
   SubscribeOptions,
   TypedEventStore
 } from "../EventStore.ts";
 import type {
   EventLog
 } from "./EventLog.ts";
+
+// CONSTANTS
+const kIteratePageSize = 200;
 
 type AppendNotifications = {
   append: (
@@ -52,6 +56,7 @@ export function createEventStore<
     get: (assetId, eventVersion) => log.get(assetId, eventVersion),
     list: (assetId, fromVersion) => log.list(assetId, fromVersion),
     listAll: (options) => log.listAll(options),
+    iterateAll: (options) => iterateAll(log, options),
     listFromCheckpoints: (options) => log.listFromCheckpoints(options)
   };
   const tags: EventTags = {
@@ -102,4 +107,31 @@ export function createEventStore<
     close,
     [Symbol.asyncDispose]: close
   };
+}
+
+async function* iterateAll(
+  log: EventLog,
+  options: IterateAllOptions = {}
+): AsyncIterableIterator<Event> {
+  let { fromEventId, beforeEventId } = options;
+  for (;;) {
+    const page = await log.listAll({
+      ...options,
+      fromEventId,
+      beforeEventId,
+      limit: kIteratePageSize
+    });
+    yield* page;
+    if (page.length < kIteratePageSize) {
+      return;
+    }
+
+    const last = page[page.length - 1].eventId;
+    if (options.newestFirst) {
+      beforeEventId = last;
+    }
+    else {
+      fromEventId = last;
+    }
+  }
 }

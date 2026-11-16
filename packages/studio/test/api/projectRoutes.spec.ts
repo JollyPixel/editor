@@ -8,7 +8,10 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
 import { readAssetArchive } from "@jolly-pixel/asset-server";
-import { PROJECT_URL_PATH } from "@jolly-pixel/server";
+import {
+  GAME_URL_PATH,
+  PROJECT_URL_PATH
+} from "@jolly-pixel/server";
 import {
   browser,
   type ServedBackend
@@ -26,10 +29,16 @@ function archiveClient(
   backend: ServedBackend,
   fetch?: typeof globalThis.fetch
 ): ProjectArchiveClient {
-  return new ProjectArchiveClient({
-    url: new URL(`.${PROJECT_URL_PATH}`, backend.url),
-    fetch
-  });
+  return new ProjectArchiveClient(
+    {
+      url: new URL(`.${PROJECT_URL_PATH}`, backend.url),
+      fetch
+    },
+    {
+      url: new URL(`.${GAME_URL_PATH}`, backend.url),
+      fetch
+    }
+  );
 }
 
 async function signedIn(
@@ -94,7 +103,7 @@ describe("GET /api/project/archive", () => {
   });
 });
 
-describe("GET /api/project/game.zip", () => {
+describe("GET /api/game/export", () => {
   test("answers 409 while the project has no default scene", async() => {
     await using backend = await serveBackend({ defaultRole: "spectator" });
     const owner = archiveClient(backend, await signedIn(backend, "Alice"));

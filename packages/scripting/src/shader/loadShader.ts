@@ -1,10 +1,15 @@
 // Import Internal Dependencies
-import { stripTypes } from "#stripper";
+import { buildShader } from "../compiler/build.ts";
+import { SourceError } from "../compiler/errors/SourceError.ts";
 import { ShaderModule } from "./ShaderModule.ts";
 
 export async function loadShader(
   source: string,
   name: string
 ): Promise<ShaderModule> {
-  return ShaderModule.load(await stripTypes(source, name), name);
+  const code = await buildShader(source).catch((cause: unknown) => {
+    throw SourceError.thrown(cause, null);
+  });
+
+  return ShaderModule.load(code, name);
 }

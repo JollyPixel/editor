@@ -79,6 +79,12 @@ export function countingReads(
     },
     list: (...parameters) => count(store.reader.list(...parameters)),
     listAll: (...parameters) => count(store.reader.listAll(...parameters)),
+    async* iterateAll(...parameters) {
+      for await (const event of store.reader.iterateAll(...parameters)) {
+        read++;
+        yield event;
+      }
+    },
     listFromCheckpoints: (...parameters) => count(
       store.reader.listFromCheckpoints(...parameters)
     )

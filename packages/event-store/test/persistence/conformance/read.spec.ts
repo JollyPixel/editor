@@ -217,4 +217,45 @@ for (const backend of backends) {
       );
     });
   });
+
+  describe(`${backend.name} — iterateAll`, () => {
+    test("reads every event within the bounds, past one page", async() => {
+      await using store = await backend.create();
+      for (let index = 0; index < 450; index++) {
+        await append(store, "a1", { index });
+      }
+
+      const oldestFirst = await iteratedIds(store.reader.iterateAll({
+        fromEventId: 10
+      }));
+      const newestFirst = await iteratedIds(store.reader.iterateAll({
+        newestFirst: true,
+        beforeEventId: 441
+      }));
+
+      assert.deepEqual(oldestFirst, eventIds(11, 450));
+      assert.deepEqual(newestFirst, eventIds(1, 440).reverse());
+    });
+  });
+}
+
+async function iteratedIds(
+  events: AsyncIterable<EventStore.Event>
+): Promise<number[]> {
+  const ids: number[] = [];
+  for await (const event of events) {
+    ids.push(event.eventId);
+  }
+
+  return ids;
+}
+
+function eventIds(
+  from: number,
+  to: number
+): number[] {
+  return Array.from(
+    { length: to - from + 1 },
+    (_, index) => from + index
+  );
 }

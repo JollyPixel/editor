@@ -1,11 +1,36 @@
+// Import Third-party Dependencies
+import * as z from "zod";
+import {
+  ADMIN_ROLE,
+  GUEST_ROLE
+} from "@jolly-pixel/accounts";
+
 // Import Internal Dependencies
-import type {
-  ProjectReply,
-  ProjectRight
-} from "./api.ts";
 import { ProjectRightRefusedError } from "./errors/ProjectRightRefusedError.ts";
 
 // CONSTANTS
+export const SHARE_RIGHT = "studio.$share";
+export const EXPORT_RIGHT = "studio.$export";
+export const SETTINGS_RIGHT = "studio.$settings";
+export const AUDIT_RIGHT = "studio.$audit";
+export const BUILT_IN_ROLES: readonly string[] = [ADMIN_ROLE, GUEST_ROLE];
+
+export const PROJECT_RIGHTS = [
+  "share",
+  "export",
+  "readSettings",
+  "editSettings",
+  "audit",
+  "manageAccess"
+] as const;
+
+export const rightSchema = z.enum(["write", "read", "void"]);
+
+export type Right = z.infer<typeof rightSchema>;
+export type ProjectRight = typeof PROJECT_RIGHTS[number];
+export type NamedRight = typeof SETTINGS_RIGHT | typeof AUDIT_RIGHT;
+export type GrantedRights = Record<ProjectRight, boolean>;
+
 const kRefusals = {
   share: "this role cannot share assets",
   export: "this role cannot export the project",
@@ -25,10 +50,10 @@ export class ProjectRights {
     manageAccess: false
   });
 
-  #granted: ProjectReply;
+  #granted: GrantedRights;
 
   constructor(
-    granted: Readonly<ProjectReply>
+    granted: Readonly<GrantedRights>
   ) {
     this.#granted = {
       ...granted
@@ -49,9 +74,16 @@ export class ProjectRights {
     }
   }
 
-  toJSON(): ProjectReply {
+  toJSON(): GrantedRights {
     return {
       ...this.#granted
     };
   }
+}
+
+export function namedRight(
+  rules: Readonly<Record<string, Right>>,
+  name: NamedRight
+): Right {
+  return Object.hasOwn(rules, name) ? rules[name] : "void";
 }
