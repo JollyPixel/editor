@@ -75,6 +75,7 @@ interface SceneEnvironmentFile {
     | { kind: "none"; }
     | { kind: "linear"; color: ColorJSON; near: number; far: number; }
     | { kind: "exp2"; color: ColorJSON; density: number; };
+  glow?: { strength: number; radius: number; } | null;
 }
 
 type ColorJSON = string; // "#rrggbb"
@@ -354,7 +355,7 @@ class FileScene<TContext> extends Scene<TContext> {
 - `sceneId` is the asset id of `file`. Pass it so a prefab cycle back to this
   scene stops at once, as in the editor, instead of one level down.
 - `awake()` builds the actors in play mode and applies the environment.
-- `destroy()` resets the background, fog and environment map.
+- `destroy()` resets the background, fog, environment map and glow.
 
 ## Saving a running scene
 
@@ -575,7 +576,12 @@ to the graph's `THREE.Scene`:
   [BakedRoomEnvironment](baked-room-environment.md). It loads in the
   background; the map is set once it
   arrives and the world is invalidated. A failed load logs a warning.
-- `dispose()` clears the background, fog and environment map.
+- `glow` blooms emissive surfaces: `strength` is 0 or more, `radius` goes
+  from 0 to 1. It sets the graph's `postProcessing`, which every camera
+  without its own post-processing renders through. Changing `strength` or
+  `radius` keeps the same function, so camera pipelines are not rebuilt. A
+  missing or `null` glow clears it.
+- `dispose()` clears the background, fog, environment map and glow.
 
 ## Built-in definitions
 

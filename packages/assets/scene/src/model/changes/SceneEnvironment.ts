@@ -5,7 +5,8 @@ import type {
   SceneEnvironmentJSON,
   SceneEnvironmentPatch,
   SceneEnvironmentView,
-  SceneFogJSON
+  SceneFogJSON,
+  SceneGlowJSON
 } from "../../network/types.ts";
 
 export type SceneFogKind = SceneFogJSON["kind"];
@@ -31,24 +32,30 @@ const kDefaultFogs = {
     density: 0.02
   }
 } satisfies DefaultFogs;
+const kDefaultGlow: SceneGlowJSON = {
+  strength: 1,
+  radius: 0.4
+};
 
 export class SceneEnvironment {
   static readonly FIELDS: readonly SceneEnvironmentField[] = [
     "background",
     "environment",
-    "fog"
+    "fog",
+    "glow"
   ];
 
   static create(): SceneEnvironmentJSON {
     return {
       background: null,
       environment: {
-        kind: "none",
+        kind: "room",
         intensity: 1
       },
       fog: {
         kind: "none"
-      }
+      },
+      glow: null
     };
   }
 
@@ -73,5 +80,16 @@ export class SceneEnvironment {
       ...kDefaultFogs[kind],
       color: fog.color
     };
+  }
+
+  static switchGlow(
+    glow: SceneGlowJSON | null,
+    enabled: boolean
+  ): SceneGlowJSON | null {
+    if (!enabled) {
+      return null;
+    }
+
+    return glow ?? { ...kDefaultGlow };
   }
 }

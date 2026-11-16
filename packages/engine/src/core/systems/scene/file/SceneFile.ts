@@ -96,6 +96,14 @@ export type SceneFogFile =
   | { kind: "linear"; color: ColorJSON; near: number; far: number; }
   | { kind: "exp2"; color: ColorJSON; density: number; };
 
+export interface SceneGlowFile {
+  strength: number;
+  /**
+   * From 0 to 1.
+   */
+  radius: number;
+}
+
 export interface SceneEnvironmentFile {
   background: ColorJSON | null;
   environment: {
@@ -103,6 +111,10 @@ export interface SceneEnvironmentFile {
     intensity: number;
   };
   fog: SceneFogFile;
+  /**
+   * Blooms emissive surfaces. Left out or `null` draws no bloom.
+   */
+  glow?: SceneGlowFile | null;
 }
 
 export interface SceneFile {

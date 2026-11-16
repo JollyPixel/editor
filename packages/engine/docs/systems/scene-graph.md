@@ -67,7 +67,9 @@ parent's group; `enableLayer` also enables the layer on the scene. `prune`
 removes every scene child that is not a surviving actor group, including
 objects added to the scene by hand. `createEnvironment` returns a
 `ThreeSceneEnvironment` (see [Scene environment](scene-file.md#scene-environment)),
-and `createAudio` a new `GlobalAudio`.
+and `createAudio` a new `GlobalAudio`. `postProcessing` (`null` by default)
+is the [post-processing](renderer.md#post-processing) of every camera that has
+none of its own; the scene environment sets it from the file's `glow`.
 
 A seated actor's group sits in a socket group under its parent's group, so
 the actor's group always holds its local pose and a `TransformControls`

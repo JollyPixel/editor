@@ -151,6 +151,8 @@ is disposed.
   renderer's tone mapping and output color space, so later cameras and
   overlays draw over it.
 - Pass targets follow the canvas size, not the viewport size.
+- A camera without post-processing uses the scene graph's
+  `postProcessing` when it is set.
 
 ## Cameras (render components)
 

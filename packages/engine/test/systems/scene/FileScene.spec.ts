@@ -62,7 +62,8 @@ function createModelSetup(
     ],
     {
       background: "#ff0000",
-      fog: { kind: "linear", color: "#ffffff", near: 2, far: 40 }
+      fog: { kind: "linear", color: "#ffffff", near: 2, far: 40 },
+      glow: { strength: 1, radius: 0.4 }
     }
   );
 
@@ -263,10 +264,12 @@ describe("Systems.FileScene", () => {
     assert.strictEqual(background.getHexString(), "ff0000");
     assert.ok(fog instanceof THREE.Fog);
     assert.deepEqual([fog.near, fog.far], [2, 40]);
+    assert.strictEqual(typeof sm.graph.postProcessing, "function");
 
     sm.unloadScene(scene);
 
     assert.strictEqual(threeScene.background, null);
     assert.strictEqual(threeScene.fog, null);
+    assert.strictEqual(sm.graph.postProcessing, null);
   });
 });

@@ -21,3 +21,13 @@ describe("SceneEnvironment.switchFog", () => {
     assert.strictEqual(SceneEnvironment.switchFog(exp2, "exp2"), exp2);
   });
 });
+
+describe("SceneEnvironment.switchGlow", () => {
+  test("starts a default glow and keeps an existing one", () => {
+    const glow = SceneEnvironment.switchGlow(null, true);
+    assert.deepEqual(glow, { strength: 1, radius: 0.4 });
+
+    assert.strictEqual(SceneEnvironment.switchGlow(glow, true), glow);
+    assert.strictEqual(SceneEnvironment.switchGlow(glow, false), null);
+  });
+});

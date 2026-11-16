@@ -16,6 +16,7 @@ import type {
 } from "../../core/systems/scene/SceneGraph.ts";
 import { GlobalAudio } from "../audio/GlobalAudio.ts";
 import type { ThreeRenderComponent } from "../rendering/ThreeRenderComponent.ts";
+import type { PostProcessing } from "../rendering/compositing/PostProcessing.ts";
 import { disposeObject3D } from "../utils/disposeObject3D.ts";
 import { ThreeSceneEnvironment } from "./ThreeSceneEnvironment.ts";
 
@@ -141,6 +142,7 @@ export class ThreeActorNode implements ActorNode {
 
 export class ThreeSceneGraph implements SceneGraph {
   readonly scene: THREE.Scene;
+  postProcessing: PostProcessing | null = null;
 
   constructor(
     scene: THREE.Scene = new THREE.Scene()
@@ -157,7 +159,7 @@ export class ThreeSceneGraph implements SceneGraph {
   createEnvironment(
     world: World<any, any>
   ): SceneEnvironment {
-    return new ThreeSceneEnvironment(this.scene, world);
+    return new ThreeSceneEnvironment(this, world);
   }
 
   createAudio(): GlobalAudio {

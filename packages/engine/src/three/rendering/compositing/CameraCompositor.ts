@@ -3,6 +3,7 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import type { ThreeRenderComponent } from "../ThreeRenderComponent.ts";
+import type { PostProcessing } from "./PostProcessing.ts";
 import type { CanvasDimensions } from "../../../core/systems/rendering/CanvasDimensions.ts";
 import { Viewport } from "../../../core/systems/rendering/Viewport.ts";
 import {
@@ -46,7 +47,8 @@ export class CameraCompositor {
 
   render(
     scene: THREE.Scene,
-    canvas: CanvasDimensions
+    canvas: CanvasDimensions,
+    scenePostProcessing: PostProcessing | null
   ): void {
     const components = this.#components.sort(byDepth);
     const hasViewports = components.some(hasViewport);
@@ -69,7 +71,11 @@ export class CameraCompositor {
         this.#renderer.clear();
       }
 
-      const pipeline = this.#pipelines.acquire(rc, scene);
+      const pipeline = this.#pipelines.acquire(
+        rc,
+        scene,
+        scenePostProcessing
+      );
       if (pipeline) {
         pipeline.render();
       }

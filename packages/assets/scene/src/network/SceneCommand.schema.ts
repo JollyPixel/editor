@@ -120,13 +120,19 @@ export const sceneFogSchema = z.discriminatedUnion("kind", [
   })
 ]);
 
+export const sceneGlowSchema = z.object({
+  strength: z.number().check(z.minimum(0)),
+  radius: z.number().check(z.minimum(0), z.maximum(1))
+});
+
 const kEnvironmentShape = {
   background: z.nullable(kHexColorSchema),
   environment: z.object({
     kind: z.enum(["none", "room"]),
     intensity: z.number().check(z.minimum(0))
   }),
-  fog: sceneFogSchema
+  fog: sceneFogSchema,
+  glow: z.nullable(sceneGlowSchema)
 };
 
 export const sceneEnvironmentSchema = z.object(kEnvironmentShape);

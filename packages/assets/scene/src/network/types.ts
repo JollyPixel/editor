@@ -14,6 +14,7 @@ import type {
   sceneEnvironmentPatchSchema,
   sceneEnvironmentSchema,
   sceneFogSchema,
+  sceneGlowSchema,
   sceneOverridesSchema,
   sceneSnapshotSchema,
   sceneTransformPatchSchema,
@@ -52,6 +53,7 @@ export type SceneActorOverrideJSON = network.Infer<typeof sceneActorOverrideSche
 export type SceneComponentOverrideJSON = network.Infer<typeof sceneComponentOverrideSchema>;
 export type SceneOverridesJSON = network.Infer<typeof sceneOverridesSchema>;
 export type SceneFogJSON = network.Infer<typeof sceneFogSchema>;
+export type SceneGlowJSON = network.Infer<typeof sceneGlowSchema>;
 export type SceneEnvironmentJSON = network.Infer<typeof sceneEnvironmentSchema>;
 export type SceneEnvironmentPatch = network.Infer<typeof sceneEnvironmentPatchSchema>;
 export type SceneEnvironmentField = keyof SceneEnvironmentJSON;

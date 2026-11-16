@@ -38,9 +38,10 @@ export class CameraPipelines {
 
   acquire(
     component: ThreeRenderComponent,
-    scene: THREE.Scene
+    scene: THREE.Scene,
+    scenePostProcessing: PostProcessing | null
   ): CameraPipeline | null {
-    const postProcessing = component.postProcessing ?? null;
+    const postProcessing = component.postProcessing ?? scenePostProcessing;
     const camera = component.threeCamera;
     const entry = this.#entries.get(component);
 

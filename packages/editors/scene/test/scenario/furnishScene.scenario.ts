@@ -129,8 +129,9 @@ const kBlank: SceneExpectation = {
   scenes: { [kRoom]: kSeedActors },
   environment: {
     background: null,
-    environment: { kind: "none", intensity: 1 },
-    fog: { kind: "none" }
+    environment: { kind: "room", intensity: 1 },
+    fog: { kind: "none" },
+    glow: null
   },
   assets: []
 };

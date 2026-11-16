@@ -74,7 +74,7 @@ export async function probe(
     let remaining = kFrames;
     void renderer.setAnimationLoop(() => {
       try {
-        compositor.render(scene, new CanvasDimensions(kSize, kSize));
+        compositor.render(scene, new CanvasDimensions(kSize, kSize), null);
         if (options.overlay) {
           renderer.setViewport(kSize - 8, 0, 8, 8);
           renderer.render(overlay, camera);

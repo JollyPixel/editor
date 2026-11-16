@@ -8,6 +8,8 @@ import type { Logger } from "../../core/systems/Logger.ts";
 import {
   BakedRoomEnvironment
 } from "../rendering/environment/BakedRoomEnvironment.ts";
+import { EmissiveGlow } from "../rendering/compositing/EmissiveGlow.ts";
+import type { ThreeSceneGraph } from "./ThreeSceneGraph.ts";
 import type {
   SceneEnvironmentFile,
   SceneFogFile
@@ -15,18 +17,19 @@ import type {
 
 export class ThreeSceneEnvironment implements SceneEnvironment {
   #world: World<any, any>;
-  #scene: THREE.Scene;
+  #graph: ThreeSceneGraph;
   #logger: Logger;
+  #glow = new EmissiveGlow();
   #room: THREE.RenderTarget | null = null;
   #wantsRoom = false;
   #disposed = false;
 
   constructor(
-    scene: THREE.Scene,
+    graph: ThreeSceneGraph,
     world: World<any, any>
   ) {
     this.#world = world;
-    this.#scene = scene;
+    this.#graph = graph;
     this.#logger = world.logger.child({
       namespace: "Systems.SceneEnvironment"
     });
@@ -35,14 +38,18 @@ export class ThreeSceneEnvironment implements SceneEnvironment {
   apply(
     file: SceneEnvironmentFile
   ): void {
-    this.#scene.background = file.background === null ?
+    this.#graph.scene.background = file.background === null ?
       null :
       new THREE.Color(file.background);
-    this.#scene.fog = createFog(file.fog);
-    this.#scene.environmentIntensity = file.environment.intensity;
+    this.#graph.scene.fog = createFog(file.fog);
+    this.#graph.scene.environmentIntensity = file.environment.intensity;
     this.#wantsRoom = file.environment.kind === "room";
-    this.#scene.environment = this.#wantsRoom ?
+    this.#graph.scene.environment = this.#wantsRoom ?
       this.#room?.texture ?? null :
+      null;
+
+    this.#graph.postProcessing = file.glow ?
+      this.#glow.apply(file.glow) :
       null;
 
     if (this.#wantsRoom && this.#room === null) {
@@ -60,7 +67,7 @@ export class ThreeSceneEnvironment implements SceneEnvironment {
           this.#world.renderer.source
         );
         if (this.#wantsRoom) {
-          this.#scene.environment = this.#room.texture;
+          this.#graph.scene.environment = this.#room.texture;
           this.#world.invalidate();
         }
       },
@@ -74,10 +81,11 @@ export class ThreeSceneEnvironment implements SceneEnvironment {
 
   dispose(): void {
     this.#disposed = true;
-    this.#scene.background = null;
-    this.#scene.fog = null;
-    this.#scene.environment = null;
-    this.#scene.environmentIntensity = 1;
+    this.#graph.scene.background = null;
+    this.#graph.scene.fog = null;
+    this.#graph.scene.environment = null;
+    this.#graph.scene.environmentIntensity = 1;
+    this.#graph.postProcessing = null;
     this.#room?.dispose();
     this.#room = null;
   }

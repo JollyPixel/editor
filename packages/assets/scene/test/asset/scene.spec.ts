@@ -65,9 +65,22 @@ describe("scene file codec", () => {
     assert.equal("visible" in stored.actors[0], false);
     assert.deepEqual(stored.actors[1].transform, { position: { x: 1, y: 0, z: 0 } });
     assert.equal(stored.actors[1].visible, false);
+    assert.equal("glow" in stored.environment, false);
   });
 
   test("decodes the stored form back to the full file", () => {
     assert.deepEqual(SCENE_FILE.decode(SCENE_FILE.encode(file)), file);
+  });
+
+  test("keeps a glow through the stored form", () => {
+    const glowing = {
+      ...file,
+      environment: {
+        ...file.environment,
+        glow: { strength: 1.5, radius: 0.4 }
+      }
+    };
+
+    assert.deepEqual(SCENE_FILE.decode(SCENE_FILE.encode(glowing)), glowing);
   });
 });

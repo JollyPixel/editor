@@ -12,6 +12,7 @@ import {
 import type { ThreeRenderComponent } from "../../../../src/three/rendering/ThreeRenderComponent.ts";
 import { CanvasDimensions } from "../../../../src/core/systems/rendering/CanvasDimensions.ts";
 import type {
+  PostProcessing,
   PostProcessingContext
 } from "../../../../src/three/rendering/compositing/PostProcessing.ts";
 import {
@@ -43,7 +44,8 @@ describe("Systems.Rendering.CameraCompositor post-processing", () => {
     );
 
     function render(
-      components: ThreeRenderComponent[]
+      components: ThreeRenderComponent[],
+      scenePostProcessing: PostProcessing | null = null
     ) {
       for (const component of [...compositor.components]) {
         if (!components.includes(component)) {
@@ -53,7 +55,11 @@ describe("Systems.Rendering.CameraCompositor post-processing", () => {
       for (const component of components) {
         compositor.add(component);
       }
-      compositor.render(scene, new CanvasDimensions(800, 600));
+      compositor.render(
+        scene,
+        new CanvasDimensions(800, 600),
+        scenePostProcessing
+      );
     }
 
     return {
@@ -98,6 +104,34 @@ describe("Systems.Rendering.CameraCompositor post-processing", () => {
       renderer.render.mock.calls.map((call) => call.arguments[1]),
       [direct.threeCamera]
     );
+  });
+
+  test("should render cameras without post-processing through the scene post-processing", () => {
+    const { renderer, pipelines, render } = setup();
+    const outputNode = new THREE.Node();
+    const own = new THREE.Node();
+
+    render([
+      createRenderComponent(),
+      createRenderComponent({ postProcessing: () => own })
+    ], () => outputNode);
+
+    assert.strictEqual(renderer.render.mock.callCount(), 0);
+    assert.deepStrictEqual(
+      pipelines.map((pipeline) => pipeline.outputNode),
+      [outputNode, own]
+    );
+  });
+
+  test("should render directly once the scene post-processing is cleared", () => {
+    const { renderer, pipelines, render } = setup();
+    const component = createRenderComponent();
+
+    render([component], () => new THREE.Node());
+    render([component]);
+
+    assert.strictEqual(pipelines[0].dispose.mock.callCount(), 1);
+    assert.strictEqual(renderer.render.mock.callCount(), 1);
   });
 
   test("should set the camera viewport before the pipeline draws", () => {

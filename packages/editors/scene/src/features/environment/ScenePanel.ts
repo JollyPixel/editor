@@ -11,7 +11,8 @@ import {
   type SceneEnvironmentJSON,
   type SceneEnvironmentPatch,
   type SceneFogJSON,
-  type SceneFogKind
+  type SceneFogKind,
+  type SceneGlowJSON
 } from "@jolly-pixel/asset.scene/client";
 import {
   SubscriptionController,
@@ -29,6 +30,17 @@ import type { SceneEditing } from "../../editing/SceneEditing.ts";
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 type EnvironmentMapKind = SceneEnvironmentJSON["environment"]["kind"];
+
+interface FieldEdits<TValue> {
+  preview(value: TValue): void;
+  commit(value: TValue): void;
+}
+
+interface NumberRange {
+  min: number;
+  max?: number;
+  step: number;
+}
 
 // CONSTANTS
 const kDefaultBackground = "#20252b";
@@ -75,7 +87,7 @@ export class ScenePanel extends LitElement {
       gap: var(--jolly-row-gap, 4px);
       padding: var(--jolly-space-2, 8px);
       overflow: auto;
-  
+
       --jolly-label-width: 12ch;
     }
   `;
@@ -94,16 +106,16 @@ export class ScenePanel extends LitElement {
 
     const { draft } = editing;
     const environment = draft.environment();
-    function preview(
-      patch: SceneEnvironmentPatch
-    ): void {
-      draft.editEnvironment(patch);
-    }
-    function commit(
-      patch: SceneEnvironmentPatch
-    ): void {
-      draft.commitEnvironment(patch);
-    }
+    const edits: FieldEdits<SceneEnvironmentPatch> = {
+      preview: (patch) => draft.editEnvironment(patch),
+      commit: (patch) => draft.commitEnvironment(patch)
+    };
+    const environmentMapEdits = mapEdits(
+      edits,
+      (map: SceneEnvironmentJSON["environment"]) => {
+        return { environment: map };
+      }
+    );
 
     return html`
       <jolly-folder
@@ -115,24 +127,19 @@ export class ScenePanel extends LitElement {
         <jolly-checkbox
           label="Color"
           .value=${environment.background !== null}
-          @jolly-change=${(event: ChangeEvent<boolean>) => commit({
+          @jolly-change=${(event: ChangeEvent<boolean>) => edits.commit({
             background: event.detail.value ? kDefaultBackground : null
           })}
         ></jolly-checkbox>
         ${environment.background === null ?
           nothing :
-          html`
-            <jolly-color
-              label="Background"
-              .value=${environment.background}
-              @jolly-input=${(event: ChangeEvent<string>) => preview({
-                background: event.detail.value
-              })}
-              @jolly-change=${(event: ChangeEvent<string>) => commit({
-                background: event.detail.value
-              })}
-            ></jolly-color>
-          `}
+          colorField(
+            "Background",
+            environment.background,
+            mapEdits(edits, (background: string) => {
+              return { background };
+            })
+          )}
       </jolly-folder>
       <jolly-folder
         key="environment"
@@ -144,31 +151,17 @@ export class ScenePanel extends LitElement {
           label="Map"
           .options=${kEnvironmentKinds}
           .value=${environment.environment.kind}
-          @jolly-change=${(event: ChangeEvent<EnvironmentMapKind>) => commit({
-            environment: {
-              ...environment.environment,
-              kind: event.detail.value
-            }
+          @jolly-change=${(event: ChangeEvent<EnvironmentMapKind>) => environmentMapEdits.commit({
+            ...environment.environment,
+            kind: event.detail.value
           })}
         ></jolly-select>
-        <jolly-number
-          label="Intensity"
-          min="0"
-          step="0.05"
-          .value=${environment.environment.intensity}
-          @jolly-input=${(event: ChangeEvent<number>) => preview({
-            environment: {
-              ...environment.environment,
-              intensity: event.detail.value
-            }
-          })}
-          @jolly-change=${(event: ChangeEvent<number>) => commit({
-            environment: {
-              ...environment.environment,
-              intensity: event.detail.value
-            }
-          })}
-        ></jolly-number>
+        ${numberField(
+          "Intensity",
+          environment.environment.intensity,
+          { min: 0, step: 0.05 },
+          editField(environmentMapEdits, environment.environment, "intensity")
+        )}
       </jolly-folder>
       <jolly-folder
         key="fog"
@@ -180,94 +173,162 @@ export class ScenePanel extends LitElement {
           label="Fog"
           .options=${kFogKinds}
           .value=${environment.fog.kind}
-          @jolly-change=${(event: ChangeEvent<SceneFogKind>) => commit({
+          @jolly-change=${(event: ChangeEvent<SceneFogKind>) => edits.commit({
             fog: SceneEnvironment.switchFog(environment.fog, event.detail.value)
           })}
         ></jolly-select>
         ${renderFogFields(
           environment.fog,
-          (fog) => preview({ fog }),
-          (fog) => commit({ fog })
+          mapEdits(edits, (fog: SceneFogJSON) => {
+            return { fog };
+          })
+        )}
+      </jolly-folder>
+      <jolly-folder
+        key="glow"
+        label="Glow"
+        storage-key="scene:folder:glow"
+        flush
+      >
+        <jolly-checkbox
+          label="Bloom"
+          .value=${environment.glow !== null}
+          @jolly-change=${(event: ChangeEvent<boolean>) => edits.commit({
+            glow: SceneEnvironment.switchGlow(environment.glow, event.detail.value)
+          })}
+        ></jolly-checkbox>
+        ${renderGlowFields(
+          environment.glow,
+          mapEdits(edits, (glow: SceneGlowJSON) => {
+            return { glow };
+          })
         )}
       </jolly-folder>
     `;
   }
 }
 
+function renderGlowFields(
+  glow: SceneGlowJSON | null,
+  edits: FieldEdits<SceneGlowJSON>
+): TemplateResult | typeof nothing {
+  if (glow === null) {
+    return nothing;
+  }
+
+  return html`
+    ${numberField(
+      "Strength",
+      glow.strength,
+      { min: 0, step: 0.05 },
+      editField(edits, glow, "strength")
+    )}
+    ${numberField(
+      "Radius",
+      glow.radius,
+      { min: 0, max: 1, step: 0.05 },
+      editField(edits, glow, "radius")
+    )}
+  `;
+}
+
 function renderFogFields(
   fog: SceneFogJSON,
-  preview: (fog: SceneFogJSON) => void,
-  commit: (fog: SceneFogJSON) => void
+  edits: FieldEdits<SceneFogJSON>
 ): TemplateResult | typeof nothing {
   if (fog.kind === "none") {
     return nothing;
   }
 
-  const color = html`
-    <jolly-color
-      label="Color"
-      .value=${fog.color}
-      @jolly-input=${(event: ChangeEvent<string>) => preview({
-        ...fog,
-        color: event.detail.value
-      })}
-      @jolly-change=${(event: ChangeEvent<string>) => commit({
-        ...fog,
-        color: event.detail.value
-      })}
-    ></jolly-color>
-  `;
+  const color = colorField(
+    "Color",
+    fog.color,
+    editField(edits, fog, "color")
+  );
   if (fog.kind === "exp2") {
     return html`
       ${color}
-      <jolly-number
-        label="Density"
-        min="0"
-        step="0.001"
-        .value=${fog.density}
-        @jolly-input=${(event: ChangeEvent<number>) => preview({
-          ...fog,
-          density: event.detail.value
-        })}
-        @jolly-change=${(event: ChangeEvent<number>) => commit({
-          ...fog,
-          density: event.detail.value
-        })}
-      ></jolly-number>
+      ${numberField(
+        "Density",
+        fog.density,
+        { min: 0, step: 0.001 },
+        editField(edits, fog, "density")
+      )}
     `;
   }
 
   return html`
     ${color}
+    ${numberField(
+      "Near",
+      fog.near,
+      { min: 0, step: 0.5 },
+      editField(edits, fog, "near")
+    )}
+    ${numberField(
+      "Far",
+      fog.far,
+      { min: 0, step: 0.5 },
+      editField(edits, fog, "far")
+    )}
+  `;
+}
+
+function numberField(
+  label: string,
+  value: number,
+  range: NumberRange,
+  edits: FieldEdits<number>
+): TemplateResult {
+  return html`
     <jolly-number
-      label="Near"
-      min="0"
-      step="0.5"
-      .value=${fog.near}
-      @jolly-input=${(event: ChangeEvent<number>) => preview({
-        ...fog,
-        near: event.detail.value
-      })}
-      @jolly-change=${(event: ChangeEvent<number>) => commit({
-        ...fog,
-        near: event.detail.value
-      })}
-    ></jolly-number>
-    <jolly-number
-      label="Far"
-      min="0"
-      step="0.5"
-      .value=${fog.far}
-      @jolly-input=${(event: ChangeEvent<number>) => preview({
-        ...fog,
-        far: event.detail.value
-      })}
-      @jolly-change=${(event: ChangeEvent<number>) => commit({
-        ...fog,
-        far: event.detail.value
-      })}
+      label=${label}
+      .min=${range.min}
+      .max=${range.max ?? Number.POSITIVE_INFINITY}
+      .step=${range.step}
+      .value=${value}
+      @jolly-input=${(event: ChangeEvent<number>) => edits.preview(event.detail.value)}
+      @jolly-change=${(event: ChangeEvent<number>) => edits.commit(event.detail.value)}
     ></jolly-number>
   `;
+}
+
+function colorField(
+  label: string,
+  value: string,
+  edits: FieldEdits<string>
+): TemplateResult {
+  return html`
+    <jolly-color
+      label=${label}
+      .value=${value}
+      @jolly-input=${(event: ChangeEvent<string>) => edits.preview(event.detail.value)}
+      @jolly-change=${(event: ChangeEvent<string>) => edits.commit(event.detail.value)}
+    ></jolly-color>
+  `;
+}
+
+function editField<TObject extends object, TKey extends keyof TObject>(
+  edits: FieldEdits<NoInfer<TObject>>,
+  object: TObject,
+  key: TKey
+): FieldEdits<TObject[TKey]> {
+  return mapEdits(edits, (value: TObject[TKey]) => {
+    return {
+      ...object,
+      [key]: value
+    };
+  });
+}
+
+function mapEdits<TFrom, TTo>(
+  edits: FieldEdits<TTo>,
+  map: (value: TFrom) => TTo
+): FieldEdits<TFrom> {
+  return {
+    preview: (value) => edits.preview(map(value)),
+    commit: (value) => edits.commit(map(value))
+  };
 }
 
 customElements.define("jolly-scene-environment", ScenePanel);

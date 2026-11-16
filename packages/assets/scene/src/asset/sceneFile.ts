@@ -6,7 +6,7 @@ import * as z from "zod/mini";
 import { SceneTransform } from "../model/changes/SceneTransform.ts";
 import {
   sceneActorSchema,
-  sceneSnapshotSchema,
+  sceneEnvironmentSchema,
   sceneTransformSchema
 } from "../network/SceneCommand.schema.ts";
 import type { SceneActorJSON } from "../network/types.ts";
@@ -21,9 +21,13 @@ const kCompactActorSchema = z.extend(sceneActorSchema, {
   transform: z.optional(z.partial(sceneTransformSchema))
 });
 
+const kCompactEnvironmentSchema = z.extend(sceneEnvironmentSchema, {
+  glow: z.optional(sceneEnvironmentSchema.shape.glow)
+});
+
 export const compactSceneFileSchema = z.object({
   version: z.literal(SCENE_FILE_VERSION),
-  environment: sceneSnapshotSchema.shape.environment,
+  environment: kCompactEnvironmentSchema,
   actors: z.array(kCompactActorSchema)
 });
 
@@ -33,8 +37,11 @@ type CompactSceneActor = CompactSceneFile["actors"][number];
 export function compactSceneFile(
   file: SceneFile
 ): CompactSceneFile {
+  const { glow, ...environment } = file.environment;
+
   return {
     ...file,
+    environment: glow === null ? environment : file.environment,
     actors: file.actors.map(compactActor)
   };
 }
@@ -44,6 +51,10 @@ export function expandSceneFile(
 ): SceneFile {
   return {
     ...compact,
+    environment: {
+      ...compact.environment,
+      glow: compact.environment.glow ?? null
+    },
     actors: compact.actors.map(expandActor)
   };
 }
