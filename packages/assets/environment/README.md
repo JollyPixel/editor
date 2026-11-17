@@ -7,7 +7,9 @@ Private asset workspace for environments (kind `environment`, `.environment.json
 - Scenes reference an environment by id. The scene kind lists it as a dependency, so a game export ships it.
 - The client entry (`@jolly-pixel/asset.environment/client`) gives `EnvironmentDocument`, `environmentDocumentKind()`, `EnvironmentSwitch` (default values when the sky, fog, sun or glow changes kind), `EnvironmentLink`, which follows one environment document while its id stays the same and opens it again on a later link after a failed open, `environmentOpener(session)`, which opens an id only when the catalog records it as an environment, and `PreviewEnvironment`, which lists the project's environments behind a "Lighting preset" option and resolves the file an editor viewport shows: the previewed environment or the editor's preset, with reflections off when the view turns them off.
 
-Browser code imports `@jolly-pixel/asset.environment/client`. The package root also builds the command schemas.
+- `createEnvironmentFile(preset?)` copies an engine preset (`ENVIRONMENT_PRESET_NAMES`), `default` when none is named.
+
+Browser code imports `@jolly-pixel/asset.environment/client`. The package root also builds the command schemas. The server entry (`@jolly-pixel/asset.environment/server`) adds `environmentEditableKind()`, the command schema and protocol a Node peer such as the golem needs to send commands.
 
 ## 🚀 Building
 

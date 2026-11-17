@@ -121,6 +121,10 @@ Removes `actors` with their descendants. An actor listed with one of its ancesto
 
 Adds `ComponentSpec` components to `actor` and returns `{ id, type }` for each. Throws `TypeError` for a prefab instance, which takes no components.
 
+### `useEnvironment(ref): Promise<void>`
+
+Points the scene at an environment asset, given by id or catalog path; `null` renders the scene with the `default` preset. An asset of another kind throws `KindMismatchError` and an unknown one `UnknownAssetError`, before anything is sent.
+
 ### Actors and assets by name
 
 Every actor argument takes a name or an id.
@@ -317,6 +321,35 @@ The texture's pixels ([`PixelSurface`](#pixelsurface)).
 ### Focus
 
 After each batch with a stroke, the golem's cursor (`cursor`) moves to the last painted pixel, as the pixel-art editor shows a person's cursor. A blockset publishes the same cursor.
+
+## `EnvironmentAsset`
+
+The asset for `environment`: the sky, sun, ambient light, reflections, fog, tone mapping, glow and voxel shading a scene renders in. Its one command, `environment-changed`, replaces whole sections. The studio arbitrates by section, so a person editing another section keeps their change.
+
+```ts
+const environment = await golem.open(assetId, "environment");
+await environment.change(
+  { fog: { kind: "exp2", density: 0.03 } },
+  { preset: "day" }
+);
+await environment.settled();
+```
+
+### `read(): EnvironmentFile`
+
+A copy of the file.
+
+### `change(patch, options?): Promise<EnvironmentSection[]>`
+
+Merges each section of `patch` into the current one and sends one command holding only the sections that differ. It returns those sections, and sends nothing when none differs.
+
+- A new `kind` for `sky` or `fog`, or a `sun` or `glow` that was `null`, starts from the defaults the environment editor uses. `null` turns `sun` or `glow` off.
+- `options.preset` (`default`, `studio`, `day` or `night`) makes every section start from that preset instead of the current file.
+- A field the section's kind does not have (`density` on a `linear` fog) throws `TypeError`, and a value the command schema rejects throws `CommandInvalidError`, both before anything is sent.
+
+### Focus
+
+None: the environment editor shows no peer focus.
 
 ## `PixelSurface`
 

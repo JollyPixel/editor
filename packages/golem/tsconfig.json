@@ -11,6 +11,9 @@
       "path": "../asset-server"
     },
     {
+      "path": "../assets/environment"
+    },
+    {
       "path": "../assets/pixel-art"
     },
     {

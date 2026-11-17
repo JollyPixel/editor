@@ -22,6 +22,7 @@ import {
 import { registerAssetTools } from "./tools/asset.ts";
 import { registerCatalogTools } from "./tools/catalog.ts";
 import { registerChatTools } from "./tools/chat.ts";
+import { registerEnvironmentTools } from "./tools/environment.ts";
 import { registerPixelArtTools } from "./tools/pixelArt.ts";
 import { registerPresenceTools } from "./tools/presence.ts";
 import { registerScriptTools } from "./tools/script.ts";
@@ -84,6 +85,7 @@ export class GolemMcpServer {
     registerVoxelMapTools(this.mcp, this.#session);
     registerVoxelModelTools(this.mcp, this.#session);
     registerPixelArtTools(this.mcp, this.#session);
+    registerEnvironmentTools(this.mcp, this.#session);
     registerPresenceTools(this.mcp, this.#session);
     registerChatTools(this.mcp, this.#session);
     registerScriptTools(this.mcp, new ScriptRunner({

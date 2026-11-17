@@ -171,6 +171,32 @@ export function registerSceneTools(
   );
 
   server.registerTool(
+    "scene_set_environment",
+    {
+      description: "Pick the environment asset a scene renders in, and " +
+        "wait until the studio accepts it. Lights in the scene add to the " +
+        "environment's sun and ambient light.",
+      inputSchema: z.object({
+        assetId: ASSET_ID_FIELD,
+        environment: z.string()
+          .nullable()
+          .describe("An environment asset id or catalog path; null for " +
+            "the default environment.")
+      })
+    },
+    async({ assetId, environment }) => {
+      const scene = await session.open(assetId, "scene");
+      await scene.useEnvironment(environment);
+      await scene.settled();
+
+      return jsonResult({
+        assetId,
+        environment: scene.tree.environment
+      });
+    }
+  );
+
+  server.registerTool(
     "scene_add_components",
     {
       description: "Add components to an actor, and wait until the studio " +

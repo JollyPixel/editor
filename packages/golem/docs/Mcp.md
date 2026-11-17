@@ -42,13 +42,15 @@ Tools answer with compact JSON. A result over 32,000 characters becomes `{ trunc
 - `pixelart_read_pixels({ assetId, x, y, width, height })`: up to 4,096 pixels as rows of `"#rrggbbaa"`.
 - `pixelart_paint({ assetId, pixels })`, `pixelart_fill_rect({ assetId, x, y, width, height, color })` and `pixelart_replace_palette({ assetId, colors })`: the `PixelSurface` methods, answering `{ assetId, painted }` or `{ assetId, colors }`.
 - The `pixelart_*` tools take a `pixelart` or a `blockset` id; another kind fails with `KindMismatchError`.
+- `environment_change({ assetId, preset?, sky?, sun?, ambient?, reflections?, fog?, toneMapping?, glow?, voxel? })`: `EnvironmentAsset.change` with each section given as a partial, answering `{ assetId, changed, environment }`: the sections that changed and the file after.
+- `scene_set_environment({ assetId, environment })`: `SceneAsset.useEnvironment` with an environment id, a catalog path or `null`, answering `{ assetId, environment }`.
 - `presence_activity({ assetId, label, progress? })`: publishes the golem's activity on the asset.
 - `presence_clear()`: clears it.
 - `chat_say({ text, assetId? })`: writes in the golem chat and returns the message's `id` and `at`.
 - `chat_next({ timeoutMs? })`: what people wrote since the last call, as `{ username, text, assetId?, at }`. Waits up to `timeoutMs` (default 30,000, at most 120,000) when nothing is unread, then returns `[]`.
 - `script_run({ script, args?, timeoutMs? })`: runs `node <script>` from the package's `local/` folder, with `JOLLY_STUDIO_URL` and `JOLLY_GOLEM_TOKEN` set to the server's, so a script connects under the golem's name without the token reaching the agent. Answers `{ exitCode, timedOut, stdout, stderr }`, each output cut to its last 8,000 characters. A path outside `local/` fails. Stops the script after `timeoutMs` (default 120,000, at most 600,000).
 
-`asset_read`, `asset_apply`, the `scene_*`, `text_*`, `voxelmap_*`, `voxelmodel_*` and `pixelart_*` tools and `presence_activity` open the asset when it is not open yet.
+`asset_read`, `asset_apply`, the `scene_*`, `text_*`, `voxelmap_*`, `voxelmodel_*`, `pixelart_*` and `environment_*` tools and `presence_activity` open the asset when it is not open yet.
 
 ## Resources
 

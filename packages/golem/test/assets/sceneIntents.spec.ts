@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { ComponentSlotError } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
+import { KindMismatchError } from "#src/assets/errors/KindMismatchError.ts";
 import { UnknownEntryError } from "#src/assets/errors/UnknownEntryError.ts";
 import { UnknownAssetError } from "#src/peer/errors/UnknownAssetError.ts";
 import { SceneStudio } from "../helpers/SceneStudio.ts";
@@ -258,5 +259,42 @@ describe("SceneAsset intents", { timeout: 5_000 }, () => {
       ComponentSlotError
     );
     assert.equal(studio.room.sent.length, sent);
+  });
+
+  test("picks an environment by catalog path, and sends no other kind", async() => {
+    const studio = new SceneStudio([
+      {
+        id: "dusk-environment",
+        kind: "environment",
+        path: "environments/dusk.environment.json"
+      },
+      {
+        id: "spin-script",
+        kind: "script",
+        path: "scripts/spin.ts"
+      }
+    ]);
+    await studio.open();
+
+    await studio.scene.useEnvironment("environments/dusk.environment.json");
+    await studio.answer();
+    await studio.scene.settled();
+    const sent = studio.room.sent.length;
+
+    assert.deepEqual(studio.server.state.snapshot().environment, {
+      id: "dusk-environment",
+      kind: "environment"
+    });
+    await assert.rejects(
+      studio.scene.useEnvironment("scripts/spin.ts"),
+      KindMismatchError
+    );
+    assert.equal(studio.room.sent.length, sent);
+
+    await studio.scene.useEnvironment(null);
+    await studio.answer();
+    await studio.scene.settled();
+
+    assert.equal(studio.server.state.snapshot().environment, null);
   });
 });

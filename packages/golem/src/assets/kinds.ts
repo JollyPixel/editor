@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { environmentEditableKind } from "@jolly-pixel/asset.environment/server";
 import { pixelArtEditableKind } from "@jolly-pixel/asset.pixel-art/server";
 import { sceneEditableKind } from "@jolly-pixel/asset.scene/server";
 import {
@@ -15,6 +16,7 @@ import { voxelModelEditableKind } from "@jolly-pixel/asset.voxel-model/server";
 import type * as z from "zod/mini";
 
 // Import Internal Dependencies
+import { EnvironmentAsset } from "./environment/EnvironmentAsset.ts";
 import type { AssetOpening } from "./GolemAsset.ts";
 import { PixelArtAsset } from "./pixelArt/PixelArtAsset.ts";
 import { SceneAsset } from "./scene/SceneAsset.ts";
@@ -34,7 +36,8 @@ const kKinds: {
   voxelmap: golemKind(voxelMapEditableKind(), VoxelMapAsset),
   blockset: golemKind(blocksetEditableKind(), BlocksetAsset),
   voxelmodel: golemKind(voxelModelEditableKind(), VoxelModelAsset),
-  pixelart: golemKind(pixelArtEditableKind(), PixelArtAsset)
+  pixelart: golemKind(pixelArtEditableKind(), PixelArtAsset),
+  environment: golemKind(environmentEditableKind(), EnvironmentAsset)
 };
 export const GOLEM_KINDS: readonly GolemKind[] = Object.freeze(
   Object.keys(kKinds) as GolemKind[]
@@ -54,6 +57,7 @@ export interface GolemAssets {
   blockset: BlocksetAsset;
   voxelmodel: VoxelModelAsset;
   pixelart: PixelArtAsset;
+  environment: EnvironmentAsset;
 }
 
 export type GolemKind = keyof GolemAssets;

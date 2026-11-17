@@ -191,6 +191,15 @@ export class SceneAsset extends GolemAsset<
     });
   }
 
+  async useEnvironment(
+    ref: string | null
+  ): Promise<void> {
+    await this.apply([{
+      action: "environment-changed",
+      environment: this.#refs.environment(ref)
+    }]);
+  }
+
   protected override guard(
     commands: readonly SceneCommand[]
   ): void {

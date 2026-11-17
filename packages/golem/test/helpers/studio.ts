@@ -50,7 +50,8 @@ export async function serveStudio(
           "@jolly-pixel/asset.script": {},
           "@jolly-pixel/asset.voxel-map": {},
           "@jolly-pixel/asset.voxel-model": {},
-          "@jolly-pixel/asset.pixel-art": {}
+          "@jolly-pixel/asset.pixel-art": {},
+          "@jolly-pixel/asset.environment": {}
         },
         access: DEFAULT_ACCESS
       }

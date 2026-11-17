@@ -1,12 +1,15 @@
 // Import Third-party Dependencies
-import type {
-  SceneComponentJSON,
-  SceneTreeReader
+import {
+  SCENE_ENVIRONMENT_KIND,
+  type SceneComponentJSON,
+  type SceneEnvironmentJSON,
+  type SceneTreeReader
 } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
 import type { CatalogReader } from "../GolemAsset.ts";
 import { resolveEntry } from "../resolveEntry.ts";
+import { KindMismatchError } from "../errors/KindMismatchError.ts";
 import { UnknownAssetError } from "../../peer/errors/UnknownAssetError.ts";
 
 export type AssetReference = NonNullable<SceneComponentJSON["assets"][string]>;
@@ -46,6 +49,30 @@ export class SceneRefs {
       return ref;
     }
 
+    return this.#record(ref);
+  }
+
+  environment(
+    ref: string | null
+  ): SceneEnvironmentJSON {
+    if (ref === null) {
+      return null;
+    }
+
+    const { id, kind } = this.#record(ref);
+    if (kind !== SCENE_ENVIRONMENT_KIND) {
+      throw new KindMismatchError(id, kind, [SCENE_ENVIRONMENT_KIND]);
+    }
+
+    return {
+      id,
+      kind
+    };
+  }
+
+  #record(
+    ref: string
+  ): AssetReference {
     const record = this.#catalog.record(ref) ??
       [...this.#catalog.records()].find(({ path }) => path === ref);
     if (record === undefined) {

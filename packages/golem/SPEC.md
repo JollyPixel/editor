@@ -172,6 +172,7 @@ throws with the list of supported kinds.
 | `blockset` | `SyncedBlockset` | blocks, material and blend groups; its texture is painted like a `pixelart` |
 | `voxelmodel` | `voxelModelDocumentKind()` | transform and field locks; new blocks get free space on its texture, which grows when full |
 | `pixelart` | `pixelArtDocumentKind()` | `PixelDocument` creates its `<canvas>` only when asked; commands JSON can carry |
+| `environment` | `environmentDocumentKind()` | partial section patches merged into whole sections; scenes point at one with `useEnvironment` |
 
 ### Editing
 

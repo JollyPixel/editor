@@ -1447,6 +1447,9 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../asset-server
+      '@jolly-pixel/asset.environment':
+        specifier: workspace:*
+        version: link:../assets/environment
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art

@@ -26,7 +26,7 @@ Write a script for anything procedural or long: a level layout, scattering props
 1. `catalog_list` to find the asset, `asset_open` to join it. `asset_open` names the schema resource to read before writing commands.
 2. `asset_read` returns the document. Big documents are truncated; read those from a script.
 3. `catalog_tag` before a bulk edit. A name is used once per asset: add the date, such as `before-forest-2026-11-12`.
-4. `asset_apply` with related commands in one batch, at most 500. It answers once the studio has accepted all of them, or with the refusal or denial. Kinds have shorter tools for common edits: `scene_add_actors`, `scene_transform_actors`, `scene_move_actors`, `scene_remove_actors`, `scene_add_components` for scenes; `text_read`, `text_replace`, `text_write` for scripts, shaders and texts; `voxelmap_summary`, `voxelmap_query`, `voxelmap_heightmap`, `voxelmap_add_layer`, `voxelmap_fill_box`, `voxelmap_clear_box` for voxel maps; `voxelmodel_add_materials`, `voxelmodel_add_blocks` for voxel models; `pixelart_read_pixels`, `pixelart_paint`, `pixelart_fill_rect`, `pixelart_replace_palette` for pixel art.
+4. `asset_apply` with related commands in one batch, at most 500. It answers once the studio has accepted all of them, or with the refusal or denial. Kinds have shorter tools for common edits: `scene_add_actors`, `scene_transform_actors`, `scene_move_actors`, `scene_remove_actors`, `scene_add_components` for scenes; `text_read`, `text_replace`, `text_write` for scripts, shaders and texts; `voxelmap_summary`, `voxelmap_query`, `voxelmap_heightmap`, `voxelmap_add_layer`, `voxelmap_fill_box`, `voxelmap_clear_box` for voxel maps; `voxelmodel_add_materials`, `voxelmodel_add_blocks` for voxel models; `pixelart_read_pixels`, `pixelart_paint`, `pixelart_fill_rect`, `pixelart_replace_palette` for pixel art; `environment_change` and `scene_set_environment` for environments.
 5. `presence_activity` with a short label while you work, and `presence_clear` when you are done.
 6. `catalog_restore` with the tag when the result is wrong.
 
@@ -91,7 +91,7 @@ A scene is a tree of actors. Each actor has an `id`, a `name`, a `parentId` (`nu
 
 - `actor-transformed` takes only the transform fields that change: `{ "action": "actor-transformed", "id": "…", "transform": { "position": { "x": 0, "y": 1, "z": 0 } } }`.
 - A component has an `id`, a `type`, `data` and `assets`, which maps a slot to `{ "id": <asset id>, "kind": <kind> }`.
-- A new scene starts with a "Main Camera", a "Sun" directional light and a "Sky" hemisphere light.
+- A new scene starts with a "Main Camera", a "Sun" directional light and a "Sky" hemisphere light. Its sky, fog and overall light come from its environment (see Environments).
 
 ### Scene components
 
@@ -166,6 +166,19 @@ A `pixelart` asset is a texture people paint pixel by pixel; voxel models and bl
 - Paint with `pixelart_fill_rect` and `pixelart_paint`; colors are `"#rrggbb"` or `"#rrggbbaa"`, alpha `00` being transparent. `pixelart_replace_palette` changes the colors the editor offers, not the pixels.
 - The `pixelart_*` tools also paint a blockset's texture: pass the blockset's id.
 - For a pattern, a gradient or anything computed, write a script: `golem.open(assetId, "pixelart")` returns a `PixelArtAsset`, and `golem.open(assetId, "blockset")` a `BlocksetAsset`; both have `pixels` with `readPixels`, `paintPixels`, `fillRect` and `replacePalette`.
+
+## Environments
+
+An `environment` asset (`.environment.json`) is the look a scene renders in: `sky` (`none`, `color`, `day` or `night`), `sun` (a directional light, or `null`), `ambient` (a hemisphere light), `reflections`, `fog` (`none`, `linear` or `exp2`), `toneMapping`, `glow` (bloom on emissive surfaces, or `null`) and `voxel` (block light and shadow fill for voxel maps and models). Several scenes can share one.
+
+- Read it with `asset_read`. Create one with `catalog_create` and a path ending in `.environment.json`: it starts as the `default` preset, no sky and no sun.
+- Change it with `environment_change`. Each section is partial: `{ "fog": { "density": 0.03 } }` keeps the fog's color. Give a section a new `kind` and the missing fields take defaults. `null` turns `sun` or `glow` off. `preset` (`default`, `studio`, `day`, `night`) starts every section from that preset first: `{ "preset": "day", "fog": { "kind": "linear", "far": 120 } }`.
+- The sun's `azimuth` is in degrees around the up axis, from +Z toward +X; `elevation` is in degrees above the horizon, so a low value gives a sunset. Fog `near` and `far` are in world units; `exp2` density is around 0.01 to 0.05.
+- Each change replaces whole sections. A person editing another section keeps their change; a person editing the same one at the same time can make yours refused. Read the asset again, then retry.
+- Point a scene at it with `scene_set_environment`, by id or path. `null` goes back to the `default` environment.
+- Lights placed in a scene add to the environment's sun and ambient light. The `default` environment has neither, which is why a new scene seeds a "Sun" and a "Sky" light. With `day`, `night` or any environment that has a sun, remove or dim those lights, or the scene is lit twice.
+- You cannot see the result, and `catalog_preview` has no image for environments. Report the values you set.
+- In a script, `golem.open(assetId, "environment")` returns an `EnvironmentAsset` with `read()` and `change(patch, { preset })`; `scene.useEnvironment(ref)` sets a scene's environment.
 
 ## Etiquette
 

@@ -39,6 +39,8 @@ export * from "./assets/voxelMap/VoxelBox.ts";
 export * from "./assets/voxelModel/VoxelModelAsset.ts";
 export * from "./assets/pixelArt/PixelArtAsset.ts";
 export * from "./assets/pixelArt/PixelSurface.ts";
+export * from "./assets/environment/EnvironmentAsset.ts";
+export type { EnvironmentPatch } from "./assets/environment/EnvironmentPatch.ts";
 export * from "./assets/errors/AssetClosedError.ts";
 export * from "./assets/errors/CommandDeniedError.ts";
 export * from "./assets/errors/CommandInvalidError.ts";

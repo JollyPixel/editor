@@ -48,6 +48,7 @@
     "@jolly-pixel/accounts": "workspace:*",
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/asset.environment": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.scene": "workspace:*",
     "@jolly-pixel/asset.script": "workspace:*",
