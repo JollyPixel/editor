@@ -227,14 +227,14 @@ export function enableVertexPulling(
     uv: varying(nodes.uv),
     region: varying(nodes.region),
     vertexRegion: nodes.region,
-    brightness: varying(nodes.brightness),
-    faceBrightness: varying(nodes.faceBrightness),
-    light: varying(nodes.light)
+    brightness: centroid(nodes.brightness).clamp(0, 1),
+    faceBrightness: centroid(nodes.faceBrightness).clamp(0, 1),
+    light: centroid(nodes.light)
   };
   if (blended) {
     inputs.blend = {
-      plane: varying(nodes.plane),
-      cell: varying(nodes.cell),
+      plane: centroid(nodes.plane).clamp(0, 1),
+      cell: centroid(nodes.cell),
       indices: [
         varying(nodes.blendIndices[0]),
         varying(nodes.blendIndices[1])
@@ -244,6 +244,15 @@ export function enableVertexPulling(
   }
 
   return inputs;
+}
+
+function centroid<TNodeType>(
+  node: Node<TNodeType>
+): Node<TNodeType> {
+  return varying(node).setInterpolation(
+    THREE.InterpolationSamplingType.PERSPECTIVE,
+    THREE.InterpolationSamplingMode.CENTROID
+  );
 }
 
 function blockLightAt(

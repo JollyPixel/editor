@@ -9,16 +9,16 @@ import {
 import { bootRuntime } from "./support/runtime.ts";
 
 test.describe("Runtime pixel ratio", () => {
-  test.use({ deviceScaleFactor: 2 });
+  test.use({ deviceScaleFactor: 3 });
 
-  test("load fits the pixel ratio to the device by default", async({ page }) => {
+  test("load caps the device pixel ratio at 2 on desktop", async({ page }) => {
     await bootRuntime(page, {
       load: {
         skipLoadingScreen: true
       }
     });
 
-    expect(await readPixelRatio(page)).toBe(1);
+    expect(await readPixelRatio(page)).toBe(2);
   });
 
   test("load keeps an explicit renderer pixel ratio", async({ page }) => {
@@ -26,7 +26,7 @@ test.describe("Runtime pixel ratio", () => {
       runtime: {
         renderer: {
           output: {
-            pixelRatio: 2
+            pixelRatio: 1
           }
         }
       },
@@ -35,7 +35,7 @@ test.describe("Runtime pixel ratio", () => {
       }
     });
 
-    expect(await readPixelRatio(page)).toBe(2);
+    expect(await readPixelRatio(page)).toBe(1);
   });
 });
 

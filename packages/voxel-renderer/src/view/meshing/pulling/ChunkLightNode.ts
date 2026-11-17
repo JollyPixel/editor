@@ -39,10 +39,8 @@ export class ChunkLightNode extends Texture3DNode {
 
   override update(
     frame: NodeFrame
-  ): boolean | undefined {
+  ): undefined {
     this.value = resolveLightTexture(frame.object);
-
-    return super.update(frame);
   }
 }
 
