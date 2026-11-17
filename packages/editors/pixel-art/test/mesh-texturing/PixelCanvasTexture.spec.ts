@@ -41,13 +41,13 @@ describe("PixelCanvasTexture", () => {
   });
 
   describe("constructor", () => {
-    test("points a nearest-filtered sRGB texture at the source canvas", () => {
+    test("points a nearest-magnified, mipmapped sRGB texture at the source canvas", () => {
       const bridge = new PixelCanvasTexture(source, { flush: "manual" });
 
       assert.strictEqual(bridge.texture.image, source.textureCanvas());
       assert.strictEqual(bridge.texture.magFilter, THREE.NearestFilter);
-      assert.strictEqual(bridge.texture.minFilter, THREE.NearestFilter);
-      assert.strictEqual(bridge.texture.generateMipmaps, false);
+      assert.strictEqual(bridge.texture.minFilter, THREE.LinearMipmapLinearFilter);
+      assert.strictEqual(bridge.texture.generateMipmaps, true);
       assert.strictEqual(bridge.texture.colorSpace, THREE.SRGBColorSpace);
     });
 
@@ -59,7 +59,7 @@ describe("PixelCanvasTexture", () => {
       });
 
       assert.strictEqual(bridge.texture.magFilter, THREE.LinearFilter);
-      assert.strictEqual(bridge.texture.minFilter, THREE.LinearFilter);
+      assert.strictEqual(bridge.texture.minFilter, THREE.LinearMipmapLinearFilter);
       assert.strictEqual(bridge.texture.colorSpace, THREE.NoColorSpace);
     });
   });

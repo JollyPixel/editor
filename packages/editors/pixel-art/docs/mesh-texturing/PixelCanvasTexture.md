@@ -20,13 +20,15 @@ The source is any object with `document`, `textureSize` and `textureCanvas()`
 
 ```ts
 interface PixelCanvasTextureOptions {
-  filter?: "nearest" | "linear"; // "nearest", both mag and min
+  filter?: "nearest" | "linear"; // "nearest", magnification only
   colorSpace?: THREE.ColorSpace; // THREE.SRGBColorSpace
   flush?: "frame" | "immediate" | "manual"; // "frame"
   scheduler?: (callback: () => void) => void; // requestAnimationFrame
 }
 ```
 
+- The texture is mipmapped and minified trilinearly, so a texture seen from
+  far away blends instead of sparkling. Each upload regenerates the mipmaps.
 - `frame` uploads at most once per animation frame.
 - `immediate` uploads on every change.
 - `manual` never uploads by itself; call `consume()`.

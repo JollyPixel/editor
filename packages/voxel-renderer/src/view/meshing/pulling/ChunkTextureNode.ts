@@ -36,10 +36,8 @@ export abstract class ChunkTextureNode extends TextureNode {
 
   override update(
     frame: NodeFrame
-  ): boolean | undefined {
+  ): undefined {
     this.value = this.#resolveTexture(frame.object);
-
-    return super.update(frame);
   }
 
   protected abstract pick(

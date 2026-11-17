@@ -3,11 +3,16 @@ import * as THREE from "three/webgpu";
 import {
   attribute,
   clamp,
+  dFdx,
+  dFdy,
   dot,
   float,
   floor,
   int,
+  length,
+  log2,
   max,
+  min,
   texture,
   textureSize,
   uv,
@@ -77,7 +82,26 @@ function sampleClamped(
     region.zw
   );
   const wrapped = texel.sub(floor(texel.div(size)).mul(size));
-  const sampled = texture(map, wrapped.div(size)).level(float(0));
+  const sampled = texture(map, wrapped.div(size)).level(
+    footprintLevel(uv().mul(size), region)
+  );
 
   return vec4(kTint, float(1)).mul(sampled);
+}
+
+function footprintLevel(
+  texelPosition: Node<"vec2">,
+  region: Node<"vec4">
+): Node<"float"> {
+  const footprint = max(
+    length(dFdx(texelPosition)),
+    length(dFdy(texelPosition))
+  );
+  const extent = region.zw.sub(region.xy).add(1);
+
+  return clamp(
+    log2(footprint),
+    float(0),
+    log2(min(extent.x, extent.y))
+  );
 }

@@ -25,6 +25,7 @@ import { expandPulled } from "../../../helpers/pulledFaces.ts";
 // CONSTANTS
 const kSize = 64;
 const kAtlasTexels = 8;
+const kSamples = 4;
 const kShapes: BlockShapeID[] = [
   "cube",
   "slabBottom",
@@ -52,6 +53,7 @@ export interface ParityOptions {
   expanded: boolean;
   channel: ParityChannel;
   ambientOcclusion?: boolean;
+  multisampled?: boolean;
 }
 
 async function atlasImage(): Promise<HTMLImageElement> {
@@ -140,9 +142,7 @@ export async function renderParityScene(
   renderer.toneMapping = THREE.NoToneMapping;
   const lit = options.channel === "lit";
   renderer.shadowMap.enabled = lit;
-  const target = options.channel === "velocity" ?
-    velocityTarget(renderer) :
-    new THREE.RenderTarget(kSize, kSize, { type: THREE.FloatType });
+  const target = probeTarget(renderer, options);
   renderer.setRenderTarget(target);
 
   const view = createView({
@@ -226,6 +226,16 @@ export async function renderParityScene(
       }
       renderer.render(scene, camera);
     });
+    if (options.multisampled) {
+      const halves = await renderer.readRenderTargetPixelsAsync(
+        target, 0, 0, kSize, kSize
+      );
+
+      return Array.from(
+        halves as Uint16Array,
+        (half) => Math.round(THREE.DataUtils.fromHalfFloat(half) * 1024)
+      );
+    }
     if (options.channel === "velocity") {
       const halves = await renderer.readRenderTargetPixelsAsync(
         target, 0, 0, kSize, kSize, 1
@@ -251,6 +261,22 @@ export async function renderParityScene(
     target.dispose();
     renderer.dispose();
   }
+}
+
+function probeTarget(
+  renderer: THREE.WebGPURenderer,
+  options: ParityOptions
+): THREE.RenderTarget {
+  if (options.channel === "velocity") {
+    return velocityTarget(renderer);
+  }
+
+  return options.multisampled ?
+    new THREE.RenderTarget(kSize, kSize, {
+      type: THREE.HalfFloatType,
+      samples: kSamples
+    }) :
+    new THREE.RenderTarget(kSize, kSize, { type: THREE.FloatType });
 }
 
 function velocityTarget(

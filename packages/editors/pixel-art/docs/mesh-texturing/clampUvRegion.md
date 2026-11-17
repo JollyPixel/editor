@@ -40,5 +40,8 @@ clampUvRegion(mesh: UvRegionClampedMesh, map: THREE.Texture | null): void
 - Change the map by calling it again, not by setting `material.map`. Materials
   on the same map share one shader build, and each one keeps its own `color`
   tint. A `null` map renders the material `color` alone.
-- Samples mip level `0` of the first `uv` set: the map's `offset`, `repeat`,
-  `rotation`, `center` and `channel` are ignored.
+- Samples the first `uv` set: the map's `offset`, `repeat`, `rotation`,
+  `center` and `channel` are ignored.
+- Picks the mip level from the face's on-screen texel footprint, capped at
+  `log2` of the region's shorter side so a small region never takes a level
+  that averages it away. Up close it samples level `0`.
