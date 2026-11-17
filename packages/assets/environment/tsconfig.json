@@ -8,6 +8,9 @@
       "path": "../../engine"
     },
     {
+      "path": "../../golem-kit"
+    },
+    {
       "path": "../../history"
     },
     {

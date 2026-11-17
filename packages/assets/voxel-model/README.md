@@ -6,7 +6,7 @@
 
 Private asset workspace for `.voxelmodel.json` model trees (kind `voxelmodel`): blocks and folders, a material library and links to animation sets. Models are edited in `@jolly-pixel/editor.voxel-model`.
 
-Browser code imports `@jolly-pixel/asset.voxel-model/client`; the package root and `@jolly-pixel/asset.voxel-model/server` pull in server dependencies.
+Browser code imports `@jolly-pixel/asset.voxel-model/client`; the package root and `@jolly-pixel/asset.voxel-model/server` pull in server dependencies. The golem entry (`@jolly-pixel/asset.voxel-model/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
 ## 🚀 Building
 

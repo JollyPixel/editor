@@ -10,11 +10,13 @@ import {
   VOXEL_BRUSH_PRESENCE_KEY,
   voxelMapDocumentKind
 } from "@jolly-pixel/asset.voxel-map/client";
+import {
+  UnknownBlockError,
+  type VoxelMapAsset
+} from "@jolly-pixel/asset.voxel-map/golem";
 import type { ServedBackend } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { UnknownBlockError } from "#src/assets/voxelMap/errors/UnknownBlockError.ts";
-import type { VoxelMapAsset } from "#src/assets/voxelMap/VoxelMapAsset.ts";
 import { Golem } from "#src/peer/Golem.ts";
 import { AssetPeer } from "../helpers/AssetPeer.ts";
 import {

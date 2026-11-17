@@ -5,8 +5,10 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { MapSummary } from "@jolly-pixel/asset.voxel-map/golem";
+
 // Import Internal Dependencies
-import type { MapSummary } from "#src/assets/voxelMap/VoxelMapAsset.ts";
 import { McpAgent } from "../helpers/McpAgent.ts";
 import {
   createAgentToken,
@@ -28,7 +30,7 @@ const kBox = {
   }
 };
 
-describe("voxel map tools", { timeout: 15_000 }, () => {
+describe("voxel map intents", { timeout: 15_000 }, () => {
   test("fills a box with a named block, reads it from above, then clears it", async() => {
     await using backend = await serveStudio();
     const bob = await registered(backend, "Bob");
@@ -40,7 +42,7 @@ describe("voxel map tools", { timeout: 15_000 }, () => {
       "catalog_create",
       { path: "maps/field.voxelmap.json" }
     );
-    const { blocksets } = await agent.call<MapSummary>("voxelmap_summary", { assetId });
+    const { blocksets } = await agent.intent<MapSummary>(assetId, "summary");
     await agent.call("asset_apply", {
       assetId: blocksets[0].assetId,
       commands: [
@@ -57,26 +59,23 @@ describe("voxel map tools", { timeout: 15_000 }, () => {
         }
       ]
     });
-    const { layer } = await agent.call<{ layer: { id: string; name: string; }; }>(
-      "voxelmap_add_layer",
+    const { layer } = await agent.intent<{ layer: { id: string; name: string; }; }>(
+      assetId,
+      "addLayer",
       {
-        assetId,
         name: "Ground"
       }
     );
     assert.equal(layer.name, "Ground");
 
-    assert.deepEqual(await agent.call("voxelmap_fill_box", {
-      assetId,
+    assert.deepEqual(await agent.intent(assetId, "fillBox", {
       layer: "Ground",
       ...kBox,
       block: "grass"
     }), {
-      assetId,
       written: 6
     });
-    assert.deepEqual(await agent.call("voxelmap_heightmap", {
-      assetId,
+    assert.deepEqual(await agent.intent(assetId, "heightmap", {
       ...kBox
     }), {
       min: {
@@ -85,12 +84,10 @@ describe("voxel map tools", { timeout: 15_000 }, () => {
       },
       heights: [[2, 2]]
     });
-    assert.deepEqual(await agent.call("voxelmap_clear_box", {
-      assetId,
+    assert.deepEqual(await agent.intent(assetId, "clearBox", {
       layer: layer.id,
       ...kBox
     }), {
-      assetId,
       cleared: 6
     });
   });

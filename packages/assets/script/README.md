@@ -16,7 +16,7 @@ Scripts have an outline: each `Behavior` class with its `@SceneProperty` fields.
 
 Scripts and shaders build to `text/javascript` with `buildScript` or `buildShader` from `@jolly-pixel/scripting`. A refused import, a dynamic import or a syntax error fails the build. Scripts build in Node only.
 
-Browser code imports `@jolly-pixel/asset.script/client`; the package root pulls in server dependencies.
+Browser code imports `@jolly-pixel/asset.script/client`; the package root pulls in server dependencies. The golem entry (`@jolly-pixel/asset.script/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
 ## 🚀 Building
 

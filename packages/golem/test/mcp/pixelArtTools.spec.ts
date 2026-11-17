@@ -5,8 +5,10 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { PixelRead } from "@jolly-pixel/asset.pixel-art/golem";
+
 // Import Internal Dependencies
-import type { PixelRead } from "#src/assets/pixelArt/PixelSurface.ts";
 import { McpAgent } from "../helpers/McpAgent.ts";
 import {
   createAgentToken,
@@ -14,7 +16,7 @@ import {
   serveStudio
 } from "../helpers/studio.ts";
 
-describe("pixel art tools", { timeout: 15_000 }, () => {
+describe("pixel art intents", { timeout: 15_000 }, () => {
   test("fills a rect, paints over it and reads the pixels back", async() => {
     await using backend = await serveStudio();
     const bob = await registered(backend, "Bob");
@@ -27,21 +29,18 @@ describe("pixel art tools", { timeout: 15_000 }, () => {
       { path: "textures/hero.pixelart" }
     );
 
-    await agent.call("pixelart_fill_rect", {
-      assetId,
+    await agent.intent(assetId, "fillRect", {
       x: 0,
       y: 0,
       width: 2,
       height: 1,
       color: "#336699"
     });
-    await agent.call("pixelart_paint", {
-      assetId,
+    await agent.intent(assetId, "paint", {
       pixels: [{ x: 1, y: 0, color: "#ffffff00" }]
     });
 
-    const read = await agent.call<PixelRead>("pixelart_read_pixels", {
-      assetId,
+    const read = await agent.intent<PixelRead>(assetId, "readPixels", {
       x: 0,
       y: 0,
       width: 2,
@@ -50,7 +49,7 @@ describe("pixel art tools", { timeout: 15_000 }, () => {
     assert.deepEqual(read.rows, [["#336699ff", "#ffffff00"]]);
   });
 
-  test("paints a blockset's texture, and names both kinds for another asset", async() => {
+  test("paints a blockset's texture, which a scene cannot", async() => {
     await using backend = await serveStudio();
     const bob = await registered(backend, "Bob");
     await using agent = await McpAgent.connect({
@@ -66,8 +65,7 @@ describe("pixel art tools", { timeout: 15_000 }, () => {
       { path: "levels/forest.scene.json" }
     );
 
-    await agent.call("pixelart_fill_rect", {
-      assetId: blockset.assetId,
+    await agent.intent(blockset.assetId, "fillRect", {
       x: 0,
       y: 0,
       width: 1,
@@ -75,8 +73,7 @@ describe("pixel art tools", { timeout: 15_000 }, () => {
       color: "#336699"
     });
 
-    const read = await agent.call<PixelRead>("pixelart_read_pixels", {
-      assetId: blockset.assetId,
+    const read = await agent.intent<PixelRead>(blockset.assetId, "readPixels", {
       x: 0,
       y: 0,
       width: 1,
@@ -84,11 +81,10 @@ describe("pixel art tools", { timeout: 15_000 }, () => {
     });
     assert.deepEqual(read.rows, [["#336699ff"]]);
     assert.match(
-      await agent.error("pixelart_paint", {
-        assetId: scene.assetId,
+      await agent.intentError(scene.assetId, "paint", {
         pixels: [{ x: 0, y: 0, color: "#ffffff" }]
       }),
-      /is a scene, not a pixelart or blockset/
+      /"scene" assets have no "paint" intent/
     );
   });
 });

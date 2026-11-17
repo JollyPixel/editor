@@ -2,6 +2,7 @@ export {
   ENVIRONMENT_ASSET,
   ENVIRONMENT_EXTENSION,
   ENVIRONMENT_KIND,
+  ENVIRONMENT_PRESET_NAMES,
   createEnvironmentFile
 } from "../asset/environment.ts";
 export * from "../model/EnvironmentDocument.ts";

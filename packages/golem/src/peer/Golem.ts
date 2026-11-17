@@ -9,6 +9,14 @@ import {
   CatalogUnavailableError
 } from "@jolly-pixel/asset-server/client";
 import {
+  AssetClosedError,
+  KindMismatchError,
+  UnknownAssetError,
+  type GolemAsset,
+  type GolemAssets,
+  type GolemKind
+} from "@jolly-pixel/golem.kit";
+import {
   DEFAULT_WEBSOCKET_PATH,
   type PeerActivity
 } from "@jolly-pixel/network";
@@ -24,17 +32,10 @@ import {
 } from "@jolly-pixel/server/client";
 
 // Import Internal Dependencies
-import type { GolemAsset } from "../assets/GolemAsset.ts";
 import {
-  GOLEM_KINDS,
-  isGolemKind,
-  openAsset,
-  type GolemAssets,
-  type GolemKind
-} from "../assets/kinds.ts";
-import { AssetClosedError } from "../assets/errors/AssetClosedError.ts";
-import { KindMismatchError } from "../assets/errors/KindMismatchError.ts";
-import { UnsupportedKindError } from "../assets/errors/UnsupportedKindError.ts";
+  GolemKinds,
+  type AnyGolemKind
+} from "../kinds/GolemKinds.ts";
 import { ChatChannel } from "../chat/ChatChannel.ts";
 import { ActivityMirror } from "./ActivityMirror.ts";
 import {
@@ -44,7 +45,6 @@ import {
 import { GolemDisconnectedError } from "./errors/GolemDisconnectedError.ts";
 import { GolemTokenRefusedError } from "./errors/GolemTokenRefusedError.ts";
 import { StudioUnreachableError } from "./errors/StudioUnreachableError.ts";
-import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
 import {
   OpenAssets,
   type AssetHolder
@@ -74,13 +74,14 @@ export interface OpenAssetStatus {
   peers: StudioPeer[];
 }
 
-export type GolemKindFilter<TKind extends GolemKind> = TKind | readonly TKind[];
+export type GolemKindFilter<TKind extends string> = TKind | readonly TKind[];
 
 interface GolemConnection {
   url: string;
   client: network.Client;
   catalog: CatalogClient;
   manifest: ProjectManifest;
+  kinds: GolemKinds;
   agentChat: AgentChatClient;
   revoked: AbortSignal;
 }
@@ -92,7 +93,8 @@ export class Golem {
     const {
       url,
       token,
-      timeoutMs
+      timeoutMs,
+      projectRoot
     } = golemTarget(options);
     const socketUrl = studioSocketUrl(url);
     const client = new network.Client({
@@ -129,6 +131,7 @@ export class Golem {
         client,
         catalog,
         manifest,
+        kinds: await GolemKinds.load(manifest.kindPackages, projectRoot),
         agentChat,
         revoked: revoked.signal
       });
@@ -146,6 +149,7 @@ export class Golem {
 
   readonly url: string;
   readonly catalog: CatalogClient;
+  readonly kinds: GolemKinds;
   readonly chat: ChatChannel;
 
   #client: network.Client;
@@ -162,6 +166,7 @@ export class Golem {
     this.#client = connection.client;
     this.#presence = openAssetsChannel(connection.client.room(CATALOG_ROOM));
     this.catalog = connection.catalog;
+    this.kinds = connection.kinds;
     this.#manifest = connection.manifest;
     this.chat = new ChatChannel(connection.agentChat);
     this.#revoked = connection.revoked;
@@ -200,10 +205,18 @@ export class Golem {
     };
   }
 
-  open<TKind extends GolemKind = GolemKind>(
+  open<TKind extends GolemKind>(
     assetId: string,
-    kind?: GolemKindFilter<TKind>
-  ): Promise<GolemAssets[TKind]> {
+    kind: GolemKindFilter<TKind>
+  ): Promise<GolemAssets[TKind]>;
+  open(
+    assetId: string,
+    kind?: GolemKindFilter<string>
+  ): Promise<GolemAsset>;
+  open(
+    assetId: string,
+    kind?: GolemKindFilter<string>
+  ): Promise<GolemAsset> {
     return this.#hold(assetId, kind, kAgent);
   }
 
@@ -254,11 +267,11 @@ export class Golem {
     return this.#client.room(new AssetRoom(kind, assetId).toString());
   }
 
-  async #hold<TKind extends GolemKind>(
+  async #hold(
     assetId: string,
-    kind: GolemKindFilter<TKind> | undefined,
+    kind: GolemKindFilter<string> | undefined,
     holder: AssetHolder
-  ): Promise<GolemAssets[TKind]> {
+  ): Promise<GolemAsset> {
     const record = this.catalog.record(assetId);
     if (record === undefined) {
       throw new UnknownAssetError(assetId);
@@ -269,15 +282,12 @@ export class Golem {
     if (expected !== null && !expected.includes(record.kind)) {
       throw new KindMismatchError(assetId, record.kind, expected);
     }
-    if (!isGolemKind(record.kind)) {
-      throw new UnsupportedKindError(record.kind, GOLEM_KINDS);
-    }
+    const contribution = this.kinds.contribution(record.kind);
 
-    const recordKind = record.kind;
     const asset = this.#opened.hold(
       assetId,
       holder,
-      () => this.#join(assetId, recordKind)
+      () => this.#join(assetId, contribution)
     );
     try {
       await asset.ready;
@@ -288,21 +298,23 @@ export class Golem {
       throw error;
     }
 
-    return asset as GolemAssets[TKind];
+    return asset;
   }
 
   #join(
     assetId: string,
-    kind: GolemKind
+    contribution: AnyGolemKind
   ): GolemAsset {
-    const asset = openAsset(kind, {
+    const asset = contribution.open({
       assetId,
-      room: this.#room(kind, assetId),
+      room: this.#room(contribution.kind, assetId),
       catalog: this.catalog,
       manifest: this.#manifest,
       signal: this.#revoked,
       onClose: () => this.#forget(asset),
-      open: (otherId, otherKind) => this.#hold(otherId, otherKind, assetId)
+      open: <TKind extends GolemKind>(otherId: string, otherKind: TKind) => (
+        this.#hold(otherId, otherKind, assetId) as Promise<GolemAssets[TKind]>
+      )
     });
 
     return asset;

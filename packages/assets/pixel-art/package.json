@@ -17,14 +17,21 @@
     "./server": {
       "types": "./dist/network/server.d.ts",
       "default": "./dist/network/server.js"
+    },
+    "./golem": {
+      "types": "./dist/golem/index.d.ts",
+      "default": "./dist/golem/index.js"
     }
   },
   "imports": {
     "#src/*": "./src/*"
   },
+  "jollypixel": {
+    "golem": "./golem"
+  },
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",
-    "build": "tsc -b",
+    "build": "tsc -b && node -e \"fs.cpSync('src/golem/guide.md', 'dist/golem/guide.md')\"",
     "bench": "jolly-bench bench/network.bench.ts",
     "test-only": "node --import ./test/setup.ts --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
@@ -55,6 +62,8 @@
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.common": "workspace:*",
+    "@jolly-pixel/color": "workspace:*",
+    "@jolly-pixel/golem.kit": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",

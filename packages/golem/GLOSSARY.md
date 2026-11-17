@@ -30,6 +30,18 @@ The guide that teaches an agent the studio, the tools and scripting against the 
 
 *In code:* `skill/SKILL.md`.
 
+### Kind contribution
+
+What an asset package hands the golem so it can open the package's kind: its editable kind, its `GolemAsset` class, its intents and a guide. The package's `golem` entry exports its contributions as `GOLEM_KINDS`, and the golem imports it for the kinds the studio lists.
+
+*In code:* `GolemKindContribution`, `golemKind`, `GolemKinds`, `GolemKindList`, `ENVIRONMENT_GOLEM_KIND`.
+
+### Intent
+
+A named operation a kind offers agents, with a description and an input schema, such as a scene's `addActors` or an environment's `change`. The MCP server lists them on `asset_open` and runs one with `asset_intent`.
+
+*In code:* `GolemIntent`, `golemIntent`, `UnknownIntentError`, `IntentInputError`.
+
 ## Commands
 
 ### Unanswered command

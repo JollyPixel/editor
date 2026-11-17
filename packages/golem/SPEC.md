@@ -123,7 +123,7 @@ Private workspace `packages/golem`, name `@jolly-pixel/golem`, Node only.
 | Path | Holds |
 |---|---|
 | `src/peer/` | `Golem`, connection, discovery, activity |
-| `src/assets/` | the kind table, `GolemAsset`, per-kind focus, lock reading and intent helpers |
+| `src/kinds/` | `GolemKinds`, the kinds imported from the project's kind packages |
 | `src/chat/` | `ChatChannel` client for the `agent-chat` room |
 | `src/mcp/` | MCP server, one file per tool group |
 | `src/bin/jolly-golem.ts` | CLI: `mcp`, `status` |
@@ -172,6 +172,7 @@ throws with the list of supported kinds.
 | `blockset` | `SyncedBlockset` | blocks, material and blend groups; its texture is painted like a `pixelart` |
 | `voxelmodel` | `voxelModelDocumentKind()` | transform and field locks; new blocks get free space on its texture, which grows when full |
 | `pixelart` | `pixelArtDocumentKind()` | `PixelDocument` creates its `<canvas>` only when asked; commands JSON can carry |
+| `environment` | `environmentDocumentKind()` | partial section patches merged into whole sections; scenes point at one with `useEnvironment` |
 
 ### Editing
 
@@ -187,7 +188,9 @@ await scene.settled();
 ```
 
 Per-kind intent helpers, named after what a person does, come on top as
-agents show which commands they struggle to write raw. Block and asset
+agents show which commands they struggle to write raw. They live with the
+kind, in its asset package's `golem` entry (`@jolly-pixel/golem.kit`), and
+the MCP server runs them through `asset_intent`. Block and asset
 arguments accept a name or an id; an ambiguous name throws with the
 candidates.
 
@@ -270,10 +273,9 @@ Tools take and return compact JSON. Large reads are capped and say so.
 |---|---|
 | studio | `studio_status` (URL, peers, open assets) |
 | catalog | `catalog_list`, `catalog_create`, `catalog_rename`, `catalog_preview` (image content), `catalog_tag`, `catalog_restore` |
-| asset | `asset_open`, `asset_close`, `asset_read`, `asset_apply` |
+| asset | `asset_open` (kind, schema, guide, intents), `asset_close`, `asset_read`, `asset_apply`, `asset_intent` |
 | presence | `presence_activity` |
 | chat | `chat_say`, `chat_next` |
-| per kind | intent tools added with each kind (`scene_add_actor`, `voxelmap_fill_box`, …) |
 
 `chat_next({ timeoutMs })` blocks until a person writes in the chat pane or
 the timeout passes. It is how a terminal-driven agent hears people in v1.

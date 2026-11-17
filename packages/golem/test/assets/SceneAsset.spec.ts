@@ -7,15 +7,15 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { SceneCommand } from "@jolly-pixel/asset.scene";
-
-// Import Internal Dependencies
 import {
+  CommandDeniedError,
+  CommandInvalidError,
+  CommandRefusedError,
   MAX_BATCH_COMMANDS,
   MAX_UNANSWERED_COMMANDS
-} from "#src/assets/GolemAsset.ts";
-import { CommandDeniedError } from "#src/assets/errors/CommandDeniedError.ts";
-import { CommandInvalidError } from "#src/assets/errors/CommandInvalidError.ts";
-import { CommandRefusedError } from "#src/assets/errors/CommandRefusedError.ts";
+} from "@jolly-pixel/golem.kit";
+
+// Import Internal Dependencies
 import { SceneStudio } from "../helpers/SceneStudio.ts";
 
 function renames(

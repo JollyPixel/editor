@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { GolemAsset } from "../assets/GolemAsset.ts";
+// Import Third-party Dependencies
+import type { GolemAsset } from "@jolly-pixel/golem.kit";
 
 export type AssetHolder = string | symbol;
 

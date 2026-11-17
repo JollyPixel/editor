@@ -1,0 +1,11 @@
+{
+  "name": "local-kind",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./golem": "./golem.js"
+  },
+  "jollypixel": {
+    "golem": "./golem"
+  }
+}

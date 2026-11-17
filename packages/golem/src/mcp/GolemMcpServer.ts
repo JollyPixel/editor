@@ -15,21 +15,14 @@ import {
 } from "../peer/GolemConnectOptions.ts";
 import { GolemSession } from "./GolemSession.ts";
 import { ScriptRunner } from "./ScriptRunner.ts";
-import {
-  PACKAGE_ROOT,
-  registerResources
-} from "./resources.ts";
+import { registerResources } from "./resources.ts";
+import { PACKAGE_ROOT } from "../packageRoot.ts";
 import { registerAssetTools } from "./tools/asset.ts";
 import { registerCatalogTools } from "./tools/catalog.ts";
 import { registerChatTools } from "./tools/chat.ts";
-import { registerPixelArtTools } from "./tools/pixelArt.ts";
 import { registerPresenceTools } from "./tools/presence.ts";
 import { registerScriptTools } from "./tools/script.ts";
-import { registerSceneTools } from "./tools/scene.ts";
 import { registerStudioTools } from "./tools/studio.ts";
-import { registerTextTools } from "./tools/text.ts";
-import { registerVoxelMapTools } from "./tools/voxelMap.ts";
-import { registerVoxelModelTools } from "./tools/voxelModel.ts";
 
 // CONSTANTS
 const kManifest = path.join(PACKAGE_ROOT, "package.json");
@@ -38,7 +31,8 @@ const kInstructions = [
   "your focus and your edits live.",
   "Read jollypixel://guide before your first edit.",
   "Find assets with catalog_list, open one with asset_open, then read the " +
-  "command schema it names before calling asset_apply.",
+  "command schema it names before calling asset_apply. When it lists " +
+  "intents and a guide, read the guide and prefer asset_intent.",
   "Send related commands in one asset_apply batch. It answers once the " +
   "studio accepted them; report success only then.",
   "Call catalog_tag before a bulk edit, and catalog_restore if it goes wrong.",
@@ -79,11 +73,6 @@ export class GolemMcpServer {
     registerStudioTools(this.mcp, this.#session);
     registerCatalogTools(this.mcp, this.#session);
     registerAssetTools(this.mcp, this.#session);
-    registerSceneTools(this.mcp, this.#session);
-    registerTextTools(this.mcp, this.#session);
-    registerVoxelMapTools(this.mcp, this.#session);
-    registerVoxelModelTools(this.mcp, this.#session);
-    registerPixelArtTools(this.mcp, this.#session);
     registerPresenceTools(this.mcp, this.#session);
     registerChatTools(this.mcp, this.#session);
     registerScriptTools(this.mcp, new ScriptRunner({
@@ -91,7 +80,7 @@ export class GolemMcpServer {
       scriptsDir: path.join(PACKAGE_ROOT, "local"),
       cwd: PACKAGE_ROOT
     }));
-    registerResources(this.mcp);
+    registerResources(this.mcp, this.#session);
   }
 
   connect(

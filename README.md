@@ -103,6 +103,7 @@ Generic packages used by more than one sub-domain.
 ## 🤖 AI
 
 - [golem](./packages/golem) - Connects a local AI agent to a running JollyPixel studio as a peer
+- [golem-kit](./packages/golem-kit) - The contract an asset package implements to give golems intent methods for its kind
 
 ## 💃 Getting started
 

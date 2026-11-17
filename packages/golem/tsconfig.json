@@ -11,6 +11,9 @@
       "path": "../asset-server"
     },
     {
+      "path": "../assets/environment"
+    },
+    {
       "path": "../assets/pixel-art"
     },
     {
@@ -29,7 +32,7 @@
       "path": "../color"
     },
     {
-      "path": "../history"
+      "path": "../golem-kit"
     },
     {
       "path": "../network"
@@ -39,9 +42,6 @@
     },
     {
       "path": "../server"
-    },
-    {
-      "path": "../voxel-renderer"
     }
   ]
 }

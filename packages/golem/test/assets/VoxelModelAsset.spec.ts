@@ -8,19 +8,21 @@ import { setTimeout as delay } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import {
-  VOXEL_MODEL_PRESENCE_KEYS,
   materialFieldLockPath,
+  VOXEL_MODEL_PRESENCE_KEYS,
   voxelModelDocumentKind,
   type SyncedModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
+import type { VoxelModelAsset } from "@jolly-pixel/asset.voxel-model/golem";
+import {
+  LockedByPeerError,
+  UnknownEntryError
+} from "@jolly-pixel/golem.kit";
 import { PEER_FIELD_LOCK_KEY } from "@jolly-pixel/network/client";
 import { UVRegion } from "@jolly-pixel/pixel-draw.renderer";
 import type { ServedBackend } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { LockedByPeerError } from "#src/assets/errors/LockedByPeerError.ts";
-import type { VoxelModelAsset } from "#src/assets/voxelModel/VoxelModelAsset.ts";
-import { UnknownEntryError } from "#src/assets/errors/UnknownEntryError.ts";
 import { Golem } from "#src/peer/Golem.ts";
 import { AssetPeer } from "../helpers/AssetPeer.ts";
 import {

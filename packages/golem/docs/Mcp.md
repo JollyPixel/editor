@@ -10,7 +10,7 @@ Build the package (`pnpm --filter @jolly-pixel/golem run build`), create a token
 claude mcp add jollypixel --env JOLLY_GOLEM_TOKEN=<token> -- node <checkout>/packages/golem/dist/bin/jolly-golem.js mcp --url <studio url>
 ```
 
-`--url` defaults to `JOLLY_STUDIO_URL` and `--token` to `JOLLY_GOLEM_TOKEN`. The server exits at once without a URL or a token. It connects on the first tool call, so it starts even when the studio is down: tools then answer with `StudioUnreachableError` until the studio is up.
+`--url` defaults to `JOLLY_STUDIO_URL` and `--token` to `JOLLY_GOLEM_TOKEN`. `--project` is the `projectRoot` the project's kind packages resolve from, `JOLLY_PROJECT` or the current folder by default: pass the studio's project folder when it has kind packages of its own. The server exits at once without a URL or a token. It connects on the first tool call, so it starts even when the studio is down: tools then answer with `StudioUnreachableError` until the studio is up.
 
 `jolly-golem status` connects once, prints the studio status as JSON and exits.
 
@@ -24,36 +24,23 @@ Tools answer with compact JSON. A result over 32,000 characters becomes `{ trunc
 - `catalog_rename({ assetId, to })`
 - `catalog_preview({ assetId })`: the preview as image content, or a text result when the kind has none.
 - `catalog_tag({ assetId, name, message? })` and `catalog_restore({ assetId, tag })`.
-- `asset_open({ assetId })`: joins the asset's room and returns its kind and schema resource.
+- `asset_open({ assetId })`: joins the asset's room and returns its kind and schema resource. When the kind has them, it adds `guide`, Markdown on working with the kind, and `intents`, each `{ name, description, input }` with `input` a JSON Schema.
+- `asset_intent({ assetId, intent, input? })`: runs one of the kind's intents and answers `{ assetId, intent, result }` once the studio accepted its commands. An unknown intent fails with `UnknownIntentError`, an input outside the intent's schema with `IntentInputError`. Each asset package documents its kinds' intents in its `docs/Golem.md`, such as `addActors` for a scene, `fillBox` for a voxel map or `change` for an environment.
 - `asset_close({ assetId })`
 - `asset_read({ assetId })`: the document as JSON.
 - `asset_apply({ assetId, commands })`: applies up to 500 commands and answers once the studio accepted them all.
-- `scene_add_actors({ assetId, parentId?, actors })`: adds actors, given as `SceneAsset.addActors` specs ([GolemAsset](./GolemAsset.md)), and answers `{ assetId, actors }` once the studio accepted them.
-- `scene_transform_actors({ assetId, changes })`, `scene_move_actors({ assetId, actors, parent, before? })` and `scene_remove_actors({ assetId, actors })`: the `SceneAsset` methods of the same name, answering `{ assetId, transformed }`, `{ assetId, moved }` or `{ assetId, removed }`. Actors are names or ids.
-- `scene_add_components({ assetId, actor, components })`: adds components, asset slots named by id or catalog path, and answers `{ assetId, components }` with their `{ id, type }`.
-- `text_read({ assetId, from?, to? })`: a script, shader or text asset as `{ assetId, kind, from, to, lineCount, text }`, whole or the lines `from` to `to` counted from 1.
-- `text_replace({ assetId, search, replace, all? })`: replaces `search`, which must appear once unless `all` is true, and answers `{ assetId, replaced }` once the studio accepted it.
-- `text_write({ assetId, text })`: replaces the whole text, sending only what differs, and answers `{ assetId, lineCount }`.
-- `voxelmap_summary({ assetId })`: a voxel map's layers, blocksets and blocks, as `VoxelMapAsset.summary()`.
-- `voxelmap_query({ assetId, min, max, layer? })` and `voxelmap_heightmap({ assetId, min, max, layer? })`: the occupied cells of a box, and its heights seen from above.
-- `voxelmap_add_layer({ assetId, name, above? })`: adds an empty layer and answers `{ assetId, layer: { id, name } }` once the studio accepted it.
-- `voxelmap_fill_box({ assetId, layer, min, max, block })` and `voxelmap_clear_box({ assetId, layer, min, max })`: fill or empty a box on one layer, answering `{ assetId, written }` or `{ assetId, cleared }` once the studio accepted it.
-- `voxelmodel_add_materials({ assetId, materials })` and `voxelmodel_add_blocks({ assetId, parent?, blocks })`: `VoxelModelAsset.addMaterials` and `addBlocks`, answering `{ assetId, materials }` with their `{ id, name }`, or `{ assetId, blocks }` with their `{ id, name, uv, shared }`.
-- `pixelart_read_pixels({ assetId, x, y, width, height })`: up to 4,096 pixels as rows of `"#rrggbbaa"`.
-- `pixelart_paint({ assetId, pixels })`, `pixelart_fill_rect({ assetId, x, y, width, height, color })` and `pixelart_replace_palette({ assetId, colors })`: the `PixelSurface` methods, answering `{ assetId, painted }` or `{ assetId, colors }`.
-- The `pixelart_*` tools take a `pixelart` or a `blockset` id; another kind fails with `KindMismatchError`.
 - `presence_activity({ assetId, label, progress? })`: publishes the golem's activity on the asset.
 - `presence_clear()`: clears it.
 - `chat_say({ text, assetId? })`: writes in the golem chat and returns the message's `id` and `at`.
 - `chat_next({ timeoutMs? })`: what people wrote since the last call, as `{ username, text, assetId?, at }`. Waits up to `timeoutMs` (default 30,000, at most 120,000) when nothing is unread, then returns `[]`.
-- `script_run({ script, args?, timeoutMs? })`: runs `node <script>` from the package's `local/` folder, with `JOLLY_STUDIO_URL` and `JOLLY_GOLEM_TOKEN` set to the server's, so a script connects under the golem's name without the token reaching the agent. Answers `{ exitCode, timedOut, stdout, stderr }`, each output cut to its last 8,000 characters. A path outside `local/` fails. Stops the script after `timeoutMs` (default 120,000, at most 600,000).
+- `script_run({ script, args?, timeoutMs? })`: runs `node <script>` from the package's `local/` folder, with `JOLLY_STUDIO_URL`, `JOLLY_GOLEM_TOKEN` and `JOLLY_PROJECT` set to the server's, so a script connects under the golem's name without the token reaching the agent. Answers `{ exitCode, timedOut, stdout, stderr }`, each output cut to its last 8,000 characters. A path outside `local/` fails. Stops the script after `timeoutMs` (default 120,000, at most 600,000).
 
-`asset_read`, `asset_apply`, the `scene_*`, `text_*`, `voxelmap_*`, `voxelmodel_*` and `pixelart_*` tools and `presence_activity` open the asset when it is not open yet.
+`asset_read`, `asset_apply`, `asset_intent` and `presence_activity` open the asset when it is not open yet.
 
 ## Resources
 
 - `jollypixel://guide`: the skill, `skill/SKILL.md`.
-- `jollypixel://schemas/<kind>`: the JSON Schema of a kind's commands.
+- `jollypixel://schemas/<kind>`: the JSON Schema of a kind's commands. Listing and reading them connect to the studio first.
 - `jollypixel://docs/<package>/<file>`: a package's `docs/` page from the checkout, named without the `@jolly-pixel/` scope, such as `jollypixel://docs/golem/Golem.md`.
 
 ## `GolemMcpServer`

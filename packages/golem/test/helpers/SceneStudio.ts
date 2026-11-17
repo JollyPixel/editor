@@ -11,10 +11,10 @@ import {
   type SceneSnapshot,
   type SceneState
 } from "@jolly-pixel/asset.scene";
+import { SceneAsset } from "@jolly-pixel/asset.scene/golem";
 import { sceneEditableKind } from "@jolly-pixel/asset.scene/server";
 
 // Import Internal Dependencies
-import { SceneAsset } from "#src/assets/scene/SceneAsset.ts";
 import { mockOpening } from "./opening.ts";
 import { MockStudio } from "./MockStudio.ts";
 

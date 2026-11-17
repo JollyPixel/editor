@@ -376,6 +376,9 @@ importers:
       '@jolly-pixel/engine':
         specifier: workspace:*
         version: link:../../engine
+      '@jolly-pixel/golem.kit':
+        specifier: workspace:*
+        version: link:../../golem-kit
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -437,6 +440,12 @@ importers:
       '@jolly-pixel/asset.common':
         specifier: workspace:*
         version: link:../common
+      '@jolly-pixel/color':
+        specifier: workspace:*
+        version: link:../../color
+      '@jolly-pixel/golem.kit':
+        specifier: workspace:*
+        version: link:../../golem-kit
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -462,9 +471,6 @@ importers:
       '@jolly-pixel/bench':
         specifier: workspace:*
         version: link:../../bench
-      '@jolly-pixel/color':
-        specifier: workspace:*
-        version: link:../../color
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -480,6 +486,9 @@ importers:
       '@jolly-pixel/asset.common':
         specifier: workspace:*
         version: link:../common
+      '@jolly-pixel/golem.kit':
+        specifier: workspace:*
+        version: link:../../golem-kit
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -499,6 +508,9 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/golem.kit':
+        specifier: workspace:*
+        version: link:../../golem-kit
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -626,6 +638,9 @@ importers:
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art
+      '@jolly-pixel/golem.kit':
+        specifier: workspace:*
+        version: link:../../golem-kit
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -672,6 +687,9 @@ importers:
       '@jolly-pixel/asset.voxel-animation':
         specifier: workspace:*
         version: link:../voxel-animation
+      '@jolly-pixel/golem.kit':
+        specifier: workspace:*
+        version: link:../../golem-kit
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -1447,6 +1465,25 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../asset-server
+      '@jolly-pixel/golem.kit':
+        specifier: workspace:*
+        version: link:../golem-kit
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../network
+      '@jolly-pixel/server':
+        specifier: workspace:*
+        version: link:../server
+      '@modelcontextprotocol/server':
+        specifier: 2.4.0
+        version: 2.4.0
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@jolly-pixel/asset.environment':
+        specifier: workspace:*
+        version: link:../assets/environment
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../assets/pixel-art
@@ -1465,31 +1502,27 @@ importers:
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../color
+      '@jolly-pixel/pixel-draw.renderer':
+        specifier: workspace:*
+        version: link:../pixel-draw-renderer
+      '@modelcontextprotocol/client':
+        specifier: 2.4.0
+        version: 2.4.0
+
+  packages/golem-kit:
+    dependencies:
+      '@jolly-pixel/asset-server':
+        specifier: workspace:*
+        version: link:../asset-server
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
-      '@jolly-pixel/pixel-draw.renderer':
-        specifier: workspace:*
-        version: link:../pixel-draw-renderer
-      '@jolly-pixel/server':
-        specifier: workspace:*
-        version: link:../server
-      '@jolly-pixel/voxel.renderer':
-        specifier: workspace:*
-        version: link:../voxel-renderer
-      '@modelcontextprotocol/server':
-        specifier: 2.4.0
-        version: 2.4.0
       zod:
         specifier: 4.6.7
         version: 4.6.7
-    devDependencies:
-      '@modelcontextprotocol/client':
-        specifier: 2.4.0
-        version: 2.4.0
 
   packages/history:
     dependencies:

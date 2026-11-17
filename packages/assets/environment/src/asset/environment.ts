@@ -3,10 +3,16 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import { Systems } from "@jolly-pixel/engine/core";
 
 // Import Internal Dependencies
-import type { EnvironmentFile } from "../network/types.ts";
+import type {
+  EnvironmentFile,
+  EnvironmentPresetName
+} from "../network/types.ts";
 
 // CONSTANTS
 export const ENVIRONMENT_KIND = "environment";
+export const ENVIRONMENT_PRESET_NAMES = Object.freeze(
+  Object.keys(Systems.ENVIRONMENT_PRESETS) as EnvironmentPresetName[]
+);
 export const ENVIRONMENT_COMMAND = "environment.command";
 export const ENVIRONMENT_EXTENSION = ".environment.json";
 
@@ -32,6 +38,8 @@ export const ENVIRONMENT_ASSET: AssetKindDescriptor = {
   }
 };
 
-export function createEnvironmentFile(): EnvironmentFile {
-  return structuredClone(Systems.ENVIRONMENT_PRESETS.default);
+export function createEnvironmentFile(
+  preset: EnvironmentPresetName = "default"
+): EnvironmentFile {
+  return structuredClone(Systems.ENVIRONMENT_PRESETS[preset]);
 }

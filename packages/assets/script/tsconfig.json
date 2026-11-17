@@ -18,6 +18,9 @@
     },
     {
       "path": "../../scripting"
+    },
+    {
+      "path": "../../golem-kit"
     }
   ]
 }

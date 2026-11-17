@@ -60,6 +60,32 @@ export class McpAgent implements AsyncDisposable {
     return resultText(result);
   }
 
+  async intent<T = unknown>(
+    assetId: string,
+    intent: string,
+    input: Record<string, unknown> = {}
+  ): Promise<T> {
+    const { result } = await this.call<{ result: T; }>("asset_intent", {
+      assetId,
+      intent,
+      input
+    });
+
+    return result;
+  }
+
+  intentError(
+    assetId: string,
+    intent: string,
+    input: Record<string, unknown> = {}
+  ): Promise<string> {
+    return this.error("asset_intent", {
+      assetId,
+      intent,
+      input
+    });
+  }
+
   async read(
     uri: string
   ): Promise<string> {

@@ -24,6 +24,9 @@
     },
     {
       "path": "../../voxel-renderer"
+    },
+    {
+      "path": "../../golem-kit"
     }
   ]
 }

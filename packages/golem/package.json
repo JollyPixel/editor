@@ -48,21 +48,21 @@
     "@jolly-pixel/accounts": "workspace:*",
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/golem.kit": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/server": "workspace:*",
+    "@modelcontextprotocol/server": "2.4.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@jolly-pixel/asset.environment": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.scene": "workspace:*",
     "@jolly-pixel/asset.script": "workspace:*",
     "@jolly-pixel/asset.voxel-map": "workspace:*",
     "@jolly-pixel/asset.voxel-model": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
-    "@jolly-pixel/history": "workspace:*",
-    "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
-    "@jolly-pixel/server": "workspace:*",
-    "@jolly-pixel/voxel.renderer": "workspace:*",
-    "@modelcontextprotocol/server": "2.4.0",
-    "zod": "4.6.7"
-  },
-  "devDependencies": {
     "@modelcontextprotocol/client": "2.4.0"
   }
 }

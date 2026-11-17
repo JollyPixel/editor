@@ -19,10 +19,12 @@ import {
   TEXT_KIND,
   textDocumentKind
 } from "@jolly-pixel/asset.script/client";
+import {
+  TextAsset,
+  TextMatchError
+} from "@jolly-pixel/asset.script/golem";
 
 // Import Internal Dependencies
-import { TextAsset } from "#src/assets/text/TextAsset.ts";
-import { TextMatchError } from "#src/assets/text/errors/TextMatchError.ts";
 import { Golem } from "#src/peer/Golem.ts";
 import { AssetPeer } from "../helpers/AssetPeer.ts";
 import { mockOpening } from "../helpers/opening.ts";

@@ -2,7 +2,7 @@
 
 Private asset workspace for `.scene.json` scenes (kind `scene`): a tree of actors whose components can reference other assets. Scenes are edited in `@jolly-pixel/editor.scene`.
 
-Browser code imports `@jolly-pixel/asset.scene/client`; the package root and `@jolly-pixel/asset.scene/server` pull in server dependencies.
+Browser code imports `@jolly-pixel/asset.scene/client`; the package root and `@jolly-pixel/asset.scene/server` pull in server dependencies. The golem entry (`@jolly-pixel/asset.scene/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
 ## 🚀 Building
 

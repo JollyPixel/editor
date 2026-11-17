@@ -6,14 +6,14 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { ColorParseError } from "@jolly-pixel/color";
 import {
   PIXEL_CURSOR_PRESENCE_KEY,
   pixelArtDocumentKind
 } from "@jolly-pixel/asset.pixel-art/client";
+import type { PixelArtAsset } from "@jolly-pixel/asset.pixel-art/golem";
+import { ColorParseError } from "@jolly-pixel/color";
 
 // Import Internal Dependencies
-import type { PixelArtAsset } from "#src/assets/pixelArt/PixelArtAsset.ts";
 import { Golem } from "#src/peer/Golem.ts";
 import { AssetPeer } from "../helpers/AssetPeer.ts";
 import {
