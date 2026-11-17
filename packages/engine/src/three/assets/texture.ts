@@ -19,8 +19,9 @@ export interface CompressedTextureLoader {
 
 export interface TextureAssetLoaderOptions {
   /**
-   * Magnification and minification filter applied to every loaded texture.
-   * Nearest keeps pixel-art edges crisp.
+   * Magnification filter applied to every loaded texture. Nearest keeps
+   * pixel-art edges crisp. Minification is trilinear when the texture has
+   * mipmaps, and this filter otherwise.
    * @default THREE.NearestFilter
    */
   filter?: THREE.MagnificationTextureFilter;
@@ -67,7 +68,9 @@ export class TextureAssetLoader implements AssetLoader<THREE.Texture> {
 
     texture.colorSpace = this.#colorSpace;
     texture.magFilter = this.#filter;
-    texture.minFilter = this.#filter;
+    texture.minFilter = hasMipmaps(texture) ?
+      THREE.LinearMipmapLinearFilter :
+      this.#filter;
 
     return texture;
   }
@@ -85,4 +88,14 @@ export class TextureAssetLoader implements AssetLoader<THREE.Texture> {
 
     return this.#ktx2.loadAsync(source);
   }
+}
+
+function hasMipmaps(
+  texture: THREE.Texture
+): boolean {
+  if (texture instanceof THREE.CompressedTexture) {
+    return texture.mipmaps.length > 1;
+  }
+
+  return texture.generateMipmaps;
 }

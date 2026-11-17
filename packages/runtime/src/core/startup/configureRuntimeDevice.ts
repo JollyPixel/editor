@@ -71,7 +71,7 @@ async function benchmarkDevice(): Promise<DeviceProfile> {
 function getDevicePixelRatio(
   isMobile: boolean
 ): number {
-  const maxPixelRatio = isMobile ? 1.5 : 1;
+  const maxPixelRatio = isMobile ? 1.5 : 2;
 
   return Math.min(
     maxPixelRatio,

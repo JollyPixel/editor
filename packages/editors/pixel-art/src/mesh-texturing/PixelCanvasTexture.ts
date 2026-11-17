@@ -65,8 +65,7 @@ export class PixelCanvasTexture extends Emitter<PixelCanvasTextureEvent> {
 
     this.texture = new THREE.CanvasTexture(source.textureCanvas());
     this.texture.magFilter = threeFilter;
-    this.texture.minFilter = threeFilter;
-    this.texture.generateMipmaps = false;
+    this.texture.minFilter = THREE.LinearMipmapLinearFilter;
     this.texture.colorSpace = options.colorSpace ?? THREE.SRGBColorSpace;
 
     this.#changes = new PixelCanvasChangeTracker(source, {

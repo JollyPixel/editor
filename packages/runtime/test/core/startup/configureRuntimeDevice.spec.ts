@@ -10,6 +10,7 @@ import {
   configureRuntimeDevice,
   isMobileDevice
 } from "../../../src/core/startup/configureRuntimeDevice.ts";
+import { stubProperty } from "../../helpers/stubProperty.ts";
 
 describe("configureRuntimeDevice", () => {
   test("applies an explicit render cap without fetching GPU benchmarks", async(t) => {
@@ -29,6 +30,31 @@ describe("configureRuntimeDevice", () => {
     assert.strictEqual(adaptPixelRatio.mock.callCount(), 1);
     assert.strictEqual(fetch.mock.callCount(), 0);
   });
+
+  for (const [display, expected] of [
+    [1.25, 1.25],
+    [2, 2],
+    [3, 2]
+  ]) {
+    describe(`on a ${display}x desktop display`, () => {
+      stubProperty(window, "devicePixelRatio", display);
+
+      test(`renders at ${expected}x`, async() => {
+        const adaptPixelRatio = mock.fn((_ratio: number) => void 0);
+
+        await configureRuntimeDevice(
+          { scheduler: { maxFps: 0 } } as Pick<GameLoop, "scheduler">,
+          { adaptPixelRatio },
+          { maxFps: 60 }
+        );
+
+        assert.deepStrictEqual(
+          adaptPixelRatio.mock.calls[0].arguments,
+          [expected]
+        );
+      });
+    });
+  }
 });
 
 describe("isMobileDevice", () => {

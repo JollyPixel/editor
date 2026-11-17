@@ -60,7 +60,7 @@ interface RuntimeBackend<TWorld, TScene, TMetrics> {
 - `frameSource` drives `runtime.loop`.
 - `metrics` is registered on `runtime.stats`.
 - `load()` calls `adaptPixelRatio()` once with a ratio fit to the device: at
-  most `1` on desktop and `1.5` on mobile. Ignore it when the user fixed the
+  most `2` on desktop and `1.5` on mobile. Ignore it when the user fixed the
   pixel ratio.
 - `load()` awaits `loadScene()` for its `scene` option and shows the reported
   `completed`, `total`, and `currentAsset` on the loading screen.

@@ -112,7 +112,9 @@ next to `Sphere.png` loads textured.
 `TextureAssetLoader` sends `.ktx2` paths to the `ktx2` option, any object
 with `loadAsync(url): Promise<THREE.CompressedTexture>` (a
 `CompressedTextureLoader`). Without it, loading a `.ktx2` path rejects. The
-same `filter` and `colorSpace` apply to both paths.
+same `filter` and `colorSpace` apply to both paths. `filter` is the
+magnification filter; a texture with mipmaps (any image, or a KTX2 file with
+mip levels) minifies trilinearly, and one without uses `filter`.
 
 ```ts
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
