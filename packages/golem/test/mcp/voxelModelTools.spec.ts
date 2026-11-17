@@ -16,7 +16,7 @@ import {
   serveStudio
 } from "../helpers/studio.ts";
 
-describe("voxel model tools", { timeout: 15_000 }, () => {
+describe("voxel model intents", { timeout: 15_000 }, () => {
   test("adds a material, then shaped blocks that use it by name", async() => {
     await using backend = await serveStudio();
     const bob = await registered(backend, "Bob");
@@ -29,15 +29,14 @@ describe("voxel model tools", { timeout: 15_000 }, () => {
       { path: "models/robot.voxelmodel.json" }
     );
 
-    const { materials } = await agent.call<{ materials: { id: string; }[]; }>(
-      "voxelmodel_add_materials",
+    const { materials } = await agent.intent<{ materials: { id: string; }[]; }>(
+      assetId,
+      "addMaterials",
       {
-        assetId,
         materials: [{ name: "Rubber", surface: { color: "#202020" } }]
       }
     );
-    await agent.call("voxelmodel_add_blocks", {
-      assetId,
+    await agent.intent(assetId, "addBlocks", {
       blocks: [
         {
           name: "Wheel",

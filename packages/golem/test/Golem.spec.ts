@@ -10,17 +10,17 @@ import {
   SCENE_SELECTION_PRESENCE_KEY,
   sceneDocumentKind
 } from "@jolly-pixel/asset.scene/client";
+import type { SceneAsset } from "@jolly-pixel/asset.scene/golem";
+import { CommandDeniedError } from "@jolly-pixel/golem.kit";
 import {
   parseAgentChatActivity,
   type AgentChatActivity
 } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import type { SceneAsset } from "#src/assets/scene/SceneAsset.ts";
 import { Golem } from "#src/peer/Golem.ts";
 import { GolemDisconnectedError } from "#src/peer/errors/GolemDisconnectedError.ts";
 import { GolemTokenRefusedError } from "#src/peer/errors/GolemTokenRefusedError.ts";
-import { CommandDeniedError } from "#src/assets/errors/CommandDeniedError.ts";
 import { ChatPeer } from "./helpers/ChatPeer.ts";
 import { AssetPeer } from "./helpers/AssetPeer.ts";
 import { CatalogPeer } from "./helpers/CatalogPeer.ts";

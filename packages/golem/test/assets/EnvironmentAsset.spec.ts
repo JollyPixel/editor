@@ -10,9 +10,9 @@ import {
   createEnvironmentFile,
   environmentDocumentKind
 } from "@jolly-pixel/asset.environment/client";
+import type { EnvironmentAsset } from "@jolly-pixel/asset.environment/golem";
 
 // Import Internal Dependencies
-import type { EnvironmentAsset } from "#src/assets/environment/EnvironmentAsset.ts";
 import { Golem } from "#src/peer/Golem.ts";
 import { AssetPeer } from "../helpers/AssetPeer.ts";
 import {

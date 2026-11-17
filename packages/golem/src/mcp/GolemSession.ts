@@ -1,12 +1,5 @@
 // Import Internal Dependencies
-import type {
-  GolemAssets,
-  GolemKind
-} from "../assets/kinds.ts";
-import {
-  Golem,
-  type GolemKindFilter
-} from "../peer/Golem.ts";
+import { Golem } from "../peer/Golem.ts";
 import type { GolemTarget } from "../peer/GolemConnectOptions.ts";
 
 export class GolemSession {
@@ -27,15 +20,6 @@ export class GolemSession {
     });
 
     return this.#golem;
-  }
-
-  async open<TKind extends GolemKind = GolemKind>(
-    assetId: string,
-    kind?: GolemKindFilter<TKind>
-  ): Promise<GolemAssets[TKind]> {
-    const golem = await this.golem();
-
-    return golem.open(assetId, kind);
   }
 
   async dispose(): Promise<void> {

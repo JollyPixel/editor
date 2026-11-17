@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { GolemAsset } from "@jolly-pixel/golem.kit";
 import {
   PEER_ACTIVITY_KEY,
   peerActivitySchema,
@@ -6,9 +7,6 @@ import {
 } from "@jolly-pixel/network";
 import type { Room } from "@jolly-pixel/network/client";
 import type { AgentChatClient } from "@jolly-pixel/server/client";
-
-// Import Internal Dependencies
-import type { GolemAsset } from "../assets/GolemAsset.ts";
 
 export type AssetRoomLookup = (asset: GolemAsset) => Room;
 

@@ -16,12 +16,20 @@ export interface GolemConnectOptions {
    * @default 10_000
    */
   timeoutMs?: number;
+  /**
+   * The folder the project's kind packages resolve from, as the studio's
+   * project root. Golem imports the `golem` entry of each kind package the
+   * studio lists from there, then from the golem's own dependencies.
+   * @default process.env.JOLLY_PROJECT ?? process.cwd()
+   */
+  projectRoot?: string;
 }
 
 export interface GolemTarget {
   url: URL;
   token: string;
   timeoutMs: number;
+  projectRoot: string;
 }
 
 export function golemTarget(
@@ -30,7 +38,8 @@ export function golemTarget(
   const {
     url = process.env.JOLLY_STUDIO_URL,
     token = process.env.JOLLY_GOLEM_TOKEN,
-    timeoutMs = kDefaultTimeoutMs
+    timeoutMs = kDefaultTimeoutMs,
+    projectRoot = process.env.JOLLY_PROJECT || process.cwd()
   } = options;
   if (url === undefined || url === "") {
     throw new TypeError(
@@ -46,6 +55,7 @@ export function golemTarget(
   return {
     url: new URL(url),
     token,
-    timeoutMs
+    timeoutMs,
+    projectRoot
   };
 }

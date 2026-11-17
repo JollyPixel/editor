@@ -9,7 +9,7 @@ Private asset workspace for environments (kind `environment`, `.environment.json
 
 - `createEnvironmentFile(preset?)` copies an engine preset (`ENVIRONMENT_PRESET_NAMES`), `default` when none is named.
 
-Browser code imports `@jolly-pixel/asset.environment/client`. The package root also builds the command schemas. The server entry (`@jolly-pixel/asset.environment/server`) adds `environmentEditableKind()`, the command schema and protocol a Node peer such as the golem needs to send commands.
+Browser code imports `@jolly-pixel/asset.environment/client`. The package root also builds the command schemas. The server entry (`@jolly-pixel/asset.environment/server`) adds `environmentEditableKind()`, the command schema and protocol a Node peer such as the golem needs to send commands. The golem entry (`@jolly-pixel/asset.environment/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
 ## 🚀 Building
 

@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
-import {
-  Golem,
-  type ActorSpec
-} from "@jolly-pixel/golem";
+import type { ActorSpec } from "@jolly-pixel/asset.scene/golem";
+import { Golem } from "@jolly-pixel/golem";
 
 // CONSTANTS
 const kBatchSize = 200;

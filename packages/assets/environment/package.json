@@ -17,13 +17,20 @@
     "./server": {
       "types": "./dist/network/server.d.ts",
       "default": "./dist/network/server.js"
+    },
+    "./golem": {
+      "types": "./dist/golem/index.d.ts",
+      "default": "./dist/golem/index.js"
     }
   },
   "imports": {
     "#src/*": "./src/*"
   },
+  "jollypixel": {
+    "golem": "./golem"
+  },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node -e \"fs.cpSync('src/golem/guide.md', 'dist/golem/guide.md')\"",
     "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test-types": "tstyche --tsconfig ./test/tsconfig.json",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only && pnpm run test-types",
@@ -47,6 +54,7 @@
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/golem.kit": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@openally/emitt": "1.1.0",

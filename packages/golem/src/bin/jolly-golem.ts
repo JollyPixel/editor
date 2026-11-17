@@ -11,12 +11,15 @@ import { GolemMcpServer } from "../mcp/GolemMcpServer.ts";
 // CONSTANTS
 const kUsage = [
   "Usage: jolly-golem <command> [--url <studio url>] [--token <agent token>]",
+  "                   [--project <folder>]",
   "",
   "Commands:",
   "  mcp     run the MCP server on stdio",
   "  status  connect once and print the studio status",
   "",
-  "--url defaults to JOLLY_STUDIO_URL, --token to JOLLY_GOLEM_TOKEN."
+  "--url defaults to JOLLY_STUDIO_URL, --token to JOLLY_GOLEM_TOKEN.",
+  "--project, where the project's kind packages resolve from, defaults to",
+  "JOLLY_PROJECT, then the current folder."
 ].join("\n");
 
 const { positionals, values } = parseArgs({
@@ -28,6 +31,9 @@ const { positionals, values } = parseArgs({
     token: {
       type: "string"
     },
+    project: {
+      type: "string"
+    },
     help: {
       type: "boolean",
       short: "h"
@@ -37,7 +43,8 @@ const { positionals, values } = parseArgs({
 const [command] = positionals;
 const options = {
   url: values.url,
-  token: values.token
+  token: values.token,
+  projectRoot: values.project
 };
 
 if (

@@ -75,7 +75,8 @@ export class ScriptRunner {
       env: {
         ...process.env,
         JOLLY_STUDIO_URL: this.#target.url.href,
-        JOLLY_GOLEM_TOKEN: this.#target.token
+        JOLLY_GOLEM_TOKEN: this.#target.token,
+        JOLLY_PROJECT: this.#target.projectRoot
       },
       timeout: timeoutMs,
       stdio: ["ignore", "pipe", "pipe"]

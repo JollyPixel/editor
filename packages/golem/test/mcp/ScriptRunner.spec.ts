@@ -44,7 +44,8 @@ describe("ScriptRunner", { timeout: 10_000 }, () => {
       target: {
         url: new URL("http://localhost:5173/"),
         token: "agent-token",
-        timeoutMs: 1_000
+        timeoutMs: 1_000,
+        projectRoot: root
       },
       scriptsDir,
       cwd: root

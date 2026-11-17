@@ -6,7 +6,7 @@
 
 Private asset workspace for `.voxelmap.json` worlds (kind `voxelmap`) and the `.blockset.json` blocksets they link (kind `blockset`), edited in `@jolly-pixel/editor.voxel-map`.
 
-Browser code imports `@jolly-pixel/asset.voxel-map/client`; the package root and `@jolly-pixel/asset.voxel-map/server` pull in server dependencies.
+Browser code imports `@jolly-pixel/asset.voxel-map/client`; the package root and `@jolly-pixel/asset.voxel-map/server` pull in server dependencies. The golem entry (`@jolly-pixel/asset.voxel-map/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
 ## 🚀 Building
 

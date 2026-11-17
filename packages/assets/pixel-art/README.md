@@ -6,7 +6,7 @@
 
 Private asset workspace for `.pixelart` textures (kind `pixelart`). Textures are edited in `@jolly-pixel/editor.pixel-art` and referenced by voxel maps, voxel models and scenes.
 
-Browser code imports `@jolly-pixel/asset.pixel-art/client`; the package root and `@jolly-pixel/asset.pixel-art/server` pull in server dependencies.
+Browser code imports `@jolly-pixel/asset.pixel-art/client`; the package root and `@jolly-pixel/asset.pixel-art/server` pull in server dependencies. The golem entry (`@jolly-pixel/asset.pixel-art/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
 ## 🚀 Building
 

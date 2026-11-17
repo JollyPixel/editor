@@ -1,8 +1,6 @@
 // Import Third-party Dependencies
-import {
-  Golem,
-  type VoxelWrite
-} from "@jolly-pixel/golem";
+import type { VoxelWrite } from "@jolly-pixel/asset.voxel-map/golem";
+import { Golem } from "@jolly-pixel/golem";
 
 // CONSTANTS
 const kSize = 32;

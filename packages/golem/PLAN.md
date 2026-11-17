@@ -13,8 +13,10 @@ the chat). Trial follow-ups and `llms.txt` built too: scene component checks
 from the editors' `sceneComponents` manifests, voxel model nets placed in
 free texture space (growing the texture), blockset texture painting through
 `PixelSurface`, and `llms.txt` / `llms-full.txt` from `docs:build`.
-The `environment` kind came on 2026-11-17: `EnvironmentAsset.change`,
-`SceneAsset.useEnvironment`, `environment_change` and `scene_set_environment`.
+The `environment` kind came on 2026-11-17. The same day every kind moved
+to its asset package's `golem` entry over `@jolly-pixel/golem.kit`, the golem
+importing them from the manifest's kind packages, and the per-kind MCP tools
+became intents run through `asset_intent`.
 
 ## 3. Bridge
 

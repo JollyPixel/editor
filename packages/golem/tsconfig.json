@@ -32,7 +32,7 @@
       "path": "../color"
     },
     {
-      "path": "../history"
+      "path": "../golem-kit"
     },
     {
       "path": "../network"
@@ -42,9 +42,6 @@
     },
     {
       "path": "../server"
-    },
-    {
-      "path": "../voxel-renderer"
     }
   ]
 }

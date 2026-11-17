@@ -12,17 +12,11 @@ import {
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
-import {
-  GOLEM_KINDS,
-  golemCommandSchema,
-  isGolemKind
-} from "../assets/kinds.ts";
-import { UnsupportedKindError } from "../assets/errors/UnsupportedKindError.ts";
+import { PACKAGE_ROOT } from "../packageRoot.ts";
+import type { GolemSession } from "./GolemSession.ts";
 import { WorkspaceDocs } from "./WorkspaceDocs.ts";
 
 // CONSTANTS
-export const PACKAGE_ROOT = path.join(import.meta.dirname, "..", "..");
-
 const kGuideFile = path.join(PACKAGE_ROOT, "skill", "SKILL.md");
 const kWorkspacesRoot = path.join(PACKAGE_ROOT, "..");
 const kGuideUri = "jollypixel://guide";
@@ -34,7 +28,8 @@ export function schemaUri(
 }
 
 export function registerResources(
-  server: McpServer
+  server: McpServer,
+  session: GolemSession
 ): void {
   const docs = new WorkspaceDocs(kWorkspacesRoot);
 
@@ -51,9 +46,11 @@ export function registerResources(
   server.registerResource(
     "schemas",
     new ResourceTemplate("jollypixel://schemas/{kind}", {
-      list: () => {
+      list: async() => {
+        const golem = await session.golem();
+
         return {
-          resources: GOLEM_KINDS.map((kind) => {
+          resources: golem.kinds.names().map((kind) => {
             return {
               uri: schemaUri(kind),
               name: `${kind} commands`,
@@ -67,12 +64,11 @@ export function registerResources(
       description: "The JSON Schema of one kind's commands, for asset_apply.",
       mimeType: "application/schema+json"
     },
-    (uri, variables) => {
+    async(uri, variables) => {
       const kind = variable(variables, "kind");
-      if (!isGolemKind(kind)) {
-        throw new UnsupportedKindError(kind, GOLEM_KINDS);
-      }
-      const schema = z.toJSONSchema(golemCommandSchema(kind), {
+      const golem = await session.golem();
+      const { schema: commands } = golem.kinds.contribution(kind);
+      const schema = z.toJSONSchema(commands, {
         io: "input"
       });
 

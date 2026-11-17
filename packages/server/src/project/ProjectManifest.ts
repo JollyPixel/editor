@@ -9,7 +9,6 @@ import {
   type EditorDescriptor
 } from "../editors/EditorDescriptor.ts";
 import type { EditorPreferenceScopes } from "../preferences/PreferenceScopes.ts";
-import { SceneComponentTypes } from "./SceneComponentTypes.ts";
 
 // CONSTANTS
 export const PROJECT_MANIFEST_FILE = "project-manifest.json";
@@ -111,12 +110,6 @@ export class ProjectManifest implements ProjectManifestData {
     this.kinds = [...data.kinds];
     this.kindPackages = [...data.kindPackages];
     this.maxContentBytes = data.maxContentBytes;
-  }
-
-  sceneComponents(): SceneComponentTypes {
-    return new SceneComponentTypes(
-      this.editors.flatMap((editor) => editor.sceneComponents)
-    );
   }
 
   * editorScopes(): IterableIterator<EditorScopes> {

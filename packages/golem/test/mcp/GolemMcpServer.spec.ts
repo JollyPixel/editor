@@ -129,11 +129,17 @@ describe("GolemMcpServer", { timeout: kTimeoutMs }, () => {
     });
 
     const assetId = await createForest(agent);
-    assert.deepEqual(await agent.call("asset_open", { assetId }), {
-      assetId,
-      kind: "scene",
-      schema: "jollypixel://schemas/scene"
-    });
+    const opened = await agent.call<{
+      kind: string;
+      schema: string;
+      intents: { name: string; }[];
+    }>("asset_open", { assetId });
+    assert.equal(opened.kind, "scene");
+    assert.ok(opened.intents.some(({ name }) => name === "addActors"));
+    const schema = JSON.parse(await agent.read(opened.schema));
+    assert.ok(schema.oneOf.some(
+      (command: SchemaVariant) => command.properties.action.const === "actor-renamed"
+    ));
     using peer = await AssetPeer.join({
       socketUrl: backend.socketUrl,
       credential: watcher.value,
@@ -243,17 +249,12 @@ describe("GolemMcpServer", { timeout: kTimeoutMs }, () => {
     assert.match(error, /studio at http:\/\/127\.0\.0\.1:9\/ is not reachable/);
   });
 
-  test("serves kind schemas and package docs, but no file outside docs/", async() => {
+  test("serves package docs without a studio, but no file outside docs/", async() => {
     await using agent = await McpAgent.connect({
       url: kNoStudio,
       token: "any"
     });
 
-    const schema = JSON.parse(await agent.read("jollypixel://schemas/scene"));
-    const actions = schema.oneOf.map(
-      (command: SchemaVariant) => command.properties.action.const
-    );
-    assert.ok(actions.includes("actor-renamed"));
     assert.equal(
       await agent.read("jollypixel://docs/golem/Golem.md"),
       fs.readFileSync(path.join(kGolemDocs, "Golem.md"), "utf-8")

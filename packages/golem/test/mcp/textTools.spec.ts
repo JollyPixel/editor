@@ -13,7 +13,7 @@ import {
   serveStudio
 } from "../helpers/studio.ts";
 
-describe("text tools", { timeout: 15_000 }, () => {
+describe("text intents", { timeout: 15_000 }, () => {
   test("writes, replaces and reads back a range of lines", async() => {
     await using backend = await serveStudio();
     const bob = await registered(backend, "Bob");
@@ -26,23 +26,18 @@ describe("text tools", { timeout: 15_000 }, () => {
       { path: "notes/todo.md" }
     );
 
-    await agent.call("text_write", {
-      assetId,
+    await agent.intent(assetId, "write", {
       text: "# Todo\n- bread\n- milk\n- bread\n"
     });
-    await agent.call("text_replace", {
-      assetId,
+    await agent.intent(assetId, "replace", {
       search: "- milk\n",
       replace: ""
     });
 
-    assert.deepEqual(await agent.call("text_read", {
-      assetId,
+    assert.deepEqual(await agent.intent(assetId, "read", {
       from: 2,
       to: 9
     }), {
-      assetId,
-      kind: "text",
       from: 2,
       to: 4,
       lineCount: 4,

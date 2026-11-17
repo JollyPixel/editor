@@ -5,8 +5,10 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { AddedActor } from "@jolly-pixel/asset.scene/golem";
+
 // Import Internal Dependencies
-import type { AddedActor } from "#src/assets/scene/ActorSpec.ts";
 import { McpAgent } from "../helpers/McpAgent.ts";
 import {
   actorNamed,
@@ -19,7 +21,7 @@ import {
   serveStudio
 } from "../helpers/studio.ts";
 
-describe("scene tools", { timeout: 15_000 }, () => {
+describe("scene intents", { timeout: 15_000 }, () => {
   test("adds nested actors under an existing one", async() => {
     await using backend = await serveStudio();
     const bob = await registered(backend, "Bob");
@@ -30,10 +32,10 @@ describe("scene tools", { timeout: 15_000 }, () => {
     const assetId = await createForest(agent);
     const sunId = await actorNamed(agent, assetId, "Sun");
 
-    const { actors } = await agent.call<{ actors: AddedActor[]; }>(
-      "scene_add_actors",
+    const { actors } = await agent.intent<{ actors: AddedActor[]; }>(
+      assetId,
+      "addActors",
       {
-        assetId,
         parentId: sunId,
         actors: [
           {
@@ -65,16 +67,15 @@ describe("scene tools", { timeout: 15_000 }, () => {
       { path: "scripts/spin.ts" }
     );
 
-    const { components } = await agent.call<{ components: { id: string; }[]; }>(
-      "scene_add_components",
+    const { components } = await agent.intent<{ components: { id: string; }[]; }>(
+      assetId,
+      "addComponents",
       {
-        assetId,
         actor: "Sun",
         components: [{ type: "Script", assets: { script: "scripts/spin.ts" } }]
       }
     );
-    await agent.call("scene_move_actors", {
-      assetId,
+    await agent.intent(assetId, "moveActors", {
       actors: ["Sun"],
       parent: "Sky"
     });
@@ -86,7 +87,7 @@ describe("scene tools", { timeout: 15_000 }, () => {
       { script: { id: script.assetId, kind: "script" } }
     );
 
-    await agent.call("scene_remove_actors", { assetId, actors: ["Sky"] });
+    await agent.intent(assetId, "removeActors", { actors: ["Sky"] });
     const removed = await agent.call<SceneRead>("asset_read", { assetId });
     assert.deepEqual(removed.actors.map(({ name }) => name), ["Main Camera"]);
   });
