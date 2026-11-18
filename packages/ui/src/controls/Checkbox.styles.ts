@@ -71,7 +71,7 @@ export const checkboxStyles = css`
   }
 
   :host([clickable-background]:not([disabled], [readonly], [locked]))
-    .checkbox:has(input:focus-visible)::before {
+  .checkbox:has(input:focus-visible)::before {
     background-image: linear-gradient(
       var(--jolly-checkbox-gradient-direction),
       var(--jolly-control-bg-focus),

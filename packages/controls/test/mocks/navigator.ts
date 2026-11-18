@@ -52,7 +52,7 @@ export function Gamepad(): GamepadMock {
 export class NavigatorAdapter implements NavigatorAdapterContract {
   gamepads: Array<GamepadMock | null> = [null, null, null, null];
 
-  getGamepads(): (globalThis.Gamepad | null)[] {
+  pollGamepads(): (globalThis.Gamepad | null)[] {
     return this.toNativeGamepads();
   }
 

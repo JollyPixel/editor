@@ -98,7 +98,7 @@ export class BenchNavigatorAdapter implements NavigatorAdapter {
 
   allocateSnapshot = true;
 
-  getGamepads(): (globalThis.Gamepad | null)[] {
+  pollGamepads(): (globalThis.Gamepad | null)[] {
     return this.allocateSnapshot ? this.gamepads.slice() : this.gamepads;
   }
 

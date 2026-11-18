@@ -17,7 +17,7 @@ export class BlockShapePreview extends LitElement {
     css`
       :host {
         display: block;
-        aspect-ratio: 1;
+        aspect-ratio: 1 / 1;
         contain: size;
       }
 

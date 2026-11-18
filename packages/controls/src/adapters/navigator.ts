@@ -1,12 +1,12 @@
 export interface NavigatorAdapter {
-  getGamepads(): (Gamepad | null)[];
+  pollGamepads(): (Gamepad | null)[];
   vibrate(
     pattern: VibratePattern,
   ): boolean;
 }
 
 export class BrowserNavigatorAdapter implements NavigatorAdapter {
-  getGamepads(): (Gamepad | null)[] {
+  pollGamepads(): (Gamepad | null)[] {
     return navigator.getGamepads();
   }
 

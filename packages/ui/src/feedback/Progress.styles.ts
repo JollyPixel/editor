@@ -84,7 +84,8 @@ export const progressStyles = css`
   }
 
   @keyframes progress-pulse {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: var(--jolly-progress-shadow);
     }
 
@@ -104,7 +105,8 @@ export const progressStyles = css`
   }
 
   @keyframes progress-speed {
-    0%, 100% {
+    0%,
+    100% {
       filter: blur(0);
     }
 

@@ -34,7 +34,8 @@ export const spinnerStyles = css`
   }
 
   @keyframes spinner-pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.35;
     }
 

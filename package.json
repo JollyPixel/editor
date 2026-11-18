@@ -38,8 +38,8 @@
   "devDependencies": {
     "@changesets/changelog-github": "1.0.1",
     "@changesets/cli": "3.0.3",
-    "@openally/config.oxlint": "1.0.0",
-    "@openally/config.stylelint": "1.0.2",
+    "@openally/config.oxlint": "1.1.1",
+    "@openally/config.stylelint": "2.0.0",
     "@openally/config.typescript": "1.3.0",
     "@openally/mutex": "4.0.0",
     "@playwright/test": "1.65.0",

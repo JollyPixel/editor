@@ -28,7 +28,7 @@ export const colorStripStyles = css`
     flex: 0 1 auto;
     width: 16px;
     min-width: 10px;
-    aspect-ratio: 1;
+    aspect-ratio: 1 / 1;
     padding: 0;
     border: 1px solid var(--color-divider);
     border-radius: var(--color-swatch-radius, 4px);

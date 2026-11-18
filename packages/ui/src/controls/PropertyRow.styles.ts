@@ -108,8 +108,7 @@ export const propertyRowStyles = css`
   }
 
   /* Let an opted-in checkbox carry its gradient across the whole value column. */
-  :host([align="end"])
-    ::slotted(jolly-checkbox[align="end"][clickable-background]) {
+  :host([align="end"]) ::slotted(jolly-checkbox[align="end"][clickable-background]) {
     flex: 1 1 auto;
     min-width: 0;
   }

@@ -250,7 +250,7 @@ export class Gamepad extends Emitter<
       this.#idlePollCountdown = Gamepad.IdlePollFrames;
     }
 
-    const gamepads = this.#navigatorAdapter.getGamepads();
+    const gamepads = this.#navigatorAdapter.pollGamepads();
     let present = 0;
     let active = false;
     for (let index = 0; index < Gamepad.MaxGamepads; index++) {

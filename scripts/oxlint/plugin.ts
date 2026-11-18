@@ -4,11 +4,7 @@ import { errDeclaredError } from "./rules/errDeclaredError.ts";
 import { errorsInErrorsFolder } from "./rules/errorsInErrorsFolder.ts";
 import { importRenderedElements } from "./rules/importRenderedElements.ts";
 import { noComments } from "./rules/noComments.ts";
-import { noEnum } from "./rules/noEnum.ts";
-import { noGetSetPrefix } from "./rules/noGetSetPrefix.ts";
 import { noOfNames } from "./rules/noOfNames.ts";
-import { noTsPrivate } from "./rules/noTsPrivate.ts";
-import { paramsPerLine } from "./rules/paramsPerLine.ts";
 
 export default {
   meta: {
@@ -20,10 +16,6 @@ export default {
     "errors-in-errors-folder": errorsInErrorsFolder,
     "import-rendered-elements": importRenderedElements,
     "no-comments": noComments,
-    "no-enum": noEnum,
-    "no-get-set-prefix": noGetSetPrefix,
-    "no-of-names": noOfNames,
-    "no-ts-private": noTsPrivate,
-    "params-per-line": paramsPerLine
+    "no-of-names": noOfNames
   }
 };
