@@ -54,6 +54,6 @@
   },
   "devDependencies": {
     "@jolly-pixel/bench": "workspace:*",
-    "fake-indexeddb": "6.2.7"
+    "fake-indexeddb": "6.2.8"
   }
 }
