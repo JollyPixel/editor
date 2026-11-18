@@ -1,6 +1,6 @@
 # Scene gizmos
 
-Markers an editor draws for objects that render nothing on their own: `CameraGizmo` for a camera and `LightGizmo` for a light. Each one shows a flat icon that keeps the same size on screen whatever the distance, and is drawn over the scene. Add them to the scene root and call `update()` every frame.
+Markers an editor draws for objects that render nothing on their own: `CameraGizmo` for a camera, `LightGizmo` for a light and `AudioGizmo` for a sound source. Each one shows a flat icon that keeps the same size on screen whatever the distance, and is drawn over the scene. Add them to the scene root and call `update()` every frame.
 
 ```ts
 import { CameraGizmo, LightGizmo } from "@jolly-pixel/three";
@@ -71,5 +71,23 @@ Tints the icon with `selectedColor` and shows the light's shape:
 - point: three circles at `distance`, none when `distance` is 0.
 
 Hemisphere and ambient lights have no shape.
+
+### dispose(): void
+
+## AudioGizmo
+
+```ts
+interface AudioGizmoOptions {
+  selectedColor?: THREE.ColorRepresentation; // "#f5c46b"
+}
+```
+
+### update(position, color): void
+
+Moves to `position` and draws a speaker icon tinted with `color`.
+
+### selected: boolean
+
+Tints the icon with `selectedColor`.
 
 ### dispose(): void

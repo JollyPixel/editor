@@ -12,7 +12,10 @@ const kHaloColor = "rgba(10, 12, 16, 0.7)";
 const kHaloWidth = 9;
 const kGlyphColor = "#ffffff";
 const kGlyphWidth = 4;
+const kIdleColor = "#ffffff";
 const kTurn = Math.PI * 2;
+const kSpeakerWaveAngle = kTurn / 8;
+export const GIZMO_SELECTED_COLOR = "#f5c46b";
 
 export type GizmoIconGlyph =
   | "camera"
@@ -20,7 +23,8 @@ export type GizmoIconGlyph =
   | "spot"
   | "directional"
   | "hemisphere"
-  | "ambient";
+  | "ambient"
+  | "speaker";
 
 type GlyphTrace = (context: CanvasRenderingContext2D) => void;
 
@@ -95,14 +99,34 @@ const kGlyphs: Record<GizmoIconGlyph, GlyphTrace> = {
       );
       context.arc(32, 32, 22, start, end);
     }
+  },
+  speaker(context) {
+    context.moveTo(8, 25);
+    context.lineTo(18, 25);
+    context.lineTo(30, 13);
+    context.lineTo(30, 51);
+    context.lineTo(18, 39);
+    context.lineTo(8, 39);
+    context.closePath();
+    for (const radius of [10, 20]) {
+      context.moveTo(
+        32 + (Math.cos(-kSpeakerWaveAngle) * radius),
+        32 + (Math.sin(-kSpeakerWaveAngle) * radius)
+      );
+      context.arc(32, 32, radius, -kSpeakerWaveAngle, kSpeakerWaveAngle);
+    }
   }
 };
 
 export class GizmoIcon extends CanvasSprite {
+  readonly #color = new THREE.Color(kIdleColor);
+  readonly #selectedColor: THREE.Color;
   #glyph: GizmoIconGlyph;
+  #selected = false;
 
   constructor(
-    glyph: GizmoIconGlyph
+    glyph: GizmoIconGlyph,
+    selectedColor: THREE.ColorRepresentation
   ) {
     super({
       width: kCanvasSize,
@@ -112,6 +136,7 @@ export class GizmoIcon extends CanvasSprite {
     });
 
     this.#glyph = glyph;
+    this.#selectedColor = new THREE.Color(selectedColor);
     this.material.sizeAttenuation = false;
     this.redraw();
   }
@@ -132,13 +157,31 @@ export class GizmoIcon extends CanvasSprite {
   }
 
   get color(): THREE.Color {
-    return this.material.color.clone();
+    return this.#color.clone();
   }
 
   set color(
     color: THREE.ColorRepresentation
   ) {
-    this.material.color.set(color);
+    this.#color.set(color);
+    this.#tint();
+  }
+
+  get selected(): boolean {
+    return this.#selected;
+  }
+
+  set selected(
+    selected: boolean
+  ) {
+    this.#selected = selected;
+    this.#tint();
+  }
+
+  #tint(): void {
+    this.material.color.copy(
+      this.#selected ? this.#selectedColor : this.#color
+    );
   }
 
   protected override paint(

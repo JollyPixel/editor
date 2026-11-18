@@ -3,6 +3,7 @@ import { SoundDocument } from "@jolly-pixel/asset.sound/client";
 
 // Import Internal Dependencies
 import { SoundPlayer } from "#src/player/SoundPlayer.ts";
+import { LiveSettings } from "#src/settings/LiveSettings.ts";
 import { FakeAudioContext } from "./FakeAudioContext.ts";
 
 // CONSTANTS
@@ -13,16 +14,19 @@ export async function followingPlayer(
 ): Promise<{
   context: FakeAudioContext;
   document: SoundDocument;
+  settings: LiveSettings;
   player: SoundPlayer;
 }> {
   const player = new SoundPlayer(context.asAudioContext());
   const document = new SoundDocument();
   document.load(kOggBytes);
-  await player.follow(document);
+  const settings = new LiveSettings(document);
+  await player.follow(settings);
 
   return {
     context,
     document,
+    settings,
     player
   };
 }

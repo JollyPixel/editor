@@ -1,6 +1,7 @@
 export * from "./box/index.ts";
 export * from "./grid/Grid.ts";
 export * from "./peer-frustum/PeerFrustum.ts";
+export * from "./scene-gizmos/AudioGizmo.ts";
 export * from "./scene-gizmos/CameraGizmo.ts";
 export * from "./scene-gizmos/LightGizmo.ts";
 export * from "./mesh-highlight/index.ts";

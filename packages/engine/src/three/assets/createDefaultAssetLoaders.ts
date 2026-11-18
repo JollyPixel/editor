@@ -4,9 +4,9 @@ import type * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import {
-  AUDIO_ASSET,
-  AudioAssetLoader
-} from "./audio.ts";
+  SoundAssetLoader,
+  SoundAssetType
+} from "./sound.ts";
 import {
   FontAssetLoader,
   FontAssetType
@@ -43,7 +43,7 @@ export function createDefaultAssetLoaders(
     .register(SceneFileAssetType, new SceneFileAssetLoader(manager))
     .register(ENVIRONMENT_ASSET, new EnvironmentFileAssetLoader(manager))
     .register(FontAssetType, new FontAssetLoader(manager))
-    .register(AUDIO_ASSET, new AudioAssetLoader(manager))
+    .register(SoundAssetType, new SoundAssetLoader(manager))
     .register(TEXTURE_ASSET, new TextureAssetLoader(manager, {
       ktx2: options.ktx2
     }));

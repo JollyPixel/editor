@@ -1,9 +1,11 @@
 // Import Internal Dependencies
 import { Playback } from "../Playback.ts";
+import { Voice } from "../Voice.ts";
 import type {
   Sound,
   SoundFormat,
   SoundPlayOptions,
+  SoundVoiceOptions,
   WaveformBar
 } from "./Sound.ts";
 import { Timecode } from "./Timecode.ts";
@@ -60,9 +62,9 @@ export class DecodedSound implements Sound {
   play(
     options: SoundPlayOptions
   ): Playback {
-    const { context, output, mode } = options;
+    const { context, output, tuning } = options;
     const source = context.createBufferSource();
-    source.buffer = mode.reversed
+    source.buffer = tuning.reversed
       ? this.#reversedBuffer(context)
       : this.#buffer;
     source.connect(output);
@@ -70,9 +72,17 @@ export class DecodedSound implements Sound {
     return Playback.start({
       context,
       source,
-      mode,
-      offset: options.offset,
-      duration: this.duration
+      tuning,
+      offset: options.offset
+    });
+  }
+
+  voice(
+    options: SoundVoiceOptions
+  ): Voice {
+    return Voice.start({
+      ...options,
+      buffer: this.#buffer
     });
   }
 

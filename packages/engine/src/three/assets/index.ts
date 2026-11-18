@@ -8,7 +8,8 @@ import {
   FontAssetType
 } from "./font.ts";
 
-export * from "./audio.ts";
+export * from "./sound.ts";
+export * from "./scriptAssetTypes.ts";
 export * from "./sceneFile.ts";
 export * from "./environmentFile.ts";
 export * from "./texture.ts";

@@ -121,16 +121,17 @@ describe("SceneComponents", () => {
     assert.deepEqual(components.descriptors, [FONT_ASSET, TEXTURE_ASSET, kMapSource.descriptor]);
   });
 
-  test("shows the icon of a component's asset kind before its own icon", () => {
+  test("shows a component's own icon, else the icon of its asset kind", () => {
+    const { icon: _icon, ...iconlessMap } = kMapKind;
     const components = createSceneComponents(["maps", kMaps]);
-    const bare = createSceneComponents(["maps", {
+    const iconless = createSceneComponents(["maps", {
       ...kMaps,
-      assets: [{ ...kMapSource, descriptor: { ...kMapSource.descriptor, icon: undefined } }]
+      components: [iconlessMap]
     }]);
 
     assert.deepEqual(
-      [components.icon("Map"), components.icon("Text"), bare.icon("Map")],
-      ["kind:map", "kind:font", "actor-map"]
+      [components.icon("Map"), components.icon("Text"), iconless.icon("Map")],
+      ["actor-map", "kind:font", "kind:map"]
     );
   });
 

@@ -1,7 +1,8 @@
 // Import Third-party Dependencies
 import {
   AssetReference,
-  type AssetReferenceData
+  type AssetReferenceData,
+  type AssetType
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -23,6 +24,20 @@ import type {
 } from "../SceneFile.ts";
 
 export type AnyComponentDefinition = ComponentDefinition<any, any, any>;
+
+function filledSlot(
+  slot: string,
+  data: AssetReferenceData,
+  type: AssetType<unknown>
+): FilledSlot {
+  return {
+    slot,
+    data,
+    reference: data.kind === type.kind.value ?
+      AssetReference.parse(data, type) :
+      null
+  };
+}
 
 export interface MissingComponentAsset {
   readonly slot: string;
@@ -198,17 +213,24 @@ export class ComponentDefinitions {
   * #slots(
     entry: Readonly<Pick<SceneComponentFile, "type" | "assets">>
   ): IterableIterator<FilledSlot> {
-    const slots = this.#definitions.get(entry.type)?.assets ?? {};
+    const definition = this.#definitions.get(entry.type);
+    const slots = definition?.assets ?? {};
     for (const [slot, type] of Object.entries(slots)) {
       const data = entry.assets[slot] ?? null;
       if (data !== null) {
-        yield {
-          slot,
-          data,
-          reference: data.kind === type.kind.value ?
-            AssetReference.parse(data, type) :
-            null
-        };
+        yield filledSlot(slot, data, type);
+      }
+    }
+    if (definition?.slotType === undefined) {
+      return;
+    }
+
+    for (const [slot, data] of Object.entries(entry.assets)) {
+      const type = data === null || Object.hasOwn(slots, slot) ?
+        null :
+        definition.slotType(slot, data);
+      if (data !== null && type !== null) {
+        yield filledSlot(slot, data, type);
       }
     }
   }

@@ -213,6 +213,7 @@ interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
   owns?(component: Component): component is TComponent;
   capture?(component: TComponent, stored: Readonly<JSONObject>): JSONObject;
   anchors?(component: TComponent): ComponentAnchors;
+  slotType?(slot: string, reference: AssetReferenceData): AssetType<unknown> | null;
 }
 
 interface ComponentContext<TAssets> {
@@ -244,6 +245,10 @@ interface ComponentContext<TAssets> {
   called once per built component.
 - `assets` maps each asset slot the component reads to its `AssetType`. The
   filled slots are loaded before the scene activates.
+- `slotType` gives the type of a filled slot that `assets` does not list,
+  such as the `property:<field>` slot of a `Sound` script property, or
+  `null` to leave it out. Those slots are loaded and checked like the listed
+  ones.
 - In edit mode a definition builds nothing that runs the game: the camera
   never renders and no script is built.
 
@@ -278,7 +283,7 @@ the asset arrives.
 
 Resolves any slot of the component's `assets` map with the given type, for
 slots the definition does not declare, such as the texture slots of a shader
-uniform.
+uniform. Returns `null` when the slot holds another asset kind.
 
 ### ComponentDefinitions
 
@@ -568,6 +573,10 @@ captures the live component back to data.
 - `CameraDefinition` (`Camera`): the [camera](../components/camera.md)
   options. In edit mode the camera is created with `render: false`.
 - `LightDefinition` (`Light`): a [light](../components/light.md).
+- `AudioSourceDefinition` (`AudioSource`), `AudioListenerDefinition`
+  (`AudioListener`) and `AudioZoneDefinition` (`AudioZone`): the
+  [audio components](../components/audio.md). The sound editor contributes
+  them to scenes.
 - `MeshDefinition` (`Mesh`): a [mesh renderer](../components/renderers.md#meshrenderer).
 - `ScriptDefinition` (`Script`): a [behavior](../components/behavior.md#scene-files)
   taken from its `script` asset, or found by name in the record it was given.

@@ -1,11 +1,11 @@
 # AudioLibrary
 
-`AudioLibrary` gives gameplay code named, synchronous access to audio buffers
-that the runtime prepared before an ECS lifecycle method runs.
+`AudioLibrary` gives gameplay code named, synchronous access to sounds that
+the runtime prepared before an ECS lifecycle method runs.
 
 ## Setup
 
-References use stable catalog IDs and `AUDIO_ASSET`:
+References use stable catalog IDs and `SoundAssetType`:
 
 ```ts
 import {
@@ -13,17 +13,15 @@ import {
   AssetReference
 } from "@jolly-pixel/asset";
 import {
-  AUDIO_ASSET,
   AudioLibrary,
-  GlobalAudioManager
+  SoundAssetType
 } from "@jolly-pixel/engine";
 
 const ShootAudio = new AssetReference(
   new AssetId("audio.shoot"),
-  AUDIO_ASSET
+  SoundAssetType
 );
 
-const audioManager = GlobalAudioManager.fromWorld(world);
 const sfx = new AudioLibrary<"shoot">(
   world.assetCoordinator
 );
@@ -37,13 +35,8 @@ and decode it before the scene is activated.
 
 ```ts
 class PlayerBehavior extends Behavior {
-  #shootAudio: THREE.Audio;
-
-  start() {
-    this.#shootAudio = audioManager.createAudio(
-      sfx.get("shoot"),
-      { volume: 0.8 }
-    );
+  shoot() {
+    this.actor.world.audio.play(sfx.get("shoot"), { volume: 0.8 });
   }
 }
 ```
@@ -56,10 +49,10 @@ class AudioLibrary<TKeys extends string = string> {
 
   register(
     name: TKeys,
-    reference: AssetReference<AudioBuffer>
-  ): AssetHandle<AudioBuffer>;
+    reference: AssetReference<Sound>
+  ): AssetHandle<Sound>;
 
-  get(name: TKeys): AudioBuffer;
+  get(name: TKeys): Sound;
 }
 ```
 

@@ -1,11 +1,14 @@
 // Import Third-party Dependencies
-import type { SoundDocument } from "@jolly-pixel/asset.sound/client";
+import { Systems } from "@jolly-pixel/engine/core";
 import { Emitter } from "@openally/emitt";
 import { clamp } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
+import type { LiveSettings } from "../settings/LiveSettings.ts";
+import { LoopRegion } from "./LoopRegion.ts";
 import type { Playback } from "./Playback.ts";
 import { PlaybackMode } from "./PlaybackMode.ts";
+import type { PlaybackTuning } from "./PlaybackTuning.ts";
 import { DecodedSound } from "./sound/DecodedSound.ts";
 import type {
   Sound,
@@ -14,6 +17,7 @@ import type {
   WaveformBar
 } from "./sound/Sound.ts";
 import { UnplayableSound } from "./sound/UnplayableSound.ts";
+import type { Voice } from "./Voice.ts";
 import { Volume } from "./volume/Volume.ts";
 
 // CONSTANTS
@@ -22,21 +26,25 @@ const kVolumeSmoothing = 0.01;
 export type SoundPlayerEvents = {
   change: () => void;
   sound: () => void;
+  settings: () => void;
   volume: () => void;
   resumed: () => void;
 };
 
 export class SoundPlayer {
   #context: AudioContext;
-  #gain: GainNode;
+  #monitor: GainNode;
+  #level: GainNode;
   #events = new Emitter<SoundPlayerEvents>();
   #bytes: Uint8Array | null = null;
   #sound: Sound = UnplayableSound.empty;
+  #settings: LiveSettings | null = null;
   #playback: Playback | null = null;
+  #voices = new Systems.SoundVoices<Voice>();
   #cursor = 0;
   #mode = PlaybackMode.default;
   #volume = Volume.default;
-  #unfollow: (() => void) | null = null;
+  #unfollow: Array<() => void> = [];
 
   #onStateChange = (): void => {
     if (
@@ -51,9 +59,11 @@ export class SoundPlayer {
     context: AudioContext
   ) {
     this.#context = context;
-    this.#gain = context.createGain();
-    this.#gain.gain.value = this.#volume.gain();
-    this.#gain.connect(context.destination);
+    this.#monitor = context.createGain();
+    this.#monitor.gain.value = this.#mode.monitorGain(this.#volume);
+    this.#monitor.connect(context.destination);
+    this.#level = context.createGain();
+    this.#level.connect(this.#monitor);
     context.addEventListener(
       "statechange",
       this.#onStateChange
@@ -68,6 +78,18 @@ export class SoundPlayer {
     return this.#mode;
   }
 
+  get settings(): Readonly<Systems.SoundSettings> {
+    return this.#settings?.current ?? Systems.SOUND_SETTINGS_DEFAULTS;
+  }
+
+  get loopRegion(): LoopRegion | null {
+    const { duration } = this;
+
+    return duration === null ?
+      null :
+      LoopRegion.resolve(this.settings, duration);
+  }
+
   get volume(): Volume {
     return this.#volume;
   }
@@ -79,11 +101,7 @@ export class SoundPlayer {
       return;
     }
     this.#volume = volume;
-    this.#gain.gain.setTargetAtTime(
-      volume.gain(),
-      this.#context.currentTime,
-      kVolumeSmoothing
-    );
+    this.#applyVolume();
     this.#events.emit("volume");
   }
 
@@ -111,29 +129,46 @@ export class SoundPlayer {
   }
 
   follow(
-    document: SoundDocument
+    settings: LiveSettings
   ): Promise<void> {
-    this.#unfollow?.();
-    this.#unfollow = document.subscribe(
-      "reset",
-      () => void this.#load(document.bytes)
-    );
+    this.#stopFollowing();
+    this.#settings = settings;
+    const { document } = settings;
+    this.#unfollow = [
+      document.subscribe(
+        "reset",
+        () => void this.#load(document.bytes)
+      ),
+      settings.subscribe("change", () => this.#onSettings())
+    ];
 
     return this.#load(document.bytes);
+  }
+
+  tune(
+    mode: PlaybackMode
+  ): PlaybackTuning | null {
+    const { duration } = this;
+
+    return duration === null ? null : mode.tune(this.settings, duration);
   }
 
   retune(
     mode: PlaybackMode
   ): void {
     const playback = this.#playback;
-    const turning = mode.reversed !== this.#mode.reversed;
-    this.#mode = mode;
-    if (playback !== null && turning) {
-      this.play(playback.elapsed(), mode);
+    const tuning = this.tune(mode);
+    if (playback !== null && tuning !== null) {
+      if (tuning.reversed !== playback.tuning.reversed) {
+        this.play(playback.elapsed(), mode);
 
-      return;
+        return;
+      }
+      playback.retune(tuning);
     }
-    playback?.retune(mode);
+
+    this.#mode = mode;
+    this.#applyVolume();
     this.#events.emit("change");
   }
 
@@ -156,15 +191,15 @@ export class SoundPlayer {
   }
 
   play(
-    offset = this.#resumeAt(this.#mode),
-    mode = this.#mode
+    offset: number | null = null,
+    mode = this.playing ? this.#mode : this.#mode.rerolled()
   ): void {
-    this.#mode = mode;
-    const playback = this.#sound.play({
+    const tuning = this.tune(mode);
+    const playback = tuning === null ? null : this.#sound.play({
       context: this.#context,
-      output: this.#gain,
-      mode,
-      offset
+      output: this.#level,
+      tuning,
+      offset: offset ?? this.#resumeAt(tuning)
     });
     if (playback === null) {
       return;
@@ -175,11 +210,13 @@ export class SoundPlayer {
     playback.onEnded(() => {
       if (this.#playback === playback) {
         this.#playback = null;
-        this.#cursor = this.#mode.end(this.duration ?? 0);
+        this.#cursor = playback.tuning.end();
         this.#events.emit("change");
       }
     });
     this.#playback = playback;
+    this.#mode = mode;
+    this.#applyVolume();
     this.#events.emit("change");
   }
 
@@ -190,6 +227,23 @@ export class SoundPlayer {
       this.#halt();
       this.#events.emit("change");
     }
+  }
+
+  trigger(): void {
+    const sound = this.#sound;
+    const { settings } = this;
+    void this.#context.resume();
+    this.#voices.start(
+      sound,
+      settings,
+      this.#context.currentTime,
+      () => sound.voice({
+        context: this.#context,
+        output: this.#monitor,
+        rate: Systems.variedPitch(settings),
+        volume: settings.volume
+      })
+    );
   }
 
   timecode(): string {
@@ -208,15 +262,48 @@ export class SoundPlayer {
   }
 
   dispose(): void {
-    this.#unfollow?.();
+    this.#stopFollowing();
     this.#context.removeEventListener(
       "statechange",
       this.#onStateChange
     );
     this.#halt();
-    this.#gain.disconnect();
+    this.#voices.stopAll();
+    this.#level.disconnect();
+    this.#monitor.disconnect();
     this.#events.removeAllListeners();
     void this.#context.close();
+  }
+
+  #onSettings(): void {
+    const playback = this.#playback;
+    const tuning = this.tune(this.#mode);
+    if (playback !== null && tuning !== null) {
+      playback.retune(tuning);
+    }
+    this.#applyVolume();
+    this.#events.emit("settings");
+  }
+
+  #applyVolume(): void {
+    const now = this.#context.currentTime;
+    this.#monitor.gain.setTargetAtTime(
+      this.#mode.monitorGain(this.#volume),
+      now,
+      kVolumeSmoothing
+    );
+    this.#level.gain.setTargetAtTime(
+      this.#mode.level(this.settings),
+      now,
+      kVolumeSmoothing
+    );
+  }
+
+  #stopFollowing(): void {
+    for (const unfollow of this.#unfollow) {
+      unfollow();
+    }
+    this.#unfollow = [];
   }
 
   async #load(
@@ -227,6 +314,7 @@ export class SoundPlayer {
     }
     this.#bytes = bytes;
     this.pause();
+    this.#voices.stopAll();
     if (bytes !== null) {
       this.#sound = UnplayableSound.decoding;
       this.#events.emit("change");
@@ -263,12 +351,10 @@ export class SoundPlayer {
   }
 
   #resumeAt(
-    mode: PlaybackMode
+    tuning: PlaybackTuning
   ): number {
-    const duration = this.duration ?? 0;
-
-    return this.#cursor === mode.end(duration) ?
-      mode.start(duration) :
+    return this.#cursor === tuning.end() ?
+      tuning.start() :
       this.#cursor;
   }
 

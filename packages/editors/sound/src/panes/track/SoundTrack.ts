@@ -26,13 +26,27 @@ import "../../icons.ts";
 import type { SoundCollaboration } from "../../collaboration/SoundCollaboration.ts";
 import {
   PLAYBACK_SPEEDS,
+  PlaybackMode,
   type PlaybackSpeed
 } from "../../player/PlaybackMode.ts";
 import type { SoundPlayer } from "../../player/SoundPlayer.ts";
 import { Volume } from "../../player/volume/Volume.ts";
+import type { LiveSettings } from "../../settings/LiveSettings.ts";
 import { soundTrackStyles } from "./SoundTrack.styles.ts";
 
+interface VolumeEvents {
+  input(percent: number): void;
+  change(percent: number): void;
+}
+
 // CONSTANTS
+const kApplySettingsLabel = "Apply settings";
+const kApplySettingsHint = "Apply settings: play with the volume, pitch, " +
+  "random pitch and loop of the sound settings";
+const kTriggerHint = "Trigger: play once the way the game does, with " +
+  "Random pitch, Cooldown and Max at once";
+const kSetBySettings = "Set by the sound settings";
+const kSettingsVolumeHint = "Volume of the sound settings";
 const kSpeeds: JollyOption<PlaybackSpeed>[] = PLAYBACK_SPEEDS.map((speed) => {
   return {
     value: speed,
@@ -63,6 +77,9 @@ export class SoundTrack extends LitElement {
       collaboration.subscribe("change", () => this.requestUpdate())
     ]
   );
+  #settings = new SubscriptionController<LiveSettings>(this, (settings) => [
+    settings.subscribe("change", () => this.requestUpdate())
+  ]);
   #frames = new FrameUpdateController(this);
 
   #onSpeed = (
@@ -87,23 +104,16 @@ export class SoundTrack extends LitElement {
     }
   };
 
-  #onVolume = (
-    event: Event
-  ): void => {
-    const detail = readDetail<JollyChangeDetail<number>>(event);
-    if (detail !== null) {
-      this.#player.attached.volume = Volume.percent(detail.value);
-    }
-  };
-
   static override styles = soundTrackStyles;
 
   attach(
     player: SoundPlayer,
-    collaboration: SoundCollaboration
+    collaboration: SoundCollaboration,
+    settings: LiveSettings
   ): void {
     this.#player.attach(player);
     this.#collaboration.attach(collaboration);
+    this.#settings.attach(settings);
   }
 
   protected override updated(): void {
@@ -115,7 +125,8 @@ export class SoundTrack extends LitElement {
   override render(): TemplateResult | typeof nothing {
     const player = this.#player.current;
     const collaboration = this.#collaboration.current;
-    if (player === null || collaboration === null) {
+    const settings = this.#settings.current;
+    if (player === null || collaboration === null || settings === null) {
       return nothing;
     }
 
@@ -123,7 +134,7 @@ export class SoundTrack extends LitElement {
       <div class="controls" role="toolbar" aria-label="Playback">
         ${this.#renderButtons(player, collaboration)}
         <span class="time">${player.timecode()}</span>
-        ${this.#renderVolume(player)}
+        ${renderVolume(player, settings)}
         ${this.#renderDrive(collaboration)}
       </div>
     `;
@@ -134,8 +145,13 @@ export class SoundTrack extends LitElement {
     collaboration: SoundCollaboration
   ): TemplateResult {
     const { playing, mode } = player;
-    const { loop, reversed, speed } = mode;
+    const { applySettings } = mode;
+    const shown = applySettings ? PlaybackMode.default : mode;
+    function hint(label: string): string {
+      return applySettings ? kSetBySettings : label;
+    }
     const playLabel = playing ? "Pause" : "Play";
+    const ready = player.status === "ready";
 
     return html`
       <jolly-button
@@ -144,55 +160,59 @@ export class SoundTrack extends LitElement {
         label=${playLabel}
         title=${playLabel}
         icon-only
-        ?disabled=${player.status !== "ready"}
+        ?disabled=${!ready}
         @click=${() => (playing ? collaboration.pause() : collaboration.play())}
+      ></jolly-button>
+      <jolly-button
+        data-tool="trigger"
+        icon="sound-trigger"
+        label="Trigger"
+        title=${kTriggerHint}
+        icon-only
+        ?disabled=${!ready}
+        @click=${() => player.trigger()}
+      ></jolly-button>
+      <jolly-button
+        data-tool="apply-settings"
+        icon="settings"
+        label=${kApplySettingsLabel}
+        title=${kApplySettingsHint}
+        icon-only
+        variant=${applySettings ? "accent" : "default"}
+        .pressed=${applySettings}
+        @click=${() => collaboration.retune(mode.withApplySettings(!applySettings))}
       ></jolly-button>
       <jolly-button-group
         class="direction"
         data-tool="direction"
         aria-label="Direction"
         icon-only
+        ?disabled=${applySettings}
         .options=${kDirections}
-        .value=${reversed}
+        .value=${shown.reversed}
         @jolly-change=${this.#onDirection}
       ></jolly-button-group>
       <jolly-button
         data-tool="loop"
         icon="loop"
         label="Loop"
-        title="Loop"
+        title=${hint("Loop")}
         icon-only
-        variant=${loop ? "accent" : "default"}
-        .pressed=${loop}
-        @click=${() => collaboration.retune(mode.withLoop(!loop))}
+        ?disabled=${applySettings}
+        variant=${shown.loop ? "accent" : "default"}
+        .pressed=${shown.loop}
+        @click=${() => collaboration.retune(mode.withLoop(!mode.loop))}
       ></jolly-button>
       <jolly-select
         class="speed"
         data-tool="speed"
         aria-label="Speed"
-        title="Speed"
+        title=${hint("Speed")}
+        ?disabled=${applySettings}
         .options=${kSpeeds}
-        .value=${speed}
+        .value=${shown.speed}
         @jolly-change=${this.#onSpeed}
       ></jolly-select>
-    `;
-  }
-
-  #renderVolume(
-    player: SoundPlayer
-  ): TemplateResult {
-    return html`
-      <div class="volume" title="Volume">
-        <jolly-icon name="sound-volume" label="Volume"></jolly-icon>
-        <jolly-slider
-          data-tool="volume"
-          min="0"
-          max="100"
-          .value=${player.volume.toPercent()}
-          @jolly-input=${this.#onVolume}
-          @jolly-change=${this.#onVolume}
-        ></jolly-slider>
-      </div>
     `;
   }
 
@@ -269,6 +289,66 @@ export class SoundTrack extends LitElement {
       </div>
     `;
   }
+}
+
+function renderVolume(
+  player: SoundPlayer,
+  settings: LiveSettings
+): TemplateResult {
+  if (player.mode.applySettings) {
+    return volumeSlider(
+      kSettingsVolumeHint,
+      new Volume(settings.current.volume).toPercent(),
+      {
+        input: (percent) => settings.preview({
+          volume: Volume.percent(percent).level
+        }),
+        change: (percent) => settings.commit({
+          volume: Volume.percent(percent).level
+        })
+      }
+    );
+  }
+
+  function monitor(percent: number): void {
+    player.volume = Volume.percent(percent);
+  }
+
+  return volumeSlider("Volume", player.volume.toPercent(), {
+    input: monitor,
+    change: monitor
+  });
+}
+
+function volumeSlider(
+  title: string,
+  percent: number,
+  events: VolumeEvents
+): TemplateResult {
+  return html`
+    <div class="volume" title=${title}>
+      <jolly-icon name="sound-volume" label="Volume"></jolly-icon>
+      <jolly-slider
+        data-tool="volume"
+        min="0"
+        max="100"
+        .value=${percent}
+        @jolly-input=${onPercent(events.input)}
+        @jolly-change=${onPercent(events.change)}
+      ></jolly-slider>
+    </div>
+  `;
+}
+
+function onPercent(
+  listener: (percent: number) => void
+): (event: Event) => void {
+  return (event) => {
+    const detail = readDetail<JollyChangeDetail<number>>(event);
+    if (detail !== null) {
+      listener(detail.value);
+    }
+  };
 }
 
 customElements.define("jolly-sound-track", SoundTrack);

@@ -86,6 +86,7 @@ describe("SoundCollaboration", () => {
     alice.collaboration.retune(alice.player.mode.withReversed(true));
 
     assert.deepEqual(bob.player.mode.toJSON(), {
+      ...alice.player.mode.toJSON(),
       loop: true,
       reversed: true,
       speed: 2
@@ -99,6 +100,25 @@ describe("SoundCollaboration", () => {
 
     assert.equal(bob.player.playing, false);
     assert.equal(followed(bob)?.listening, true);
+  });
+
+  test("plays along at the random pitch the driver rolled", async(t) => {
+    const network = new FakeNetwork();
+    const alice = await connect(network, "alice");
+    const bob = await connect(network, "bob");
+    clock(t, [alice, bob]);
+    const random = t.mock.method(Math, "random", () => 1);
+    for (const { settings } of [alice, bob]) {
+      settings.preview({ pitchVariation: 0.4 });
+    }
+
+    alice.collaboration.drive();
+    alice.player.retune(alice.player.mode.withApplySettings(true));
+    alice.player.play();
+    random.mock.mockImplementation(() => 0);
+    bob.collaboration.listen();
+
+    assert.equal(bob.context.sources[0].playbackRate.value, 1.4);
   });
 
   test("listens along with a driver who took the wheel before it joined", async(t) => {

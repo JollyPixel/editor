@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { AssetType } from "@jolly-pixel/asset";
+import {
+  AssetType,
+  type AssetReferenceData
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type { Actor } from "../../actor/Actor.ts";
@@ -8,6 +11,7 @@ import {
   isJSONObject
 } from "../../systems/scene/file/definitions/ComponentData.ts";
 import type {
+  ComponentAssets,
   ComponentAssetTypes,
   ComponentContext,
   ComponentDefinition
@@ -20,8 +24,12 @@ import {
 } from "./Behavior.ts";
 import { getBehaviorMetadata } from "./BehaviorDecorators.ts";
 import {
+  isAssetPropertyType,
+  isScriptPropertySlot,
   parseScenePropertyValue,
-  serializeScenePropertyValue
+  scriptPropertySlot,
+  serializeScenePropertyValue,
+  type AssetPropertyType
 } from "./ScenePropertyValue.ts";
 
 export type BehaviorConstructor = new (
@@ -40,6 +48,17 @@ export interface ScriptData {
   properties: Readonly<JSONObject>;
 }
 
+export type ScriptAssetTypes = Readonly<Record<AssetPropertyType, AssetType<unknown>>>;
+
+export interface ScriptDefinitionOptions {
+  /**
+   * Asset type each asset property type loads, such as `SoundAssetType` for
+   * `Sound`. Without it, asset properties stay `null`.
+   * @default {}
+   */
+  assetTypes?: ScriptAssetTypes;
+}
+
 // CONSTANTS
 export const SCRIPT_MODULE_ASSET = new AssetType<ScriptModule>("script");
 
@@ -55,11 +74,14 @@ export class ScriptDefinition implements ComponentDefinition<
 
   #registered: ScriptModule;
   #names = new WeakMap<object, string>();
+  #assetTypes: Partial<ScriptAssetTypes>;
 
   constructor(
-    behaviors: Readonly<Record<string, BehaviorConstructor>> = {}
+    behaviors: Readonly<Record<string, BehaviorConstructor>> = {},
+    options: ScriptDefinitionOptions = {}
   ) {
     this.#registered = { ...behaviors };
+    this.#assetTypes = { ...options.assetTypes };
     for (const [name, behavior] of Object.entries(behaviors)) {
       this.#names.set(behavior, name);
     }
@@ -100,8 +122,24 @@ export class ScriptDefinition implements ComponentDefinition<
     }
 
     return actor.addComponentAndGet(behavior, {
-      properties: convertProperties(behavior, data.properties)
+      properties: {
+        ...convertProperties(behavior, data.properties),
+        ...this.#assetProperties(behavior, context.assets)
+      }
     });
+  }
+
+  slotType(
+    slot: string,
+    reference: AssetReferenceData
+  ): AssetType<unknown> | null {
+    if (!isScriptPropertySlot(slot)) {
+      return null;
+    }
+
+    return Object.values(this.#assetTypes).find(
+      (type) => type.kind.value === reference.kind
+    ) ?? null;
   }
 
   owns(
@@ -117,6 +155,29 @@ export class ScriptDefinition implements ComponentDefinition<
       behavior: this.#names.get(component.constructor) ?? "",
       properties: captureProperties(component)
     };
+  }
+
+  #assetProperties(
+    behavior: BehaviorConstructor,
+    assets: ComponentAssets<ScriptAssets>
+  ): Record<string, unknown> {
+    const declared = getBehaviorMetadata(
+      behavior.prototype
+    )?.properties ?? [];
+    const resolved: Record<string, unknown> = Object.create(null);
+
+    for (const [name, { type }] of declared) {
+      const assetType = isAssetPropertyType(type) ?
+        this.#assetTypes[type] :
+        undefined;
+      if (typeof name !== "string" || assetType === undefined) {
+        continue;
+      }
+
+      resolved[name] = assets.resolveSlot(scriptPropertySlot(name), assetType);
+    }
+
+    return resolved;
   }
 
   #behavior(

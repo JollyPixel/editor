@@ -2,22 +2,22 @@
 
 Playlist-based background music player. Supports multiple playlists
 with configurable end behavior (stop, loop, chain to another playlist).
-Track volumes are relative: the master volume of `world.audio` is
-applied once, by the shared `THREE.AudioListener`.
+Tracks play through the `music` category of `world.audio`, and start even
+when asked for before the page allows sound.
 
 ```ts
-const audioManager = GlobalAudioManager.fromWorld(world);
-
 const bg = new AudioBackground({
-  audioManager,
+  audio: world.audio,
+  assets: world.assetCoordinator,
+  crossfade: 1.5,
   autoPlay: "ambient.forest",
   playlists: [
     {
       name: "ambient",
       onEnd: "loop",
       tracks: [
-        { name: "forest", path: "/audio/forest.mp3" },
-        { name: "rain", path: "/audio/rain.mp3", volume: 0.8 }
+        { name: "forest", sound: new AssetReference("music/forest", SoundAssetType) },
+        { name: "rain", sound: new AssetReference("music/rain", SoundAssetType), volume: 0.8 }
       ]
     },
     {
@@ -25,8 +25,8 @@ const bg = new AudioBackground({
       onEnd: "play-next-playlist",
       nextPlaylistName: "ambient",
       tracks: [
-        { name: "intro", path: "/audio/battle-intro.mp3" },
-        { name: "loop", path: "/audio/battle-loop.mp3" }
+        { name: "intro", sound: battleIntro },
+        { name: "loop", sound: battleLoop }
       ]
     }
   ]
@@ -53,6 +53,21 @@ bg.stop();
 ## Types
 
 ```ts
+interface AudioBackgroundOptions {
+  audio: GlobalAudio;
+  // loads the tracks given as asset references, such as world.assetCoordinator
+  assets?: SoundLoader;
+  playlists: AudioBackgroundPlaylist[];
+  autoPlay?: boolean | AudioBackgroundSoundPath | AudioBackgroundSoundIndex;
+  // seconds over which a track fades out while the next fades in, default 0
+  crossfade?: number;
+  onError?: (error: Error) => void;
+}
+
+interface SoundLoader {
+  load(reference: AssetReference<Sound>): Promise<Sound>;
+}
+
 // Reference a track by "playlistName.trackName"
 type AudioBackgroundSoundPath = `${string}.${string}`;
 // Or by [playlistIndex, trackIndex]
@@ -69,8 +84,8 @@ interface AudioBackgroundPlaylist {
 
 interface AudioBackgroundTrack {
   name: string;
-  path: string;
-  // default 1
+  sound: Sound | AssetReference<Sound>;
+  // replaces the volume of the sound settings
   volume?: number;
   metadata?: Record<string, any>;
 }
@@ -81,7 +96,7 @@ interface AudioBackgroundTrack {
 ```ts
 interface AudioBackground {
   readonly playlists: AudioPlaylists;
-  audio: THREE.Audio | null;
+  readonly instance: SoundInstance | null;
 
   readonly isPlaying: boolean;
   readonly isPaused: boolean;

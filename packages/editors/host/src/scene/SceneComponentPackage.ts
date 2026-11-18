@@ -24,8 +24,8 @@ export interface SceneComponentKind<
    */
   initialData?: Systems.JSONObject;
   /**
-   * Name of a registered `@jolly-pixel/ui` icon, used when no asset slot
-   * names an asset kind with an icon.
+   * Name of a registered `@jolly-pixel/ui` icon. Without it, the kind shows
+   * the icon of its first asset kind that has one.
    */
   icon?: string;
   form: ComponentForm<TData, TAssets>;

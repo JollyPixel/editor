@@ -18,6 +18,8 @@ export class FakeGainNode {
 export class FakeSourceNode extends EventTarget {
   buffer: AudioBuffer | null = null;
   loop = false;
+  loopStart = 0;
+  loopEnd = 0;
   playbackRate = {
     value: 1
   };
@@ -33,8 +35,8 @@ export class FakeSourceNode extends EventTarget {
   }
 
   start(
-    _when: number,
-    offset: number
+    _when = 0,
+    offset = 0
   ): void {
     this.offset = offset;
   }
@@ -52,12 +54,23 @@ export class FakeAudioContext extends EventTarget {
   state: AudioContextState = "running";
   currentTime = 0;
   destination = {};
-  output = new FakeGainNode();
+  gains: FakeGainNode[] = [];
   sources: FakeSourceNode[] = [];
   decoded = fakeBuffer([new Float32Array(88_200)]);
 
+  get output(): FakeGainNode {
+    return this.gains[0];
+  }
+
+  get level(): FakeGainNode {
+    return this.gains[1];
+  }
+
   createGain(): FakeGainNode {
-    return this.output;
+    const gain = new FakeGainNode();
+    this.gains.push(gain);
+
+    return gain;
   }
 
   createBuffer(

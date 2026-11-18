@@ -10,6 +10,7 @@ import type { JSONValue } from "../../systems/scene/file/SceneFile.ts";
 import { isHexColor } from "../../systems/scene/file/definitions/ComponentData.ts";
 
 // CONSTANTS
+const kPropertySlotPrefix = "property:";
 const kScenePropertyKinds = {
   number: {
     parse: (value) => (isNumber(value) ? value : undefined),
@@ -62,8 +63,14 @@ const kScenePropertyKinds = {
     serialize: (value) => parseArray(value, isBoolean)
   }
 } satisfies Record<string, ScenePropertyKind>;
+const kAssetPropertyKind: ScenePropertyKind = {
+  parse: () => undefined,
+  createDefault: () => null,
+  serialize: () => undefined
+};
 const kBehaviorPropertyKinds: Record<BehaviorPropertyType, ScenePropertyKind> = {
   ...kScenePropertyKinds,
+  Sound: kAssetPropertyKind,
   Actor: {
     parse: (value) => (isString(value) || value === null ? value : undefined),
     createDefault: () => null,
@@ -91,7 +98,28 @@ interface ScenePropertyKind {
 }
 
 export type ScenePropertyType = keyof typeof kScenePropertyKinds;
-export type BehaviorPropertyType = ScenePropertyType | "Actor";
+export type AssetPropertyType = typeof ASSET_PROPERTY_TYPES[number];
+export type BehaviorPropertyType = ScenePropertyType | AssetPropertyType | "Actor";
+
+export const ASSET_PROPERTY_TYPES = ["Sound"] as const;
+
+export function scriptPropertySlot(
+  property: string
+): string {
+  return `${kPropertySlotPrefix}${property}`;
+}
+
+export function isAssetPropertyType(
+  type: BehaviorPropertyType
+): type is AssetPropertyType {
+  return ASSET_PROPERTY_TYPES.some((known) => known === type);
+}
+
+export function isScriptPropertySlot(
+  slot: string
+): boolean {
+  return slot.startsWith(kPropertySlotPrefix);
+}
 
 export const SCENE_PROPERTY_TYPES = Object.keys(
   kScenePropertyKinds

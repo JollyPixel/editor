@@ -70,18 +70,19 @@ export class PlaybackMark {
   }
 
   elapsed(
-    duration: number
+    player: SoundPlayer
   ): number | null {
+    const tuning = player.tune(this.mode);
     const played = Math.max(0, Date.now() - this.at) / 1000;
 
-    return this.mode.advance(this.offset, played, duration);
+    return tuning?.advance(tuning.entry(this.offset), played) ?? null;
   }
 
   mirrorInto(
     player: SoundPlayer
   ): void {
-    const { duration, elapsed: current } = player;
-    const elapsed = duration === null ? null : this.elapsed(duration);
+    const { elapsed: current } = player;
+    const elapsed = this.elapsed(player);
     if (elapsed === null) {
       player.pause();
     }

@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import {
+  SCRIPT_ASSET_TYPES,
   SCRIPT_MODULE_ASSET,
   ScriptDefinition,
   ShaderAssetType
@@ -11,7 +12,9 @@ import {
 } from "@jolly-pixel/scripting/three";
 
 // CONSTANTS
-export const SCRIPT_DEFINITION = new ScriptDefinition();
+export const SCRIPT_DEFINITION = new ScriptDefinition({}, {
+  assetTypes: SCRIPT_ASSET_TYPES
+});
 
 export const RUNTIME_COMPONENTS: RuntimeComponentPackage = {
   definitions: [SCRIPT_DEFINITION],

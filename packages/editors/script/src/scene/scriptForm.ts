@@ -1,11 +1,15 @@
 // Import Third-party Dependencies
 import type {
+  AssetRow,
   ChoiceOption,
   DeclaredProperty,
   FormRow
 } from "@jolly-pixel/editor.host/scene";
 import {
+  ASSET_PROPERTY_TYPES,
   SCENE_PROPERTY_TYPES,
+  SCRIPT_ASSET_TYPES,
+  scriptPropertySlot,
   type ScriptData
 } from "@jolly-pixel/engine";
 import type { ScriptOutline } from "@jolly-pixel/scripting";
@@ -23,12 +27,22 @@ export function scriptForm(
   const behaviors = outline?.behaviors ?? [];
   const behavior = behaviors.find(({ name }) => name === data.behavior);
   const declared: DeclaredProperty[] = [];
+  const assets: AssetRow[] = [];
   for (const property of behavior?.properties ?? []) {
     const type = SCENE_PROPERTY_TYPES.find((known) => known === property.type);
+    const assetType = ASSET_PROPERTY_TYPES.find((known) => known === property.type);
     if (type !== undefined) {
       declared.push({
         ...property,
         type
+      });
+    }
+    else if (assetType !== undefined) {
+      assets.push({
+        control: "asset",
+        slot: scriptPropertySlot(property.key),
+        label: property.label,
+        type: SCRIPT_ASSET_TYPES[assetType]
       });
     }
   }
@@ -51,7 +65,8 @@ export function scriptForm(
       path: ["properties"],
       label: "Properties",
       declared
-    }
+    },
+    ...assets
   ];
 }
 

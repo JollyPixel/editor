@@ -1,12 +1,11 @@
 // Import Internal Dependencies
-import type { PlaybackMode } from "./PlaybackMode.ts";
+import type { PlaybackTuning } from "./PlaybackTuning.ts";
 
 export interface PlaybackOptions {
   context: BaseAudioContext;
   source: AudioBufferSourceNode;
-  mode: PlaybackMode;
+  tuning: PlaybackTuning;
   offset: number;
-  duration: number;
 }
 
 export class Playback {
@@ -16,7 +15,7 @@ export class Playback {
     const playback = new Playback(options);
     options.source.start(
       0,
-      options.mode.bufferOffset(options.offset, options.duration)
+      options.tuning.bufferOffset(playback.#offset)
     );
 
     return playback;
@@ -24,37 +23,39 @@ export class Playback {
 
   #context: BaseAudioContext;
   #source: AudioBufferSourceNode;
-  #mode: PlaybackMode;
+  #tuning: PlaybackTuning;
   #anchor: number;
   #offset: number;
-  #duration: number;
 
   constructor(
     options: PlaybackOptions
   ) {
     this.#context = options.context;
     this.#source = options.source;
-    this.#mode = options.mode;
+    this.#tuning = options.tuning;
     this.#anchor = options.context.currentTime;
-    this.#offset = options.offset;
-    this.#duration = options.duration;
-    this.#tune(options.mode);
+    this.#offset = options.tuning.entry(options.offset);
+    this.#tune(options.tuning);
+  }
+
+  get tuning(): PlaybackTuning {
+    return this.#tuning;
   }
 
   elapsed(): number {
     const played = this.#context.currentTime - this.#anchor;
 
-    return this.#mode.advance(this.#offset, played, this.#duration) ??
-      this.#mode.end(this.#duration);
+    return this.#tuning.advance(this.#offset, played) ??
+      this.#tuning.end();
   }
 
   retune(
-    mode: PlaybackMode
+    tuning: PlaybackTuning
   ): void {
     this.#offset = this.elapsed();
     this.#anchor = this.#context.currentTime;
-    this.#mode = mode;
-    this.#tune(mode);
+    this.#tuning = tuning;
+    this.#tune(tuning);
   }
 
   onEnded(
@@ -69,9 +70,18 @@ export class Playback {
   }
 
   #tune(
-    mode: PlaybackMode
+    tuning: PlaybackTuning
   ): void {
-    this.#source.loop = mode.loop;
-    this.#source.playbackRate.value = mode.speed;
+    const { loop } = tuning;
+    this.#source.loop = loop !== null;
+    if (loop !== null) {
+      this.#source.loopStart = tuning.bufferOffset(
+        tuning.reversed ? loop.end : loop.start
+      );
+      this.#source.loopEnd = tuning.bufferOffset(
+        tuning.reversed ? loop.start : loop.end
+      );
+    }
+    this.#source.playbackRate.value = tuning.rate;
   }
 }

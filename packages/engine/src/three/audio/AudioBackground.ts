@@ -1,20 +1,34 @@
 // Import Third-party Dependencies
-import * as THREE from "three/webgpu";
+import type { AssetReference } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type {
-  AudioManager
-} from "./AudioManager.ts";
+import type { GlobalAudio } from "./GlobalAudio.ts";
 import { AudioPlaylists } from "./AudioPlaylists.ts";
+import { Sound } from "./Sound.ts";
+import { SoundChannel } from "./SoundChannel.ts";
+import type { SoundInstance } from "./SoundInstance.ts";
 
 export type AudioBackgroundSoundIndex = [playlistIndex: number, trackIndex: number];
 export type AudioBackgroundSoundPath = `${string}.${string}`;
 
-export interface AudioBackgroundOptions {
-  audioManager: AudioManager;
+export interface SoundLoader {
+  load(reference: AssetReference<Sound>): Promise<Sound>;
+}
 
+export interface AudioBackgroundOptions {
+  audio: GlobalAudio;
+  /**
+   * Loads the tracks given as asset references, such as the world asset
+   * coordinator.
+   */
+  assets?: SoundLoader;
   playlists: AudioBackgroundPlaylist[];
   autoPlay?: boolean | AudioBackgroundSoundPath | AudioBackgroundSoundIndex;
+  /**
+   * Seconds over which a track fades out while the next one fades in.
+   * @default 0
+   */
+  crossfade?: number;
   onError?: (error: Error) => void;
 }
 
@@ -33,20 +47,25 @@ export interface AudioBackgroundPlaylist {
 
 export interface AudioBackgroundTrack {
   name: string;
-  path: string;
+  sound: Sound | AssetReference<Sound>;
   /**
-   * @default 1
+   * Replaces the volume of the sound settings.
    */
   volume?: number;
   metadata?: Record<string, any>;
 }
 
+// CONSTANTS
+const kMusicCategory = "music";
+
 export class AudioBackground {
   readonly playlists: AudioPlaylists;
-  audio: null | THREE.Audio = null;
 
-  #audioManager: AudioManager;
+  #audio: GlobalAudio;
+  #assets: SoundLoader | null;
+  #crossfade: number;
   #onError: (error: Error) => void;
+  #channel = new SoundChannel(() => this.playNext().catch(this.#onError));
   #currentIndex: AudioBackgroundSoundIndex | null = null;
   #playRequest = 0;
 
@@ -56,25 +75,33 @@ export class AudioBackground {
     const {
       playlists,
       autoPlay = false,
-      audioManager,
+      audio,
+      assets = null,
+      crossfade = 0,
       onError = (err) => console.error(err)
     } = options;
 
     this.playlists = new AudioPlaylists(playlists);
+    this.#audio = audio;
+    this.#assets = assets;
+    this.#crossfade = Math.max(crossfade, 0);
     this.#onError = onError;
-    this.#audioManager = audioManager;
     if (autoPlay) {
       this.play(typeof autoPlay === "boolean" ? [0, 0] : autoPlay)
         .catch(this.#onError);
     }
   }
 
-  get isPlaying() {
-    return Boolean(this.audio?.isPlaying);
+  get instance(): SoundInstance | null {
+    return this.#channel.instance;
   }
 
-  get isPaused() {
-    return Boolean(this.audio && !this.audio.isPlaying);
+  get isPlaying(): boolean {
+    return this.#channel.playing;
+  }
+
+  get isPaused(): boolean {
+    return this.#channel.instance?.state === "paused";
   }
 
   get track(): AudioBackgroundTrack | null {
@@ -87,7 +114,7 @@ export class AudioBackground {
 
   async play(
     pathOrIndex?: AudioBackgroundSoundPath | AudioBackgroundSoundIndex
-  ) {
+  ): Promise<void> {
     if (typeof pathOrIndex === "undefined") {
       this.resume();
 
@@ -100,26 +127,25 @@ export class AudioBackground {
       throw new Error(`Track not found: ${pathOrIndex}`);
     }
 
-    this.stop();
+    this.#fadeOut();
     this.#currentIndex = index;
-    const request = this.#playRequest;
+    const request = ++this.#playRequest;
 
-    const audio = await this.#audioManager.loadAudio(track.path, {
-      name: track.name,
-      volume: track.volume
-    });
+    const sound = await this.#load(track);
     if (request !== this.#playRequest) {
-      this.#audioManager.destroyAudio(audio);
-
       return;
     }
 
-    this.audio = audio;
-    this.audio.onEnded = () => this.playNext().catch(this.#onError);
-    this.audio.play();
+    this.#channel.play(() => this.#audio.play(sound, {
+      category: kMusicCategory,
+      loop: false,
+      queue: true,
+      fadeIn: this.#crossfade,
+      ...(track.volume === undefined ? {} : { volume: track.volume })
+    }));
   }
 
-  async playNext() {
+  async playNext(): Promise<void> {
     if (!this.#currentIndex) {
       return;
     }
@@ -133,24 +159,36 @@ export class AudioBackground {
     }
   }
 
-  stop() {
+  stop(): void {
     this.#playRequest++;
-    if (this.audio) {
-      this.#audioManager.destroyAudio(this.audio);
-      this.audio = null;
-    }
+    this.#fadeOut();
     this.#currentIndex = null;
   }
 
-  pause() {
-    if (this.audio && this.audio.isPlaying) {
-      this.audio.pause();
-    }
+  pause(): void {
+    this.#channel.pause();
   }
 
-  resume() {
-    if (this.audio && !this.audio.isPlaying) {
-      this.audio.play();
+  resume(): void {
+    this.#channel.resume();
+  }
+
+  #fadeOut(): void {
+    this.#channel.stop({ fade: this.#crossfade });
+  }
+
+  #load(
+    track: AudioBackgroundTrack
+  ): Promise<Sound> {
+    if (track.sound instanceof Sound) {
+      return Promise.resolve(track.sound);
     }
+    if (this.#assets === null) {
+      return Promise.reject(
+        new Error(`Track "${track.name}" needs the assets option to load.`)
+      );
+    }
+
+    return this.#assets.load(track.sound);
   }
 }

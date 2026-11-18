@@ -7,6 +7,7 @@ import { Actor } from "../../../src/core/actor/index.ts";
 import { Scene } from "../../../src/core/systems/scene/Scene.ts";
 import { SceneManager } from "../../../src/core/systems/scene/SceneManager.ts";
 import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
+import { GlobalAudio } from "../../../src/three/audio/GlobalAudio.ts";
 import {
   createSceneAssets,
   type SceneAssets
@@ -49,6 +50,7 @@ export function createSceneSetup(
     logger,
     sceneManager: sm,
     assetCoordinator: assets.coordinator,
+    audio: new GlobalAudio(),
     renderer: {
       source: null
     },

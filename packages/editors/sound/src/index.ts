@@ -12,6 +12,7 @@ import "./panes/track/SoundTrack.ts";
 import "./panes/track/SoundWave.ts";
 import "./panes/sound/SoundFileFolder.ts";
 import "./panes/sound/SoundDetails.ts";
+import "./panes/sound/SoundSettingsPane.ts";
 import { SoundEditor } from "./SoundEditor.ts";
 
 declare global {

@@ -7,6 +7,7 @@ import type { SoundDocument } from "@jolly-pixel/asset.sound/client";
 // Import Internal Dependencies
 import { SoundCollaboration } from "#src/collaboration/SoundCollaboration.ts";
 import type { SoundPlayer } from "#src/player/SoundPlayer.ts";
+import type { LiveSettings } from "#src/settings/LiveSettings.ts";
 import type { FakeAudioContext } from "./FakeAudioContext.ts";
 import type {
   FakeNetwork,
@@ -21,6 +22,7 @@ export interface Listener {
   room: FakeRoom;
   context: FakeAudioContext;
   document: SoundDocument;
+  settings: LiveSettings;
   player: SoundPlayer;
   collaboration: SoundCollaboration;
 }
@@ -30,7 +32,7 @@ export async function connect(
   clientId: string
 ): Promise<Listener> {
   const room = network.connect(clientId);
-  const { context, document, player } = await followingPlayer();
+  const { context, document, settings, player } = await followingPlayer();
   const collaboration = new SoundCollaboration({
     room,
     player
@@ -40,6 +42,7 @@ export async function connect(
     room,
     context,
     document,
+    settings,
     player,
     collaboration
   };

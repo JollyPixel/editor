@@ -7,6 +7,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
+  AudioGizmo,
   CameraGizmo,
   LightGizmo,
   type CameraGizmoLens
@@ -166,5 +167,22 @@ describe("LightGizmo", () => {
 
     assert.strictEqual(lines(gizmo).geometry.getAttribute("position").count, 0);
     assert.deepEqual(disposals, [1]);
+  });
+});
+
+describe("AudioGizmo", () => {
+  test("sits on the given position, tinted with the given color or the selected color", () => {
+    const gizmo = new AudioGizmo({ selectedColor: kSelectedColor });
+
+    gizmo.update(new THREE.Vector3(1, 2, 3), "#3366ff");
+
+    assert.deepEqual(gizmo.position.toArray(), [1, 2, 3]);
+    assert.strictEqual(icon(gizmo).material.color.getHexString(), "3366ff");
+
+    gizmo.selected = true;
+    assert.strictEqual(icon(gizmo).material.color.getHexString(), "f5c46b");
+
+    gizmo.selected = false;
+    assert.strictEqual(icon(gizmo).material.color.getHexString(), "3366ff");
   });
 });

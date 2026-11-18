@@ -1,13 +1,14 @@
 // Import Third-party Dependencies
 import {
-  binaryAssetKind,
-  binaryCommands,
+  arbitrated,
+  contentRefSchema,
   InvalidAssetFileError,
   NO_OPTIONS_SCHEMA,
+  PASS_THROUGH_BUILD,
   type AssetKindHandler,
-  type AssetKindPackage,
-  type BinaryAssetState
+  type AssetKindPackage
 } from "@jolly-pixel/asset-server";
+import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
@@ -19,15 +20,28 @@ import {
   SOUND_SOURCE_EXTENSIONS
 } from "./sound.ts";
 import { oggContentFromAudio } from "../conversion/oggFromAudio.ts";
+import {
+  changedSettings,
+  SoundState
+} from "../model/SoundState.ts";
+import {
+  soundCommandProtocol,
+  soundSnapshotSchema
+} from "../network/SoundCommand.schema.ts";
+import type { SoundNetworkCommand } from "../network/types.ts";
 
 // CONSTANTS
 const kOggCapturePattern = new TextEncoder().encode("OggS");
 const kRefAboveBytes = 256 * 1024;
+const kSnapshotSchema = z.union([
+  soundSnapshotSchema,
+  contentRefSchema
+]);
 
-export function soundAssetKind(): AssetKindHandler<BinaryAssetState, never> {
+export function soundAssetKind(): AssetKindHandler<SoundState, SoundNetworkCommand> {
   return {
-    ...binaryAssetKind,
     kind: SOUND_KIND,
+    build: PASS_THROUGH_BUILD,
     extensions: {
       [SOUND_EXTENSION]: SOUND_CONTENT_TYPE
     },
@@ -42,8 +56,12 @@ export function soundAssetKind(): AssetKindHandler<BinaryAssetState, never> {
       ])
     ),
 
+    create(): SoundState {
+      return new SoundState();
+    },
+
     load(
-      state: BinaryAssetState,
+      state: SoundState,
       content: Uint8Array
     ): void {
       if (content.byteLength > 0 && !isOggFile(content)) {
@@ -53,12 +71,49 @@ export function soundAssetKind(): AssetKindHandler<BinaryAssetState, never> {
         );
       }
 
-      state.bytes = content;
+      state.load(content);
     },
 
-    commands: binaryCommands(SOUND_COMMAND, {
-      refAbove: kRefAboveBytes
-    })
+    clear(
+      state: SoundState
+    ): void {
+      state.clear();
+    },
+
+    serialize(
+      state: SoundState
+    ): Promise<Uint8Array> {
+      return Promise.resolve(state.bytes);
+    },
+
+    commands: {
+      eventType: SOUND_COMMAND,
+      protocol: soundCommandProtocol,
+
+      apply(state, command) {
+        state.applyCommand(command);
+      },
+
+      live({ state, contentRef }) {
+        return {
+          snapshotSchema: kSnapshotSchema,
+          snapshot: () => state.bytes,
+          encodeSnapshot: () => (
+            contentRef === undefined || state.bytes.byteLength <= kRefAboveBytes ?
+              Promise.resolve(null) :
+              contentRef(state.bytes)
+          ),
+          ...arbitrated(state, {
+            accepts: () => state.editable,
+            writes: (command) => {
+              return {
+                keys: changedSettings(command.set)
+              };
+            }
+          })
+        };
+      }
+    }
   };
 }
 

@@ -75,6 +75,21 @@ registerIcon("sound-listen", svg`
   />
 `, { tone: "violet" });
 
+registerIcon("sound-trigger", svg`
+  <path
+    class="tone-fill"
+    d="M13 2 4 14h7l-1 8 9-12h-7z"
+  />
+  <path
+    d="M13 2 4 14h7l-1 8 9-12h-7z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "coral" });
+
 registerIcon("sound-backward", svg`
   <path
     class="tone-ink"

@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import {
+  GIZMO_SELECTED_COLOR,
   GizmoIcon,
   type GizmoIconGlyph
 } from "./GizmoIcon.ts";
@@ -15,7 +16,6 @@ export interface LightGizmoOptions {
 }
 
 // CONSTANTS
-const kDefaultSelectedColor = "#f5c46b";
 const kForward = new THREE.Vector3(0, 0, -1);
 const kArrowStart = 0.25;
 const kArrowLength = 1.2;
@@ -33,22 +33,19 @@ interface LightShape {
 }
 
 export class LightGizmo extends THREE.Group {
-  readonly #selectedColor: THREE.Color;
-  readonly #icon = new GizmoIcon("ambient");
+  readonly #icon: GizmoIcon;
   readonly #shape: THREE.LineSegments<
     THREE.BufferGeometry, THREE.LineBasicMaterial
   >;
   #shapeKey = "";
-  #selected = false;
-  #lightColor = new THREE.Color();
 
   constructor(
     options: LightGizmoOptions = {}
   ) {
     super();
-    const { selectedColor = kDefaultSelectedColor } = options;
+    const { selectedColor = GIZMO_SELECTED_COLOR } = options;
 
-    this.#selectedColor = new THREE.Color(selectedColor);
+    this.#icon = new GizmoIcon("ambient", selectedColor);
     this.#shape = new THREE.LineSegments(
       new THREE.BufferGeometry(),
       new THREE.LineBasicMaterial({ color: selectedColor })
@@ -58,14 +55,14 @@ export class LightGizmo extends THREE.Group {
   }
 
   get selected(): boolean {
-    return this.#selected;
+    return this.#icon.selected;
   }
 
   set selected(
     selected: boolean
   ) {
-    this.#selected = selected;
-    this.#paint();
+    this.#icon.selected = selected;
+    this.#shape.visible = selected;
   }
 
   update(
@@ -73,8 +70,7 @@ export class LightGizmo extends THREE.Group {
   ): void {
     const shape = lightShape(light);
     this.#icon.glyph = shape.glyph;
-    this.#lightColor.copy(light.color);
-    this.#paint();
+    this.#icon.color = light.color;
 
     if (shape.key !== this.#shapeKey) {
       this.#shapeKey = shape.key;
@@ -92,11 +88,6 @@ export class LightGizmo extends THREE.Group {
     this.#shape.geometry.dispose();
     this.#shape.material.dispose();
     this.#icon.dispose();
-  }
-
-  #paint(): void {
-    this.#icon.color = this.#selected ? this.#selectedColor : this.#lightColor;
-    this.#shape.visible = this.#selected;
   }
 
   #aim(
