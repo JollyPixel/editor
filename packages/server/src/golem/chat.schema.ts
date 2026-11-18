@@ -7,17 +7,26 @@ import * as z from "zod";
 
 // Import Internal Dependencies
 import {
+  AGENT_CHAT_ANSWER,
+  AGENT_CHAT_ANSWERED,
+  AGENT_CHAT_CANCEL,
+  AGENT_CHAT_CANCELLED,
   AGENT_CHAT_HISTORY,
   AGENT_CHAT_HISTORY_LENGTH,
   AGENT_CHAT_SAID,
   AGENT_CHAT_SAY,
-  AGENT_CHAT_TEXT_MAX_LENGTH
+  AGENT_CHAT_TEXT_MAX_LENGTH,
+  agentChatIdSchema
 } from "./chat.ts";
 
 // CONSTANTS
 const kTextSchema = z.string()
   .max(AGENT_CHAT_TEXT_MAX_LENGTH)
   .regex(/\S/);
+const kAuthorShape = {
+  clientId: z.string(),
+  peerId: z.string().optional()
+};
 const kEntrySchema = z.object({
   id: z.string(),
   clientId: z.string(),
@@ -30,11 +39,23 @@ const kEntrySchema = z.object({
 });
 
 export const agentChatCommandProtocol = new MessageProtocol(
-  z.object({
-    type: z.literal(AGENT_CHAT_SAY),
-    text: kTextSchema,
-    assetId: z.string().optional()
-  }),
+  z.union([
+    z.object({
+      type: z.literal(AGENT_CHAT_SAY),
+      text: kTextSchema,
+      assetId: z.string().optional()
+    }),
+    z.object({
+      type: z.literal(AGENT_CHAT_ANSWER),
+      bridgeClientId: agentChatIdSchema,
+      requestId: agentChatIdSchema,
+      optionId: agentChatIdSchema
+    }),
+    z.object({
+      type: z.literal(AGENT_CHAT_CANCEL),
+      bridgeClientId: agentChatIdSchema
+    })
+  ]),
   {
     discriminator: "type"
   }
@@ -48,6 +69,16 @@ export const agentChatMessageProtocol = new MessageProtocol(
     z.object({
       type: z.literal(AGENT_CHAT_HISTORY),
       messages: z.array(kEntrySchema).max(AGENT_CHAT_HISTORY_LENGTH)
+    }),
+    z.object({
+      type: z.literal(AGENT_CHAT_ANSWERED),
+      ...kAuthorShape,
+      requestId: agentChatIdSchema,
+      optionId: agentChatIdSchema
+    }),
+    z.object({
+      type: z.literal(AGENT_CHAT_CANCELLED),
+      ...kAuthorShape
     })
   ]),
   {

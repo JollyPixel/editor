@@ -9,12 +9,14 @@ import {
 } from "@modelcontextprotocol/server";
 
 // Import Internal Dependencies
-import { GolemMcpServer } from "#src/mcp/GolemMcpServer.ts";
-import type { GolemConnectOptions } from "#src/peer/GolemConnectOptions.ts";
+import {
+  GolemMcpServer,
+  type GolemMcpServerOptions
+} from "#src/mcp/GolemMcpServer.ts";
 
 export class McpAgent implements AsyncDisposable {
   static async connect(
-    options: GolemConnectOptions
+    options: GolemMcpServerOptions
   ): Promise<McpAgent> {
     const server = new GolemMcpServer(options);
     const client = new Client({

@@ -19,7 +19,10 @@ import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/message";
 
 // Import Internal Dependencies
-import { agentSetupLine } from "../../golem/AgentSetupLine.ts";
+import {
+  agentBridgeLine,
+  agentSetupLine
+} from "../../golem/AgentSetupLine.ts";
 import type { StudioAgentTokens } from "../../golem/StudioAgentTokens.ts";
 import { RemoteStateController } from "../RemoteStateController.ts";
 import { listRowStyles } from "../listRowStyles.ts";
@@ -33,7 +36,10 @@ interface RevealedToken {
   id: string;
   name: string;
   setupLine: string;
+  bridgeLine: string;
 }
+
+type RevealedLine = "setupLine" | "bridgeLine";
 
 @customElement("studio-agent-tokens")
 export class AgentTokensPane extends LitElement {
@@ -82,7 +88,7 @@ export class AgentTokensPane extends LitElement {
   declare _revealed: RevealedToken | null;
 
   @state()
-  declare _copied: boolean;
+  declare _copied: RevealedLine | null;
 
   #tokens = new RemoteStateController<StudioAgentTokens>(this);
 
@@ -90,7 +96,7 @@ export class AgentTokensPane extends LitElement {
     super();
     this._name = "";
     this._revealed = null;
-    this._copied = false;
+    this._copied = null;
   }
 
   set tokens(
@@ -149,18 +155,33 @@ export class AgentTokensPane extends LitElement {
           The token is shown only now.
         </p>
         <code>${revealed.setupLine}</code>
+        <p>
+          Or run this one to chat with it from the golem pane, where you
+          answer its permission requests.
+        </p>
+        <code>${revealed.bridgeLine}</code>
         <jolly-toolbar label="Token actions">
-          <jolly-button
-            variant="accent"
-            data-action="copy"
-            @click=${this.#copy}
-          >${this._copied ? "Copied" : "Copy"}</jolly-button>
+          ${this.#renderCopy("setupLine", "Copy the MCP line")}
+          ${this.#renderCopy("bridgeLine", "Copy the bridge line")}
           <jolly-button
             data-action="dismiss"
             @click=${this.#dismiss}
           >Done</jolly-button>
         </jolly-toolbar>
       </div>
+    `;
+  }
+
+  #renderCopy(
+    line: RevealedLine,
+    label: string
+  ): TemplateResult {
+    return html`
+      <jolly-button
+        variant="accent"
+        data-action=${`copy-${line}`}
+        @click=${() => this.#copy(line)}
+      >${this._copied === line ? "Copied" : label}</jolly-button>
     `;
   }
 
@@ -195,30 +216,34 @@ export class AgentTokensPane extends LitElement {
       return;
     }
     this._name = "";
-    this._copied = false;
+    this._copied = null;
+    const lineOptions = {
+      studioUrl: new URL(".", document.baseURI).href,
+      token: created.value
+    };
     this._revealed = {
       id: created.token.id,
       name: created.token.name,
-      setupLine: agentSetupLine({
-        studioUrl: new URL(".", document.baseURI).href,
-        token: created.value
-      })
+      setupLine: agentSetupLine(lineOptions),
+      bridgeLine: agentBridgeLine(lineOptions)
     };
   };
 
-  readonly #copy = async(): Promise<void> => {
+  async #copy(
+    line: RevealedLine
+  ): Promise<void> {
     if (this._revealed === null) {
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(this._revealed.setupLine);
-      this._copied = true;
+      await navigator.clipboard.writeText(this._revealed[line]);
+      this._copied = line;
     }
     catch {
-      this._copied = false;
+      this._copied = null;
     }
-  };
+  }
 
   readonly #dismiss = (): void => {
     this._revealed = null;

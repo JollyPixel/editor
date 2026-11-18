@@ -20,6 +20,7 @@ export interface ChatRoomHarness {
     presence?: PeerMetadata
   ): void;
   readonly published: PeerMetadata[];
+  readonly sent: unknown[];
   patchPresence(
     clientId: string,
     patch: PeerMetadata
@@ -41,6 +42,7 @@ export function chatRoomHarness(
 ): ChatRoomHarness {
   const peers = new Map<string, Peer>();
   const published: PeerMetadata[] = [];
+  const sent: unknown[] = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
   function emit(
     event: string,
@@ -62,7 +64,9 @@ export function chatRoomHarness(
     can: (event: string): Right => (event === AGENT_CHAT_SAY ? sayRight : "void"),
     join: () => undefined,
     leave: () => undefined,
-    send: () => undefined,
+    send: (payload: unknown) => {
+      sent.push(payload);
+    },
     updatePresence: (patch: PeerMetadata) => {
       published.push(patch);
     },
@@ -94,6 +98,7 @@ export function chatRoomHarness(
       emit("peer-joined", { clientId });
     },
     published,
+    sent,
     patchPresence(clientId, patch) {
       const peer = peers.get(clientId);
       if (peer !== undefined) {

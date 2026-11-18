@@ -138,12 +138,36 @@ describe("ServerBackend", () => {
       /^permessage-deflate/
     );
   });
+
+  test("refuses an upgrade from another browser origin and accepts one without origin", async() => {
+    await using backend = await serveBackend();
+
+    const foreign = await upgrade(backend.socketUrl, {
+      Origin: "http://evil.example"
+    });
+    const local = await upgrade(backend.socketUrl);
+
+    assert.notEqual(foreign.statusCode, 101);
+    assert.equal(local.statusCode, 101);
+  });
 });
 
 async function negotiatedExtensions(
   socketUrl: string
 ): Promise<string> {
-  const upgraded = Promise.withResolvers<string>();
+  const response = await upgrade(socketUrl);
+  if (response.statusCode !== 101) {
+    throw new Error(`Upgrade refused: ${response.statusCode}`);
+  }
+
+  return response.headers["sec-websocket-extensions"] ?? "";
+}
+
+function upgrade(
+  socketUrl: string,
+  headers: Record<string, string> = {}
+): Promise<http.IncomingMessage> {
+  const upgraded = Promise.withResolvers<http.IncomingMessage>();
   const request = http.request(socketUrl.replace(/^ws:/, "http:"), {
     headers: {
       Connection: "Upgrade",
@@ -151,15 +175,17 @@ async function negotiatedExtensions(
       "Sec-WebSocket-Version": "13",
       "Sec-WebSocket-Key": randomBytes(16).toString("base64"),
       "Sec-WebSocket-Protocol": WEBSOCKET_PROTOCOL,
-      "Sec-WebSocket-Extensions": "permessage-deflate"
+      "Sec-WebSocket-Extensions": "permessage-deflate",
+      ...headers
     }
   });
   request.once("upgrade", (response, socket) => {
     socket.destroy();
-    upgraded.resolve(response.headers["sec-websocket-extensions"] ?? "");
+    upgraded.resolve(response);
   });
   request.once("response", (response) => {
-    upgraded.reject(new Error(`Upgrade refused: ${response.statusCode}`));
+    response.resume();
+    upgraded.resolve(response);
   });
   request.once("error", upgraded.reject);
   request.end();

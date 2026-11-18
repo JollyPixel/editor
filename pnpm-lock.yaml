@@ -1456,6 +1456,9 @@ importers:
 
   packages/golem:
     dependencies:
+      '@agentclientprotocol/sdk':
+        specifier: 2.4.0
+        version: 2.4.0(@modelcontextprotocol/server@2.4.0)(zod@4.6.7)
       '@jolly-pixel/accounts':
         specifier: workspace:*
         version: link:../accounts
@@ -1985,6 +1988,15 @@ importers:
         version: 0.1.0
 
 packages:
+
+  '@agentclientprotocol/sdk@2.4.0':
+    resolution: {integrity: sha512-7qJ8nnyj7WesC5ve185ioTpB2/svQoeGV4HA4nLEhgDUrcmBe54/08VcXc/oL4p14tDbxxECZzdYmUYQ+4l+Wg==}
+    peerDependencies:
+      '@modelcontextprotocol/server': ^2.4.0
+      zod: ^3.25.76 || ^4.0.0
+    peerDependenciesMeta:
+      '@modelcontextprotocol/server':
+        optional: true
 
   '@algolia/abtesting@1.21.2':
     resolution: {integrity: sha512-uXj0rgk30EpsKvOpuS+R+1XFDrnm56hED1Lz56e8uBkZdKCxw99LS2U8eXBqAHYU8kpkbsnV1GC8velBG070Hg==}
@@ -5715,6 +5727,12 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@agentclientprotocol/sdk@2.4.0(@modelcontextprotocol/server@2.4.0)(zod@4.6.7)':
+    dependencies:
+      zod: 4.6.7
+    optionalDependencies:
+      '@modelcontextprotocol/server': 2.4.0
 
   '@algolia/abtesting@1.21.2':
     dependencies:

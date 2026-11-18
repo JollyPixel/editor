@@ -89,6 +89,17 @@ function pillar(
   };
 }
 
+async function chatTools(
+  agent: McpAgent
+): Promise<string[]> {
+  const { tools } = await agent.client.listTools();
+
+  return tools
+    .map(({ name }) => name)
+    .filter((name) => name.startsWith("chat_"))
+    .sort();
+}
+
 describe("GolemMcpServer", { timeout: kTimeoutMs }, () => {
   test("hears a person in the chat and answers them", async() => {
     await using backend = await serveStudio();
@@ -247,6 +258,21 @@ describe("GolemMcpServer", { timeout: kTimeoutMs }, () => {
     const error = await agent.error("studio_status");
 
     assert.match(error, /studio at http:\/\/127\.0\.0\.1:9\/ is not reachable/);
+  });
+
+  test("leaves the chat tools to the bridge when bridged", async() => {
+    await using standalone = await McpAgent.connect({
+      url: kNoStudio,
+      token: "any"
+    });
+    await using bridged = await McpAgent.connect({
+      url: kNoStudio,
+      token: "any",
+      bridged: true
+    });
+
+    assert.deepEqual(await chatTools(standalone), ["chat_next", "chat_say"]);
+    assert.deepEqual(await chatTools(bridged), []);
   });
 
   test("serves package docs without a studio, but no file outside docs/", async() => {

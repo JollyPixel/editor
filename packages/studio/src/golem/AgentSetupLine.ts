@@ -19,3 +19,14 @@ export function agentSetupLine(
     `--url ${options.studioUrl}`
   ].join(" ");
 }
+
+export function agentBridgeLine(
+  options: AgentSetupLineOptions
+): string {
+  return [
+    `node ${kLauncher} bridge`,
+    `--url ${options.studioUrl}`,
+    `--token ${options.token}`,
+    "--agent claude"
+  ].join(" ");
+}

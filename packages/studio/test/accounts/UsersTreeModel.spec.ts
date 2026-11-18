@@ -67,12 +67,15 @@ function agent(
     clientId: `${tokenId}-client`,
     tokenId,
     ownerId,
+    ownerName: null,
+    owned: false,
     username,
     color: "#123456",
     activity: activity === null ? null : {
       label: activity,
       assetId: "scene-1"
-    }
+    },
+    bridge: null
   };
 }
 
