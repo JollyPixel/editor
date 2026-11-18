@@ -9,8 +9,12 @@ export {
   type ScenePropertyOptions
 } from "./script/BehaviorDecorators.ts";
 export {
+  ASSET_PROPERTY_TYPES,
   SCENE_PROPERTY_TYPES,
   inferScenePropertyType,
+  isScriptPropertySlot,
+  scriptPropertySlot,
+  type AssetPropertyType,
   type ScenePropertyType,
   type BehaviorPropertyType
 } from "./script/ScenePropertyValue.ts";

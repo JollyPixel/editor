@@ -293,7 +293,7 @@ export class SoundCollaboration {
     }
 
     const mark = this.#sharedMark(peer.clientId);
-    const elapsed = mark?.elapsed(duration) ?? null;
+    const elapsed = mark?.elapsed(this.#player) ?? null;
 
     return mark === null || elapsed === null ? null : {
       peer,

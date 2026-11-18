@@ -15,6 +15,21 @@
       "id": "helvetiker_regular",
       "kind": "font",
       "path": "assets/fonts/helvetiker_regular.typeface.json"
+    },
+    {
+      "id": "behemoth",
+      "kind": "sound",
+      "path": "assets/sounds/behemoth.ogg"
+    },
+    {
+      "id": "infernal-heat",
+      "kind": "sound",
+      "path": "assets/sounds/infernal-heat.ogg"
+    },
+    {
+      "id": "tech-space",
+      "kind": "sound",
+      "path": "assets/sounds/tech-space.ogg"
     }
   ]
 }

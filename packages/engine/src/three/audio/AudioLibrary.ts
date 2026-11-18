@@ -5,11 +5,14 @@ import type {
   AssetReference
 } from "@jolly-pixel/asset";
 
+// Import Internal Dependencies
+import type { Sound } from "./Sound.ts";
+
 export class AudioLibrary<
   TKeys extends string = string
 > {
   #assetCoordinator: AssetCoordinator;
-  #assets = new Map<TKeys, AssetHandle<AudioBuffer>>();
+  #assets = new Map<TKeys, AssetHandle<Sound>>();
 
   constructor(
     assetCoordinator: AssetCoordinator
@@ -19,8 +22,8 @@ export class AudioLibrary<
 
   register(
     name: TKeys,
-    reference: AssetReference<AudioBuffer>
-  ): AssetHandle<AudioBuffer> {
+    reference: AssetReference<Sound>
+  ): AssetHandle<Sound> {
     const handle = this.#assetCoordinator.request(
       reference
     );
@@ -31,7 +34,7 @@ export class AudioLibrary<
 
   get(
     name: TKeys
-  ): AudioBuffer {
+  ): Sound {
     const handle = this.#assets.get(name);
     if (!handle) {
       throw new Error(`Audio "${name}" not registered.`);

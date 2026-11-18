@@ -21,7 +21,9 @@ const kWebApis = [
   "setItem",
   "setPointerCapture",
   "setProperty",
-  "setTransform"
+  "setTargetAtTime",
+  "setTransform",
+  "setValueAtTime"
 ];
 
 export const noGetSetPrefix: Rule = {

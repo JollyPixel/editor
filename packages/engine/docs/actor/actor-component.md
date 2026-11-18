@@ -12,6 +12,9 @@ with these components:
 | [MeshRenderer](../components/renderers.md#meshrenderer) | Renders a primitive geometry |
 | [LightComponent](../components/light.md) | Adds a three.js light |
 | [CameraComponent](../components/camera.md) | Turns the actor into a camera |
+| [AudioSourceComponent](../components/audio.md#audiosourcecomponent) | Plays a sound from the actor |
+| [AudioListenerComponent](../components/audio.md#audiolistenercomponent) | Hears positional sounds from the actor |
+| [AudioZoneComponent](../components/audio.md#audiozonecomponent) | Ambient or trigger sound in an area |
 | [Camera3DControls](../components/camera-3d-controls.md) | First-person camera with WASD + mouse look |
 | [OrbitFlyCamera](../components/orbit-fly-camera.md) | Fly camera with an optional orbit pivot |
 | [Behavior](../components/behavior.md) | Custom scripting with lifecycle hooks and decorators |

@@ -1,80 +1,64 @@
 // Import Node.js Dependencies
 import { mock } from "node:test";
-import timers from "node:timers/promises";
+import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
-import type * as THREE from "three/webgpu";
+import { AssetReference } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import { SoundAssetType } from "../../../src/three/assets/sound.ts";
 import {
   AudioBackground,
   type AudioBackgroundOptions,
-  type AudioBackgroundPlaylist
+  type AudioBackgroundPlaylist,
+  type AudioBackgroundTrack
 } from "../../../src/three/audio/AudioBackground.ts";
-import type { AudioManager } from "../../../src/three/audio/AudioManager.ts";
+import { GlobalAudio } from "../../../src/three/audio/GlobalAudio.ts";
+import { Sound } from "../../../src/three/audio/Sound.ts";
+import {
+  fakeAudioBuffer,
+  installFakeAudioContext,
+  type FakeBufferSource
+} from "./FakeAudioContext.ts";
 
-// CONSTANTS
-const kAsyncPropagationDelay = 10;
-
-export interface MockAudio {
-  isPlaying: boolean;
-  setVolume: ReturnType<typeof mock.fn<(volume: number) => void>>;
-  play: ReturnType<typeof mock.fn<() => void>>;
-  pause: ReturnType<typeof mock.fn<() => void>>;
-  stop: ReturnType<typeof mock.fn<() => void>>;
-  onEnded: (() => void) | null;
-}
-
-export interface MockAudioManager {
-  loadAudio: ReturnType<typeof mock.fn<(url: string, options?: any) => Promise<THREE.Audio>>>;
-  destroyAudio: ReturnType<typeof mock.fn<(audio: THREE.Audio) => void>>;
+export function musicTrack(
+  name: string,
+  volume?: number
+): AudioBackgroundTrack {
+  return {
+    name,
+    sound: new AssetReference(name, SoundAssetType),
+    ...(volume === undefined ? {} : { volume })
+  };
 }
 
 export function createAudioBackgroundHarness() {
-  const mockAudio: MockAudio = {
-    isPlaying: false,
-    setVolume: mock.fn(),
-    play: mock.fn(() => {
-      mockAudio.isPlaying = true;
-    }),
-    pause: mock.fn(() => {
-      mockAudio.isPlaying = false;
-    }),
-    stop: mock.fn(() => {
-      mockAudio.isPlaying = false;
-    }),
-    onEnded: null
-  };
+  const context = installFakeAudioContext();
+  const audio = new GlobalAudio();
+  const sounds = new Map<string, Sound>();
+  const assets = {
+    load: mock.fn(async(reference: AssetReference<Sound>): Promise<Sound> => {
+      const id = reference.id.value;
+      const sound = sounds.get(id) ?? new Sound(fakeAudioBuffer());
+      sounds.set(id, sound);
 
-  const mockAudioManager: MockAudioManager = {
-    loadAudio: mock.fn(async() => mockAudio as unknown as THREE.Audio),
-    destroyAudio: mock.fn()
+      return sound;
+    })
   };
 
   const playlists: AudioBackgroundPlaylist[] = [
     {
       name: "main",
       tracks: [
-        {
-          name: "track1",
-          path: "/audio/track1.mp3",
-          volume: 0.8
-        },
-        {
-          name: "track2",
-          path: "/audio/track2.mp3",
-          volume: 0.6
-        }
+        musicTrack("track1", 0.8),
+        musicTrack("track2", 0.6)
       ],
       onEnd: "loop"
     },
     {
       name: "secondary",
       tracks: [
-        {
-          name: "ambient",
-          path: "/audio/ambient.mp3"
-        }
+        musicTrack("ambient")
       ],
       onEnd: "stop"
     }
@@ -84,24 +68,35 @@ export function createAudioBackgroundHarness() {
     options: Partial<AudioBackgroundOptions> = {}
   ): AudioBackground {
     return new AudioBackground({
-      audioManager: mockAudioManager as unknown as AudioManager,
+      audio,
+      assets,
       playlists,
       autoPlay: false,
       ...options
     });
   }
 
+  const audioBackground = createBackground();
+
   return {
-    audioBackground: createBackground(),
-    mockAudio,
-    mockAudioManager,
+    context,
+    audio,
+    assets,
+    audioBackground,
     playlists,
     createBackground,
-    async triggerOnEnded(): Promise<void> {
-      if (mockAudio.onEnded) {
-        mockAudio.onEnded();
-        await timers.setTimeout(kAsyncPropagationDelay);
-      }
+    loadedTracks(): string[] {
+      return assets.load.mock.calls.map((call) => call.arguments[0].id.value);
+    },
+    async settle(): Promise<void> {
+      await setImmediate();
+    },
+    async endTrack(
+      background = audioBackground
+    ): Promise<void> {
+      const source = background.instance?.audio.source as unknown as FakeBufferSource | undefined;
+      source?.end();
+      await setImmediate();
     }
   };
 }

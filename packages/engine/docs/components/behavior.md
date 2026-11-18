@@ -91,6 +91,23 @@ reference is not cleared when the target is destroyed: check
 target: Actor | null = null;
 ```
 
+The `Sound` type references a [sound](../audio/audio.md#sound) asset. A
+scene file stores it in the component's asset slot named
+`scriptPropertySlot(field)` (`property:<field>`), not in `properties`, so
+the scene loads the sound before the behavior starts. An empty slot, or one
+holding another asset kind, leaves `null`.
+
+```ts
+@SceneProperty({ type: "Sound" })
+jump: Sound | null = null;
+
+jumpNow() {
+  if (this.jump !== null) {
+    this.actor.world.audio.play(this.jump);
+  }
+}
+```
+
 ### `@SceneActorComponent`
 
 Binds a field to a sibling component on the same actor.
@@ -132,8 +149,14 @@ from each name to its behavior class:
 ```ts
 const script = new ScriptDefinition({
   Player: PlayerBehavior
+}, {
+  assetTypes: SCRIPT_ASSET_TYPES
 });
 ```
+
+`assetTypes` gives the asset type each asset property type loads.
+`SCRIPT_ASSET_TYPES` maps `Sound` to `SoundAssetType`. Without it, `Sound`
+properties stay `null`.
 
 ```ts
 interface ScriptData {
@@ -156,9 +179,11 @@ interface ScriptData {
 - `capture(behavior)` writes each `@SceneProperty` field back in its stored
   form. `owns(component)` accepts instances of a registered class, not of a
   subclass.
-- `SCENE_PROPERTY_TYPES` lists the value types (`Actor` excluded;
-  `BehaviorPropertyType` includes it). `inferScenePropertyType(value)` guesses
-  one from a stored value, or returns `null`.
+- `SCENE_PROPERTY_TYPES` lists the value types (`Actor` and `Sound` excluded;
+  `BehaviorPropertyType` includes them). `ASSET_PROPERTY_TYPES` lists the
+  asset types, and `isScriptPropertySlot(slot)` tells a property slot apart.
+  `inferScenePropertyType(value)` guesses one from a stored value, or returns
+  `null`.
 
 ## See also
 

@@ -21,6 +21,12 @@
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../engine"
+    },
+    {
+      "path": "../../runtime"
     }
   ]
 }

@@ -15,7 +15,8 @@ const kOutline: ScriptOutline = {
       name: "Player",
       properties: [
         { key: "speed", type: "number", label: "Speed", description: "", default: 2 },
-        { key: "target", type: "Actor", label: "target", description: "", default: null }
+        { key: "target", type: "Actor", label: "target", description: "", default: null },
+        { key: "jump", type: "Sound", label: "Jump sound", description: "", default: null }
       ]
     },
     {
@@ -37,6 +38,17 @@ describe("scriptForm", () => {
     assert.deepEqual(
       properties.control === "properties" ? properties.declared?.map(({ key }) => key) : [],
       ["speed"]
+    );
+  });
+
+  test("picks the sound of a Sound property from its own asset slot", () => {
+    const [, , jump, ...rest] = scriptForm({ behavior: "Player", properties: {} }, kOutline);
+
+    assert.deepEqual(rest, []);
+    assert.equal(jump.control, "asset");
+    assert.deepEqual(
+      jump.control === "asset" ? [jump.slot, jump.label, jump.type.kind.value] : [],
+      ["property:jump", "Jump sound", "sound"]
     );
   });
 

@@ -179,11 +179,11 @@ the package's `jollypixel.runtime` entry (`RuntimeComponentPackage` in
 `@jolly-pixel/runtime`), so the editor and the game share one object. Its
 `assets` slots decide which asset pickers open when the component is added.
 
-The component shows the asset kind icon of its first `definition.assets` slot
-whose kind an `assets` source declares with an icon, so a voxel map component
-looks like a voxel map asset. Otherwise it shows `icon`, the name of an icon
-the package registers with `registerIcon` from `@jolly-pixel/ui` when its
-module loads.
+The component shows `icon`, the name of an icon the package registers with
+`registerIcon` from `@jolly-pixel/ui` when its module loads. Without `icon`, it
+shows the asset kind icon of its first `definition.assets` slot whose kind an
+`assets` source declares with an icon, so a voxel map component looks like a
+voxel map asset.
 
 `category` picks the folder of the Add component menu, which lists the
 categories in the order of `SCENE_COMPONENT_CATEGORIES` (`{ id, label }`).

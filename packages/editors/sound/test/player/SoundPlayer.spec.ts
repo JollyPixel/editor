@@ -10,6 +10,7 @@ import { SoundDocument } from "@jolly-pixel/asset.sound/client";
 
 // Import Internal Dependencies
 import { SoundPlayer } from "#src/player/SoundPlayer.ts";
+import { LiveSettings } from "#src/settings/LiveSettings.ts";
 import {
   FakeAudioContext,
   fakeBuffer
@@ -96,7 +97,7 @@ describe("SoundPlayer", () => {
       if (content !== null) {
         document.load(content);
       }
-      await player.follow(document);
+      await player.follow(new LiveSettings(document));
       player.play();
 
       assert.equal(player.playing, false);
@@ -166,7 +167,7 @@ describe("SoundPlayer", () => {
     const document = new SoundDocument();
     document.load(kOggBytes);
 
-    const followed = player.follow(document);
+    const followed = player.follow(new LiveSettings(document));
     const newest = nextSound(player);
     document.load(kOtherOggBytes);
     decodes[1](fakeBuffer([new Float32Array(4), new Float32Array(4)]));

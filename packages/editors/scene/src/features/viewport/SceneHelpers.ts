@@ -2,6 +2,7 @@
 import * as THREE from "three";
 import {
   ActorComponent,
+  AudioSourceComponent,
   CameraComponent,
   LightComponent,
   type Actor,
@@ -17,6 +18,7 @@ import type {
   SceneBinding
 } from "../../scene/SceneBinding.ts";
 import type { SelectionStore } from "../../state/SelectionStore.ts";
+import { AudioSourceMarker } from "./helpers/AudioSourceMarker.ts";
 import { CameraFrustum } from "./helpers/CameraFrustum.ts";
 import type { ComponentHelper } from "./helpers/ComponentHelper.ts";
 import { LightMarker } from "./helpers/LightMarker.ts";
@@ -141,6 +143,9 @@ function createHelper(
   }
   if (component instanceof LightComponent) {
     return new LightMarker(component);
+  }
+  if (component instanceof AudioSourceComponent) {
+    return new AudioSourceMarker(component);
   }
 
   return null;

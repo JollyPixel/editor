@@ -2,190 +2,80 @@
 import {
   describe,
   test,
-  beforeEach,
-  afterEach
+  beforeEach
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import type {
-  AudioBackground,
-  AudioBackgroundPlaylist
-} from "../../src/three/audio/AudioBackground.ts";
+import type { AudioBackgroundPlaylist } from "../../src/three/audio/AudioBackground.ts";
 import {
   createAudioBackgroundHarness,
+  musicTrack,
   type AudioBackgroundHarness
 } from "../helpers/audio/audioBackgroundHarness.ts";
 
-describe("Audio.AudioBackground", () => {
-  let audioBackground: AudioBackground;
-  let mockAudioManager: AudioBackgroundHarness["mockAudioManager"];
-  let mockAudio: AudioBackgroundHarness["mockAudio"];
-  let createBackground: AudioBackgroundHarness["createBackground"];
-  let triggerOnEnded: AudioBackgroundHarness["triggerOnEnded"];
+describe("Audio.AudioBackground playlists", () => {
+  let harness: AudioBackgroundHarness;
 
   beforeEach(() => {
-    ({
-      audioBackground,
-      mockAudioManager,
-      mockAudio,
-      createBackground,
-      triggerOnEnded
-    } = createAudioBackgroundHarness());
+    harness = createAudioBackgroundHarness();
   });
 
-  afterEach(() => {
-    audioBackground.stop();
-  });
+  test("should loop the playlist when onEnd is loop", async() => {
+    await harness.audioBackground.play([0, 1]);
 
-  test("should loop playlist when onEnd is loop", async() => {
-    await audioBackground.play([0, 1]);
+    await harness.endTrack();
 
-    await triggerOnEnded();
-
-    assert.strictEqual(mockAudioManager.loadAudio.mock.calls.length, 2);
-    assert.strictEqual(mockAudioManager.loadAudio.mock.calls[1].arguments[0], "/audio/track1.mp3");
+    assert.strictEqual(harness.audioBackground.track?.name, "track1");
   });
 
   test("should stop when onEnd is stop", async() => {
-    await audioBackground.play([1, 0]);
+    await harness.audioBackground.play([1, 0]);
 
-    await triggerOnEnded();
+    await harness.endTrack();
 
-    assert.strictEqual(audioBackground.audio, null);
-    assert.strictEqual(audioBackground.track, null);
+    assert.strictEqual(harness.audioBackground.instance, null);
+    assert.strictEqual(harness.audioBackground.track, null);
   });
 
-  test("should play next playlist when configured", async() => {
-    const playlistsWithNext: AudioBackgroundPlaylist[] = [
+  test("should play the next playlist when configured", async() => {
+    const playlists: AudioBackgroundPlaylist[] = [
       {
         name: "first",
-        tracks: [
-          {
-            name: "track1",
-            path: "/audio/track1.mp3"
-          }
-        ],
+        tracks: [musicTrack("track1")],
         onEnd: "play-next-playlist",
         nextPlaylistName: "second"
       },
       {
         name: "second",
-        tracks: [
-          {
-            name: "track2",
-            path: "/audio/track2.mp3"
-          }
-        ],
+        tracks: [musicTrack("track2")],
         onEnd: "stop"
       }
     ];
+    const background = harness.createBackground({ playlists });
 
-    const bg = createBackground({
-      playlists: playlistsWithNext
+    await background.play([0, 0]);
+    await harness.endTrack(background);
+
+    assert.strictEqual(background.track?.name, "track2");
+  });
+
+  test("should stop when the next playlist is not found", async() => {
+    const background = harness.createBackground({
+      playlists: [
+        {
+          name: "first",
+          tracks: [musicTrack("track1")],
+          onEnd: "play-next-playlist",
+          nextPlaylistName: "nonexistent"
+        }
+      ]
     });
 
-    await bg.play([0, 0]);
-    await triggerOnEnded();
+    await background.play([0, 0]);
+    await harness.endTrack(background);
 
-    assert.strictEqual(mockAudioManager.loadAudio.mock.calls.length, 2);
-    assert.strictEqual(mockAudioManager.loadAudio.mock.calls[1].arguments[0], "/audio/track2.mp3");
-
-    bg.stop();
-  });
-
-  test("should stop if next playlist is not found", async() => {
-    const playlistsWithInvalidNext: AudioBackgroundPlaylist[] = [
-      {
-        name: "first",
-        tracks: [
-          {
-            name: "track1",
-            path: "/audio/track1.mp3"
-          }
-        ],
-        onEnd: "play-next-playlist",
-        nextPlaylistName: "nonexistent"
-      }
-    ];
-
-    const bg = createBackground({
-      playlists: playlistsWithInvalidNext
-    });
-
-    await bg.play([0, 0]);
-    await triggerOnEnded();
-
-    assert.strictEqual(bg.audio, null);
-
-    bg.stop();
-  });
-
-  test("should pause audio when playing", () => {
-    audioBackground.audio = mockAudio as any;
-    mockAudio.isPlaying = true;
-
-    audioBackground.pause();
-
-    assert.strictEqual(mockAudio.pause.mock.calls.length, 1);
-  });
-
-  test("should not pause if audio is not playing", () => {
-    audioBackground.audio = mockAudio as any;
-    mockAudio.isPlaying = false;
-
-    audioBackground.pause();
-
-    assert.strictEqual(mockAudio.pause.mock.calls.length, 0);
-  });
-
-  test("should resume audio when paused", () => {
-    audioBackground.audio = mockAudio as any;
-    mockAudio.isPlaying = false;
-
-    audioBackground.resume();
-
-    assert.strictEqual(mockAudio.play.mock.calls.length, 1);
-  });
-
-  test("should not resume if audio is already playing", () => {
-    audioBackground.audio = mockAudio as any;
-    mockAudio.isPlaying = true;
-
-    audioBackground.resume();
-
-    assert.strictEqual(mockAudio.play.mock.calls.length, 0);
-  });
-
-  test("should stop audio and reset state", () => {
-    audioBackground.audio = mockAudio as any;
-
-    audioBackground.stop();
-
-    assert.strictEqual(mockAudioManager.destroyAudio.mock.calls.length, 1);
-    assert.strictEqual(audioBackground.audio, null);
-    assert.strictEqual(audioBackground.track, null);
-  });
-
-  test("should return correct isPlaying state", async() => {
-    assert.strictEqual(audioBackground.isPlaying, false);
-
-    await audioBackground.play([0, 0]);
-    mockAudio.isPlaying = true;
-
-    assert.strictEqual(audioBackground.isPlaying, true);
-
-    audioBackground.stop();
-
-    assert.strictEqual(audioBackground.isPlaying, false);
-  });
-
-  test("should return correct isPaused state", async() => {
-    assert.strictEqual(audioBackground.isPaused, false);
-
-    await audioBackground.play([0, 0]);
-    mockAudio.isPlaying = false;
-
-    assert.strictEqual(audioBackground.isPaused, true);
+    assert.strictEqual(background.instance, null);
+    assert.strictEqual(background.track, null);
   });
 });

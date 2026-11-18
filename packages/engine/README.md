@@ -168,33 +168,35 @@ See [Controls](../controls/README.md) workspace for detailed documentation.
 
 Manages sound playback across the engine. It provides a global volume controller, a factory for creating audio sources, and a playlist-based background music manager.
 
-- [Audio](./docs/audio/audio.md) — global audio controller owning the
-  AudioContext and master volume.
+- [Audio](./docs/audio/audio.md) — plays sounds through a mixer of
+  categories, with voice limits, fades and positional sound.
   - [AudioLibrary](./docs/audio/audio-library.md)
   - [AudioBackground](./docs/audio/audio-background.md) —
     playlist-based background music with sequential track playback,
     pause/resume/stop, and playlist chaining.
+  - [Audio components](./docs/components/audio.md) — `AudioSource`,
+    `AudioListener` and `AudioZone`.
 
 <details>
 <summary>Code Example</summary>
 
 ```ts
-import { GlobalAudioManager, AudioBackground } from "@jolly-pixel/engine";
+import { AudioBackground } from "@jolly-pixel/engine";
 
-const audioManager = GlobalAudioManager.fromWorld(world);
 const bg = new AudioBackground({
-  audioManager,
+  audio: world.audio,
   autoPlay: true,
   playlists: [{
     name: "main",
     onEnd: "loop",
     tracks: [
-      { name: "theme", path: "audio/theme.mp3" }
+      { name: "theme", sound: themeSound }
     ]
   }]
 });
 
 world.audio.volume = 0.5;
+world.audio.mixer.category("sfx").muted = true;
 ```
 
 </details>

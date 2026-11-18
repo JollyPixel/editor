@@ -16,6 +16,7 @@ import { SoundCollaboration } from "./collaboration/SoundCollaboration.ts";
 import { SoundFile } from "./panes/sound/SoundFile.ts";
 import { SoundPlayer } from "./player/SoundPlayer.ts";
 import { VolumePreference } from "./player/volume/VolumePreference.ts";
+import { LiveSettings } from "./settings/LiveSettings.ts";
 
 // CONSTANTS
 const kSoundKind = soundDocumentKind();
@@ -55,15 +56,19 @@ export class SoundEditor {
       const wave = document.querySelector("jolly-sound-wave");
       const fileFolder = document.querySelector("jolly-sound-file");
       const details = document.querySelector("jolly-sound-details");
+      const settings = document.querySelector("jolly-sound-settings");
       if (
         track === null ||
         wave === null ||
         fileFolder === null ||
-        details === null
+        details === null ||
+        settings === null
       ) {
         throw new Error("SoundEditor: the page is missing a sound pane.");
       }
 
+      const liveSettings = new LiveSettings(target.document);
+      teardown.defer(() => liveSettings.dispose());
       const player = new SoundPlayer(
         new AudioContext()
       );
@@ -76,7 +81,7 @@ export class SoundEditor {
         player
       });
       teardown.defer(() => collaboration.dispose());
-      track.attach(player, collaboration);
+      track.attach(player, collaboration, liveSettings);
       wave.attach(player, collaboration);
       fileFolder.attach(new SoundFile({
         catalog: session.catalog,
@@ -84,6 +89,7 @@ export class SoundEditor {
         document: target.document
       }), context.notifications);
       details.attach(player);
+      settings.attach(liveSettings);
 
       const presenceStack = document.querySelector("jolly-presence-stack");
       if (presenceStack !== null) {
@@ -95,7 +101,7 @@ export class SoundEditor {
       }
 
       const ready = target.ready.then(() => {
-        void player.follow(target.document);
+        void player.follow(liveSettings);
       });
 
       return new SoundEditor({

@@ -36,4 +36,8 @@ export class UnplayableSound implements Sound {
   play(): null {
     return null;
   }
+
+  voice(): null {
+    return null;
+  }
 }

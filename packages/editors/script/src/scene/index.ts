@@ -10,6 +10,7 @@ import type {
   SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
 import {
+  SCRIPT_ASSET_TYPES,
   ScriptDefinition,
   type ScriptData
 } from "@jolly-pixel/engine";
@@ -33,7 +34,9 @@ type ScriptAssets = {
 // CONSTANTS
 export const SCRIPT_OUTLINE_ASSET = new AssetType<ScriptOutline>(SCRIPT_KIND);
 
-const kRuntimeScript = new ScriptDefinition();
+const kRuntimeScript = new ScriptDefinition({}, {
+  assetTypes: SCRIPT_ASSET_TYPES
+});
 
 const kScript: SceneComponentKind<ScriptData, ScriptAssets> = {
   definition: {
@@ -42,7 +45,8 @@ const kScript: SceneComponentKind<ScriptData, ScriptAssets> = {
       script: SCRIPT_OUTLINE_ASSET
     },
     parse: (data) => kRuntimeScript.parse(data),
-    create: () => null
+    create: () => null,
+    slotType: (slot, reference) => kRuntimeScript.slotType(slot, reference)
   },
   label: "Script",
   category: "logic",

@@ -35,6 +35,7 @@ const kMessages: Record<UnplayableStatus, string> = {
 export class SoundWave extends LitElement {
   #player = new SubscriptionController<SoundPlayer>(this, (player) => [
     player.subscribe("change", () => this.requestUpdate()),
+    player.subscribe("settings", () => this.requestUpdate()),
     player.subscribe("sound", () => this.#drawWaveform())
   ]);
   #collaboration = new SubscriptionController<SoundCollaboration>(
@@ -162,6 +163,7 @@ export class SoundWave extends LitElement {
         @lostpointercapture=${this.#onScrubEnd}
       >
         <canvas></canvas>
+        ${player === null ? nothing : this.#renderLoopRegion(player)}
         ${player === null ? nothing : this.#renderCursor(player)}
         ${playheads.map((playhead) => this.#renderPlayhead(playhead))}
         ${playheads.map((playhead, index) => this.#renderTags(
@@ -172,6 +174,26 @@ export class SoundWave extends LitElement {
           <div class="message">${kMessages[status]}</div>
         `}
       </div>
+    `;
+  }
+
+  #renderLoopRegion(
+    player: SoundPlayer
+  ): TemplateResult | typeof nothing {
+    const { duration, loopRegion: region } = player;
+    if (duration === null || region === null) {
+      return nothing;
+    }
+
+    return html`
+      <div
+        class=${player.mode.applySettings ? "loop-region" : "loop-region idle"}
+        title="Loop region"
+        style=${styleMap({
+          left: `${region.start / duration * 100}%`,
+          width: `${region.length / duration * 100}%`
+        })}
+      ></div>
     `;
   }
 

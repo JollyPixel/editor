@@ -79,6 +79,9 @@ export class SceneComponents {
     slots: KindSlots,
     assetIcons: ReadonlyMap<string, string | undefined>
   ): string {
+    if (kind.icon !== undefined) {
+      return kind.icon;
+    }
     for (const slot of Object.values(slots.required)) {
       const icon = assetIcons.get(slot.kind.value);
       if (icon !== undefined) {
@@ -86,7 +89,7 @@ export class SceneComponents {
       }
     }
 
-    return kind.icon ?? EMPTY_ACTOR_ICON;
+    return EMPTY_ACTOR_ICON;
   }
 
   readonly kinds: readonly SceneComponentKind[];

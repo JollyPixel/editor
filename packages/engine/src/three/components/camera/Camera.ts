@@ -136,7 +136,7 @@ export class CameraComponent<
     this.#projection = createCameraProjection(this.#settings.projectionMode);
     this.#writeProjection();
     if (addAudioListener) {
-      this.threeCamera.add(actor.world.audio.threeAudioListener);
+      this.threeCamera.add(actor.world.audio.listener);
     }
   }
 

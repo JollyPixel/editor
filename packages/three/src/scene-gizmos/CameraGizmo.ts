@@ -6,7 +6,10 @@ import {
   frustumLinePoints,
   type FrustumLens
 } from "../common/geometry/frustumLines.ts";
-import { GizmoIcon } from "./GizmoIcon.ts";
+import {
+  GIZMO_SELECTED_COLOR,
+  GizmoIcon
+} from "./GizmoIcon.ts";
 
 export interface CameraGizmoLens {
   projection: "perspective" | "orthographic";
@@ -45,10 +48,8 @@ export interface CameraGizmoOptions {
 
 // CONSTANTS
 const kDefaultColor = "#aab4c3";
-const kDefaultSelectedColor = "#f5c46b";
 const kDefaultAspect = 16 / 9;
 const kDefaultDepth = 3;
-const kIdleIconColor = "#ffffff";
 const kScale = new THREE.Vector3();
 
 export class CameraGizmo extends THREE.Group {
@@ -56,12 +57,11 @@ export class CameraGizmo extends THREE.Group {
   readonly #depth: number;
   readonly #color: THREE.Color;
   readonly #selectedColor: THREE.Color;
-  readonly #icon = new GizmoIcon("camera");
+  readonly #icon: GizmoIcon;
   readonly #frustum: THREE.LineSegments<
     THREE.BufferGeometry, THREE.LineBasicMaterial
   >;
   #lensKey = "";
-  #selected = false;
 
   constructor(
     options: CameraGizmoOptions = {}
@@ -69,7 +69,7 @@ export class CameraGizmo extends THREE.Group {
     super();
     const {
       color = kDefaultColor,
-      selectedColor = kDefaultSelectedColor,
+      selectedColor = GIZMO_SELECTED_COLOR,
       aspect = kDefaultAspect,
       depth = kDefaultDepth
     } = options;
@@ -78,26 +78,25 @@ export class CameraGizmo extends THREE.Group {
     this.#depth = depth;
     this.#color = new THREE.Color(color);
     this.#selectedColor = new THREE.Color(selectedColor);
+    this.#icon = new GizmoIcon("camera", selectedColor);
     this.#frustum = new THREE.LineSegments(
       new THREE.BufferGeometry(),
       new THREE.LineBasicMaterial({ color })
     );
-    this.#icon.color = kIdleIconColor;
     this.add(this.#frustum, this.#icon);
   }
 
   get selected(): boolean {
-    return this.#selected;
+    return this.#icon.selected;
   }
 
   set selected(
     selected: boolean
   ) {
-    this.#selected = selected;
+    this.#icon.selected = selected;
     this.#frustum.material.color.copy(
       selected ? this.#selectedColor : this.#color
     );
-    this.#icon.color = selected ? this.#selectedColor : kIdleIconColor;
   }
 
   update(

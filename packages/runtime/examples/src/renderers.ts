@@ -2,7 +2,7 @@
 import {
   Camera3DControls,
   AudioBackground,
-  GlobalAudioManager,
+  SoundAssetType,
   TextRenderer,
   AssetTypes,
   Systems
@@ -51,9 +51,10 @@ class RenderersScene extends Systems.Scene {
       });
     textActor.transform.local.position = { x: 0, y: 5, z: 0 };
 
-    const audioManager = GlobalAudioManager.fromWorld(this.world);
     this.audioBackground = new AudioBackground({
-      audioManager,
+      audio: this.world.audio,
+      assets: this.world.assetCoordinator,
+      crossfade: 1,
       playlists: [
         {
           name: "normal",
@@ -61,11 +62,11 @@ class RenderersScene extends Systems.Scene {
           tracks: [
             {
               name: "behemoth",
-              path: "./assets/sounds/behemoth.ogg"
+              sound: new AssetReference("behemoth", SoundAssetType)
             },
             {
               name: "infernal-heat",
-              path: "./assets/sounds/infernal-heat.ogg"
+              sound: new AssetReference("infernal-heat", SoundAssetType)
             }
           ]
         },
@@ -76,7 +77,7 @@ class RenderersScene extends Systems.Scene {
           tracks: [
             {
               name: "tech-space",
-              path: "./assets/sounds/tech-space.ogg",
+              sound: new AssetReference("tech-space", SoundAssetType),
               volume: 0.5
             }
           ]

@@ -58,7 +58,7 @@ export class ComponentAssets<
   ): TValue | null {
     const reference = this.#references[slot] ?? null;
 
-    return reference === null ?
+    return reference === null || reference.kind !== type.kind.value ?
       null :
       this.#resolver.resolve(reference, type);
   }
@@ -98,6 +98,10 @@ export interface ComponentDefinition<
     component: TComponent,
     stored: Readonly<JSONObject>
   ): JSONObject;
+  slotType?(
+    slot: string,
+    reference: AssetReferenceData
+  ): AssetType<unknown> | null;
   anchors?(
     component: TComponent
   ): ComponentAnchors;

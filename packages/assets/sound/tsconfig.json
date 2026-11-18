@@ -8,6 +8,9 @@
       "path": "../../asset-server"
     },
     {
+      "path": "../../engine"
+    },
+    {
       "path": "../../event-store"
     },
     {

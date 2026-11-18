@@ -6,3 +6,5 @@ export {
   SOUND_SOURCE_EXTENSIONS
 } from "../asset/sound.ts";
 export * from "./SoundDocument.ts";
+export * from "./SoundCommand.schema.ts";
+export type * from "./types.ts";

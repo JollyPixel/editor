@@ -1,5 +1,11 @@
 // Import Third-party Dependencies
+import { Systems } from "@jolly-pixel/engine/core";
 import * as z from "zod/mini";
+
+// Import Internal Dependencies
+import { LoopRegion } from "./LoopRegion.ts";
+import { PlaybackTuning } from "./PlaybackTuning.ts";
+import type { Volume } from "./volume/Volume.ts";
 
 // CONSTANTS
 export const PLAYBACK_SPEEDS = [0.5, 1, 2, 4] as const;
@@ -10,23 +16,31 @@ export interface PlaybackModeSnapshot {
   readonly loop: boolean;
   readonly reversed: boolean;
   readonly speed: PlaybackSpeed;
+  readonly applySettings: boolean;
+  readonly pitchRoll: number;
 }
 
 export class PlaybackMode {
   static readonly schema = z.object({
     loop: z.boolean(),
     reversed: z.boolean(),
-    speed: z.literal(PLAYBACK_SPEEDS)
+    speed: z.literal(PLAYBACK_SPEEDS),
+    applySettings: z.boolean(),
+    pitchRoll: z.number().check(z.gte(-1), z.lte(1))
   });
   static readonly default = new PlaybackMode({
     loop: false,
     reversed: false,
-    speed: 1
+    speed: 1,
+    applySettings: false,
+    pitchRoll: 0
   });
 
   readonly loop: boolean;
   readonly reversed: boolean;
   readonly speed: PlaybackSpeed;
+  readonly applySettings: boolean;
+  readonly pitchRoll: number;
 
   constructor(
     snapshot: PlaybackModeSnapshot
@@ -34,6 +48,8 @@ export class PlaybackMode {
     this.loop = snapshot.loop;
     this.reversed = snapshot.reversed;
     this.speed = snapshot.speed;
+    this.applySettings = snapshot.applySettings;
+    this.pitchRoll = snapshot.pitchRoll;
   }
 
   withLoop(
@@ -54,46 +70,56 @@ export class PlaybackMode {
     return this.#with({ speed });
   }
 
-  advance(
-    offset: number,
-    played: number,
+  withApplySettings(
+    applySettings: boolean
+  ): PlaybackMode {
+    return this.#with({ applySettings });
+  }
+
+  rerolled(): PlaybackMode {
+    return this.#with({ pitchRoll: Systems.rollPitch() });
+  }
+
+  tune(
+    settings: Readonly<Systems.SoundSettings>,
     duration: number
-  ): number | null {
-    const velocity = this.reversed ? -this.speed : this.speed;
-    const position = offset + velocity * played;
-    if (this.loop) {
-      return (position % duration + duration) % duration;
+  ): PlaybackTuning {
+    if (this.applySettings) {
+      return new PlaybackTuning({
+        duration,
+        rate: Systems.variedPitch(settings, this.pitchRoll),
+        reversed: false,
+        loop: LoopRegion.resolve(settings, duration)
+      });
     }
 
-    const inside = this.reversed ? position > 0 : position < duration;
-
-    return inside ? position : null;
+    return new PlaybackTuning({
+      duration,
+      rate: this.speed,
+      reversed: this.reversed,
+      loop: this.loop ? LoopRegion.whole(duration) : null
+    });
   }
 
-  start(
-    duration: number
+  level(
+    settings: Readonly<Systems.SoundSettings>
   ): number {
-    return this.reversed ? duration : 0;
+    return this.applySettings ? settings.volume : 1;
   }
 
-  end(
-    duration: number
+  monitorGain(
+    volume: Volume
   ): number {
-    return this.reversed ? 0 : duration;
-  }
-
-  bufferOffset(
-    position: number,
-    duration: number
-  ): number {
-    return this.reversed ? duration - position : position;
+    return this.applySettings ? 1 : volume.gain();
   }
 
   toJSON(): PlaybackModeSnapshot {
     return {
       loop: this.loop,
       reversed: this.reversed,
-      speed: this.speed
+      speed: this.speed,
+      applySettings: this.applySettings,
+      pitchRoll: this.pitchRoll
     };
   }
 

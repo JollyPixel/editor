@@ -1,9 +1,6 @@
 // Import Node.js Dependencies
 import { mock } from "node:test";
 
-// Import Third-party Dependencies
-import * as THREE from "three/webgpu";
-
 // Import Internal Dependencies
 import { Transform } from "../../../src/core/actor/transform/Transform.ts";
 import { ActorComponents } from "../../../src/core/actor/ActorComponents.ts";
@@ -11,6 +8,7 @@ import { ActorRegistry } from "../../../src/core/systems/scene/ActorRegistry.ts"
 import type { Actor } from "../../../src/core/actor/Actor.ts";
 import { ThreeSceneGraph } from "../../../src/three/scene/ThreeSceneGraph.ts";
 import { GlobalAudio } from "../../../src/three/audio/GlobalAudio.ts";
+import { installFakeAudioContext } from "../audio/FakeAudioContext.ts";
 
 function createRendererMock() {
   return {
@@ -20,6 +18,7 @@ function createRendererMock() {
 }
 
 export function createActorMock() {
+  installFakeAudioContext();
   const graph = new ThreeSceneGraph();
   const node = graph.createNode({} as Actor);
   const transform = new Transform(node).attach(null);
@@ -34,9 +33,7 @@ export function createActorMock() {
         unscaledDelta: 0.1
       },
       renderer: createRendererMock(),
-      audio: new GlobalAudio(
-        new THREE.Object3D() as unknown as THREE.AudioListener
-      ),
+      audio: new GlobalAudio(),
       sceneManager: {
         actors: new ActorRegistry(graph)
       },

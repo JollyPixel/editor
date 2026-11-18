@@ -27,6 +27,19 @@ export const soundWaveStyles = css`
     color: var(--jolly-accent-400);
   }
 
+  .loop-region {
+    position: absolute;
+    inset-block: 0;
+    box-sizing: border-box;
+    border-inline: 2px solid var(--jolly-amber-400);
+    background: color-mix(in oklab, var(--jolly-amber-400) 14%, transparent);
+    pointer-events: none;
+  }
+
+  .loop-region.idle {
+    opacity: 0.45;
+  }
+
   .playhead {
     position: absolute;
     inset-block: 0;

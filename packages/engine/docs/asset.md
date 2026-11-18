@@ -66,7 +66,7 @@ A value not loaded yet throws `AssetNotReadyError`; it never starts a load.
 | ---- | ---- | ------ | ----------------- |
 | `AssetTypes.model` | `model` | `AssetLoaders.model` | OBJ, FBX, glTF, GLB (including `EXT_meshopt_compression`) |
 | `AssetTypes.font` | `font` | `AssetLoaders.font` | Three.js typeface JSON |
-| `AUDIO_ASSET` | `audio` | `AudioAssetLoader` | Formats supported by `THREE.AudioLoader` |
+| `SoundAssetType` | `sound` | `SoundAssetLoader` | Formats `decodeAudioData` supports, with [sound settings](./audio/audio.md#sound) read from an Ogg header |
 | `TEXTURE_ASSET` | `texture` | `TextureAssetLoader` | Formats supported by `THREE.TextureLoader`, plus KTX2 (see below) |
 | `SceneFileAssetType` | `scene` | `SceneFileAssetLoader` | A `SceneFile` as JSON, read by [`FileScene`](./systems/scene-file.md) |
 | `Systems.ENVIRONMENT_ASSET` | `environment` | `EnvironmentFileAssetLoader` | An [`EnvironmentFile`](./systems/environment.md) as JSON |
