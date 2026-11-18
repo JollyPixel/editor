@@ -13,6 +13,7 @@ import {
   state
 } from "lit/decorators.js";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import type { AgentBridgePermission } from "@jolly-pixel/server";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/message";
 import { errorMessage } from "@jolly-pixel/utils";
@@ -21,6 +22,7 @@ import { errorMessage } from "@jolly-pixel/utils";
 import {
   AGENT_CHAT_CHANGE,
   type ChatAgent,
+  type ChatAgentBridge,
   type ChatLine,
   type StudioAgentChat
 } from "../../golem/StudioAgentChat.ts";
@@ -89,6 +91,32 @@ export class GolemChatPane extends LitElement {
 
     .author {
       font-weight: 600;
+    }
+
+    .agent {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--jolly-space-1, 4px);
+    }
+
+    .status {
+      flex: 1;
+    }
+
+    .permission {
+      display: grid;
+      gap: var(--jolly-space-1, 4px);
+      margin-block-start: var(--jolly-space-1, 4px);
+      padding: var(--jolly-space-1, 4px) var(--jolly-space-2, 8px);
+      border-radius: var(--studio-radius);
+      box-shadow: inset 0 0 0 1px var(--studio-shade);
+    }
+
+    .options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--jolly-space-1, 4px);
     }
 
     .muted {
@@ -229,17 +257,63 @@ export class GolemChatPane extends LitElement {
   #renderAgent(
     agent: ChatAgent
   ): TemplateResult {
-    const { activity } = agent;
+    const bridge = agent.owned ? agent.bridge : null;
 
     return html`
       <li>
-        <span class="author" style=${`color: ${agent.color}`}>
-          ${agent.username}
-        </span>
-        <span class="muted">${activity === null ?
-          "idle" :
-          `${activity.label}${this.#assetSuffix(activity.assetId)}`}</span>
+        <div class="agent">
+          <span class="author" style=${`color: ${agent.color}`}>
+            ${agent.username}
+          </span>
+          ${agent.ownerName === null ? nothing : html`
+            <span class="muted">(${agent.ownerName})</span>
+          `}
+          <span class="muted status">${this.#agentStatus(agent)}</span>
+          ${bridge?.turn === "running" ? html`
+            <jolly-button
+              variant="danger"
+              @click=${() => this.#chat.current?.stop(bridge)}
+            >Stop</jolly-button>
+          ` : nothing}
+        </div>
+        ${bridge === null ? nothing : bridge.permissions.map(
+          (permission) => this.#renderPermission(bridge, permission)
+        )}
       </li>
+    `;
+  }
+
+  #agentStatus(
+    agent: ChatAgent
+  ): string {
+    const { activity, bridge } = agent;
+    if (activity !== null) {
+      return `${activity.label}${this.#assetSuffix(activity.assetId)}`;
+    }
+
+    return bridge?.turn === "running" ? bridge.tool ?? "working" : "idle";
+  }
+
+  #renderPermission(
+    bridge: ChatAgentBridge,
+    permission: AgentBridgePermission
+  ): TemplateResult {
+    return html`
+      <div class="permission" role="group" aria-label="Permission request">
+        <p class="text">${permission.title}</p>
+        <div class="options">
+          ${permission.options.map((option) => html`
+            <jolly-button
+              variant=${option.kind.startsWith("allow") ? "accent" : "default"}
+              @click=${() => this.#chat.current?.answer(
+                bridge,
+                permission.id,
+                option.optionId
+              )}
+            >${option.name}</jolly-button>
+          `)}
+        </div>
+      </div>
     `;
   }
 

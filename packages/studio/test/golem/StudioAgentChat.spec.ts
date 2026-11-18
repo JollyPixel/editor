@@ -7,7 +7,12 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { PEER_ACTIVITY_KEY } from "@jolly-pixel/network";
-import type { AgentChatEntry } from "@jolly-pixel/server";
+import {
+  AGENT_BRIDGE_PRESENCE_KEY,
+  AGENT_CHAT_CANCEL,
+  type AgentBridgeState,
+  type AgentChatEntry
+} from "@jolly-pixel/server";
 import { AgentChatClient } from "@jolly-pixel/server/client";
 import { NotificationQueue } from "@jolly-pixel/ui";
 
@@ -22,6 +27,17 @@ const kAgentProfile = {
   peerId: "token-1",
   via: "golem",
   ownerId: "alice-id"
+};
+const kBobAgentProfile = {
+  username: "Helper",
+  peerId: "token-2",
+  via: "golem",
+  ownerId: "bob-id"
+};
+const kRunningBridge: AgentBridgeState = {
+  turn: "running",
+  tool: "Run pnpm install",
+  permissions: []
 };
 const kTokens = {
   disconnect: async() => undefined
@@ -99,6 +115,47 @@ describe("StudioAgentChat", () => {
       chat.lines.map((line) => line.entry.text),
       ["Add a tower", "Make it red", "Starting", "Done"]
     );
+  });
+
+  test("shows a bridge's state and the owner's name, and gives its controls to the owner only", () => {
+    const harness = chatRoomHarness("write", {
+      username: "Alice",
+      peerId: "alice-id"
+    });
+    using chat = new StudioAgentChat(
+      new AgentChatClient(harness.room),
+      new NotificationQueue(),
+      kTokens
+    );
+
+    harness.addPeer("alice", { username: "Alice", peerId: "alice-id" });
+    harness.addPeer("builder-mcp", kAgentProfile);
+    harness.addPeer("builder-bridge", kAgentProfile, {
+      [AGENT_BRIDGE_PRESENCE_KEY]: kRunningBridge
+    });
+    harness.addPeer("helper-bridge", kBobAgentProfile, {
+      [AGENT_BRIDGE_PRESENCE_KEY]: kRunningBridge
+    });
+
+    assert.deepEqual(
+      chat.agents.map(({ username, ownerName, owned, bridge }) => [
+        username,
+        ownerName,
+        owned,
+        bridge?.clientId
+      ]),
+      [
+        ["Builder", "Alice", true, "builder-bridge"],
+        ["Helper", null, false, "helper-bridge"]
+      ]
+    );
+    assert.equal(chat.stopOwnBridges(), 1);
+    assert.deepEqual(harness.sent, [
+      {
+        type: AGENT_CHAT_CANCEL,
+        bridgeClientId: "builder-bridge"
+      }
+    ]);
   });
 
   test("lets only a role that writes in the chat send", () => {

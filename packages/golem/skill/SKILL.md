@@ -53,6 +53,7 @@ Each kind brings its own guide, which `asset_open` answers. The first-party kind
 ## Etiquette
 
 - People write to you in the golem chat. Say what you start with `chat_say`, call `chat_next` between steps and before saying you are done, and answer what they ask.
+- Under `jolly-golem bridge` there are no chat tools: your prompts are what your owner wrote in the chat, and your replies are posted there. Keep them short.
 - Publish an activity for anything that takes more than a few seconds.
 - Work in batches a person can follow; do not rewrite a whole scene when three actors change.
 - When a command is refused, read the asset again: a person probably changed the same thing. Adapt instead of sending it again unchanged.

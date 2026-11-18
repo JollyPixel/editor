@@ -44,7 +44,7 @@ import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
 import { StudioAgentChat } from "../golem/StudioAgentChat.ts";
 import { CatalogPresence } from "../catalog/CatalogPresence.ts";
-import type { GolemChatOpener } from "./golem/golemConsole.ts";
+import type { GolemConsoleHost } from "./golem/golemConsole.ts";
 import "./home/StudioHome.ts";
 import "./account/AccountBadge.ts";
 import "./play/PlayButton.ts";
@@ -61,7 +61,7 @@ export interface StudioOptions extends Pick<
 }
 
 @customElement("jolly-studio")
-export class Studio extends LitElement implements GolemChatOpener {
+export class Studio extends LitElement implements GolemConsoleHost {
   static override styles = css`
     :host {
       display: flex;
@@ -402,6 +402,10 @@ export class Studio extends LitElement implements GolemChatOpener {
       });
     }
     void this._golemChat?.focusPrompt();
+  }
+
+  stopGolems(): number {
+    return this._agentChat?.stopOwnBridges() ?? 0;
   }
 
   reloadEditor(

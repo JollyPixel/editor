@@ -12,6 +12,8 @@ claude mcp add jollypixel --env JOLLY_GOLEM_TOKEN=<token> -- node <checkout>/pac
 
 `--url` defaults to `JOLLY_STUDIO_URL` and `--token` to `JOLLY_GOLEM_TOKEN`. `--project` is the `projectRoot` the project's kind packages resolve from, `JOLLY_PROJECT` or the current folder by default: pass the studio's project folder when it has kind packages of its own. The server exits at once without a URL or a token. It connects on the first tool call, so it starts even when the studio is down: tools then answer with `StudioUnreachableError` until the studio is up.
 
+`jolly-golem mcp --bridged` leaves out `chat_say` and `chat_next`: the [bridge](./Bridge.md) starts the server that way, since it delivers the owner's messages as prompts and posts the agent's replies itself.
+
 `jolly-golem status` connects once, prints the studio status as JSON and exits.
 
 ## Tools
@@ -56,4 +58,4 @@ await server.connect(transport);
 await server.close();
 ```
 
-`new GolemMcpServer(options?)` takes the [`Golem.connect` options](./Golem.md#options) and throws `TypeError` when they and the environment give no URL or no token. `connect(transport)` serves MCP on any MCP SDK transport, and `close()` ends it and disconnects the golem. `mcp` is the underlying `McpServer`.
+`new GolemMcpServer(options?)` takes the [`Golem.connect` options](./Golem.md#options), plus `bridged` (default `false`) to leave the chat tools out, and throws `TypeError` when they and the environment give no URL or no token. `connect(transport)` serves MCP on any MCP SDK transport, and `close()` ends it and disconnects the golem. `mcp` is the underlying `McpServer`.

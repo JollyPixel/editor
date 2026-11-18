@@ -1,6 +1,3 @@
-// Import Node.js Dependencies
-import { Console } from "node:console";
-
 // Import Third-party Dependencies
 import { AssetRoom } from "@jolly-pixel/asset";
 import {
@@ -16,10 +13,7 @@ import {
   type GolemAssets,
   type GolemKind
 } from "@jolly-pixel/golem.kit";
-import {
-  DEFAULT_WEBSOCKET_PATH,
-  type PeerActivity
-} from "@jolly-pixel/network";
+import type { PeerActivity } from "@jolly-pixel/network";
 import * as network from "@jolly-pixel/network/client";
 import {
   ProjectManifest,
@@ -42,9 +36,8 @@ import {
   golemTarget,
   type GolemConnectOptions
 } from "./GolemConnectOptions.ts";
-import { GolemDisconnectedError } from "./errors/GolemDisconnectedError.ts";
-import { GolemTokenRefusedError } from "./errors/GolemTokenRefusedError.ts";
 import { StudioUnreachableError } from "./errors/StudioUnreachableError.ts";
+import { studioClient } from "./studioClient.ts";
 import {
   OpenAssets,
   type AssetHolder
@@ -90,36 +83,15 @@ export class Golem {
   static async connect(
     options: GolemConnectOptions = {}
   ): Promise<Golem> {
-    const {
-      url,
-      token,
-      timeoutMs,
-      projectRoot
-    } = golemTarget(options);
-    const socketUrl = studioSocketUrl(url);
-    const client = new network.Client({
-      logger: network.consoleLogger(new Console({
-        stdout: process.stderr
-      })),
-      socket: () => network.connectWebSocket({
-        url: socketUrl,
-        credential: token
-      })
-    });
-    const revoked = new AbortController();
-    client.on("unauthorized", (reason) => {
-      revoked.abort(
-        reason === network.DISCONNECTED_CLOSE_REASON ?
-          new GolemDisconnectedError() :
-          new GolemTokenRefusedError()
-      );
-    });
+    const target = golemTarget(options);
+    const { url, projectRoot } = target;
+    const { client, revoked } = studioClient(target);
     const agentChat = AgentChatClient.join(client);
     try {
       const [catalog, manifest] = await Promise.all([
         CatalogClient.connect(client, {
-          timeoutMs,
-          signal: revoked.signal
+          timeoutMs: target.timeoutMs,
+          signal: revoked
         }),
         ProjectManifest.fetch(url).catch((error: unknown) => {
           throw new StudioUnreachableError(url.href, { cause: error });
@@ -133,7 +105,7 @@ export class Golem {
         manifest,
         kinds: await GolemKinds.load(manifest.kindPackages, projectRoot),
         agentChat,
-        revoked: revoked.signal
+        revoked
       });
     }
     catch (error) {
@@ -332,15 +304,6 @@ export class Golem {
       openAssets(this.#opened.heldBy(kAgent), this.#activity.assetId)
     );
   }
-}
-
-function studioSocketUrl(
-  studioUrl: URL
-): string {
-  const url = new URL(`.${DEFAULT_WEBSOCKET_PATH}`, studioUrl);
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-
-  return url.href;
 }
 
 function studioPeer(

@@ -23,9 +23,13 @@ import {
 import { AgentChatClient } from "#src/golem/AgentChatClient.ts";
 import { AgentChatRefusedError } from "#src/golem/errors/AgentChatRefusedError.ts";
 import {
+  AGENT_CHAT_ANSWER,
+  AGENT_CHAT_ANSWERED,
+  AGENT_CHAT_CANCELLED,
   AGENT_CHAT_HISTORY_LENGTH,
   AGENT_CHAT_SAY,
   AGENT_CHAT_TEXT_MAX_LENGTH,
+  type AgentBridgeControl,
   type AgentChatCommand
 } from "#src/golem/chat.ts";
 import {
@@ -179,6 +183,76 @@ describe("AgentChatExtension", { timeout: kTimeoutMs }, () => {
     finally {
       agent.destroy();
       person.destroy();
+    }
+  });
+
+  test("routes answers and cancels to the named bridge only, signed by their sender", async() => {
+    await using backend = await serveBackend();
+    const alice = await signedIn(backend, "Alice");
+    const bob = await signedIn(backend, "Bob");
+    const builder = await agentToken(backend, alice, "Builder");
+    const helper = await agentToken(backend, bob, "Helper");
+    const bridge = agentClient(backend, builder);
+    const bystander = agentClient(backend, builder);
+    const owner = personClient(backend, alice);
+    const other = personClient(backend, bob);
+    try {
+      const bridgeChat = await joinChat(bridge);
+      const bystanderChat = await joinChat(bystander);
+      const ownerChat = await joinChat(owner);
+      const otherChat = await joinChat(other);
+      const controls: AgentBridgeControl[] = [];
+      const strayed: AgentBridgeControl[] = [];
+      const answered = Promise.withResolvers<void>();
+      const cancelled = Promise.withResolvers<void>();
+      bridgeChat.subscribeControls((control) => {
+        controls.push(control);
+        (control.type === AGENT_CHAT_CANCELLED ? cancelled : answered).resolve();
+      });
+      bystanderChat.subscribeControls((control) => strayed.push(control));
+      const bridgeClientId = bridgeChat.room.clientId ?? assert.fail();
+      const command: AgentChatCommand = {
+        type: AGENT_CHAT_ANSWER,
+        bridgeClientId,
+        requestId: "request-2",
+        optionId: "allow"
+      };
+
+      ownerChat.answer(bridgeClientId, "request-1", "allow");
+      await answered.promise;
+      const forged = { ...command, peerId: builder.token.ownerId };
+      otherChat.room.send(forged);
+      otherChat.cancel(bridgeClientId);
+      await cancelled.promise;
+
+      assert.deepEqual(controls, [
+        {
+          type: AGENT_CHAT_ANSWERED,
+          clientId: ownerChat.room.clientId,
+          peerId: builder.token.ownerId,
+          requestId: "request-1",
+          optionId: "allow"
+        },
+        {
+          type: AGENT_CHAT_ANSWERED,
+          clientId: otherChat.room.clientId,
+          peerId: helper.token.ownerId,
+          requestId: "request-2",
+          optionId: "allow"
+        },
+        {
+          type: AGENT_CHAT_CANCELLED,
+          clientId: otherChat.room.clientId,
+          peerId: helper.token.ownerId
+        }
+      ]);
+      assert.deepEqual(strayed, []);
+    }
+    finally {
+      bridge.destroy();
+      bystander.destroy();
+      owner.destroy();
+      other.destroy();
     }
   });
 

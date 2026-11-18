@@ -24,6 +24,18 @@ The stdio server an agent registers to reach the studio through tools. It holds 
 
 *In code:* `GolemMcpServer`, `jolly-golem mcp`.
 
+### Bridge
+
+The process on the owner's machine that runs an agent over ACP and connects it to the golem chat: the owner's messages become prompts, and the agent's replies and permission requests come back to the chat pane. It starts the MCP server with `--bridged`.
+
+*In code:* `GolemBridge`, `jolly-golem bridge`, `AGENT_BRIDGE_PRESENCE_KEY` from `@jolly-pixel/server`.
+
+### Permission request
+
+An agent asking before it runs a tool. The bridge allows calls to the golem's own MCP server and shows the others in the pane, where only the owner answers.
+
+*In code:* `BridgePermissions`, `AgentBridgePermission` from `@jolly-pixel/server`.
+
 ### Skill
 
 The guide that teaches an agent the studio, the tools and scripting against the SDK. The MCP server serves it as `jollypixel://guide`.

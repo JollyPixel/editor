@@ -7,6 +7,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 // Import Internal Dependencies
 import { Golem } from "../peer/Golem.ts";
 import { GolemMcpServer } from "../mcp/GolemMcpServer.ts";
+import { runBridge } from "./runBridge.ts";
 
 // CONSTANTS
 const kUsage = [
@@ -14,13 +15,17 @@ const kUsage = [
   "                   [--project <folder>]",
   "",
   "Commands:",
-  "  mcp     run the MCP server on stdio",
-  "  status  connect once and print the studio status",
+  "  mcp [--bridged]                 run the MCP server on stdio",
+  "  bridge [--agent <agent>] [--cwd <folder>]",
+  "                                  run an ACP agent for the token's owner",
+  "  status                          connect once and print the studio status",
   "",
   "--url defaults to JOLLY_STUDIO_URL, --token to JOLLY_GOLEM_TOKEN.",
   "--project, where the project's kind packages resolve from, defaults to",
-  "JOLLY_PROJECT, then the current folder."
+  "JOLLY_PROJECT, then the current folder.",
+  "--agent is claude (default), codex, or a command that speaks ACP on stdio."
 ].join("\n");
+const kCommands = new Set(["mcp", "bridge", "status"]);
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
@@ -32,6 +37,15 @@ const { positionals, values } = parseArgs({
       type: "string"
     },
     project: {
+      type: "string"
+    },
+    bridged: {
+      type: "boolean"
+    },
+    agent: {
+      type: "string"
+    },
+    cwd: {
       type: "string"
     },
     help: {
@@ -47,18 +61,26 @@ const options = {
   projectRoot: values.project
 };
 
-if (
-  values.help ||
-  (command !== "mcp" && command !== "status")
-) {
+if (values.help || !kCommands.has(command)) {
   console.error(kUsage);
   process.exitCode = values.help ? 0 : 1;
 }
 else {
   try {
     if (command === "mcp") {
-      const server = new GolemMcpServer(options);
+      const server = new GolemMcpServer({
+        ...options,
+        bridged: values.bridged
+      });
       await server.connect(new StdioServerTransport());
+    }
+    else if (command === "bridge") {
+      await runBridge({
+        ...options,
+        agent: values.agent ?? "claude",
+        cwd: values.cwd ?? process.cwd(),
+        script: import.meta.filename
+      });
     }
     else {
       using golem = await Golem.connect(options);

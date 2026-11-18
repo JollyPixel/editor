@@ -22,3 +22,5 @@ export {
 } from "@jolly-pixel/golem.kit";
 export * from "./kinds/GolemKinds.ts";
 export * from "./kinds/errors/UnsupportedKindError.ts";
+export * from "./bridge/GolemBridge.ts";
+export * from "./bridge/errors/NotAnAgentTokenError.ts";

@@ -356,11 +356,16 @@ audit shows it as kind `agent`, named "<token name> (<owner>)".
 | `say` | client → server | `text`, optional `assetId` |
 | `said` | server → clients | `id`, `clientId`, `peerId?`, `username`, `via?`, `text`, `assetId?`, `at` |
 | `history` | server → joiner | last 200 `said` |
+| `answer` | client → server | `bridgeClientId`, `requestId`, `optionId` |
+| `cancel` | client → server | `bridgeClientId` |
+| `answered` | server → the named bridge | `clientId`, `peerId?`, `requestId`, `optionId` |
+| `cancelled` | server → the named bridge | `clientId`, `peerId?` |
 
 The server names the author from the connection's profile; `peerId` lets the
-pane color an author who already left. History is in memory, one per studio
-process, and is lost on restart. Presence on the room carries the `activity`
-mirror. Rights follow the role: a spectator reads the room and cannot `say`,
+pane color an author who already left and lets a bridge check that an answer
+comes from its owner. History is in memory, one per studio process, and is
+lost on restart. Presence on the room carries the `activity` mirror and a
+bridge's state (`agentBridge`). Rights follow the role: a spectator reads the room and cannot `say`,
 and share-link guests cannot join it. `AgentChatClient` in
 `@jolly-pixel/server/client` is the client both golem and the pane use.
 
@@ -379,7 +384,7 @@ an editor frame is open.
   | `/golem <message>` | shows the pane and sends `<message>` as `say` |
 
   The command sets `closeOnExecute`, so the console closes and the pane takes
-  focus.
+  focus. `/golem.stop` stops the viewer's running bridges and prints how many.
 - Lists messages with the author's color and badge, the agents' current
   `activity`, and a prompt that sends `say`.
 - A `said` from an agent while the pane is hidden raises a notification.
@@ -405,16 +410,26 @@ flowchart TB
 ```
 
 - The bridge joins `agent-chat` with the owner's agent token. The agent
-  profile names the owner, and only the owner's messages become prompts.
-- Protocol: ACP (Agent Client Protocol). `session/new` attaches
-  `jolly-golem mcp --bridged`, which has no `chat_next`. Adapters:
-  `@agentclientprotocol/claude-agent-acp`, `@agentclientprotocol/codex-acp`.
-- Replies come back as `said`, one per agent message; tool calls show as
-  `activity`.
-- Calls to the golem MCP server are allowed without asking. Other permission
-  requests appear in the pane as buttons only the owner can answer.
-- Stop, or `/golem stop`, sends `session/cancel`; pending requests are
-  answered `cancelled`.
+  profile's `ownerId` names the owner, and only the owner's messages become
+  prompts, queued while a turn runs.
+- Protocol: ACP (Agent Client Protocol), `@agentclientprotocol/sdk`.
+  `session/new` attaches `jolly-golem mcp --bridged`, which has no chat
+  tools. Adapters: `@agentclientprotocol/claude-agent-acp`,
+  `@agentclientprotocol/codex-acp`, run with `npx` at pinned versions.
+- The agent's text comes back as one `said` per stretch between tool calls,
+  split at the text limit.
+- The bridge publishes its state as presence: `turn` (`idle` or `running`),
+  the running `tool` title and the pending `permissions`, each with its
+  `title` and options. The pane shows the tool to everyone, and the
+  permission buttons and Stop to the owner only.
+- Calls to the golem MCP server are allowed without asking. ACP does not
+  name the server behind a tool call, so the bridge reads each adapter's
+  `_meta`; a request it cannot attribute asks.
+- Answers and Stop travel as `answer` and `cancel`; the server routes them to
+  the named bridge with the sender's `peerId`, and the bridge drops any not
+  from its owner.
+- Stop, or `/golem.stop`, sends `session/cancel`, answers pending requests
+  `cancelled` and drops queued messages.
 - The agent to run is a CLI argument (`claude`, `codex` or a command); the
   bridge never stores model keys.
 

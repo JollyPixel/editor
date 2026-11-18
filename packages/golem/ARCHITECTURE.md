@@ -68,3 +68,14 @@ flowchart TB
 - `WorkspaceDocs` indexes the checkout's `@jolly-pixel/*` workspaces that have a `docs/` folder once, on first use.
 - `ScriptRunner` backs `script_run`: it spawns Node on a script under `local/` with the server's URL, token and project root in the child's environment. The token only reaches the MCP server's process, so an agent can script as the golem without holding it.
 - Code: `src/mcp/`, `src/bin/jolly-golem.ts`.
+
+## Bridge
+
+`GolemBridge` is a second peer on the token, next to the MCP server's golem. It joins only `agent-chat`, with `AgentChatClient.connect` over the same `studioClient` as `Golem.connect`.
+
+- `GolemBridge` follows the owner: a `said` from them (`peerId` equal to the agent profile's `ownerId`) is queued and one turn runs at a time; their `answered` and `cancelled` reach the relay.
+- `AgentSession` is the ACP client (`@agentclientprotocol/sdk`): `initialize`, `session/new`, `session/prompt` and `session/cancel`. It exists only once its session does.
+- `ChatRelay` answers the agent's callbacks. `ReplyBuffer` gathers `agent_message_chunk` text and posts it when a tool call starts or the turn ends. `session/request_permission` goes through `GolemToolCalls`, which remembers each tool call's MCP server from its `rawInput` (codex-acp announces it only there) and reads claude-agent-acp's `_meta`. A golem call gets `allow_once`; any other waits in `BridgePermissions` until the owner answers, Stop, or ACP cancels the request.
+- The bridge's state lives in presence, so the server keeps nothing: every change republishes `{ turn, tool?, permissions }`. `BridgePermissions` keeps it within `agentBridgeStateSchema`, which `publishBridge` checks. Permission options go out as their index, which keeps the agent's option ids off the wire.
+- `AgentProcess` spawns the agent through the shell (so `npx` works on Windows) and hands its stdio to `ndJsonStream` with `Writable.toWeb` and `Readable.toWeb`.
+- Code: `src/bridge/`, `src/bin/runBridge.ts`.

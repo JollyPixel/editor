@@ -3,10 +3,13 @@ import {
   isAgentProfile,
   parseAgentProfile
 } from "@jolly-pixel/accounts";
+import { parsePeerProfile } from "@jolly-pixel/network";
 import type { Peer } from "@jolly-pixel/network/client";
 import {
   AGENT_CHAT_SAY,
+  parseAgentBridgeState,
   parseAgentChatActivity,
+  type AgentBridgeState,
   type AgentChatEntry
 } from "@jolly-pixel/server";
 import {
@@ -39,14 +42,26 @@ export interface ChatAgent {
   clientId: string;
   tokenId: string;
   ownerId: string;
+  ownerName: string | null;
+  owned: boolean;
   username: string;
   color: string;
   activity: ChatAgentActivity | null;
+  bridge: ChatAgentBridge | null;
+}
+
+export interface ChatAgentBridge extends AgentBridgeState {
+  clientId: string;
 }
 
 export interface ChatAgentActivity {
   label: string;
   assetId: string;
+}
+
+interface AgentViewer {
+  peerId: string | undefined;
+  people: ReadonlyMap<string, string>;
 }
 
 export interface ChatLine {
@@ -103,15 +118,34 @@ export class StudioAgentChat extends EventTarget implements Disposable {
   }
 
   get agents(): ChatAgent[] {
+    const { peers, profile } = this.#chat.room;
+    const viewer: AgentViewer = {
+      peerId: parsePeerProfile(profile).peerId,
+      people: peopleByPeerId(peers.values())
+    };
+
     const byToken = new Map<string, ChatAgent>();
-    for (const peer of this.#chat.room.peers.values()) {
-      const agent = chatAgent(peer);
-      if (agent !== null && !byToken.has(agent.tokenId)) {
-        byToken.set(agent.tokenId, agent);
+    for (const peer of peers.values()) {
+      const agent = chatAgent(peer, viewer);
+      if (agent === null) {
+        continue;
       }
+
+      const known = byToken.get(agent.tokenId);
+      byToken.set(agent.tokenId, known === undefined ? agent : {
+        ...known,
+        activity: known.activity ?? agent.activity,
+        bridge: known.bridge ?? agent.bridge
+      });
     }
 
     return Array.from(byToken.values());
+  }
+
+  get ownBridges(): ChatAgentBridge[] {
+    return this.agents.flatMap(
+      (agent) => (agent.owned && agent.bridge !== null ? [agent.bridge] : [])
+    );
   }
 
   show(): void {
@@ -128,6 +162,31 @@ export class StudioAgentChat extends EventTarget implements Disposable {
     text: string
   ): Promise<void> {
     await this.#chat.say(text);
+  }
+
+  answer(
+    bridge: ChatAgentBridge,
+    requestId: string,
+    optionId: string
+  ): void {
+    this.#chat.answer(bridge.clientId, requestId, optionId);
+  }
+
+  stop(
+    bridge: ChatAgentBridge
+  ): void {
+    this.#chat.cancel(bridge.clientId);
+  }
+
+  stopOwnBridges(): number {
+    const running = this.ownBridges.filter(
+      (bridge) => bridge.turn === "running"
+    );
+    for (const bridge of running) {
+      this.stop(bridge);
+    }
+
+    return running.length;
   }
 
   disconnect(
@@ -167,8 +226,23 @@ export class StudioAgentChat extends EventTarget implements Disposable {
   };
 }
 
+function peopleByPeerId(
+  peers: Iterable<Peer>
+): Map<string, string> {
+  const people = new Map<string, string>();
+  for (const peer of peers) {
+    const person = parsePeerProfile(peer.profile);
+    if (person.peerId !== undefined && !isAgentProfile(person)) {
+      people.set(person.peerId, person.username);
+    }
+  }
+
+  return people;
+}
+
 function chatAgent(
-  peer: Peer
+  peer: Peer,
+  viewer: AgentViewer
 ): ChatAgent | null {
   const profile = parseAgentProfile(peer.profile);
   if (profile === null) {
@@ -176,16 +250,23 @@ function chatAgent(
   }
 
   const activity = parseAgentChatActivity(peer.presence);
+  const bridge = parseAgentBridgeState(peer.presence);
 
   return {
     clientId: peer.clientId,
     tokenId: profile.peerId,
     ownerId: profile.ownerId,
+    ownerName: viewer.people.get(profile.ownerId) ?? null,
+    owned: viewer.peerId === profile.ownerId,
     username: profile.username,
     color: peerProfileColor(peer.clientId, peer.profile),
     activity: activity === null ? null : {
       label: formatPeerActivity(activity),
       assetId: activity.assetId
+    },
+    bridge: bridge === null ? null : {
+      ...bridge,
+      clientId: peer.clientId
     }
   };
 }
