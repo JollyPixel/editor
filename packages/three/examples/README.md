@@ -19,6 +19,8 @@ examples/
 ├── area-box/               /area-box/
 ├── marquee-box/            /marquee-box/
 ├── transform-controls/     /transform-controls/
+├── sky/                    /sky/
+├── scene-gizmos/           /scene-gizmos/
 ├── frustum/                one folder per example, plus family shared code
 │   ├── local/              /frustum/local/
 │   └── sync/               /frustum/sync/
