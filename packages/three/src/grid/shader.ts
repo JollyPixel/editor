@@ -23,7 +23,6 @@ import {
   mix,
   dFdx,
   dFdy,
-  fwidth,
   round,
   mod,
   or,
@@ -95,11 +94,16 @@ export function createGridUniforms(
 
 export type GridUniforms = ReturnType<typeof createGridUniforms>;
 
-const pristineGrid = Fn(([uv, lineWidthPx]: [Node<"vec2">, Node<"float">]) => {
-  const uvDeriv = vec2(
-    length(vec2(dFdx(uv.x), dFdy(uv.x))),
-    length(vec2(dFdx(uv.y), dFdy(uv.y)))
-  );
+interface GridLines {
+  blended: Node<"vec2">;
+  gridUV: Node<"vec2">;
+}
+
+function gridLines(
+  uv: Node<"vec2">,
+  uvDeriv: Node<"vec2">,
+  lineWidthPx: Node<"float">
+): GridLines {
   const targetWidth = uvDeriv.mul(lineWidthPx);
   const drawWidth = clamp(targetWidth, uvDeriv, vec2(0.5));
   const lineAA = max(uvDeriv.mul(1.5), vec2(0.0001));
@@ -116,31 +120,27 @@ const pristineGrid = Fn(([uv, lineWidthPx]: [Node<"vec2">, Node<"float">]) => {
   const blended = line.add(
     targetWidth.sub(line).mul(blendFactor)
   );
+
+  return { blended, gridUV };
+}
+
+function pristineGrid(
+  uv: Node<"vec2">,
+  uvDeriv: Node<"vec2">,
+  lineWidthPx: Node<"float">
+): Node<"float"> {
+  const { blended } = gridLines(uv, uvDeriv, lineWidthPx);
 
   return max(blended.x, blended.y);
-});
+}
 
-const pristineCross = Fn(([uv, lineWidthPx, armLength]: [Node<"vec2">, Node<"float">, Node<"float">]) => {
-  const uvDeriv = vec2(
-    length(vec2(dFdx(uv.x), dFdy(uv.x))),
-    length(vec2(dFdx(uv.y), dFdy(uv.y)))
-  );
-  const targetWidth = uvDeriv.mul(lineWidthPx);
-  const drawWidth = clamp(targetWidth, uvDeriv, vec2(0.5));
-  const lineAA = max(uvDeriv.mul(1.5), vec2(0.0001));
-  const gridUV = abs(fract(uv).mul(2).sub(1));
-  const invGrid = float(1).sub(gridUV);
-  const line = smoothstep(
-    drawWidth.add(lineAA),
-    drawWidth.sub(lineAA),
-    invGrid
-  )
-    .mul(saturate(targetWidth.div(drawWidth)));
-
-  const blendFactor = saturate(uvDeriv.mul(2).sub(1));
-  const blended = line.add(
-    targetWidth.sub(line).mul(blendFactor)
-  );
+function pristineCross(
+  uv: Node<"vec2">,
+  uvDeriv: Node<"vec2">,
+  lineWidthPx: Node<"float">,
+  armLength: Node<"float">
+): Node<"float"> {
+  const { blended, gridUV } = gridLines(uv, uvDeriv, lineWidthPx);
 
   const armAA = max(uvDeriv.mul(1.5), vec2(0.0001));
   const armEdge = vec2(float(1).sub(armLength.mul(2)));
@@ -154,18 +154,34 @@ const pristineCross = Fn(([uv, lineWidthPx, armLength]: [Node<"vec2">, Node<"flo
     blended.x.mul(arm.y),
     blended.y.mul(arm.x)
   );
-});
+}
 
-const axisLine = Fn(([coord, widthPx]: [Node<"float">, Node<"float">]) => {
+function gridPattern(
+  style: GridStyle,
+  uv: Node<"vec2">,
+  uvDeriv: Node<"vec2">,
+  lineWidthPx: Node<"float">,
+  armLength: Node<"float">
+): Node<"float"> {
+  return style === "cross" ?
+    pristineCross(uv, uvDeriv, lineWidthPx, armLength) :
+    pristineGrid(uv, uvDeriv, lineWidthPx);
+}
+
+function axisLine(
+  coord: Node<"float">,
+  coordWidth: Node<"float">,
+  widthPx: Node<"float">
+): Node<"float"> {
   const halfWidth = max(
-    fwidth(coord).mul(widthPx).mul(0.5),
+    coordWidth.mul(widthPx).mul(0.5),
     0.0001
   );
 
   return float(1).sub(
     smoothstep(0, halfWidth, abs(coord))
   );
-});
+}
 
 const hardLatticeMask = Fn(([cellIndex, sectionSize]: [Node<"vec2">, Node<"float">]) => {
   const onLattice = or(
@@ -340,31 +356,39 @@ export function buildGridMaterial(
     } = pickPlaneComponents(plane, uniforms, positionSource, anchor);
 
     const worldUV = vec2(u, v);
+    const worldDx = dFdx(worldUV).toVar();
+    const worldDy = dFdy(worldUV).toVar();
 
-    const fineLine = cellStyle === "cross" ?
-      pristineCross(
-        worldUV.div(uniforms.cellSize),
-        uniforms.cellThickness,
-        uniforms.crossSize
-      ) :
-      pristineGrid(
-        worldUV.div(uniforms.cellSize),
-        uniforms.cellThickness
-      );
-    const sectionLine = (
-      sectionStyle === "cross" ?
-        pristineCross(
-          worldUV.div(uniforms.cellSize.mul(uniforms.sectionSize)),
-          uniforms.sectionThickness,
-          uniforms.crossSize
-        ) :
-        pristineGrid(
-          worldUV.div(uniforms.cellSize.mul(uniforms.sectionSize)),
-          uniforms.sectionThickness
-        )
+    const dist = fadeFrom === "origin" ?
+      length(vec2(u, v)) :
+      length(vec2(u.sub(anchorU), v.sub(anchorV)));
+    If(dist.greaterThanEqual(uniforms.fadeDistance), () => {
+      Discard();
+    });
+
+    const worldDeriv = vec2(
+      length(vec2(worldDx.x, worldDy.x)),
+      length(vec2(worldDx.y, worldDy.y))
+    );
+    const worldWidth = abs(worldDx).add(abs(worldDy));
+    const sectionScale = uniforms.cellSize.mul(uniforms.sectionSize);
+
+    const fineLine = gridPattern(
+      cellStyle,
+      worldUV.div(uniforms.cellSize),
+      worldDeriv.div(uniforms.cellSize),
+      uniforms.cellThickness,
+      uniforms.crossSize
+    );
+    const sectionLine = gridPattern(
+      sectionStyle,
+      worldUV.div(sectionScale),
+      worldDeriv.div(sectionScale),
+      uniforms.sectionThickness,
+      uniforms.crossSize
     ).mul(uniforms.showSection);
 
-    const fineDeriv = fwidth(worldUV.div(uniforms.cellSize));
+    const fineDeriv = worldWidth.div(uniforms.cellSize);
     const fineFade = saturate(
       float(1).sub(max(fineDeriv.x, fineDeriv.y))
     );
@@ -396,17 +420,14 @@ export function buildGridMaterial(
       sectionLine
     );
 
-    const uAxisMask = axisLine(v, uniforms.axisThickness)
+    const uAxisMask = axisLine(v, worldWidth.y, uniforms.axisThickness)
       .mul(uniforms.showAxes);
-    const vAxisMask = axisLine(u, uniforms.axisThickness)
+    const vAxisMask = axisLine(u, worldWidth.x, uniforms.axisThickness)
       .mul(uniforms.showAxes);
     const withUAxis = mix(gridColor, uAxisColor, uAxisMask);
     const finalColor = mix(withUAxis, vAxisColor, vAxisMask);
     const maskWithAxes = max(gridMask, max(uAxisMask, vAxisMask));
 
-    const dist = fadeFrom === "origin" ?
-      length(vec2(u, v)) :
-      length(vec2(u.sub(anchorU), v.sub(anchorV)));
     const fade = pow(
       saturate(
         float(1).sub(dist.div(uniforms.fadeDistance))

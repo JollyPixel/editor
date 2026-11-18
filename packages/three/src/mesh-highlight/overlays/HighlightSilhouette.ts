@@ -14,6 +14,7 @@ export const SILHOUETTE_LINEWIDTH = 0.05;
 const kXrayRenderOrder = 999;
 const kInitialCameraPosition = new THREE.Vector3(1e6, 1e6, 1e6);
 const kWorldScale = new THREE.Vector3();
+const kLocalCameraPosition = new THREE.Vector3();
 
 export interface SilhouetteView {
   key: string;
@@ -147,16 +148,10 @@ function localRings(
   };
 }
 
-function scaledViewKey(
-  view: SilhouetteView,
-  scale: number
-): string {
-  return `${scale}:${view.key}`;
-}
-
 export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> {
   #target: THREE.Object3D;
   #shape: SilhouetteShape;
+  #scale: number;
   #viewKey: string;
   #rings: SilhouetteRings;
   #renderOrder: number;
@@ -206,7 +201,8 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
 
     this.#target = target;
     this.#shape = shape;
-    this.#viewKey = scaledViewKey(view, scale);
+    this.#scale = scale;
+    this.#viewKey = view.key;
     this.#rings = rings;
     this.#renderOrder = renderOrder;
     this.#xray = xray;
@@ -280,15 +276,17 @@ export abstract class HighlightSilhouette extends THREE.Mesh<THREE.BufferGeometr
     cameraWorldPosition: THREE.Vector3
   ): void {
     const scale = largestWorldScale(this.#target);
-    const localCameraPosition = this.#target.worldToLocal(cameraWorldPosition.clone());
+    const localCameraPosition = this.#target.worldToLocal(
+      kLocalCameraPosition.copy(cameraWorldPosition)
+    );
     const view = this.#shape.viewFrom(localCameraPosition);
-    const viewKey = scaledViewKey(view, scale);
-    if (viewKey === this.#viewKey) {
+    if (scale === this.#scale && view.key === this.#viewKey) {
       return;
     }
 
     const built = view.build(localRings(this.#rings, scale));
-    this.#viewKey = viewKey;
+    this.#scale = scale;
+    this.#viewKey = view.key;
     this.geometry.dispose();
     this.geometry = built.geometry;
     this.#outerColorStart = built.outerColorStart;

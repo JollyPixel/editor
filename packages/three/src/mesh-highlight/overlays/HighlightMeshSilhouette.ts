@@ -9,10 +9,8 @@ import {
   type SilhouetteView
 } from "./HighlightSilhouette.ts";
 import { BoxSilhouetteShape } from "./HighlightBoxSilhouette.ts";
-import {
-  MeshContour,
-  positionVersion
-} from "./meshContour.ts";
+import { positionVersion } from "./geometryBounds.ts";
+import { MeshContour } from "./meshContour.ts";
 
 export type HighlightMeshSilhouetteOptions = HighlightSilhouetteOptions;
 

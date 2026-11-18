@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 // Import Internal Dependencies
-import { CanvasSprite } from "../common/texture/CanvasSprite.ts";
+import { createCanvas2D } from "../common/texture/Canvas2D.ts";
 
 // CONSTANTS
 const kCanvasSize = 64;
@@ -21,6 +21,7 @@ const kRectAreaRays = [
   [38, 41],
   [50, 56]
 ] as const;
+const kGlyphTextures = new Map<GizmoIconGlyph, THREE.CanvasTexture>();
 export const GIZMO_SELECTED_COLOR = "#f5c46b";
 
 export type GizmoIconGlyph =
@@ -255,27 +256,31 @@ const kGlyphs: Record<GizmoIconGlyph, GlyphTrace> = {
   }
 };
 
-export class GizmoIcon extends CanvasSprite {
+export class GizmoIcon extends THREE.Sprite {
   readonly #color = new THREE.Color(kIdleColor);
   readonly #selectedColor: THREE.Color;
   #glyph: GizmoIconGlyph;
   #selected = false;
+  #disposed = false;
 
   constructor(
     glyph: GizmoIconGlyph,
     selectedColor: THREE.ColorRepresentation
   ) {
-    super({
-      width: kCanvasSize,
-      height: kCanvasSize,
-      worldWidth: kSize,
-      renderOrder: kRenderOrder
-    });
+    super(
+      new THREE.SpriteMaterial({
+        map: glyphTexture(glyph),
+        sizeAttenuation: false,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true
+      })
+    );
 
     this.#glyph = glyph;
     this.#selectedColor = new THREE.Color(selectedColor);
-    this.material.sizeAttenuation = false;
-    this.redraw();
+    this.scale.set(kSize, kSize, 1);
+    this.renderOrder = kRenderOrder;
   }
 
   get glyph(): GizmoIconGlyph {
@@ -290,7 +295,7 @@ export class GizmoIcon extends CanvasSprite {
     }
 
     this.#glyph = glyph;
-    this.redraw();
+    this.material.map = glyphTexture(glyph);
   }
 
   get color(): THREE.Color {
@@ -315,27 +320,47 @@ export class GizmoIcon extends CanvasSprite {
     this.#tint();
   }
 
+  override dispose(): void {
+    if (this.#disposed) {
+      return;
+    }
+
+    this.#disposed = true;
+    this.material.dispose();
+  }
+
   #tint(): void {
     this.material.color.copy(
       this.#selected ? this.#selectedColor : this.#color
     );
   }
+}
 
-  protected override paint(
-    context: CanvasRenderingContext2D
-  ): void {
-    context.lineCap = "round";
-    context.lineJoin = "round";
-
-    context.beginPath();
-    kGlyphs[this.#glyph](context);
-    context.strokeStyle = kHaloColor;
-    context.lineWidth = kHaloWidth;
-    context.stroke();
-    context.strokeStyle = kGlyphColor;
-    context.lineWidth = kGlyphWidth;
-    context.stroke();
+function glyphTexture(
+  glyph: GizmoIconGlyph
+): THREE.CanvasTexture {
+  const cached = kGlyphTextures.get(glyph);
+  if (cached !== undefined) {
+    return cached;
   }
+
+  const { canvas, context } = createCanvas2D(kCanvasSize, kCanvasSize);
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.beginPath();
+  kGlyphs[glyph](context);
+  context.strokeStyle = kHaloColor;
+  context.lineWidth = kHaloWidth;
+  context.stroke();
+  context.strokeStyle = kGlyphColor;
+  context.lineWidth = kGlyphWidth;
+  context.stroke();
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  kGlyphTextures.set(glyph, texture);
+
+  return texture;
 }
 
 function circle(

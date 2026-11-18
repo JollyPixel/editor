@@ -117,6 +117,56 @@ describe("render", () => {
     assert.deepStrictEqual([first, second], [false, false]);
     assert.deepStrictEqual(renderer.clears, [mask.composite]);
   });
+
+  test("skips entries hidden by an ancestor or detached from the scene", () => {
+    const { renderer, scene, meshes, mask } = createMaskScene();
+    const hiddenParent = new THREE.Group();
+    hiddenParent.visible = false;
+    hiddenParent.add(createMesh());
+    scene.add(hiddenParent);
+    mask.entries = [hiddenParent, createMesh(), meshes.plain].map((target) => {
+      return {
+        target,
+        color: "#ff0000"
+      };
+    });
+
+    mask.render();
+
+    assert.deepStrictEqual(renderer.draws.map(({ object }) => object), [meshes.plain]);
+  });
+
+  test("draws a mesh once when its ancestor is highlighted too", () => {
+    const { renderer, scene, mask } = createMaskScene();
+    const group = new THREE.Group();
+    const child = createMesh();
+    group.add(child);
+    scene.add(group);
+    mask.entries = [child, group].map((target) => {
+      return {
+        target,
+        color: "#ff0000"
+      };
+    });
+
+    mask.render();
+
+    assert.deepStrictEqual(renderer.draws.map(({ object }) => object), [child]);
+  });
+
+  test("still clears a mask target when none of its entries can be drawn", () => {
+    const { renderer, mask } = createMaskScene();
+    mask.entries = [
+      {
+        target: createMesh(),
+        color: "#ff0000"
+      }
+    ];
+
+    assert.strictEqual(mask.render(), true);
+
+    assert.deepStrictEqual(renderer.clears, [mask.shared]);
+  });
 });
 
 describe("entries", () => {

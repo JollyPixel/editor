@@ -7,7 +7,6 @@ import type { TslNode, TslTextureNode } from "../tslNode.ts";
 
 export interface JfaRingChannel {
   positionTexture: TslTextureNode;
-  colorTexture: TslTextureNode;
   maskTexture: TslTextureNode;
 }
 
@@ -20,13 +19,14 @@ interface JfaRingShape {
 function buildChannelRing(
   uvNode: TslNode<"vec2">,
   pixelCoord: TslNode<"vec2">,
+  resolutionNode: TslNode<"vec2">,
   channel: JfaRingChannel,
   shape: JfaRingShape
 ) {
   const { ringThicknessNode, borderThicknessNode, fillOpacityNode } = shape;
-  const seedPos = channel.positionTexture.sample(uvNode);
-  const seedColor = channel.colorTexture.sample(uvNode);
-  const dist = pixelCoord.sub(seedPos.xy).length();
+  const seedPos = channel.positionTexture.sample(uvNode).xy;
+  const seedColor = channel.maskTexture.sample(seedPos.div(resolutionNode));
+  const dist = pixelCoord.sub(seedPos).length();
   const ownSurface = maskGate(channel.maskTexture.sample(uvNode));
 
   const ringShape = oneMinus(smoothstep(ringThicknessNode, ringThicknessNode.add(1), dist));
@@ -74,9 +74,16 @@ export function buildJfaRingComposite(
     const uvNode = uv();
     const pixelCoord = uvNode.mul(resolutionNode);
 
-    const sharedRing = buildChannelRing(uvNode, pixelCoord, shared, ringOnlyShape);
-    const priorityRing = buildChannelRing(uvNode, pixelCoord, priority, ringOnlyShape).mul(hasPriorityNode);
-    const isolatedRing = buildChannelRing(uvNode, pixelCoord, isolated, isolatedShape).mul(hasIsolatedNode);
+    function ring(
+      channel: JfaRingChannel,
+      shape: JfaRingShape
+    ) {
+      return buildChannelRing(uvNode, pixelCoord, resolutionNode, channel, shape);
+    }
+
+    const sharedRing = ring(shared, ringOnlyShape);
+    const priorityRing = ring(priority, ringOnlyShape).mul(hasPriorityNode);
+    const isolatedRing = ring(isolated, isolatedShape).mul(hasIsolatedNode);
 
     return max(max(sharedRing, priorityRing), isolatedRing);
   })();

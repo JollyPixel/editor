@@ -210,3 +210,18 @@ describe("AudioGizmo", () => {
     assert.strictEqual(icon(gizmo).material.color.getHexString(), "3366ff");
   });
 });
+
+describe("GizmoIcon", () => {
+  test("disposes its own material and keeps the glyph other icons draw", () => {
+    const disposed = new GizmoIcon("camera", kSelectedColor);
+    const kept = new GizmoIcon("camera", kSelectedColor);
+    const disposals = watchDisposal(
+      disposed.material,
+      kept.material.map ?? undefined
+    );
+
+    disposed.dispose();
+
+    assert.deepEqual(disposals, [1, 0]);
+  });
+});

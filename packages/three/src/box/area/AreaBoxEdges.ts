@@ -49,7 +49,6 @@ export class AreaBoxEdges extends LineSegments2 {
 
     this.#opacity = opacity;
     this.#color = new THREE.Color(color);
-    this.frustumCulled = false;
     this.renderOrder = kRenderOrder;
   }
 

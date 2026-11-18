@@ -129,7 +129,7 @@ const GIZMO_SELECTED_COLOR = "#f5c46b";
 
 ### glyph: GizmoIconGlyph
 
-Redraws the icon when set to another glyph.
+Swaps in the texture of another glyph. Icons share one texture per glyph, drawn once on first use.
 
 ### color: THREE.Color
 
@@ -141,4 +141,4 @@ Tints the icon with `selectedColor` instead of `color`.
 
 ### dispose(): void
 
-Disposes the icon's texture and material. Calling it again does nothing.
+Disposes the icon's material. The shared glyph texture stays alive for the other icons. Calling it again does nothing.

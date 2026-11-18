@@ -16,6 +16,7 @@ type RenderObjectFunction = Parameters<
 >[0];
 
 interface MaskLayer {
+  roots: Set<THREE.Object3D>;
   meshColor: (mesh: THREE.Mesh) => THREE.Color | undefined;
   material: THREE.NodeMaterial;
   instancedMaterial: (mesh: THREE.InstancedMesh) => THREE.NodeMaterial | undefined;
@@ -77,11 +78,13 @@ export class HighlightMask {
     this.#onTopMaterial.depthTest = false;
 
     this.#sharedLayer = {
+      roots: new Set(),
       meshColor: (mesh) => this.#entryByMesh.get(mesh),
       material: this.#material,
       instancedMaterial: (mesh) => this.#instancedMask.maskMaterials(mesh)?.material
     };
     this.#priorityLayer = {
+      roots: new Set(),
       meshColor: (mesh) => (
         this.#priorityMeshes.has(mesh) ? this.#entryByMesh.get(mesh) : undefined
       ),
@@ -89,6 +92,7 @@ export class HighlightMask {
       instancedMaterial: (mesh) => this.#instancedMask.maskMaterials(mesh)?.priorityMaterial
     };
     this.#isolatedLayer = {
+      roots: new Set(),
       meshColor: (mesh) => this.#isolatedEntryByMesh.get(mesh),
       material: this.#onTopMaterial,
       instancedMaterial: () => undefined
@@ -107,13 +111,27 @@ export class HighlightMask {
     this.#priorityMeshes.clear();
     this.#isolatedEntryByMesh.clear();
     this.#instancedMask.clear();
+    for (const layer of this.#layers()) {
+      layer.roots.clear();
+    }
 
     for (const { target, color, priority = false, isolated = false, instanceId } of entries) {
       const threeColor = color instanceof THREE.Color ? color.clone() : new THREE.Color(color);
 
       if (instanceId !== undefined) {
         this.#instancedMask.add(target, instanceId, threeColor, priority);
+        this.#sharedLayer.roots.add(target);
+        this.#priorityLayer.roots.add(target);
         continue;
+      }
+      if (isolated) {
+        this.#isolatedLayer.roots.add(target);
+      }
+      else {
+        this.#sharedLayer.roots.add(target);
+        if (priority) {
+          this.#priorityLayer.roots.add(target);
+        }
       }
 
       target.traverse((object) => {
@@ -132,6 +150,9 @@ export class HighlightMask {
       });
     }
 
+    for (const layer of this.#layers()) {
+      pruneNestedRoots(layer.roots);
+    }
     this.#instancedMask.sync();
   }
 
@@ -291,9 +312,55 @@ export class HighlightMask {
       );
     };
 
-    renderer.autoClear = clear;
     renderer.setRenderObjectFunction(renderObject);
     renderer.setRenderTarget(target);
-    renderer.render(this.#scene, this.#camera);
+    let pendingClear = clear;
+    for (const root of layer.roots) {
+      if (!this.#drawsInScene(root)) {
+        continue;
+      }
+      renderer.autoClear = pendingClear;
+      pendingClear = false;
+      renderer.render(root, this.#camera);
+    }
+    if (pendingClear) {
+      renderer.clear();
+    }
+  }
+
+  #drawsInScene(
+    root: THREE.Object3D
+  ): boolean {
+    for (let node: THREE.Object3D | null = root; node !== null; node = node.parent) {
+      if (!node.visible) {
+        return false;
+      }
+      if (node === this.#scene) {
+        root.parent?.updateWorldMatrix(true, false);
+
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  * #layers(): IterableIterator<MaskLayer> {
+    yield this.#sharedLayer;
+    yield this.#priorityLayer;
+    yield this.#isolatedLayer;
+  }
+}
+
+function pruneNestedRoots(
+  roots: Set<THREE.Object3D>
+): void {
+  for (const root of roots) {
+    for (let node = root.parent; node !== null; node = node.parent) {
+      if (roots.has(node)) {
+        roots.delete(root);
+        break;
+      }
+    }
   }
 }

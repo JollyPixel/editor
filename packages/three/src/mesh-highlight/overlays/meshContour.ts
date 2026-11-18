@@ -33,12 +33,6 @@ interface EdgeWalk {
   edges: ContourEdge[];
 }
 
-export function positionVersion(
-  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute
-): number {
-  return "version" in position ? position.version : position.data.version;
-}
-
 export class MeshContour implements SilhouetteShape {
   static #created = 0;
 
@@ -46,6 +40,10 @@ export class MeshContour implements SilhouetteShape {
   #vertices: THREE.Vector3[] = [];
   #faces: ContourFace[] = [];
   #edges: ContourEdge[] = [];
+  #facing = new Uint8Array(0);
+  #eye = new THREE.Vector3();
+  #contour: number[] = [];
+  #view: SilhouetteView | null = null;
 
   constructor(
     geometry: THREE.BufferGeometry
@@ -106,8 +104,24 @@ export class MeshContour implements SilhouetteShape {
   viewFrom(
     localCameraPosition: THREE.Vector3
   ): SilhouetteView {
-    const edges = this.#contourFrom(localCameraPosition);
+    if (this.#view !== null && this.#eye.equals(localCameraPosition)) {
+      return this.#view;
+    }
+    this.#eye.copy(localCameraPosition);
 
+    const edges = this.#contourFrom(localCameraPosition);
+    if (this.#view !== null && sameNumbers(edges, this.#contour)) {
+      return this.#view;
+    }
+    this.#contour = edges;
+    this.#view = this.#describeContour(edges);
+
+    return this.#view;
+  }
+
+  #describeContour(
+    edges: readonly number[]
+  ): SilhouetteView {
     return {
       key: `contour:${this.#id}:${edges.join(",")}`,
       build: (rings) => {
@@ -128,16 +142,30 @@ export class MeshContour implements SilhouetteShape {
   #contourFrom(
     localCameraPosition: THREE.Vector3
   ): number[] {
-    const facing = this.#faces.map(
-      ({ normal, distance }) => normal.dot(localCameraPosition) > distance
-    );
+    const faces = this.#faces;
+    if (this.#facing.length !== faces.length) {
+      this.#facing = new Uint8Array(faces.length);
+    }
+    const facing = this.#facing;
+    for (let face = 0; face < faces.length; face++) {
+      const { normal, distance } = faces[face];
+      facing[face] = normal.dot(localCameraPosition) > distance ? 1 : 0;
+    }
 
-    return this.#edges.flatMap((edge, index) => {
-      const front = edge.faces.filter((face) => facing[face]).length;
-      const isContour = edge.faces.length === 1 || (front > 0 && front < edge.faces.length);
+    const contour: number[] = [];
+    const edges = this.#edges;
+    for (let index = 0; index < edges.length; index++) {
+      const edgeFaces = edges[index].faces;
+      let front = 0;
+      for (const face of edgeFaces) {
+        front += facing[face];
+      }
+      if (edgeFaces.length === 1 || (front > 0 && front < edgeFaces.length)) {
+        contour.push(index);
+      }
+    }
 
-      return isContour ? [index] : [];
-    });
+    return contour;
   }
 
   #chains(
@@ -211,4 +239,20 @@ function extendWalk(
     walk.edges.push(next);
     walk.vertices.push(next.from === vertex ? next.to : next.from);
   }
+}
+
+export function sameNumbers(
+  left: readonly number[],
+  right: readonly number[]
+): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  for (let index = 0; index < left.length; index++) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+
+  return true;
 }

@@ -1,19 +1,24 @@
 // Import Third-party Dependencies
-import { mrt, select, float, vec4, uv, greaterThan } from "three/tsl";
+import { select, float, vec2, vec4, uv, greaterThan } from "three/tsl";
 
 // Import Internal Dependencies
 import { maskGate } from "../maskWeight.ts";
 import type { TslNode, TslTextureNode } from "../tslNode.ts";
+
+// CONSTANTS
+export const JFA_NO_SEED = -1e6;
 
 export function buildJfaSeedInit(
   maskTextureNode: TslTextureNode,
   resolutionNode: TslNode<"vec2">
 ) {
   const uvNode = uv();
-  const maskSample = maskTextureNode.sample(uvNode);
-  const masked = greaterThan(maskGate(maskSample), float(0.5));
-  const pixelCoord = uvNode.mul(resolutionNode);
-  const position = select(masked, vec4(pixelCoord, 1, 0), vec4(pixelCoord, 0, 0));
+  const masked = greaterThan(maskGate(maskTextureNode.sample(uvNode)), float(0.5));
+  const position = select(
+    masked,
+    uvNode.mul(resolutionNode),
+    vec2(JFA_NO_SEED, JFA_NO_SEED)
+  );
 
-  return mrt({ position, color: maskSample });
+  return vec4(position, 0, 0);
 }

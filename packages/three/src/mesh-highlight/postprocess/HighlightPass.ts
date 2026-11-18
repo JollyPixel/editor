@@ -68,12 +68,10 @@ export interface HighlightPassOptions {
 }
 
 interface EdgeChannel {
-  maskDownSample: THREE.RenderTarget;
   edge1: THREE.RenderTarget;
   edge2: THREE.RenderTarget;
   blur1: THREE.RenderTarget;
   blur2: THREE.RenderTarget;
-  copyMaterial: THREE.NodeMaterial;
   edgeDetectionMaterial: THREE.NodeMaterial;
   composite: HighlightCompositeChannel;
 }
@@ -90,6 +88,8 @@ export class HighlightPass {
   #edgeGlow: number;
   #edgeThicknessUniform;
   #edgeGlowUniform;
+  #hasPriorityUniform = uniform(0);
+  #hasIsolatedUniform = uniform(0);
 
   #blurDirection = new THREE.Vector2();
   #invSize = new THREE.Vector2();
@@ -153,7 +153,11 @@ export class HighlightPass {
       this.#shared.composite,
       this.#priority.composite,
       this.#isolated.composite,
-      this.#edgeGlowUniform
+      {
+        edgeGlowNode: this.#edgeGlowUniform,
+        hasPriorityNode: this.#hasPriorityUniform,
+        hasIsolatedNode: this.#hasIsolatedUniform
+      }
     );
 
     this.#quad = new THREE.QuadMesh(this.#compositeMaterial);
@@ -233,12 +237,10 @@ export class HighlightPass {
   dispose(): void {
     this.#mask.dispose();
     for (const channel of [this.#shared, this.#priority, this.#isolated]) {
-      channel.maskDownSample.dispose();
       channel.edge1.dispose();
       channel.edge2.dispose();
       channel.blur1.dispose();
       channel.blur2.dispose();
-      channel.copyMaterial.dispose();
       channel.edgeDetectionMaterial.dispose();
     }
     this.#blurMaterial1.dispose();
@@ -251,34 +253,26 @@ export class HighlightPass {
     mask: THREE.RenderTarget,
     name: string
   ): EdgeChannel {
-    const maskDownSample = new THREE.RenderTarget(1, 1, { depthBuffer: false });
     const edge1 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
     const edge2 = new THREE.RenderTarget(1, 1, { depthBuffer: false });
-    const maskTexture = texture(mask.texture);
-
-    const copyMaterial = new THREE.NodeMaterial();
-    copyMaterial.name = `HighlightPass.${name}Copy`;
-    copyMaterial.fragmentNode = maskTexture;
 
     const edgeDetectionMaterial = new THREE.NodeMaterial();
     edgeDetectionMaterial.name = `HighlightPass.${name}EdgeDetection`;
     edgeDetectionMaterial.fragmentNode = buildEdgeDetection(
-      texture(maskDownSample.texture),
+      texture(mask.texture),
       this.#invSizeUniform
     );
 
     return {
-      maskDownSample,
       edge1,
       edge2,
       blur1: new THREE.RenderTarget(1, 1, { depthBuffer: false }),
       blur2: new THREE.RenderTarget(1, 1, { depthBuffer: false }),
-      copyMaterial,
       edgeDetectionMaterial,
       composite: {
         edge1: texture(edge1.texture),
         edge2: texture(edge2.texture),
-        mask: maskTexture
+        mask: texture(mask.texture)
       }
     };
   }
@@ -286,21 +280,16 @@ export class HighlightPass {
   #renderEdges(): void {
     const renderer = this.#renderer;
     const previousTarget = renderer.getRenderTarget();
+    const { hasPriority, hasIsolated } = this.#mask;
+    this.#hasPriorityUniform.value = hasPriority ? 1 : 0;
+    this.#hasIsolatedUniform.value = hasIsolated ? 1 : 0;
 
     this.#renderChannel(this.#shared);
-    if (this.#mask.hasPriority) {
+    if (hasPriority) {
       this.#renderChannel(this.#priority);
     }
-    else {
-      this.#mask.clear(this.#priority.edge1);
-      this.#mask.clear(this.#priority.edge2);
-    }
-    if (this.#mask.hasIsolated) {
+    if (hasIsolated) {
       this.#renderChannel(this.#isolated);
-    }
-    else {
-      this.#mask.clear(this.#isolated.edge1);
-      this.#mask.clear(this.#isolated.edge2);
     }
 
     this.#drawQuad(this.#compositeMaterial, this.#mask.composite);
@@ -310,11 +299,12 @@ export class HighlightPass {
   #renderChannel(
     channel: EdgeChannel
   ): void {
-    this.#drawQuad(channel.copyMaterial, channel.maskDownSample);
     this.#drawQuad(channel.edgeDetectionMaterial, channel.edge1);
 
     this.#blur(this.#blurMaterial1, channel.edge1, channel.blur1, channel.edge1);
-    this.#blur(this.#blurMaterial2, channel.edge1, channel.blur2, channel.edge2);
+    if (this.#edgeGlow > 0) {
+      this.#blur(this.#blurMaterial2, channel.edge1, channel.blur2, channel.edge2);
+    }
   }
 
   #blur(
@@ -350,7 +340,6 @@ export class HighlightPass {
     let resx = Math.round(width / this.#downSampleRatio);
     let resy = Math.round(height / this.#downSampleRatio);
     for (const channel of [this.#shared, this.#priority, this.#isolated]) {
-      channel.maskDownSample.setSize(resx, resy);
       channel.edge1.setSize(resx, resy);
       channel.blur1.setSize(resx, resy);
     }
