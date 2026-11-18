@@ -14,6 +14,11 @@ import {
   type CameraGizmoLens
 } from "#src/index.ts";
 import { watchDisposal } from "../fixtures/disposal.ts";
+import {
+  lineSegments,
+  strokeColor,
+  strokes
+} from "../fixtures/lines.ts";
 
 // CONSTANTS
 const kLens: CameraGizmoLens = {
@@ -57,17 +62,26 @@ function bounds(
   return object.geometry.boundingBox!;
 }
 
-function rectangleHalfHeight(
-  geometry: THREE.BufferGeometry,
-  firstPoint: number
-): number {
-  const position = geometry.getAttribute("position");
-  let halfHeight = 0;
-  for (let point = firstPoint; point < firstPoint + 8; point++) {
-    halfHeight = Math.max(halfHeight, Math.abs(position.getY(point)));
+function frustumBounds(
+  object: THREE.Object3D
+): THREE.Box3 {
+  const box = new THREE.Box3();
+  for (const segment of lineSegments(object)) {
+    box.expandByPoint(segment.start).expandByPoint(segment.end);
   }
 
-  return halfHeight;
+  return box;
+}
+
+function rectangleHalfHeight(
+  object: THREE.Object3D,
+  firstSegment: number
+): number {
+  return Math.max(
+    ...lineSegments(object)
+      .slice(firstSegment, firstSegment + 4)
+      .flatMap(({ start, end }) => [Math.abs(start.y), Math.abs(end.y)])
+  );
 }
 
 describe("CameraGizmo", () => {
@@ -82,7 +96,7 @@ describe("CameraGizmo", () => {
     gizmo.update(kLens, matrixWorld);
     gizmo.updateMatrixWorld();
 
-    assert.ok(Math.abs(bounds(lines(gizmo)).min.z + 2.1) < 1e-6);
+    assert.ok(Math.abs(frustumBounds(gizmo).min.z + 2.1) < 1e-6);
     assert.deepEqual(
       gizmo.matrixWorld.elements,
       new THREE.Matrix4().makeTranslation(1, 2, 3).elements
@@ -92,13 +106,12 @@ describe("CameraGizmo", () => {
   test("draws an orthographic lens as a box as tall as its scale and disposes the perspective lines", () => {
     const gizmo = new CameraGizmo();
     gizmo.update(kLens, new THREE.Matrix4());
-    const disposals = watchDisposal(lines(gizmo).geometry);
+    const disposals = watchDisposal(strokes(gizmo)[0].geometry);
 
     gizmo.update({ ...kLens, projection: "orthographic" }, new THREE.Matrix4());
 
-    const { geometry } = lines(gizmo);
-    assert.strictEqual(rectangleHalfHeight(geometry, 0), 5);
-    assert.strictEqual(rectangleHalfHeight(geometry, 8), 5);
+    assert.strictEqual(rectangleHalfHeight(gizmo, 0), 5);
+    assert.strictEqual(rectangleHalfHeight(gizmo, 4), 5);
     assert.deepEqual(disposals, [1]);
   });
 
@@ -106,11 +119,11 @@ describe("CameraGizmo", () => {
     const gizmo = new CameraGizmo({ color: "#ffffff" });
 
     gizmo.selected = true;
-    assert.strictEqual(lines(gizmo).material.color.getHexString(), "f5c46b");
+    assert.strictEqual(strokeColor(gizmo), "f5c46b");
     assert.strictEqual(icon(gizmo).material.color.getHexString(), "f5c46b");
 
     gizmo.selected = false;
-    assert.strictEqual(lines(gizmo).material.color.getHexString(), "ffffff");
+    assert.strictEqual(strokeColor(gizmo), "ffffff");
     assert.strictEqual(icon(gizmo).material.color.getHexString(), "ffffff");
   });
 });

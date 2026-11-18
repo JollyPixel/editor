@@ -44,6 +44,10 @@ interface CameraGizmoLens {
 
 Draws a camera icon and the frustum of `lens`, cut at `near + depth`. A perspective frustum has lines from the camera to its near rectangle; an orthographic one is a box `orthographicScale` tall. A triangle above the far rectangle marks the camera's up side. The gizmo takes the position and rotation of `matrixWorld` and ignores its scale.
 
+The frustum lines are 2 pixels wide at any distance, with a dark outline so they stay readable on bright or busy backgrounds. Parts hidden behind scene geometry are drawn thinner and dimmer.
+
+A raycast hits the frustum only on its drawn lines, and only when the raycaster has a `camera`, which `setFromCamera` sets. Rays without a camera pass through it.
+
 ### selected: boolean
 
 Draws the frustum and icon in `selectedColor` instead of `color` and white.

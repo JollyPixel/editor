@@ -8,6 +8,7 @@ import type { PeerMetadata } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { FakeRoom } from "../fixtures/room.ts";
+import { strokes } from "../fixtures/lines.ts";
 import { watchDisposal } from "../fixtures/disposal.ts";
 import { PeerFrustum } from "#src/index.ts";
 import { PeerFrustumSync } from "#src/network/index.ts";
@@ -86,7 +87,8 @@ describe("remote peers", () => {
     joinPeer(room, "alice", { frustum: pose(1) });
     sync.attach(new THREE.Object3D());
     const [frustum] = findFrustums(parent);
-    const disposals = watchDisposal(frustum.geometry, frustum.material);
+    const [stroke] = strokes(frustum);
+    const disposals = watchDisposal(stroke.geometry, stroke.material);
 
     room.emitLeft("alice");
 

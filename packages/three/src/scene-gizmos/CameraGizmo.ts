@@ -6,6 +6,7 @@ import {
   frustumLinePoints,
   type FrustumLens
 } from "../common/geometry/frustumLines.ts";
+import { HaloLines } from "../common/lines/HaloLines.ts";
 import {
   GIZMO_SELECTED_COLOR,
   GizmoIcon
@@ -58,9 +59,7 @@ export class CameraGizmo extends THREE.Group {
   readonly #color: THREE.Color;
   readonly #selectedColor: THREE.Color;
   readonly #icon: GizmoIcon;
-  readonly #frustum: THREE.LineSegments<
-    THREE.BufferGeometry, THREE.LineBasicMaterial
-  >;
+  readonly #frustum: HaloLines;
   #lensKey = "";
 
   constructor(
@@ -79,10 +78,7 @@ export class CameraGizmo extends THREE.Group {
     this.#color = new THREE.Color(color);
     this.#selectedColor = new THREE.Color(selectedColor);
     this.#icon = new GizmoIcon("camera", selectedColor);
-    this.#frustum = new THREE.LineSegments(
-      new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial({ color })
-    );
+    this.#frustum = new HaloLines(color);
     this.add(this.#frustum, this.#icon);
   }
 
@@ -94,9 +90,7 @@ export class CameraGizmo extends THREE.Group {
     selected: boolean
   ) {
     this.#icon.selected = selected;
-    this.#frustum.material.color.copy(
-      selected ? this.#selectedColor : this.#color
-    );
+    this.#frustum.paint(selected ? this.#selectedColor : this.#color);
   }
 
   update(
@@ -113,8 +107,7 @@ export class CameraGizmo extends THREE.Group {
     ].join(":");
     if (key !== this.#lensKey) {
       this.#lensKey = key;
-      this.#frustum.geometry.dispose();
-      this.#frustum.geometry = new THREE.BufferGeometry().setFromPoints(
+      this.#frustum.redraw(
         frustumLinePoints(this.#frustumLens(lens, far), {
           apex: true,
           up: true
@@ -126,8 +119,7 @@ export class CameraGizmo extends THREE.Group {
   }
 
   override dispose(): void {
-    this.#frustum.geometry.dispose();
-    this.#frustum.material.dispose();
+    this.#frustum.dispose();
     this.#icon.dispose();
   }
 

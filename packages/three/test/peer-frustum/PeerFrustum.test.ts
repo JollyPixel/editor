@@ -2,9 +2,6 @@
 import { describe, test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
 
-// Import Third-party Dependencies
-import * as THREE from "three";
-
 // Import Internal Dependencies
 import {
   PeerFrustum,
@@ -13,6 +10,12 @@ import {
 } from "#src/index.ts";
 import { spriteContext } from "../fixtures/canvas.ts";
 import { watchDisposal } from "../fixtures/disposal.ts";
+import {
+  colorStrokes,
+  lineSegments,
+  strokeColor,
+  strokes
+} from "../fixtures/lines.ts";
 
 function overrideDefaults(
   t: TestContext,
@@ -42,16 +45,14 @@ describe("constructor", () => {
 
   test("builds near/far rectangles + connecting body, no apex tip, by default", () => {
     const frustum = new PeerFrustum();
-    const positions = frustum.geometry.getAttribute("position");
 
-    assert.strictEqual(positions.count, 12 * 2);
+    assert.strictEqual(lineSegments(frustum).length, 12);
   });
 
   test("showApex: true adds the apex-tip edges", () => {
     const frustum = new PeerFrustum({ showApex: true });
-    const positions = frustum.geometry.getAttribute("position");
 
-    assert.strictEqual(positions.count, 16 * 2);
+    assert.strictEqual(lineSegments(frustum).length, 16);
   });
 
   test("near-plane corners are a scaled-down copy of the far-plane corners", () => {
@@ -66,17 +67,9 @@ describe("constructor", () => {
       near
     });
 
-    const positions = frustum.geometry.getAttribute("position");
-    function point(index: number): THREE.Vector3 {
-      return new THREE.Vector3(
-        positions.getX(index),
-        positions.getY(index),
-        positions.getZ(index)
-      );
-    }
-
-    const nearTopLeft = point(0);
-    const farTopLeft = point(8);
+    const segments = lineSegments(frustum);
+    const nearTopLeft = segments[0].start;
+    const farTopLeft = segments[4].start;
     const ratio = near / depth;
 
     assert.ok(
@@ -89,8 +82,7 @@ describe("constructor", () => {
   test("default near is 20% of depth", () => {
     const depth = 3;
     const frustum = new PeerFrustum({ depth });
-    const positions = frustum.geometry.getAttribute("position");
-    const nearTopLeftZ = positions.getZ(0);
+    const nearTopLeftZ = lineSegments(frustum)[0].start.z;
 
     assert.ok(Math.abs(nearTopLeftZ - -(depth * 0.2)) < 1e-6);
   });
@@ -99,27 +91,22 @@ describe("constructor", () => {
     const frustum = new PeerFrustum();
 
     assert.equal(frustum.label, null);
-    assert.strictEqual(frustum.children.length, 0);
   });
 
   test("creates a nameplate label when a name is provided, added as a child", () => {
     const frustum = new PeerFrustum({ displayName: "Alice" });
 
     assert.ok(frustum.label instanceof PeerFrustumLabel);
-    assert.strictEqual(frustum.children.length, 1);
-    assert.strictEqual(frustum.children[0], frustum.label);
+    assert.strictEqual(frustum.label.parent, frustum);
   });
 });
 
 describe("color", () => {
-  test("updates the wireframe material color", () => {
+  test("redraws the wireframe in the new color", () => {
     const frustum = new PeerFrustum({ color: "#000000" });
     frustum.color = "#ff0000";
 
-    assert.strictEqual(
-      `#${frustum.material.color.getHexString()}`,
-      "#ff0000"
-    );
+    assert.strictEqual(strokeColor(frustum), "ff0000");
   });
 
   test("forwards the new color to the existing label", () => {
@@ -151,6 +138,20 @@ describe("opacity", () => {
     assert.strictEqual(frustum.opacity, 0);
   });
 
+  test("turns the wireframe transparent below 1 and opaque again at 1", () => {
+    const frustum = new PeerFrustum();
+
+    frustum.opacity = 0.5;
+    assert.ok(colorStrokes(frustum).every(
+      ({ material }) => material.transparent && material.opacity === 0.5
+    ));
+
+    frustum.opacity = 1;
+    assert.ok(colorStrokes(frustum).every(
+      ({ material }) => !material.transparent && material.opacity === 1
+    ));
+  });
+
   test("passes the opacity to a label created later", () => {
     const frustum = new PeerFrustum();
     frustum.opacity = 0.5;
@@ -170,7 +171,7 @@ describe("displayName", () => {
 
     const label: unknown = frustum.label;
     assert.ok(label instanceof PeerFrustumLabel);
-    assert.strictEqual(frustum.children.length, 1);
+    assert.strictEqual(label.parent, frustum);
   });
 
   test("updates an existing label instead of replacing it", () => {
@@ -181,7 +182,10 @@ describe("displayName", () => {
 
     assert.strictEqual(frustum.label, label);
     assert.strictEqual(frustum.displayName, "Erin");
-    assert.strictEqual(frustum.children.length, 1);
+    assert.strictEqual(
+      frustum.children.filter((child) => child instanceof PeerFrustumLabel).length,
+      1
+    );
   });
 });
 
@@ -203,66 +207,62 @@ describe("PeerFrustum.Defaults", () => {
     overrideDefaults(t, { color: "#ff00ff" });
     const frustum = new PeerFrustum();
 
-    assert.strictEqual(
-      `#${frustum.material.color.getHexString()}`,
-      "#ff00ff"
-    );
+    assert.strictEqual(strokeColor(frustum), "ff00ff");
   });
 
   test("mutating PeerFrustum.Defaults does not affect already-constructed instances", (t) => {
     const frustum = new PeerFrustum();
     overrideDefaults(t, { color: "#ff00ff" });
 
-    assert.strictEqual(
-      `#${frustum.material.color.getHexString()}`,
-      "#43aa8b"
-    );
+    assert.strictEqual(strokeColor(frustum), "43aa8b");
   });
 
   test("constructor options still override a mutated PeerFrustum.Defaults value", (t) => {
     overrideDefaults(t, { color: "#ff00ff" });
     const frustum = new PeerFrustum({ color: "#00ff00" });
 
-    assert.strictEqual(
-      `#${frustum.material.color.getHexString()}`,
-      "#00ff00"
-    );
+    assert.strictEqual(strokeColor(frustum), "00ff00");
   });
 
   test("PeerFrustum.Defaults.nearRatio drives the derived near when near is omitted", (t) => {
     overrideDefaults(t, { nearRatio: 0.5 });
     const depth = 3;
     const frustum = new PeerFrustum({ depth });
-    const positions = frustum.geometry.getAttribute("position");
-    const nearTopLeftZ = positions.getZ(0);
+    const nearTopLeftZ = lineSegments(frustum)[0].start.z;
 
     assert.ok(Math.abs(nearTopLeftZ - -(depth * 0.5)) < 1e-6);
   });
 });
 
 describe("dispose", () => {
-  test("disposes geometry, material and the label's texture/material", () => {
+  test("disposes the shared geometry once, every line material and the label's texture/material", () => {
     const frustum = new PeerFrustum({ displayName: "Frank" });
     const { label } = frustum;
     assert.ok(label instanceof PeerFrustumLabel);
-    const disposals = watchDisposal(
-      frustum.geometry,
-      frustum.material,
+    const lines = strokes(frustum);
+    const geometry = watchDisposal(lines[0].geometry);
+    const materials = watchDisposal(...lines.map((line) => line.material));
+    const labelDisposals = watchDisposal(
       label.material.map ?? undefined,
       label.material
     );
 
     frustum.dispose();
 
-    assert.deepEqual(disposals, [1, 1, 1, 1]);
+    assert.deepEqual(geometry, [1]);
+    assert.ok(materials.every((count) => count === 1));
+    assert.deepEqual(labelDisposals, [1, 1]);
   });
 
-  test("disposes geometry and material without a label", () => {
+  test("disposes geometry and materials without a label", () => {
     const frustum = new PeerFrustum();
-    const disposals = watchDisposal(frustum.geometry, frustum.material);
+    const lines = strokes(frustum);
+    const geometry = watchDisposal(lines[0].geometry);
+    const materials = watchDisposal(...lines.map((line) => line.material));
 
     frustum.dispose();
 
-    assert.deepEqual(disposals, [1, 1]);
+    assert.deepEqual(geometry, [1]);
+    assert.ok(materials.every((count) => count === 1));
   });
 });

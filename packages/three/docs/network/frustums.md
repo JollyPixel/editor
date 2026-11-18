@@ -20,7 +20,10 @@ frustum.quaternion.copy(remoteQuaternion);
 scene.add(frustum);
 ```
 
-The shape points down local `-Z`.
+The shape points down local `-Z`. `PeerFrustum` extends `THREE.Group`. Its
+lines are 2 pixels wide at any distance, with a dark outline, and the parts
+hidden behind scene geometry are drawn thinner and dimmer. A raycast hits the
+lines only when the raycaster has a `camera`, which `setFromCamera` sets.
 
 | Option | Default | Purpose |
 |---|---:|---|
@@ -100,7 +103,7 @@ fades on arrival rather than on the next tick, and `detach()` restores full
 opacity.
 
 The fade drives `PeerFrustum.opacity`, which spans the wireframe and its label,
-clamps to `0..1`, and turns the line material transparent below `1`.
+clamps to `0..1`, and turns the line materials transparent below `1`.
 
 `peerPose(clientId)` returns a copy of the last pose applied to a peer, or
 `undefined` for an unknown peer, one whose pose is missing or malformed, and
