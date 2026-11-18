@@ -12,6 +12,14 @@ import { typescriptConfig } from "@openally/config.oxlint";
 const kUiElements = readdirSync(new URL("./packages/ui/src/elements", import.meta.url))
   .map((file: string) => file.replace(/\.ts$/, ""));
 const kAssetServerLayers = ["common", "model", "storage", "catalog", "live", "client", "node"];
+const kAccessorApis = ["getLayoutMap", "setAnimationLoop"];
+const kFakeAccessorApis = [
+  ...kAccessorApis,
+  "getImageData",
+  "setTargetAtTime",
+  "setTransform",
+  "setValueAtTime"
+];
 
 function assetServerLayer(
   layer: string,
@@ -36,7 +44,6 @@ function assetServerLayer(
 
 export default defineConfig(typescriptConfig({
   ignorePatterns: [
-    "**/coverage/**",
     "**/generated/**"
   ],
   env: {
@@ -58,26 +65,34 @@ export default defineConfig(typescriptConfig({
       "error", { max: 5 }
     ],
     "unicorn/no-new-array": "error",
-    "typescript/parameter-properties": "error",
-    "typescript/no-namespace": "error",
     "@jolly-pixel/comment-format": "error",
     "@jolly-pixel/err-declared-error": "error",
     "@jolly-pixel/import-rendered-elements": [
       "error", { elements: kUiElements }
     ],
-    "@jolly-pixel/no-enum": "error",
-    "@jolly-pixel/no-ts-private": "error",
-    "@jolly-pixel/params-per-line": "error",
     "@jolly-pixel/no-comments": "error",
     "@jolly-pixel/no-of-names": "error",
-    "@jolly-pixel/no-get-set-prefix": "error"
+    "@openally/no-enum": "error",
+    "@openally/no-ts-private": "error",
+    "@openally/params-per-line": "error",
+    "@openally/no-get-set-prefix": [
+      "error", { allow: kAccessorApis }
+    ]
   },
   overrides: [
     {
-      files: ["**/test/**", "**/bench/**"],
+      files: ["**/bench/**"],
       rules: {
         "max-classes-per-file": "off",
         "no-empty-function": "off"
+      }
+    },
+    {
+      files: ["**/test/**"],
+      rules: {
+        "@openally/no-get-set-prefix": [
+          "error", { allow: kFakeAccessorApis }
+        ]
       }
     },
     {

@@ -51,9 +51,9 @@ describe("Controls.Gamepad polling", () => {
   });
 
   describe("idle polling", () => {
-    test("stops calling getGamepads() every frame while nothing is connected", () => {
+    test("stops calling pollGamepads() every frame while nothing is connected", () => {
       let polls = 0;
-      navigatorAdapter.getGamepads = () => {
+      navigatorAdapter.pollGamepads = () => {
         polls++;
 
         return navigatorAdapter.toNativeGamepads();
@@ -68,7 +68,7 @@ describe("Controls.Gamepad polling", () => {
 
     test("polls every frame again as soon as a gamepad appears", () => {
       let polls = 0;
-      navigatorAdapter.getGamepads = () => {
+      navigatorAdapter.pollGamepads = () => {
         polls++;
 
         return navigatorAdapter.toNativeGamepads();
@@ -94,14 +94,14 @@ describe("Controls.Gamepad polling", () => {
       assert.strictEqual(gamepad.wasButtonJustReleased(0, "A"), true);
     });
 
-    test("clears wasActive when getGamepads() returns null", () => {
+    test("clears wasActive when pollGamepads() returns null", () => {
       const mockGamepad = mocks.Gamepad();
       mockGamepad.buttons[0] = { pressed: true, value: 1 };
       navigatorAdapter.gamepads = [mockGamepad, null, null, null];
       gamepad.update();
       assert.strictEqual(gamepad.wasActive, true);
 
-      navigatorAdapter.getGamepads = () => null as any;
+      navigatorAdapter.pollGamepads = () => null as any;
       gamepad.update();
 
       assert.strictEqual(gamepad.wasActive, false);

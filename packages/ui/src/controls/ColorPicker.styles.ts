@@ -82,7 +82,7 @@ export const colorPickerStyles = css`
     width: min(100%, var(--jolly-picker-wheel-size));
     height: auto;
     margin-inline: auto;
-    aspect-ratio: 1;
+    aspect-ratio: 1 / 1;
     border-radius: 50%;
     background: var(--jolly-surface-sunken, #808080);
   }

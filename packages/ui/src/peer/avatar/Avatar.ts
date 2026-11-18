@@ -99,7 +99,7 @@ export class Avatar extends LitElement {
       height: 6px;
       border-radius: 50%;
       box-shadow: 0 0 0 1px var(--jolly-avatar-presence-ring, var(--jolly-surface, Canvas));
-      background: var(--jolly-success, oklch(62% 0.150 149deg));
+      background: var(--jolly-success, oklch(62% 0.15 149deg));
     }
 
     :host([presence="offline"]) .presence {

@@ -150,7 +150,7 @@ export class MaterialPalettePanel extends LitElement {
 
     .tile {
       position: relative;
-      aspect-ratio: 1;
+      aspect-ratio: 1 / 1;
       border-radius: var(--jolly-radius-md, 4px);
       background: var(--fallback-albedo);
       background-size: cover;
@@ -230,7 +230,7 @@ export class MaterialPalettePanel extends LitElement {
     .preview {
       flex: none;
       width: 72px;
-      aspect-ratio: 1;
+      aspect-ratio: 1 / 1;
       border-radius: var(--jolly-radius-md, 4px);
       background: var(--fallback-albedo);
       background-size: cover;

@@ -115,8 +115,7 @@ export const toggleStyles = css`
     background: var(--jolly-surface-raised);
   }
 
-  :host(:not([disabled], [readonly], [locked]))
-    .toggle:hover input:checked + .switch {
+  :host(:not([disabled], [readonly], [locked])) .toggle:hover input:checked + .switch {
     background: var(--jolly-field-active-color-hover);
   }
 
