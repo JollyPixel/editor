@@ -140,9 +140,7 @@ function lightShape(
     };
   }
 
-  const glyph = light instanceof THREE.HemisphereLight ?
-    "hemisphere" :
-    "ambient";
+  const glyph = flatLightGlyph(light);
 
   return {
     glyph,
@@ -150,6 +148,19 @@ function lightShape(
     target: null,
     points: () => []
   };
+}
+
+function flatLightGlyph(
+  light: THREE.Light
+): GizmoIconGlyph {
+  if (light instanceof THREE.HemisphereLight) {
+    return "hemisphere";
+  }
+  if (light instanceof THREE.RectAreaLight) {
+    return "rect-area";
+  }
+
+  return "ambient";
 }
 
 function arrowPoints(): THREE.Vector3[] {

@@ -11,6 +11,9 @@ These hold for every workspace that renders with `three/webgpu`.
   reallocates it mid-frame. Prefer one target with MRT attachments.
 - `Line2NodeMaterial` with `transparent: true` composites against the opaque
   copy, not the live framebuffer. Keep fat lines opaque and depth-tested.
+- `Line2NodeMaterial` draws with `NoBlending`, so its default
+  `alphaToCoverage` writes alpha below 1 into the canvas at line caps and the
+  page shows through as gray pixels at joints. Set `alphaToCoverage: false`.
 - `THREE.Euler` serializes as `isEuler`/`_x`/`_y`/`_z`/`_order`. Flatten math
   objects to plain `{ x, y, z }` before they enter a network command.
 - A hidden browser tab renders no frames: `requestAnimationFrame` stops, so

@@ -10,7 +10,10 @@ import {
 import type { HighlightEntry } from "./HighlightPass.ts";
 import { HighlightMask } from "./HighlightMask.ts";
 import { buildJfaSeedInit } from "./tsl/jfa/seed.ts";
-import { buildJfaPropagateStep } from "./tsl/jfa/propagate.ts";
+import {
+  buildJfaPropagateStep,
+  jfaStepSizes
+} from "./tsl/jfa/propagate.ts";
 import { buildJfaRingComposite, type JfaRingChannel } from "./tsl/jfa/resolve.ts";
 import type { TslTextureNode } from "./tsl/tslNode.ts";
 
@@ -18,6 +21,7 @@ import type { TslTextureNode } from "./tsl/tslNode.ts";
 const kIsolatedRefreshIntervalBase = 6;
 const kIsolatedRefreshIntervalReferencePixels = 1920 * 1080;
 const kIsolatedRefreshIntervalMax = 16;
+const kRingFalloff = 2;
 const kNearestFilter = {
   magFilter: THREE.NearestFilter,
   minFilter: THREE.NearestFilter
@@ -48,7 +52,6 @@ interface FloodChannel {
   seedInitMaterial: THREE.NodeMaterial;
   stepMaterial: THREE.NodeMaterial;
   positionSource: TslTextureNode;
-  colorSource: TslTextureNode;
   ring: JfaRingChannel;
 }
 
@@ -75,7 +78,7 @@ export class HighlightPassJfa {
   #hasPriorityUniform;
   #hasIsolatedUniform;
 
-  #stepSizes: number[] = [];
+  #stepSizes: number[];
   #jfaStepUniform;
 
   #shared: FloodChannel;
@@ -96,6 +99,7 @@ export class HighlightPassJfa {
     this.#renderer = renderer;
     this.#mask = new HighlightMask(renderer, scene, camera, kNearestFilter);
     this.#ringThickness = ringThickness;
+    this.#stepSizes = jfaStepSizes(floodReach(ringThickness));
     this.#borderThickness = borderThickness;
     this.#isolatedFillOpacity = isolatedFillOpacity;
 
@@ -144,6 +148,7 @@ export class HighlightPassJfa {
   ) {
     this.#ringThickness = ringThickness;
     this.#ringThicknessUniform.value = ringThickness;
+    this.#stepSizes = jfaStepSizes(floodReach(ringThickness));
   }
 
   get borderThickness(): number {
@@ -225,8 +230,7 @@ export class HighlightPassJfa {
     const seedA = this.#createSeedRenderTarget();
     const seedB = this.#createSeedRenderTarget();
     const maskTexture = texture(mask.texture);
-    const positionSource = texture(seedA.textures[0]);
-    const colorSource = texture(seedA.textures[1]);
+    const positionSource = texture(seedA.texture);
 
     const seedInitMaterial = new THREE.NodeMaterial();
     seedInitMaterial.name = `HighlightPassJfa.${name}SeedInit`;
@@ -236,7 +240,6 @@ export class HighlightPassJfa {
     stepMaterial.name = `HighlightPassJfa.${name}Step`;
     stepMaterial.fragmentNode = buildJfaPropagateStep(
       positionSource,
-      colorSource,
       this.#jfaStepUniform,
       this.#invSizeUniform,
       this.#resolutionUniform
@@ -249,10 +252,8 @@ export class HighlightPassJfa {
       seedInitMaterial,
       stepMaterial,
       positionSource,
-      colorSource,
       ring: {
-        positionTexture: texture(seedA.textures[0]),
-        colorTexture: texture(seedA.textures[1]),
+        positionTexture: texture(seedA.texture),
         maskTexture
       }
     };
@@ -305,8 +306,7 @@ export class HighlightPassJfa {
       for (const channel of channels) {
         const source = channel.sourceIsA ? channel.seedA : channel.seedB;
         const destination = channel.sourceIsA ? channel.seedB : channel.seedA;
-        channel.positionSource.value = source.textures[0];
-        channel.colorSource.value = source.textures[1];
+        channel.positionSource.value = source.texture;
         this.#drawQuad(channel.stepMaterial, destination);
         channel.sourceIsA = !channel.sourceIsA;
       }
@@ -314,8 +314,7 @@ export class HighlightPassJfa {
 
     for (const channel of channels) {
       const final = channel.sourceIsA ? channel.seedA : channel.seedB;
-      channel.ring.positionTexture.value = final.textures[0];
-      channel.ring.colorTexture.value = final.textures[1];
+      channel.ring.positionTexture.value = final.texture;
     }
 
     this.#drawQuad(this.#compositeMaterial, this.#mask.composite);
@@ -346,28 +345,23 @@ export class HighlightPassJfa {
       channel.seedA.setSize(width, height);
       channel.seedB.setSize(width, height);
     }
-
-    this.#stepSizes = [];
-    let step = 1;
-    while (step < Math.max(width, height)) {
-      step *= 2;
-    }
-    while (step >= 1) {
-      this.#stepSizes.push(step);
-      step = Math.floor(step / 2);
-    }
   }
 
   #createSeedRenderTarget(): THREE.RenderTarget {
     const target = new THREE.RenderTarget(1, 1, {
       depthBuffer: false,
       type: THREE.FloatType,
-      count: 2,
+      format: THREE.RGFormat,
       ...kNearestFilter
     });
-    target.textures[0].name = "position";
-    target.textures[1].name = "color";
+    target.texture.name = "position";
 
     return target;
   }
+}
+
+function floodReach(
+  ringThickness: number
+): number {
+  return Math.ceil(Math.max(ringThickness, 0)) + kRingFalloff;
 }

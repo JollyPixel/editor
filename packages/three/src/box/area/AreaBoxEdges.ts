@@ -4,6 +4,7 @@ import { LineSegments2 } from "three/addons/lines/webgpu/LineSegments2.js";
 import { Line2NodeMaterial } from "three/webgpu";
 
 // Import Internal Dependencies
+import { fadeMaterial } from "../../common/lines/fadeMaterial.ts";
 import { BoxEdgesGeometry } from "../BoxEdgesGeometry.ts";
 
 // CONSTANTS
@@ -48,7 +49,6 @@ export class AreaBoxEdges extends LineSegments2 {
 
     this.#opacity = opacity;
     this.#color = new THREE.Color(color);
-    this.frustumCulled = false;
     this.renderOrder = kRenderOrder;
   }
 
@@ -94,22 +94,10 @@ export class AreaBoxEdges extends LineSegments2 {
       1
     );
 
-    this.material.opacity = opacity;
-    this.#applyTransparency(opacity < 1);
+    fadeMaterial(this.material, opacity);
     this.material.color.copy(this.#color).lerp(
       kTintTarget,
       this.#tint * kTintRatio
     );
-  }
-
-  #applyTransparency(
-    transparent: boolean
-  ): void {
-    if (this.material.transparent === transparent) {
-      return;
-    }
-
-    this.material.transparent = transparent;
-    this.material.needsUpdate = true;
   }
 }

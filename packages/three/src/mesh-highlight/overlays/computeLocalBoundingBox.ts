@@ -1,34 +1,43 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
 
+// Import Internal Dependencies
+import { geometryBounds } from "./geometryBounds.ts";
+import { isHighlightOverlay } from "./HighlightOverlay.ts";
+
+// CONSTANTS
+const kInverseTargetWorld = new THREE.Matrix4();
+const kRelativeMatrix = new THREE.Matrix4();
+const kMeshLocalBox = new THREE.Box3();
+
 export function computeLocalBoundingBox(
   target: THREE.Object3D
 ): THREE.Box3 {
   target.updateWorldMatrix(true, true);
-  const inverseTargetWorld = target.matrixWorld.clone().invert();
-  const relativeMatrix = new THREE.Matrix4();
-  const meshLocalBox = new THREE.Box3();
+  kInverseTargetWorld.copy(target.matrixWorld).invert();
   const box = new THREE.Box3();
 
-  target.traverse((descendant) => {
-    if (!(descendant instanceof THREE.Mesh)) {
-      return;
+  const pending = [target];
+  while (pending.length > 0) {
+    const object = pending.pop()!;
+    if (object !== target && isHighlightOverlay(object)) {
+      continue;
     }
-
-    descendant.geometry.computeBoundingBox();
-    if (!descendant.geometry.boundingBox) {
-      return;
+    if (object instanceof THREE.Mesh) {
+      kRelativeMatrix.multiplyMatrices(
+        kInverseTargetWorld,
+        object.matrixWorld
+      );
+      box.union(
+        kMeshLocalBox
+          .copy(geometryBounds(object.geometry))
+          .applyMatrix4(kRelativeMatrix)
+      );
     }
-
-    relativeMatrix.multiplyMatrices(
-      inverseTargetWorld,
-      descendant.matrixWorld
-    );
-    meshLocalBox
-      .copy(descendant.geometry.boundingBox)
-      .applyMatrix4(relativeMatrix);
-    box.union(meshLocalBox);
-  });
+    for (const child of object.children) {
+      pending.push(child);
+    }
+  }
 
   return box;
 }

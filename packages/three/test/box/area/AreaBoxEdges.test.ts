@@ -46,10 +46,6 @@ describe("AreaBoxEdges", () => {
       assert.equal(createEdges({ opacity: 0.4 }).material.transparent, true);
     });
 
-    test("opts out of frustum culling", () => {
-      assert.equal(createEdges().frustumCulled, false);
-    });
-
     test("wins the depth tie against a coplanar voxel edge", () => {
       const { material } = createEdges();
 

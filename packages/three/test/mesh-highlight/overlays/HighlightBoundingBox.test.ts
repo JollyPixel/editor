@@ -178,6 +178,30 @@ describe("update", () => {
 
     assertVectorCloseTo(box.position, new THREE.Vector3(2, 0, 0));
   });
+
+  test("follows positions edited in place once marked for upload", () => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    const target = new THREE.Group().add(mesh);
+    const box = new HighlightBoundingBox({ target });
+
+    const position = mesh.geometry.getAttribute("position");
+    for (let index = 0; index < position.count; index++) {
+      position.setX(index, position.getX(index) * 3);
+    }
+    position.needsUpdate = true;
+    box.update();
+
+    assertVectorCloseTo(box.scale, new THREE.Vector3(3, 1, 1).multiplyScalar(1.01), 1e-6);
+  });
+
+  test("keeps its size across updates when it draws a fill", () => {
+    const box = new HighlightBoundingBox({ target: createGroupOfTwoBoxes(), fillOpacity: 0.3 });
+
+    box.update();
+    box.update();
+
+    assertVectorCloseTo(box.scale, new THREE.Vector3(3, 1, 1).multiplyScalar(1.01), 1e-6);
+  });
 });
 
 describe("color", () => {

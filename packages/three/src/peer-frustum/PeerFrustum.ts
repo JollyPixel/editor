@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 // Import Internal Dependencies
 import { frustumLinePoints } from "../common/geometry/frustumLines.ts";
+import { HaloLines } from "../common/lines/HaloLines.ts";
 import { PeerFrustumLabel } from "./PeerFrustumLabel.ts";
 
 export interface PeerFrustumOptions {
@@ -61,9 +62,7 @@ export interface PeerFrustumDefaults {
   showNameBox: boolean;
 }
 
-export class PeerFrustum extends THREE.LineSegments<
-  THREE.BufferGeometry, THREE.LineBasicMaterial
-> {
+export class PeerFrustum extends THREE.Group {
   static readonly Defaults: PeerFrustumDefaults = {
     fov: 50,
     aspect: 16 / 9,
@@ -76,6 +75,7 @@ export class PeerFrustum extends THREE.LineSegments<
 
   label: PeerFrustumLabel | null = null;
 
+  readonly #wire: HaloLines;
   #color: THREE.ColorRepresentation;
   #showNameBox: boolean;
   #opacity = 1;
@@ -101,11 +101,20 @@ export class PeerFrustum extends THREE.LineSegments<
       );
     }
 
-    super(
-      PeerFrustum.#buildGeometry(fov, aspect, near, depth, showApex),
-      new THREE.LineBasicMaterial({ color })
-    );
+    super();
 
+    this.#wire = new HaloLines(color);
+    this.#wire.redraw(frustumLinePoints(
+      {
+        projection: "perspective",
+        fov,
+        aspect,
+        near,
+        far: depth
+      },
+      { apex: showApex }
+    ));
+    this.add(this.#wire);
     this.#color = color;
     this.#showNameBox = showNameBox;
     if (displayName !== undefined) {
@@ -125,7 +134,7 @@ export class PeerFrustum extends THREE.LineSegments<
   set color(
     color: THREE.ColorRepresentation
   ) {
-    this.material.color.set(color);
+    this.#wire.paint(color);
     this.#color = color;
     if (this.label !== null) {
       this.label.color = color;
@@ -145,8 +154,7 @@ export class PeerFrustum extends THREE.LineSegments<
     }
 
     this.#opacity = next;
-    this.material.opacity = next;
-    this.material.transparent = next < 1;
+    this.#wire.fade(next);
     if (this.label !== null) {
       this.label.opacity = next;
     }
@@ -187,30 +195,8 @@ export class PeerFrustum extends THREE.LineSegments<
   }
 
   override dispose(): void {
-    this.geometry.dispose();
-    this.material.dispose();
+    this.#wire.dispose();
     this.label?.dispose();
-  }
-
-  static #buildGeometry(
-    fov: number,
-    aspect: number,
-    near: number,
-    depth: number,
-    showApex: boolean
-  ): THREE.BufferGeometry {
-    const points = frustumLinePoints(
-      {
-        projection: "perspective",
-        fov,
-        aspect,
-        near,
-        far: depth
-      },
-      { apex: showApex }
-    );
-
-    return new THREE.BufferGeometry().setFromPoints(points);
   }
 }
 

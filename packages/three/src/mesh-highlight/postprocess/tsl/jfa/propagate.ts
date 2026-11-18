@@ -1,8 +1,9 @@
 // Import Third-party Dependencies
-import { mrt, select, and, float, vec2, vec4, uv, greaterThan, lessThan } from "three/tsl";
+import { select, float, vec2, vec4, uv, lessThan } from "three/tsl";
 
 // Import Internal Dependencies
 import type { TslNode, TslTextureNode } from "../tslNode.ts";
+import { JFA_NO_SEED } from "./seed.ts";
 
 // CONSTANTS
 export const JFA_OFFSETS: ReadonlyArray<readonly [number, number]> = [
@@ -13,7 +14,6 @@ export const JFA_OFFSETS: ReadonlyArray<readonly [number, number]> = [
 
 export function buildJfaPropagateStep(
   positionSourceTexture: TslTextureNode,
-  colorSourceTexture: TslTextureNode,
   stepNode: TslNode<"float">,
   invSizeNode: TslNode<"vec2">,
   resolutionNode: TslNode<"vec2">
@@ -21,20 +21,35 @@ export function buildJfaPropagateStep(
   const uvNode = uv();
   const pixelCoord = uvNode.mul(resolutionNode);
 
-  let bestPosition: TslNode<"vec4"> = vec4(0, 0, 0, 0);
-  let bestColor: TslNode<"vec4"> = vec4(0, 0, 0, 0);
+  let bestPosition: TslNode<"vec2"> = vec2(JFA_NO_SEED, JFA_NO_SEED);
   let bestDist: TslNode<"float"> = float(1e10);
 
   for (const [dx, dy] of JFA_OFFSETS) {
     const sampleUv = uvNode.add(vec2(dx, dy).mul(stepNode).mul(invSizeNode));
-    const candidatePosition = positionSourceTexture.sample(sampleUv);
-    const dist = pixelCoord.sub(candidatePosition.xy).length();
-    const isBetter = and(greaterThan(candidatePosition.z, float(0.5)), lessThan(dist, bestDist));
+    const candidate = positionSourceTexture.sample(sampleUv).xy;
+    const dist = pixelCoord.sub(candidate).length();
+    const isBetter = lessThan(dist, bestDist);
 
-    bestPosition = select(isBetter, candidatePosition, bestPosition);
-    bestColor = select(isBetter, colorSourceTexture.sample(sampleUv), bestColor);
+    bestPosition = select(isBetter, candidate, bestPosition);
     bestDist = select(isBetter, dist, bestDist);
   }
 
-  return mrt({ position: bestPosition, color: bestColor });
+  return vec4(bestPosition, 0, 0);
+}
+
+export function jfaStepSizes(
+  reach: number
+): number[] {
+  let step = 1;
+  while ((step * 2) - 1 < reach) {
+    step *= 2;
+  }
+
+  const steps: number[] = [];
+  for (; step >= 1; step /= 2) {
+    steps.push(step);
+  }
+  steps.push(1);
+
+  return steps;
 }

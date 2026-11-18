@@ -200,7 +200,7 @@ interface AreaBoxEdgesOptions {
 
 The twelve-segment outline, drawn with `Line2NodeMaterial` fat lines: line width is capped at one pixel on both renderers, so a plain `THREE.LineSegments` cannot draw a thicker rim. `width` is in CSS pixels and stays constant at any camera distance.
 
-It keeps the area color as-is, and opts out of frustum culling because fat lines expand beyond the source segments the frustum test reads.
+It keeps the area color as-is. Frustum culling tests the outline's bounds, which `resize()` recomputes, so off-screen areas skip their edge draw. A line may lose up to half its `width` in pixels at the screen border once its whole box leaves the view.
 
 `material.transparent` follows the effective opacity rather than staying on: `Line2NodeMaterial` sets `NoBlending` and, while transparent, composites in the shader against a full-screen copy of the opaque pass. Three resizes that copy from inside the render pass, so a canvas resize faults the WebGPU queue with a texture the pass being encoded still references. At an effective opacity of `1` the copy buys nothing, so the material stays opaque and the pass never runs.
 

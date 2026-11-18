@@ -4,6 +4,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 // Import Internal Dependencies
 import type { Axis, AxisSign } from "../../common/math/axes.ts";
+import { geometryBounds } from "./geometryBounds.ts";
 
 export interface VisibleFaces {
   posX: boolean;
@@ -286,8 +287,7 @@ export function writeOuterColor(
 export function measureHalfExtents(
   target: THREE.Mesh
 ): THREE.Vector3 {
-  target.geometry.computeBoundingBox();
-  const box = target.geometry.boundingBox as THREE.Box3;
+  const box = geometryBounds(target.geometry);
 
   return box.max.clone().sub(box.min).multiplyScalar(0.5);
 }

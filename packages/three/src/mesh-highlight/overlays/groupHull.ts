@@ -6,9 +6,10 @@ import {
 } from "three/addons/math/ConvexHull.js";
 
 // Import Internal Dependencies
+import { positionVersion } from "./geometryBounds.ts";
 import {
   MeshContour,
-  positionVersion
+  sameNumbers
 } from "./meshContour.ts";
 
 // CONSTANTS
@@ -142,12 +143,4 @@ function isFlat(
   const extent = Math.max(kSize.x, kSize.y, kSize.z);
 
   return Math.abs(volume) <= kFlatVolumeRatio * (extent ** 3);
-}
-
-function sameNumbers(
-  left: readonly number[],
-  right: readonly number[]
-): boolean {
-  return left.length === right.length &&
-    left.every((value, index) => value === right[index]);
 }

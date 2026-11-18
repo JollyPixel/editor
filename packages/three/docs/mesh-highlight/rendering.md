@@ -192,6 +192,10 @@ Both expose `pipeline`, writable `entries`, `render()`, and `dispose()`.
 `ringThickness`, `borderThickness`, and `isolatedFillOpacity` properties.
 `configure(options)` sets the given properties and keeps the others.
 
+`HighlightPass` skips its glow blur while `edgeGlow` is `0`. `HighlightPassJfa`
+floods only as far as the ring reaches, so its pass count follows
+`ringThickness` rather than the viewport size.
+
 Both passes draw rings without scene occlusion. `MeshHighlightAppearance.xray`
 only affects object overlays.
 

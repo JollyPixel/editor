@@ -28,6 +28,14 @@ export const EXAMPLE_GROUPS: ExampleGroup[] = [
       {
         label: "Transform Controls",
         path: "/transform-controls/"
+      },
+      {
+        label: "Studio Sky",
+        path: "/sky/"
+      },
+      {
+        label: "Scene Gizmos",
+        path: "/scene-gizmos/"
       }
     ]
   },

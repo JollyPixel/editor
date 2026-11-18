@@ -53,7 +53,6 @@ describe("proximity fade", () => {
 
     const [frustum] = findFrustums(parent);
     assert.equal(frustum.opacity, 0.5);
-    assert.equal(frustum.material.transparent, true);
     assert.equal(frustum.visible, true);
   });
 
