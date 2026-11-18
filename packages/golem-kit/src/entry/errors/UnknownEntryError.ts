@@ -1,12 +1,10 @@
-export type EntryKind = "actor" | "layer" | "node" | "material";
-
 export class UnknownEntryError extends Error {
-  readonly entry: EntryKind;
+  readonly entry: string;
   readonly ref: string;
   readonly candidates: readonly string[];
 
   constructor(
-    entry: EntryKind,
+    entry: string,
     ref: string,
     candidates: readonly string[]
   ) {

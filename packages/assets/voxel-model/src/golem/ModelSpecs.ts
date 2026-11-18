@@ -27,6 +27,21 @@ export const materialSpecSchema = z.object({
   )))
 });
 
+export const addBlocksInputSchema = z.object({
+  parent: z.optional(z.nullable(z.string()).check(
+    z.describe("The node name or id to add under. Default: the root.")
+  )),
+  blocks: z.array(blockSpecSchema)
+});
+
+export const addMaterialsInputSchema = z.object({
+  materials: z.array(materialSpecSchema)
+});
+
 export type BlockSpec = z.output<typeof blockSpecSchema>;
 
 export type MaterialSpec = z.output<typeof materialSpecSchema>;
+
+export type AddBlocksInput = z.output<typeof addBlocksInputSchema>;
+
+export type AddMaterialsInput = z.output<typeof addMaterialsInputSchema>;

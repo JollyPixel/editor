@@ -27,7 +27,7 @@ Tools answer with compact JSON. A result over 32,000 characters becomes `{ trunc
 - `catalog_preview({ assetId })`: the preview as image content, or a text result when the kind has none.
 - `catalog_tag({ assetId, name, message? })` and `catalog_restore({ assetId, tag })`.
 - `asset_open({ assetId })`: joins the asset's room and returns its kind and schema resource. When the kind has them, it adds `guide`, Markdown on working with the kind, and `intents`, each `{ name, description, input }` with `input` a JSON Schema.
-- `asset_intent({ assetId, intent, input? })`: runs one of the kind's intents and answers `{ assetId, intent, result }` once the studio accepted its commands. An unknown intent fails with `UnknownIntentError`, an input outside the intent's schema with `IntentInputError`. Each asset package documents its kinds' intents in its `docs/Golem.md`, such as `addActors` for a scene, `fillBox` for a voxel map or `change` for an environment.
+- `asset_intent({ assetId, intent, input? })`: runs one of the kind's intents and answers `{ assetId, intent, result }` once the studio accepted its commands. `result` is what the asset method of the same name returns, and is left out when it returns nothing. An unknown intent fails with `UnknownIntentError`, an input outside the intent's schema with `IntentInputError`. Each asset package documents its kinds' intents in its `docs/Golem.md`, such as `addActors` for a scene, `fillBox` for a voxel map or `change` for an environment.
 - `asset_close({ assetId })`
 - `asset_read({ assetId })`: the document as JSON.
 - `asset_apply({ assetId, commands })`: applies up to 500 commands and answers once the studio accepted them all.

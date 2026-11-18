@@ -6,14 +6,9 @@ An agent reaches the same edits through the MCP server: `asset_open` answers the
 
 ## Intents
 
-A voxel map has:
+A voxel map has `summary`, `query`, `heightmap`, `addLayer`, `fillBox` and `clearBox`: each runs the method of the same name with its input and answers what the method returns.
 
-- `summary()`: `summary`.
-- `query({ min, max, layer? })` and `heightmap({ min, max, layer? })`.
-- `addLayer({ name, above? })`: answers `{ layer: { id, name } }`.
-- `fillBox({ layer, min, max, block })` and `clearBox({ layer, min, max })`: answer `{ written }` or `{ cleared }`.
-
-A blockset has the pixel intents of `@jolly-pixel/asset.pixel-art/golem` for its texture: `readPixels`, `paint`, `fillRect` and `replacePalette`.
+A blockset has the pixel intents of `@jolly-pixel/asset.pixel-art/golem` for its texture: `readPixels`, `paintPixels`, `fillRect` and `replacePalette`.
 
 ## `VoxelMapAsset`
 
@@ -21,7 +16,7 @@ The asset for `voxelmap`. Commands are the map's world commands (`VoxelWorldComm
 
 ```ts
 const map = await golem.open(assetId, "voxelmap");
-await map.fillBox({ min: { x: 0, y: 0, z: 0 }, max: { x: 15, y: 0, z: 15 } }, "grass", { layer: "Ground" });
+await map.fillBox({ layer: "Ground", min: { x: 0, y: 0, z: 0 }, max: { x: 15, y: 0, z: 15 }, block: "grass" });
 await map.settled();
 ```
 
@@ -31,25 +26,25 @@ Opening a map also opens the blockset assets it links, so its blocks have names.
 
 The chunk size, the voxel count, the layers (`id`, `name`, `visible`, `voxelCount`, and `bounds`, `null` for an empty layer), the blocksets (`id`, `slot`, `assetId`, `linked`, and `error` when its asset could not be opened) and the blocks (`id`, `name`, `shapeId`, `blockset`). `read()` returns the same summary at once, without opening blocksets.
 
-### `query(box, options?): MapQuery`
+### `query({ min, max, layer? }): MapQuery`
 
-The occupied cells of `box` as `{ x, y, z, block, layer }`. With `options.layer` it reads that layer only; without, the cell each position shows across layers. Stops at `MAX_QUERY_CELLS` (4,096) and sets `truncated`.
+The occupied cells of the box as `{ x, y, z, block, layer }`. With `layer` it reads that layer only; without, the cell each position shows across layers. Stops at `MAX_QUERY_CELLS` (4,096) and sets `truncated`.
 
-### `heightmap(box, options?): MapHeightmap`
+### `heightmap({ min, max, layer? }): MapHeightmap`
 
-For each column of `box`, the highest occupied y within it, or `null`. `heights` holds one row per z from `min.z`, one value per x from `min.x`.
+For each column of the box, on `layer` or across all layers, the highest occupied y within it, or `null`. `heights` holds one row per z from `min.z`, one value per x from `min.x`.
 
-### `addLayer(name, options?): Promise<AddedLayer>`
+### `addLayer({ name, above? }): Promise<AddedLayer>`
 
-Adds an empty layer on top, or right above the layer `options.above` names, and returns its `{ id, name }`. When another layer has `name`, the studio appends a number: `"Ground (1)"`.
+Adds an empty layer on top, or right above the layer `above` names, and returns its `{ id, name }`. When another layer has `name`, the studio appends a number: `"Ground (1)"`.
 
-### `fillBox(box, block, options): Promise<number>`
+### `fillBox({ layer, min, max, block }): Promise<number>`
 
-Puts `block` in every cell of `box` on `options.layer`, a layer name or id, and returns the number of cells written. Writes go out as `voxels-patched` commands of at most `MAX_PATCH_CELLS` (32,768) cells.
+Puts `block` in every cell of the box on `layer`, a layer name or id, and returns the number of cells written. Writes go out as `voxels-patched` commands of at most `MAX_PATCH_CELLS` (32,768) cells.
 
-### `clearBox(box, options): Promise<number>`
+### `clearBox({ layer, min, max }): Promise<number>`
 
-Empties the occupied cells of `box` on `options.layer` and returns how many it emptied.
+Empties the occupied cells of the box on `layer` and returns how many it emptied.
 
 ### `writeVoxels(voxels, options): Promise<number>`
 
@@ -87,5 +82,5 @@ Projects the blocks into `map`, a voxel document, under `slot`, and keeps them i
 
 ## How it works
 
-- `SyncedVoxelMap.applyStep` runs the document's `applyCommand` and returns the change `VoxelEdits.captureLocal` saw. The map's `loaded()` hook, which `ready` waits for, has `MapBlocksets` open the linked blockset assets through `AssetOpening.open` and link them with `BlocksetAsset.link`. Writes and `summary()` link again first, so a blockset added, closed, or pointed at another asset or slot since is picked up.
+- `SyncedVoxelMap.applyStep` runs the document's `applyCommand` and returns the change `VoxelEdits.captureLocal` saw. The map's `loaded()` hook, which `ready` waits for, has `MapBlocksets` open the linked blockset assets through `studio.open` and link them with `BlocksetAsset.link`. Writes and `summary()` link again first, so a blockset added, closed, or pointed at another asset or slot since is picked up.
 - A blockset uses the editor's `SyncedBlockset`, whose texture is a `PixelDocument` too. `PixelSurface` paints and reads both kinds' textures through the asset's `applyInBatches`.

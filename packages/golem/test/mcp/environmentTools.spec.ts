@@ -42,20 +42,11 @@ describe("environment tools", { timeout: 15_000 }, () => {
     assert.deepEqual(opened.intents.map(({ name }) => name), ["change"]);
     assert.ok("fog" in opened.intents[0].input.properties);
 
-    const { result: { changed, environment } } = await agent.call<{
-      result: {
-        changed: string[];
-        environment: EnvironmentFile;
-      };
-    }>("asset_intent", {
-      assetId,
-      intent: "change",
-      input: {
-        preset: "day",
-        fog: {
-          kind: "linear",
-          far: 80
-        }
+    const changed = await agent.intent<string[]>(assetId, "change", {
+      preset: "day",
+      fog: {
+        kind: "linear",
+        far: 80
       }
     });
     await agent.intent(sceneId, "useEnvironment", {
@@ -63,6 +54,7 @@ describe("environment tools", { timeout: 15_000 }, () => {
     });
 
     const day = createEnvironmentFile("day");
+    const environment = await agent.call<EnvironmentFile>("asset_read", { assetId });
     assert.deepEqual(environment, {
       ...day,
       fog: {
@@ -73,7 +65,6 @@ describe("environment tools", { timeout: 15_000 }, () => {
       }
     });
     assert.ok(changed.includes("sky") && changed.includes("fog"));
-    assert.deepEqual(await agent.call("asset_read", { assetId }), environment);
     const scene = await agent.call<{ environment: unknown; }>(
       "asset_read",
       { assetId: sceneId }
@@ -86,7 +77,7 @@ describe("environment tools", { timeout: 15_000 }, () => {
       await agent.intentError(sceneId, "useEnvironment", {
         environment: "levels/forest.scene.json"
       }),
-      /is a scene, not a environment/
+      /is a scene, not an environment/
     );
   });
 

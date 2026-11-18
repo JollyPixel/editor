@@ -59,7 +59,7 @@ describe("voxel map intents", { timeout: 15_000 }, () => {
         }
       ]
     });
-    const { layer } = await agent.intent<{ layer: { id: string; name: string; }; }>(
+    const layer = await agent.intent<{ id: string; name: string; }>(
       assetId,
       "addLayer",
       {
@@ -72,9 +72,7 @@ describe("voxel map intents", { timeout: 15_000 }, () => {
       layer: "Ground",
       ...kBox,
       block: "grass"
-    }), {
-      written: 6
-    });
+    }), 6);
     assert.deepEqual(await agent.intent(assetId, "heightmap", {
       ...kBox
     }), {
@@ -87,8 +85,6 @@ describe("voxel map intents", { timeout: 15_000 }, () => {
     assert.deepEqual(await agent.intent(assetId, "clearBox", {
       layer: layer.id,
       ...kBox
-    }), {
-      cleared: 6
-    });
+    }), 6);
   });
 });

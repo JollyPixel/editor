@@ -1,3 +1,8 @@
+// CONSTANTS
+const kExpectedKinds = new Intl.ListFormat("en", {
+  type: "disjunction"
+});
+
 export class KindMismatchError extends Error {
   readonly assetId: string;
   readonly kind: string;
@@ -7,13 +12,18 @@ export class KindMismatchError extends Error {
     kind: string,
     expected: readonly string[]
   ) {
-    const last = expected.at(-1);
-    const wanted = expected.length > 1 ?
-      `${expected.slice(0, -1).join(", ")} or ${last}` :
-      last;
-    super(`Asset "${assetId}" is a ${kind}, not a ${wanted}.`);
+    const wanted = kExpectedKinds.format(expected);
+    super(
+      `Asset "${assetId}" is ${withArticle(kind)}, not ${withArticle(wanted)}.`
+    );
     this.name = "KindMismatchError";
     this.assetId = assetId;
     this.kind = kind;
   }
+}
+
+function withArticle(
+  noun: string
+): string {
+  return /^[aeiou]/i.test(noun) ? `an ${noun}` : `a ${noun}`;
 }

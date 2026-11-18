@@ -14,23 +14,16 @@ import {
   type TEXT_KIND
 } from "../network/client.ts";
 import { TextMatchError } from "./errors/TextMatchError.ts";
+import type {
+  LinesInput,
+  ReplaceInput,
+  WriteInput
+} from "./TextInputs.ts";
 
 export type TextKind =
   | typeof SCRIPT_KIND
   | typeof SHADER_KIND
   | typeof TEXT_KIND;
-
-export interface LineRange {
-  /**
-   * The first line, from 1.
-   */
-  from: number;
-  /**
-   * The last line, included.
-   * @default the last line of the text
-   */
-  to?: number;
-}
 
 export interface TextLines {
   from: number;
@@ -40,14 +33,6 @@ export interface TextLines {
   to: number;
   lineCount: number;
   text: string;
-}
-
-export interface ReplaceOptions {
-  /**
-   * Replace every occurrence instead of failing when there are several.
-   * @default false
-   */
-  all?: boolean;
 }
 
 export class TextAsset<
@@ -68,9 +53,9 @@ export class TextAsset<
   }
 
   lines(
-    range: LineRange
+    input: LinesInput = {}
   ): TextLines {
-    const { from, to = Infinity } = range;
+    const { from = 1, to = Infinity } = input;
     if (!Number.isInteger(from) || from < 1 || to < from) {
       throw new RangeError(
         `Lines ${from} to ${to} are not a range of lines counted from 1.`
@@ -88,16 +73,15 @@ export class TextAsset<
   }
 
   async replace(
-    search: string,
-    replacement: string,
-    options: ReplaceOptions = {}
+    input: ReplaceInput
   ): Promise<number> {
+    const { search, replace: replacement, all = false } = input;
     if (search === "") {
       throw new TypeError("The search text is empty.");
     }
 
     const offsets = occurrences(this.text, search);
-    if (offsets.length === 0 || (offsets.length > 1 && !options.all)) {
+    if (offsets.length === 0 || (offsets.length > 1 && !all)) {
       throw new TextMatchError(search, offsets.length);
     }
 
@@ -115,9 +99,9 @@ export class TextAsset<
   }
 
   async write(
-    text: string
+    input: WriteInput
   ): Promise<void> {
-    const edit = TextEdit.between(this.text, text);
+    const edit = TextEdit.between(this.text, input.text);
     if (!edit.empty) {
       await this.apply([
         {

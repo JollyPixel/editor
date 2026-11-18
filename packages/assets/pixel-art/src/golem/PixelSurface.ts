@@ -8,24 +8,16 @@ import type {
 
 // Import Internal Dependencies
 import type { PixelEditCommand } from "../network/server.ts";
+import type {
+  FillRectInput,
+  PaintPixelsInput,
+  PixelRect,
+  ReplacePaletteInput
+} from "./PixelInputs.ts";
 
 // CONSTANTS
 export const MAX_READ_PIXELS = 4_096;
 export const MAX_STROKE_PIXELS = 16_384;
-
-export interface PixelRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface PixelWrite extends Vec2 {
-  /**
-   * `"#rrggbb"` or `"#rrggbbaa"`.
-   */
-  color: string;
-}
 
 export interface PixelArtRegion {
   id: string;
@@ -127,10 +119,10 @@ export class PixelSurface {
   }
 
   async paintPixels(
-    writes: Iterable<PixelWrite>
+    input: PaintPixelsInput
   ): Promise<number> {
     const strokes = new Map<string, ColorStroke>();
-    for (const { x, y, color } of writes) {
+    for (const { x, y, color } of input.pixels) {
       this.#assertInside({ x, y, width: 1, height: 1 });
       const rgba = Color.from(color).toBytes();
       const key = hexColor(rgba);
@@ -146,9 +138,9 @@ export class PixelSurface {
   }
 
   async fillRect(
-    rect: PixelRect,
-    color: string
+    input: FillRectInput
   ): Promise<number> {
+    const { color, ...rect } = input;
     this.#assertInside(rect);
     const positions: Vec2[] = [];
     for (let y = rect.y; y < rect.y + rect.height; y++) {
@@ -166,13 +158,13 @@ export class PixelSurface {
   }
 
   async replacePalette(
-    colors: Iterable<string>
+    input: ReplacePaletteInput
   ): Promise<void> {
     await this.#apply([
       {
         action: "palette-replaced",
         metadata: {
-          colors: Array.from(colors, (color) => Color.from(color).toBytes())
+          colors: input.colors.map((color) => Color.from(color).toBytes())
         }
       }
     ]);

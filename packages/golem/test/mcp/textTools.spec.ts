@@ -34,7 +34,7 @@ describe("text intents", { timeout: 15_000 }, () => {
       replace: ""
     });
 
-    assert.deepEqual(await agent.intent(assetId, "read", {
+    assert.deepEqual(await agent.intent(assetId, "lines", {
       from: 2,
       to: 9
     }), {

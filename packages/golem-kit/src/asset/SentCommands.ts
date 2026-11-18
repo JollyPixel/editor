@@ -1,7 +1,11 @@
 // Import Internal Dependencies
+import type { GolemCommand } from "./CommandBatch.ts";
 import { CommandRefusedError } from "./errors/CommandRefusedError.ts";
 
-export class SentCommands<TCommand> {
+// CONSTANTS
+export const MAX_UNANSWERED_COMMANDS = 1_000;
+
+export class SentCommands<TCommand extends GolemCommand> {
   #unanswered = new Map<object, TCommand>();
   #refused: TCommand[] = [];
   #failure: Error | null = null;
@@ -9,10 +13,6 @@ export class SentCommands<TCommand> {
 
   get unanswered(): number {
     return this.#unanswered.size;
-  }
-
-  get failure(): Error | null {
-    return this.#failure;
   }
 
   track(
@@ -50,7 +50,25 @@ export class SentCommands<TCommand> {
     this.#drain = null;
   }
 
-  drained(): Promise<void> {
+  throwIfFailed(): void {
+    if (this.#failure !== null) {
+      throw this.#failure;
+    }
+  }
+
+  async makeRoom(
+    count: number
+  ): Promise<void> {
+    while (
+      this.#unanswered.size > 0 &&
+      this.#unanswered.size + count > MAX_UNANSWERED_COMMANDS
+    ) {
+      await this.#drained();
+    }
+    this.throwIfFailed();
+  }
+
+  #drained(): Promise<void> {
     if (this.#failure !== null) {
       return Promise.reject(this.#failure);
     }
@@ -64,7 +82,7 @@ export class SentCommands<TCommand> {
   }
 
   async settled(): Promise<void> {
-    await this.drained();
+    await this.#drained();
     const refused = this.#refused.splice(0);
     if (refused.length > 0) {
       throw new CommandRefusedError(refused);

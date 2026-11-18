@@ -29,7 +29,7 @@ describe("voxel model intents", { timeout: 15_000 }, () => {
       { path: "models/robot.voxelmodel.json" }
     );
 
-    const { materials } = await agent.intent<{ materials: { id: string; }[]; }>(
+    const materials = await agent.intent<{ id: string; }[]>(
       assetId,
       "addMaterials",
       {

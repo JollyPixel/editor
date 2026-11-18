@@ -6,7 +6,7 @@ An agent reaches the same edits through the MCP server: `asset_open` answers the
 
 ## Intents
 
-- `change({ preset?, sky?, sun?, ambient?, reflections?, fog?, toneMapping?, glow?, voxel? })`: `change` with each section given as a partial, answering `{ changed, environment }`: the sections that changed and the file after.
+- `change`: runs the method of the same name with its input and answers the sections that changed.
 
 ## `EnvironmentAsset`
 
@@ -14,10 +14,7 @@ The asset for `environment`: the sky, sun, ambient light, reflections, fog, tone
 
 ```ts
 const environment = await golem.open(assetId, "environment");
-await environment.change(
-  { fog: { kind: "exp2", density: 0.03 } },
-  { preset: "day" }
-);
+await environment.change({ preset: "day", fog: { kind: "exp2", density: 0.03 } });
 await environment.settled();
 ```
 
@@ -25,12 +22,12 @@ await environment.settled();
 
 A copy of the file.
 
-### `change(patch, options?): Promise<EnvironmentSection[]>`
+### `change({ preset?, ...patch }): Promise<EnvironmentSection[]>`
 
-Merges each section of `patch` into the current one and sends one command holding only the sections that differ. It returns those sections, and sends nothing when none differs.
+Merges each section given (`sky`, `sun`, `ambient`, `reflections`, `fog`, `toneMapping`, `glow`, `voxel`) into the current one and sends one command holding only the sections that differ. It returns those sections, and sends nothing when none differs.
 
 - A new `kind` for `sky` or `fog`, or a `sun` or `glow` that was `null`, starts from the defaults the environment editor uses. `null` turns `sun` or `glow` off.
-- `options.preset` (`default`, `studio`, `day` or `night`) makes every section start from that preset instead of the current file.
+- `preset` (`default`, `studio`, `day` or `night`) makes every section start from that preset instead of the current file.
 - A field the section's kind does not have (`density` on a `linear` fog) throws `TypeError`, and a value the command schema rejects throws `CommandInvalidError`, both before anything is sent.
 
 ### Focus

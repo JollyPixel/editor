@@ -5,10 +5,7 @@ import {
   PixelSurface,
   type PixelRect
 } from "@jolly-pixel/asset.pixel-art/golem";
-import {
-  GolemAsset,
-  type AssetOpening
-} from "@jolly-pixel/golem.kit";
+import { GolemAsset } from "@jolly-pixel/golem.kit";
 import type { PeerMetadata } from "@jolly-pixel/network/client";
 import {
   BlocksetLink,
@@ -24,7 +21,6 @@ import type {
   BlocksetEditCommand,
   SyncedBlockset
 } from "../network/client.ts";
-import type { BlocksetEditableKind } from "../network/server.ts";
 
 export interface BlockSummary {
   id: number;
@@ -41,18 +37,10 @@ export class BlocksetAsset extends GolemAsset<
   BlocksetEditCommand,
   SyncedBlockset
 > {
-  readonly pixels: PixelSurface;
-
-  constructor(
-    opening: AssetOpening,
-    kind: BlocksetEditableKind
-  ) {
-    super(opening, kind);
-    this.pixels = new PixelSurface(
-      this.synced.pixels,
-      (commands) => this.applyInBatches(commands)
-    );
-  }
+  readonly pixels = new PixelSurface(
+    this.synced.pixels,
+    (commands) => this.applyInBatches(commands)
+  );
 
   blocks(): BlockSummary[] {
     const { blockset } = this.synced;

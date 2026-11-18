@@ -4,8 +4,7 @@ import { randomUUID } from "node:crypto";
 // Import Third-party Dependencies
 import {
   GolemAsset,
-  UnknownEntryError,
-  type AssetOpening
+  UnknownEntryError
 } from "@jolly-pixel/golem.kit";
 import type { PeerMetadata } from "@jolly-pixel/network/client";
 import {
@@ -26,7 +25,13 @@ import {
   type SyncedVoxelMap,
   type VoxelBrushPresence
 } from "../network/client.ts";
-import type { VoxelMapEditableKind } from "../network/server.ts";
+import type {
+  AddLayerInput,
+  ClearBoxInput,
+  FillBoxInput,
+  HeightmapInput,
+  QueryInput
+} from "./MapInputs.ts";
 import {
   MapBlocksets,
   type MapBlock,
@@ -46,14 +51,6 @@ export interface LayerOption {
    * A layer name or id.
    */
   layer: string;
-}
-
-export interface AddLayerOptions {
-  /**
-   * A layer name or id: the new layer goes right above it.
-   * @default the new layer goes on top
-   */
-  above?: string;
 }
 
 export interface AddedLayer {
@@ -119,15 +116,7 @@ export interface VoxelWrite {
 type CellWrite = readonly [VoxelCoord, PackedVoxel];
 
 export class VoxelMapAsset extends GolemAsset<VoxelWorldCommand, SyncedVoxelMap> {
-  #blocksets: MapBlocksets;
-
-  constructor(
-    opening: AssetOpening,
-    kind: VoxelMapEditableKind
-  ) {
-    super(opening, kind);
-    this.#blocksets = new MapBlocksets(this.synced.voxels, opening.open);
-  }
+  #blocksets = new MapBlocksets(this.synced.voxels, this.studio);
 
   async summary(): Promise<MapSummary> {
     await this.#blocksets.link();
@@ -171,16 +160,15 @@ export class VoxelMapAsset extends GolemAsset<VoxelWorldCommand, SyncedVoxelMap>
   }
 
   query(
-    box: VoxelBoxJSON,
-    options: Partial<LayerOption> = {}
+    input: QueryInput
   ): MapQuery {
-    const layer = this.#layerFilter(options.layer);
+    const layer = this.#layerFilter(input.layer);
     const { world } = this.synced.voxels;
     const voxelAt = layer === null ?
       (position: VoxelCoord) => world.voxelWithLayerAt(position) :
       (position: VoxelCoord) => layerVoxel(layer, position);
     const cells: MapCell[] = [];
-    for (const position of new VoxelBox(box).cells()) {
+    for (const position of new VoxelBox(input).cells()) {
       const found = voxelAt(position);
       if (found === undefined) {
         continue;
@@ -205,11 +193,10 @@ export class VoxelMapAsset extends GolemAsset<VoxelWorldCommand, SyncedVoxelMap>
   }
 
   heightmap(
-    box: VoxelBoxJSON,
-    options: Partial<LayerOption> = {}
+    input: HeightmapInput
   ): MapHeightmap {
-    const { min, max } = new VoxelBox(box);
-    const source = this.#layerFilter(options.layer) ?? this.synced.voxels.world;
+    const { min, max } = new VoxelBox(input);
+    const source = this.#layerFilter(input.layer) ?? this.synced.voxels.world;
     const heights: (number | null)[][] = [];
     for (let z = min.z; z <= max.z; z++) {
       const row: (number | null)[] = [];
@@ -235,8 +222,7 @@ export class VoxelMapAsset extends GolemAsset<VoxelWorldCommand, SyncedVoxelMap>
   }
 
   async addLayer(
-    name: string,
-    options: AddLayerOptions = {}
+    input: AddLayerInput
   ): Promise<AddedLayer> {
     const layerId = randomUUID();
     await this.apply([
@@ -244,8 +230,8 @@ export class VoxelMapAsset extends GolemAsset<VoxelWorldCommand, SyncedVoxelMap>
         action: "added",
         layerId,
         metadata: {
-          name,
-          rank: this.#rankAbove(options.above),
+          name: input.name,
+          rank: this.#rankAbove(input.above),
           options: {}
         }
       }
@@ -258,15 +244,13 @@ export class VoxelMapAsset extends GolemAsset<VoxelWorldCommand, SyncedVoxelMap>
   }
 
   async fillBox(
-    box: VoxelBoxJSON,
-    block: string | number,
-    options: LayerOption
+    input: FillBoxInput
   ): Promise<number> {
-    const layer = this.#layer(options.layer);
+    const layer = this.#layer(input.layer);
     const resolve = await this.#blocksets.resolver();
-    const packed = packVoxel(resolve(block), 0);
+    const packed = packVoxel(resolve(input.block), 0);
     const writes = Array.from(
-      new VoxelBox(box).cells(),
+      new VoxelBox(input).cells(),
       (position): CellWrite => [position, packed]
     );
 
@@ -274,12 +258,11 @@ export class VoxelMapAsset extends GolemAsset<VoxelWorldCommand, SyncedVoxelMap>
   }
 
   async clearBox(
-    box: VoxelBoxJSON,
-    options: LayerOption
+    input: ClearBoxInput
   ): Promise<number> {
-    const layer = this.#layer(options.layer);
+    const layer = this.#layer(input.layer);
     const writes: CellWrite[] = [];
-    for (const position of new VoxelBox(box).cells()) {
+    for (const position of new VoxelBox(input).cells()) {
       if (layer.packedAt(position) !== VOXEL_ABSENT) {
         writes.push([position, VOXEL_ABSENT]);
       }

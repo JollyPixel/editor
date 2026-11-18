@@ -32,7 +32,7 @@ describe("scene intents", { timeout: 15_000 }, () => {
     const assetId = await createForest(agent);
     const sunId = await actorNamed(agent, assetId, "Sun");
 
-    const { actors } = await agent.intent<{ actors: AddedActor[]; }>(
+    const actors = await agent.intent<AddedActor[]>(
       assetId,
       "addActors",
       {
@@ -67,7 +67,7 @@ describe("scene intents", { timeout: 15_000 }, () => {
       { path: "scripts/spin.ts" }
     );
 
-    const { components } = await agent.intent<{ components: { id: string; }[]; }>(
+    const components = await agent.intent<{ id: string; }[]>(
       assetId,
       "addComponents",
       {

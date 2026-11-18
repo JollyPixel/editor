@@ -2,7 +2,7 @@
 import { LockedByPeerError } from "@jolly-pixel/golem.kit";
 import {
   parsePeerProfile,
-  type Room
+  type Peer
 } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
@@ -14,7 +14,7 @@ import {
 } from "../network/client.ts";
 
 export function assertModelUnlocked(
-  room: Room,
+  peers: Iterable<Peer>,
   commands: readonly VoxelModelCommand[]
 ): void {
   const refs = commands.flatMap((command) => modelFootprint(command).conflicts);
@@ -22,10 +22,8 @@ export function assertModelUnlocked(
     return;
   }
 
-  for (const peer of room.peers.values()) {
-    const locked = peer.clientId === room.clientId ?
-      undefined :
-      refs.find((ref) => holdsModelLock(peer.presence, ref));
+  for (const peer of peers) {
+    const locked = refs.find((ref) => holdsModelLock(peer.presence, ref));
     if (locked !== undefined) {
       throw new LockedByPeerError(
         parsePeerProfile(peer.profile).username,

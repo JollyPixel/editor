@@ -11,7 +11,7 @@ import {
 import {
   GOLEM_KINDS_EXPORT,
   type GolemAsset,
-  type GolemKind,
+  type GolemKindName,
   type GolemKindContribution
 } from "@jolly-pixel/golem.kit";
 import type { KindPackageDescriptor } from "@jolly-pixel/server";
@@ -65,7 +65,7 @@ export class GolemKinds {
 
   has(
     kind: string
-  ): kind is GolemKind {
+  ): kind is GolemKindName {
     return this.#contributions.has(kind);
   }
 

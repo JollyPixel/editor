@@ -39,7 +39,7 @@ Write the script in the folder `script_run` names (`packages/golem/local/` of th
 `skill/examples/sceneLayout.ts` is a template:
 
 - `Golem.connect()`, then `golem.catalog.tag(assetId, name)`.
-- `golem.open(assetId, "scene")` returns a `SceneAsset`, whose types come from `@jolly-pixel/asset.scene/golem`; `scene.tree` reads actors and components, `scene.addActors(specs)` adds actors.
+- `golem.open(assetId, "scene")` returns a `SceneAsset`, whose types come from `@jolly-pixel/asset.scene/golem`; `scene.tree` reads actors and components, `scene.addActors({ actors })` adds actors. Each intent is also a method of the same name taking the same input.
 - `scene.apply(commands)` takes up to 500 commands and waits while 1,000 are unanswered, so loop over batches freely.
 - `await scene.settled()` before reporting success. It rejects with `CommandRefusedError` or `CommandDeniedError`.
 - `golem.activity(scene, { label, progress })` to show progress; `golem.clearActivity()` at the end.

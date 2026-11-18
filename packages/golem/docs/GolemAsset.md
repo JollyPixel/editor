@@ -32,7 +32,7 @@ Checks every command against the kind's schema and the golem's rights, applies t
 - Throws `CommandDeniedError` when the owner's role may not write this asset.
 - Throws `LockedByPeerError` when a peer holds a lock on what the batch edits, for kinds whose editor has locks.
 - Throws `RangeError` for a batch over `MAX_BATCH_COMMANDS` (500).
-- Waits before sending while the batch would bring the unanswered commands over `MAX_UNANSWERED_COMMANDS` (1,000), so a runaway loop cannot flood the room.
+- Waits before sending while the batch would bring the unanswered commands over `MAX_UNANSWERED_COMMANDS` (1,000), so a runaway loop cannot flood the room. The rights and lock checks run after the wait, against the asset as it is then.
 
 ### `settled(): Promise<void>`
 

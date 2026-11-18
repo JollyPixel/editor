@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import * as z from "zod/mini";
 
+// Import Internal Dependencies
+import { ENVIRONMENT_PRESET_NAMES } from "../asset/environment.ts";
+
 // CONSTANTS
 const kColor = z.string().check(z.describe("Hex, such as \"#ffd9a0\"."));
 const kIntensity = z.number().check(z.gte(0));
@@ -66,4 +69,13 @@ export const environmentPatchSchema = z.object({
   }).check(z.describe("Read by voxel maps and voxel models only.")))
 });
 
+export const environmentChangeSchema = z.extend(environmentPatchSchema, {
+  preset: z.optional(z.enum(ENVIRONMENT_PRESET_NAMES).check(
+    z.describe("Start every section from this preset, then apply the " +
+      "sections given.")
+  ))
+});
+
 export type EnvironmentPatch = z.output<typeof environmentPatchSchema>;
+
+export type EnvironmentChange = z.output<typeof environmentChangeSchema>;

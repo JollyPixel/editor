@@ -10,6 +10,7 @@ import {
 } from "./voxelMapGolemKinds.ts";
 
 export * from "./VoxelMapAsset.ts";
+export type * from "./MapInputs.ts";
 export {
   BlocksetAsset,
   type BlockSummary

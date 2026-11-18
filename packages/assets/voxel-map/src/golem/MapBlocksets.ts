@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { AssetOpening } from "@jolly-pixel/golem.kit";
+import type { AssetStudio } from "@jolly-pixel/golem.kit";
 import {
   BlocksetSlot,
   decodeBlocksetSlot,
@@ -38,16 +38,16 @@ interface LinkedBlockset {
 
 export class MapBlocksets {
   #voxels: VoxelDocument;
-  #open: AssetOpening["open"];
+  #studio: AssetStudio;
   #linked = new Map<string, LinkedBlockset>();
   #errors = new Map<string, string>();
 
   constructor(
     voxels: VoxelDocument,
-    open: AssetOpening["open"]
+    studio: AssetStudio
   ) {
     this.#voxels = voxels;
-    this.#open = open;
+    this.#studio = studio;
   }
 
   async link(): Promise<void> {
@@ -70,7 +70,7 @@ export class MapBlocksets {
 
       this.#errors.delete(definition.id);
       try {
-        const blockset = await this.#open(asset.id, "blockset");
+        const blockset = await this.#studio.open(asset.id, "blockset");
         this.#linked.set(definition.id, {
           asset: blockset,
           link: blockset.link(this.#voxels, new BlocksetSlot({

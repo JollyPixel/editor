@@ -11,19 +11,19 @@ import type {
 import type * as z from "zod/mini";
 
 // Import Internal Dependencies
-import type { AssetOpening } from "./AssetOpening.ts";
+import type {
+  AssetOpening,
+  AssetStudio
+} from "./AssetOpening.ts";
+import {
+  CommandBatch,
+  MAX_BATCH_COMMANDS,
+  type GolemCommand
+} from "./CommandBatch.ts";
 import { SentCommands } from "./SentCommands.ts";
 import { AssetClosedError } from "./errors/AssetClosedError.ts";
 import { CommandDeniedError } from "./errors/CommandDeniedError.ts";
 import { CommandInvalidError } from "./errors/CommandInvalidError.ts";
-
-// CONSTANTS
-export const MAX_BATCH_COMMANDS = 500;
-export const MAX_UNANSWERED_COMMANDS = 1_000;
-
-export interface GolemCommand {
-  action: string;
-}
 
 export type GolemDocumentKind<
   TCommand,
@@ -38,24 +38,15 @@ export abstract class GolemAsset<
   readonly kind: string;
 
   protected readonly synced: TSynced;
+  protected readonly studio: AssetStudio;
 
   #room: Room;
   #schema: z.ZodMiniType<TCommand>;
-  #actions: ReadonlySet<string>;
   #edits: LocalEdits<TCommand>;
   #sent = new SentCommands<TCommand>();
   #ready = Promise.withResolvers<void>();
-  #release: () => void;
+  #subscriptions = new DisposableStack();
   #onClose: () => void;
-  #closed = false;
-
-  #onDenied = (
-    event: RoomRejectionEvent
-  ): void => {
-    if (this.#actions.has(event.event)) {
-      this.#fail(new CommandDeniedError(event.event, event.reason));
-    }
-  };
 
   constructor(
     opening: AssetOpening,
@@ -65,33 +56,38 @@ export abstract class GolemAsset<
     this.id = opening.assetId;
     this.kind = kind.kind;
     this.synced = kind.syncDocument(opening.room);
+    this.studio = opening.studio;
     this.#room = opening.room;
     this.#schema = kind.commandSchema;
-    this.#actions = new Set(kind.commandProtocol.events);
     this.#edits = kind.localEdits(this.synced);
     this.#onClose = opening.onClose;
     this.synced.ready
       .then(() => this.loaded())
       .then(this.#ready.resolve, this.#ready.reject);
 
-    const { receipts } = this.#edits;
+    const actions = new Set(kind.commandProtocol.events);
+    const onDenied = (event: RoomRejectionEvent): void => {
+      if (actions.has(event.event)) {
+        this.#fail(new CommandDeniedError(event.event, event.reason));
+      }
+    };
     const onAbort = (): void => this.#fail(signal.reason);
-    const unsubscribers = [
-      receipts.subscribe("confirmed", (change) => this.#sent.confirm(change)),
+    const { receipts } = this.#edits;
+    this.#subscriptions.defer(
+      receipts.subscribe("confirmed", (change) => this.#sent.confirm(change))
+    );
+    this.#subscriptions.defer(
       receipts.subscribe("refused", (change) => this.#sent.refuse(change))
-    ];
-    this.#room.on("denied", this.#onDenied);
+    );
+    this.#room.on("denied", onDenied);
+    this.#subscriptions.defer(() => this.#room.off("denied", onDenied));
     signal.addEventListener("abort", onAbort, { once: true });
+    this.#subscriptions.defer(
+      () => signal.removeEventListener("abort", onAbort)
+    );
     if (signal.aborted) {
       onAbort();
     }
-    this.#release = () => {
-      for (const unsubscribe of unsubscribers) {
-        unsubscribe();
-      }
-      this.#room.off("denied", this.#onDenied);
-      signal.removeEventListener("abort", onAbort);
-    };
     this.#room.join();
   }
 
@@ -104,7 +100,7 @@ export abstract class GolemAsset<
   }
 
   get closed(): boolean {
-    return this.#closed;
+    return this.#subscriptions.disposed;
   }
 
   peers(): IterableIterator<Peer> {
@@ -120,23 +116,18 @@ export abstract class GolemAsset<
   async apply(
     commands: Iterable<unknown>
   ): Promise<void> {
-    this.#throwIfFailed();
-    const batch = this.#parse(commands);
+    const { commands: batch } = new CommandBatch(commands, this.#schema);
+    await this.#sent.makeRoom(batch.length);
+    this.#assertWritable(batch);
     this.guard(batch);
-    while (
-      this.#sent.unanswered > 0 &&
-      this.#sent.unanswered + batch.length > MAX_UNANSWERED_COMMANDS
-    ) {
-      await this.#sent.drained();
-    }
-    this.#throwIfFailed();
 
     for (const [index, command] of batch.entries()) {
       const change = this.#edits.applyStep(command);
       if (change === null) {
         throw new CommandInvalidError(
           index,
-          `the asset cannot apply ${JSON.stringify(command)} as it is now`
+          `the asset cannot apply ${JSON.stringify(command)} as it is now` +
+          (index > 0 ? `; the ${index} command(s) before it were sent` : "")
         );
       }
       this.#sent.track(change, command);
@@ -153,13 +144,12 @@ export abstract class GolemAsset<
   }
 
   close(): void {
-    if (this.#closed) {
+    if (this.closed) {
       return;
     }
 
-    this.#closed = true;
     this.#fail(new AssetClosedError(this.id));
-    this.#release();
+    this.#subscriptions.dispose();
     this.synced.dispose();
     this.#room.leave();
     this.#onClose();
@@ -190,36 +180,16 @@ export abstract class GolemAsset<
     this.#ready.reject(error);
   }
 
-  #parse(
-    commands: Iterable<unknown>
-  ): TCommand[] {
-    const batch = [...commands];
-    if (batch.length > MAX_BATCH_COMMANDS) {
-      throw new RangeError(
-        `A batch holds at most ${MAX_BATCH_COMMANDS} commands, got ${batch.length}.`
-      );
-    }
-
-    return batch.map((command, index) => {
-      const parsed = this.#schema.safeParse(command);
-      if (!parsed.success) {
-        throw new CommandInvalidError(index, parsed.error.message);
-      }
-      const { action } = parsed.data;
+  #assertWritable(
+    commands: readonly TCommand[]
+  ): void {
+    for (const { action } of commands) {
       if (this.#room.can(action) !== "write") {
         throw new CommandDeniedError(
           action,
           `role "${this.#room.role}" may only read this asset`
         );
       }
-
-      return parsed.data;
-    });
-  }
-
-  #throwIfFailed(): void {
-    if (this.#sent.failure !== null) {
-      throw this.#sent.failure;
     }
   }
 }
