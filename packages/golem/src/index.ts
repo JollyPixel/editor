@@ -18,7 +18,7 @@ export {
   UnknownAssetError,
   UnknownEntryError,
   type GolemAssets,
-  type GolemKind
+  type GolemKindName
 } from "@jolly-pixel/golem.kit";
 export * from "./kinds/GolemKinds.ts";
 export * from "./kinds/errors/UnsupportedKindError.ts";

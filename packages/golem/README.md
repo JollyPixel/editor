@@ -36,4 +36,4 @@ claude mcp add jollypixel --env JOLLY_GOLEM_TOKEN=<token> -- node <checkout>/pac
 - [MCP server](./docs/Mcp.md): registering it, its tools and resources.
 - [Glossary](./GLOSSARY.md) and [architecture](./ARCHITECTURE.md).
 
-`SPEC.md` holds the design and `PLAN.md` the build order.
+`ROADMAP.md` lists what is left to do.

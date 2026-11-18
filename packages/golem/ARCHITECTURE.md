@@ -13,7 +13,7 @@ flowchart TB
 ```
 
 - `Golem` owns the connection and the open assets; opening an asset twice returns the same one. Each `GolemAsset` joins its room when built and leaves it on `close`.
-- `OpenAssets` keeps who holds each open asset: the caller of `open`, and each asset that opened it through `AssetOpening.open`, as a voxel map opens its blocksets. `golem.close` and a holder's `close` drop a holder; the asset closes with its last one.
+- `OpenAssets` keeps who holds each open asset: the caller of `open`, and each asset that opened it through `AssetStudio.open`, as a voxel map opens its blocksets. `golem.close` and a holder's `close` drop a holder; the asset closes with its last one.
 - `ChatChannel` wraps the server's `AgentChatClient`; it keeps people's messages until `next` takes them. `ActivityMirror` publishes `Golem.activity` on the asset's room and, with the asset id, through `AgentChatClient.publishActivity`.
 - Code: `src/peer/`, `src/kinds/GolemKinds.ts`, `src/chat/`.
 
@@ -49,11 +49,11 @@ flowchart TB
 ```
 
 - `GolemKinds.load` locates every kind package the manifest lists with asset-server's `PackageResolver` (`projectRoot`, then the golem's dependencies, then the checkout's `packages/assets/`), reads its `jollypixel.golem` export subpath through `findProjectContributions`, as the studio does for its other contributions, and imports the packages in parallel. A local package such as `./kinds/foo` works the same way. A package without `jollypixel.golem` adds nothing; one that fails to load records the error, which `UnsupportedKindError` carries as its cause when one of its kinds is opened.
-- The kit holds what kinds share: `GolemAsset`, `AssetOpening` (with the manifest's editors as `unknown[]`: a kind parses the fields it reads, as the scene parses `sceneComponents`), `golemKind`, `golemIntent`, `resolveEntry` and the errors kinds throw (`UnknownEntryError`, `UnknownAssetError`, `KindMismatchError`, `LockedByPeerError`). It has no `@jolly-pixel/server` dependency: the server depends on `asset.voxel-map`, which would close a project-reference cycle.
+- The kit holds what kinds share: `GolemAsset`, `AssetOpening`, `golemKind`, `golemIntent`, `resolveEntry` and the errors kinds throw (`UnknownEntryError`, `UnknownAssetError`, `KindMismatchError`, `LockedByPeerError`). It has no `@jolly-pixel/server` dependency: the server depends on `asset.voxel-map`, which would close a project-reference cycle.
 - A package adds its kinds to the kit's `GolemAssets` interface in its `golem` entry, so `golem.open(id, kind)` is typed once the entry is imported. Without it, `open` returns a `GolemAsset`.
-- A kind that needs another asset opens it through `AssetOpening.open`, such as a voxel map its blocksets; `OpenAssets` keeps it open while a holder needs it.
-- An intent is a named operation with a description, an input schema and `run(asset, input)`. `golemIntent` parses the input before `run`, so a bad input fails with `IntentInputError` before any command is sent.
-- The golem's tests open every first-party kind against a test studio, so the asset packages are its dev dependencies only.
+- `GolemAsset` keeps the room, the abort signal and `onClose` from its `AssetOpening` to itself. A subclass sees only `synced` and `studio` (`AssetStudio`): the catalog, the manifest's editors as `unknown[]` (a kind parses the fields it reads, as the scene parses `sceneComponents`) and `open`. A kind that needs another asset opens it through `studio.open`, such as a voxel map its blocksets; `OpenAssets` keeps it open while a holder needs it.
+- An intent is a named operation with a description, an input schema and `run(asset, input)`. `golemIntent` parses the input before `run`, so a bad input fails with `IntentInputError` before any command is sent. Each first-party intent passes its input to the asset method of the same name, whose parameter is the schema's output type, and answers what the method returns.
+- The kit's `testing` entry builds openings without a server: `TestStudio` hosts each asset in a `LiveAssetRoom` and hands the golem a `TestRoom`. Each asset package tests its kind with it, in its `test/golem/`. The golem tests discovery, holders, MCP and the bridge against a real studio, so the asset packages are its dev dependencies only.
 - `asset_open` reads a kind's guide, a URL next to the built entry, only when an agent opens an asset of that kind.
 - Code: `src/kinds/GolemKinds.ts`; each kind in its asset package's `src/golem/`, described in that package's `docs/Golem.md`.
 

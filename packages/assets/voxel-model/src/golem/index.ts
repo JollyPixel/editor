@@ -7,6 +7,8 @@ import { VOXEL_MODEL_GOLEM_KIND } from "./voxelModelGolemKind.ts";
 
 export * from "./VoxelModelAsset.ts";
 export type {
+  AddBlocksInput,
+  AddMaterialsInput,
   BlockSpec,
   MaterialSpec
 } from "./ModelSpecs.ts";

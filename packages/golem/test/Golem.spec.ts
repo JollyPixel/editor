@@ -45,6 +45,12 @@ function actorNamed(
   return actor.id;
 }
 
+function openIds(
+  golem: Golem
+): string[] {
+  return golem.status().assets.map(({ assetId }) => assetId);
+}
+
 function mirrored(
   person: ChatPeer
 ): AgentChatActivity | null {
@@ -155,6 +161,30 @@ describe("Golem", { timeout: kTimeoutMs }, () => {
 
       return assets?.open.length === 0 && assets.focused === null;
     });
+  });
+
+  test("keeps a blockset open while the agent or a map still holds it", async() => {
+    await using backend = await serveStudio();
+    const alice = await registered(backend, "Alice");
+    using golem = await Golem.connect({
+      url: backend.url,
+      token: (await createAgentToken(backend, alice, "Builder")).value
+    });
+    const mapId = await golem.catalog.create("maps/field.voxelmap.json", null);
+    const map = await golem.open(mapId, "voxelmap");
+    const [{ assetId: blocksetId }] = (await map.summary()).blocksets;
+    assert.ok(blocksetId !== null);
+    await golem.open(blocksetId, "blockset");
+
+    golem.close(blocksetId);
+    assert.deepEqual(openIds(golem), [mapId, blocksetId]);
+    golem.close(mapId);
+    assert.deepEqual(openIds(golem), []);
+
+    const reopened = await golem.open(mapId, "voxelmap");
+    await golem.open(blocksetId, "blockset");
+    golem.close(reopened.id);
+    assert.deepEqual(openIds(golem), [blocksetId]);
   });
 
   test("refuses to connect with an unknown token", async() => {

@@ -10,21 +10,15 @@ import { createEnvironmentFile } from "../asset/environment.ts";
 import { changedSections } from "../model/EnvironmentState.ts";
 import { EnvironmentSwitch } from "../model/EnvironmentSwitch.ts";
 import type { SyncedEnvironmentDocument } from "../network/environmentDocumentKind.ts";
-import type { EnvironmentPatch } from "./EnvironmentPatch.ts";
+import type {
+  EnvironmentChange,
+  EnvironmentPatch
+} from "./EnvironmentPatch.ts";
 import type {
   EnvironmentCommand,
   EnvironmentFile,
-  EnvironmentPresetName,
   EnvironmentSection
 } from "../network/types.ts";
-
-export interface EnvironmentChangeOptions {
-  /**
-   * Every section starts from this preset before the patch.
-   * @default the environment as it is now
-   */
-  preset?: EnvironmentPresetName;
-}
 
 export class EnvironmentAsset extends GolemAsset<
   EnvironmentCommand,
@@ -35,12 +29,12 @@ export class EnvironmentAsset extends GolemAsset<
   }
 
   async change(
-    patch: EnvironmentPatch,
-    options: EnvironmentChangeOptions = {}
+    input: EnvironmentChange
   ): Promise<EnvironmentSection[]> {
+    const { preset, ...patch } = input;
     const current = this.synced.document.file;
     const next = patchedSections(
-      options.preset === undefined ? current : createEnvironmentFile(options.preset),
+      preset === undefined ? current : createEnvironmentFile(preset),
       patch
     );
 

@@ -286,7 +286,7 @@ describe("GolemMcpServer", { timeout: kTimeoutMs }, () => {
       fs.readFileSync(path.join(kGolemDocs, "Golem.md"), "utf-8")
     );
     await assert.rejects(
-      agent.read("jollypixel://docs/golem/..%2FSPEC.md"),
+      agent.read("jollypixel://docs/golem/..%2FREADME.md"),
       /No documentation/
     );
   });

@@ -8,8 +8,7 @@ An agent reaches the same edits through the MCP server: `asset_open` answers the
 
 `pixelIntents()` builds them, and a blockset reuses them for its texture:
 
-- `readPixels({ x, y, width, height })`: up to 4,096 pixels as rows of `"#rrggbbaa"`.
-- `paint({ pixels })`, `fillRect({ x, y, width, height, color })` and `replacePalette({ colors })`: the `PixelSurface` methods, answering `{ painted }` or `{ colors }`.
+- `readPixels`, `paintPixels`, `fillRect` and `replacePalette`: each runs the `PixelSurface` method of the same name with its input and answers what the method returns.
 
 ## `PixelArtAsset`
 
@@ -17,8 +16,8 @@ The asset for `pixelart`, a texture people paint in the pixel-art editor. Comman
 
 ```ts
 const texture = await golem.open(assetId, "pixelart");
-await texture.pixels.fillRect({ x: 0, y: 0, width: 16, height: 4 }, "#3a7d2c");
-await texture.pixels.paintPixels([{ x: 3, y: 1, color: "#ffffff80" }]);
+await texture.pixels.fillRect({ x: 0, y: 0, width: 16, height: 4, color: "#3a7d2c" });
+await texture.pixels.paintPixels({ pixels: [{ x: 3, y: 1, color: "#ffffff80" }] });
 await texture.settled();
 ```
 
@@ -50,15 +49,15 @@ The size, the palette as `"#rrggbbaa"` strings and the UV regions as `{ id, name
 
 The colors of `rect` (`{ x, y, width, height }`), one row per y, as `"#rrggbbaa"`. Throws `RangeError` for more than `MAX_READ_PIXELS` (4,096) pixels.
 
-### `paintPixels(pixels): Promise<number>`
+### `paintPixels({ pixels }): Promise<number>`
 
-Paints `{ x, y, color }` entries, one `stroke` per color, and returns how many it painted.
+Paints the `{ x, y, color }` entries of `pixels`, one `stroke` per color, and returns how many it painted.
 
-### `fillRect(rect, color): Promise<number>`
+### `fillRect({ x, y, width, height, color }): Promise<number>`
 
-Paints every pixel of `rect` with `color`. Strokes hold at most `MAX_STROKE_PIXELS` (16,384) pixels.
+Paints every pixel of the rect with `color` and returns how many it painted. Strokes hold at most `MAX_STROKE_PIXELS` (16,384) pixels.
 
-### `replacePalette(colors): Promise<void>`
+### `replacePalette({ colors }): Promise<void>`
 
 Replaces the palette the editor offers. It repaints nothing.
 

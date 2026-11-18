@@ -7,6 +7,7 @@ import { PIXEL_ART_GOLEM_KIND } from "./pixelArtGolemKind.ts";
 
 export * from "./PixelArtAsset.ts";
 export * from "./PixelSurface.ts";
+export type * from "./PixelInputs.ts";
 export * from "./pixelCursor.ts";
 export * from "./pixelIntents.ts";
 

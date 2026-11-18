@@ -1,7 +1,7 @@
 A scene is a tree of actors. Each actor has an `id`, a `name`, a `parentId` (`null` at the root), `visible`, a `transform` and `components`.
 
 - y is up, rotations are Euler angles in degrees, scale is a factor.
-- Add actors with the `addActors` intent, or `scene.addActors(specs, { parentId })` in a script. A spec needs only a `name`; `transform` fields, `visible`, `components` (`{ type, data?, assets? }`) and nested `children` are optional. It answers the new ids, parents before children:
+- Add actors with the `addActors` intent, or `scene.addActors({ parentId, actors })` in a script, which takes the intent's input. A spec needs only a `name`; `transform` fields, `visible`, `components` (`{ type, data?, assets? }`) and nested `children` are optional. It answers the new ids, parents before children:
 
 ```json
 {

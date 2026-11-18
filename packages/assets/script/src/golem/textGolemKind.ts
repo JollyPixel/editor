@@ -5,7 +5,6 @@ import {
   type GolemIntents,
   type GolemKindContribution
 } from "@jolly-pixel/golem.kit";
-import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { textEditableKind } from "../network/textEditableKind.ts";
@@ -13,58 +12,34 @@ import {
   TextAsset,
   type TextKind
 } from "./TextAsset.ts";
+import {
+  linesInputSchema,
+  replaceInputSchema,
+  writeInputSchema
+} from "./TextInputs.ts";
 
 // CONSTANTS
 const kGuide = new URL("./guide.md", import.meta.url);
 const kTextIntents: GolemIntents<TextAsset> = {
-  read: golemIntent({
+  lines: golemIntent({
     description: "Read the text, whole or a range of lines. Answers the " +
       "text, the lines it covers and the line count.",
-    input: z.object({
-      from: z.optional(z.int().check(
-        z.gte(1),
-        z.describe("The first line, from 1. Default 1.")
-      )),
-      to: z.optional(z.int().check(
-        z.gte(1),
-        z.describe("The last line, included. Default: the last line.")
-      ))
-    }),
-    run: async(asset: TextAsset, { from = 1, to }) => asset.lines({ from, to })
+    input: linesInputSchema,
+    run: async(asset: TextAsset, input) => asset.lines(input)
   }),
   replace: golemIntent({
     description: "Replace a piece of the text. The search text must " +
       "appear exactly once unless all is true: copy enough surrounding " +
-      "lines to make it unique. Fails when it is not found.",
-    input: z.object({
-      search: z.string().check(
-        z.minLength(1),
-        z.describe("The exact text to replace, whitespace included.")
-      ),
-      replace: z.string().check(z.describe("The new text; empty to delete.")),
-      all: z.optional(z.boolean().check(
-        z.describe("Replace every occurrence. Default false.")
-      ))
-    }),
-    run: async(asset: TextAsset, { search, replace, all }) => {
-      return {
-        replaced: await asset.replace(search, replace, { all })
-      };
-    }
+      "lines to make it unique. Fails when it is not found. Answers the " +
+      "number of occurrences replaced.",
+    input: replaceInputSchema,
+    run: (asset: TextAsset, input) => asset.replace(input)
   }),
   write: golemIntent({
     description: "Replace the whole text. Only the changed part is sent, " +
       "but prefer replace for small changes.",
-    input: z.object({
-      text: z.string()
-    }),
-    run: async(asset: TextAsset, { text }) => {
-      await asset.write(text);
-
-      return {
-        lineCount: asset.lineCount
-      };
-    }
+    input: writeInputSchema,
+    run: (asset: TextAsset, input) => asset.write(input)
   })
 };
 

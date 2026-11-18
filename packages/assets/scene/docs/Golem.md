@@ -6,10 +6,7 @@ An agent reaches the same edits through the MCP server: `asset_open` answers the
 
 ## Intents
 
-- `addActors({ parentId?, actors })`: `addActors`, answering `{ actors }`.
-- `transformActors({ changes })`, `moveActors({ actors, parent, before? })` and `removeActors({ actors })`: the methods of the same name, answering `{ transformed }`, `{ moved }` or `{ removed }`.
-- `addComponents({ actor, components })`: answers `{ components }` with their `{ id, type }`.
-- `useEnvironment({ environment })`: an environment id, a catalog path or `null`, answering `{ environment }`.
+Each intent runs the method of the same name with its input and answers what the method returns: `addActors`, `transformActors`, `moveActors`, `removeActors`, `addComponents` and `useEnvironment`.
 
 ## `SceneAsset`
 
@@ -23,19 +20,21 @@ The live scene tree: actors, transforms and components. Read actor ids here befo
 
 The environment and actors as a scene file stores them.
 
-### `addActors(specs, options?): Promise<AddedActor[]>`
+### `addActors({ parentId?, actors }): Promise<AddedActor[]>`
 
 Adds actors with their children and components, then returns `{ id, name }` for each new actor, parents before their children. Await `settled()` before reporting them added.
 
 ```ts
-const [tower] = await scene.addActors([
-  {
-    name: "Tower",
-    transform: { position: { x: 4, y: 0, z: -2 } },
-    components: [{ type: "Light" }],
-    children: [{ name: "Roof" }]
-  }
-], { parentId: null });
+const [tower] = await scene.addActors({
+  actors: [
+    {
+      name: "Tower",
+      transform: { position: { x: 4, y: 0, z: -2 } },
+      components: [{ type: "Light" }],
+      children: [{ name: "Roof" }]
+    }
+  ]
+});
 await scene.settled();
 ```
 
@@ -59,29 +58,29 @@ type AssetRef = string | { id: string; kind: string; } | null;
 ```
 
 - Actors and components get ids from `crypto.randomUUID()`.
-- `options.parentId` names the actor the specs go under, by name or id; `null`, the default, is the scene root.
+- `parentId` names the actor the specs go under, by name or id; `null`, the default, is the scene root.
 - Each top-level spec becomes one `actor-added` command, sent through `apply` in batches of `MAX_BATCH_COMMANDS`.
 - Throws `TypeError` and sends nothing when `parentId` is a prefab instance, which cannot hold children.
 
-### `transformActors(changes): Promise<void>`
+### `transformActors({ changes }): Promise<void>`
 
-Sends one `actor-transformed` per `{ actor, transform }`. `transform` holds only the fields that change, relative to the parent.
+Sends one `actor-transformed` per `{ actor, transform }` in `changes`. `transform` holds only the fields that change, relative to the parent.
 
-### `moveActors(actors, options): Promise<void>`
+### `moveActors({ actors, parent, before? }): Promise<void>`
 
-Moves `actors` under `options.parent`, `null` for the root, in the given order: before the child `options.before` names, or after the last child. Each actor keeps its transform, which is relative to its parent, so a moved actor shifts in the world when its new parent is placed elsewhere.
+Moves `actors` under `parent`, `null` for the root, in the given order: before the child `before` names, or after the last child. Each actor keeps its transform, which is relative to its parent, so a moved actor shifts in the world when its new parent is placed elsewhere.
 
-### `removeActors(actors): Promise<void>`
+### `removeActors({ actors }): Promise<void>`
 
 Removes `actors` with their descendants. An actor listed with one of its ancestors is removed once.
 
-### `addComponents(actor, specs): Promise<AddedComponent[]>`
+### `addComponents({ actor, components }): Promise<AddedComponent[]>`
 
-Adds `ComponentSpec` components to `actor` and returns `{ id, type }` for each. Throws `TypeError` for a prefab instance, which takes no components.
+Adds the `ComponentSpec` `components` to `actor` and returns `{ id, type }` for each. Throws `TypeError` for a prefab instance, which takes no components.
 
-### `useEnvironment(ref): Promise<void>`
+### `useEnvironment({ environment }): Promise<SceneEnvironmentJSON>`
 
-Points the scene at an environment asset, given by id or catalog path; `null` renders the scene with the `default` preset. An asset of another kind throws `KindMismatchError` and an unknown one `UnknownAssetError`, before anything is sent.
+Points the scene at an environment asset, given by id or catalog path, and returns its `{ id, kind }` reference; `null` renders the scene with the `default` preset. An asset of another kind throws `KindMismatchError` and an unknown one `UnknownAssetError`, before anything is sent.
 
 ### Actors and assets by name
 
@@ -108,5 +107,5 @@ After each batch, the golem's selection presence (`actor`) moves to the last act
 
 ## How it works
 
-- `ActorSpec` and `ComponentSpec` are the output types of the zod schemas the `addActors` and `addComponents` intents parse, built from the scene command schemas, so the SDK and the intents take the same input.
-- `SceneAsset.guard` checks added components against `SceneComponentTypes`, which parses the scene components each editor declares out of the studio's `project-manifest.json` (`AssetOpening.manifest`, whose editors the kit leaves untyped). The component definitions only load in a browser, so the golem cannot read them.
+- Each method's input type, such as `AddActorsInput`, is the output type of the zod schema its intent parses (`SceneInputs.ts`), built from the scene command schemas, so the SDK and the intents take the same input.
+- `SceneAsset.guard` checks added components against `SceneComponentTypes`, which parses the scene components each editor declares out of the studio's `project-manifest.json` (`studio.editors`, which the kit leaves untyped). The component definitions only load in a browser, so the golem cannot read them.

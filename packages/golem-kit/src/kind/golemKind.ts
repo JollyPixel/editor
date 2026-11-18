@@ -2,12 +2,16 @@
 import type * as z from "zod/mini";
 
 // Import Internal Dependencies
-import type { AssetOpening } from "./AssetOpening.ts";
-import type { GolemAsset } from "./GolemAsset.ts";
+import type { AssetOpening } from "../asset/AssetOpening.ts";
+import type { GolemAsset } from "../asset/GolemAsset.ts";
 import type { GolemIntent } from "./golemIntent.ts";
 
 // CONSTANTS
 export const GOLEM_KINDS_EXPORT = "GOLEM_KINDS";
+
+export interface GolemAssets {}
+
+export type GolemKindName = keyof GolemAssets;
 
 export type GolemIntents<TAsset> = Readonly<Record<string, GolemIntent<TAsset>>>;
 
@@ -23,15 +27,12 @@ export interface GolemKindOptions<TAsset> {
   guide?: URL;
 }
 
-export interface GolemKindContribution<
-  TAsset,
-  TOpening extends AssetOpening = AssetOpening
-> {
+export interface GolemKindContribution<TAsset> {
   readonly kind: string;
   readonly schema: z.ZodMiniType;
   readonly intents: GolemIntents<TAsset>;
   readonly guide: URL | null;
-  open(opening: TOpening): TAsset;
+  open(opening: AssetOpening): TAsset;
 }
 
 export type GolemKindList = readonly GolemKindContribution<GolemAsset>[];
@@ -41,13 +42,12 @@ export function golemKind<
     readonly kind: string;
     readonly commandSchema: z.ZodMiniType;
   },
-  TAsset,
-  TOpening extends AssetOpening = AssetOpening
+  TAsset
 >(
   documentKind: TDocumentKind,
-  Asset: new (opening: TOpening, kind: TDocumentKind) => TAsset,
+  Asset: new (opening: AssetOpening, kind: TDocumentKind) => TAsset,
   options: GolemKindOptions<NoInfer<TAsset>> = {}
-): GolemKindContribution<TAsset, TOpening> {
+): GolemKindContribution<TAsset> {
   const {
     intents = {},
     guide = null

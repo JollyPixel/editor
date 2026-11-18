@@ -11,7 +11,7 @@ import {
   UnknownAssetError,
   type GolemAsset,
   type GolemAssets,
-  type GolemKind
+  type GolemKindName
 } from "@jolly-pixel/golem.kit";
 import type { PeerActivity } from "@jolly-pixel/network";
 import * as network from "@jolly-pixel/network/client";
@@ -177,7 +177,7 @@ export class Golem {
     };
   }
 
-  open<TKind extends GolemKind>(
+  open<TKind extends GolemKindName>(
     assetId: string,
     kind: GolemKindFilter<TKind>
   ): Promise<GolemAssets[TKind]>;
@@ -280,13 +280,15 @@ export class Golem {
     const asset = contribution.open({
       assetId,
       room: this.#room(contribution.kind, assetId),
-      catalog: this.catalog,
-      manifest: this.#manifest,
       signal: this.#revoked,
       onClose: () => this.#forget(asset),
-      open: <TKind extends GolemKind>(otherId: string, otherKind: TKind) => (
-        this.#hold(otherId, otherKind, assetId) as Promise<GolemAssets[TKind]>
-      )
+      studio: {
+        catalog: this.catalog,
+        editors: this.#manifest.editors,
+        open: <TKind extends GolemKindName>(otherId: string, otherKind: TKind) => (
+          this.#hold(otherId, otherKind, assetId) as Promise<GolemAssets[TKind]>
+        )
+      }
     });
 
     return asset;

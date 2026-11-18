@@ -1,8 +1,5 @@
 // Import Third-party Dependencies
-import {
-  GolemAsset,
-  type AssetOpening
-} from "@jolly-pixel/golem.kit";
+import { GolemAsset } from "@jolly-pixel/golem.kit";
 import type { PeerMetadata } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
@@ -11,53 +8,26 @@ import {
   sceneCommandActor,
   type SceneCommand,
   type SceneComponentJSON,
+  type SceneEnvironmentJSON,
   type SceneSnapshot,
-  type SceneTransformJSON,
   type SceneTreeReader,
   type SyncedSceneDocument
 } from "../network/client.ts";
-import type { SceneEditableKind } from "../network/server.ts";
 import { SceneComponentTypes } from "./SceneComponentTypes.ts";
 import {
   actorList,
   componentJSON,
-  type ActorSpec,
-  type AddedActor,
-  type ComponentSpec
+  type AddedActor
 } from "./ActorSpec.ts";
+import type {
+  AddActorsInput,
+  AddComponentsInput,
+  MoveActorsInput,
+  RemoveActorsInput,
+  TransformActorsInput,
+  UseEnvironmentInput
+} from "./SceneInputs.ts";
 import { SceneRefs } from "./SceneRefs.ts";
-
-export interface AddActorsOptions {
-  /**
-   * The name or id of the actor the new actors go under; `null` for the
-   * scene root.
-   * @default null
-   */
-  parentId?: string | null;
-}
-
-export interface ActorTransform {
-  /**
-   * An actor name or id.
-   */
-  actor: string;
-  /**
-   * Only the fields that change.
-   */
-  transform: Partial<SceneTransformJSON>;
-}
-
-export interface MoveActorsOptions {
-  /**
-   * The name or id of the new parent; `null` for the scene root.
-   */
-  parent: string | null;
-  /**
-   * The name or id of the child the actors go before.
-   * @default the actors go after the parent's last child
-   */
-  before?: string;
-}
 
 export interface AddedComponent {
   id: string;
@@ -68,17 +38,8 @@ export class SceneAsset extends GolemAsset<
   SceneCommand,
   SyncedSceneDocument
 > {
-  #refs: SceneRefs;
-  #components: SceneComponentTypes;
-
-  constructor(
-    opening: AssetOpening,
-    kind: SceneEditableKind
-  ) {
-    super(opening, kind);
-    this.#refs = new SceneRefs(this.tree, opening.catalog);
-    this.#components = SceneComponentTypes.parse(opening.manifest);
-  }
+  #refs = new SceneRefs(this.tree, this.studio.catalog);
+  #components = SceneComponentTypes.parse(this.studio.editors);
 
   get tree(): SceneTreeReader {
     return this.synced.document.tree;
@@ -89,12 +50,10 @@ export class SceneAsset extends GolemAsset<
   }
 
   async addActors(
-    specs: Iterable<ActorSpec>,
-    options: AddActorsOptions = {}
+    input: AddActorsInput
   ): Promise<AddedActor[]> {
-    const parentId = this.#parent(options.parentId ?? null);
-    const lists = Array.from(
-      specs,
+    const parentId = this.#parent(input.parentId ?? null);
+    const lists = input.actors.map(
       (spec) => actorList(spec, parentId, this.#refs)
     );
     await this.applyInBatches(lists.map((actors): SceneCommand => {
@@ -113,9 +72,9 @@ export class SceneAsset extends GolemAsset<
   }
 
   async transformActors(
-    changes: Iterable<ActorTransform>
+    input: TransformActorsInput
   ): Promise<void> {
-    await this.applyInBatches(Array.from(changes, (change): SceneCommand => {
+    await this.applyInBatches(input.changes.map((change): SceneCommand => {
       return {
         action: "actor-transformed",
         id: this.#refs.actor(change.actor),
@@ -125,14 +84,13 @@ export class SceneAsset extends GolemAsset<
   }
 
   async moveActors(
-    actors: Iterable<string>,
-    options: MoveActorsOptions
+    input: MoveActorsInput
   ): Promise<void> {
-    const parentId = this.#parent(options.parent);
-    const beforeId = options.before === undefined ?
+    const parentId = this.#parent(input.parent);
+    const beforeId = input.before === undefined ?
       undefined :
-      this.#refs.actor(options.before);
-    await this.applyInBatches(Array.from(actors, (actor): SceneCommand => {
+      this.#refs.actor(input.before);
+    await this.applyInBatches(input.actors.map((actor): SceneCommand => {
       const id = this.#refs.actor(actor);
 
       return {
@@ -146,9 +104,9 @@ export class SceneAsset extends GolemAsset<
   }
 
   async removeActors(
-    actors: Iterable<string>
+    input: RemoveActorsInput
   ): Promise<void> {
-    const ids = Array.from(actors, (actor) => this.#refs.actor(actor));
+    const ids = input.actors.map((actor) => this.#refs.actor(actor));
     await this.applyInBatches(
       this.tree.topmostIds(ids).map((id): SceneCommand => {
         return {
@@ -160,9 +118,9 @@ export class SceneAsset extends GolemAsset<
   }
 
   async addComponents(
-    actor: string,
-    specs: Iterable<ComponentSpec>
+    input: AddComponentsInput
   ): Promise<AddedComponent[]> {
+    const { actor } = input;
     const actorId = this.#refs.actor(actor);
     if (!this.tree.canHoldComponents(actorId)) {
       throw new TypeError(
@@ -171,8 +129,7 @@ export class SceneAsset extends GolemAsset<
       );
     }
 
-    const components = Array.from(
-      specs,
+    const components = input.components.map(
       (spec) => componentJSON(spec, this.#refs)
     );
     await this.applyInBatches(components.map((component): SceneCommand => {
@@ -192,12 +149,15 @@ export class SceneAsset extends GolemAsset<
   }
 
   async useEnvironment(
-    ref: string | null
-  ): Promise<void> {
+    input: UseEnvironmentInput
+  ): Promise<SceneEnvironmentJSON> {
+    const environment = this.#refs.environment(input.environment);
     await this.apply([{
       action: "environment-changed",
-      environment: this.#refs.environment(ref)
+      environment
     }]);
+
+    return environment;
   }
 
   protected override guard(

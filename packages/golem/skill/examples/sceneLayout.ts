@@ -41,7 +41,7 @@ try {
       label: `Placing ${pillars.length} pillars`,
       progress: start / pillars.length
     });
-    await scene.addActors(pillars.slice(start, start + kBatchSize));
+    await scene.addActors({ actors: pillars.slice(start, start + kBatchSize) });
   }
   await scene.settled();
 }

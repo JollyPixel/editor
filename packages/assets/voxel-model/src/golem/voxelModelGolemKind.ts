@@ -3,13 +3,12 @@ import {
   golemIntent,
   golemKind
 } from "@jolly-pixel/golem.kit";
-import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import { voxelModelEditableKind } from "../network/server.ts";
 import {
-  blockSpecSchema,
-  materialSpecSchema
+  addBlocksInputSchema,
+  addMaterialsInputSchema
 } from "./ModelSpecs.ts";
 import { VoxelModelAsset } from "./VoxelModelAsset.ts";
 
@@ -27,28 +26,14 @@ export const VOXEL_MODEL_GOLEM_KIND = golemKind(
           "uv, shared }: uv is the rect of the block's faces on the model's " +
           "texture, to paint with that texture's intents; shared is true " +
           "when the texture was full and the faces overlap another block's.",
-        input: z.object({
-          parent: z.optional(z.nullable(z.string()).check(
-            z.describe("The node name or id to add under. Default: the root.")
-          )),
-          blocks: z.array(blockSpecSchema)
-        }),
-        run: async(model: VoxelModelAsset, { parent, blocks }) => {
-          return {
-            blocks: await model.addBlocks(blocks, { parent })
-          };
-        }
+        input: addBlocksInputSchema,
+        run: (model: VoxelModelAsset, input) => model.addBlocks(input)
       }),
       addMaterials: golemIntent({
-        description: "Add materials. Blocks take a material by name or id.",
-        input: z.object({
-          materials: z.array(materialSpecSchema)
-        }),
-        run: async(model: VoxelModelAsset, { materials }) => {
-          return {
-            materials: await model.addMaterials(materials)
-          };
-        }
+        description: "Add materials. Blocks take a material by name or id. " +
+          "Answers the new materials as { id, name }.",
+        input: addMaterialsInputSchema,
+        run: (model: VoxelModelAsset, input) => model.addMaterials(input)
       })
     }
   }

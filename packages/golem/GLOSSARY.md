@@ -50,9 +50,21 @@ What an asset package hands the golem so it can open the package's kind: its edi
 
 ### Intent
 
-A named operation a kind offers agents, with a description and an input schema, such as a scene's `addActors` or an environment's `change`. The MCP server lists them on `asset_open` and runs one with `asset_intent`.
+A named operation a kind offers agents, with a description and an input schema, such as a scene's `addActors` or an environment's `change`. The MCP server lists them on `asset_open` and runs one with `asset_intent`. It runs the asset method of the same name, so a script calling `scene.addActors(input)` and an agent calling the intent pass the same input and get the same answer.
 
 *In code:* `GolemIntent`, `golemIntent`, `UnknownIntentError`, `IntentInputError`.
+
+### Asset studio
+
+What an open asset may ask the studio for: the catalog, the editors from `project-manifest.json`, and `open` for another asset it needs. The golem builds one per asset; tests build it with a test studio.
+
+*In code:* `AssetStudio`, `GolemAsset.studio` (protected).
+
+### Test studio
+
+A studio without a server, for a kind's tests: it hosts each asset's studio state in memory, answers the golem's commands as the studio would, and lets a test play a person's command, a denial or a peer's lock.
+
+*In code:* `TestStudio`, `TestRoom`, `HostedAsset` from `@jolly-pixel/golem.kit/testing`.
 
 ## Commands
 

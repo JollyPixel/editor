@@ -36,7 +36,7 @@ describe("pixel art intents", { timeout: 15_000 }, () => {
       height: 1,
       color: "#336699"
     });
-    await agent.intent(assetId, "paint", {
+    await agent.intent(assetId, "paintPixels", {
       pixels: [{ x: 1, y: 0, color: "#ffffff00" }]
     });
 
@@ -81,10 +81,10 @@ describe("pixel art intents", { timeout: 15_000 }, () => {
     });
     assert.deepEqual(read.rows, [["#336699ff"]]);
     assert.match(
-      await agent.intentError(scene.assetId, "paint", {
+      await agent.intentError(scene.assetId, "paintPixels", {
         pixels: [{ x: 0, y: 0, color: "#ffffff" }]
       }),
-      /"scene" assets have no "paint" intent/
+      /"scene" assets have no "paintPixels" intent/
     );
   });
 });

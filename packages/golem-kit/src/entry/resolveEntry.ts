@@ -1,8 +1,5 @@
 // Import Internal Dependencies
-import {
-  UnknownEntryError,
-  type EntryKind
-} from "./errors/UnknownEntryError.ts";
+import { UnknownEntryError } from "./errors/UnknownEntryError.ts";
 
 export interface NamedEntry {
   readonly id: string;
@@ -10,7 +7,7 @@ export interface NamedEntry {
 }
 
 export function resolveEntry<TEntry extends NamedEntry>(
-  entry: EntryKind,
+  entry: string,
   nameOrId: string,
   entries: Iterable<TEntry>,
   describe: (match: TEntry) => string = (match) => match.id

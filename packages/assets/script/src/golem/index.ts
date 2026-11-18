@@ -11,6 +11,7 @@ import type { TextAsset } from "./TextAsset.ts";
 import { textGolemKind } from "./textGolemKind.ts";
 
 export * from "./TextAsset.ts";
+export type * from "./TextInputs.ts";
 export * from "./errors/TextMatchError.ts";
 
 declare module "@jolly-pixel/golem.kit" {

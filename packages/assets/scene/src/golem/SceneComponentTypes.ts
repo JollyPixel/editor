@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { StudioManifest } from "@jolly-pixel/golem.kit";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies
@@ -24,12 +23,11 @@ export type ComponentAssets = Readonly<Record<
 
 export class SceneComponentTypes {
   static parse(
-    manifest: StudioManifest
+    editors: readonly unknown[]
   ): SceneComponentTypes {
-    const editors = z.parse(kEditorsSchema, manifest.editors);
-
     return new SceneComponentTypes(
-      editors.flatMap((editor) => editor.sceneComponents ?? [])
+      z.parse(kEditorsSchema, editors)
+        .flatMap((editor) => editor.sceneComponents ?? [])
     );
   }
 

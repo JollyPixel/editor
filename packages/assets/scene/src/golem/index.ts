@@ -6,6 +6,7 @@ import type { SceneAsset } from "./SceneAsset.ts";
 import { SCENE_GOLEM_KIND } from "./sceneGolemKind.ts";
 
 export * from "./SceneAsset.ts";
+export type * from "./SceneInputs.ts";
 export type {
   ActorSpec,
   AddedActor,

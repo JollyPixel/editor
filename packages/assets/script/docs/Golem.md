@@ -8,9 +8,7 @@ An agent reaches the same edits through the MCP server: `asset_open` answers the
 
 The three kinds share them:
 
-- `read({ from?, to? })`: `lines`, answering `{ from, to, lineCount, text }`.
-- `replace({ search, replace, all? })`: answers `{ replaced }`.
-- `write({ text })`: answers `{ lineCount }`.
+- `lines`, `replace` and `write`: each runs the method of the same name with its input and answers what the method returns.
 
 ## `TextAsset`
 
@@ -18,7 +16,7 @@ The asset for `script`, `shader` and `text`. Its one command is `{ action: "edit
 
 ```ts
 const notes = await golem.open(assetId, "text");
-await notes.replace("- bread", "- milk");
+await notes.replace({ search: "- bread", replace: "- milk" });
 await notes.settled();
 ```
 
@@ -30,18 +28,18 @@ The current text and its number of lines. A text ending with a line break counts
 
 The whole text, as `text`.
 
-### `lines(range): TextLines`
+### `lines({ from?, to? }): TextLines`
 
-The lines `range.from` to `range.to` (default: the last line), counted from 1, as `{ from, to, lineCount, text }`. `text` joins them with `\n` and `to` is capped at `lineCount`. Throws `RangeError` when `from` is below 1 or `to` is below `from`. A range past the end reads `""`.
+The lines `from` (default 1) to `to` (default: the last line), counted from 1, as `{ from, to, lineCount, text }`. `text` joins them with `\n` and `to` is capped at `lineCount`. Throws `RangeError` when `from` is below 1 or `to` is below `from`. A range past the end reads `""`.
 
-### `replace(search, replacement, options?): Promise<number>`
+### `replace({ search, replace, all? }): Promise<number>`
 
-Replaces `search`, matched exactly, and returns how many occurrences it replaced.
+Replaces `search`, matched exactly, with `replace` and returns how many occurrences it replaced.
 
-- Throws `TextMatchError` when `search` is missing, or appears more than once and `options.all` is not `true`. `error.matches` holds the count.
+- Throws `TextMatchError` when `search` is missing, or appears more than once and `all` is not `true`. `error.matches` holds the count.
 - Throws `TypeError` for an empty `search`.
 
-### `write(text): Promise<void>`
+### `write({ text }): Promise<void>`
 
 Replaces the whole text. Only the part that differs is sent, so people's carets outside it stay put. Sends nothing when the text is unchanged.
 

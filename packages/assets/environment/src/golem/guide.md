@@ -7,4 +7,4 @@ An `environment` asset (`.environment.json`) is the look a scene renders in: `sk
 - Point a scene at it with the scene's `useEnvironment` intent, by id or path.
 - Lights placed in a scene add to the environment's sun and ambient light. A new scene seeds a "Sun" and a "Sky" light for the `default` environment, which has neither. With an environment that has a sun, remove or dim those lights, or the scene is lit twice.
 - You cannot see the result, and `catalog_preview` has no image for environments. Report the values you set.
-- In a script, `golem.open(assetId, "environment")` returns an `EnvironmentAsset` with `read()` and `change(patch, { preset })`.
+- In a script, `golem.open(assetId, "environment")` returns an `EnvironmentAsset` with `read()` and `change(input)`, which takes the intent's input.

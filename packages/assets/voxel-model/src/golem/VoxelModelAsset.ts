@@ -9,14 +9,9 @@ import type {
 } from "@jolly-pixel/asset.pixel-art/golem";
 import {
   GolemAsset,
-  resolveEntry,
-  type AssetOpening,
-  type CatalogReader
+  resolveEntry
 } from "@jolly-pixel/golem.kit";
-import type {
-  PeerMetadata,
-  Room
-} from "@jolly-pixel/network/client";
+import type { PeerMetadata } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import {
@@ -33,20 +28,11 @@ import {
   type VoxelModelCommand,
   type VoxelModelSnapshot
 } from "../network/client.ts";
-import type { VoxelModelEditableKind } from "../network/server.ts";
 import { assertModelUnlocked } from "./assertModelUnlocked.ts";
 import type {
-  BlockSpec,
-  MaterialSpec
+  AddBlocksInput,
+  AddMaterialsInput
 } from "./ModelSpecs.ts";
-
-export interface AddBlocksOptions {
-  /**
-   * The name or id of the node the blocks go under; `null` for the root.
-   * @default null
-   */
-  parent?: string | null;
-}
 
 export interface AddedEntry {
   id: string;
@@ -69,20 +55,6 @@ export class VoxelModelAsset extends GolemAsset<
   VoxelModelCommand,
   SyncedModelDocument
 > {
-  #room: Room;
-  #catalog: CatalogReader;
-  #open: AssetOpening["open"];
-
-  constructor(
-    opening: AssetOpening,
-    kind: VoxelModelEditableKind
-  ) {
-    super(opening, kind);
-    this.#room = opening.room;
-    this.#catalog = opening.catalog;
-    this.#open = opening.open;
-  }
-
   get tree(): ModelTreeReader {
     return this.synced.document.tree;
   }
@@ -92,14 +64,13 @@ export class VoxelModelAsset extends GolemAsset<
   }
 
   async addBlocks(
-    specs: Iterable<BlockSpec>,
-    options: AddBlocksOptions = {}
+    input: AddBlocksInput
   ): Promise<AddedBlock[]> {
-    const { parent = null } = options;
+    const { parent = null } = input;
     const parentId = parent === null ?
       null :
       resolveEntry("node", parent, this.tree.nodes.values()).id;
-    const blocks = Array.from(specs, (spec) => {
+    const blocks = input.blocks.map((spec) => {
       return {
         name: spec.name,
         shape: spec.shape ?? BlockShape.box,
@@ -151,10 +122,10 @@ export class VoxelModelAsset extends GolemAsset<
   }
 
   async addMaterials(
-    specs: Iterable<MaterialSpec>
+    input: AddMaterialsInput
   ): Promise<AddedEntry[]> {
     const added: AddedEntry[] = [];
-    const commands = Array.from(specs, (spec): VoxelModelCommand => {
+    const commands = input.materials.map((spec): VoxelModelCommand => {
       const id = randomUUID();
       added.push({
         id,
@@ -193,12 +164,12 @@ export class VoxelModelAsset extends GolemAsset<
   protected override guard(
     commands: readonly VoxelModelCommand[]
   ): void {
-    assertModelUnlocked(this.#room, commands);
+    assertModelUnlocked(this.peers(), commands);
   }
 
   #texture(): Promise<PixelArtAsset> {
-    return this.#open(
-      linkedTextureId(this.#catalog.dependencies, this.id),
+    return this.studio.open(
+      linkedTextureId(this.studio.catalog.dependencies, this.id),
       PIXEL_ART_KIND
     );
   }
