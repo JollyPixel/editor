@@ -15,6 +15,12 @@ const kGlyphWidth = 4;
 const kIdleColor = "#ffffff";
 const kTurn = Math.PI * 2;
 const kSpeakerWaveAngle = kTurn / 8;
+const kRectAreaRays = [
+  [14, 8],
+  [26, 23],
+  [38, 41],
+  [50, 56]
+] as const;
 export const GIZMO_SELECTED_COLOR = "#f5c46b";
 
 export type GizmoIconGlyph =
@@ -24,7 +30,17 @@ export type GizmoIconGlyph =
   | "directional"
   | "hemisphere"
   | "ambient"
-  | "speaker";
+  | "rect-area"
+  | "speaker"
+  | "listener"
+  | "audio-zone"
+  | "rigid-body"
+  | "joint"
+  | "text"
+  | "script"
+  | "anchor"
+  | "prefab"
+  | "warning";
 
 type GlyphTrace = (context: CanvasRenderingContext2D) => void;
 
@@ -115,6 +131,127 @@ const kGlyphs: Record<GizmoIconGlyph, GlyphTrace> = {
       );
       context.arc(32, 32, radius, -kSpeakerWaveAngle, kSpeakerWaveAngle);
     }
+  },
+  "rect-area"(context) {
+    context.moveTo(10, 12);
+    context.lineTo(54, 12);
+    context.lineTo(54, 24);
+    context.lineTo(10, 24);
+    context.closePath();
+    for (const [startX, endX] of kRectAreaRays) {
+      context.moveTo(startX, 34);
+      context.lineTo(endX, 50);
+    }
+  },
+  listener(context) {
+    context.moveTo(13, 40);
+    context.arc(32, 36, 19, kTurn / 2, kTurn);
+    context.lineTo(51, 40);
+    context.moveTo(8, 36);
+    context.lineTo(18, 36);
+    context.lineTo(18, 54);
+    context.lineTo(8, 54);
+    context.closePath();
+    context.moveTo(46, 36);
+    context.lineTo(56, 36);
+    context.lineTo(56, 54);
+    context.lineTo(46, 54);
+    context.closePath();
+  },
+  "audio-zone"(context) {
+    context.moveTo(17, 27);
+    context.lineTo(23, 27);
+    context.lineTo(32, 19);
+    context.lineTo(32, 45);
+    context.lineTo(23, 37);
+    context.lineTo(17, 37);
+    context.closePath();
+    context.moveTo(
+      32 + (Math.cos(-kSpeakerWaveAngle) * 11),
+      32 + (Math.sin(-kSpeakerWaveAngle) * 11)
+    );
+    context.arc(32, 32, 11, -kSpeakerWaveAngle, kSpeakerWaveAngle);
+    for (let dash = 0; dash < 10; dash++) {
+      const start = ((dash + 0.25) / 10) * kTurn;
+      const end = ((dash + 0.75) / 10) * kTurn;
+      context.moveTo(
+        32 + (Math.cos(start) * 26),
+        32 + (Math.sin(start) * 26)
+      );
+      context.arc(32, 32, 26, start, end);
+    }
+  },
+  "rigid-body"(context) {
+    circle(context, 32, 17, 8);
+    context.moveTo(18, 27);
+    context.lineTo(46, 27);
+    context.lineTo(54, 54);
+    context.lineTo(10, 54);
+    context.closePath();
+  },
+  joint(context) {
+    const edge = 8 * Math.SQRT1_2;
+
+    circle(context, 18, 46, 8);
+    circle(context, 46, 18, 8);
+    context.moveTo(18 + edge, 46 - edge);
+    context.lineTo(46 - edge, 18 + edge);
+  },
+  text(context) {
+    context.moveTo(14, 54);
+    context.lineTo(32, 10);
+    context.lineTo(50, 54);
+    context.moveTo(21, 38);
+    context.lineTo(43, 38);
+  },
+  script(context) {
+    context.moveTo(26, 10);
+    context.quadraticCurveTo(18, 10, 18, 18);
+    context.lineTo(18, 26);
+    context.quadraticCurveTo(18, 32, 11, 32);
+    context.quadraticCurveTo(18, 32, 18, 38);
+    context.lineTo(18, 46);
+    context.quadraticCurveTo(18, 54, 26, 54);
+    context.moveTo(38, 10);
+    context.quadraticCurveTo(46, 10, 46, 18);
+    context.lineTo(46, 26);
+    context.quadraticCurveTo(46, 32, 53, 32);
+    context.quadraticCurveTo(46, 32, 46, 38);
+    context.lineTo(46, 46);
+    context.quadraticCurveTo(46, 54, 38, 54);
+  },
+  anchor(context) {
+    circle(context, 32, 12, 5);
+    context.moveTo(32, 17);
+    context.lineTo(32, 56);
+    context.moveTo(22, 26);
+    context.lineTo(42, 26);
+    context.moveTo(10, 38);
+    context.quadraticCurveTo(12, 56, 32, 56);
+    context.quadraticCurveTo(52, 56, 54, 38);
+  },
+  prefab(context) {
+    context.moveTo(32, 8);
+    context.lineTo(54, 20);
+    context.lineTo(54, 44);
+    context.lineTo(32, 56);
+    context.lineTo(10, 44);
+    context.lineTo(10, 20);
+    context.closePath();
+    context.moveTo(10, 20);
+    context.lineTo(32, 32);
+    context.lineTo(54, 20);
+    context.moveTo(32, 32);
+    context.lineTo(32, 56);
+  },
+  warning(context) {
+    context.moveTo(32, 8);
+    context.lineTo(57, 53);
+    context.lineTo(7, 53);
+    context.closePath();
+    context.moveTo(32, 23);
+    context.lineTo(32, 37);
+    circle(context, 32, 45, 0.5);
   }
 };
 

@@ -13,6 +13,9 @@ import {
   AudioGizmo,
   CameraGizmo,
   type CameraGizmoLens,
+  GIZMO_SELECTED_COLOR,
+  GizmoIcon,
+  type GizmoIconGlyph,
   Grid,
   LightGizmo,
   StudioSky
@@ -43,6 +46,20 @@ const kCameraRadius = 7;
 const kCameraHeight = 2.5;
 const kCameraTarget = new THREE.Vector3(0, 0.5, 0);
 const kSpeakerRadius = 3.5;
+const kGlyphRow: GizmoIconGlyph[] = [
+  "rect-area",
+  "listener",
+  "audio-zone",
+  "rigid-body",
+  "joint",
+  "text",
+  "script",
+  "anchor",
+  "prefab",
+  "warning"
+];
+const kGlyphSpacing = 0.9;
+const kGlyphRowZ = 5.5;
 const kUp = new THREE.Vector3(0, 1, 0);
 const kLookAt = new THREE.Matrix4();
 
@@ -148,6 +165,18 @@ const speaker = {
 const audioGizmo = new AudioGizmo();
 helpers.add(audioGizmo);
 
+const glyphIcons = kGlyphRow.map((glyph, index) => {
+  const icon = new GizmoIcon(glyph, GIZMO_SELECTED_COLOR);
+  icon.position.set(
+    (index - ((kGlyphRow.length - 1) / 2)) * kGlyphSpacing,
+    0.6,
+    kGlyphRowZ
+  );
+  helpers.add(icon);
+
+  return icon;
+});
+
 const settings = {
   animate: true
 };
@@ -245,6 +274,9 @@ sceneFolder
       gizmo.selected = value;
     }
     audioGizmo.selected = value;
+    for (const icon of glyphIcons) {
+      icon.selected = value;
+    }
     cameraState.selected = value;
     cameraGizmo.selected = value;
     pane.refresh();

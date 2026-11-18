@@ -1,6 +1,6 @@
 # Scene gizmos
 
-Markers an editor draws for objects that render nothing on their own: `CameraGizmo` for a camera, `LightGizmo` for a light and `AudioGizmo` for a sound source. Each one shows a flat icon that keeps the same size on screen whatever the distance, and is drawn over the scene. Add them to the scene root and call `update()` every frame.
+Markers an editor draws for objects that render nothing on their own: `CameraGizmo` for a camera, `LightGizmo` for a light and `AudioGizmo` for a sound source. Each one shows a flat icon that keeps the same size on screen whatever the distance, and is drawn over the scene. Add them to the scene root and call `update()` every frame. For other objects, such as a rigid body or a script, place a `GizmoIcon` yourself.
 
 ```ts
 import { CameraGizmo, LightGizmo } from "@jolly-pixel/three";
@@ -60,7 +60,7 @@ interface LightGizmoOptions {
 
 ### update(light): void
 
-Moves to the light's world position, turns toward its target, and draws the icon of its type, tinted with the light's color: a sun for a directional light, a spotlight, a sky over the ground for a hemisphere light, a bulb for a point light, and a dotted ring for any other light.
+Moves to the light's world position, turns toward its target, and draws the icon of its type, tinted with the light's color: a sun for a directional light, a spotlight, a sky over the ground for a hemisphere light, a bulb for a point light, a lit panel for a rect area light, and a dotted ring for any other light.
 
 ### selected: boolean
 
@@ -91,3 +91,50 @@ Moves to `position` and draws a speaker icon tinted with `color`.
 Tints the icon with `selectedColor`.
 
 ### dispose(): void
+
+## GizmoIcon
+
+The `THREE.Sprite` the gizmos above draw their icon with: a white glyph with a dark outline, the same size on screen at any distance, drawn over the scene.
+
+```ts
+import { GIZMO_SELECTED_COLOR, GizmoIcon } from "@jolly-pixel/three";
+
+const icon = new GizmoIcon("rigid-body", GIZMO_SELECTED_COLOR);
+icon.position.copy(body.position);
+scene.add(icon);
+```
+
+```ts
+type GizmoIconGlyph =
+  // cameras and lights
+  | "camera" | "point" | "spot" | "directional"
+  | "hemisphere" | "ambient" | "rect-area"
+  // audio
+  | "speaker" | "listener" | "audio-zone"
+  // physics
+  | "rigid-body" | "joint"
+  // actors
+  | "text" | "script" | "anchor" | "prefab"
+  // state
+  | "warning";
+
+const GIZMO_SELECTED_COLOR = "#f5c46b";
+```
+
+### constructor(glyph, selectedColor)
+
+### glyph: GizmoIconGlyph
+
+Redraws the icon when set to another glyph.
+
+### color: THREE.Color
+
+The tint while not selected, white by default. The setter takes any `THREE.ColorRepresentation`; the getter returns a copy.
+
+### selected: boolean
+
+Tints the icon with `selectedColor` instead of `color`.
+
+### dispose(): void
+
+Disposes the icon's texture and material. Calling it again does nothing.

@@ -9,6 +9,7 @@ import * as THREE from "three";
 import {
   AudioGizmo,
   CameraGizmo,
+  GizmoIcon,
   LightGizmo,
   type CameraGizmoLens
 } from "#src/index.ts";
@@ -155,6 +156,16 @@ describe("LightGizmo", () => {
     assert.strictEqual(shape.visible, true);
     assert.ok(Math.abs(box.min.z + 4) < 1e-6);
     assert.ok(Math.abs(box.max.x - 4) < 1e-6);
+  });
+
+  test("draws a light panel icon for a rect area light", () => {
+    const gizmo = new LightGizmo();
+
+    gizmo.update(new THREE.RectAreaLight("#ffffff", 1, 2, 1));
+
+    const sprite = icon(gizmo);
+    assert.ok(sprite instanceof GizmoIcon);
+    assert.strictEqual(sprite.glyph, "rect-area");
   });
 
   test("draws no range for a point light without a distance and disposes the previous range", () => {
