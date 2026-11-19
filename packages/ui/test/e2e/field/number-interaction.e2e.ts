@@ -76,6 +76,16 @@ test.describe("number", () => {
     await expect.poll(() => changes(page)).toEqual([0.49, 0.48, 0.481, 0.581]);
   });
 
+  test("the stepper arrows commit one step per click", async({ page }) => {
+    const field = row(page, "jolly-number", "default");
+    await field.locator(".stepper[data-direction='up']").click();
+    await field.locator(".stepper[data-direction='down']").click({
+      modifiers: ["Shift"]
+    });
+
+    await expect.poll(() => changes(page)).toEqual([0.51, 0.41]);
+  });
+
   test("dragging the scrub handle commits one stepped value", async({ page }) => {
     await scrubBy(
       page,
@@ -130,6 +140,7 @@ test.describe("number", () => {
     test(`a ${state} field refuses scrubbing and keyboard edits`, async({ page }) => {
       const field = row(page, "jolly-number", state);
       const input = field.locator("input");
+      await expect(field.locator(".stepper")).toHaveCount(0);
 
       await scrubBy(page, field.locator(".scrub-handle"), 40);
       await input.focus();

@@ -8,12 +8,15 @@ import {
   ScrubController,
   type ScrubOptions
 } from "../interaction/scrub/ScrubController.ts";
+import { StepperController } from "../interaction/stepper/StepperController.ts";
 import {
   formatNumber,
   parseNumericEntry,
   stepNumericEntry,
-  type NumericBounds
+  type NumericBounds,
+  type StepDirection
 } from "../numeric/entry.ts";
+import type { ModifierKeys } from "../numeric/modifierMultiplier.ts";
 
 export type NumericScrubOptions = Omit<
   ScrubOptions,
@@ -34,6 +37,7 @@ export interface NumericInputOptions {
 }
 
 export class NumericInputController {
+  readonly stepper: StepperController;
   readonly #options: NumericInputOptions;
   readonly #pointerFocus: PointerFocusController;
   readonly #scrub: ScrubController | null;
@@ -44,6 +48,22 @@ export class NumericInputController {
   ) {
     this.#options = options;
     this.#pointerFocus = new PointerFocusController(host);
+    this.stepper = new StepperController(host, {
+      start: () => this.#start(),
+      next: (value, direction, modifiers) => this.#stepFrom(
+        value,
+        direction,
+        modifiers
+      ),
+      onInput: (value) => {
+        options.draft.clear();
+        options.onInput(value);
+      },
+      onCommit: (value) => {
+        options.draft.clear();
+        options.onChange(value);
+      }
+    });
     const { scrub } = options;
     this.#scrub = scrub === undefined ?
       null :
@@ -65,7 +85,7 @@ export class NumericInputController {
   }
 
   get dragging(): boolean {
-    return this.#scrub?.dragging ?? false;
+    return (this.#scrub?.dragging ?? false) || this.stepper.dragging;
   }
 
   get pointerFocused(): boolean {
@@ -145,12 +165,24 @@ export class NumericInputController {
 
     event.preventDefault();
     this.#options.draft.clear();
-    this.#options.onChange(this.#coerce(stepNumericEntry(
+    this.#options.onChange(this.#stepFrom(
       start,
       event.key === "ArrowUp" ? 1 : -1,
-      event,
+      event
+    ));
+  }
+
+  #stepFrom(
+    value: number,
+    direction: StepDirection,
+    modifiers: ModifierKeys
+  ): number {
+    return this.#coerce(stepNumericEntry(
+      value,
+      direction,
+      modifiers,
       this.#bounds()
-    )));
+    ));
   }
 
   #start(): number | undefined {

@@ -45,6 +45,12 @@ export class NumberField extends JollyField<number> {
   @property({ type: Number })
   declare max: number;
 
+  @property({
+    type: Boolean,
+    attribute: "no-steppers"
+  })
+  declare noSteppers: boolean;
+
   #input = new NumericInputController(this, {
     draft: this.draftController,
     step: () => this.step,
@@ -66,16 +72,42 @@ export class NumberField extends JollyField<number> {
     this.min = NumberField.Defaults.min;
     this.max = NumberField.Defaults.max;
     this.value = NumberField.Defaults.value;
+    this.noSteppers = false;
   }
 
   protected override get scrubbable(): boolean {
     return this.editable && !this.mixed;
   }
 
+  #renderSteppers(): TemplateResult | typeof nothing {
+    const value = this.concreteValue;
+    if (this.noSteppers || !this.scrubbable || value === undefined) {
+      return nothing;
+    }
+
+    return html`
+      <span class="steppers" aria-hidden="true">
+        <span
+          class="stepper"
+          data-direction="up"
+          ?data-at-bound=${value >= this.max}
+          @pointerdown=${this.#input.stepper.onIncrementPress}
+        ></span>
+        <span
+          class="stepper"
+          data-direction="down"
+          ?data-at-bound=${value <= this.min}
+          @pointerdown=${this.#input.stepper.onDecrementPress}
+        ></span>
+      </span>
+    `;
+  }
+
   protected renderValue(): TemplateResult {
     return html`
       <div class="wrap">
         <span class="scrub-handle" aria-hidden="true"></span>
+        ${this.#renderSteppers()}
         <input
           type="text"
           inputmode="decimal"

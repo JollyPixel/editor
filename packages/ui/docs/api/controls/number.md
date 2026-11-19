@@ -15,6 +15,7 @@ interface NumberField {
   min: number; // default -Infinity
   max: number; // default Infinity
   value: number | typeof Mixed; // default 0
+  noSteppers: boolean; // default false, attribute no-steppers
 }
 ```
 
@@ -35,3 +36,9 @@ interface NumberField {
   moved. The arrow stops at `min` or `max`.
 - Pointer scrubbing emits `jolly-input` while moving and `jolly-change` on
   release.
+- The up and down arrows at the input's right edge step the value, with the
+  same Shift and Alt modifiers. Holding one repeats the step. A press emits
+  `jolly-input` for each step and one `jolly-change` on release; Escape or a
+  cancelled pointer restores the starting value with `jolly-input`.
+- The arrows are hidden on a disabled, read-only, locked, or mixed field, and
+  when `noSteppers` is set. An arrow at `min` or `max` is dimmed.
