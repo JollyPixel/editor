@@ -126,8 +126,6 @@ test.describe("controls: state matrix", () => {
       await test.step("state attributes", async() => {
         const reflected = [
           ["mixed", "mixed"],
-          ["modified", "modified"],
-          ["mixed+modified", "modified"],
           ["error", "invalid"],
           ["disabled", "disabled"],
           ["readonly", "readonly"],
@@ -137,14 +135,10 @@ test.describe("controls: state matrix", () => {
           await expect(row(page, tag, state)).toHaveAttribute(flag, "");
         }
 
-        await expect(row(page, tag, "default"))
-          .not.toHaveAttribute("modified", "");
-        await expect(row(page, tag, "mixed"))
-          .not.toHaveAttribute("modified", "");
         await expect(control(row(page, tag, "disabled"))).toBeDisabled();
       });
 
-      await test.step("revert gutter only when modified", async() => {
+      await test.step("revert button only when modified", async() => {
         const modified = row(page, tag, "modified");
         const revert = modified.locator(".revert");
 
@@ -156,9 +150,11 @@ test.describe("controls: state matrix", () => {
         await expect(
           row(page, tag, "mixed+modified").locator(".revert")
         ).toBeVisible();
-        await expect(
-          row(page, tag, "default").locator(".revert")
-        ).toHaveCount(0);
+        for (const state of ["default", "mixed"]) {
+          await expect(
+            row(page, tag, state).locator(".revert")
+          ).toHaveCount(0);
+        }
       });
 
       await test.step("peer chips overflow past three", async() => {
@@ -251,7 +247,7 @@ test.describe("controls: state matrix", () => {
       await expectLabelColumn(page, tag);
       await expectStableLockedLayout(page, tag);
       await expect(row(page, tag, "mixed")).toHaveAttribute("mixed", "");
-      await expect(row(page, tag, "modified")).toHaveAttribute("modified", "");
+      await expect(row(page, tag, "modified").locator(".revert")).toBeVisible();
       await expect(row(page, tag, "locked")).toHaveAttribute("locked", "");
       await expect(row(page, tag, "locked"))
         .toHaveCSS("padding-block-start", "0px");

@@ -11,20 +11,6 @@ test.describe("colored fields", () => {
     example: "controls/checkbox"
   });
 
-  test("the modified gutter follows the field color mode", async({ page }) => {
-    const shadows: string[] = [];
-    for (const state of ["modified", "colored+modified"]) {
-      const field = row(page, "jolly-checkbox", state);
-      const paint = await readStyle(field.locator("input"), "accent-color");
-      const shadow = await readStyle(field, "box-shadow");
-
-      expect(shadow).toContain(paint);
-      shadows.push(shadow);
-    }
-
-    expect(shadows[0]).not.toBe(shadows[1]);
-  });
-
   test("the neutral paint is muted in light and near-white in dark", async({ page }) => {
     const field = row(page, "jolly-checkbox", "default");
     const box = field.locator("input");
