@@ -27,12 +27,18 @@ export const fieldStyles = css`
     --jolly-field-active-color-hover: var(--jolly-accent-fill-hover);
   }
 
+  :host(:first-child) {
+    margin-block-start: var(--jolly-field-lead, 0);
+  }
+
   :host([disabled]) {
     opacity: 0.5;
     pointer-events: none;
   }
 
   .row {
+    --jolly-field-lead: 0px;
+
     position: relative;
     display: flex;
     align-items: center;

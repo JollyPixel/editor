@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/utils";
+
 // Import Internal Dependencies
 import type { LoopRegion } from "./LoopRegion.ts";
 
@@ -52,6 +55,15 @@ export class PlaybackTuning {
 
   end(): number {
     return this.reversed ? 0 : this.duration;
+  }
+
+  progress(
+    position: number
+  ): number {
+    const start = this.loop?.start ?? 0;
+    const end = this.loop?.end ?? this.duration;
+
+    return end > start ? clamp((position - start) / (end - start), 0, 1) : 0;
   }
 
   bufferOffset(

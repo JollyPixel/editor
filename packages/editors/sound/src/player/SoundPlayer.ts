@@ -17,6 +17,7 @@ import type {
   WaveformBar
 } from "./sound/Sound.ts";
 import { UnplayableSound } from "./sound/UnplayableSound.ts";
+import { SpatialPreview } from "./spatial/SpatialPreview.ts";
 import type { Voice } from "./Voice.ts";
 import { Volume } from "./volume/Volume.ts";
 
@@ -35,6 +36,7 @@ export class SoundPlayer {
   #context: AudioContext;
   #monitor: GainNode;
   #level: GainNode;
+  #spatial: SpatialPreview;
   #events = new Emitter<SoundPlayerEvents>();
   #bytes: Uint8Array | null = null;
   #sound: Sound = UnplayableSound.empty;
@@ -63,7 +65,8 @@ export class SoundPlayer {
     this.#monitor.gain.value = this.#mode.monitorGain(this.#volume);
     this.#monitor.connect(context.destination);
     this.#level = context.createGain();
-    this.#level.connect(this.#monitor);
+    this.#spatial = new SpatialPreview(context, this.#monitor, this);
+    this.#level.connect(this.#spatial.input);
     context.addEventListener(
       "statechange",
       this.#onStateChange
@@ -76,6 +79,10 @@ export class SoundPlayer {
 
   get mode(): PlaybackMode {
     return this.#mode;
+  }
+
+  get spatial(): SpatialPreview {
+    return this.#spatial;
   }
 
   get settings(): Readonly<Systems.SoundSettings> {
@@ -239,7 +246,7 @@ export class SoundPlayer {
       this.#context.currentTime,
       () => sound.voice({
         context: this.#context,
-        output: this.#monitor,
+        output: this.#spatial.input,
         rate: Systems.variedPitch(settings),
         volume: settings.volume
       })
@@ -270,6 +277,7 @@ export class SoundPlayer {
     this.#halt();
     this.#voices.stopAll();
     this.#level.disconnect();
+    this.#spatial.dispose();
     this.#monitor.disconnect();
     this.#events.removeAllListeners();
     void this.#context.close();

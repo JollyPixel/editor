@@ -8,29 +8,34 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { oggContentFromAudio } from "@jolly-pixel/asset.sound";
-import { SoundDocument } from "@jolly-pixel/asset.sound/client";
+import type { SoundDocument } from "@jolly-pixel/asset.sound/client";
 import { Systems } from "@jolly-pixel/engine/core";
+import type { Button } from "@jolly-pixel/ui/elements/button";
 import type { NumberField } from "@jolly-pixel/ui/elements/number";
 
 // Import Internal Dependencies
 import "#src/panes/sound/SoundSettingsPane.ts";
+import type { SoundPlayer } from "#src/player/SoundPlayer.ts";
 import { Chime } from "#src/seed/Chime.ts";
-import { LiveSettings } from "#src/settings/LiveSettings.ts";
+import { FakeNetwork } from "../../helpers/FakeNetwork.ts";
+import { connect } from "../../helpers/listeners.ts";
 
 async function mountPane(): Promise<{
   pane: HTMLElementTagNameMap["jolly-sound-settings"];
   sound: SoundDocument;
+  player: SoundPlayer;
 }> {
-  const sound = new SoundDocument();
-  sound.load(await oggContentFromAudio(new Chime().waveFile()));
+  const listener = await connect(new FakeNetwork(), "alice");
+  listener.document.load(await oggContentFromAudio(new Chime().waveFile()));
   const pane = document.createElement("jolly-sound-settings");
-  pane.attach(new LiveSettings(sound));
+  pane.attach(listener.settings, listener.player, listener.collaboration);
   document.body.append(pane);
   await pane.updateComplete;
 
   return {
     pane,
-    sound
+    sound: listener.document,
+    player: listener.player
   };
 }
 
@@ -42,9 +47,34 @@ function numberField(
     .find((field) => field.label === label);
 }
 
+function headerToggle(
+  pane: HTMLElement,
+  tool: string
+): Button {
+  return pane.shadowRoot!.querySelector<Button>(
+    `jolly-button[slot="actions"][data-tool="${tool}"]`
+  )!;
+}
+
 describe("SoundSettingsPane", () => {
   afterEach(() => {
     document.body.replaceChildren();
+  });
+
+  test("the folder header toggles switch the preview between settings and spatial rules", async() => {
+    const { pane, player } = await mountPane();
+
+    headerToggle(pane, "spatial").click();
+    await pane.updateComplete;
+
+    assert.equal(player.mode.spatial, true);
+    assert.equal(headerToggle(pane, "apply-settings").pressed, true);
+
+    headerToggle(pane, "apply-settings").click();
+    await pane.updateComplete;
+
+    assert.equal(player.mode.applySettings, false);
+    assert.equal(headerToggle(pane, "spatial").pressed, false);
   });
 
   test("shows Max distance only for the linear falloff", async() => {

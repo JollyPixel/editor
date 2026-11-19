@@ -23,6 +23,8 @@ export class Toolbar extends LitElement {
     }
 
     :host {
+      --jolly-field-lead: 0px;
+
       min-width: 0;
       color: var(--jolly-text);
       font: inherit;

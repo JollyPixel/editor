@@ -246,6 +246,8 @@ export const paneStyles = css`
   }
 
   .content {
+    --jolly-field-lead: var(--jolly-space-1, 4px);
+
     display: flex;
     overflow: auto;
     flex: 1 1 auto;
