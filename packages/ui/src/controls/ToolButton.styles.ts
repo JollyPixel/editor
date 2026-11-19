@@ -75,6 +75,8 @@ export const toolButtonStyles = css`
   }
 
   .button:disabled {
+    --jolly-icon-tone-strength: 0%;
+
     opacity: 0.4;
     cursor: default;
   }

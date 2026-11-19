@@ -215,6 +215,8 @@ export const folderStyles = css`
   }
 
   .content {
+    --jolly-field-lead: 0px;
+
     display: none;
     flex-direction: column;
     gap: var(--jolly-row-gap, 4px);

@@ -103,6 +103,8 @@ export const buttonStyles = css`
   }
 
   :host([disabled]) button {
+    --jolly-icon-tone-strength: 0%;
+
     opacity: 0.5;
     cursor: default;
   }

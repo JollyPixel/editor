@@ -128,3 +128,55 @@ registerIcon("sound-volume", svg`
     stroke-linejoin="round"
   />
 `, { tone: "teal" });
+
+registerIcon("sound-spatial", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="12"
+    r="9"
+    opacity="0.6"
+  />
+  <circle
+    cx="12"
+    cy="12"
+    r="9"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+  <circle
+    cx="12"
+    cy="12"
+    r="4.5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+  <circle cx="12" cy="12" r="1.3" fill="currentColor" />
+  <circle cx="17.2" cy="7" r="2" fill="currentColor" />
+`, { tone: "sky" });
+
+registerIcon("sound-tuning", svg`
+  <circle
+    class="tone-fill"
+    cx="12"
+    cy="13.5"
+    r="6.5"
+  />
+  <circle
+    cx="12"
+    cy="13.5"
+    r="6.5"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+  <path
+    d="M12 13.5l3.2-3.6M4 6.5l1.4 1.2M12 2.5v2M20 6.5l-1.4 1.2"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+`, { tone: "teal" });

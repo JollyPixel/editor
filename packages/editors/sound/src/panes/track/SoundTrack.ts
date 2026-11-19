@@ -40,9 +40,6 @@ interface VolumeEvents {
 }
 
 // CONSTANTS
-const kApplySettingsLabel = "Apply settings";
-const kApplySettingsHint = "Apply settings: play with the volume, pitch, " +
-  "random pitch and loop of the sound settings";
 const kTriggerHint = "Trigger: play once the way the game does, with " +
   "Random pitch, Cooldown and Max at once";
 const kSetBySettings = "Set by the sound settings";
@@ -171,16 +168,6 @@ export class SoundTrack extends LitElement {
         icon-only
         ?disabled=${!ready}
         @click=${() => player.trigger()}
-      ></jolly-button>
-      <jolly-button
-        data-tool="apply-settings"
-        icon="settings"
-        label=${kApplySettingsLabel}
-        title=${kApplySettingsHint}
-        icon-only
-        variant=${applySettings ? "accent" : "default"}
-        .pressed=${applySettings}
-        @click=${() => collaboration.retune(mode.withApplySettings(!applySettings))}
       ></jolly-button>
       <jolly-button-group
         class="direction"

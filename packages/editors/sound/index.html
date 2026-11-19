@@ -33,6 +33,19 @@
           <jolly-presence-stack selectable max="6" hidden></jolly-presence-stack>
         </section>
       </div>
+      <jolly-dock
+        key="spatial"
+        side="right"
+        collapsible
+        size="280"
+        min-size="220"
+        max-size="480"
+        hidden
+      >
+        <jolly-pane key="spatial" heading="Spatial" icon="sound-spatial" locked>
+          <jolly-sound-spatial></jolly-sound-spatial>
+        </jolly-pane>
+      </jolly-dock>
     </jolly-dock-layout>
   </jolly-scope>
   <script type="module" src="./src/index.ts"></script>

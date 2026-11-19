@@ -87,6 +87,14 @@ commits a concrete value.
 - Set the start inset to `0px` inside a padded container, such as a dialog
   body.
 
+## Lead space
+
+A field that is the first child of its container gets a top margin of
+`--jolly-field-lead`, so it does not touch a pane header. A pane sets it to
+`--jolly-space-1`. Folders, toolbars and fields set it back to `0px`, so
+fields inside them keep their usual spacing. Set it to `0px` on any other
+container that lays fields out in a row.
+
 ## Collaboration
 
 ```ts

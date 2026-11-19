@@ -34,7 +34,8 @@ jolly-icon {
 ```
 
 - `--jolly-icon-tone-strength` is how much tone a glyph shows. Hosts raise it
-  to the engaged stop on hover and selection.
+  to the engaged stop on hover and selection. Disabled buttons, button-group
+  segments and tool buttons drop it to `0%`.
 - Set `--jolly-icon-tone-rest: 100%` on a scope for colour that is always on.
 - `--jolly-icon-ink-strength` tints strokes and other `currentColor` parts
   towards the tone. Set it to `100%` where small icons must stand out, such as

@@ -57,12 +57,14 @@ export class SoundEditor {
       const fileFolder = document.querySelector("jolly-sound-file");
       const details = document.querySelector("jolly-sound-details");
       const settings = document.querySelector("jolly-sound-settings");
+      const spatial = document.querySelector("jolly-sound-spatial");
       if (
         track === null ||
         wave === null ||
         fileFolder === null ||
         details === null ||
-        settings === null
+        settings === null ||
+        spatial === null
       ) {
         throw new Error("SoundEditor: the page is missing a sound pane.");
       }
@@ -89,7 +91,12 @@ export class SoundEditor {
         document: target.document
       }), context.notifications);
       details.attach(player);
-      settings.attach(liveSettings);
+      settings.attach(liveSettings, player, collaboration);
+      spatial.attach(player, collaboration, liveSettings);
+      const spatialDock = spatial.closest("jolly-dock");
+      if (spatialDock !== null) {
+        teardown.defer(showWhileSpatial(spatialDock, player));
+      }
 
       const presenceStack = document.querySelector("jolly-presence-stack");
       if (presenceStack !== null) {
@@ -135,4 +142,16 @@ export class SoundEditor {
   dispose(): void {
     this.#teardown.run();
   }
+}
+
+function showWhileSpatial(
+  dock: HTMLElement,
+  player: SoundPlayer
+): () => void {
+  function show(): void {
+    dock.hidden = !player.mode.spatial;
+  }
+  show();
+
+  return player.subscribe("change", show);
 }

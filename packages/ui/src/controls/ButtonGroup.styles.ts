@@ -126,6 +126,8 @@ export const buttonGroupStyles = css`
   }
 
   .segment:disabled {
+    --jolly-icon-tone-strength: 0%;
+
     cursor: default;
     opacity: 0.5;
   }

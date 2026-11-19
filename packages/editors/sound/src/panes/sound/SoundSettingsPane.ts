@@ -12,6 +12,7 @@ import {
   type JollyChangeDetail,
   type JollyOption
 } from "@jolly-pixel/ui";
+import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";
 import "@jolly-pixel/ui/elements/folder";
 import "@jolly-pixel/ui/elements/message";
@@ -19,6 +20,10 @@ import "@jolly-pixel/ui/elements/number";
 import "@jolly-pixel/ui/elements/select";
 
 // Import Internal Dependencies
+import "../../icons.ts";
+import type { SoundCollaboration } from "../../collaboration/SoundCollaboration.ts";
+import type { PlaybackMode } from "../../player/PlaybackMode.ts";
+import type { SoundPlayer } from "../../player/SoundPlayer.ts";
 import type { LiveSettings } from "../../settings/LiveSettings.ts";
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
@@ -65,7 +70,20 @@ interface SelectInput<TValue> {
   default: TValue;
 }
 
+interface PreviewToggle {
+  tool: string;
+  icon: string;
+  label: string;
+  hint: string;
+  on: boolean;
+  next: PlaybackMode;
+}
+
 // CONSTANTS
+const kApplySettingsHint = "Apply settings: play with the volume, pitch, " +
+  "random pitch and loop of these settings";
+const kSpatialHint = "Spatial: hear the sound from where it sits on the " +
+  "Spatial pad, with the falloff of these settings";
 const kLimits = Systems.SOUND_SETTINGS_LIMITS;
 const kDefaults = Systems.SOUND_SETTINGS_DEFAULTS;
 const kCopy: Record<FieldKey, FieldCopy> = {
@@ -160,6 +178,13 @@ export class SoundSettingsPane extends LitElement {
   #settings = new SubscriptionController<LiveSettings>(this, (settings) => [
     settings.subscribe("change", () => this.requestUpdate())
   ]);
+  #player = new SubscriptionController<SoundPlayer>(this, (player) => [
+    player.subscribe("change", () => this.requestUpdate())
+  ]);
+  #collaboration = new SubscriptionController<SoundCollaboration>(
+    this,
+    () => []
+  );
 
   static override styles = css`
     :host {
@@ -172,23 +197,42 @@ export class SoundSettingsPane extends LitElement {
   `;
 
   attach(
-    settings: LiveSettings
+    settings: LiveSettings,
+    player: SoundPlayer,
+    collaboration: SoundCollaboration
   ): void {
     this.#settings.attach(settings);
+    this.#player.attach(player);
+    this.#collaboration.attach(collaboration);
   }
 
   override render(): TemplateResult | typeof nothing {
     const live = this.#settings.current;
-    if (live === null || live.document.bytes === null) {
+    const player = this.#player.current;
+    const collaboration = this.#collaboration.current;
+    if (
+      live === null ||
+      player === null ||
+      collaboration === null ||
+      live.document.bytes === null
+    ) {
       return nothing;
     }
 
-    return this.#renderSettings(live);
+    return this.#renderSettings(live, player, collaboration);
   }
 
   #renderSettings(
-    live: LiveSettings
+    live: LiveSettings,
+    player: SoundPlayer,
+    collaboration: SoundCollaboration
   ): TemplateResult {
+    const { mode } = player;
+    function toggle(
+      preview: PreviewToggle
+    ): TemplateResult {
+      return previewToggle(preview, () => collaboration.retune(preview.next));
+    }
     const settings = live.current;
     const { spatial } = settings;
     function edit(
@@ -225,7 +269,14 @@ export class SoundSettingsPane extends LitElement {
     }
 
     return html`
-      ${folder("settings", "Playback", html`
+      ${folder("settings", "Playback", toggle({
+        tool: "apply-settings",
+        icon: "sound-tuning",
+        label: "Apply settings",
+        hint: kApplySettingsHint,
+        on: mode.applySettings,
+        next: mode.withApplySettings(!mode.applySettings)
+      }), html`
         ${select(kCopy.category, {
           options: categoryOptions(settings.category),
           value: settings.category,
@@ -255,11 +306,18 @@ export class SoundSettingsPane extends LitElement {
           ${field("loopEnd", { min: 0, step: 0.01 })}
         ` : nothing}
       `)}
-      ${folder("limits", "Repeats", html`
+      ${folder("limits", "Repeats", nothing, html`
         ${field("cooldown", { min: 0, step: 0.05 })}
         ${field("maxInstances", { min: 0, step: 1 })}
       `)}
-      ${folder("spatial", "Spatial", html`
+      ${folder("spatial", "Spatial", toggle({
+        tool: "spatial",
+        icon: "sound-spatial",
+        label: "Spatial",
+        hint: kSpatialHint,
+        on: mode.spatial,
+        next: mode.withSpatial(!mode.spatial)
+      }), html`
         <jolly-message role="note">
           Used by Audio source components with Spatial on: the volume then
           fades with the distance to the Audio listener.
@@ -303,6 +361,7 @@ function categoryOptions(
 function folder(
   key: string,
   label: string,
+  action: TemplateResult | typeof nothing,
   content: TemplateResult
 ): TemplateResult {
   return html`
@@ -312,8 +371,28 @@ function folder(
       storage-key=${`sound:folder:${key}`}
       flush
     >
+      ${action}
       ${content}
     </jolly-folder>
+  `;
+}
+
+function previewToggle(
+  preview: PreviewToggle,
+  onClick: () => void
+): TemplateResult {
+  return html`
+    <jolly-button
+      slot="actions"
+      data-tool=${preview.tool}
+      icon=${preview.icon}
+      label=${preview.label}
+      title=${preview.hint}
+      icon-only
+      variant=${preview.on ? "accent" : "default"}
+      .pressed=${preview.on}
+      @click=${onClick}
+    ></jolly-button>
   `;
 }
 

@@ -1,18 +1,56 @@
-export class FakeGainNode {
-  gain = {
-    value: 1,
-    setTargetAtTime: (target: number) => {
-      this.gain.value = target;
-    }
-  };
+export class FakeAudioParam {
+  value: number;
 
-  connect(): void {
+  constructor(
+    value: number
+  ) {
+    this.value = value;
+  }
+
+  setTargetAtTime(
+    target: number
+  ): void {
+    this.value = target;
+  }
+
+  setValueAtTime(
+    value: number
+  ): void {
+    this.value = value;
+  }
+
+  cancelScheduledValues(): void {
     return undefined;
+  }
+}
+
+export class FakeAudioNode {
+  outputs: unknown[] = [];
+
+  connect(
+    target: unknown
+  ): void {
+    this.outputs.push(target);
   }
 
   disconnect(): void {
-    return undefined;
+    this.outputs = [];
   }
+}
+
+export class FakeGainNode extends FakeAudioNode {
+  gain = new FakeAudioParam(1);
+}
+
+export class FakePannerNode extends FakeAudioNode {
+  panningModel: PanningModelType = "equalpower";
+  distanceModel: DistanceModelType = "inverse";
+  refDistance = 1;
+  maxDistance = 10_000;
+  rolloffFactor = 1;
+  positionX = new FakeAudioParam(0);
+  positionY = new FakeAudioParam(0);
+  positionZ = new FakeAudioParam(0);
 }
 
 export class FakeSourceNode extends EventTarget {
@@ -56,6 +94,7 @@ export class FakeAudioContext extends EventTarget {
   destination = {};
   gains: FakeGainNode[] = [];
   sources: FakeSourceNode[] = [];
+  panners: FakePannerNode[] = [];
   decoded = fakeBuffer([new Float32Array(88_200)]);
 
   get output(): FakeGainNode {
@@ -64,6 +103,21 @@ export class FakeAudioContext extends EventTarget {
 
   get level(): FakeGainNode {
     return this.gains[1];
+  }
+
+  get spatialInput(): FakeGainNode {
+    return this.gains[2];
+  }
+
+  get panner(): FakePannerNode {
+    return this.panners[0];
+  }
+
+  createPanner(): FakePannerNode {
+    const panner = new FakePannerNode();
+    this.panners.push(panner);
+
+    return panner;
   }
 
   createGain(): FakeGainNode {
