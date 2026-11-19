@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import { AssetPath } from "@jolly-pixel/asset";
 import type { AssetSource } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
@@ -17,8 +18,8 @@ export interface AssetSeedEntry {
   id: string;
   kind: string;
   /**
-   * @default the serialized `create(id)` state of the kind's handler, with
-   * its part files for a kind that declares parts
+   * @default the serialized `create(id, path)` state of the kind's handler,
+   * with its part files for a kind that declares parts
    */
   content?: AssetSeedFactory;
 }
@@ -53,7 +54,7 @@ export async function seedAssetSource(
   const indexedAssets: IndexedAsset[] = [];
 
   for (const [assetPath, value] of Object.entries(seed)) {
-    const { content, indexed } = normalizeSeed(value, registry);
+    const { content, indexed } = normalizeSeed(assetPath, value, registry);
     if (await source.exists(assetPath)) {
       continue;
     }
@@ -93,6 +94,7 @@ export async function seedAssetSource(
 }
 
 function normalizeSeed(
+  assetPath: string,
   value: AssetSeedFactory | AssetSeedEntry,
   registry: AssetKindRegistry
 ): NormalizedSeed {
@@ -109,7 +111,7 @@ function normalizeSeed(
 
   return {
     content: content === undefined ?
-      defaultContent(value, registry) :
+      defaultContent(assetPath, value, registry) :
       async() => {
         return { data: await content() };
       },
@@ -121,12 +123,14 @@ function normalizeSeed(
 }
 
 function defaultContent(
+  assetPath: string,
   entry: AssetSeedEntry,
   registry: AssetKindRegistry
 ): () => Promise<SeedContent> {
   return async() => {
     const handler = registry.get(entry.kind);
+    const state = handler.create(entry.id, new AssetPath(assetPath));
 
-    return serializeAsset(handler, handler.create(entry.id));
+    return serializeAsset(handler, state);
   };
 }

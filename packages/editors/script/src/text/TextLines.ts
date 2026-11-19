@@ -93,12 +93,30 @@ export class TextLines {
     const text = this.line(position.line);
     let column = 0;
     for (let index = 0; index < position.column; index++) {
-      column = text[index] === "\t" ?
-        column + kTabSize - (column % kTabSize) :
-        column + 1;
+      column = advance(column, text[index]);
     }
 
     return column;
+  }
+
+  offsetAt(
+    line: number,
+    visualColumn: number
+  ): number | null {
+    const text = this.lines[line];
+    if (text === undefined) {
+      return null;
+    }
+
+    let column = 0;
+    for (let index = 0; index < text.length; index++) {
+      column = advance(column, text[index]);
+      if (column > visualColumn) {
+        return this.#starts[line] + index;
+      }
+    }
+
+    return null;
   }
 
   visualWidth(
@@ -109,4 +127,13 @@ export class TextLines {
       column: this.line(line).length
     });
   }
+}
+
+function advance(
+  column: number,
+  character: string
+): number {
+  return character === "\t" ?
+    column + kTabSize - (column % kTabSize) :
+    column + 1;
 }

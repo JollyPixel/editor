@@ -12,17 +12,6 @@ export const SCRIPT_CONTENT_TYPES = {
   ".js": "text/javascript"
 } as const;
 
-export const SCRIPT_TEMPLATE = `import { Behavior, SceneProperty } from "@jolly-pixel/engine";
-
-export class NewBehavior extends Behavior {
-  @SceneProperty({ type: "number" })
-  speed = 1;
-
-  update() {
-  }
-}
-`;
-
 export const SCRIPT_ASSET: AssetKindDescriptor = {
   kind: SCRIPT_KIND,
   label: "Script",

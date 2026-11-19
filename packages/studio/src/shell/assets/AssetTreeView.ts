@@ -14,9 +14,10 @@ import { KindFilter } from "@jolly-pixel/server";
 import { AssetOccupancy } from "../../catalog/AssetOccupancy.ts";
 import { CATALOG_PRESENCE_CHANGE } from "../../catalog/CatalogPresence.ts";
 import { AssetDrop } from "../../catalog/AssetDrop.ts";
-import type {
-  AssetKindEntry,
-  AssetKindSet
+import {
+  newAssetName,
+  type AssetKindEntry,
+  type AssetKindSet
 } from "../../catalog/AssetKindSet.ts";
 import { AssetPath } from "../../catalog/AssetPath.ts";
 import {
@@ -48,6 +49,7 @@ import type {
   KindFilterSource,
   OccupancySource
 } from "./AssetTreeViewOptions.ts";
+import { AddingNotice } from "./AddingNotice.ts";
 import { LARGE_FILE_BYTES } from "./fileSize.ts";
 
 // CONSTANTS
@@ -76,7 +78,7 @@ export class AssetTreeView {
   #onChange: () => void;
   #onError: (message: string) => void;
   #onCreated: (nodeId: string) => void;
-  #onImported: (nodeId: string) => void;
+  #onRevealed: (nodeId: string) => void;
   #model = AssetTreeModel.EMPTY;
   #nodes: AssetTreeNode[] = AssetTreeModel.EMPTY.nodes;
   #layout = CatalogLayout.EMPTY;
@@ -104,7 +106,7 @@ export class AssetTreeView {
     this.#onChange = options.onChange;
     this.#onError = options.onError;
     this.#onCreated = options.onCreated;
-    this.#onImported = options.onImported;
+    this.#onRevealed = options.onRevealed;
     this.#notifications = options.notifications;
     this.#commands = new AssetCommands({
       catalog: options.catalog,
@@ -254,28 +256,55 @@ export class AssetTreeView {
     this.#onCreated(nodeId);
   }
 
-  async createAsset(
+  createAsset(
     kind: string,
     folder: AssetPath
-  ): Promise<void> {
+  ): void {
     const entry = this.#kinds.findEntry(kind);
     if (entry === undefined) {
       return;
     }
 
-    const assetId = await this.#commands.create(folder, entry);
-    if (assetId === null) {
+    const rowId = this.#pendingAssets.draft(
+      folder.child(`${newAssetName(entry)}${entry.extension}`),
+      entry,
+      this.#kinds.kindIcon(kind)
+    );
+    this.#expandFolder(folder);
+    this.#present();
+    this.#onCreated(rowId);
+  }
+
+  async endRename(
+    nodeId: string,
+    name: string | null
+  ): Promise<void> {
+    const draft = this.#pendingAssets.takeDraft(nodeId);
+    if (draft === null) {
       return;
     }
 
-    this.#expandFolder(folder);
-    this.#arrivals.set(assetId, (nodeId) => {
-      if (nodeId !== null) {
-        this.#selected = [nodeId];
-        this.#onCreated(nodeId);
+    const path = name === null ?
+      null :
+      this.#plan(() => draft.path.withNameKeepingExtension(
+        name,
+        draft.entry.extension
+      ));
+    if (path === null) {
+      this.#present();
+
+      return;
+    }
+
+    await this.#write(
+      path,
+      "Creating",
+      () => this.#commands.create(path, draft.entry),
+      (shownId) => {
+        this.#selected = [shownId];
+        this.#onRevealed(shownId);
       }
-    });
-    this.#onChange();
+    );
   }
 
   allows(
@@ -444,7 +473,7 @@ export class AssetTreeView {
     const reveal = (nodeId: string): void => {
       if (!revealed) {
         revealed = true;
-        this.#onImported(nodeId);
+        this.#onRevealed(nodeId);
       }
     };
 
@@ -494,64 +523,31 @@ export class AssetTreeView {
     uploads: readonly Upload[],
     onShown: (nodeId: string) => void
   ): Promise<void> {
-    const [first] = uploads;
-    if (first === undefined) {
+    if (uploads.length === 0) {
       return;
     }
 
-    const total = uploads.length;
-    const label = total === 1 ? `"${first.file.name}"` : `${total} files`;
-    const adding = this.#notifications.notify({
-      tone: "loading",
-      title: `Adding ${label}`
-    });
-    let done = 0;
-    const failures: string[] = [];
+    const notice = new AddingNotice(
+      this.#notifications,
+      uploads.map(({ file }) => file.name)
+    );
     await Promise.all(uploads.map(async(upload) => {
       let share = 0;
       function advance(
         next: number
       ): void {
-        done += next - share;
+        notice.advance(next - share);
         share = next;
-        adding.update({ progress: done / total });
       }
       try {
         await this.#add(folder, upload, onShown, advance);
       }
       catch (error) {
-        const reason = errorMessage(error);
-        failures.push(
-          total === 1 ? reason : `"${upload.file.name}": ${reason}`
-        );
+        notice.fail(upload.file.name, error);
       }
       advance(1);
     }));
-
-    const message = failures.join("\n");
-    if (failures.length === 0) {
-      adding.update({
-        tone: "success",
-        title: `Added ${label}`,
-        progress: null
-      });
-    }
-    else if (failures.length === total) {
-      adding.update({
-        tone: "error",
-        title: `Could not add ${label}`,
-        message,
-        progress: null
-      });
-    }
-    else {
-      adding.update({
-        tone: "warning",
-        title: `Added ${total - failures.length} of ${total} files`,
-        message,
-        progress: null
-      });
-    }
+    notice.settle();
   }
 
   async #add(
@@ -563,21 +559,35 @@ export class AssetTreeView {
     const path = folder.child(
       convertTo === null ? file.name : `${file.stem}${convertTo.extension}`
     );
-    const rowId = this.#pendingAssets.add(
+    await this.#write(
       path,
-      convertTo === null ? "Adding" : `Converting to ${convertTo.label}`
+      convertTo === null ? "Adding" : `Converting to ${convertTo.label}`,
+      () => this.#commands.add(path, file, convertTo, onProgress),
+      onShown
     );
+  }
+
+  async #write(
+    path: AssetPath,
+    status: string,
+    write: () => Promise<string | null>,
+    onShown: (nodeId: string) => void
+  ): Promise<void> {
+    const rowId = this.#pendingAssets.add(path, status);
     this.#present();
 
-    let assetId: string;
+    let assetId: string | null = null;
     try {
-      assetId = await this.#commands.add(path, file, convertTo, onProgress);
+      assetId = await write();
     }
-    catch (error) {
-      this.#pendingAssets.remove(rowId);
-      this.#present();
-
-      throw error;
+    finally {
+      if (assetId === null) {
+        this.#pendingAssets.remove(rowId);
+        this.#present();
+      }
+    }
+    if (assetId === null) {
+      return;
     }
 
     this.#arrivals.set(assetId, (nodeId) => {

@@ -22,6 +22,8 @@ Turns the text of a script or shader asset into code a game runs.
 
 - builds it: scripts are transpiled, shaders lose their types;
 - checks its imports;
+- lints it with oxlint, and type-checks and completes it with the TypeScript
+  language service, for the editor;
 - outlines the `Behavior` classes of a script for the scene inspector;
 - loads the build in a game.
 
@@ -63,8 +65,8 @@ const shaders = new ShaderModuleLoader(manager);
 
 ### Root
 
-Runs in Node and in a browser. `buildScript` and `readScriptOutline` need
-Node; their browser builds refuse.
+Runs in Node and in a browser. `buildScript`, `lintScript` and
+`readScriptOutline` need Node; their browser builds refuse or answer `null`.
 
 ```ts
 import { buildScript } from "@jolly-pixel/scripting";
@@ -75,8 +77,22 @@ import { buildScript } from "@jolly-pixel/scripting";
   `SHADER_IMPORTS` and `ScriptImportError`
 - [`ScriptModules`](./docs/ScriptModules.md): the script a relative import
   names, and `SCRIPT_KIND`
+- [`lintScript`](./docs/lintScript.md): oxlint diagnostics and the
+  `ScriptDiagnostic` schema
 - [`readScriptOutline`](./docs/readScriptOutline.md): the outline and its
   schemas
+
+### Language
+
+Needs the `typescript` package, about 9 MB: load it in a Web Worker.
+
+```ts
+import { ScriptLanguageService } from "@jolly-pixel/scripting/language";
+import files from "@jolly-pixel/scripting/types";
+```
+
+- [`ScriptLanguageService`](./docs/ScriptLanguageService.md): type errors,
+  completions and quick info, and the declaration files of `./types`
 
 ### Three
 
@@ -93,8 +109,12 @@ import { loadShader } from "@jolly-pixel/scripting/three";
 
 ## ✨ Contributors guide
 
-The `#compiler`, `#outliner` and `#stripper` imports resolve to `dist/`, so
-tests need a build first:
+The `#compiler`, `#linter`, `#outliner` and `#stripper` imports resolve to
+`dist/`, so tests need a build first. `src/types/scriptTypes.ts` is left out
+of the `tsc` project: only `scripts/bundleTypes.ts` writes
+`dist/types/scriptTypes.js`, with the declaration files of the built
+`@jolly-pixel/engine` and `@types/three`. A consumer's `tsc -b` therefore
+never writes over it:
 
 ```bash
 $ pnpm run build

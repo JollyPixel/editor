@@ -1,4 +1,5 @@
 // Import Third-party Dependencies
+import type { AssetPath } from "@jolly-pixel/asset";
 import {
   InvalidAssetFileError,
   type AssetBuild,
@@ -32,7 +33,7 @@ export interface TextKindOptions<TRelay extends object> {
   kind: string;
   eventType: string;
   extensions: Readonly<Record<string, string>>;
-  template: string;
+  template: (path: AssetPath | undefined) => string;
   relay?: TextKindRelay<TRelay>;
   compile?: (source: string) => Promise<string>;
 }
@@ -42,7 +43,7 @@ export function textAssetKind(): AssetKindHandler<ScriptText, ScriptNetworkComma
     kind: TEXT_KIND,
     eventType: TEXT_COMMAND,
     extensions: TEXT_CONTENT_TYPES,
-    template: ""
+    template: () => ""
   });
 }
 
@@ -62,8 +63,11 @@ export function textKindHandler<TRelay extends object = never>(
     extensions: options.extensions,
     build: compile === undefined ? undefined : compiledBuild(compile),
 
-    create(): ScriptText {
-      return new ScriptText(template);
+    create(
+      _assetId: string,
+      path?: AssetPath
+    ): ScriptText {
+      return new ScriptText(template(path));
     },
 
     load(

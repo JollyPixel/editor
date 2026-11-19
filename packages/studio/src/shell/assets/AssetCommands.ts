@@ -13,10 +13,7 @@ import type { Notifier } from "@jolly-pixel/ui";
 import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import {
-  newAssetName,
-  type AssetKindEntry
-} from "../../catalog/AssetKindSet.ts";
+import type { AssetKindEntry } from "../../catalog/AssetKindSet.ts";
 import type { AssetPath } from "../../catalog/AssetPath.ts";
 import type { AssetDeletion } from "../../catalog/AssetDeletion.ts";
 import type { DroppedFile } from "../../browser/DroppedFile.ts";
@@ -71,13 +68,12 @@ export class AssetCommands {
   }
 
   async create(
-    folder: AssetPath,
+    path: AssetPath,
     kind: AssetKindEntry
   ): Promise<string | null> {
-    const name = newAssetName(kind);
     try {
       return await this.#catalog.create(
-        folder.child(`${name}${kind.extension}`).toString(),
+        path.toString(),
         null,
         {
           kind: kind.kind,
@@ -86,7 +82,7 @@ export class AssetCommands {
       );
     }
     catch (error) {
-      this.#onError(`Could not create "${name}": ${errorMessage(error)}`);
+      this.#onError(`Could not create "${path.stem}": ${errorMessage(error)}`);
 
       return null;
     }

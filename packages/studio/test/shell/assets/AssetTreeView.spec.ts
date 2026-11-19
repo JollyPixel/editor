@@ -10,12 +10,12 @@ import { setImmediate } from "node:timers/promises";
 import { AssetPath } from "../../../src/catalog/AssetPath.ts";
 import {
   assetNodeId,
-  folderNodeId,
-  type AssetTreeNode
+  folderNodeId
 } from "../../../src/catalog/AssetTreeModel.ts";
 import {
   FakeTreeCatalog,
-  findLabel
+  findLabel,
+  pendingRows
 } from "../../helpers/assetTree.ts";
 import {
   MAP_RECORD,
@@ -24,17 +24,6 @@ import {
   treeView
 } from "../../helpers/assetTreeView.ts";
 import { readChips } from "../../helpers/notifications.ts";
-
-function pendingRows(
-  nodes: readonly AssetTreeNode[],
-  folder = ""
-): string[] {
-  return nodes.flatMap((node) => (
-    node.pending === undefined ?
-      pendingRows(node.children ?? [], `${folder}${node.label}/`) :
-      [`${folder}${node.label}: ${node.pending}`]
-  ));
-}
 
 describe("AssetTreeView", () => {
   test("shows a new name while renaming and the old one again when the rename fails", async() => {
@@ -112,7 +101,7 @@ describe("AssetTreeView", () => {
 
   test("shows dropped files as pending rows until the catalog lists them", async() => {
     const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
-    const { view, imported } = treeView(catalog);
+    const { view, revealed } = treeView(catalog);
     const asked: string[] = [];
     const release = catalog.hold();
 
@@ -152,14 +141,14 @@ describe("AssetTreeView", () => {
       "maps/notes.txt",
       "maps/tree.voxelmodel.json"
     ]);
-    assert.equal(imported.length, 1);
-    assert.ok(added.some(({ id }) => imported[0] === assetNodeId(id)));
+    assert.equal(revealed.length, 1);
+    assert.ok(added.some(({ id }) => revealed[0] === assetNodeId(id)));
   });
 
   test("reveals a dropped file the catalog lists before its add resolves", async() => {
     const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
     catalog.echoBeforeReply = true;
-    const { view, imported } = treeView(catalog);
+    const { view, revealed } = treeView(catalog);
 
     await view.importFiles(AssetPath.parse("maps"), [
       new File(["txt"], "notes.txt")
@@ -170,13 +159,13 @@ describe("AssetTreeView", () => {
     view.refresh();
 
     assert.deepEqual(pendingRows(view.nodes), []);
-    assert.deepEqual(imported, [assetNodeId("created-1")]);
+    assert.deepEqual(revealed, [assetNodeId("created-1")]);
   });
 
   test("removes the pending row of a file the catalog refuses", async() => {
     const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
     catalog.failure = "disk full";
-    const { view, errors, imported, notifications } = treeView(catalog);
+    const { view, errors, revealed, notifications } = treeView(catalog);
 
     await view.importFiles(AssetPath.parse("maps"), [
       new File(["txt"], "notes.txt")
@@ -187,28 +176,10 @@ describe("AssetTreeView", () => {
 
     assert.deepEqual(pendingRows(view.nodes), []);
     assert.deepEqual(errors, []);
-    assert.deepEqual(imported, []);
+    assert.deepEqual(revealed, []);
     assert.deepEqual(readChips(notifications), [
       "error Could not add \"notes.txt\": disk full"
     ]);
-  });
-
-  test("selects a new asset and asks to rename it once the catalog lists it", async() => {
-    const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
-    const { view, created } = treeView(catalog);
-
-    await view.createAsset("voxelmap", AssetPath.parse("maps"));
-    view.refresh();
-    const beforeEcho = [...created];
-    catalog.change();
-    view.refresh();
-
-    const [assetId] = [...catalog.byId.keys()].filter((id) => id !== MAP_RECORD.id);
-    assert.ok(assetId !== undefined);
-    assert.deepEqual(beforeEcho, []);
-    assert.deepEqual(created, [assetNodeId(assetId)]);
-    assert.deepEqual(view.selected, [assetNodeId(assetId)]);
-    assert.ok(view.expanded.has(folderNodeId(AssetPath.parse("maps"))));
   });
 });
 

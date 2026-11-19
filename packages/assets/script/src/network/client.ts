@@ -19,5 +19,6 @@ export * from "../model/TextEdit.ts";
 export * from "../model/errors/TextEditMismatchError.ts";
 export * from "./textDocumentKind.ts";
 export * from "./scriptCaret.ts";
+export * from "./ScriptLintFeed.ts";
 export * from "./ScriptOutlineFeed.ts";
 export * from "./types.ts";

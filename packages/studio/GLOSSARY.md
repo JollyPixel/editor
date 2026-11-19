@@ -63,6 +63,8 @@ create it when the project has none.
 The `<asset-browser>` element in the asset dock on Home: the kind filter, the
 asset actions, the tree of catalog records and the details of the selection.
 The details start with the asset's preview image when its kind has one.
+New asset adds a draft row to name first: the asset is created once the name
+is committed, so its kind can build it from that name. Escape drops the row.
 
 ### Occupant
 

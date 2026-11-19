@@ -13,6 +13,14 @@
     "./three": {
       "types": "./dist/three.d.ts",
       "default": "./dist/three.js"
+    },
+    "./language": {
+      "types": "./dist/language/ScriptLanguageService.d.ts",
+      "default": "./dist/language/ScriptLanguageService.js"
+    },
+    "./types": {
+      "types": "./dist/types/scriptTypes.d.ts",
+      "default": "./dist/types/scriptTypes.js"
     }
   },
   "imports": {
@@ -28,10 +36,14 @@
     "#stripper": {
       "browser": "./dist/compiler/stripper/browser.js",
       "default": "./dist/compiler/stripper/node.js"
+    },
+    "#linter": {
+      "browser": "./dist/lint/linter/browser.js",
+      "default": "./dist/lint/linter/node.js"
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node scripts/bundleTypes.ts",
     "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "oxlint src test",
@@ -58,8 +70,10 @@
     "@jolly-pixel/utils": "workspace:*",
     "@swc/wasm-typescript-esm": "1.16.22",
     "es-module-lexer": "3.0.4",
+    "oxlint": "1.93.0",
     "three": "0.187.0",
     "ts-morph": "28.0.0",
+    "typescript": "6.0.3",
     "zod": "4.6.7"
   }
 }

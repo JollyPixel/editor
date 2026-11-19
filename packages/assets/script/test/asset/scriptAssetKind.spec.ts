@@ -3,6 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { AssetPath } from "@jolly-pixel/asset";
 import {
   AssetKindRegistry,
   InvalidAssetFileError
@@ -12,7 +13,6 @@ import {
 import {
   ASSET_KINDS,
   SCRIPT_KIND,
-  SCRIPT_TEMPLATE,
   SHADER_KIND,
   TEXT_KIND,
   scriptAssetKind,
@@ -48,11 +48,26 @@ describe("textAssetKind", () => {
 });
 
 describe("scriptAssetKind", () => {
-  test("a new script starts from the behavior template", async() => {
+  test("a new script declares a behavior named after its file", () => {
     const handler = scriptAssetKind();
-    const content = await handler.serialize(handler.create("new"));
+    const cases: Array<[string, string]> = [
+      ["scripts/player.ts", "PlayerBehavior"],
+      ["scripts/enemy-spawner.ts", "EnemySpawnerBehavior"],
+      ["scripts/New script-2.ts", "NewScript2Behavior"],
+      ["scripts/PlayerBehavior.ts", "PlayerBehavior"],
+      ["scripts/behavior.ts", "NewBehavior"],
+      ["scripts/2d camera.js", "_2dCameraBehavior"],
+      ["scripts/élan.ts", "ÉlanBehavior"]
+    ];
 
-    assert.equal(new TextDecoder().decode(content), SCRIPT_TEMPLATE);
+    for (const [path, behavior] of cases) {
+      const state = handler.create("new", new AssetPath(path));
+
+      assert.ok(
+        state.text.includes(`export class ${behavior} extends Behavior {`),
+        path
+      );
+    }
   });
 
   test("loads a file with Windows line endings as LF text", () => {

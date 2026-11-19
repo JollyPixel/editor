@@ -74,7 +74,7 @@ export class StudioPage {
     const { assets } = this.shell;
     if (seed.kind === "new") {
       await assets.createAsset(seed.menuItem);
-      await assets.renameField.press("Escape");
+      await assets.renameField.press("Enter");
 
       return;
     }

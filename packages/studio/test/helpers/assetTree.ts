@@ -135,6 +135,17 @@ export function createCompanionModel(
   });
 }
 
+export function pendingRows(
+  nodes: readonly AssetTreeNode[],
+  folder = ""
+): string[] {
+  return nodes.flatMap((node) => (
+    node.pending === undefined ?
+      pendingRows(node.children ?? [], `${folder}${node.label}/`) :
+      [`${folder}${node.label}: ${node.pending}`]
+  ));
+}
+
 export function findNode(
   nodes: readonly AssetTreeNode[],
   nodeId: string
