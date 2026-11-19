@@ -31,8 +31,8 @@ const runtime = await Runtime.create("canvas", {
 });
 ```
 
-The asset package's [game developer guide](../../../asset/docs/guides/using-assets-in-a-game.md)
-shows how to create typed references and declare `scene.assets`.
+The `@jolly-pixel/engine` asset documentation shows how to create typed
+references and declare `scene.assets`.
 
 ## Load the initial scene
 

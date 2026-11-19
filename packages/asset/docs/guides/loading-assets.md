@@ -1,8 +1,8 @@
-# Custom runtime integration
+# Loading assets
 
-Use the orchestration API directly when building a platform runtime, editor
-tool, test harness, or server-side asset pipeline. JollyPixel game projects can
-normally rely on `@jolly-pixel/runtime` instead.
+The orchestration API composes a catalog, loaders, and a coordinator. The same
+setup serves a browser application, an editor tool, a test harness, or a
+server-side asset pipeline.
 
 ## Compose the loading system
 
