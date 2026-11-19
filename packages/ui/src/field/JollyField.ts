@@ -264,10 +264,6 @@ export abstract class JollyField<TValue> extends LitElement
       this.mixed
     );
     this.toggleAttribute(
-      "modified",
-      this.modified
-    );
-    this.toggleAttribute(
       "unlabeled",
       !this.hasLabelColumn
     );

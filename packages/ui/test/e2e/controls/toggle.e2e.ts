@@ -90,7 +90,7 @@ test.describe("toggle", () => {
     expect(await readStyle(invalid, "background-color")).not.toBe(validHover);
   });
 
-  test("the revert gutter sits before the box, not inside it", async({ page }) => {
+  test("the revert button sits before the box, not inside it", async({ page }) => {
     const field = row(page, "jolly-toggle", "modified");
     const [revert, box] = await Promise.all([
       measureBox(field.locator(".revert")),

@@ -144,13 +144,12 @@ test.describe("number", () => {
     });
   }
 
-  test("the revert gutter commits the default and then clears", async({ page }) => {
+  test("the revert button commits the default and then clears", async({ page }) => {
     const field = row(page, "jolly-number", "modified");
 
     await field.locator(".revert").dispatchEvent("click");
 
     await expect.poll(() => changes(page)).toEqual([0.5]);
-    await expect(field).not.toHaveAttribute("modified", "");
     await expect(field.locator(".revert")).toHaveCount(0);
   });
 });

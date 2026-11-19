@@ -209,11 +209,6 @@ export const fieldStyles = css`
     background: var(--jolly-control-bg-muted);
   }
 
-  :host([modified]:not([locked])) {
-    box-shadow: inset 2px 0 0 0 var(--jolly-field-active-color);
-    border-radius: var(--jolly-radius-sm, 2px);
-  }
-
   :host([locked]) {
     box-shadow: inset 3px 0 0 0 var(--jolly-locked-ring, var(--jolly-locked));
     border-radius: var(--jolly-radius-sm, 2px);
