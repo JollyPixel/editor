@@ -83,7 +83,7 @@ batches.
 
 ### Asset Dependency
 
-An asset reference required before an operation can continue. The runtime
+An asset reference required before an operation can continue. The application
 decides which dependencies belong to startup, a scene transition, or dynamic
 content.
 

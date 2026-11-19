@@ -85,6 +85,5 @@ Register each asset type once. A definition that duplicates a default or an
 earlier custom type causes `Runtime.create()` to reject.
 
 The [runtime asset options](../api/runtime-assets.md) page describes catalog
-resolution and loader defaults. The asset package's
-[custom runtime integration](../../../asset/docs/guides/custom-runtime-integration.md)
-guide covers direct coordinator construction outside `@jolly-pixel/runtime`.
+resolution and loader defaults. The `@jolly-pixel/asset` loading guide covers
+direct coordinator construction outside `@jolly-pixel/runtime`.

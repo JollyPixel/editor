@@ -15,13 +15,12 @@ $ yarn add @jolly-pixel/asset
 ## 💡 About 
 
 An asset keeps the same identity when its file, URL, or revision changes.
-Scenes and components store an `AssetReference`. An `AssetCatalog` resolves
-that reference to an `AssetRecord`, which describes the current path and
-revision.
+Consumers store an `AssetReference`. An `AssetCatalog` resolves that reference
+to an `AssetRecord`, which describes the current path and revision.
 
 ```mermaid
 flowchart TB
-    Scene["Scene / component"]
+    Consumer["Consumer"]
     Reference["AssetReference<br/>id + expected kind"]
     Coordinator["AssetCoordinator"]
     Catalog["AssetCatalog"]
@@ -29,64 +28,61 @@ flowchart TB
     Loader["AssetLoader"]
     Handle["AssetHandle<br/>asset value"]
 
-    Scene --> Reference
+    Consumer --> Reference
     Reference --> Coordinator
     Coordinator -->|"resolve"| Catalog
     Catalog --> Record
     Record -->|"path"| Loader
     Loader -->|"runtime value"| Coordinator
     Coordinator --> Handle
-    Handle -->|"synchronous access"| Scene
+    Handle -->|"synchronous access"| Consumer
 ```
 
-Choose the path that matches your work:
-
-- Game developers using `@jolly-pixel/runtime` should start with
-  [using assets in a game](./docs/guides/using-assets-in-a-game.md).
-- Runtime, editor, and server maintainers should read
-  [runtime loading architecture](./docs/concepts/runtime-loading-architecture.md)
-  and [custom runtime integration](./docs/guides/custom-runtime-integration.md).
-
-The [asset glossary](./GLOSSARY.md) defines the terms shared by these APIs.
+The [loading architecture](./docs/concepts/runtime-loading-architecture.md)
+explains how these objects share work, and the
+[asset glossary](./GLOSSARY.md) defines the terms shared by these APIs.
 
 ## 👀 Usage example
 
-Create a reference with one of the engine's shared asset types, then declare it
-as a scene dependency:
+Share one `AssetType` token per kind, register its loader, and load a reference
+through a coordinator:
 
 ```ts
-import { AssetReference } from "@jolly-pixel/asset";
 import {
-  AssetTypes,
-  ModelRenderer,
-  Systems
-} from "@jolly-pixel/engine";
+  AssetCatalog,
+  AssetCoordinator,
+  AssetLoaderRegistry,
+  AssetReference,
+  AssetType
+} from "@jolly-pixel/asset";
 
-const heroModel = new AssetReference(
-  "hero-model",
-  AssetTypes.model
+const TEXT_ASSET = new AssetType<string>("text");
+
+const catalog = AssetCatalog.parse({
+  version: 1,
+  assets: [
+    { id: "intro", kind: "text", path: "texts/intro.txt" }
+  ]
+});
+
+const loaders = new AssetLoaderRegistry();
+loaders.register(TEXT_ASSET, {
+  async load(record) {
+    const response = await fetch(record.path.toString());
+
+    return response.text();
+  }
+});
+
+const assets = new AssetCoordinator({ catalog, loaders });
+const intro = await assets.load(
+  new AssetReference("intro", TEXT_ASSET)
 );
-
-class GameScene extends Systems.Scene {
-  constructor() {
-    super("game", {
-      assets: [heroModel]
-    });
-  }
-
-  override awake(): void {
-    this.world.createActor("hero")
-      .addComponent(ModelRenderer, {
-        asset: heroModel
-      });
-  }
-}
 ```
 
-The engine's `SceneManager` loads `scene.assets` before activating the scene. The
-catalog supplies the path for `"hero-model"`; gameplay code keeps the stable
-reference. The [game developer guide](./docs/guides/using-assets-in-a-game.md)
-shows the matching catalog and runtime setup.
+The catalog supplies the path for `"intro"`; consumers keep the stable
+reference. The [loading assets guide](./docs/guides/loading-assets.md) covers
+batches, handles, and eviction.
 
 ## 📚 API
 

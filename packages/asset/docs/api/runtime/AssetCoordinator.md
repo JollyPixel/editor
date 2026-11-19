@@ -2,8 +2,7 @@
 
 `AssetCoordinator` resolves persistent references, starts runtime loading
 operations, and owns the loaded values and in-flight loads of one runtime
-scope. Game projects receive a configured coordinator from
-`@jolly-pixel/runtime`; custom integrations construct one directly.
+scope.
 
 ## API
 
