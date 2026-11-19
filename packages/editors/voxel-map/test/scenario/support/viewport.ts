@@ -3,9 +3,13 @@ import type {
   Locator,
   Page
 } from "@playwright/test";
+import type { Vector3Like } from "three";
+import type { MouseButton } from "@jolly-pixel/e2e";
 import {
+  hoverAt,
   nextFrames,
-  pressAt
+  pressAt,
+  type PressModifier
 } from "@jolly-pixel/e2e/editor";
 
 // Import Internal Dependencies
@@ -16,19 +20,22 @@ import {
 } from "./projection.ts";
 
 // CONSTANTS
-const kCameraPose = {
-  position: {
-    x: 0.5,
-    y: 14,
-    z: 10.5
-  },
-  pitch: -Math.atan2(14, 10)
-};
+export const AUTO_ROTATION = 2;
+
+export interface CameraPose {
+  position: Vector3Like;
+  pitch: number;
+}
 
 export interface Cell {
   x: number;
   y: number;
   z: number;
+}
+
+export interface ViewportPress {
+  button?: MouseButton;
+  modifiers?: readonly PressModifier[];
 }
 
 export class Viewport {
@@ -42,7 +49,9 @@ export class Viewport {
     this.#canvas = page.locator("#game-container > canvas");
   }
 
-  async pinCamera(): Promise<void> {
+  async pinCamera(
+    pose: CameraPose
+  ): Promise<void> {
     await this.#page.evaluate((pose) => {
       const orbit = window.voxelMapEditor!.scene.camera!;
       const { camera } = orbit;
@@ -51,29 +60,50 @@ export class Viewport {
         position: pose.position,
         quaternion: camera.quaternion.clone().setFromEuler(rotation)
       });
-    }, kCameraPose);
+    }, pose);
     await nextFrames(this.#page);
   }
 
   async cellTop(
     cell: Cell
   ): Promise<ScreenPoint> {
-    return projectCellTop(await this.#view(), cell);
+    return toClientPoint(await this.#view(), floorCenter(cell));
+  }
+
+  async hover(
+    cell: Cell
+  ): Promise<void> {
+    await hoverAt(this.#page, await this.cellTop(cell), this.#canvas);
+    await nextFrames(this.#page);
   }
 
   async click(
-    cell: Cell
+    cell: Cell,
+    options: ViewportPress = {}
   ): Promise<void> {
-    await this.drag([cell]);
+    await this.drag([cell], options);
   }
 
   async drag(
-    cells: Cell[]
+    cells: Cell[],
+    options: ViewportPress = {}
+  ): Promise<void> {
+    await this.press(cells.map(floorCenter), options);
+  }
+
+  async press(
+    points: Vector3Like[],
+    options: ViewportPress = {}
   ): Promise<void> {
     const view = await this.#view();
-    await pressAt(this.#page, cells.map((cell) => projectCellTop(view, cell)), {
-      target: this.#canvas
-    });
+    await pressAt(
+      this.#page,
+      points.map((point) => toClientPoint(view, point)),
+      {
+        ...options,
+        target: this.#canvas
+      }
+    );
   }
 
   #view(): Promise<ViewSnapshot> {
@@ -97,13 +127,37 @@ export class Viewport {
   }
 }
 
-function projectCellTop(
-  view: ViewSnapshot,
+export function cameraAbove(
+  target: Vector3Like,
+  height: number,
+  distance: number
+): CameraPose {
+  return {
+    position: {
+      x: target.x,
+      y: target.y + height,
+      z: target.z + distance
+    },
+    pitch: -Math.atan2(height, distance)
+  };
+}
+
+export function frontFace(
   cell: Cell
-): ScreenPoint {
-  return toClientPoint(view, {
+): Vector3Like {
+  return {
+    x: cell.x + 0.5,
+    y: cell.y + 0.5,
+    z: cell.z + 1
+  };
+}
+
+function floorCenter(
+  cell: Cell
+): Vector3Like {
+  return {
     x: cell.x + 0.5,
     y: cell.y,
     z: cell.z + 0.5
-  });
+  };
 }

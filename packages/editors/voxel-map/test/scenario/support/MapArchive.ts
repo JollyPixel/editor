@@ -15,15 +15,16 @@ import {
 } from "@jolly-pixel/asset.voxel-map";
 import {
   composeBlockId,
-  decodeVoxelWorld
+  decodeVoxelWorld,
+  voxelBlockId,
+  voxelTransform,
+  VoxelTransform,
+  VOXEL_ABSENT,
+  type PackedVoxel
 } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies
 import type { Cell } from "./viewport.ts";
-
-export interface MapCell extends Cell {
-  block: string | null;
-}
 
 export type TileCoverage = "empty" | "partial" | "full";
 
@@ -34,6 +35,7 @@ export interface MapLayer {
 
 export interface MapBlock {
   name: string;
+  shape: string;
   tile: TileCoverage;
   material: string | null;
 }
@@ -43,22 +45,23 @@ export interface MapMaterial {
   swatch: string | null;
 }
 
-export interface MapExpectation {
-  layers: MapLayer[];
-  templates: string[];
-  blocks: MapBlock[];
-  materials: MapMaterial[];
-  paintedTiles: number;
-  voxelCount: number;
-  cells: MapCell[];
+export interface MapVoxelPart {
+  block: string;
+  rotation: number;
+  flipY: boolean;
 }
+
+export interface MapVoxel extends MapVoxelPart {
+  partner: MapVoxelPart | null;
+}
+
+export type MapVoxels = Record<string, MapVoxel>;
 
 export class MapArchive {
   readonly #state: VoxelMapState;
   readonly #blockNames = new Map<number, string>();
   readonly #blocks: MapBlock[] = [];
   readonly #materials: MapMaterial[] = [];
-  #paintedTiles = 0;
 
   constructor(
     archive: AssetArchive
@@ -83,33 +86,54 @@ export class MapArchive {
     }
   }
 
-  describe(
-    cells: Iterable<Cell>
-  ): MapExpectation {
-    const { world } = this.#state;
+  layers(): MapLayer[] {
+    return this.#state.world.layers().map((layer) => {
+      return {
+        name: layer.name,
+        voxels: layer.voxelCount
+      };
+    });
+  }
+
+  templates(): string[] {
+    return this.#state.world.templates.toArray().map(
+      (template) => template.name
+    );
+  }
+
+  blocks(): MapBlock[] {
+    return [...this.#blocks];
+  }
+
+  materials(): MapMaterial[] {
+    return [...this.#materials];
+  }
+
+  voxels(): MapVoxels {
+    const voxels: MapVoxels = {};
+    for (const layer of this.#state.world.layers()) {
+      for (const [x, y, z, packed, partner] of layer.localVoxels()) {
+        voxels[cellKey(layer.localToWorld({ x, y, z }))] = {
+          ...this.#part(packed),
+          partner: partner === VOXEL_ABSENT ? null : this.#part(partner)
+        };
+      }
+    }
+
+    return voxels;
+  }
+
+  #part(
+    packed: PackedVoxel
+  ): MapVoxelPart {
+    const { rotation, flipY } = VoxelTransform.fromPacked(
+      voxelTransform(packed)
+    );
 
     return {
-      layers: world.layers().map((layer) => {
-        return {
-          name: layer.name,
-          voxels: layer.voxelCount
-        };
-      }),
-      templates: world.templates.toArray().map((template) => template.name),
-      blocks: this.#blocks,
-      materials: this.#materials,
-      paintedTiles: this.#paintedTiles,
-      voxelCount: world.voxelCount,
-      cells: [...cells].map((cell) => {
-        const blockId = world.voxelAt(cell)?.blockId;
-
-        return {
-          x: cell.x,
-          y: cell.y,
-          z: cell.z,
-          block: blockId === undefined ? null : this.#blockName(blockId)
-        };
-      })
+      block: this.#blockName(voxelBlockId(packed)),
+      rotation,
+      flipY
     };
   }
 
@@ -124,6 +148,7 @@ export class MapArchive {
       this.#blockNames.set(composeBlockId(slot, block.id), block.name);
       this.#blocks.push({
         name: block.name,
+        shape: block.shapeId,
         tile: tile === undefined ? "empty" : atlas.coverage(tile.col, tile.row),
         material: block.materialGroup ?? null
       });
@@ -134,7 +159,6 @@ export class MapArchive {
         swatch: group.swatch ?? null
       });
     }
-    this.#paintedTiles += atlas.paintedTiles();
   }
 
   #blockName(
@@ -147,7 +171,6 @@ export class MapArchive {
 class BlocksetAtlas {
   readonly #tileSize: number;
   readonly #width: number;
-  readonly #height: number;
   readonly #rgba: Buffer;
 
   constructor(
@@ -155,7 +178,6 @@ class BlocksetAtlas {
   ) {
     this.#tileSize = file.tileSize;
     this.#width = file.pixels.size.x;
-    this.#height = file.pixels.size.y;
     this.#rgba = Buffer.from(file.pixels.pixels, "base64");
   }
 
@@ -179,17 +201,10 @@ class BlocksetAtlas {
 
     return opaque === size * size ? "full" : "partial";
   }
+}
 
-  paintedTiles(): number {
-    let painted = 0;
-    for (let row = 0; row < this.#height / this.#tileSize; row++) {
-      for (let col = 0; col < this.#width / this.#tileSize; col++) {
-        if (this.coverage(col, row) !== "empty") {
-          painted++;
-        }
-      }
-    }
-
-    return painted;
-  }
+function cellKey(
+  cell: Cell
+): string {
+  return `${cell.x},${cell.y},${cell.z}`;
 }

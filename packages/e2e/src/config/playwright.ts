@@ -17,6 +17,7 @@ const kScenarioViewport = {
   width: 1280,
   height: 720
 };
+const kScenarioLanguage = "en-US";
 
 export interface E2EConfigOptions {
   port: number;
@@ -98,6 +99,9 @@ export function defineScenarioConfig(
       ...config.use,
       channel: "chrome",
       headless: false,
+      launchOptions: {
+        args: [`--lang=${kScenarioLanguage}`]
+      },
       actionTimeout: 10_000,
       navigationTimeout: 30_000,
       trace: "retain-on-failure",

@@ -2,6 +2,7 @@
 import type { Page } from "@playwright/test";
 import { CommandConsole } from "@jolly-pixel/e2e";
 import {
+  nextFrames,
   openEditor,
   reloadEditor
 } from "@jolly-pixel/e2e/editor";
@@ -18,7 +19,10 @@ import { MaterialsPane } from "./materials.ts";
 import { TemplateList } from "./templates.ts";
 import { TextureEditor } from "./texture.ts";
 import { EditToolbar } from "./toolbar.ts";
-import { Viewport } from "./viewport.ts";
+import {
+  Viewport,
+  type Cell
+} from "./viewport.ts";
 import { MapWorld } from "./world.ts";
 
 // CONSTANTS
@@ -29,6 +33,11 @@ const kOfflineEditor = {
     samples: "0",
     render: "on-demand"
   }
+};
+const kRestCell: Cell = {
+  x: 0,
+  y: 0,
+  z: 7
 };
 
 export class VoxelMapPage {
@@ -76,7 +85,15 @@ export class VoxelMapPage {
     await this.blocks.library.select(block);
     await this.#commands.submit(`brush.size ${size}`);
     await this.#commands.close();
-    await this.viewport.pinCamera();
+  }
+
+  async shortcut(
+    keys: string,
+    aim: Cell = kRestCell
+  ): Promise<void> {
+    await this.viewport.hover(aim);
+    await this.#page.keyboard.press(keys);
+    await nextFrames(this.#page);
   }
 
   async openOffline(): Promise<void> {

@@ -46,9 +46,27 @@ export class LayersPane {
   async saveAsTemplate(
     name: string
   ): Promise<void> {
+    await (await this.#menuItem(name, "Save as template")).click();
+  }
+
+  async mergeInto(
+    name: string,
+    target: string
+  ): Promise<void> {
+    await (await this.#menuItem(name, "Merge into")).hover();
+    await this.#page.getByRole("menuitem", {
+      name: target,
+      exact: true
+    }).click();
+  }
+
+  async #menuItem(
+    name: string,
+    action: string
+  ): Promise<Locator> {
     await this.row(name).locator(".label").click({ button: "right" });
-    await this.#page.getByRole("menu", { name: "Layer actions" })
-      .getByRole("menuitem", { name: "Save as template" })
-      .click();
+
+    return this.#page.getByRole("menu", { name: "Layer actions" })
+      .getByRole("menuitem", { name: action });
   }
 }

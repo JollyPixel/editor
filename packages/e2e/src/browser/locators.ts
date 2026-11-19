@@ -45,6 +45,27 @@ export function selectField(
     .getByRole("combobox");
 }
 
+export function gridSelectField(
+  scope: Locator,
+  label: string
+): Locator {
+  return scope.locator("jolly-select")
+    .filter({ hasText: label })
+    .locator("[aria-haspopup='listbox']");
+}
+
+export function gridSelectOption(
+  scope: Locator,
+  label: string,
+  option: string
+): Locator {
+  return scope.getByRole("listbox", { name: label })
+    .getByRole("option", {
+      name: option,
+      exact: true
+    });
+}
+
 export function checkboxField(
   scope: Locator,
   label: string
