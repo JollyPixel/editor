@@ -26,6 +26,15 @@ export class TemplateList {
     this.row = page.locator("template-manager").getByRole("treeitem");
   }
 
+  async rename(
+    name: string
+  ): Promise<void> {
+    await this.row.locator(".label").dblclick();
+    const box = this.row.getByRole("textbox");
+    await box.fill(name);
+    await box.press("Enter");
+  }
+
   async dragTo(
     cell: Cell
   ): Promise<void> {

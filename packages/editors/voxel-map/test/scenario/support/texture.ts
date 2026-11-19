@@ -4,7 +4,11 @@ import type {
   Page
 } from "@playwright/test";
 import type { PixelDrawPanel } from "@jolly-pixel/editor.pixel-art";
-import { measureBox } from "@jolly-pixel/e2e";
+import {
+  buttonGroup,
+  dialog,
+  measureBox
+} from "@jolly-pixel/e2e";
 
 export interface TexturePoint {
   x: number;
@@ -31,6 +35,29 @@ export class TextureEditor {
     await this.#page.mouse.move(0, 0);
     await this.#button(mode).hover();
     await this.#button(option).click();
+  }
+
+  blocksetTab(
+    name: string
+  ): Locator {
+    return this.#panel.getByRole("tab", {
+      name,
+      exact: true
+    });
+  }
+
+  async importBlockset(
+    path: string
+  ): Promise<void> {
+    await this.#panel.getByRole("button", { name: "Add blockset" }).click();
+    const form = dialog(this.#page, "Add blockset");
+    await buttonGroup(form, "Source")
+      .getByRole("radio", { name: "Import", exact: true })
+      .click();
+    const choosing = this.#page.waitForEvent("filechooser");
+    await form.getByRole("button", { name: "Choose file…" }).click();
+    const chooser = await choosing;
+    await chooser.setFiles(path);
   }
 
   async clickTexel(

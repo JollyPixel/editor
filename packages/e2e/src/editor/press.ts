@@ -12,10 +12,38 @@ import {
 } from "../browser/pointer.ts";
 import { nextFrames } from "./frames.ts";
 
+export type PressModifier =
+  | "Alt"
+  | "Control"
+  | "ControlOrMeta"
+  | "Meta"
+  | "Shift";
+
 export interface PressOptions {
   button?: MouseButton;
   frames?: number;
   target?: Locator;
+  modifiers?: readonly PressModifier[];
+}
+
+export async function hoverAt(
+  page: Page,
+  point: Point,
+  target?: Locator
+): Promise<void> {
+  if (target === undefined) {
+    await page.mouse.move(point.x, point.y);
+
+    return;
+  }
+
+  const box = await measureBox(target);
+  await target.hover({
+    position: {
+      x: point.x - box.x,
+      y: point.y - box.y
+    }
+  });
 }
 
 export async function pressAt(
@@ -26,32 +54,34 @@ export async function pressAt(
   const {
     button = "left",
     frames,
-    target
+    target,
+    modifiers = []
   } = options;
   const [first, ...rest] = points;
   if (first === undefined) {
     return;
   }
 
-  if (target === undefined) {
-    await page.mouse.move(first.x, first.y);
+  await hoverAt(page, first, target);
+
+  const { keyboard } = page;
+  for (const modifier of modifiers) {
+    await keyboard.down(modifier);
   }
-  else {
-    const box = await measureBox(target);
-    await target.hover({
-      position: {
-        x: first.x - box.x,
-        y: first.y - box.y
-      }
-    });
-  }
-  await nextFrames(page, frames);
-  await page.mouse.down({ button });
-  await nextFrames(page, frames);
-  for (const point of rest) {
-    await page.mouse.move(point.x, point.y, { steps: 4 });
+  try {
+    await nextFrames(page, frames);
+    await page.mouse.down({ button });
+    await nextFrames(page, frames);
+    for (const point of rest) {
+      await page.mouse.move(point.x, point.y, { steps: 4 });
+      await nextFrames(page, frames);
+    }
+    await page.mouse.up({ button });
     await nextFrames(page, frames);
   }
-  await page.mouse.up({ button });
-  await nextFrames(page, frames);
+  finally {
+    for (const modifier of modifiers.toReversed()) {
+      await keyboard.up(modifier);
+    }
+  }
 }

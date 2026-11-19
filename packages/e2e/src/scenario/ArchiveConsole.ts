@@ -49,6 +49,7 @@ export class ArchiveConsole {
       this.#page,
       rootId === undefined ? () => true : new RegExp(`target=${rootId}`)
     );
+    await this.#closePrompt();
   }
 
   async importCopy(
@@ -63,9 +64,7 @@ export class ArchiveConsole {
       this.#page,
       (url) => url.searchParams.get("target") !== current
     );
-    if (await this.#commands.prompt.isVisible()) {
-      await this.#commands.close();
-    }
+    await this.#closePrompt();
   }
 
   async resetOfflineData(): Promise<void> {
@@ -73,6 +72,12 @@ export class ArchiveConsole {
     await reloadEditor(this.#page, () => dialog(this.#page, "Reset offline data")
       .getByRole("button", { name: "Reset" })
       .click());
+  }
+
+  async #closePrompt(): Promise<void> {
+    if (await this.#commands.prompt.isVisible()) {
+      await this.#commands.close();
+    }
   }
 
   async #import(

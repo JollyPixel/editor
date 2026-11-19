@@ -30,10 +30,22 @@ export interface ScenarioChapter<TEditor, TExpectation> {
   expected: TExpectation;
 }
 
+interface EditorArchive {
+  readonly session: {
+    readonly targetRecord: {
+      readonly id: string;
+    };
+    readonly archive: {
+      export(assetId: string): Promise<Blob>;
+    };
+  };
+}
+
 export interface ScenarioOptions<TEditor, TExpectation> {
   id: string;
   title: string;
   open: (page: Page) => Promise<TEditor>;
+  ready?: (editor: TEditor) => Promise<void>;
   describe: (archive: AssetArchive, expected: TExpectation) => TExpectation;
   chapters: ScenarioChapter<TEditor, TExpectation>[];
 }
@@ -111,17 +123,29 @@ class ScenarioRun<TEditor, TExpectation> {
   ): Promise<void> {
     if (previous === undefined) {
       await test.step("open a blank offline editor", async() => {
-        this.#editor = await this.#options.open(this.#page);
+        this.#editor = await this.#open(null);
       }, kStep);
 
       return;
     }
 
     await test.step(`resume after "${previous.title}"`, async() => {
-      this.#editor = await this.#options.open(this.#page);
-      await this.#archives.importArchive(this.#checkpoint(previous));
+      this.#editor = await this.#open(this.#checkpoint(previous));
       await this.#settle(previous);
     }, kStep);
+  }
+
+  async #open(
+    checkpoint: string | null
+  ): Promise<TEditor> {
+    const { open, ready } = this.#options;
+    const editor = await open(this.#page);
+    if (checkpoint !== null) {
+      await this.#archives.importArchive(checkpoint);
+    }
+    await ready?.(editor);
+
+    return editor;
   }
 
   async play(
@@ -135,8 +159,13 @@ class ScenarioRun<TEditor, TExpectation> {
     await test.step(chapter.title, async() => {
       await chapter.play(editor);
       await this.#settle(chapter);
+      const screenshot = await this.#page.screenshot();
+      await fs.writeFile(
+        path.join(this.#folder, `${chapter.id}.png`),
+        screenshot
+      );
       await this.#testInfo.attach(`${chapter.id}.png`, {
-        body: await this.#page.screenshot(),
+        body: screenshot,
         contentType: "image/png"
       });
     }, kStep);
@@ -149,9 +178,9 @@ class ScenarioRun<TEditor, TExpectation> {
     await fs.mkdir(this.#folder, { recursive: true });
 
     await expect(async() => {
-      const download = await this.#archives.exportArchive();
-      await download.saveAs(checkpoint);
-      const archive = readAssetArchive(await fs.readFile(checkpoint));
+      const bytes = await this.#exportArchive();
+      await fs.writeFile(checkpoint, bytes);
+      const archive = readAssetArchive(bytes);
       if (!archive.ok) {
         throw archive.val;
       }
@@ -163,6 +192,22 @@ class ScenarioRun<TEditor, TExpectation> {
       expect(actual).toEqual(chapter.expected);
     }).toPass({ timeout: kSettleTimeout });
     expect(this.#errors).toEqual([]);
+  }
+
+  async #exportArchive(): Promise<Uint8Array> {
+    const bytes = await this.#page.evaluate(async() => {
+      const editor: EditorArchive | undefined = Reflect.get(globalThis, "jollyEditor");
+      if (editor === undefined) {
+        throw new Error("window.jollyEditor is only exposed in dev builds.");
+      }
+
+      const { archive, targetRecord } = editor.session;
+      const blob = await archive.export(targetRecord.id);
+
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    });
+
+    return Uint8Array.from(bytes);
   }
 
   #checkpoint(

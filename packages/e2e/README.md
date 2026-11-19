@@ -117,7 +117,8 @@ parameters, `data-editor-state` on `<html>` and `window.jollyEditor` in dev buil
 
 - Fixture: `editorFixture`, `withCatalog` and `e2eFolder`
 - Navigation: `openEditor`, `reloadEditor`, `followEditor`, `waitForEditor` and `editorPath`
-- Frames and input: `nextFrames` and `pressAt`
+- Frames and input: `nextFrames`, `hoverAt` and `pressAt`, which can hold modifier keys for the whole
+  press
 - Toolbar: `EditorToolbar`, the Asset and Version selects above the viewport
 
 ### Scenario
@@ -132,13 +133,16 @@ import {
 
 Plays one user story as one Playwright test, chapter by chapter, for editors that run offline and
 export archives. `defineScenarioConfig` runs `test/scenario/*.scenario.ts` headed in installed
-Chrome with one worker, video and no retry.
+Chrome with one worker, video and no retry. Chrome runs in English, so it offers no translation
+of the editor.
 
 - `Scenario`: takes an `open` function, chapters with an expected value, and a `describe` function
   that turns the exported archive into that value. After each chapter it exports the open asset
-  with `/archive.export` and retries the comparison for 15 s. The export is saved as a checkpoint
-  under `node_modules/.cache/scenario/<id>/`, and `SCENARIO_FROM=<chapter>` resumes from the one
-  before it.
+  through `window.jollyEditor`, without a browser download, and retries the comparison for 15 s.
+  The export is saved as a checkpoint under `node_modules/.cache/scenario/<id>/`, next to a
+  `<chapter>.png` screenshot, and
+  `SCENARIO_FROM=<chapter>` resumes from the one before it. The optional `ready` function runs
+  after `open` and again after a resume imports its checkpoint.
 - `ArchiveConsole`: drives `/archive.export`, `/archive.import` and `/archive.reset` from the
   command console. `importCopy` picks "Import as copy" when the archived assets already exist.
 
