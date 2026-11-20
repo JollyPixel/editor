@@ -97,7 +97,7 @@ function press(
   command: KeyCommand
 ): string | null {
   const at = marked.indexOf("|");
-  const text = marked.replace("|", "");
+  const text = marked.replace(/\|/g, "");
   const keyEdit = command(new TextLines(text), ScriptCaret.collapsed(at));
   if (keyEdit === null) {
     return null;
