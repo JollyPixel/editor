@@ -7,7 +7,7 @@ import { TSC_PATH } from "../typescript/tsc.ts";
 import { WorkspaceProject } from "../workspace/WorkspaceProject.ts";
 
 // CONSTANTS
-const kTscBuild = /^tsc -b(?: && (?<after>.+))?$/;
+const kTscBuild = /^(?:node \S+\/typescript7\/bin\/)?tsc -b(?: && (?<after>.+))?$/;
 
 async function exitCode(
   command: string,
