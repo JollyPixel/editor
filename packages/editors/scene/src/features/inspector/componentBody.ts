@@ -10,8 +10,7 @@ import type {
 import type {
   ComponentChange,
   JSONObject,
-  JSONValue,
-  SceneComponentJSON
+  JSONValue
 } from "@jolly-pixel/asset.scene/client";
 import type {
   DeclaredProperty,
@@ -36,6 +35,7 @@ import "@jolly-pixel/ui/elements/message";
 // Import Internal Dependencies
 import {
   ComponentInspection,
+  type ComponentEntry,
   type InspectedField,
   type InspectedList
 } from "../../components/ComponentInspection.ts";
@@ -62,7 +62,7 @@ interface ListEdit {
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 
 export function renderComponentBody(
-  stored: SceneComponentJSON,
+  stored: ComponentEntry,
   context: ComponentBodyContext
 ): TemplateResult {
   const { draft, components } = context;
@@ -221,7 +221,7 @@ function renderRow(
 }
 
 function renderAssetSlots(
-  entry: SceneComponentJSON,
+  entry: ComponentEntry,
   slots: Readonly<Record<string, AssetType<unknown>>>,
   context: ComponentBodyContext
 ): TemplateResult[] {
@@ -235,7 +235,7 @@ function renderAssetSlots(
 }
 
 function renderAssetSlot(
-  entry: SceneComponentJSON,
+  entry: ComponentEntry,
   slot: string,
   label: string,
   type: AssetType<unknown>,

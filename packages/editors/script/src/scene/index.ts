@@ -25,7 +25,10 @@ import {
   SHADER_DOCUMENT_KIND,
   SceneShaders
 } from "./SceneShaders.ts";
-import { scriptForm } from "./scriptForm.ts";
+import {
+  scriptForm,
+  scriptSignals
+} from "./scriptForm.ts";
 
 type ScriptAssets = {
   script: ScriptOutline;
@@ -51,6 +54,7 @@ const kScript: SceneComponentKind<ScriptData, ScriptAssets> = {
   label: "Script",
   category: "logic",
   form: (data, assets) => scriptForm(data, assets.resolve("script")),
+  signals: (data, assets) => scriptSignals(data, assets.resolve("script")),
   describe: (_data, assets) => {
     return { label: assets.script ?? "Script" };
   }

@@ -78,6 +78,23 @@ export interface AddComponentOptions {
   beforeId?: string;
 }
 
+export interface ConnectOptions {
+  id?: string;
+  /**
+   * Field of the source component holding the signal.
+   */
+  signal: string;
+  /**
+   * Id of the component whose method receives the signal.
+   */
+  target: string;
+  method: string;
+  /**
+   * @default false
+   */
+  once?: boolean;
+}
+
 export class SceneDocument extends CommandDocument<
   SceneCommand,
   SceneSnapshot,
@@ -256,6 +273,43 @@ export class SceneDocument extends CommandDocument<
       action: "component-assets-changed",
       id,
       assets
+    });
+  }
+
+  connect(
+    componentId: string,
+    options: ConnectOptions
+  ): string | null {
+    const {
+      id = randomId(),
+      signal,
+      target,
+      method,
+      once = false
+    } = options;
+    const added = this.commit({
+      action: "connection-added",
+      componentId,
+      connection: {
+        id,
+        signal,
+        target,
+        method,
+        ...once ? { once } : {}
+      }
+    });
+
+    return added ? id : null;
+  }
+
+  disconnect(
+    componentId: string,
+    id: string
+  ): boolean {
+    return this.commit({
+      action: "connection-removed",
+      componentId,
+      id
     });
   }
 

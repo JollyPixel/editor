@@ -40,10 +40,10 @@ class InterfaceScene extends Systems.Scene {
         }
       });
 
-    uiButton.onHover.connect(() => {
+    uiButton.pointerEntered.connect(() => {
       console.log("Button hovered!");
     });
-    uiButton.onClick.connect(() => {
+    uiButton.clicked.connect(() => {
       console.log("Button clicked!");
     });
   }

@@ -62,11 +62,20 @@ export const componentAssetsSchema = z.record(
   z.nullable(assetReferenceSchema)
 );
 
+export const sceneConnectionSchema = z.object({
+  id: kIdSchema,
+  signal: z.string().check(z.minLength(1)),
+  target: kIdSchema,
+  method: z.string().check(z.minLength(1)),
+  once: z.optional(z.boolean())
+});
+
 export const sceneComponentSchema = z.object({
   id: kIdSchema,
   type: z.string().check(z.minLength(1)),
   data: componentDataSchema,
-  assets: componentAssetsSchema
+  assets: componentAssetsSchema,
+  connections: z.optional(z.array(sceneConnectionSchema))
 });
 
 const kActorOverrideFieldSchema = z.keyof(z.object({
@@ -162,6 +171,15 @@ export const sceneCommandSchema = z.discriminatedUnion("action", [
   commandVariant("component-assets-changed", {
     id: kIdSchema,
     assets: minProperties(componentAssetsSchema, 1)
+  }),
+  commandVariant("connection-added", {
+    componentId: kIdSchema,
+    connection: sceneConnectionSchema,
+    beforeId: kBeforeIdSchema
+  }),
+  commandVariant("connection-removed", {
+    componentId: kIdSchema,
+    id: kIdSchema
   }),
   commandVariant("actor-overridden", {
     id: kIdSchema,

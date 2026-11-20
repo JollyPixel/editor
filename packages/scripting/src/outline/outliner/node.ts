@@ -2,15 +2,19 @@
 import type {
   ClassDeclaration,
   Expression,
+  MethodDeclaration,
   Node,
   ObjectLiteralExpression,
-  PropertyDeclaration
+  PropertyDeclaration,
+  TypeNode
 } from "ts-morph";
 
 // Import Internal Dependencies
 import type {
   ScriptBehavior,
+  ScriptMember,
   ScriptOutline,
+  ScriptParameter,
   ScriptProperty,
   ScriptPropertyValue
 } from "../ScriptOutline.schema.ts";
@@ -26,6 +30,16 @@ interface Outliner {
 const kSourceFileName = "script.ts";
 const kPropertyDecorator = "SceneProperty";
 const kBehaviorBase = /(?:^|\.)Behavior$/;
+const kSignalClass = /(?:^|\.)SignalEvent$/;
+const kLifecycleMethods = new Set([
+  "bind",
+  "awake",
+  "start",
+  "update",
+  "fixedUpdate",
+  "destroy",
+  "onDestroy"
+]);
 
 let outliner: Promise<Outliner> | null = null;
 
@@ -68,10 +82,15 @@ function readBehavior(
   }
 
   const properties: ScriptProperty[] = [];
+  const signals: ScriptMember[] = [];
   for (const property of declaration.getProperties()) {
     const read = readProperty(morph, property);
     if (read !== null) {
       properties.push(read);
+    }
+    const signal = readSignal(morph, property);
+    if (signal !== null) {
+      signals.push(signal);
     }
   }
   const base = declaration.getExtends()?.getExpression().getText() ?? "";
@@ -81,7 +100,90 @@ function readBehavior(
 
   return {
     name,
-    properties
+    properties,
+    signals,
+    methods: declaration.getMethods().flatMap(
+      (method) => readMethod(morph, method) ?? []
+    )
+  };
+}
+
+function readSignal(
+  morph: TsMorph,
+  property: PropertyDeclaration
+): ScriptMember | null {
+  if (property.isStatic() || property.getName().startsWith("#")) {
+    return null;
+  }
+
+  const is = morph.Node;
+  const annotation = property.getTypeNode();
+  const initializer = property.getInitializer();
+  const annotated = is.isTypeReference(annotation) &&
+    kSignalClass.test(annotation.getTypeName().getText());
+  const constructed = is.isNewExpression(initializer) &&
+    kSignalClass.test(initializer.getExpression().getText());
+  if (!annotated && !constructed) {
+    return null;
+  }
+
+  const [tuple] = [
+    ...annotated ? annotation.getTypeArguments() : [],
+    ...constructed ? initializer.getTypeArguments() : []
+  ];
+
+  return {
+    key: property.getName(),
+    params: readTupleParameters(morph, tuple)
+  };
+}
+
+function readTupleParameters(
+  morph: TsMorph,
+  tuple: TypeNode | undefined
+): ScriptParameter[] {
+  const is = morph.Node;
+  if (!is.isTupleTypeNode(tuple)) {
+    return [];
+  }
+
+  return tuple.getElements().map((element, index) => {
+    if (is.isNamedTupleMember(element)) {
+      return {
+        name: element.getName(),
+        type: element.getTypeNode().getText()
+      };
+    }
+
+    return {
+      name: `arg${index}`,
+      type: element.getText()
+    };
+  });
+}
+
+function readMethod(
+  morph: TsMorph,
+  method: MethodDeclaration
+): ScriptMember | null {
+  const key = method.getName();
+  if (
+    method.isStatic() ||
+    key.startsWith("#") ||
+    method.getScope() !== morph.Scope.Public ||
+    kLifecycleMethods.has(key)
+  ) {
+    return null;
+  }
+
+  return {
+    key,
+    params: method.getParameters().map((parameter) => {
+      return {
+        name: parameter.getName(),
+        type: parameter.getTypeNode()?.getText() ?? ""
+      };
+    })
   };
 }
 

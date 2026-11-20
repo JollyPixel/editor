@@ -11,6 +11,7 @@ import type { ComponentDefinitions } from "./definitions/ComponentDefinitions.ts
 import { CoordinatorAssetResolver } from "./definitions/CoordinatorAssetResolver.ts";
 import { SceneInstance } from "./live/SceneInstance.ts";
 import { captureSceneActors } from "./live/sceneCapture.ts";
+import { connectSceneSignals } from "./live/sceneConnections.ts";
 import type { SceneFile } from "./SceneFile.ts";
 import type { SceneEnvironment } from "../SceneGraph.ts";
 import {
@@ -99,7 +100,7 @@ export class FileScene<
   }
 
   override awake(): void {
-    new SceneInstance<TContext>({
+    const instance = new SceneInstance<TContext>({
       world: this.world,
       mode: "play",
       components: this.#components,
@@ -108,7 +109,12 @@ export class FileScene<
       ),
       prefabs: this.#prefabs,
       sceneId: this.#sceneId
-    }).add(this.file.actors);
+    });
+    instance.add(this.file.actors);
+    connectSceneSignals(
+      instance,
+      this.world.logger.child({ namespace: "Systems.FileScene" })
+    );
 
     this.#environment = this.world.sceneManager.graph.createEnvironment(
       this.world

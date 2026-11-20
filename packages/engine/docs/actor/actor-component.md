@@ -108,6 +108,28 @@ a component stop when it is destroyed, and skip their callback while
 the component waits for removal. They run on `world.timers`, described
 in [World](../systems/world.md#timers).
 
+## Listen
+
+`listen(signal, listener, options?)` connects `listener` to a
+[signal](../components/signal.md) with `this` bound to the component, and
+disconnects it when the component is destroyed. A plain `signal.connect()`
+keeps calling a destroyed component.
+
+```ts
+class Door extends Behavior {
+  @SceneActorComponent(Lever)
+  lever: Lever;
+
+  awake() {
+    this.listen(this.lever.pulled, this.open);
+  }
+
+  open(force: number) {
+    // …
+  }
+}
+```
+
 ## API
 
 ```ts
@@ -159,6 +181,13 @@ interface ActorComponent {
 
   /** Runs `teardown` when the component is destroyed. */
   addTeardown(teardown: () => void): void;
+
+  /** Connects `listener` until the component is destroyed. */
+  listen<T extends unknown[]>(
+    signal: SignalEvent<T>,
+    listener: (this: this, ...args: T) => void,
+    options?: SignalConnectOptions
+  ): SignalConnection;
 
   /** Calls `callback` after `seconds` of game time. */
   schedule(

@@ -24,6 +24,9 @@ export function sceneCommandActor(
     case "component-changed":
     case "component-assets-changed":
       return tree.componentOwner(command.id) ?? null;
+    case "connection-added":
+    case "connection-removed":
+      return tree.componentOwner(command.componentId) ?? null;
     case "environment-changed":
       return null;
   }

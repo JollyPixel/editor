@@ -7,5 +7,7 @@ export type { LocalSpace } from "./transform/LocalSpace.ts";
 export type { GlobalSpace } from "./transform/GlobalSpace.ts";
 export {
   SignalEvent,
+  type SignalConnectOptions,
+  type SignalConnection,
   type SignalListener
 } from "./Signal.ts";

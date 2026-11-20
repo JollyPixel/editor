@@ -15,6 +15,11 @@ import type {
   TimerOptions
 } from "../systems/Timers.ts";
 import type {
+  SignalConnectOptions,
+  SignalConnection,
+  SignalEvent
+} from "./Signal.ts";
+import type {
   Component,
   FreeComponentEnum
 } from "../components/types.ts";
@@ -85,6 +90,20 @@ export class ActorComponent<
     teardown: () => void
   ): void {
     this.#teardowns.push(teardown);
+  }
+
+  listen<T extends unknown[]>(
+    signal: SignalEvent<T>,
+    listener: (this: this, ...args: T) => void,
+    options: SignalConnectOptions = {}
+  ): SignalConnection {
+    const connection = signal.connect(
+      (...args) => listener.apply(this, args),
+      options
+    );
+    this.addTeardown(() => connection.disconnect());
+
+    return connection;
   }
 
   schedule(

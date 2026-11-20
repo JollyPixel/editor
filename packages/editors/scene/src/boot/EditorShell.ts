@@ -19,6 +19,7 @@ import { SCENE_REFUSAL_WORDING } from "../features/history/sceneHistory.ts";
 const kAttachedTags = [
   "jolly-scene-hierarchy",
   "jolly-scene-inspector",
+  "jolly-scene-signals",
   "jolly-scene-environment",
   "jolly-scene-toolbar",
   "jolly-scene-top-bar"

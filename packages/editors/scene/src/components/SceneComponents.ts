@@ -7,6 +7,7 @@ import {
   registerKindIcon,
   requiredAssetSlots,
   type AssetSlots,
+  type ComponentSignals,
   type NamedSceneComponentPackage,
   type SceneAssetSource,
   type SceneComponentKind,
@@ -21,6 +22,10 @@ const kNoSlots: KindSlots = {
   optional: new Set(),
   required: {},
   shown: {}
+};
+const kNoSignals: ComponentSignals = {
+  signals: [],
+  methods: []
 };
 
 export type AssetChange = Record<string, AssetReferenceData | null>;
@@ -192,6 +197,25 @@ export class SceneComponents {
         label: kind.label,
         detail
       };
+  }
+
+  signals(
+    component: DescribedComponent,
+    resolver: Systems.ComponentAssetResolver
+  ): ComponentSignals | null {
+    const kind = this.find(component.type);
+    if (kind?.signals === undefined) {
+      return kNoSignals;
+    }
+
+    return kind.signals(
+      kind.definition.parse(component.data),
+      new Systems.ComponentAssets(
+        kind.definition.assets ?? {},
+        component.assets,
+        resolver
+      )
+    );
   }
 
   missingAsset(

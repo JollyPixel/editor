@@ -4,7 +4,8 @@ import { randomId } from "@jolly-pixel/asset.common";
 // Import Internal Dependencies
 import type {
   SceneActorJSON,
-  SceneActorView
+  SceneActorView,
+  SceneComponentJSON
 } from "../../network/types.ts";
 import { ownedCopy } from "../ownedCopy.ts";
 
@@ -17,29 +18,26 @@ export function copySubtree(
 ): SceneActorJSON[] {
   const ids = new Map<string, string>();
   const componentIds = new Map<string, string>();
+  for (const actor of source) {
+    ids.set(actor.id, randomId());
+    for (const component of actor.components) {
+      componentIds.set(component.id, randomId());
+    }
+  }
 
   return source.map((actor, index) => {
     const copy = ownedCopy<SceneActorJSON>(actor);
-    const id = randomId();
-    ids.set(actor.id, id);
-    const components = copy.components.map((component) => {
-      const componentId = randomId();
-      componentIds.set(component.id, componentId);
-
-      return {
-        ...component,
-        id: componentId
-      };
-    });
 
     return {
       ...copy,
-      id,
+      id: ids.get(actor.id)!,
       name: index === 0 ? copyName(actor.name, siblingNames) : actor.name,
       parentId: actor.parentId === null ?
         null :
         ids.get(actor.parentId) ?? actor.parentId,
-      components,
+      components: copy.components.map(
+        (component) => copyComponent(component, componentIds)
+      ),
       ...copy.anchor === undefined ? {} : {
         anchor: {
           ...copy.anchor,
@@ -48,6 +46,26 @@ export function copySubtree(
       }
     };
   });
+}
+
+function copyComponent(
+  component: SceneComponentJSON,
+  componentIds: ReadonlyMap<string, string>
+): SceneComponentJSON {
+  const { connections } = component;
+
+  return {
+    ...component,
+    id: componentIds.get(component.id)!,
+    ...connections === undefined ? {} : {
+      connections: connections.map((connection) => {
+        return {
+          ...connection,
+          target: componentIds.get(connection.target) ?? connection.target
+        };
+      })
+    }
+  };
 }
 
 function copyName(

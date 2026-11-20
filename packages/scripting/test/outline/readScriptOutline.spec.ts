@@ -80,14 +80,54 @@ describe("readScriptOutline", () => {
               description: "",
               default: null
             }
-          ]
+          ],
+          signals: [],
+          methods: []
         },
         {
           name: "Idle",
-          properties: []
+          properties: [],
+          signals: [],
+          methods: []
         }
       ]
     });
+  });
+
+  test("lists the signals and public methods of a behavior", async() => {
+    const outline = await readScriptOutline(`
+      import { Behavior, SignalEvent } from "@jolly-pixel/engine";
+
+      export class Health extends Behavior {
+        readonly damaged = new SignalEvent<[amount: number, source: string]>();
+        readonly died: SignalEvent = new SignalEvent();
+        healed: SignalEvent<[number]>;
+        #secret = new SignalEvent();
+        static created = new SignalEvent();
+
+        heal(amount: number, quiet) {}
+        protected regenerate() {}
+        #reset() {}
+        static spawn() {}
+        update() {}
+      }
+    `);
+
+    const [health] = outline?.behaviors ?? [];
+    assert.deepEqual(health?.signals, [
+      {
+        key: "damaged",
+        params: [{ name: "amount", type: "number" }, { name: "source", type: "string" }]
+      },
+      { key: "died", params: [] },
+      { key: "healed", params: [{ name: "arg0", type: "number" }] }
+    ]);
+    assert.deepEqual(health?.methods, [
+      {
+        key: "heal",
+        params: [{ name: "amount", type: "number" }, { name: "quiet", type: "" }]
+      }
+    ]);
   });
 
   test("still reads the valid part of a script with syntax errors", async() => {

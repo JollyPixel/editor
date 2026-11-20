@@ -39,7 +39,7 @@ flowchart TB
     Kinematic["kinematic: actor pose to body"]
     Step["physics.step(fixedDelta)"]
     Dynamic["dynamic: body pose recorded"]
-    Contacts["RigidBody.contacts"]
+    Contacts["RigidBody.contactStarted / contactEnded"]
     Render["update(alpha): actor between last two poses"]
 
     Script --> Kinematic --> Step --> Dynamic --> Contacts

@@ -86,6 +86,12 @@ describe("scene history", () => {
     ["filling an asset slot", (document) => document.changeComponentAssets("light", {
       cookie: { id: "texture-1", kind: "pixelart" }
     })],
+    ["connecting a signal", (document) => document.connect("light", {
+      signal: "toggled",
+      target: "mesh",
+      method: "show",
+      once: true
+    })],
     ["changing the environment", (document) => document.changeEnvironment({
       id: "dusk",
       kind: "environment"
@@ -125,6 +131,19 @@ describe("scene history", () => {
       assert.deepEqual(document.tree.toJSON(), after);
     });
   }
+
+  test("undo of a disconnect puts the connection back in its place, even with its target removed", () => {
+    const { document, history } = setup();
+    document.connect("light", { id: "c1", signal: "toggled", target: "mesh", method: "show" });
+    document.connect("light", { id: "c2", signal: "toggled", target: "mesh", method: "hide" });
+    document.removeComponent("mesh");
+    const before = document.tree.toJSON();
+
+    history.record(kScope, null, () => assert.ok(document.disconnect("light", "c1")));
+
+    assert.ok(history.undo(kScope));
+    assert.deepEqual(document.tree.toJSON(), before);
+  });
 
   test("rewinds pending edits to the actors they found", () => {
     const { document } = setup();

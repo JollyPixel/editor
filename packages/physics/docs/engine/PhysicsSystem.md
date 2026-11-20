@@ -93,6 +93,6 @@ Each fixed step of the engine `World` runs:
 3. `physics.step(fixedDelta)`;
 4. `afterStep` observers: dynamic bodies record their new pose;
 5. contact events, delivered to the `onContact` of each body's owner, such as
-   `RigidBody.contacts`.
+   `RigidBody.contactStarted` and `contactEnded`.
 
 Rendering then interpolates dynamic actors between their last two poses.

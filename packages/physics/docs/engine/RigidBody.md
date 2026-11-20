@@ -56,11 +56,13 @@ class RigidBody {
   readonly settings: Readonly<RigidBodySettings>;
   readonly body: PhysicsBody;
   readonly colliders: readonly PhysicsCollider[]; // in settings order
-  readonly contacts: SignalEvent<[contact: ActorContact]>;
+  readonly contactStarted: SignalEvent<[contact: ActorContact]>;
+  readonly contactEnded: SignalEvent<[contact: ActorContact]>;
 }
 ```
 
-`contacts` fires when one of its colliders starts or stops touching another;
+`contactStarted` fires when one of its colliders starts touching another, and
+`contactEnded` when it stops;
 [`PhysicsSystem`](./PhysicsSystem.md) documents `ActorContact`.
 
 ```ts
@@ -69,8 +71,8 @@ const coin = world.createActor("coin").addComponentAndGet(RigidBody, {
   colliders: [{ shape: { type: "sphere", radius: 0.3 }, sensor: true }]
 });
 
-coin.contacts.connect(({ started, actor }) => {
-  if (started && actor?.name === "player") {
+coin.contactStarted.connect(({ actor }) => {
+  if (actor?.name === "player") {
     coin.actor.markDestructionPending();
   }
 });

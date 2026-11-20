@@ -68,6 +68,16 @@ export class SceneValueRef {
     );
   }
 
+  static connection(
+    componentId: string,
+    id: string
+  ): SceneValueRef {
+    return new SceneValueRef(
+      `connection:${componentId}:${id}`,
+      (tree) => tree.connection(componentId, id)
+    );
+  }
+
   static environment(): SceneValueRef {
     return new SceneValueRef("environment", (tree) => tree.environment);
   }

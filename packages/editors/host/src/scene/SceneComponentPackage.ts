@@ -1,7 +1,10 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
-import type { Systems } from "@jolly-pixel/engine";
+import type {
+  SignalEvent,
+  Systems
+} from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import type { AssetDocumentKind } from "../lease/AssetLease.ts";
@@ -44,6 +47,10 @@ export interface SceneComponentKind<
    */
   anchorAsset?: string;
   /**
+   * Signals a component of this kind emits and methods a connection can call.
+   */
+  signals?: ComponentSignalsDescriber<TData, TAssets>;
+  /**
    * Where the actor origin sits on the rendered content. `"corner"` when the
    * content grows from the origin toward the positive axes.
    * @default "center"
@@ -52,6 +59,41 @@ export interface SceneComponentKind<
 }
 
 export type SceneComponentOrigin = "center" | "corner";
+
+export interface DeclaredParameter {
+  name: string;
+  /**
+   * Type as written in the source, `""` when it has none.
+   */
+  type: string;
+}
+
+export interface DeclaredMember {
+  /**
+   * Name of the field holding the `SignalEvent`, or of the method.
+   */
+  key: string;
+  params: readonly DeclaredParameter[];
+}
+
+export interface ComponentSignals {
+  signals: readonly DeclaredMember[];
+  methods: readonly DeclaredMember[];
+}
+
+export type SignalKey<TComponent> = {
+  [TKey in keyof TComponent]: TComponent[TKey] extends SignalEvent<any> ?
+    TKey :
+    never;
+}[keyof TComponent] & string;
+
+export type ComponentSignalsDescriber<
+  TData extends object = any,
+  TAssets extends Systems.ComponentAssetValues = any
+> = (
+  data: TData,
+  assets: Systems.ComponentAssets<TAssets>
+) => ComponentSignals | null;
 
 export interface SceneComponentSummary {
   label: string;

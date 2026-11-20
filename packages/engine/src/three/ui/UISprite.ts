@@ -46,14 +46,13 @@ export class UISprite<
 
   #lastClickTime = Number.NEGATIVE_INFINITY;
 
-  onPointerEnter = new SignalEvent();
-  onPointerLeave = new SignalEvent();
-  onPointerDown = new SignalEvent();
-  onPointerUp = new SignalEvent();
-  onClick = new SignalEvent();
-  onDoubleClick = new SignalEvent();
-  onRightClick = new SignalEvent();
-  onHover = new SignalEvent();
+  readonly pointerEntered = new SignalEvent();
+  readonly pointerExited = new SignalEvent();
+  readonly pointerPressed = new SignalEvent();
+  readonly pointerReleased = new SignalEvent();
+  readonly clicked = new SignalEvent();
+  readonly doubleClicked = new SignalEvent();
+  readonly rightClicked = new SignalEvent();
 
   constructor(
     actor: Actor<TContext>,
@@ -109,8 +108,7 @@ export class UISprite<
 
     if (isOver && !this.#isHovered) {
       this.#isHovered = true;
-      this.onPointerEnter.emit();
-      this.onHover.emit();
+      this.pointerEntered.emit();
 
       if (this.#styleOnHover) {
         this.#applyStyle(this.#styleOnHover);
@@ -118,29 +116,29 @@ export class UISprite<
     }
     else if (!isOver && this.#isHovered) {
       this.#isHovered = false;
-      this.onPointerLeave.emit();
+      this.pointerExited.emit();
       this.#applyStyle(this.#style);
     }
 
     if (isOver && input.mouse.wasJustPressed("left")) {
       this.#isPressed = true;
-      this.onPointerDown.emit();
+      this.pointerPressed.emit();
     }
 
     if (isOver && input.mouse.wasJustReleased("right")) {
-      this.onRightClick.emit();
+      this.rightClicked.emit();
     }
 
     if (this.#isPressed && input.mouse.wasJustReleased("left")) {
       this.#isPressed = false;
-      this.onPointerUp.emit();
+      this.pointerReleased.emit();
 
       if (isOver) {
-        this.onClick.emit();
+        this.clicked.emit();
 
         const now = time.unscaledElapsed;
         if (now - this.#lastClickTime < kDoubleClickThreshold) {
-          this.onDoubleClick.emit();
+          this.doubleClicked.emit();
           this.#lastClickTime = Number.NEGATIVE_INFINITY;
         }
         else {

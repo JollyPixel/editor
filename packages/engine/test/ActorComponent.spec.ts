@@ -11,7 +11,8 @@ import {
 // Import Internal Dependencies
 import {
   Actor,
-  ActorComponent
+  ActorComponent,
+  SignalEvent
 } from "../src/index.ts";
 import { Timers } from "../src/core/systems/Timers.ts";
 import { createWorld } from "./helpers/actor/mockWorld.ts";
@@ -85,4 +86,22 @@ test("ActorComponent timers stop firing once the component is removed or destroy
   world.sceneManager.endFrame();
 
   assert.strictEqual(timers.pending, false);
+});
+
+test("ActorComponent.listen calls the listener on the component until it is destroyed", () => {
+  const actor = new Actor(createWorld() as any, {
+    name: "listener"
+  });
+  const component = new AssetConsumer(actor);
+  const signal = new SignalEvent<[amount: number]>();
+  const received: [AssetConsumer, number][] = [];
+  component.listen(signal, function onDamage(amount) {
+    received.push([this, amount]);
+  });
+
+  signal.emit(3);
+  component.destroy();
+  signal.emit(5);
+
+  assert.deepEqual(received, [[component, 3]]);
 });

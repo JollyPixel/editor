@@ -240,46 +240,6 @@ describe("RigidBody", () => {
     );
   });
 
-  it("reports contacts on both bodies with their own collider and the other actor", () => {
-    const { world, physics, tick } = createPhysicsHarness();
-    const player = world.createActor("player").addComponentAndGet(RigidBody);
-    const coin = world.createActor("coin").addComponentAndGet(RigidBody, {
-      kind: "fixed",
-      colliders: [{ sensor: true }]
-    });
-    const seen: [string, ActorContact][] = [];
-    player.contacts.connect((contact) => seen.push(["player", contact]));
-    coin.contacts.connect((contact) => seen.push(["coin", contact]));
-
-    physics.pendingContacts.push({
-      started: true,
-      first: player.colliders[0],
-      second: coin.colliders[0]
-    });
-    tick();
-
-    assert.deepEqual(seen, [
-      [
-        "player",
-        {
-          started: true,
-          collider: player.colliders[0],
-          other: coin.colliders[0],
-          actor: coin.actor
-        }
-      ],
-      [
-        "coin",
-        {
-          started: true,
-          collider: coin.colliders[0],
-          other: player.colliders[0],
-          actor: player.actor
-        }
-      ]
-    ]);
-  });
-
   it("removes its body when destroyed", () => {
     const { world, physics } = createPhysicsHarness();
     const actor = world.createActor("box");

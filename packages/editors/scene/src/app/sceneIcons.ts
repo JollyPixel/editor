@@ -35,6 +35,20 @@ registerIcon("scene-inspector", svg`
   />
 `, { tone: "sky" });
 
+registerIcon("scene-signals", svg`
+  <path
+    class="tone-fill"
+    d="M13 3 5 14h6l-1 7 8-11h-6z"
+  />
+  <path
+    d="M13 3 5 14h6l-1 7 8-11h-6z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+`, { tone: "amber" });
+
 registerIcon("scene-environment", svg`
   <path
     class="tone-fill"

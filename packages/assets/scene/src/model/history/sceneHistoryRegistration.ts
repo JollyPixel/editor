@@ -24,6 +24,8 @@ const kLabels: Readonly<Record<SceneCommandAction, string>> = {
   "component-moved": "Reorder components",
   "component-changed": "Edit component",
   "component-assets-changed": "Change component asset",
+  "connection-added": "Connect signal",
+  "connection-removed": "Disconnect signal",
   "actor-overridden": "Override actor",
   "component-overridden": "Override component",
   "environment-changed": "Edit environment"

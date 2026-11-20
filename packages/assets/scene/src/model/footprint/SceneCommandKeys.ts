@@ -41,6 +41,10 @@ export function sceneWriteRefs(
         )
       );
     }
+    case "connection-added":
+      return [SceneValueRef.connection(command.componentId, command.connection.id)];
+    case "connection-removed":
+      return [SceneValueRef.connection(command.componentId, command.id)];
     case "environment-changed":
       return [SceneValueRef.environment()];
     case "actor-added":

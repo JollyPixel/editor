@@ -60,7 +60,7 @@ const button = new Actor(world, {
     }
   });
 
-button.onClick.connect(() => {
+button.clicked.connect(() => {
   console.log("Start clicked!");
 });
 ```
