@@ -2,6 +2,7 @@
 import type {
   AssetRow,
   ChoiceOption,
+  ComponentSignals,
   DeclaredProperty,
   FormRow
 } from "@jolly-pixel/editor.host/scene";
@@ -88,4 +89,19 @@ function behaviorOptions(
   }
 
   return [kNoBehavior, ...options];
+}
+
+export function scriptSignals(
+  data: ScriptData,
+  outline: ScriptOutline | null
+): ComponentSignals | null {
+  if (outline === null) {
+    return null;
+  }
+  const behavior = outline.behaviors.find(({ name }) => name === data.behavior);
+
+  return {
+    signals: behavior?.signals ?? [],
+    methods: behavior?.methods ?? []
+  };
 }

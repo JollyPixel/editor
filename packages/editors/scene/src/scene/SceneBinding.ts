@@ -302,6 +302,8 @@ export class SceneBinding
         this.#changeComponent(command.id);
         break;
       case "component-moved":
+      case "connection-added":
+      case "connection-removed":
         break;
       case "actor-overridden":
       case "component-overridden": {

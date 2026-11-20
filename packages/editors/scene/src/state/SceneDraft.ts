@@ -3,7 +3,6 @@ import {
   ComponentChange,
   type SceneActorView,
   type SceneChange,
-  type SceneComponentJSON,
   type SceneDocument,
   type SceneTransformJSON,
   type SceneTransformPatch
@@ -12,6 +11,7 @@ import { Systems } from "@jolly-pixel/engine";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import type { ComponentEntry } from "../components/ComponentInspection.ts";
 import type { ActorWrites } from "../editing/ActorWrites.ts";
 import type { SceneBinding } from "../scene/SceneBinding.ts";
 
@@ -59,8 +59,8 @@ export class SceneDraft extends Emitter<SceneDraftEvents> {
   }
 
   component(
-    entry: SceneComponentJSON
-  ): SceneComponentJSON {
+    entry: ComponentEntry
+  ): ComponentEntry {
     const change = this.#components.get(entry.id);
 
     return change === undefined ? entry : {

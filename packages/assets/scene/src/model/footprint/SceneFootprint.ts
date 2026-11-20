@@ -42,6 +42,14 @@ export class SceneFootprint {
       case "component-removed":
       case "component-moved":
         return SceneFootprint.#actor(command, tree.actor(command.actorId), [command.actorId]);
+      case "connection-added":
+      case "connection-removed": {
+        const ownerId = tree.componentOwner(command.componentId);
+
+        return ownerId === undefined ?
+          SceneFootprint.unknown(command) :
+          SceneFootprint.#actor(command, tree.actor(ownerId), [ownerId]);
+      }
       case "component-changed":
       case "component-assets-changed": {
         const ownerId = tree.componentOwner(command.id);
@@ -119,6 +127,8 @@ export class SceneFootprint {
       case "actor-transformed":
       case "component-changed":
       case "component-assets-changed":
+      case "connection-added":
+      case "connection-removed":
       case "actor-overridden":
       case "component-overridden":
       case "environment-changed":
@@ -195,6 +205,9 @@ function componentRefs(
     ),
     ...Object.keys(component.assets).map(
       (slot) => SceneValueRef.componentAsset(component.id, slot)
+    ),
+    ...(component.connections ?? []).map(
+      ({ id }) => SceneValueRef.connection(component.id, id)
     )
   ];
 }

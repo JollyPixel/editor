@@ -11,6 +11,7 @@ import type {
   sceneCommandSchema,
   sceneComponentOverrideSchema,
   sceneComponentSchema,
+  sceneConnectionSchema,
   sceneEnvironmentSchema,
   sceneOverridesSchema,
   sceneSnapshotSchema,
@@ -44,6 +45,7 @@ export type SceneTransformField = keyof SceneTransformJSON;
 export type AssetReferenceJSON = network.Infer<typeof assetReferenceSchema>;
 export type SceneAnchorJSON = network.Infer<typeof sceneAnchorSchema>;
 export type SceneComponentJSON = network.Infer<typeof sceneComponentSchema>;
+export type SceneConnectionJSON = network.Infer<typeof sceneConnectionSchema>;
 export type SceneActorJSON = network.Infer<typeof sceneActorSchema>;
 export type SceneActorPlacement = Pick<SceneActorJSON, "parentId" | "anchor">;
 export type SceneActorOverrideJSON = network.Infer<typeof sceneActorOverrideSchema>;
@@ -54,6 +56,7 @@ export type SceneEnvironmentJSON = network.Infer<typeof sceneEnvironmentSchema>;
 export type SceneTransformView = DeepReadonly<SceneTransformJSON>;
 export type SceneActorView = DeepReadonly<SceneActorJSON>;
 export type SceneComponentView = DeepReadonly<SceneComponentJSON>;
+export type SceneConnectionView = DeepReadonly<SceneConnectionJSON>;
 export type SceneEnvironmentView = DeepReadonly<SceneEnvironmentJSON>;
 export type SceneOverridesView = DeepReadonly<SceneOverridesJSON>;
 

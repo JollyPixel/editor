@@ -2,8 +2,10 @@
 import { TEXTURE_ASSET } from "@jolly-pixel/asset-server";
 import { FONT_ASSET } from "@jolly-pixel/asset.font/client";
 import type {
+  DeclaredParameter,
   SceneComponentKind,
-  SceneComponentPackage
+  SceneComponentPackage,
+  SignalKey
 } from "@jolly-pixel/editor.host/scene";
 import type {
   CameraData,
@@ -12,7 +14,10 @@ import type {
   MeshData,
   TextSettings
 } from "@jolly-pixel/engine";
-import type { SceneRigidBodySettings } from "@jolly-pixel/physics/engine";
+import type {
+  RigidBody,
+  SceneRigidBodySettings
+} from "@jolly-pixel/physics/engine";
 
 // Import Internal Dependencies
 import {
@@ -47,6 +52,10 @@ import {
 
 // CONSTANTS
 export const BUILT_IN_PACKAGE = "@jolly-pixel/editor.scene";
+const kContactParameter: DeclaredParameter = {
+  name: "contact",
+  type: "ActorContact"
+};
 
 const kCamera: SceneComponentKind<CameraData> = {
   definition: CAMERA_DEFINITION,
@@ -96,7 +105,22 @@ const kRigidBody: SceneComponentKind<SceneRigidBodySettings> = {
   category: "physics",
   icon: "actor-rigid-body",
   form: rigidBodyForm,
-  describe: describeRigidBody
+  describe: describeRigidBody,
+  signals: () => {
+    return {
+      signals: [
+        {
+          key: "contactStarted" satisfies SignalKey<RigidBody>,
+          params: [kContactParameter]
+        },
+        {
+          key: "contactEnded" satisfies SignalKey<RigidBody>,
+          params: [kContactParameter]
+        }
+      ],
+      methods: []
+    };
+  }
 };
 export const BUILT_IN_COMPONENTS: SceneComponentPackage = {
   components: [kCamera, kLight, kMesh, kText, kRigidBody],

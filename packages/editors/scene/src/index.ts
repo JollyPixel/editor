@@ -12,6 +12,7 @@ import "@jolly-pixel/ui/elements/scope";
 import "./app/sceneIcons.ts";
 import "./features/hierarchy/HierarchyPanel.ts";
 import "./features/inspector/InspectorPanel.ts";
+import "./features/signals/SignalsPanel.ts";
 import "./features/environment/ScenePanel.ts";
 import "./features/viewport/SceneToolbar.ts";
 import "./features/viewport/SceneTopBar.ts";

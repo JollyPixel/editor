@@ -159,7 +159,10 @@ export class ComponentDefinitions {
         id: built.id,
         type: built.type,
         data: definition?.capture?.(component, built.data) ?? built.data,
-        assets: { ...built.assets }
+        assets: { ...built.assets },
+        ...built.connections === undefined ? {} : {
+          connections: structuredClone(built.connections)
+        }
       };
     }
 

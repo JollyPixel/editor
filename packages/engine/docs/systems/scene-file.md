@@ -66,6 +66,7 @@ interface SceneComponentFile {
   type: string;
   data: JSONObject;
   assets: Record<string, AssetReferenceData | null>;
+  connections?: SceneConnectionFile[]; // signals wired to other components
 }
 
 type ColorJSON = string; // "#rrggbb"
@@ -193,6 +194,45 @@ interface ComponentAnchor {
   back to the anchor once it exists again.
 - Inside a [prefab instance](#prefab-instances), `anchor.component` gets the
   same path id as the component it names.
+
+## Connections
+
+A component's `connections` wire its [signals](../components/signal.md) to
+methods of other components of the scene.
+
+```ts
+interface SceneConnectionFile {
+  id: string; // unique among the connections of its component
+  signal: string; // field of the component holding a SignalEvent
+  target: string; // id of the component whose method is called
+  method: string;
+  once?: boolean; // disconnect after the first emit
+}
+```
+
+```json
+{
+  "id": "lever-script",
+  "type": "Script",
+  "data": { "behavior": "Lever", "properties": {} },
+  "assets": { "script": { "id": "scripts-1", "kind": "script" } },
+  "connections": [
+    { "id": "c1", "signal": "pulled", "target": "door-script", "method": "open" }
+  ]
+}
+```
+
+- `FileScene` wires them once every actor of the file is built, before the
+  actors awake, so a signal emitted in `awake()` reaches its targets. Edit mode
+  wires nothing.
+- The method receives the signal's arguments.
+- A connection whose signal, target or method is missing logs a warning and
+  is skipped. A component that was not built wires none of its connections.
+- A target destroyed later stops receiving the signal.
+- Inside a [prefab instance](#prefab-instances), `target` gets the same path
+  id as the component it names, so each instance wires its own components.
+- [`capture()`](#saving-a-running-scene) keeps the connections of each built
+  component.
 
 ## Component definitions
 
@@ -419,6 +459,7 @@ interface SceneInstanceComponent {
   id: string;
   actorId: string;
   component: Component;
+  connections: readonly SceneConnectionFile[]; // as in the file it was built from
 }
 
 type SceneInstanceEvents = {

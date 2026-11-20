@@ -15,6 +15,7 @@ import type {
   SceneActorView,
   SceneCommand,
   SceneComponentView,
+  SceneConnectionView,
   SceneEnvironmentView,
   SceneSnapshot
 } from "../../network/types.ts";
@@ -53,6 +54,8 @@ export type SceneTreeReader = Pick<
   | "component"
   | "componentOwner"
   | "findNextComponent"
+  | "connection"
+  | "findNextConnection"
   | "toJSON"
 >;
 
@@ -195,6 +198,24 @@ export class SceneTree {
     return findNextId(owner.components.map((component) => component.id), id);
   }
 
+  connection(
+    componentId: string,
+    id: string
+  ): SceneConnectionView | undefined {
+    return this.component(componentId)?.connections?.find(
+      (connection) => connection.id === id
+    );
+  }
+
+  findNextConnection(
+    componentId: string,
+    id: string
+  ): string | undefined {
+    const connections = this.component(componentId)?.connections ?? [];
+
+    return findNextId(connections.map((connection) => connection.id), id);
+  }
+
   references(): AssetReferenceJSON[] {
     const references = new Map<string, AssetReferenceJSON>();
     if (this.#environment !== null) {
@@ -272,6 +293,12 @@ export class SceneTree {
         return this.#canChangeComponent(command);
       case "component-assets-changed":
         return this.#owners.has(command.id);
+      case "connection-added":
+        return this.#owners.has(command.componentId) &&
+          isPlainId(command.connection.id) &&
+          this.connection(command.componentId, command.connection.id) === undefined;
+      case "connection-removed":
+        return this.connection(command.componentId, command.id) !== undefined;
       case "actor-overridden":
       case "component-overridden":
         return this.#canOverride(command);
@@ -396,6 +423,31 @@ export class SceneTree {
         });
         break;
 
+      case "connection-added":
+        this.#updateComponent(command.componentId, (component) => {
+          return {
+            ...component,
+            connections: insertedBefore(
+              component.connections ?? [],
+              structuredClone(command.connection),
+              command.beforeId
+            )
+          };
+        });
+        break;
+
+      case "connection-removed":
+        this.#updateComponent(command.componentId, (component) => {
+          const { connections = [], ...rest } = component;
+          const kept = connections.filter(({ id }) => id !== command.id);
+
+          return kept.length === 0 ? rest : {
+            ...rest,
+            connections: kept
+          };
+        });
+        break;
+
       case "actor-overridden":
       case "component-overridden":
         this.#actors.update(command.id, (actor) => {
@@ -470,6 +522,11 @@ export class SceneTree {
         return this.#isComponentSlot(command.beforeId, command.actorId, command.component.id);
       case "component-moved":
         return this.#isComponentSlot(command.beforeId, command.actorId, command.id);
+      case "connection-added":
+        return command.beforeId === undefined || (
+          command.beforeId !== command.connection.id &&
+          this.connection(command.componentId, command.beforeId) !== undefined
+        );
       default:
         return true;
     }

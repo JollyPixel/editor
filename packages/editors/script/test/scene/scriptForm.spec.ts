@@ -6,7 +6,10 @@ import assert from "node:assert/strict";
 import type { ScriptOutline } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
-import { scriptForm } from "#src/scene/scriptForm.ts";
+import {
+  scriptForm,
+  scriptSignals
+} from "#src/scene/scriptForm.ts";
 
 // CONSTANTS
 const kOutline: ScriptOutline = {
@@ -17,11 +20,15 @@ const kOutline: ScriptOutline = {
         { key: "speed", type: "number", label: "Speed", description: "", default: 2 },
         { key: "target", type: "Actor", label: "target", description: "", default: null },
         { key: "jump", type: "Sound", label: "Jump sound", description: "", default: null }
-      ]
+      ],
+      signals: [{ key: "jumped", params: [{ name: "height", type: "number" }] }],
+      methods: [{ key: "jump", params: [] }]
     },
     {
       name: "Idle",
-      properties: []
+      properties: [],
+      signals: [],
+      methods: []
     }
   ]
 };
@@ -65,5 +72,26 @@ describe("scriptForm", () => {
     const [behavior] = scriptForm({ behavior: "", properties: {} }, null);
 
     assert.equal(behavior.control, "text");
+  });
+});
+
+describe("scriptSignals", () => {
+  test("lists the signals and methods of the picked behavior", () => {
+    const signals = scriptSignals({ behavior: "Player", properties: {} }, kOutline);
+
+    assert.deepEqual(signals, {
+      signals: [{ key: "jumped", params: [{ name: "height", type: "number" }] }],
+      methods: [{ key: "jump", params: [] }]
+    });
+  });
+
+  test("lists nothing for a behavior the script no longer declares", () => {
+    const signals = scriptSignals({ behavior: "Removed", properties: {} }, kOutline);
+
+    assert.deepEqual(signals, { signals: [], methods: [] });
+  });
+
+  test("knows no signals while the outline is not loaded", () => {
+    assert.equal(scriptSignals({ behavior: "Player", properties: {} }, null), null);
   });
 });

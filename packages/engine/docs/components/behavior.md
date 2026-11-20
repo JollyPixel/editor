@@ -15,7 +15,7 @@ import {
 import * as THREE from "three";
 
 export class PlayerBehavior extends Behavior {
-  onPlayerPunch = new SignalEvent();
+  readonly punched = new SignalEvent();
 
   @SceneProperty({ type: "number" })
   speed = 0.05;
@@ -39,7 +39,7 @@ export class PlayerBehavior extends Behavior {
     const { input } = this.actor.world;
 
     if (input.mouse.isDown("left")) {
-      this.onPlayerPunch.emit();
+      this.punched.emit();
     }
   }
 

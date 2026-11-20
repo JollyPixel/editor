@@ -106,6 +106,25 @@ export function invert(
       }];
     }
 
+    case "connection-added":
+      return [{
+        action: "connection-removed",
+        componentId: command.componentId,
+        id: command.connection.id
+      }];
+
+    case "connection-removed":
+      return [{
+        action: "connection-added",
+        componentId: command.componentId,
+        connection: ownedCopy(existing(
+          tree.connection(command.componentId, command.id),
+          "connection",
+          command.id
+        )),
+        ...withBefore(tree.findNextConnection(command.componentId, command.id))
+      }];
+
     case "actor-overridden":
     case "component-overridden": {
       const { overrides } = existing(tree.actor(command.id), "actor", command.id);

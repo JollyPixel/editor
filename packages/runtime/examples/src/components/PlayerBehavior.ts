@@ -11,7 +11,7 @@ import {
 import * as THREE from "three";
 
 export class PlayerBehavior extends Behavior {
-  onPlayerPunch = new SignalEvent();
+  readonly punched = new SignalEvent();
 
   @SceneProperty({ type: "number" })
   speed = 0.05;
@@ -70,7 +70,7 @@ export class PlayerBehavior extends Behavior {
     }
     else if (input.mouse.isDown("left")) {
       this.model.animation.play("punch_jab");
-      this.onPlayerPunch.emit();
+      this.punched.emit();
     }
     else {
       this.model.animation.play("idle_loop");

@@ -28,11 +28,36 @@ export interface SceneTransformFile {
   scale: Vector3JSON;
 }
 
+export interface SceneConnectionFile {
+  /**
+   * Unique among the connections of its component.
+   */
+  id: string;
+  /**
+   * Field of the component holding a `SignalEvent`.
+   */
+  signal: string;
+  /**
+   * Id of the component whose method receives the signal.
+   */
+  target: string;
+  method: string;
+  /**
+   * Disconnects after the first emit.
+   */
+  once?: boolean;
+}
+
 export interface SceneComponentFile {
   id: string;
   type: string;
   data: JSONObject;
   assets: Record<string, AssetReferenceData | null>;
+  /**
+   * Signals of this component wired to methods of other components, in play
+   * mode only.
+   */
+  connections?: SceneConnectionFile[];
 }
 
 export interface SceneAnchorFile {

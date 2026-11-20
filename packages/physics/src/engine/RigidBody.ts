@@ -74,7 +74,8 @@ export class RigidBody extends ActorComponent {
   readonly settings: Readonly<RigidBodySettings>;
   readonly body: PhysicsBody;
   readonly colliders: readonly PhysicsCollider[];
-  readonly contacts = new SignalEvent<[contact: ActorContact]>();
+  readonly contactStarted = new SignalEvent<[contact: ActorContact]>();
+  readonly contactEnded = new SignalEvent<[contact: ActorContact]>();
 
   #previous = {
     position: new THREE.Vector3(),
@@ -107,7 +108,7 @@ export class RigidBody extends ActorComponent {
 
     const { colliders, ...bodySettings } = settings;
     this.body = system
-      .ownedBodies(actor, (contact) => this.contacts.emit(contact))
+      .ownedBodies(actor, (contact) => this.#contact(contact))
       .createBody({
         ...bodySettings,
         position: this.#current.position,
@@ -149,7 +150,19 @@ export class RigidBody extends ActorComponent {
 
   protected override onDestroy(): void {
     this.body.remove();
-    this.contacts.clear();
+    this.contactStarted.clear();
+    this.contactEnded.clear();
+  }
+
+  #contact(
+    contact: ActorContact
+  ): void {
+    if (contact.started) {
+      this.contactStarted.emit(contact);
+    }
+    else {
+      this.contactEnded.emit(contact);
+    }
   }
 
   #stepObserver(): PhysicsStepObserver {

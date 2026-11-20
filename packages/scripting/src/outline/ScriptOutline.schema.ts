@@ -18,9 +18,21 @@ export const scriptPropertySchema = z.object({
   default: z.nullable(scriptPropertyValueSchema)
 });
 
+export const scriptParameterSchema = z.object({
+  name: z.string(),
+  type: z.string()
+});
+
+export const scriptMemberSchema = z.object({
+  key: z.string(),
+  params: z.array(scriptParameterSchema)
+});
+
 export const scriptBehaviorSchema = z.object({
   name: z.string(),
-  properties: z.array(scriptPropertySchema)
+  properties: z.array(scriptPropertySchema),
+  signals: z.array(scriptMemberSchema),
+  methods: z.array(scriptMemberSchema)
 });
 
 export const scriptOutlineSchema = z.object({
@@ -29,5 +41,7 @@ export const scriptOutlineSchema = z.object({
 
 export type ScriptPropertyValue = Infer<typeof scriptPropertyValueSchema>;
 export type ScriptProperty = Infer<typeof scriptPropertySchema>;
+export type ScriptParameter = Infer<typeof scriptParameterSchema>;
+export type ScriptMember = Infer<typeof scriptMemberSchema>;
 export type ScriptBehavior = Infer<typeof scriptBehaviorSchema>;
 export type ScriptOutline = Infer<typeof scriptOutlineSchema>;

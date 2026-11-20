@@ -12,12 +12,11 @@ describe("SignalEvent", () => {
     function late(value: string) {
       calls.push(`late:${value}`);
     }
-    function first(value: string) {
+    const first = signal.connect((value) => {
       calls.push(`first:${value}`);
-      signal.disconnect(first);
+      first.disconnect();
       signal.connect(late);
-    }
-    signal.connect(first);
+    });
     signal.connect((value) => calls.push(`second:${value}`));
 
     signal.emit("a");
@@ -27,5 +26,38 @@ describe("SignalEvent", () => {
       calls,
       ["first:a", "second:a", "second:b", "late:b"]
     );
+  });
+
+  test("should stop calling a listener once its connection is disconnected", () => {
+    const signal = new SignalEvent<[number]>();
+    const calls: number[] = [];
+    const connection = signal.connect((value) => calls.push(value));
+
+    signal.emit(1);
+    connection.disconnect();
+    signal.emit(2);
+
+    assert.deepStrictEqual(calls, [1]);
+  });
+
+  test("should call a once listener on the first emit only", () => {
+    const signal = new SignalEvent<[number]>();
+    const calls: number[] = [];
+    signal.connect((value) => calls.push(value), { once: true });
+
+    signal.emit(1);
+    signal.emit(2);
+
+    assert.deepStrictEqual(calls, [1]);
+  });
+
+  test("should resolve next() with the arguments of the following emit", async() => {
+    const signal = new SignalEvent<[amount: number, source: string]>();
+    const next = signal.next();
+
+    signal.emit(10, "fireball");
+    signal.emit(20, "arrow");
+
+    assert.deepStrictEqual(await next, [10, "fireball"]);
   });
 });

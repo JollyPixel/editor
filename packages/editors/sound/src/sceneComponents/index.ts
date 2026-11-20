@@ -1,13 +1,16 @@
 // Import Third-party Dependencies
 import { SOUND_ASSET } from "@jolly-pixel/asset.sound/client";
 import type {
+  DeclaredParameter,
   SceneComponentKind,
-  SceneComponentPackage
+  SceneComponentPackage,
+  SignalKey
 } from "@jolly-pixel/editor.host/scene";
 import type {
   AudioSourceAssets,
   AudioSourceSettings,
   AudioZoneAssets,
+  AudioZoneComponent,
   AudioZoneSettings,
   Systems
 } from "@jolly-pixel/engine";
@@ -25,6 +28,10 @@ import {
 import "./sceneIcons.ts";
 
 // CONSTANTS
+const kTargetParameter: DeclaredParameter = {
+  name: "target",
+  type: "Actor | null"
+};
 const kAudioSource: SceneComponentKind<AudioSourceSettings, AudioSourceAssets> = {
   definition: AUDIO_SOURCE_DEFINITION,
   label: "Audio source",
@@ -45,7 +52,22 @@ const kAudioZone: SceneComponentKind<AudioZoneSettings, AudioZoneAssets> = {
   category: "audio",
   icon: "audio-zone",
   optionalAssets: ["sound"],
-  form: audioZoneForm
+  form: audioZoneForm,
+  signals: () => {
+    return {
+      signals: [
+        {
+          key: "entered" satisfies SignalKey<AudioZoneComponent>,
+          params: [kTargetParameter]
+        },
+        {
+          key: "exited" satisfies SignalKey<AudioZoneComponent>,
+          params: [kTargetParameter]
+        }
+      ],
+      methods: []
+    };
+  }
 };
 
 export const SCENE_COMPONENTS: SceneComponentPackage = {

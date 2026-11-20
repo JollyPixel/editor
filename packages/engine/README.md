@@ -132,7 +132,7 @@ export interface PlayerBehaviorOptions {
 }
 
 class PlayerBehavior extends Behavior {
-  onMovement = new SignalEvent();
+  readonly moved = new SignalEvent();
   speed = 0.1;
 
   constructor(
@@ -144,7 +144,7 @@ class PlayerBehavior extends Behavior {
 
   update() {
     if (this.actor.world.input.keyboard.isDown("ArrowUp")) {
-      this.onMovement.emit();
+      this.moved.emit();
       this.actor.transform.moveForward(this.speed);
     }
   }

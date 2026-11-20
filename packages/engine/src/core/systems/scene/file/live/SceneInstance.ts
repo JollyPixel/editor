@@ -23,6 +23,7 @@ import type {
   SceneActorFile,
   SceneAnchorFile,
   SceneComponentFile,
+  SceneConnectionFile,
   SceneOverridesFile
 } from "../SceneFile.ts";
 import {
@@ -53,6 +54,10 @@ export interface SceneInstanceComponent {
   id: string;
   actorId: string;
   component: Component;
+  /**
+   * Connections of the file the component was built from.
+   */
+  connections: readonly SceneConnectionFile[];
 }
 
 interface PrefabInstance {
@@ -513,10 +518,11 @@ export class SceneInstance<
       resolver: this.#assets
     });
     if (component !== null) {
-      const built = {
+      const built: SceneInstanceComponent = {
         id: entry.id,
         actorId,
-        component
+        component,
+        connections: entry.connections ?? []
       };
       this.#components.set(entry.id, built);
       const anchors = this.#definitions.anchors(component);

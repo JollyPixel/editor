@@ -149,7 +149,35 @@ interface SceneComponentKind<TData extends object = any, TAssets = any> {
   describe?: ComponentDescriber<TData, TAssets>;
   anchorAsset?: string;
   origin?: "center" | "corner";
+  signals?: ComponentSignalsDescriber<TData, TAssets>;
 }
+
+type ComponentSignalsDescriber<TData, TAssets> = (
+  data: TData,
+  assets: Systems.ComponentAssets<TAssets>
+) => ComponentSignals | null;
+
+interface ComponentSignals {
+  signals: readonly DeclaredMember[];
+  methods: readonly DeclaredMember[];
+}
+
+interface DeclaredMember {
+  key: string; // field holding the SignalEvent, or method name
+  params: readonly DeclaredParameter[];
+}
+
+interface DeclaredParameter {
+  name: string;
+  type: string; // as written in the source, "" when it has none
+}
+
+// Names of the SignalEvent fields of TComponent
+type SignalKey<TComponent> = {
+  [TKey in keyof TComponent]: TComponent[TKey] extends SignalEvent<any> ?
+    TKey :
+    never;
+}[keyof TComponent] & string;
 
 type ComponentForm<TData, TAssets> = (
   data: TData,
@@ -231,6 +259,20 @@ anchor in that asset, which opens it with the anchor key as its
 `"corner"` when the content grows from the origin toward the positive axes,
 as voxel map blocks do. Grid snapping in the scene editor then keeps the origin
 on grid lines instead of cell centers. It defaults to `"center"`.
+
+`signals` lists the signals a component of this kind emits and the methods a
+connection can call, for the scene editor's Signals pane. Each `key` names a
+field or method of the component the definition creates in play mode. It
+returns `null` while the assets it reads are loading, and the pane then shows
+no problem on connections that target the component. Without `signals`, the
+kind has neither. The script kind reads them from the outline of the picked
+behavior; `Rigid body` declares `contactStarted` and `contactEnded`. A kind
+that writes its keys by hand checks them with `SignalKey`, so renaming the
+field breaks the build:
+
+```ts
+{ key: "contactStarted" satisfies SignalKey<RigidBody>, params: [] }
+```
 
 ## FormRows
 

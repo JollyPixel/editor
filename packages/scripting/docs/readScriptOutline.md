@@ -1,7 +1,7 @@
 # readScriptOutline
 
-Lists the behaviors of a script and their scene properties, for the scene
-inspector.
+Lists the behaviors of a script with their scene properties, signals and
+methods, for the scene inspector and Signals pane.
 
 ```ts
 import { readScriptOutline } from "@jolly-pixel/scripting";
@@ -14,7 +14,7 @@ export class Player extends Behavior {
   tags = ["hero"];
 }
 `);
-// { behaviors: [{ name: "Player", properties: [{ key: "tags", type: "string[]", label: "tags", description: "", default: ["hero"] }] }] }
+// { behaviors: [{ name: "Player", properties: [{ key: "tags", type: "string[]", label: "tags", description: "", default: ["hero"] }], signals: [], methods: [] }] }
 ```
 
 ## readScriptOutline(text: string): Promise\<ScriptOutline | null\>
@@ -41,6 +41,23 @@ tint = new THREE.Color("#ff8800"); // "#ff8800"
 target = null; // null
 ```
 
+A signal is an instance field typed or initialized as `SignalEvent`. Its
+parameters come from the tuple type argument; an unlabeled element is named
+`arg<index>`.
+
+```ts
+readonly damaged = new SignalEvent<[amount: number, source: string]>();
+// { key: "damaged", params: [{ name: "amount", type: "number" }, { name: "source", type: "string" }] }
+healed: SignalEvent<[number]>;
+// { key: "healed", params: [{ name: "arg0", type: "number" }] }
+```
+
+A method is a public instance method other than a lifecycle hook (`bind`,
+`awake`, `start`, `update`, `fixedUpdate`, `destroy`, `onDestroy`). A
+parameter with no type annotation has the type `""`.
+
+Private (`#name`) and static members are left out of both lists.
+
 ## Schemas
 
 `zod/mini` schemas, used to validate an outline
@@ -59,9 +76,21 @@ interface ScriptProperty {
   default: ScriptPropertyValue | null;
 }
 
+interface ScriptParameter {
+  name: string;
+  type: string; // as written in the source, "" without an annotation
+}
+
+interface ScriptMember {
+  key: string;
+  params: ScriptParameter[];
+}
+
 interface ScriptBehavior {
   name: string;
   properties: ScriptProperty[];
+  signals: ScriptMember[];
+  methods: ScriptMember[];
 }
 
 interface ScriptOutline {
@@ -71,6 +100,8 @@ interface ScriptOutline {
 
 - `scriptPropertyValueSchema`
 - `scriptPropertySchema`
+- `scriptParameterSchema`
+- `scriptMemberSchema`
 - `scriptBehaviorSchema`
 - `scriptOutlineSchema`
 

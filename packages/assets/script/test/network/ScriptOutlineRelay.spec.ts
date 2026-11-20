@@ -18,7 +18,7 @@ describe("script outline relay", () => {
         read.push(text);
 
         return Promise.resolve({
-          behaviors: [{ name: "A", properties: [] }]
+          behaviors: [{ name: "A", properties: [], signals: [], methods: [] }]
         });
       }
     });
@@ -39,7 +39,7 @@ describe("script outline relay", () => {
     assert.deepEqual(read, ["class A {}"]);
     assert.equal(received.length, 2);
     assert.deepEqual(aliceFeed.outline, {
-      behaviors: [{ name: "A", properties: [] }]
+      behaviors: [{ name: "A", properties: [], signals: [], methods: [] }]
     });
   });
 });

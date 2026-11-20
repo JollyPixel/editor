@@ -40,6 +40,11 @@ export interface InspectedAsset {
 
 export type InspectedRow = InspectedField | InspectedList | InspectedAsset;
 
+export type ComponentEntry = Pick<
+  SceneComponentJSON,
+  "id" | "type" | "data" | "assets"
+>;
+
 export class ComponentInspection {
   readonly rows: readonly InspectedRow[];
 
@@ -47,7 +52,7 @@ export class ComponentInspection {
   #data: ParsedData;
 
   constructor(
-    entry: SceneComponentJSON,
+    entry: ComponentEntry,
     kind: SceneComponentKind,
     resolver: Systems.ComponentAssetResolver
   ) {

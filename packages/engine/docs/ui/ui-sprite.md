@@ -17,7 +17,7 @@ const btn = new Actor(world, {
     text: { textContent: "Play" }
   });
 
-btn.onClick.connect(() => console.log("Clicked!"));
+btn.clicked.connect(() => console.log("Clicked!"));
 ```
 
 ## Style
@@ -93,14 +93,13 @@ Each pointer interaction is a [SignalEvent](../components/signal.md):
 
 | Signal | Fires when |
 | ------ | ---------- |
-| `onPointerEnter` | Pointer first enters the sprite bounds |
-| `onPointerLeave` | Pointer leaves the sprite bounds |
-| `onPointerDown` | Left mouse button pressed over the sprite |
-| `onPointerUp` | Left mouse button released (was pressed over sprite) |
-| `onClick` | Full click — down and up while still over the sprite |
-| `onDoubleClick` | Two clicks within 0.3 s of unscaled world time |
-| `onRightClick` | Right mouse button released over the sprite |
-| `onHover` | Same as `onPointerEnter` (convenience alias) |
+| `pointerEntered` | Pointer first enters the sprite bounds |
+| `pointerExited` | Pointer leaves the sprite bounds |
+| `pointerPressed` | Left mouse button pressed over the sprite |
+| `pointerReleased` | Left mouse button released (was pressed over sprite) |
+| `clicked` | Full click — down and up while still over the sprite |
+| `doubleClicked` | Two clicks within 0.3 s of unscaled world time |
+| `rightClicked` | Right mouse button released over the sprite |
 
 ```ts
 const sprite = actor.addComponentAndGet(UISprite, {
@@ -108,11 +107,11 @@ const sprite = actor.addComponentAndGet(UISprite, {
   style: { color: 0x333333 }
 });
 
-sprite.onClick.connect(() => console.log("clicked"));
-sprite.onDoubleClick.connect(() => console.log("double click"));
-sprite.onPointerEnter.connect(() => console.log("enter"));
-sprite.onPointerLeave.connect(() => console.log("leave"));
-sprite.onRightClick.connect(() => console.log("right click"));
+sprite.clicked.connect(() => console.log("clicked"));
+sprite.doubleClicked.connect(() => console.log("double click"));
+sprite.pointerEntered.connect(() => console.log("enter"));
+sprite.pointerExited.connect(() => console.log("leave"));
+sprite.rightClicked.connect(() => console.log("right click"));
 ```
 
 ## Hit testing
@@ -151,14 +150,13 @@ All [UINode options](./ui-node.md) (`anchor`, `offset`, `size`,
 class UISprite extends UINode {
   mesh: THREE.Mesh;
 
-  onPointerEnter: SignalEvent;
-  onPointerLeave: SignalEvent;
-  onPointerDown: SignalEvent;
-  onPointerUp: SignalEvent;
-  onClick: SignalEvent;
-  onDoubleClick: SignalEvent;
-  onRightClick: SignalEvent;
-  onHover: SignalEvent;
+  readonly pointerEntered: SignalEvent;
+  readonly pointerExited: SignalEvent;
+  readonly pointerPressed: SignalEvent;
+  readonly pointerReleased: SignalEvent;
+  readonly clicked: SignalEvent;
+  readonly doubleClicked: SignalEvent;
+  readonly rightClicked: SignalEvent;
 
   isPointerOver(): boolean;
   destroy(): void;

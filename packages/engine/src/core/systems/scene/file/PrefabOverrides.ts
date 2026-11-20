@@ -153,9 +153,19 @@ export class PrefabOverrides {
   ): SceneComponentFile {
     const override = this.component(component.id) ?? {};
 
+    const { connections } = component;
+
     return {
       ...component,
       id: InstancePath.join(instanceId, component.id),
+      ...connections === undefined ? {} : {
+        connections: connections.map((connection) => {
+          return {
+            ...connection,
+            target: InstancePath.join(instanceId, connection.target)
+          };
+        })
+      },
       data: {
         ...component.data,
         ...override.data
