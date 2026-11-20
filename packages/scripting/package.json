@@ -43,11 +43,11 @@
     }
   },
   "scripts": {
-    "build": "tsc -b && node scripts/bundleTypes.ts",
+    "build": "node ../../node_modules/typescript7/bin/tsc -b && node scripts/bundleTypes.ts",
     "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "oxlint src test",
-    "typecheck": "tsc --noEmit -p test/tsconfig.json"
+    "typecheck": "node ../../node_modules/typescript7/bin/tsc --noEmit -p test/tsconfig.json"
   },
   "repository": {
     "type": "git",
