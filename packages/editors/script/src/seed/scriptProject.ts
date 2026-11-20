@@ -2,7 +2,6 @@
 import type { AssetSeedMap } from "@jolly-pixel/asset-server";
 import {
   SCRIPT_KIND,
-  SCRIPT_TEMPLATE,
   SHADER_KIND,
   SHADER_TEMPLATE,
   TEXT_KIND
@@ -20,12 +19,7 @@ export function createScriptProject(): ScriptProject {
     seed: {
       "scripts/PlayerBehavior.ts": {
         id: crypto.randomUUID(),
-        kind: SCRIPT_KIND,
-        content: () => Promise.resolve(
-          new TextEncoder().encode(
-            SCRIPT_TEMPLATE.replace("NewBehavior", "PlayerBehavior")
-          )
-        )
+        kind: SCRIPT_KIND
       },
       "shaders/Wave.tsl.ts": {
         id: crypto.randomUUID(),

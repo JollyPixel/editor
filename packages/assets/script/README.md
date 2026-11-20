@@ -2,7 +2,7 @@
 
 Private asset workspace for three text kinds:
 
-- `script`: a `.ts` or `.js` file, created from a `Behavior` template.
+- `script`: a `.ts` or `.js` file, created from a `Behavior` template with empty `awake()` and `start()`. The class is named after the file: `enemy-spawner.ts` declares `EnemySpawnerBehavior`.
 - `shader`: a `.tsl.ts` file (it wins over `.ts`), created from a template that returns a `MeshStandardNodeMaterial`.
 - `text`: a `.md`, `.txt`, `.json`, `.jsonc`, `.yml`, `.yaml`, `.toml`, `.xml`, `.html` or `.css` file, created empty.
 
@@ -13,6 +13,8 @@ All three load as UTF-8 with LF line endings and share one edit protocol:
 - `ScriptDocument` holds the text and a local undo history that never reverts a peer's edit.
 
 Scripts have an outline: each `Behavior` class with its `@SceneProperty` fields. Request it with `ScriptOutlineFeed.request()`; only a Node server answers.
+
+Scripts and shaders can be linted with oxlint. `ScriptLintFeed.request()` asks the server to lint the room's current text, and `change` fires only when the diagnostics are for the text the peer holds. The server runs one lint at a time per room and answers everyone who asked while it ran.
 
 Scripts and shaders build to `text/javascript` with `buildScript` or `buildShader` from `@jolly-pixel/scripting`. A refused import, a dynamic import or a syntax error fails the build. Scripts build in Node only.
 

@@ -6,12 +6,17 @@ import {
   withCommandHeader,
   type Infer
 } from "@jolly-pixel/network";
-import { scriptOutlineSchema } from "@jolly-pixel/scripting";
+import {
+  scriptDiagnosticSchema,
+  scriptOutlineSchema
+} from "@jolly-pixel/scripting";
 import * as z from "zod/mini";
 
 // CONSTANTS
 export const SCRIPT_OUTLINE_REQUESTED = "outline-requested";
 export const SCRIPT_OUTLINE = "outline";
+export const SCRIPT_LINT_REQUESTED = "lint-requested";
+export const SCRIPT_LINT = "lint";
 
 const kOffset = z.int().check(z.minimum(0));
 const kChangedText = z.string().check(z.minLength(1));
@@ -50,10 +55,28 @@ export const outlineMessageSchema = z.object({
   outline: scriptOutlineSchema
 });
 
+export const lintRequestedSchema = z.object({
+  action: z.literal(SCRIPT_LINT_REQUESTED)
+});
+
+export const lintMessageSchema = z.object({
+  type: z.literal(SCRIPT_LINT),
+  fingerprint: z.string(),
+  diagnostics: z.array(scriptDiagnosticSchema)
+});
+
 export type ScriptOutlineRequest = Infer<typeof outlineRequestedSchema>;
 export type ScriptOutlineMessage = Infer<typeof outlineMessageSchema>;
+export type ScriptLintRequest = Infer<typeof lintRequestedSchema>;
+export type ScriptLintMessage = Infer<typeof lintMessageSchema>;
+export type ScriptRelayRequest = ScriptOutlineRequest | ScriptLintRequest;
 
-export const SCRIPT_RELAY_SCHEMAS: AssetRelaySchemas<ScriptOutlineRequest> = {
-  inbound: [outlineRequestedSchema],
-  outbound: [outlineMessageSchema]
+export const SCRIPT_RELAY_SCHEMAS: AssetRelaySchemas<ScriptRelayRequest> = {
+  inbound: [outlineRequestedSchema, lintRequestedSchema],
+  outbound: [outlineMessageSchema, lintMessageSchema]
+};
+
+export const SHADER_RELAY_SCHEMAS: AssetRelaySchemas<ScriptLintRequest> = {
+  inbound: [lintRequestedSchema],
+  outbound: [lintMessageSchema]
 };

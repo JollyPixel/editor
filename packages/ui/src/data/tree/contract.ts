@@ -109,6 +109,15 @@ export interface JollyRenameDetail {
   name: string;
 }
 
+export interface JollyRenameEndDetail {
+  id: string;
+  /**
+   * The committed name, even when unchanged, or `null` when the rename was
+   * cancelled, left blank or refused.
+   */
+  name: string | null;
+}
+
 export type TreeRenameValidator = (
   detail: JollyRenameDetail
 ) => string | null;
@@ -144,6 +153,7 @@ export interface DataEventMap {
   "jolly-toggle-visible": JollyToggleVisibleDetail;
   "jolly-toggle-lock": JollyToggleLockDetail;
   "jolly-rename": JollyRenameDetail;
+  "jolly-rename-end": JollyRenameEndDetail;
   "jolly-reparent": JollyReparentDetail;
 }
 
@@ -165,6 +175,7 @@ declare global {
     "jolly-toggle-visible": CustomEvent<JollyToggleVisibleDetail>;
     "jolly-toggle-lock": CustomEvent<JollyToggleLockDetail>;
     "jolly-rename": CustomEvent<JollyRenameDetail>;
+    "jolly-rename-end": CustomEvent<JollyRenameEndDetail>;
     "jolly-reparent": CustomEvent<JollyReparentDetail>;
   }
 }

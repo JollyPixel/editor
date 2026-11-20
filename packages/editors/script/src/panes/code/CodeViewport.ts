@@ -17,6 +17,16 @@ export interface CodeViewportElements {
   probe(): HTMLElement | null;
 }
 
+export interface CodePoint {
+  readonly line: number;
+  readonly visualColumn: number;
+}
+
+export interface CodeLayout {
+  readonly lines: TextLines;
+  top(line: number): string;
+}
+
 // CONSTANTS
 const kLineHeight = 20;
 const kLineHeightProperty = "--script-line-height";
@@ -89,6 +99,20 @@ export class CodeViewport implements ReactiveController {
     lines: TextLines
   ): string {
     return `${lines.widest + kTrailingColumns}ch`;
+  }
+
+  pointAt(
+    x: number,
+    y: number
+  ): CodePoint | null {
+    if (this.#charWidth === 0 || x < 0 || y < 0) {
+      return null;
+    }
+
+    return {
+      line: Math.floor(y / kLineHeight),
+      visualColumn: Math.floor(x / this.#charWidth)
+    };
   }
 
   schedule(): void {

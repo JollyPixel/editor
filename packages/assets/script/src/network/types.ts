@@ -6,6 +6,7 @@ import type { AssetRoomNotice } from "@jolly-pixel/asset-server";
 import type {
   scriptCommandSchema,
   scriptSnapshotSchema,
+  ScriptLintMessage,
   ScriptOutlineMessage
 } from "./ScriptCommand.schema.ts";
 
@@ -16,7 +17,7 @@ export interface ScriptStep {
 }
 export type ScriptNetworkCommand = ScriptCommand & network.NetworkCommandHeader;
 export type ScriptSnapshot = network.Infer<typeof scriptSnapshotSchema>;
-export type ScriptNotice = AssetRoomNotice | ScriptOutlineMessage;
+export type ScriptNotice = AssetRoomNotice | ScriptOutlineMessage | ScriptLintMessage;
 
 export type ScriptServerMessage = network.NetworkServerMessage<
   ScriptNetworkCommand,

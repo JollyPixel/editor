@@ -179,7 +179,7 @@ function collectImports(
     return;
   }
 
-  const specifier = importedBy(node);
+  const specifier = importedBy(node) ?? workerModule(node);
   if (specifier !== null) {
     specifiers.push(specifier);
   }
@@ -210,6 +210,64 @@ function importedBy(
     default:
       return null;
   }
+}
+
+function workerModule(
+  node: object
+): string | null {
+  if (
+    !("type" in node) ||
+    node.type !== "NewExpression" ||
+    !("callee" in node) ||
+    !isIdentifier(node.callee, "Worker", "SharedWorker") ||
+    !("arguments" in node) ||
+    !Array.isArray(node.arguments)
+  ) {
+    return null;
+  }
+
+  const [url] = node.arguments as unknown[];
+  if (
+    typeof url !== "object" ||
+    url === null ||
+    !("callee" in url) ||
+    !isIdentifier(url.callee, "URL") ||
+    !("arguments" in url) ||
+    !Array.isArray(url.arguments)
+  ) {
+    return null;
+  }
+
+  const [specifier, base] = url.arguments as unknown[];
+
+  return isImportMetaUrl(base) ? readLiteral(specifier) : null;
+}
+
+function isIdentifier(
+  node: unknown,
+  ...names: string[]
+): boolean {
+  return typeof node === "object" &&
+    node !== null &&
+    "type" in node &&
+    node.type === "Identifier" &&
+    "name" in node &&
+    typeof node.name === "string" &&
+    names.includes(node.name);
+}
+
+function isImportMetaUrl(
+  node: unknown
+): boolean {
+  return typeof node === "object" &&
+    node !== null &&
+    "object" in node &&
+    typeof node.object === "object" &&
+    node.object !== null &&
+    "type" in node.object &&
+    node.object.type === "MetaProperty" &&
+    "property" in node &&
+    isIdentifier(node.property, "url");
 }
 
 function readLiteral(

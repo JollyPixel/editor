@@ -16,6 +16,8 @@ import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
+import { bindCodeAssistant } from "./language/bindCodeAssistant.ts";
+import { CodeAssistant } from "./language/CodeAssistant.ts";
 import { fileLanguage } from "./syntax/highlight.ts";
 
 // CONSTANTS
@@ -69,6 +71,11 @@ export class ScriptEditor {
         throw new Error("ScriptEditor: the page is missing a script pane.");
       }
 
+      const assistant = kind === SCRIPT_KIND || kind === SHADER_KIND ?
+        new CodeAssistant(path) :
+        null;
+      teardown.defer(() => assistant?.dispose());
+
       const collaboration = new ScriptCollaboration({
         room: target.room,
         document: target.document
@@ -92,6 +99,14 @@ export class ScriptEditor {
           language,
           readOnly
         }));
+        if (assistant !== null) {
+          teardown.defer(bindCodeAssistant({
+            code,
+            assistant,
+            document: target.document,
+            room: target.room
+          }));
+        }
         if (markdownPreview !== null) {
           code.hidden = readOnly;
           const { bindMarkdownPreview } = await markdownPreview;

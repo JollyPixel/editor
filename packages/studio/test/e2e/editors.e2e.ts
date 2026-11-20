@@ -58,7 +58,7 @@ test("creates a map, a model, a texture and a scene from the tree and opens each
   for (const asset of created) {
     await assets.createAsset(asset.kind);
     await expect(assets.renameField).toHaveValue(asset.file);
-    await assets.renameField.press("Escape");
+    await assets.renameField.press("Enter");
 
     if (asset.companion !== null) {
       await expect(assets.row(asset.companion)).toBeVisible();

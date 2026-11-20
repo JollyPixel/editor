@@ -81,6 +81,7 @@ interface DataEventMap {
   "jolly-toggle-visible": { id: string; visible: boolean; };
   "jolly-toggle-lock": { id: string; locked: boolean; };
   "jolly-rename": { id: string; name: string; };
+  "jolly-rename-end": { id: string; name: string | null; };
   "jolly-reparent": JollyReparentDetail;
 }
 
@@ -193,6 +194,10 @@ tree.dragOut = {
 - Double-click or F2 opens the field. Enter or blur commits, Escape cancels.
 - A commit emits `jolly-rename` only. The label is not written.
 - A blank name, or the current label, commits nothing.
+- Every rename then ends with `jolly-rename-end`. Its `name` is the committed
+  name, even an unchanged one, or `null` after Escape, a blank name or a
+  refused one. A row that only exists while it is named, such as a new file,
+  listens to this event.
 - On an opted-in row, double-click renames instead of activating. With
   `activateOnDoubleClick`, double-click always activates, and renaming starts
   from F2 or `beginRename(id)`.

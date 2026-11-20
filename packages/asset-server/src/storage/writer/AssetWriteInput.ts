@@ -43,7 +43,8 @@ interface CreateAssetTarget extends WriteOptions {
 export interface CreateAssetFromPayload
   extends CreateAssetTarget, Omit<AssetPayload, "data"> {
   /**
-   * @default the serialized `create(assetId)` state of the kind, linked to
+   * @default the serialized `create(assetId, path)` state of the kind, at the
+   * path the asset is written to after any conflict suffix, linked to
    * a same-named asset of each of its companion kinds
    */
   data?: Uint8Array;

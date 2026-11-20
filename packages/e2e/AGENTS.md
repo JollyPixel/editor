@@ -16,7 +16,9 @@ devDepends on this package. Locators match `jolly-*` tags and ARIA roles;
 4. Serve with `vite --mode e2e` and add `mode.plugins()`. Without
    `prebundleWorkspace()`, every linked `dist/` file is its own request and CI
    boots time out. It scans the `.html` pages in `optimizeDeps.entries` (else
-   `index.html`); a page it misses loads a second copy of `@jolly-pixel/ui`.
+   `index.html`) and the `new Worker(new URL(..., import.meta.url))` modules
+   they start; a page it misses loads a second copy of `@jolly-pixel/ui`, and
+   a worker it misses reloads the page when Vite optimizes its imports.
    A page importing its own `src/` needs
    `vite build --mode e2e && vite preview --mode e2e`, like `@jolly-pixel/ui`.
 5. CI runs `test:e2e` when the package or a workspace dependency changes. Opt out

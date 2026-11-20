@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import type { MessageProtocol } from "@jolly-pixel/network";
-import type { AssetReferenceData } from "@jolly-pixel/asset";
+import type {
+  AssetPath,
+  AssetReferenceData
+} from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
 import type {
@@ -175,7 +178,8 @@ export interface AssetKindHandler<
   readonly build?: AssetBuild<TState>;
 
   create(
-    assetId: string
+    assetId: string,
+    path?: AssetPath
   ): TState;
 
   load(

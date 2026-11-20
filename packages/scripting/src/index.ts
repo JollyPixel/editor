@@ -1,5 +1,7 @@
 export * from "./compiler/build.ts";
 export * from "./compiler/errors/SourceError.ts";
+export * from "./diagnostics/ScriptDiagnostic.schema.ts";
+export { lintScript } from "#linter";
 export { readScriptOutline } from "#outliner";
 export * from "./imports/ScriptImportPolicy.ts";
 export * from "./imports/importPolicies.ts";

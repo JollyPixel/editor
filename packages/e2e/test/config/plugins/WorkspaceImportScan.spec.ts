@@ -49,7 +49,7 @@ function fixtureModules(
 }
 
 describe("WorkspaceImportScan", () => {
-  it("collects the scope entries a page loads at runtime", async() => {
+  it("collects the scope entries a page and its module workers load at runtime", async() => {
     const scan = new WorkspaceImportScan({
       modules: fixtureModules([]),
       scope: "@jolly-pixel/"
@@ -74,6 +74,7 @@ describe("WorkspaceImportScan", () => {
       FIXTURE_PAGE,
       `\0${MAIN_MODULE}`,
       `${FIXTURE_ROOT}/feature.js`,
+      `${FIXTURE_ROOT}/worker.js`,
       `\0${HANDLERS_MODULE}`
     ]);
   });

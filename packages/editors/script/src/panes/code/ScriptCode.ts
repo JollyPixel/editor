@@ -19,11 +19,28 @@ import type {
   PeerCaret,
   ScriptCollaboration
 } from "../../collaboration/ScriptCollaboration.ts";
+import type { CodeDiagnostics } from "../../diagnostics/CodeDiagnostics.ts";
+import type { CodeAssistant } from "../../language/CodeAssistant.ts";
 import {
+  DIAGNOSTIC_STYLES,
+  renderSquiggles
+} from "./codeSquiggles.ts";
+import type { AcceptedCompletion } from "./CompletionList.ts";
+import {
+  COMPLETION_STYLES,
+  CompletionPopup
+} from "./CompletionPopup.ts";
+import {
+  HOVER_STYLES,
+  HoverHint
+} from "./HoverHint.ts";
+import {
+  deleteBackward,
   insertIndent,
   insertNewline,
   removeIndent,
-  type KeyEdit
+  typeCharacter,
+  type KeyCommand
 } from "../../text/EditingKeys.ts";
 import { LineRange } from "../../text/LineRange.ts";
 import { changedSpan } from "../../text/changedSpan.ts";
@@ -33,7 +50,10 @@ import {
   CODE_TOKEN_COLORS,
   tokenSpan
 } from "../../syntax/tokens.ts";
-import { CodeViewport } from "./CodeViewport.ts";
+import {
+  CodeViewport,
+  type CodeLayout
+} from "./CodeViewport.ts";
 import { CodeTokens } from "../../syntax/CodeTokens.ts";
 import type { ScriptLanguage } from "../../syntax/highlight.ts";
 
@@ -44,8 +64,13 @@ export interface ScriptCodeOptions {
   readOnly: boolean;
 }
 
+export interface ScriptCodeAssist {
+  assistant: CodeAssistant;
+  diagnostics: CodeDiagnostics;
+}
+
 export class ScriptCode extends LitElement {
-  static override styles = [CODE_TOKEN_COLORS, css`
+  static override styles = [CODE_TOKEN_COLORS, DIAGNOSTIC_STYLES, HOVER_STYLES, COMPLETION_STYLES, css`
     :host {
       display: block;
       position: relative;
@@ -169,6 +194,9 @@ export class ScriptCode extends LitElement {
   #tokens = new CodeTokens(() => this.requestUpdate());
   #carets: readonly PeerCaret[] = [];
   #release: Array<() => void> = [];
+  #diagnostics: CodeDiagnostics | null = null;
+  #hoverHint: HoverHint | null = null;
+  #completions: CompletionPopup | null = null;
   #viewport = new CodeViewport(this, {
     scroller: () => this.renderRoot.querySelector(".scroller"),
     gutter: () => this.renderRoot.querySelector(".gutter"),
@@ -216,6 +244,29 @@ export class ScriptCode extends LitElement {
     this.#textarea?.focus();
   }
 
+  assist(
+    options: ScriptCodeAssist
+  ): () => void {
+    this.#unassist();
+    const { assistant, diagnostics } = options;
+    this.#diagnostics = diagnostics;
+    this.#hoverHint = new HoverHint(this, {
+      assistant,
+      diagnostics,
+      lines: () => this.#lines,
+      pointAt: (x, y) => this.#viewport.pointAt(x, y)
+    });
+    this.#completions = new CompletionPopup(this, {
+      assistant,
+      text: () => this.#lines.text,
+      caret: () => this.#collapsedCaret(),
+      accept: (accepted) => this.#applyCompletion(accepted)
+    });
+    this.requestUpdate();
+
+    return () => this.#unassist();
+  }
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.#detach();
@@ -234,14 +285,16 @@ export class ScriptCode extends LitElement {
     const current = this.#textarea === null ?
       -1 :
       this.#lines.position(this.#textarea.selectionStart).line;
+    const layout = this.#layout;
+    const diagnostics = this.#diagnostics;
 
     return html`
-      <div class="scroller" @scroll=${() => this.#viewport.schedule()}>
+      <div class="scroller" @scroll=${() => this.#onScroll()}>
         <div class="sizer" style=${styleMap({ height })}>
           <div class="gutter" aria-hidden="true">
             ${visible.map((line) => html`
               <div
-                class="number ${line === current ? "current" : ""}"
+                class="number ${line === current ? "current" : ""} ${this.#severity(line)}"
                 style=${styleMap({ top: this.#viewport.top(line) })}
               >${line + 1}</div>
             `)}
@@ -249,6 +302,9 @@ export class ScriptCode extends LitElement {
           <div class="content" style=${styleMap({ minWidth: width })}>
             <div aria-hidden="true">
               ${this.#carets.map((caret) => this.#renderSelection(caret))}
+              ${diagnostics === null ?
+                nothing :
+                visible.map((line) => renderSquiggles(layout, line, diagnostics))}
               ${visible.map((line) => html`
                 <div class="line" style=${styleMap({ top: this.#viewport.top(line) })}>${
                   this.#renderTokens(line)
@@ -256,6 +312,8 @@ export class ScriptCode extends LitElement {
               `)}
               ${this.#carets.map((caret) => this.#renderCaret(caret))}
             </div>
+            ${this.#hoverHint?.render(layout) ?? nothing}
+            ${this.#completions?.render(layout) ?? nothing}
             <textarea
               aria-label="Script source"
               spellcheck="false"
@@ -263,10 +321,14 @@ export class ScriptCode extends LitElement {
               autocomplete="off"
               wrap="off"
               ?readonly=${this.#readOnly}
-              @input=${() => this.#onInput()}
+              @input=${(event: InputEvent) => this.#onInput(event)}
               @keydown=${(event: KeyboardEvent) => this.#onKeyDown(event)}
               @beforeinput=${(event: InputEvent) => this.#onBeforeInput(event)}
               @focus=${() => this.#revealCaret()}
+              @blur=${() => this.#completions?.close()}
+              @pointerdown=${() => this.#completions?.close()}
+              @pointermove=${(event: PointerEvent) => this.#trackHover(event)}
+              @pointerleave=${() => this.#hoverHint?.leave()}
             ></textarea>
             <span class="probe">0000000000</span>
           </div>
@@ -277,6 +339,13 @@ export class ScriptCode extends LitElement {
 
   get #textarea(): HTMLTextAreaElement | null {
     return this.renderRoot.querySelector("textarea");
+  }
+
+  get #layout(): CodeLayout {
+    return {
+      lines: this.#lines,
+      top: (line) => this.#viewport.top(line)
+    };
   }
 
   #renderTokens(
@@ -343,11 +412,13 @@ export class ScriptCode extends LitElement {
 
     this.#lines = new TextLines(document.text);
     this.#tokens.read(this.#lines);
+    this.#hoverHint?.hide();
     const textarea = this.#textarea;
     if (origin !== "input" && textarea !== null) {
       this.#syncTextarea(
         caretAfter(edit, origin, ScriptCaret.from(textarea), document.text.length)
       );
+      this.#completions?.refresh();
     }
     this.requestUpdate();
   }
@@ -377,7 +448,9 @@ export class ScriptCode extends LitElement {
     scroller?.scrollTo(left, top);
   }
 
-  #onInput(): void {
+  #onInput(
+    event: InputEvent
+  ): void {
     const textarea = this.#textarea;
     const document = this.#document;
     if (textarea === null || document === null) {
@@ -390,6 +463,62 @@ export class ScriptCode extends LitElement {
     }
     document.edit(edit);
     this.#revealCaret();
+    this.#completions?.input(event);
+  }
+
+  #trackHover(
+    event: PointerEvent
+  ): void {
+    const textarea = this.#textarea;
+    if (textarea !== null) {
+      this.#hoverHint?.track(event, textarea.getBoundingClientRect());
+    }
+  }
+
+  #onScroll(): void {
+    this.#viewport.schedule();
+    this.#hoverHint?.hide();
+  }
+
+  #severity(
+    line: number
+  ): string {
+    return this.#diagnostics?.lineSeverity(this.#lines, line) ?? "";
+  }
+
+  #collapsedCaret(): number | null {
+    const textarea = this.#textarea;
+    if (
+      textarea === null ||
+      this.#readOnly ||
+      textarea.selectionStart !== textarea.selectionEnd
+    ) {
+      return null;
+    }
+
+    return textarea.selectionStart;
+  }
+
+  #applyCompletion(
+    accepted: AcceptedCompletion
+  ): void {
+    const document = this.#document;
+    if (document === null) {
+      return;
+    }
+
+    document.edit(accepted.edit);
+    this.#syncTextarea(ScriptCaret.collapsed(accepted.caret));
+    this.#revealCaret();
+  }
+
+  #unassist(): void {
+    this.#hoverHint?.hide();
+    this.#completions?.close();
+    this.#diagnostics = null;
+    this.#hoverHint = null;
+    this.#completions = null;
+    this.requestUpdate();
   }
 
   #onBeforeInput(
@@ -398,12 +527,27 @@ export class ScriptCode extends LitElement {
     if (event.inputType === "historyUndo" || event.inputType === "historyRedo") {
       event.preventDefault();
       this.#travel(event.inputType === "historyRedo");
+
+      return;
+    }
+
+    const command = inputCommand(event);
+    if (command !== null && this.#applyKey(command)) {
+      event.preventDefault();
+      this.#completions?.input(event);
     }
   }
 
   #onKeyDown(
     event: KeyboardEvent
   ): void {
+    this.#hoverHint?.hide();
+    if (this.#completions?.key(event)) {
+      event.preventDefault();
+
+      return;
+    }
+
     const modifier = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
     if (modifier && !event.altKey && (key === "z" || key === "y")) {
@@ -437,18 +581,23 @@ export class ScriptCode extends LitElement {
   }
 
   #applyKey(
-    command: (lines: TextLines, caret: ScriptCaret) => KeyEdit
-  ): void {
+    command: KeyCommand
+  ): boolean {
     const textarea = this.#textarea;
     const document = this.#document;
     if (textarea === null || document === null || this.#readOnly) {
-      return;
+      return false;
     }
 
-    const { edit, caret } = command(this.#lines, ScriptCaret.from(textarea));
-    document.edit(edit);
-    this.#syncTextarea(caret);
+    const keyEdit = command(this.#lines, ScriptCaret.from(textarea));
+    if (keyEdit === null) {
+      return false;
+    }
+    document.edit(keyEdit.edit);
+    this.#syncTextarea(keyEdit.caret);
     this.#revealCaret();
+
+    return true;
   }
 
   #revealCaret(): void {
@@ -464,6 +613,7 @@ export class ScriptCode extends LitElement {
   }
 
   #detach(): void {
+    this.#unassist();
     this.#tokens.dispose();
     for (const release of this.#release.splice(0)) {
       release();
@@ -471,6 +621,20 @@ export class ScriptCode extends LitElement {
     this.#document = null;
     this.#collaboration = null;
   }
+}
+
+function inputCommand(
+  event: InputEvent
+): KeyCommand | null {
+  const { inputType, data } = event;
+  if (event.isComposing) {
+    return null;
+  }
+  if (inputType === "insertText" && data !== null) {
+    return (lines, caret) => typeCharacter(lines, caret, data);
+  }
+
+  return inputType === "deleteContentBackward" ? deleteBackward : null;
 }
 
 function replaceText(

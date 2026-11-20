@@ -338,6 +338,7 @@ export class AssetBrowser extends LitElement {
           @jolly-toggle-expand=${this.#onToggleExpand}
           @jolly-activate=${this.#onActivate}
           @jolly-rename=${this.#onRename}
+          @jolly-rename-end=${this.#onRenameEnd}
           @jolly-reparent=${this.#onReparent}
           @jolly-context-request=${this.#onContextRequest}
           @keydown=${this.#onKeyDown}
@@ -423,9 +424,13 @@ export class AssetBrowser extends LitElement {
       onChange: () => this.requestUpdate(),
       onError: (message) => this.#error(message),
       onCreated: (nodeId) => {
-        void this.#afterRender((tree) => tree.beginRename(nodeId));
+        void this.#afterRender((tree) => {
+          if (!tree.beginRename(nodeId)) {
+            void this.#view?.endRename(nodeId, null);
+          }
+        });
       },
-      onImported: (nodeId) => {
+      onRevealed: (nodeId) => {
         void this.#afterRender((tree) => tree.reveal(nodeId));
       }
     });
@@ -602,6 +607,12 @@ export class AssetBrowser extends LitElement {
     void this.#view?.rename(event.detail.id, event.detail.name);
   };
 
+  readonly #onRenameEnd = (
+    event: HTMLElementEventMap["jolly-rename-end"]
+  ): void => {
+    void this.#view?.endRename(event.detail.id, event.detail.name);
+  };
+
   readonly #onReparent = (
     event: HTMLElementEventMap["jolly-reparent"]
   ): void => {
@@ -647,7 +658,7 @@ export class AssetBrowser extends LitElement {
 
     const kind = parseNewAssetKind(action);
     if (kind !== null) {
-      void this.#view?.createAsset(
+      this.#view?.createAsset(
         kind,
         this.#selection(target.nodeIds).folder
       );

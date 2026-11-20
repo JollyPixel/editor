@@ -12,7 +12,10 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import {
   ASSET_CREATED,
   AssetPathConflictError,
-  UnknownAssetKindError
+  UnknownAssetKindError,
+  binaryAssetKind,
+  type AssetKindHandler,
+  type BinaryAssetState
 } from "#src/index.ts";
 import { syncHarness } from "../../helpers/backend.ts";
 import {
@@ -117,6 +120,36 @@ describe("AssetWriter — create without content", () => {
       "maps/world-2.counter",
       "maps/world-2.owner"
     ]);
+  });
+
+  test("builds the default state at the path the asset is written to", async() => {
+    const labelHandler: AssetKindHandler<BinaryAssetState> = {
+      ...binaryAssetKind,
+      kind: "label",
+      extensions: { ".label": "text/plain; charset=utf-8" },
+      create: (_assetId, path) => {
+        return { bytes: bytes(path?.toString() ?? "") };
+      }
+    };
+    await using harness = await syncHarness({ handlers: [labelHandler] });
+    (await harness.writer.create({
+      path: "notes/todo.label",
+      data: bytes(""),
+      actor: kActor
+    })).unwrap();
+
+    (await harness.writer.create({
+      path: "notes/todo.label",
+      kind: "label",
+      onPathConflict: "suffix",
+      actor: kActor
+    })).unwrap();
+    await harness.projector.flush();
+
+    assert.strictEqual(
+      text(await harness.source.read("notes/todo-2.label")),
+      "notes/todo-2.label"
+    );
   });
 
   test("refuses a taken companion path without appending", async() => {

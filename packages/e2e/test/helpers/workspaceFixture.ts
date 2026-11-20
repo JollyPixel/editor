@@ -35,5 +35,6 @@ export const EXPECTED_ENTRIES = [
   "@jolly-pixel/handlers",
   "@jolly-pixel/lazy",
   "@jolly-pixel/reexported",
-  "@jolly-pixel/type-specifier"
+  "@jolly-pixel/type-specifier",
+  "@jolly-pixel/worker-only"
 ];

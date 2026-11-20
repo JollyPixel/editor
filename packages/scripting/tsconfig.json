@@ -1,5 +1,8 @@
 {
   "extends": "../../tsconfig/lib.json",
+  "exclude": [
+    "src/types/scriptTypes.ts"
+  ],
   "references": [
     {
       "path": "../asset"

@@ -73,10 +73,13 @@ export class TreeRenameController {
     }
 
     this.#options.switchInteraction(idleTreeInteraction());
-    const name = readDraft(event.target, view);
-    if (name !== null && interaction.error === null) {
+    const name = interaction.error === null ?
+      readName(event.target) :
+      null;
+    if (name !== null && name !== view.label) {
       emitDataEvent(this.#host, "jolly-rename", { id: view.id, name });
     }
+    emitDataEvent(this.#host, "jolly-rename-end", { id: view.id, name });
     this.#options.focusRow(view.id);
   }
 
@@ -106,9 +109,21 @@ export class TreeRenameController {
     const interaction = this.#options.interaction();
     this.#options.switchInteraction(idleTreeInteraction());
     if (interaction.kind === "renaming") {
+      emitDataEvent(this.#host, "jolly-rename-end", {
+        id: interaction.id,
+        name: null
+      });
       this.#options.focusRow(interaction.id);
     }
   }
+}
+
+function readName(
+  target: EventTarget | null
+): string | null {
+  const name = isInputElement(target) ? target.value.trim() : "";
+
+  return name === "" ? null : name;
 }
 
 function readDraft(

@@ -63,7 +63,8 @@ interface CreationRecipe {
   readonly companions: readonly CompanionSource[];
 
   owner(
-    assetId: string
+    assetId: string,
+    path: AssetPath
   ): Result<unknown, Error>;
 }
 
@@ -173,7 +174,7 @@ export class AssetCreationPlanner {
     }
 
     const { assetId, path } = allocated.val;
-    const owner = recipe.owner(assetId);
+    const owner = recipe.owner(assetId, path);
     if (!owner.ok) {
       return owner;
     }
@@ -277,7 +278,7 @@ function scaffoldRecipe(
   handler: AnyAssetKindHandler
 ): CreationRecipe {
   return {
-    owner: (assetId) => Ok(handler.create(assetId)),
+    owner: (assetId, path) => Ok(handler.create(assetId, path)),
     companions: (handler.companions ?? []).map((companion) => {
       return {
         kind: companion.kind,

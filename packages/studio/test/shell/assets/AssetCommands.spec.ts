@@ -46,14 +46,17 @@ function createRelocation(
 }
 
 describe("AssetCommands", () => {
-  test("creates a new asset of a kind in a folder, without content", async() => {
+  test("creates a new asset of a kind at a path, without content", async() => {
     const { commands, created, errors } = commandsFailingAt(-1);
 
-    const assetId = await commands.create(AssetPath.parse("maps"), kMapKind);
+    const assetId = await commands.create(
+      AssetPath.parse("maps/world.voxelmap.json"),
+      kMapKind
+    );
 
     assert.equal(assetId, "created");
     assert.deepEqual(created, [[
-      "maps/New voxel map.voxelmap.json",
+      "maps/world.voxelmap.json",
       null,
       {
         kind: "voxelmap",
@@ -66,8 +69,10 @@ describe("AssetCommands", () => {
   test("reports a create the catalog refuses", async() => {
     const { commands, errors } = commandsFailingAt(0);
 
-    assert.equal(await commands.create(AssetPath.ROOT, kMapKind), null);
-    assert.deepEqual(errors, ['Could not create "New voxel map": disk full']);
+    const path = AssetPath.parse("world.voxelmap.json");
+
+    assert.equal(await commands.create(path, kMapKind), null);
+    assert.deepEqual(errors, ['Could not create "world": disk full']);
   });
 
   test("says how many renames of a folder went through and returns it", async() => {

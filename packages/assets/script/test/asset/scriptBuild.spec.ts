@@ -7,12 +7,12 @@ import {
   init as initLexer,
   parse
 } from "es-module-lexer";
+import { AssetPath } from "@jolly-pixel/asset";
 import type { AssetKindHandler } from "@jolly-pixel/asset-server";
 import { ScriptImportError } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
 import {
-  SCRIPT_TEMPLATE,
   scriptAssetKind,
   shaderAssetKind,
   type ScriptText
@@ -41,6 +41,17 @@ async function build(
   return kDecoder.decode(bytes);
 }
 
+function importWithEngineStub(
+  code: string
+): Promise<Record<string, any>> {
+  const linked = code.replaceAll(
+    "\"@jolly-pixel/engine\"",
+    JSON.stringify(`data:text/javascript,${encodeURIComponent(kEngineStub)}`)
+  );
+
+  return import(`data:text/javascript,${encodeURIComponent(linked)}`);
+}
+
 async function specifiers(
   code: string
 ): Promise<string[]> {
@@ -51,20 +62,31 @@ async function specifiers(
 
 describe("script build", () => {
   test("builds a behavior whose property decorators run as standard decorators", async() => {
-    const code = await build(scriptAssetKind(), SCRIPT_TEMPLATE);
+    const code = await build(scriptAssetKind(), [
+      "import { Behavior, SceneProperty } from \"@jolly-pixel/engine\";",
+      "export class Mover extends Behavior {",
+      "  @SceneProperty({ type: \"number\" })",
+      "  speed = 1;",
+      "}"
+    ].join("\n"));
     const decorated: unknown[] = [];
     Reflect.set(globalThis, "decorated", decorated);
 
-    const linked = code.replaceAll(
-      "\"@jolly-pixel/engine\"",
-      JSON.stringify(`data:text/javascript,${encodeURIComponent(kEngineStub)}`)
-    );
-    const module = await import(`data:text/javascript,${encodeURIComponent(linked)}`);
+    const module = await importWithEngineStub(code);
     Reflect.deleteProperty(globalThis, "decorated");
 
-    assert.equal(typeof module.NewBehavior, "function");
     assert.deepEqual(decorated, [["field", "speed", "number"]]);
-    assert.equal(new module.NewBehavior().speed, 1);
+    assert.equal(new module.Mover().speed, 1);
+  });
+
+  test("builds the template of a new script into its awake and start phases", async() => {
+    const handler = scriptAssetKind();
+    const state = handler.create("new", new AssetPath("scripts/player.ts"));
+
+    const module = await importWithEngineStub(await build(handler, state.text));
+
+    assert.equal(typeof module.PlayerBehavior.prototype.awake, "function");
+    assert.equal(typeof module.PlayerBehavior.prototype.start, "function");
   });
 
   test("keeps the imports a script uses as values and drops the ones used as types", async() => {

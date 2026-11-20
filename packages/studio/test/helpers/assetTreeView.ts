@@ -71,7 +71,7 @@ export interface TreeViewProbe {
   notifications: NotificationQueue;
   errors: string[];
   created: string[];
-  imported: string[];
+  revealed: string[];
   prompted: string[];
 }
 
@@ -98,7 +98,7 @@ export function treeView(
   const notifications = new NotificationQueue();
   const errors: string[] = [];
   const created: string[] = [];
-  const imported: string[] = [];
+  const revealed: string[] = [];
   const prompted: string[] = [];
   const view = new AssetTreeView({
     catalog,
@@ -132,7 +132,7 @@ export function treeView(
     onChange: () => undefined,
     onError: (message) => errors.push(message),
     onCreated: (nodeId) => created.push(nodeId),
-    onImported: (nodeId) => imported.push(nodeId)
+    onRevealed: (nodeId) => revealed.push(nodeId)
   });
 
   return {
@@ -141,7 +141,7 @@ export function treeView(
     notifications,
     errors,
     created,
-    imported,
+    revealed,
     prompted
   };
 }

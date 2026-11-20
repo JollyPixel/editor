@@ -97,11 +97,12 @@ export interface AssetTreeViewOptions {
   onChange: () => void;
   onError: (message: string) => void;
   /**
-   * Called once a created asset or folder shows in the tree, selected.
+   * Called with a created folder, or the draft row of a new asset, to name it.
    */
   onCreated: (nodeId: string) => void;
   /**
-   * Called once the first file of a drop shows in the tree as an asset.
+   * Called once a named draft, or the first file of a drop, shows in the tree
+   * as an asset.
    */
-  onImported: (nodeId: string) => void;
+  onRevealed: (nodeId: string) => void;
 }

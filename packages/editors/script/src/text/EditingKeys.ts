@@ -14,17 +14,30 @@ export interface KeyEdit {
   readonly caret: ScriptCaret;
 }
 
+export type KeyCommand = (
+  lines: TextLines,
+  caret: ScriptCaret
+) => KeyEdit | null;
+
 // CONSTANTS
 export const INDENT = "  ";
 const kLeadingSpace = /^[\t ]*/;
-const kOpeners = new Set(["{", "[", "("]);
+const kBrackets = new Map([
+  ["(", ")"],
+  ["[", "]"],
+  ["{", "}"]
+]);
+const kQuotes = new Set(["\"", "'", "`"]);
+const kClosers = new Set([...kBrackets.values(), ...kQuotes]);
+const kClosesBefore = /^(?:[\s)\]};,:.=>]|$)/;
+const kKeepsQuoteSingle = /^[\p{ID_Continue}$\\]$/u;
 
 export function insertIndent(
   lines: TextLines,
   caret: ScriptCaret
 ): KeyEdit {
   if (!spansLines(lines, caret)) {
-    return replaceSelection(lines, caret, INDENT);
+    return replaceRange(lines, caret.start, caret.end, INDENT);
   }
 
   return shiftLines(lines, caret, (_line, at) => [{ at, insert: INDENT }]);
@@ -50,9 +63,67 @@ export function insertNewline(
 ): KeyEdit {
   const before = lines.lineBefore(caret.start);
   const indent = kLeadingSpace.exec(before)?.[0] ?? "";
-  const opens = kOpeners.has(before.trimEnd().at(-1) ?? "");
+  const closer = kBrackets.get(before.trimEnd().at(-1) ?? "");
+  if (closer === undefined) {
+    return replaceRange(lines, caret.start, caret.end, `\n${indent}`);
+  }
 
-  return replaceSelection(lines, caret, `\n${indent}${opens ? INDENT : ""}`);
+  const inner = `\n${indent}${INDENT}`;
+  const outer = lines.text[caret.end] === closer ? `\n${indent}` : "";
+
+  return replaceRange(
+    lines,
+    caret.start,
+    caret.end,
+    `${inner}${outer}`,
+    caret.start + inner.length
+  );
+}
+
+export function typeCharacter(
+  lines: TextLines,
+  caret: ScriptCaret,
+  character: string
+): KeyEdit | null {
+  if (!caret.collapsed) {
+    return null;
+  }
+
+  const at = caret.start;
+  const next = lines.text[at] ?? "";
+  if (next === character && kClosers.has(character)) {
+    return replaceRange(lines, at, at, "", at + 1);
+  }
+
+  const quote = kQuotes.has(character);
+  const closer = matchingCloser(character);
+  if (closer === undefined || !kClosesBefore.test(next)) {
+    return null;
+  }
+  if (quote && kKeepsQuoteSingle.test(lines.text[at - 1] ?? "")) {
+    return null;
+  }
+
+  return replaceRange(lines, at, at, `${character}${closer}`, at + 1);
+}
+
+export function deleteBackward(
+  lines: TextLines,
+  caret: ScriptCaret
+): KeyEdit | null {
+  const at = caret.start;
+  const closer = matchingCloser(lines.text[at - 1] ?? "");
+  if (!caret.collapsed || closer === undefined || lines.text[at] !== closer) {
+    return null;
+  }
+
+  return replaceRange(lines, at - 1, at + 1, "", at - 1);
+}
+
+function matchingCloser(
+  opener: string
+): string | undefined {
+  return kQuotes.has(opener) ? opener : kBrackets.get(opener);
 }
 
 function spansLines(
@@ -62,17 +133,19 @@ function spansLines(
   return lines.text.slice(caret.start, caret.end).includes("\n");
 }
 
-function replaceSelection(
+function replaceRange(
   lines: TextLines,
-  caret: ScriptCaret,
-  inserted: string
+  from: number,
+  to: number,
+  inserted: string,
+  caret = from + inserted.length
 ): KeyEdit {
-  const edit = TextEdit.deletion(caret.start, lines.text.slice(caret.start, caret.end))
-    .then(TextEdit.insertion(caret.start, inserted));
+  const edit = TextEdit.deletion(from, lines.text.slice(from, to))
+    .then(TextEdit.insertion(from, inserted));
 
   return {
     edit,
-    caret: ScriptCaret.collapsed(caret.start + inserted.length)
+    caret: ScriptCaret.collapsed(caret)
   };
 }
 

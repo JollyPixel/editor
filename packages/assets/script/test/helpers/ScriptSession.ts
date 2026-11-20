@@ -12,7 +12,7 @@ import {
 } from "#src/asset/scriptAssetKind.ts";
 import { SCRIPT_KIND } from "#src/asset/script.ts";
 import type { ScriptText } from "#src/model/ScriptText.ts";
-import type { ScriptOutlineRequest } from "#src/network/ScriptCommand.schema.ts";
+import type { ScriptRelayRequest } from "#src/network/ScriptCommand.schema.ts";
 import {
   textDocumentKind,
   type SyncedScript
@@ -29,7 +29,7 @@ export interface ScriptPeer {
 }
 
 export class ScriptSession {
-  readonly server: LiveAssetRoom<ScriptText, ScriptNetworkCommand, ScriptOutlineRequest>;
+  readonly server: LiveAssetRoom<ScriptText, ScriptNetworkCommand, ScriptRelayRequest>;
   readonly peers: ScriptPeer[] = [];
 
   constructor(
