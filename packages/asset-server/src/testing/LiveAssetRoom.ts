@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
-import { AssetRoom } from "@jolly-pixel/asset";
 import {
   describeErrors,
   MessageParser,
@@ -8,15 +7,21 @@ import {
 } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
-import type {
-  AssetKindHandler,
-  AssetRoomBinding
-} from "../model/kinds/AssetKindHandler.ts";
+import type { AssetKindHandler } from "../model/kinds/AssetKindHandler.ts";
 import type { AssetCommandHeader } from "../model/kinds/AssetLiveProtocol.ts";
 import { foldAssetEvent } from "../model/kinds/foldAssetEvent.ts";
 import { AssetRoomExtension } from "../live/room/AssetRoomExtension.ts";
 import { AssetRoomProtocols } from "../live/room/AssetRoomProtocols.ts";
 import type { AssetServerMessage } from "./MockAssetRoom.ts";
+import {
+  roomBinding,
+  type RoomBindingOptions
+} from "./roomBinding.ts";
+
+export type LiveAssetRoomOptions = Pick<
+  RoomBindingOptions<unknown>,
+  "path" | "files"
+>;
 
 // CONSTANTS
 const kAssetId = "asset-1";
@@ -50,7 +55,8 @@ export class LiveAssetRoom<
   };
 
   constructor(
-    handler: AssetKindHandler<TState, TCommand, TRelay>
+    handler: AssetKindHandler<TState, TCommand, TRelay>,
+    options: LiveAssetRoomOptions = {}
   ) {
     const { commands } = handler;
     if (commands?.live === undefined) {
@@ -64,13 +70,14 @@ export class LiveAssetRoom<
       version = event.eventVersion;
       foldAssetEvent(handler, this.state, event);
     });
-    const binding: AssetRoomBinding<TState> = {
-      assetId: kAssetId,
+    const binding = roomBinding({
       kind: handler.kind,
-      roomId: new AssetRoom(handler.kind, kAssetId).toString(),
+      state: this.state,
+      assetId: kAssetId,
       version: () => version,
-      state: this.state
-    };
+      path: options.path,
+      files: options.files
+    });
     const live = commands.live(binding);
     const protocols = AssetRoomProtocols
       .compile(commands)

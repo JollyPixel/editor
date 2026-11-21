@@ -1,15 +1,19 @@
 // Import Internal Dependencies
 import type { TextEdit } from "./TextEdit.ts";
-
-export type LineEnding = "\n" | "\r\n";
+import {
+  toLf,
+  type LineEnding
+} from "./LineEnding.ts";
 
 // CONSTANTS
 const kLineEnding = /\r?\n/;
 const kAnyLineEnding = /\r?\n/g;
 
 export class ScriptText {
+  lineEnding: LineEnding | null = null;
+
   #text: string;
-  #lineEnding: LineEnding = "\n";
+  #fileLineEnding: LineEnding = "\n";
 
   constructor(
     text = ""
@@ -22,16 +26,20 @@ export class ScriptText {
   }
 
   get file(): string {
-    return this.#lineEnding === "\n" ?
+    const lineEnding = this.lineEnding ?? this.#fileLineEnding;
+
+    return lineEnding === "\n" ?
       this.#text :
-      this.#text.replace(kAnyLineEnding, this.#lineEnding);
+      this.#text.replace(kAnyLineEnding, lineEnding);
   }
 
   load(
     file: string
   ): void {
-    this.#lineEnding = kLineEnding.exec(file)?.[0] === "\r\n" ? "\r\n" : "\n";
-    this.#text = file.replaceAll("\r\n", "\n");
+    this.#fileLineEnding = kLineEnding.exec(file)?.[0] === "\r\n" ?
+      "\r\n" :
+      "\n";
+    this.#text = toLf(file);
   }
 
   replace(

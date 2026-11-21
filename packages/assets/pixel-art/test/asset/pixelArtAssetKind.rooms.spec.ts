@@ -11,6 +11,7 @@ import {
   type AssetLiveProtocol,
   type AssetRoomBinding
 } from "@jolly-pixel/asset-server";
+import { roomBinding } from "@jolly-pixel/asset-server/testing";
 
 // Import Internal Dependencies
 import {
@@ -68,12 +69,10 @@ function strokeCommand(
 function binding(
   state: PixelArtState
 ): AssetRoomBinding<PixelArtState> {
-  return {
-    assetId: "asset-1",
+  return roomBinding({
     kind: PIXEL_ART_KIND,
-    roomId: `${PIXEL_ART_KIND}:asset-1`,
     state
-  };
+  });
 }
 
 function liveProtocol(

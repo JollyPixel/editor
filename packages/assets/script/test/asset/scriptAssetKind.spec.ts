@@ -76,7 +76,8 @@ describe("scriptAssetKind", () => {
     const cases: Array<[string, string]> = [
       ["a\r\nb\r\n", "a\r\nnew\r\nb\r\n"],
       ["a\nb\n", "a\nnew\nb\n"],
-      ["a\r\nb\nc", "a\r\nnew\r\nb\r\nc"]
+      ["a\r\nb\nc", "a\r\nnew\r\nb\r\nc"],
+      ["a\rb\r", "a\nnew\nb\n"]
     ];
 
     for (const [file, saved] of cases) {

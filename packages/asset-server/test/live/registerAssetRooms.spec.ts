@@ -7,12 +7,16 @@ import * as z from "zod/mini";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { AssetRelay } from "#src/index.ts";
+import type {
+  AssetRelay,
+  AssetRoomBinding
+} from "#src/index.ts";
 import {
   failingLiveCounterHandler,
   liveCounterHandler,
   relayCounterHandler,
-  COUNTER_INCREMENTED
+  COUNTER_INCREMENTED,
+  type CounterState
 } from "../helpers/kinds.ts";
 import type { RecordingClient } from "../helpers/rooms.ts";
 import { roomHarness } from "../helpers/live/roomHarness.ts";
@@ -122,7 +126,46 @@ describe("registerAssetRooms — live room opening", () => {
     assert.deepEqual(harness.clients.get("A")!.received, []);
     assert.strictEqual(harness.sync.states.has(harness.assetId), false);
   });
+
+  test("a live protocol sees the asset path and reads project files outside reserved paths", async() => {
+    const bindings: AssetRoomBinding<CounterState>[] = [];
+    const inner = liveCounterHandler();
+    await using harness = await roomHarness({
+      handler: {
+        ...inner,
+        commands: {
+          ...inner.commands!,
+          live: (binding) => {
+            bindings.push(binding);
+
+            return inner.commands!.live!(binding);
+          }
+        }
+      }
+    });
+    const encoder = new TextEncoder();
+    for (const path of ["notes/.editorconfig", ".jollypixel/notes"]) {
+      await harness.sync.source.write(path, encoder.encode(path));
+    }
+
+    await harness.join("A");
+    const [binding] = bindings;
+
+    assert.strictEqual(binding.path(), "a.counter");
+    assert.strictEqual(await readText(binding, "notes/.editorconfig"), "notes/.editorconfig");
+    assert.strictEqual(await readText(binding, "missing/.editorconfig"), null);
+    assert.strictEqual(await readText(binding, ".jollypixel/notes"), null);
+  });
 });
+
+async function readText(
+  binding: AssetRoomBinding<CounterState>,
+  path: string
+): Promise<string | null> {
+  const bytes = await binding.readFile(path);
+
+  return bytes === null ? null : new TextDecoder().decode(bytes);
+}
 
 describe("registerAssetRooms — relay", () => {
   const kNudge = z.object({

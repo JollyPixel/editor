@@ -2,6 +2,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { TextFormat } from "@jolly-pixel/asset.script/client";
+
 // Import Internal Dependencies
 import {
   deleteBackward,
@@ -78,6 +81,16 @@ describe("EditingKeys", () => {
     assert.equal(outdented.edit.applyTo(indentedText), text);
   });
 
+  test("Tab, Shift+Tab and Enter indent with the document's format", () => {
+    const tabs = new TextFormat({ indentStyle: "tab" });
+    const fourSpaces = new TextFormat({ indentSize: 4 });
+
+    assert.equal(press("a|", insertIndent, tabs), "a\t|");
+    assert.equal(press("a|", insertIndent, fourSpaces), "a    |");
+    assert.equal(press("        |b", removeIndent, fourSpaces), "    |b");
+    assert.equal(press("if (ready) {|}", insertNewline, tabs), "if (ready) {\n\t|\n}");
+  });
+
   test("Tab keeps a backward selection backward", () => {
     const text = "a\nb";
     const { caret } = insertIndent(new TextLines(text), new ScriptCaret(text.length, 0));
@@ -94,11 +107,12 @@ function outcome(
 
 function press(
   marked: string,
-  command: KeyCommand
+  command: KeyCommand,
+  format?: TextFormat
 ): string | null {
   const at = marked.indexOf("|");
   const text = marked.replace(/\|/g, "");
-  const keyEdit = command(new TextLines(text), ScriptCaret.collapsed(at));
+  const keyEdit = command(new TextLines(text, format), ScriptCaret.collapsed(at));
   if (keyEdit === null) {
     return null;
   }

@@ -15,7 +15,8 @@ export const TEXT_CONTENT_TYPES = {
   ".toml": "application/toml",
   ".xml": "application/xml",
   ".html": "text/html",
-  ".css": "text/css"
+  ".css": "text/css",
+  ".editorconfig": "text/plain"
 } as const;
 
 export const TEXT_ASSET: AssetKindDescriptor = {

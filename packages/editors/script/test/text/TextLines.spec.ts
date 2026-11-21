@@ -2,6 +2,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { TextFormat } from "@jolly-pixel/asset.script/client";
+
 // Import Internal Dependencies
 import { TextLines } from "#src/text/TextLines.ts";
 
@@ -14,6 +17,13 @@ describe("TextLines", () => {
     assert.equal(lines.offsetAt(1, 0), secondLine);
     assert.equal(lines.offsetAt(1, 1), secondLine);
     assert.equal(lines.offsetAt(1, 2), secondLine + 1);
+  });
+
+  test("a tab reaches the next stop of the document's tab width", () => {
+    const lines = new TextLines("\tx\nab\tx", new TextFormat({ tabWidth: 4 }));
+
+    assert.equal(lines.visualColumn({ line: 0, column: 1 }), 4);
+    assert.equal(lines.visualColumn({ line: 1, column: 3 }), 4);
   });
 
   test("offsetAt is null past the end of a line or below the last line", () => {

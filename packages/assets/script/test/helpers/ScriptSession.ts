@@ -2,6 +2,7 @@
 import {
   LiveAssetRoom,
   mockAssetRoom,
+  type LiveAssetRoomOptions,
   type MockAssetRoom
 } from "@jolly-pixel/asset-server/testing";
 
@@ -22,6 +23,8 @@ import type {
   ScriptSnapshot
 } from "#src/network/types.ts";
 
+export interface ScriptSessionOptions extends ScriptAssetKindOptions, LiveAssetRoomOptions {}
+
 export interface ScriptPeer {
   readonly clientId: string;
   readonly room: MockAssetRoom<ScriptNetworkCommand, ScriptSnapshot>;
@@ -34,9 +37,9 @@ export class ScriptSession {
 
   constructor(
     text: string,
-    options: ScriptAssetKindOptions = {}
+    options: ScriptSessionOptions = {}
   ) {
-    this.server = new LiveAssetRoom(scriptAssetKind(options));
+    this.server = new LiveAssetRoom(scriptAssetKind(options), options);
     this.server.state.replace(text);
   }
 

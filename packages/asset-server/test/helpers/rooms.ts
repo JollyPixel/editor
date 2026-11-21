@@ -14,6 +14,10 @@ import type {
   AssetCommands,
   AssetRoomBinding
 } from "#src/index.ts";
+import {
+  roomBinding,
+  type RoomBindingOptions
+} from "#src/testing/roomBinding.ts";
 import { counterCommandProtocol } from "./protocols.ts";
 
 // CONSTANTS
@@ -95,15 +99,14 @@ export function recordingRoom(): RecordingRoom {
 }
 
 export function counterRoomBinding(
-  overrides: Partial<AssetRoomBinding> = {}
-): AssetRoomBinding {
-  return {
-    assetId: COUNTER_ROOM_ASSET_ID,
+  options: Pick<RoomBindingOptions<null>, "version"> = {}
+): AssetRoomBinding<null> {
+  return roomBinding({
     kind: "counter",
-    roomId: `counter:${COUNTER_ROOM_ASSET_ID}`,
     state: null,
-    ...overrides
-  };
+    assetId: COUNTER_ROOM_ASSET_ID,
+    version: options.version
+  });
 }
 
 export function counterRoomCommands<

@@ -83,9 +83,13 @@ for (const message of server.take<MySnapshot>("B")) {
 - `LiveAssetRoom` serves the kind's live room for asset `"asset-1"`. Drive it
   with `connect()`, `receive()` and `resync()`, awaiting each, then read what it
   sent a client with `take()`. Its snapshots carry the room version, as a
-  real room's do.
+  real room's do. Pass `{ path, files }` to set the path the room reports and
+  the project files it can read, such as `{ ".editorconfig": "root = true" }`.
 - `mockAssetRoom()` returns a client `Room` with no transport. It records what
   the client sends in `sent`, and `deliver()` feeds it server messages.
+- `roomBinding({ kind, state })` builds the `AssetRoomBinding` a test passes to
+  `commands.live()` directly. It takes the same `path` and `files` as
+  `LiveAssetRoom`, plus `assetId` (default `"asset-1"`) and `version`.
 
 ## 📈 Benchmarks
 

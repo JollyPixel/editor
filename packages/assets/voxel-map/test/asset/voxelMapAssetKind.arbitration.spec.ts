@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { type AssetLiveProtocol } from "@jolly-pixel/asset-server";
+import { roomBinding } from "@jolly-pixel/asset-server/testing";
 
 // Import Internal Dependencies
 import {
@@ -27,12 +28,10 @@ function live(): LiveHarness {
 
   return {
     state,
-    protocol: handler.commands!.live!({
-      assetId: "asset-1",
+    protocol: handler.commands!.live!(roomBinding({
       kind: VOXEL_MAP_KIND,
-      roomId: `${VOXEL_MAP_KIND}:asset-1`,
       state
-    })
+    }))
   };
 }
 

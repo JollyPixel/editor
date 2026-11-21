@@ -10,6 +10,7 @@ import {
   foldAssetEvent,
   type AssetEventData
 } from "@jolly-pixel/asset-server";
+import { roomBinding } from "@jolly-pixel/asset-server/testing";
 import { NormalMapConfig } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -238,12 +239,10 @@ describe("blocksetAssetKind", () => {
       action: "normal-map-toggled",
       metadata: { config: NormalMapConfig.create().toJSON() }
     });
-    const protocol = handler.commands!.live!({
-      assetId: "asset-1",
+    const protocol = handler.commands!.live!(roomBinding({
       kind: BLOCKSET_KIND,
-      roomId: `${BLOCKSET_KIND}:asset-1`,
       state
-    });
+    }));
     const expected = NormalMapConfig.create().toJSON();
 
     const snapshot = protocol.snapshot() as BlocksetSnapshot;

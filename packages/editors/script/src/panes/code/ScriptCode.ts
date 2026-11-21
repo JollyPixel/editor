@@ -11,7 +11,8 @@ import { styleMap } from "lit/directives/style-map.js";
 import {
   TextEdit,
   type ScriptChange,
-  type ScriptDocument
+  type ScriptDocument,
+  type TextFormat
 } from "@jolly-pixel/asset.script/client";
 
 // Import Internal Dependencies
@@ -242,13 +243,14 @@ export class ScriptCode extends LitElement {
     this.#document = document;
     this.#collaboration = collaboration;
     this.#readOnly = readOnly;
-    this.#lines = new TextLines(document.text);
+    this.#lines = new TextLines(document.text, document.format);
     this.#tokens.reset(this.#lines, language);
     this.#carets = collaboration.carets;
     const page = this.ownerDocument;
     page.addEventListener("selectionchange", this.#onSelectionChange);
     this.#release = [
       document.subscribe("change", (change) => this.#follow(change)),
+      document.subscribe("formatChange", (format) => this.#reformat(format)),
       collaboration.subscribe("caretsChange", (carets) => {
         this.#carets = carets;
         this.requestUpdate();
@@ -285,6 +287,10 @@ export class ScriptCode extends LitElement {
     _changed: PropertyValues
   ): void {
     this.#syncTextarea(ScriptCaret.collapsed(0));
+  }
+
+  override willUpdate(): void {
+    this.style.tabSize = String(this.#lines.format.tabWidth);
   }
 
   override render(): TemplateResult {
@@ -417,7 +423,7 @@ export class ScriptCode extends LitElement {
       return;
     }
 
-    this.#lines = new TextLines(document.text);
+    this.#lines = new TextLines(document.text, document.format);
     this.#tokens.read(this.#lines);
     this.#hoverHint.hide();
     const textarea = this.#textarea;
@@ -427,6 +433,13 @@ export class ScriptCode extends LitElement {
       );
       this.#completions.refresh();
     }
+    this.requestUpdate();
+  }
+
+  #reformat(
+    format: TextFormat
+  ): void {
+    this.#lines = new TextLines(this.#lines.text, format);
     this.requestUpdate();
   }
 

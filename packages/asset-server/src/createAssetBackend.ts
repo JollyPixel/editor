@@ -293,6 +293,7 @@ async function assembleAssetBackend(
         reader: eventStore.reader,
         kinds,
         catalog,
+        source,
         states,
         flush,
         tags,

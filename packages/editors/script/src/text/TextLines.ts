@@ -1,3 +1,6 @@
+// Import Third-party Dependencies
+import { TextFormat } from "@jolly-pixel/asset.script/client";
+
 // Import Internal Dependencies
 import { LineRange } from "./LineRange.ts";
 
@@ -6,20 +9,20 @@ export interface LinePosition {
   readonly column: number;
 }
 
-// CONSTANTS
-const kTabSize = 2;
-
 export class TextLines {
   readonly text: string;
   readonly lines: readonly string[];
+  readonly format: TextFormat;
 
   #starts: number[];
   #widest: number | undefined;
 
   constructor(
-    text: string
+    text: string,
+    format = TextFormat.DEFAULT
   ) {
     this.text = text;
+    this.format = format;
     this.lines = text.split("\n");
     this.#starts = [];
     let start = 0;
@@ -93,7 +96,7 @@ export class TextLines {
     const text = this.line(position.line);
     let column = 0;
     for (let index = 0; index < position.column; index++) {
-      column = advance(column, text[index]);
+      column = this.#advance(column, text[index]);
     }
 
     return column;
@@ -110,7 +113,7 @@ export class TextLines {
 
     let column = 0;
     for (let index = 0; index < text.length; index++) {
-      column = advance(column, text[index]);
+      column = this.#advance(column, text[index]);
       if (column > visualColumn) {
         return this.#starts[line] + index;
       }
@@ -127,13 +130,15 @@ export class TextLines {
       column: this.line(line).length
     });
   }
-}
 
-function advance(
-  column: number,
-  character: string
-): number {
-  return character === "\t" ?
-    column + kTabSize - (column % kTabSize) :
-    column + 1;
+  #advance(
+    column: number,
+    character: string
+  ): number {
+    const { tabWidth } = this.format;
+
+    return character === "\t" ?
+      column + tabWidth - (column % tabWidth) :
+      column + 1;
+  }
 }

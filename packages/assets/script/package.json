@@ -53,11 +53,13 @@
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/scripting": "workspace:*",
     "@openally/emitt": "1.1.0",
+    "picomatch": "4.0.7",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
+    "@types/picomatch": "^4.0.3",
     "es-module-lexer": "3.0.4",
     "fast-check": "4.10.2"
   }

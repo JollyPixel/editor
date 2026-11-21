@@ -8,12 +8,11 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as EventStore from "@jolly-pixel/event-store";
 import { CommandHistory } from "@jolly-pixel/history";
-import { AssetRoom } from "@jolly-pixel/asset";
 import {
   AssetRoomExtension,
-  foldAssetEvent,
-  type AssetRoomBinding
+  foldAssetEvent
 } from "@jolly-pixel/asset-server";
+import { roomBinding } from "@jolly-pixel/asset-server/testing";
 import { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 
 // Import Internal Dependencies
@@ -22,7 +21,6 @@ import {
   pixelArtAssetKind,
   PIXEL_ART_KIND
 } from "#src/index.ts";
-import type { PixelArtState } from "#src/asset/pixelArtAssetKind.ts";
 import { PixelSyncClient } from "#src/network/sync/PixelSyncClient.ts";
 import { SharedPixelHistory } from "#src/history/PixelCanvasHistory.ts";
 import { registerPixelHistory } from "#src/history/pixelHistoryRegistration.ts";
@@ -74,12 +72,11 @@ function setup() {
   const state = handler.create(kAssetId);
   const eventStore = EventStore.persistence.memory();
   eventStore.subscribe((event) => foldAssetEvent(handler, state, event));
-  const binding: AssetRoomBinding<PixelArtState> = {
-    assetId: kAssetId,
+  const binding = roomBinding({
     kind: PIXEL_ART_KIND,
-    roomId: new AssetRoom(PIXEL_ART_KIND, kAssetId).toString(),
-    state
-  };
+    state,
+    assetId: kAssetId
+  });
   const commands = handler.commands!;
   const extension = new AssetRoomExtension(
     binding,

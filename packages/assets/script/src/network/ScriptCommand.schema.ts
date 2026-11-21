@@ -12,6 +12,9 @@ import {
 } from "@jolly-pixel/scripting";
 import * as z from "zod/mini";
 
+// Import Internal Dependencies
+import { MAX_INDENT_WIDTH } from "../model/TextFormat.ts";
+
 // CONSTANTS
 export const SCRIPT_OUTLINE_REQUESTED = "outline-requested";
 export const SCRIPT_OUTLINE = "outline";
@@ -42,8 +45,17 @@ export const scriptCommandProtocol: MessageProtocol = new MessageProtocol(
   z.union(scriptCommandSchema.def.options.map(withCommandHeader))
 );
 
+const kIndentWidth = z.int().check(z.minimum(1), z.maximum(MAX_INDENT_WIDTH));
+
+export const textFormatSchema = z.object({
+  indentStyle: z.enum(["tab", "space"]),
+  indentSize: kIndentWidth,
+  tabWidth: kIndentWidth
+});
+
 export const scriptSnapshotSchema = z.object({
-  text: z.string()
+  text: z.string(),
+  format: textFormatSchema
 });
 
 export const outlineRequestedSchema = z.object({
