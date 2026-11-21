@@ -17,11 +17,11 @@ import type {
 import "@jolly-pixel/ui/elements/button-group";
 import "@jolly-pixel/ui/elements/fields";
 import "@jolly-pixel/ui/elements/select";
+import type { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
 import type { BlockRenderSources } from "../rendering/BlockRenderSources.ts";
 import type { PreviewStage } from "../../preview/PreviewStage.ts";
-import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { tileSizeSegments } from "../../blocksets/tileSizes.ts";
 import { ShapeChoices } from "../shapes/ShapeChoices.ts";
 import type { ShapePreview } from "./ShapePreview.ts";

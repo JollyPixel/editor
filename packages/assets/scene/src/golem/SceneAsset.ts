@@ -39,7 +39,7 @@ export class SceneAsset extends GolemAsset<
   SyncedSceneDocument
 > {
   #refs = new SceneRefs(this.tree, this.studio.catalog);
-  #components = SceneComponentTypes.parse(this.studio.editors);
+  #components = SceneComponentTypes.parse(this.studio.kindPackages);
 
   get tree(): SceneTreeReader {
     return this.synced.document.tree;

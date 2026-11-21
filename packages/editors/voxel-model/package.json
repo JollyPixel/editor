@@ -13,20 +13,13 @@
       "preferences": "src/preferences.ts"
     },
     "scene": "./scene",
-    "sceneComponents": {
-      "VoxelModel": {
-        "assets": {
-          "model": "voxelmodel"
-        }
-      }
-    },
-    "runtime": "./runtime",
-    "preview": ["voxelmodel"]
+    "preview": [
+      "voxelmodel"
+    ]
   },
   "exports": {
     ".": "./src/viewer/index.ts",
-    "./scene": "./src/sceneComponents/index.ts",
-    "./runtime": "./src/runtime/index.ts"
+    "./scene": "./src/sceneComponents/index.ts"
   },
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",

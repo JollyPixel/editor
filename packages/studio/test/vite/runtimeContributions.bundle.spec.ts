@@ -21,7 +21,7 @@ import { openStudioProject } from "../../node/studioFiles.ts";
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
 const kEntry = "\0runtime-contributions-entry";
 const kEditorOnly = new RegExp([
-  /[\\/]packages[\\/](editors[\\/]host|asset-server|event-store)[\\/]/.source,
+  /[\\/]packages[\\/](editors|asset-server|event-store)[\\/]/.source,
   /[\\/]packages[\\/]network[\\/]dist[\\/](?!protocol[\\/])/.source
 ].join("|"));
 

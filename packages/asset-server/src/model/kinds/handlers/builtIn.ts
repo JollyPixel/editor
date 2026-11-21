@@ -4,10 +4,8 @@ import {
   NO_OPTIONS_SCHEMA,
   type AssetKindPackage
 } from "../AssetKindPackage.ts";
-import {
-  textureAssetKind,
-  TEXTURE_ASSET
-} from "./texture.ts";
+import { textureAssetKind } from "./texture.ts";
+import { TEXTURE_ASSET } from "./textureAsset.ts";
 
 export const BUILT_IN_KINDS_PACKAGE = "@jolly-pixel/asset-server";
 

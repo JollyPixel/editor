@@ -12,6 +12,10 @@ import type { EditorPreferenceScopes } from "../preferences/PreferenceScopes.ts"
 
 // CONSTANTS
 export const PROJECT_MANIFEST_FILE = "project-manifest.json";
+const kSceneComponentDeclarationSchema = z.object({
+  type: z.string(),
+  assets: z.record(z.string(), z.string())
+});
 const kProjectManifestSchema = z.object({
   editors: z.array(editorDescriptorSchema),
   kinds: z.array(z.object({
@@ -37,12 +41,17 @@ const kProjectManifestSchema = z.object({
   kindPackages: z.array(z.object({
     name: z.string(),
     kinds: z.array(z.string()),
-    configurable: z.boolean()
+    configurable: z.boolean(),
+    sceneComponents: z.array(kSceneComponentDeclarationSchema).default([])
   })),
   maxContentBytes: z.number()
 });
 
 export type KindPreview = "server" | "frame";
+
+export type SceneComponentDeclaration = z.infer<
+  typeof kSceneComponentDeclarationSchema
+>;
 
 export interface ManifestKind extends Omit<LoadedAssetKind, "preview"> {
   /**
@@ -59,6 +68,11 @@ export interface KindPackageDescriptor {
    * `true` when the package has options Settings can edit.
    */
   configurable: boolean;
+  /**
+   * The component types the package's `runtime` contribution registers,
+   * read from `jollypixel.sceneComponents`.
+   */
+  sceneComponents: readonly SceneComponentDeclaration[];
 }
 
 export interface EditorScopes extends EditorPreferenceScopes {

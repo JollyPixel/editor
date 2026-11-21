@@ -27,6 +27,18 @@
     },
     {
       "path": "../../golem-kit"
+    },
+    {
+      "path": "../../engine"
+    },
+    {
+      "path": "../../physics"
+    },
+    {
+      "path": "../../runtime"
+    },
+    {
+      "path": "../../pixel-draw-renderer"
     }
   ]
 }

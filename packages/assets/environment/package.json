@@ -59,5 +59,8 @@
     "@jolly-pixel/network": "workspace:*",
     "@openally/emitt": "1.1.0",
     "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@jolly-pixel/asset.common": "workspace:*"
   }
 }

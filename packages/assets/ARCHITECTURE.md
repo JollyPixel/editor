@@ -18,6 +18,10 @@ flowchart TB
         History["src/history<br/>undo keys"]
     end
 
+    subgraph Game["Game side (./runtime)"]
+        Runtime["src/runtime<br/>component definitions, loaders"]
+    end
+
     Sync -->|"commands"| Arbiter
     Kind --> Document
     Sync --> Document
@@ -27,19 +31,27 @@ flowchart TB
 - The server and the editor share the same model: the server replays commands
   on it, the editor draws it.
 - Browser code imports `./client` only; the root pulls in server dependencies.
-- Code: `src/asset/`, `src/model/`, `src/network/`, `src/history/`; pixel-art
-  and voxel-map take their document from the renderer packages instead.
+- A game imports `./runtime`, named by `jollypixel.runtime`: the component
+  definitions, the asset loaders and the code they draw with. The manifest's
+  `jollypixel.sceneComponents` lists each component's asset slots for the
+  server and golem. Editors import the same definitions and add only forms,
+  panes and tools.
+- Code: `src/asset/`, `src/model/`, `src/network/`, `src/history/`,
+  `src/runtime/`; pixel-art and voxel-map take their document from the
+  renderer packages instead.
 
 ## Where a workspace plugs in
 
 ```mermaid
 flowchart TB
     Editor["Editor<br/>(editors/*)"]
+    Game["Game<br/>(play, export)"]
     Workspace["Asset workspace"]
     Server["@jolly-pixel/asset-server<br/>catalog, rooms, event history"]
     Source["@jolly-pixel/asset-source<br/>files on disk or in memory"]
 
     Editor -->|"opens the asset room"| Workspace
+    Game -->|"loads its runtime entry"| Workspace
     Workspace -->|"registers its kind handler"| Server
     Workspace <-->|"commands and snapshots"| Server
     Server -->|"writes snapshots"| Source

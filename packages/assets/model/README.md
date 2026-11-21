@@ -8,7 +8,7 @@ Private asset workspace for 3D models (kind `model`). A model asset is a `.glb`,
 - Models are read-only and the studio's New asset menu does not offer them (`creatable: false`).
 - A client reads a model from its room snapshot: `modelFileDocumentKind()` from `@jolly-pixel/asset.model/client` gives a `ModelFileDocument` whose `bytes` are `null` until the snapshot arrives.
 
-Browser code imports `@jolly-pixel/asset.model/client`.
+Browser code imports `@jolly-pixel/asset.model/client`. The runtime entry (`@jolly-pixel/asset.model/runtime`) gives a game the `Model` component.
 
 ## 🚀 Building
 

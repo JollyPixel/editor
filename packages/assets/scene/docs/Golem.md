@@ -108,4 +108,4 @@ After each batch, the golem's selection presence (`actor`) moves to the last act
 ## How it works
 
 - Each method's input type, such as `AddActorsInput`, is the output type of the zod schema its intent parses (`SceneInputs.ts`), built from the scene command schemas, so the SDK and the intents take the same input.
-- `SceneAsset.guard` checks added components against `SceneComponentTypes`, which parses the scene components each editor declares out of the studio's `project-manifest.json` (`studio.editors`, which the kit leaves untyped). The component definitions only load in a browser, so the golem cannot read them.
+- `SceneAsset.guard` checks added components against `SceneComponentTypes`, which parses the scene components each kind package declares out of the studio's `project-manifest.json` (`studio.kindPackages`, which the kit leaves untyped). The component definitions only load in a browser, so the golem cannot read them.

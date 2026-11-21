@@ -14,20 +14,13 @@
       "preferences": "src/preferences.ts"
     },
     "scene": "./scene",
-    "sceneComponents": {
-      "VoxelMap": {
-        "assets": {
-          "map": "voxelmap"
-        }
-      }
-    },
-    "runtime": "./runtime",
-    "preview": ["voxelmap"]
+    "preview": [
+      "voxelmap"
+    ]
   },
   "exports": {
     ".": "./src/viewer/index.ts",
-    "./scene": "./src/sceneComponents/index.ts",
-    "./runtime": "./src/runtime/index.ts"
+    "./scene": "./src/sceneComponents/index.ts"
   },
   "scripts": {
     "prepublishOnly": "rimraf ./dist && tsc -b",
@@ -69,8 +62,8 @@
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
-    "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.environment": "workspace:*",
+    "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.voxel-map": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/console": "workspace:*",
@@ -81,7 +74,6 @@
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/lantern": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
-    "@jolly-pixel/physics": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/resize-handle": "workspace:*",

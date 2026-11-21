@@ -4,6 +4,8 @@ Private asset workspace for `.scene.json` scenes (kind `scene`): a tree of actor
 
 Browser code imports `@jolly-pixel/asset.scene/client`; the package root and `@jolly-pixel/asset.scene/server` pull in server dependencies. The golem entry (`@jolly-pixel/asset.scene/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
+The runtime entry (`@jolly-pixel/asset.scene/runtime`) registers the built-in components: `Camera`, `Light`, `Mesh`, `Text` and `RigidBody`.
+
 ## 🚀 Building
 
 ```bash

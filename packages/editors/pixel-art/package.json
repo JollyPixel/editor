@@ -13,8 +13,7 @@
       "dist": "dist-page",
       "page": "page/index.html",
       "preferences": "src/preferences.ts"
-    },
-    "runtime": "./runtime"
+    }
   },
   "exports": {
     ".": {
@@ -24,14 +23,6 @@
     "./preferences": {
       "types": "./dist/preferences.d.ts",
       "default": "./dist/preferences.js"
-    },
-    "./mesh-texturing": {
-      "types": "./dist/mesh-texturing/index.d.ts",
-      "default": "./dist/mesh-texturing/index.js"
-    },
-    "./runtime": {
-      "types": "./dist/runtime/index.d.ts",
-      "default": "./dist/runtime/index.js"
     }
   },
   "imports": {
@@ -75,7 +66,6 @@
     "@jolly-pixel/engine": "workspace:*"
   },
   "dependencies": {
-    "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/color": "workspace:*",
     "@jolly-pixel/console": "workspace:*",

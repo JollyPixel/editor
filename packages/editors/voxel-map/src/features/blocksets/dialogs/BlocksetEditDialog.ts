@@ -21,11 +21,11 @@ import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/fields";
 import { BlockTextures } from "@jolly-pixel/voxel.renderer";
 import { errorMessage } from "@jolly-pixel/utils";
+import type { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
 import type { VoxelMapEditing } from "../../../editing/VoxelMapEditing.ts";
 import { EditingElement } from "../../../editing/EditingElement.ts";
-import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { tileSizeSegments } from "../tileSizes.ts";
 import "../blocksetIcons.ts";
 

@@ -8,10 +8,7 @@ import { PreferenceScope } from "@jolly-pixel/preferences";
 import * as z from "zod";
 
 // Import Internal Dependencies
-import type {
-  EditorDescriptor,
-  SceneComponentDeclaration
-} from "../EditorDescriptor.ts";
+import type { EditorDescriptor } from "../EditorDescriptor.ts";
 
 // CONSTANTS
 const kInstallFolder = "node_modules";
@@ -19,19 +16,9 @@ const kNoPreferences = {
   preferences: [],
   sharedPreferences: []
 };
-const kSceneComponentsSchema = z.record(
-  z.string().min(1),
-  z.object({
-    assets: z.record(z.string().min(1), z.string().min(1)).default({})
-  })
-).transform((components) => Object.entries(components).map(
-  ([type, { assets }]): SceneComponentDeclaration => {
-    return {
-      type,
-      assets
-    };
-  }
-));
+const kKindPackageField = z.undefined({
+  error: "belongs to the manifest of the asset kind package, not the editor."
+}).optional();
 const kPackageManifestSchema = z.object({
   jollypixel: z.object({
     editor: z.object({
@@ -42,21 +29,15 @@ const kPackageManifestSchema = z.object({
       preferences: z.string().min(1).optional()
     }),
     scene: z.string().min(1).optional(),
-    sceneComponents: kSceneComponentsSchema.optional(),
-    preview: z.array(z.string().min(1)).optional()
+    preview: z.array(z.string().min(1)).optional(),
+    runtime: kKindPackageField,
+    sceneComponents: kKindPackageField
   }).refine(
     (jollypixel) => jollypixel.preview === undefined ||
       jollypixel.scene !== undefined,
     {
       message: "\"preview\" lists kinds of the \"scene\" contribution.",
       path: ["preview"]
-    }
-  ).refine(
-    (jollypixel) => jollypixel.scene === undefined ||
-      jollypixel.sceneComponents !== undefined,
-    {
-      message: "a \"scene\" contribution declares its \"sceneComponents\".",
-      path: ["sceneComponents"]
     }
   )
 });
@@ -103,7 +84,6 @@ export interface EditorPackageData {
    * contribution.
    */
   previewKinds: readonly string[];
-  sceneComponents: readonly SceneComponentDeclaration[];
 }
 
 type EditorPreferences = Pick<
@@ -120,7 +100,6 @@ export class EditorPackage implements EditorPackageData {
   readonly preferences: readonly PreferenceScope[];
   readonly sharedPreferences: readonly PreferenceScope[];
   readonly previewKinds: readonly string[];
-  readonly sceneComponents: readonly SceneComponentDeclaration[];
 
   static async read(
     packageName: string,
@@ -148,10 +127,7 @@ export class EditorPackage implements EditorPackageData {
       page,
       preferences
     } = manifest.data.jollypixel.editor;
-    const {
-      preview = [],
-      sceneComponents = []
-    } = manifest.data.jollypixel;
+    const { preview = [] } = manifest.data.jollypixel;
     const editorPage = await resolvePage(packageName, root, page);
     const scopes = preferences === undefined ?
       kNoPreferences :
@@ -164,7 +140,6 @@ export class EditorPackage implements EditorPackageData {
       dist: path.resolve(root, dist),
       page: editorPage,
       previewKinds: preview,
-      sceneComponents,
       ...scopes
     });
   }
@@ -180,7 +155,6 @@ export class EditorPackage implements EditorPackageData {
     this.preferences = [...data.preferences];
     this.sharedPreferences = [...data.sharedPreferences];
     this.previewKinds = [...data.previewKinds];
-    this.sceneComponents = [...data.sceneComponents];
   }
 
   toDescriptor(): EditorDescriptor {
@@ -189,8 +163,7 @@ export class EditorPackage implements EditorPackageData {
       package: this.package,
       kinds: [...this.kinds],
       preferences: this.preferences.map((scope) => scope.toJSON()),
-      sharedPreferences: this.sharedPreferences.map((scope) => scope.toJSON()),
-      sceneComponents: [...this.sceneComponents]
+      sharedPreferences: this.sharedPreferences.map((scope) => scope.toJSON())
     };
   }
 }

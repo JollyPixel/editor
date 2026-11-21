@@ -14,6 +14,10 @@
       "types": "./dist/network/client.d.ts",
       "default": "./dist/network/client.js"
     },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
+    },
     "./server": {
       "types": "./dist/network/server.d.ts",
       "default": "./dist/network/server.js"
@@ -27,7 +31,23 @@
     "#src/*": "./src/*"
   },
   "jollypixel": {
-    "golem": "./golem"
+    "golem": "./golem",
+    "runtime": "./runtime",
+    "sceneComponents": {
+      "Camera": {},
+      "Light": {},
+      "Mesh": {
+        "assets": {
+          "shader": "shader"
+        }
+      },
+      "Text": {
+        "assets": {
+          "font": "font"
+        }
+      },
+      "RigidBody": {}
+    }
   },
   "scripts": {
     "build": "tsc -b && node -e \"fs.cpSync('src/golem/guide.md', 'dist/golem/guide.md')\"",
@@ -57,9 +77,12 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.common": "workspace:*",
+    "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/golem.kit": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/physics": "workspace:*",
+    "@jolly-pixel/runtime": "workspace:*",
     "zod": "4.6.7"
   },
   "devDependencies": {

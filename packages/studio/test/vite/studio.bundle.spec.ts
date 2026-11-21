@@ -16,6 +16,7 @@ import {
   build,
   type Rolldown
 } from "vite";
+import { KIND_HANDLER_INPUT } from "@jolly-pixel/asset.common/testing";
 import { PlayerPage } from "@jolly-pixel/server";
 import { SCRIPT_IMPORTS } from "@jolly-pixel/scripting";
 
@@ -26,7 +27,6 @@ import { openStudioProject } from "../../node/studioFiles.ts";
 const kStudioRoot = path.join(import.meta.dirname, "..", "..");
 const kThreeCore = /[\\/]three[\\/]build[\\/]three\.core\.js$/;
 const kUiModule = /[\\/]packages[\\/]ui[\\/]dist[\\/]/;
-const kAtaValidator = /[\\/]ata-validator[\\/]/;
 const kPlayerModule = /[\\/]src[\\/]play[\\/]modules[\\/]/;
 const kPageTag = /<(jolly-[a-z0-9-]+)/g;
 const kDefinedTag = /(?:customElement|customElements\.define)\("(jolly-[a-z0-9-]+)"/g;
@@ -224,12 +224,19 @@ describe("@jolly-pixel/studio bundle", () => {
     }
   });
 
-  test("ships without ata-validator", () => {
-    assert.deepStrictEqual(
-      [...chunks.values()]
-        .flatMap((chunk) => chunk.moduleIds)
-        .filter((id) => kAtaValidator.test(id)),
-      []
+  test("loads kind handler code only with the offline server", () => {
+    assert.ok(
+      [...chunks.values()].some(
+        (chunk) => chunk.moduleIds.some((id) => KIND_HANDLER_INPUT.test(id))
+      ),
+      "the offline server no longer ships the kind handlers"
     );
+    for (const [name, closure] of eager) {
+      assert.deepStrictEqual(
+        chunksWith(closure, KIND_HANDLER_INPUT),
+        [],
+        `${name} loads kind handler code at start`
+      );
+    }
   });
 });

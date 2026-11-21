@@ -13,21 +13,13 @@
       "page": "index.html"
     },
     "scene": "./scene",
-    "sceneComponents": {
-      "Model": {
-        "assets": {
-          "model": "model",
-          "shader": "shader"
-        }
-      }
-    },
-    "runtime": "./runtime",
-    "preview": ["model"]
+    "preview": [
+      "model"
+    ]
   },
   "exports": {
     ".": "./src/sceneComponents/index.ts",
-    "./scene": "./src/sceneComponents/index.ts",
-    "./runtime": "./src/runtime/index.ts"
+    "./scene": "./src/sceneComponents/index.ts"
   },
   "scripts": {
     "dev": "vite",

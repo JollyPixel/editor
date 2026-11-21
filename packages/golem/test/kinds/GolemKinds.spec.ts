@@ -18,12 +18,14 @@ const kProjectRoot = path.join(import.meta.dirname, "..", "fixtures", "kinds");
 const kLocalKind: KindPackageDescriptor = {
   name: "./localKind",
   kinds: ["local"],
-  configurable: false
+  configurable: false,
+  sceneComponents: []
 };
 const kBrokenKind: KindPackageDescriptor = {
   name: "./brokenKind",
   kinds: ["broken"],
-  configurable: false
+  configurable: false,
+  sceneComponents: []
 };
 
 describe("GolemKinds.load", () => {

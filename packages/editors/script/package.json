@@ -14,20 +14,11 @@
       ],
       "page": "index.html"
     },
-    "scene": "./scene",
-    "sceneComponents": {
-      "Script": {
-        "assets": {
-          "script": "script"
-        }
-      }
-    },
-    "runtime": "./runtime"
+    "scene": "./scene"
   },
   "exports": {
     ".": "./src/sceneComponents/index.ts",
     "./scene": "./src/sceneComponents/index.ts",
-    "./runtime": "./src/runtime/index.ts",
     "./markdown": "./src/panes/markdown/MarkdownView.ts"
   },
   "scripts": {

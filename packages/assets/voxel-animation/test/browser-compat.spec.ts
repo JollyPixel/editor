@@ -1,10 +1,13 @@
 // Import Node.js Dependencies
-import assert from "node:assert";
+import assert from "node:assert/strict";
 import path from "node:path";
 import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
-import * as esbuild from "esbuild";
+import {
+  browserBundleInputs,
+  KIND_HANDLER_INPUT
+} from "@jolly-pixel/asset.common/testing";
 
 // CONSTANTS
 const kEntryPoint = path.join(
@@ -16,22 +19,10 @@ const kEntryPoint = path.join(
 );
 
 describe("Voxel-animation client browser compatibility", () => {
-  it("bundles the client entry without the schema compiler", async() => {
-    const result = await esbuild.build({
-      entryPoints: [kEntryPoint],
-      bundle: true,
-      write: false,
-      platform: "browser",
-      metafile: true,
-      logLevel: "silent"
-    });
-    const [output] = Object.values(result.metafile.outputs);
-    const compilerInputs = Object.entries(output.inputs)
-      .filter(([inputPath, { bytesInOutput }]) => (
-        inputPath.includes("ata-validator") && bytesInOutput > 0
-      ))
-      .map(([inputPath]) => inputPath);
-
-    assert.deepStrictEqual(compilerInputs, []);
+  it("bundles the client entry without kind handler code", async() => {
+    assert.deepEqual(
+      await browserBundleInputs(kEntryPoint, KIND_HANDLER_INPUT),
+      []
+    );
   });
 });

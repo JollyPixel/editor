@@ -361,7 +361,11 @@ importers:
         specifier: 6.2.8
         version: 6.2.8
 
-  packages/assets/common: {}
+  packages/assets/common:
+    devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
 
   packages/assets/environment:
     dependencies:
@@ -386,6 +390,10 @@ importers:
       zod:
         specifier: 4.6.7
         version: 4.6.7
+    devDependencies:
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
 
   packages/assets/font:
     dependencies:
@@ -417,18 +425,31 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
       zod:
         specifier: 4.6.7
         version: 4.6.7
+    devDependencies:
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
 
   packages/assets/pixel-art:
     dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
@@ -450,16 +471,22 @@ importers:
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
       '@jolly-pixel/utils':
         specifier: workspace:*
         version: link:../../utils
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      three:
+        specifier: 0.187.0
+        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
       zod:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../../asset
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
@@ -481,6 +508,9 @@ importers:
       '@jolly-pixel/asset.common':
         specifier: workspace:*
         version: link:../common
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -490,19 +520,24 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../../physics
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
       zod:
         specifier: 4.6.7
         version: 4.6.7
-    devDependencies:
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
 
   packages/assets/script:
     dependencies:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -512,6 +547,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
       '@jolly-pixel/scripting':
         specifier: workspace:*
         version: link:../../scripting
@@ -528,6 +566,9 @@ importers:
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../../asset
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -555,6 +596,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
       '@mediabunny/server':
         specifier: 1.65.2
         version: 1.65.2(mediabunny@1.65.2)
@@ -568,6 +612,9 @@ importers:
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../../asset
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -639,12 +686,18 @@ importers:
 
   packages/assets/voxel-map:
     dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -654,25 +707,34 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../../physics
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
       '@jolly-pixel/voxel.renderer':
         specifier: workspace:*
         version: link:../../voxel-renderer
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
+      three:
+        specifier: 0.187.0
+        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
       zod:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../../asset
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -694,6 +756,9 @@ importers:
       '@jolly-pixel/asset.voxel-animation':
         specifier: workspace:*
         version: link:../voxel-animation
+      '@jolly-pixel/engine':
+        specifier: workspace:*
+        version: link:../../engine
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -706,9 +771,15 @@ importers:
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../../runtime
       '@jolly-pixel/utils':
         specifier: workspace:*
         version: link:../../utils
+      three:
+        specifier: 0.187.0
+        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -949,9 +1020,6 @@ importers:
 
   packages/editors/pixel-art:
     dependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../../asset
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../../assets/pixel-art
@@ -1309,9 +1377,6 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
-      '@jolly-pixel/physics':
-        specifier: workspace:*
-        version: link:../../physics
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
@@ -1903,6 +1968,9 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../assets/common
       '@jolly-pixel/cdp':
         specifier: workspace:*
         version: link:../cdp

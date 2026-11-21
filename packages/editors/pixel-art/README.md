@@ -52,7 +52,6 @@ const canvas = await panel.initialize({
 - [`PixelDrawPanel`](./docs/panel/PixelDrawPanel.md): component API and events
 - [Pixel-art key bindings](./docs/keybindings/PixelArtKeyBindings.md): shortcuts and the console `pixelart.keybinds` namespace
 - [`UvNetLibrary`](./docs/uv/UvNetLibrary.md): the UV nets regions unfold with, and the console `pixelart.nets` namespace
-- [Mesh texturing](./docs/mesh-texturing/README.md): canvas, normal-map and UV geometry adapters
 
 ## 🖼️ Editor page
 

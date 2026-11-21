@@ -9,9 +9,9 @@ import type {
   UVRegion,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
+import { UVGeometryBinding } from "@jolly-pixel/asset.pixel-art/runtime";
 
 // Import Internal Dependencies
-import { UVGeometryBinding } from "#src/mesh-texturing/index.ts";
 import type { PreviewShape } from "./PreviewShape.ts";
 import { resolvePreviewShape } from "./resolvePreviewShape.ts";
 

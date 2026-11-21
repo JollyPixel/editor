@@ -7,9 +7,9 @@ import {
   composeBlockId,
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
+import { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
-import { BlocksetEntry } from "../../../../src/viewer/BlocksetEntry.ts";
 import { BlockLibraryScope } from "../../../../src/features/blocks/library/BlockLibraryScope.ts";
 
 // CONSTANTS

@@ -8,7 +8,7 @@ import {
 import {
   PixelCanvasTexture,
   UVGeometryBinding
-} from "@jolly-pixel/editor.pixel-art/mesh-texturing";
+} from "@jolly-pixel/asset.pixel-art/runtime";
 import {
   removedModelNodes,
   type BlockNodeJSON,

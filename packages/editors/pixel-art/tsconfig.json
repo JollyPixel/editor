@@ -5,9 +5,6 @@
       "path": "../host"
     },
     {
-      "path": "../../asset"
-    },
-    {
       "path": "../../runtime"
     },
     {

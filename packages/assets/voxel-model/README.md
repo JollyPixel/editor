@@ -8,6 +8,8 @@ Private asset workspace for `.voxelmodel.json` model trees (kind `voxelmodel`): 
 
 Browser code imports `@jolly-pixel/asset.voxel-model/client`; the package root and `@jolly-pixel/asset.voxel-model/server` pull in server dependencies. The golem entry (`@jolly-pixel/asset.voxel-model/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
+The runtime entry (`@jolly-pixel/asset.voxel-model/runtime`, `src/runtime/`) gives a game the `VoxelModel` component and a `voxelmodel` loader, which reads the model's build and loads its texture with the pixel-art runtime loader. The build is the model file with the transform and UV fields the stored form omits; animations do not play in a game yet. `ModelView` and the block meshes it draws (`src/runtime/blocks/`) are shared with the voxel-model editor.
+
 ## 🚀 Building
 
 ```bash

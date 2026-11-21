@@ -33,7 +33,7 @@ describe("ManifestRoute", () => {
     assert.equal(previews.get("blockset"), undefined);
   });
 
-  test("carries the capabilities of each kind and which packages have options", () => {
+  test("carries the capabilities of each kind and what each package configures and declares", () => {
     const route = new ManifestRoute(voxelMapProject(import.meta.dirname, "/pkg/dist"));
     const manifest = ProjectManifest.parse(JSON.parse(route.source));
     const capabilities = new Map(
@@ -46,8 +46,23 @@ describe("ManifestRoute", () => {
     assert.deepEqual(capabilities.get("blockset"), ["blocks", "materials", "tileSize"]);
     assert.deepEqual(capabilities.get("texture"), []);
     assert.deepEqual(
-      manifest.kindPackages.map(({ name, configurable }) => [name, configurable]),
-      [["@jolly-pixel/asset.voxel-map", true]]
+      manifest.kindPackages.map(({ name, configurable, sceneComponents }) => [
+        name,
+        configurable,
+        sceneComponents
+      ]),
+      [[
+        "@jolly-pixel/asset.voxel-map",
+        true,
+        [
+          {
+            type: "VoxelMap",
+            assets: {
+              map: "voxelmap"
+            }
+          }
+        ]
+      ]]
     );
   });
 

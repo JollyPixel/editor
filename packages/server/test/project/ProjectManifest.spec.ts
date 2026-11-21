@@ -18,15 +18,7 @@ const kEditors = [
     package: "@jolly-pixel/editor.voxel-map",
     kinds: ["voxelmap"],
     preferences: [],
-    sharedPreferences: [],
-    sceneComponents: [
-      {
-        type: "VoxelMap",
-        assets: {
-          map: "voxelmap"
-        }
-      }
-    ]
+    sharedPreferences: []
   }
 ];
 const kKinds = [
@@ -63,7 +55,15 @@ const kKindPackages = [
   {
     name: "@jolly-pixel/asset.voxel-map",
     kinds: ["voxelmap", "blockset"],
-    configurable: true
+    configurable: true,
+    sceneComponents: [
+      {
+        type: "VoxelMap",
+        assets: {
+          map: "voxelmap"
+        }
+      }
+    ]
   }
 ];
 
@@ -141,8 +141,7 @@ describe("ProjectManifest", () => {
                 }
               }
             }
-          ],
-          sceneComponents: []
+          ]
         }
       ],
       kinds: [],

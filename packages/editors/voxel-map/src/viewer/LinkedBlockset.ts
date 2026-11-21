@@ -6,11 +6,13 @@ import {
   type BlocksetLinkTarget,
   type VoxelView
 } from "@jolly-pixel/voxel.renderer";
+import {
+  BlocksetAtlasBridge,
+  BlocksetSurface,
+  type BlocksetEntry
+} from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
-import { BlocksetAtlasBridge } from "./BlocksetAtlasBridge.ts";
-import type { BlocksetEntry } from "./BlocksetEntry.ts";
-import { BlocksetSurface } from "./BlocksetSurface.ts";
 import type { OpenedBlockset } from "./openBlockset.ts";
 
 export type LinkedBlocksetHook = (linked: LinkedBlockset) => () => void;

@@ -10,8 +10,8 @@ const kDeclarationSchema = z.object({
   type: z.string(),
   assets: z.record(z.string(), z.string())
 });
-const kEditorsSchema = z.array(z.object({
-  sceneComponents: z.optional(z.array(kDeclarationSchema))
+const kKindPackagesSchema = z.array(z.object({
+  sceneComponents: z.array(kDeclarationSchema)
 }));
 
 export type SceneComponentDeclaration = z.output<typeof kDeclarationSchema>;
@@ -23,11 +23,11 @@ export type ComponentAssets = Readonly<Record<
 
 export class SceneComponentTypes {
   static parse(
-    editors: readonly unknown[]
+    kindPackages: readonly unknown[]
   ): SceneComponentTypes {
     return new SceneComponentTypes(
-      z.parse(kEditorsSchema, editors)
-        .flatMap((editor) => editor.sceneComponents ?? [])
+      z.parse(kKindPackagesSchema, kindPackages)
+        .flatMap((kindPackage) => kindPackage.sceneComponents)
     );
   }
 

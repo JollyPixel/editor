@@ -21,6 +21,12 @@
     },
     {
       "path": "../../golem-kit"
+    },
+    {
+      "path": "../../runtime"
+    },
+    {
+      "path": "../../physics"
     }
   ]
 }

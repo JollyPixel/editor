@@ -9,6 +9,12 @@
     },
     {
       "path": "../../network"
+    },
+    {
+      "path": "../../engine"
+    },
+    {
+      "path": "../../runtime"
     }
   ]
 }

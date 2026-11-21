@@ -10,9 +10,9 @@ import type {
   VoxelMapSettings,
   VoxelMapSource
 } from "@jolly-pixel/voxel.renderer/engine";
+import { VOXEL_MAP_DEFINITION } from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
-import { VOXEL_MAP_DEFINITION } from "../runtime/index.ts";
 import { VoxelMapViewer } from "../viewer/VoxelMapViewer.ts";
 
 // CONSTANTS

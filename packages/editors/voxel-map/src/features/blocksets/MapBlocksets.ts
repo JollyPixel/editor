@@ -19,6 +19,7 @@ import type {
 } from "@jolly-pixel/voxel.renderer";
 import type { SelectionRect } from "@jolly-pixel/pixel-draw.renderer";
 import { Emitter } from "@openally/emitt";
+import { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
 import type { EditorMap } from "../../map/EditorMap.ts";
@@ -31,7 +32,6 @@ import {
   BlockAlphaModes,
   type BlocksetPixels
 } from "./BlockAlphaModes.ts";
-import { BlocksetEntry } from "../../viewer/BlocksetEntry.ts";
 import type { LinkedBlockset } from "../../viewer/LinkedBlockset.ts";
 import {
   LinkedBlocksets,

@@ -16,10 +16,10 @@ export type CatalogReader = Pick<
 export interface AssetStudio {
   readonly catalog: CatalogReader;
   /**
-   * The editors the studio serves in `project-manifest.json`. A kind parses
-   * the fields it reads.
+   * The kind packages the studio serves in `project-manifest.json`. A kind
+   * parses the fields it reads.
    */
-  readonly editors: readonly unknown[];
+  readonly kindPackages: readonly unknown[];
   /**
    * Opens another asset through the same golem, for kinds that need one.
    */

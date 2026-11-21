@@ -18,15 +18,11 @@ Shader code runs in the viewer's page, as in a game: a member who can edit a sha
 
 ### Scene component
 
-The `./scene` export (`jollypixel.scene`) adds the `Script` component. Its slot takes a script asset, and the inspector lists that script's behaviors, then the chosen behavior's properties with their types and defaults.
+The `./scene` export (`jollypixel.scene`) adds the inspector of the `Script` component, which `@jolly-pixel/asset.script/runtime` defines. Its slot takes a script asset, and the inspector lists that script's behaviors, then the chosen behavior's properties with their types and defaults.
 
 It also fills the optional `shader` slot of the built-in `Mesh` and of the `Model` component. The inspector lists the shader's uniforms, and a texture uniform picks a `texture` asset. A uniform edit updates a `Mesh` material in place and rebuilds a `Model`. The scene loads the compiler with its first shader, recompiles 300 ms after the last edit, and keeps the last working material when a version breaks.
 
 The standalone scene editor loads no component package: try it through the studio.
-
-### Runtime
-
-The `./runtime` export (`jollypixel.runtime`) runs scripts and shaders in a game. Its `Script` component is the engine's `ScriptDefinition`, which takes the behavior from the exports of the slotted script. It registers the script and shader loaders of `@jolly-pixel/scripting/three`, which link each build against the game's own three.js and engine.
 
 ### Markdown element
 

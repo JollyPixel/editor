@@ -13,6 +13,10 @@
     "./client": {
       "types": "./dist/network/client.d.ts",
       "default": "./dist/network/client.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
     }
   },
   "imports": {
@@ -48,12 +52,30 @@
     "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
+    "@jolly-pixel/runtime": "workspace:*",
     "@mediabunny/server": "1.65.2",
     "mediabunny": "1.65.2",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset.common": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*"
+  },
+  "jollypixel": {
+    "runtime": "./runtime",
+    "sceneComponents": {
+      "AudioSource": {
+        "assets": {
+          "sound": "sound"
+        }
+      },
+      "AudioListener": {},
+      "AudioZone": {
+        "assets": {
+          "sound": "sound"
+        }
+      }
+    }
   }
 }

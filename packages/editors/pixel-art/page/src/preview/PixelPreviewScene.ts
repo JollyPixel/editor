@@ -3,9 +3,9 @@ import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
 import * as THREE from "three";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
+import { PixelCanvasTexture } from "@jolly-pixel/asset.pixel-art/runtime";
 
 // Import Internal Dependencies
-import { PixelCanvasTexture } from "#src/mesh-texturing/index.ts";
 import {
   RegionPreviewBehavior,
   type RegionPreviewStyle

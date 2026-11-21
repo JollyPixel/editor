@@ -27,6 +27,18 @@
     },
     {
       "path": "../../golem-kit"
+    },
+    {
+      "path": "../pixel-art"
+    },
+    {
+      "path": "../../engine"
+    },
+    {
+      "path": "../../runtime"
+    },
+    {
+      "path": "../../pixel-draw-renderer"
     }
   ]
 }

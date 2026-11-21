@@ -2,9 +2,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
+
 // Import Internal Dependencies
 import { blocksetTabLabels } from "../../../src/features/texture/blocksetTabLabels.ts";
-import { BlocksetEntry } from "../../../src/viewer/BlocksetEntry.ts";
 
 // CONSTANTS
 const kDefinition = {

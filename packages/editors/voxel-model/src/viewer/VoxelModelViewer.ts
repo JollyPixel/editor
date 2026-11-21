@@ -10,16 +10,14 @@ import type {
   AssetLease,
   AssetLeases
 } from "@jolly-pixel/editor.host";
-import type { PixelCanvasTexture } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
+import type { PixelCanvasTexture } from "@jolly-pixel/asset.pixel-art/runtime";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
-
-// Import Internal Dependencies
-import type {
-  ModelView,
-  ModelViewTexture
-} from "./ModelView.ts";
-import type { VoxelModelSource } from "./VoxelModelSource.ts";
-import { pixelModelTexture } from "./pixelModelTexture.ts";
+import {
+  pixelModelTexture,
+  type ModelView,
+  type ModelViewTexture,
+  type VoxelModelSource
+} from "@jolly-pixel/asset.voxel-model/runtime";
 
 // CONSTANTS
 export const VOXEL_MODEL_DOCUMENT_KIND = voxelModelDocumentKind();

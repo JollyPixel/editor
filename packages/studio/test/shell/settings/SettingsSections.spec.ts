@@ -127,12 +127,14 @@ function sections(
       {
         name: "@jolly-pixel/asset.voxel-map",
         kinds: ["voxelmap", "blockset"],
-        configurable: true
+        configurable: true,
+        sceneComponents: []
       },
       {
         name: "@jolly-pixel/asset.font",
         kinds: ["font"],
-        configurable: false
+        configurable: false,
+        sceneComponents: []
       }
     ],
     kinds: kKinds

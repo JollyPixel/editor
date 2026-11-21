@@ -16,21 +16,12 @@ export const PLAY_PAGE_PATHNAMES: ReadonlySet<string> = new Set([
   `/${PLAY_PAGE_PATH}`
 ]);
 
-export const sceneComponentDeclarationSchema = z.object({
-  type: z.string(),
-  assets: z.record(z.string(), z.string())
-});
-
 export const editorDescriptorSchema = z.object({
   name: z.string(),
   package: z.string(),
   kinds: z.array(z.string()),
   preferences: z.array(z.unknown()).default([]),
-  sharedPreferences: z.array(z.unknown()).default([]),
-  sceneComponents: z.array(sceneComponentDeclarationSchema).default([])
+  sharedPreferences: z.array(z.unknown()).default([])
 });
 
-export type SceneComponentDeclaration = z.infer<
-  typeof sceneComponentDeclarationSchema
->;
 export type EditorDescriptor = z.infer<typeof editorDescriptorSchema>;

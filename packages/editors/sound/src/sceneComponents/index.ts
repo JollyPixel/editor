@@ -14,13 +14,13 @@ import type {
   AudioZoneSettings,
   Systems
 } from "@jolly-pixel/engine";
-
-// Import Internal Dependencies
 import {
   AUDIO_LISTENER_DEFINITION,
   AUDIO_SOURCE_DEFINITION,
   AUDIO_ZONE_DEFINITION
-} from "../runtime/index.ts";
+} from "@jolly-pixel/asset.sound/runtime";
+
+// Import Internal Dependencies
 import {
   audioSourceForm,
   audioZoneForm

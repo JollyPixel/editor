@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
 import type { ResolvedBlockDefinition } from "@jolly-pixel/voxel.renderer";
 import { SearchQuery } from "@jolly-pixel/ui";
+import type { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
-import type { BlocksetEntry } from "../../../viewer/BlocksetEntry.ts";
 import { BlockLibraryOrder } from "./BlockLibraryOrder.ts";
 import { BlockLibraryScope } from "./BlockLibraryScope.ts";
 

@@ -4,6 +4,8 @@ Private workspace for code that several asset workspaces share: the ordered tree
 
 It has no dependencies and imports nothing from the server, so both browser and server code can use it. Server helpers for asset kinds (`JsonAssetFile`, `arbitrated`, `NO_OPTIONS_SCHEMA`) live in `@jolly-pixel/asset-server`.
 
+The `./testing` entry is for the workspaces' specs and runs in Node only: `assertDeclaresSceneComponents` checks a package's `jollypixel.sceneComponents` against its `RUNTIME_COMPONENTS`, and `browserBundleInputs(entry, ...patterns)` lists the modules an esbuild browser bundle of an entry keeps that match a pattern, such as `KIND_HANDLER_INPUT` (asset-server's kind authoring code and `*AssetKind.ts` handlers). The studio's bundle spec checks that same pattern against the offline server's chunks, so a renamed handler folder fails there instead of passing every asset guard.
+
 ## 🚀 Building
 
 ```bash

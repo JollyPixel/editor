@@ -11,10 +11,9 @@ import type {
   AssetLeases
 } from "@jolly-pixel/editor.host";
 import { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
+import { ModelView, type BlockMesh } from "@jolly-pixel/asset.voxel-model/runtime";
 
 // Import Internal Dependencies
-import type { BlockMesh } from "#src/scene/blocks/BlockBody.ts";
-import { ModelView } from "#src/viewer/ModelView.ts";
 import {
   MODEL_TEXTURE_DOCUMENT_KIND,
   VOXEL_MODEL_DOCUMENT_KIND,

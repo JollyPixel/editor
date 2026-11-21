@@ -18,15 +18,15 @@ import type {
   RigidBody,
   SceneRigidBodySettings
 } from "@jolly-pixel/physics/engine";
-
-// Import Internal Dependencies
 import {
   CAMERA_DEFINITION,
   LIGHT_DEFINITION,
   MESH_DEFINITION,
   RIGID_BODY_DEFINITION,
   TEXT_DEFINITION
-} from "../runtime/index.ts";
+} from "@jolly-pixel/asset.scene/runtime";
+
+// Import Internal Dependencies
 import {
   cameraForm,
   lightForm,

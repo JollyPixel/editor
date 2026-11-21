@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { BlocksetEntry } from "../../viewer/BlocksetEntry.ts";
+// Import Third-party Dependencies
+import type { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
 
 export interface BlocksetTabLabels {
   name: string;
