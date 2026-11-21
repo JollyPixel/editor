@@ -22,7 +22,6 @@ import "./ShaderOutput.ts";
 import { ShaderPreviewScene } from "./ShaderPreviewScene.ts";
 
 export interface ShaderPreviewOptions {
-  view: HTMLElement;
   document: ScriptDocument;
   name: string;
   context: Pick<EditorContext, "logger" | "preferences">;
@@ -67,12 +66,19 @@ type PreviewSelect = HTMLElementTagNameMap["jolly-select"];
 export async function bindShaderPreview(
   options: ShaderPreviewOptions
 ): Promise<() => void> {
-  const { view, document, name, context } = options;
-  const canvas = view.querySelector("canvas");
-  const output = view.querySelector("jolly-shader-output");
-  const geometry = view.querySelector<PreviewSelect>("jolly-select.preview-geometry");
-  const size = view.querySelector<PreviewSelect>("jolly-select.preview-size");
-  if (canvas === null || output === null || geometry === null || size === null) {
+  const { document, name, context } = options;
+  const view = window.document.querySelector<HTMLElement>("#shader-preview");
+  const canvas = view?.querySelector("canvas") ?? null;
+  const output = view?.querySelector("jolly-shader-output") ?? null;
+  const geometry = view?.querySelector<PreviewSelect>("jolly-select.preview-geometry") ?? null;
+  const size = view?.querySelector<PreviewSelect>("jolly-select.preview-size") ?? null;
+  if (
+    view === null ||
+    canvas === null ||
+    output === null ||
+    geometry === null ||
+    size === null
+  ) {
     throw new Error("bindShaderPreview: the page is missing a shader preview pane.");
   }
 

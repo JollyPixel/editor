@@ -1,41 +1,43 @@
-// Import Third-party Dependencies
-import type { ScriptDiagnostic } from "@jolly-pixel/scripting";
-import type {
-  ScriptCompletion,
-  ScriptQuickInfo
-} from "@jolly-pixel/scripting/language";
-
 // Import Internal Dependencies
 import type {
-  AssistantAnswers,
-  AssistantMessage,
-  AssistantQuestion,
-  AssistantReply
-} from "./assistantProtocol.ts";
+  LanguageAnswers,
+  LanguageMessage,
+  LanguageQuestion,
+  LanguageQuestions,
+  LanguageReply
+} from "./languageProtocol.ts";
+
+export interface LanguageClientOptions {
+  path: string;
+  crashed: (error: Error) => void;
+}
 
 interface PendingQuestion {
   resolve(answer: unknown): void;
   reject(error: Error): void;
 }
 
-export class CodeAssistant {
+export class LanguageClient implements LanguageQuestions {
   #worker: Worker;
   #pending = new Map<number, PendingQuestion>();
   #nextId = 0;
   #failure: Error | null = null;
 
   constructor(
-    path: string
+    options: LanguageClientOptions
   ) {
+    const { path, crashed } = options;
     this.#worker = new Worker(
-      new URL("./assistantWorker.ts", import.meta.url),
+      new URL("./languageWorker.ts", import.meta.url),
       { type: "module" }
     );
-    this.#worker.addEventListener("message", (event: MessageEvent<AssistantReply>) => {
+    this.#worker.addEventListener("message", (event: MessageEvent<LanguageReply>) => {
       this.#settle(event.data);
     });
     this.#worker.addEventListener("error", (event) => {
-      this.#fail(new Error(`Code assistant failed: ${event.message}`));
+      const error = new Error(`Language service crashed: ${event.message}`);
+      this.#fail(error);
+      crashed(error);
     });
     this.#post({
       type: "open",
@@ -45,42 +47,42 @@ export class CodeAssistant {
 
   diagnostics(
     text: string
-  ): Promise<ScriptDiagnostic[]> {
+  ): Promise<LanguageAnswers["diagnostics"]> {
     return this.#ask("diagnostics", text, 0);
   }
 
   completions(
     text: string,
     offset: number
-  ): Promise<ScriptCompletion[]> {
+  ): Promise<LanguageAnswers["completions"]> {
     return this.#ask("completions", text, offset);
   }
 
   quickInfo(
     text: string,
     offset: number
-  ): Promise<ScriptQuickInfo | null> {
+  ): Promise<LanguageAnswers["quickInfo"]> {
     return this.#ask("quickInfo", text, offset);
   }
 
   dispose(): void {
-    this.#fail(new Error("Code assistant disposed."));
+    this.#fail(new Error("Language service disposed."));
     this.#worker.terminate();
   }
 
-  #ask<TQuestion extends AssistantQuestion>(
+  #ask<TQuestion extends LanguageQuestion>(
     type: TQuestion,
     text: string,
     offset: number
-  ): Promise<AssistantAnswers[TQuestion]> {
+  ): Promise<LanguageAnswers[TQuestion]> {
     if (this.#failure !== null) {
       return Promise.reject(this.#failure);
     }
 
     const id = this.#nextId++;
-    const answer = new Promise<AssistantAnswers[TQuestion]>((resolve, reject) => {
+    const answer = new Promise<LanguageAnswers[TQuestion]>((resolve, reject) => {
       this.#pending.set(id, {
-        resolve: (value) => resolve(value as AssistantAnswers[TQuestion]),
+        resolve: (value) => resolve(value as LanguageAnswers[TQuestion]),
         reject
       });
     });
@@ -95,13 +97,13 @@ export class CodeAssistant {
   }
 
   #post(
-    message: AssistantMessage
+    message: LanguageMessage
   ): void {
     this.#worker.postMessage(message);
   }
 
   #settle(
-    reply: AssistantReply
+    reply: LanguageReply
   ): void {
     const pending = this.#pending.get(reply.id);
     this.#pending.delete(reply.id);

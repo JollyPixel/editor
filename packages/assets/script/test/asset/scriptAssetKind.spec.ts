@@ -18,6 +18,7 @@ import {
   scriptAssetKind,
   textAssetKind
 } from "#src/index.ts";
+import { TextEdit } from "#src/model/TextEdit.ts";
 
 describe("ASSET_KINDS", () => {
   test("resolves TSL files to shaders, other code to scripts and other text files to text", () => {
@@ -70,13 +71,27 @@ describe("scriptAssetKind", () => {
     }
   });
 
-  test("loads a file with Windows line endings as LF text", () => {
+  test("edits text with LF and saves it with the line ending the file had", async() => {
     const handler = scriptAssetKind();
-    const state = handler.create("a");
+    const cases: Array<[string, string]> = [
+      ["a\r\nb\r\n", "a\r\nnew\r\nb\r\n"],
+      ["a\nb\n", "a\nnew\nb\n"],
+      ["a\r\nb\nc", "a\r\nnew\r\nb\r\nc"],
+      ["a\rb\r", "a\nnew\nb\n"]
+    ];
 
-    handler.load(state, new TextEncoder().encode("a\r\nb\r\n"));
+    for (const [file, saved] of cases) {
+      const state = handler.create("a");
+      handler.load(state, new TextEncoder().encode(file));
+      state.edit(TextEdit.insertion(2, "new\n"));
 
-    assert.equal(state.text, "a\nb\n");
+      assert.ok(!state.text.includes("\r"), file);
+      assert.equal(
+        new TextDecoder().decode(await handler.serialize(state)),
+        saved,
+        file
+      );
+    }
   });
 
   test("refuses content that is not UTF-8", () => {

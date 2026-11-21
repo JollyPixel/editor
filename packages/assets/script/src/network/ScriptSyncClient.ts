@@ -11,6 +11,7 @@ import type {
   ScriptDocument
 } from "../model/ScriptDocument.ts";
 import { TextEdit } from "../model/TextEdit.ts";
+import { TextFormat } from "../model/TextFormat.ts";
 import type {
   ScriptCommand,
   ScriptNetworkCommand,
@@ -58,7 +59,7 @@ export class ScriptSyncClient extends CommandSync<
     flushes.subscribe("refused", (flush) => this.#refuse(flush.steps));
     this.on("snapshot", (snapshot) => {
       this.#refuse(edits.forget());
-      document.load(snapshot.text);
+      document.load(snapshot.text, new TextFormat(snapshot.format));
     });
     this.on("command", (command) => this.#receive(command));
     this.on("acknowledged", (command, version) => {

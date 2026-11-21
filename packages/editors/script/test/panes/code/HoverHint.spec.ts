@@ -6,8 +6,7 @@ import assert from "node:assert/strict";
 import { nothing } from "lit";
 
 // Import Internal Dependencies
-import { CodeDiagnostics } from "#src/diagnostics/CodeDiagnostics.ts";
-import type { CodeAssistant } from "#src/language/CodeAssistant.ts";
+import { CodeDiagnostics } from "#src/language/CodeDiagnostics.ts";
 import { HoverHint } from "#src/panes/code/HoverHint.ts";
 import { TextLines } from "#src/text/TextLines.ts";
 
@@ -23,7 +22,7 @@ function pointerAt(
 describe("HoverHint", () => {
   test("stays open while the pointer travels from the squiggle into it, closes after it leaves", (t) => {
     t.mock.timers.enable({ apis: ["setTimeout"] });
-    const diagnostics = new CodeDiagnostics(() => undefined);
+    const diagnostics = new CodeDiagnostics();
     diagnostics.replace("lint", [{
       start: 4,
       length: 5,
@@ -32,8 +31,10 @@ describe("HoverHint", () => {
       code: "no-unused-vars"
     }]);
     const hint = new HoverHint({ requestUpdate: () => undefined } as never, {
-      assistant: { quickInfo: () => Promise.resolve(null) } as unknown as CodeAssistant,
-      diagnostics,
+      questions: () => {
+        return { quickInfo: () => Promise.resolve(null) };
+      },
+      diagnostics: () => diagnostics,
       lines: () => kLines,
       pointAt: (x) => {
         return { line: 0, visualColumn: x };

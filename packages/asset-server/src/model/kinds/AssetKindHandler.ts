@@ -23,6 +23,16 @@ export interface AssetRoomBinding<TState = unknown> {
   readonly state: TState;
   readonly version?: () => number | undefined;
   /**
+   * The asset's current path in the project, `undefined` once it is deleted.
+   */
+  readonly path: () => string | undefined;
+  /**
+   * Reads another file of the project, such as a configuration file beside
+   * the asset. Resolves `null` when the file is missing or the path is
+   * reserved or ignored.
+   */
+  readonly readFile: (path: string) => Promise<Uint8Array | null>;
+  /**
    * Holds `bytes` for HTTP fetches while the room is open. Absent when the
    * backend serves no content refs.
    */

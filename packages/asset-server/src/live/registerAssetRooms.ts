@@ -5,6 +5,10 @@ import type {
 } from "@jolly-pixel/network";
 import type * as EventStore from "@jolly-pixel/event-store";
 import { AssetRoom } from "@jolly-pixel/asset";
+import {
+  writableAssetPath,
+  type AssetSource
+} from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import {
@@ -35,6 +39,7 @@ export interface AssetRoomsOptions {
   reader?: EventStore.EventReader;
   kinds: AssetKindRegistry;
   catalog: CatalogProjection;
+  source: Pick<AssetSource, "read" | "exists" | "isIgnored">;
   states: AssetStateStore;
   flush: (assetId: string) => Promise<void>;
   tags: Pick<AssetTags, "read">;
@@ -64,6 +69,7 @@ export function registerAssetRooms(
     reader,
     kinds,
     catalog,
+    source,
     states,
     flush,
     tags,
@@ -99,6 +105,17 @@ export function registerAssetRooms(
   }
   states.on("replaced", onStateReplaced);
 
+  async function readFile(
+    path: string
+  ): Promise<Uint8Array | null> {
+    const safe = writableAssetPath(source, path);
+    if (!safe.ok || !await source.exists(safe.val)) {
+      return null;
+    }
+
+    return source.read(safe.val);
+  }
+
   function roomExtension(
     room: ResolvedRoom,
     state: unknown,
@@ -111,6 +128,8 @@ export function registerAssetRooms(
       roomId: room.roomId,
       state,
       version,
+      path: () => catalog.record(room.assetId)?.path.value,
+      readFile,
       contentRef: contentRefs === undefined ?
         undefined :
         (bytes: Uint8Array, refOptions?: ContentRefOptions) => contentRefs.issue(

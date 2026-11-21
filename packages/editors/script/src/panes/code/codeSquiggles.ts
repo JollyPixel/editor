@@ -7,7 +7,7 @@ import {
 import { styleMap } from "lit/directives/style-map.js";
 
 // Import Internal Dependencies
-import type { CodeDiagnostics } from "../../diagnostics/CodeDiagnostics.ts";
+import type { CodeDiagnostics } from "../../language/CodeDiagnostics.ts";
 import type { CodeLayout } from "./CodeViewport.ts";
 
 // CONSTANTS

@@ -10,7 +10,7 @@ import {
 import type { ScriptDiagnostic } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies
-import { CodeDiagnostics } from "#src/diagnostics/CodeDiagnostics.ts";
+import { CodeDiagnostics } from "#src/language/CodeDiagnostics.ts";
 import { TextLines } from "#src/text/TextLines.ts";
 
 function diagnostic(
@@ -46,7 +46,7 @@ function spans(
 
 describe("CodeDiagnostics", () => {
   test("merges both sources by offset and replaces one source without the other", () => {
-    const diagnostics = new CodeDiagnostics(() => undefined);
+    const diagnostics = new CodeDiagnostics();
 
     diagnostics.replace("types", [diagnostic(10, 2)]);
     diagnostics.replace("lint", [diagnostic(4, 1, "warning")]);
@@ -56,7 +56,7 @@ describe("CodeDiagnostics", () => {
   });
 
   test("follows an edit: text typed before a span moves it, text typed at its end stays out", () => {
-    const diagnostics = new CodeDiagnostics(() => undefined);
+    const diagnostics = new CodeDiagnostics();
     diagnostics.replace("types", [diagnostic(4, 3)]);
 
     diagnostics.follow(change(new TextEdit([
@@ -68,7 +68,7 @@ describe("CodeDiagnostics", () => {
   });
 
   test("collapses a span whose text an edit deleted", () => {
-    const diagnostics = new CodeDiagnostics(() => undefined);
+    const diagnostics = new CodeDiagnostics();
     diagnostics.replace("lint", [diagnostic(4, 3)]);
 
     diagnostics.follow(change(TextEdit.deletion(2, "xxxxxx")));
@@ -77,7 +77,7 @@ describe("CodeDiagnostics", () => {
   });
 
   test("drops every diagnostic when the document loads a new text", () => {
-    const diagnostics = new CodeDiagnostics(() => undefined);
+    const diagnostics = new CodeDiagnostics();
     diagnostics.replace("lint", [diagnostic(4, 3)]);
     diagnostics.replace("types", [diagnostic(0, 1)]);
 
@@ -87,7 +87,7 @@ describe("CodeDiagnostics", () => {
   });
 
   test("finds the diagnostics under an offset, empty spans included", () => {
-    const diagnostics = new CodeDiagnostics(() => undefined);
+    const diagnostics = new CodeDiagnostics();
     diagnostics.replace("lint", [
       diagnostic(2, 4, "warning"),
       diagnostic(10, 1, "warning")
@@ -100,7 +100,7 @@ describe("CodeDiagnostics", () => {
   });
 
   test("colors a line by its worst diagnostic, an error outranking a warning", () => {
-    const diagnostics = new CodeDiagnostics(() => undefined);
+    const diagnostics = new CodeDiagnostics();
     const lines = new TextLines("ab cdef\nghi j\nklm");
     diagnostics.replace("lint", [
       diagnostic(2, 4, "warning"),
@@ -113,9 +113,10 @@ describe("CodeDiagnostics", () => {
     assert.equal(diagnostics.lineSeverity(lines, 2), null);
   });
 
-  test("reports each change to its owner", () => {
+  test("emits a change for each replace and each followed edit", () => {
     let changes = 0;
-    const diagnostics = new CodeDiagnostics(() => changes++);
+    const diagnostics = new CodeDiagnostics();
+    diagnostics.on("change", () => changes++);
 
     diagnostics.replace("lint", [diagnostic(4, 3)]);
     diagnostics.follow(change(TextEdit.insertion(0, "a")));

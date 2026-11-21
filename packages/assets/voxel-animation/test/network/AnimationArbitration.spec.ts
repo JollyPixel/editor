@@ -2,6 +2,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { roomBinding } from "@jolly-pixel/asset-server/testing";
+
 // Import Internal Dependencies
 import { voxelAnimationAssetKind } from "#src/index.ts";
 import {
@@ -14,12 +17,10 @@ function liveArbiter() {
   const state = handler.create("asset");
   state.apply(networkCommand({ action: "clip-added", clip: clip("walk") }));
 
-  return handler.commands!.live!({
-    assetId: "asset",
+  return handler.commands!.live!(roomBinding({
     kind: handler.kind,
-    roomId: "room",
     state
-  });
+  }));
 }
 
 describe("voxel-animation arbitration", () => {

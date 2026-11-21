@@ -6,7 +6,7 @@ import path from "node:path";
 import { assertDeclaresSceneComponents } from "@jolly-pixel/editor.host/testing";
 
 // Import Internal Dependencies
-import { SCENE_COMPONENTS } from "../../src/scene/index.ts";
+import { SCENE_COMPONENTS } from "#src/sceneComponents/index.ts";
 
 // CONSTANTS
 const kPackageDir = path.join(import.meta.dirname, "..", "..");

@@ -119,6 +119,7 @@ export async function roomHarness(
       events: sync.eventStore.writer,
       kinds: sync.kinds,
       catalog,
+      source: sync.source,
       states: sync.states,
       flush,
       tags,

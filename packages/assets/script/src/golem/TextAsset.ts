@@ -13,6 +13,7 @@ import {
   type SyncedScript,
   type TEXT_KIND
 } from "../network/client.ts";
+import { toLf } from "../model/LineEnding.ts";
 import { TextMatchError } from "./errors/TextMatchError.ts";
 import type {
   LinesInput,
@@ -75,7 +76,9 @@ export class TextAsset<
   async replace(
     input: ReplaceInput
   ): Promise<number> {
-    const { search, replace: replacement, all = false } = input;
+    const { all = false } = input;
+    const search = toLf(input.search);
+    const replacement = toLf(input.replace);
     if (search === "") {
       throw new TypeError("The search text is empty.");
     }
@@ -101,7 +104,7 @@ export class TextAsset<
   async write(
     input: WriteInput
   ): Promise<void> {
-    const edit = TextEdit.between(this.text, input.text);
+    const edit = TextEdit.between(this.text, toLf(input.text));
     if (!edit.empty) {
       await this.apply([
         {

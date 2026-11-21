@@ -20,7 +20,6 @@ export type KeyCommand = (
 ) => KeyEdit | null;
 
 // CONSTANTS
-export const INDENT = "  ";
 const kLeadingSpace = /^[\t ]*/;
 const kBrackets = new Map([
   ["(", ")"],
@@ -36,11 +35,12 @@ export function insertIndent(
   lines: TextLines,
   caret: ScriptCaret
 ): KeyEdit {
+  const { indent } = lines.format;
   if (!spansLines(lines, caret)) {
-    return replaceRange(lines, caret.start, caret.end, INDENT);
+    return replaceRange(lines, caret.start, caret.end, indent);
   }
 
-  return shiftLines(lines, caret, (_line, at) => [{ at, insert: INDENT }]);
+  return shiftLines(lines, caret, (_line, at) => [{ at, insert: indent }]);
 }
 
 export function removeIndent(
@@ -51,7 +51,7 @@ export function removeIndent(
     const leading = kLeadingSpace.exec(line)?.[0] ?? "";
     const removed = leading.startsWith("\t") ?
       "\t" :
-      leading.slice(0, INDENT.length);
+      leading.slice(0, lines.format.indentSize);
 
     return removed === "" ? [] : [{ at, delete: removed }];
   });
@@ -68,7 +68,7 @@ export function insertNewline(
     return replaceRange(lines, caret.start, caret.end, `\n${indent}`);
   }
 
-  const inner = `\n${indent}${INDENT}`;
+  const inner = `\n${indent}${lines.format.indent}`;
   const outer = lines.text[caret.end] === closer ? `\n${indent}` : "";
 
   return replaceRange(

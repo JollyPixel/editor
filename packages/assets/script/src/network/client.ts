@@ -16,6 +16,7 @@ export {
 export * from "../model/ScriptDocument.ts";
 export * from "../model/ScriptHistory.ts";
 export * from "../model/TextEdit.ts";
+export * from "../model/TextFormat.ts";
 export * from "../model/errors/TextEditMismatchError.ts";
 export * from "./textDocumentKind.ts";
 export * from "./scriptCaret.ts";

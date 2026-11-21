@@ -16,8 +16,8 @@ import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
-import { bindCodeAssistant } from "./language/bindCodeAssistant.ts";
-import { CodeAssistant } from "./language/CodeAssistant.ts";
+import { CodeAssist } from "./language/CodeAssist.ts";
+import { LanguageClient } from "./language/LanguageClient.ts";
 import { fileLanguage } from "./syntax/highlight.ts";
 
 // CONSTANTS
@@ -53,11 +53,21 @@ export class ScriptEditor {
     const language = fileLanguage(path);
     const teardown = new Teardown();
     const markdownPreview = language === "markdown" ?
-      import("./panes/preview/bindMarkdownPreview.ts") :
+      import("./panes/markdown/bindMarkdownPreview.ts") :
       null;
     const shaderPreview = kind === SHADER_KIND ?
       import("./panes/shader/bindShaderPreview.ts") :
       null;
+
+    function keepPreview(
+      binding: Promise<() => void>
+    ): void {
+      binding
+        .then((release) => teardown.defer(release))
+        .catch((error: unknown) => {
+          context.logger.error("preview failed", { error });
+        });
+    }
 
     try {
       const editorToolbar = document.querySelector("jolly-editor-toolbar");
@@ -65,16 +75,17 @@ export class ScriptEditor {
         editorToolbar.sources = context.toolbar;
       }
       const code = document.querySelector("jolly-script-code");
-      const preview = document.querySelector("jolly-markdown");
-      const shaderView = document.querySelector<HTMLElement>("#shader-preview");
-      if (code === null || preview === null || shaderView === null) {
+      if (code === null) {
         throw new Error("ScriptEditor: the page is missing a script pane.");
       }
 
-      const assistant = kind === SCRIPT_KIND || kind === SHADER_KIND ?
-        new CodeAssistant(path) :
+      const languageClient = kind === SCRIPT_KIND || kind === SHADER_KIND ?
+        new LanguageClient({
+          path,
+          crashed: (error) => context.logger.error("language service crashed", { error })
+        }) :
         null;
-      teardown.defer(() => assistant?.dispose());
+      teardown.defer(() => languageClient?.dispose());
 
       const collaboration = new ScriptCollaboration({
         room: target.room,
@@ -91,7 +102,7 @@ export class ScriptEditor {
         ));
       }
 
-      const ready = target.ready.then(async() => {
+      const ready = target.ready.then(() => {
         const readOnly = target.room.access !== "write";
         teardown.defer(code.attach({
           document: target.document,
@@ -99,33 +110,28 @@ export class ScriptEditor {
           language,
           readOnly
         }));
-        if (assistant !== null) {
-          teardown.defer(bindCodeAssistant({
-            code,
-            assistant,
+        if (languageClient !== null) {
+          const assist = new CodeAssist({
+            questions: languageClient,
             document: target.document,
             room: target.room
-          }));
+          });
+          teardown.defer(() => assist.dispose());
+          teardown.defer(code.assist(assist));
         }
         if (markdownPreview !== null) {
-          code.hidden = readOnly;
-          const { bindMarkdownPreview } = await markdownPreview;
-          teardown.defer(bindMarkdownPreview(preview, target.document));
+          keepPreview(markdownPreview.then(({ bindMarkdownPreview }) => bindMarkdownPreview({
+            document: target.document,
+            code,
+            readOnly
+          })));
         }
         if (shaderPreview !== null) {
-          shaderView.hidden = false;
-          void shaderPreview
-            .then(({ bindShaderPreview }) => bindShaderPreview({
-              view: shaderView,
-              document: target.document,
-              name: path,
-              context
-            }))
-            .then((release) => teardown.defer(release))
-            .catch((error: unknown) => {
-              shaderView.hidden = true;
-              context.logger.error("shader preview failed", { error });
-            });
+          keepPreview(shaderPreview.then(({ bindShaderPreview }) => bindShaderPreview({
+            document: target.document,
+            name: path,
+            context
+          })));
         }
       });
 

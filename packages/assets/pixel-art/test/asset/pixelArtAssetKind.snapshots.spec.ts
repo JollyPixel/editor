@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { type AssetLiveProtocol, type AssetRoomBinding } from "@jolly-pixel/asset-server";
+import { roomBinding } from "@jolly-pixel/asset-server/testing";
 import { SchemaParser } from "@jolly-pixel/network";
 import { decodePngPixels } from "@jolly-pixel/pixel-draw.renderer";
 
@@ -17,12 +18,10 @@ const kRedTuple = [255, 0, 0, 255];
 function binding(
   state: PixelArtState
 ): AssetRoomBinding<PixelArtState> {
-  return {
-    assetId: "asset-1",
+  return roomBinding({
     kind: PIXEL_ART_KIND,
-    roomId: `${PIXEL_ART_KIND}:asset-1`,
     state
-  };
+  });
 }
 
 function liveProtocol(

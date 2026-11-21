@@ -84,6 +84,18 @@ describe("TextAsset", () => {
     });
   });
 
+  test("replaces and writes text given with Windows line endings as LF text", async() => {
+    const { text, hosted } = await openText("let a = 1;\nlet b = a;\n");
+
+    await text.replace({ search: "let a = 1;\r\nlet b", replace: "let a = 2;\r\nconst b" });
+    await text.settled();
+    assert.equal(hosted.state.text, "let a = 2;\nconst b = a;\n");
+
+    await text.write({ text: "one\r\ntwo\r\n" });
+    await text.settled();
+    assert.equal(hosted.state.text, "one\ntwo\n");
+  });
+
   test("reads a range of lines counted from 1", async() => {
     const { text } = await openText("one\ntwo\nthree\nfour");
 

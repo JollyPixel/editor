@@ -10,6 +10,7 @@ import {
   foldAssetEvent,
   type AssetEventData
 } from "@jolly-pixel/asset-server";
+import { roomBinding } from "@jolly-pixel/asset-server/testing";
 import { SchemaParser } from "@jolly-pixel/network";
 import { decodePngPixels, NormalMapConfig } from "@jolly-pixel/pixel-draw.renderer";
 import { PIXEL_COMMAND_ACTIONS } from "@jolly-pixel/asset.pixel-art/client";
@@ -159,12 +160,10 @@ describe("blocksetAssetKind", () => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, fileEvent(seeded()));
-    const protocol = handler.commands!.live!({
-      assetId: "asset-1",
+    const protocol = handler.commands!.live!(roomBinding({
       kind: BLOCKSET_KIND,
-      roomId: `${BLOCKSET_KIND}:asset-1`,
       state
-    });
+    }));
     const parser = new SchemaParser(blocksetSnapshotSchema);
 
     const encoded = await protocol.encodeSnapshot!() as BlocksetSnapshot;
@@ -186,12 +185,10 @@ describe("blocksetAssetKind", () => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
     foldAssetEvent(handler, state, fileEvent(seeded()));
-    const protocol = handler.commands!.live!({
-      assetId: "asset-1",
+    const protocol = handler.commands!.live!(roomBinding({
       kind: BLOCKSET_KIND,
-      roomId: `${BLOCKSET_KIND}:asset-1`,
       state
-    });
+    }));
 
     const snapshot = protocol.snapshot() as Record<string, unknown>;
 
@@ -211,12 +208,10 @@ describe("blocksetAssetKind", () => {
   test("live() arbitrates a block collision by timestamp", () => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    const protocol = handler.commands!.live!({
-      assetId: "asset-1",
+    const protocol = handler.commands!.live!(roomBinding({
       kind: BLOCKSET_KIND,
-      roomId: `${BLOCKSET_KIND}:asset-1`,
       state
-    });
+    }));
 
     protocol.arbitrate(blockCommand(3, { timestamp: 2_000 }))!.commit!();
 
@@ -233,12 +228,10 @@ describe("blocksetAssetKind", () => {
   test("live() corrects a rejected stroke in place and defers block commands to a snapshot", () => {
     const handler = blocksetAssetKind();
     const state = handler.create("asset-1");
-    const protocol = handler.commands!.live!({
-      assetId: "asset-1",
+    const protocol = handler.commands!.live!(roomBinding({
       kind: BLOCKSET_KIND,
-      roomId: `${BLOCKSET_KIND}:asset-1`,
       state
-    });
+    }));
 
     const correction = protocol.correct!(strokeCommand(), null);
 

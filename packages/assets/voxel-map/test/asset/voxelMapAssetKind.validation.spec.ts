@@ -10,6 +10,7 @@ import {
   type AssetEventData,
   type AssetLiveProtocol
 } from "@jolly-pixel/asset-server";
+import { roomBinding } from "@jolly-pixel/asset-server/testing";
 import {
   decodeVoxelWorld,
   encodeVoxelWorld,
@@ -39,12 +40,10 @@ function live(): LiveHarness {
 
   return {
     state,
-    protocol: handler.commands!.live!({
-      assetId: "asset-1",
+    protocol: handler.commands!.live!(roomBinding({
       kind: VOXEL_MAP_KIND,
-      roomId: `${VOXEL_MAP_KIND}:asset-1`,
       state
-    })
+    }))
   };
 }
 

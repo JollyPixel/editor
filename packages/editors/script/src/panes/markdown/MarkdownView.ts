@@ -6,7 +6,7 @@ import {
 } from "marked";
 
 // Import Internal Dependencies
-import { changedSpan } from "../text/changedSpan.ts";
+import { changedSpan } from "../../text/changedSpan.ts";
 import { leavesElementsOpen } from "./rawHtml.ts";
 
 // CONSTANTS

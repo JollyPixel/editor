@@ -30,7 +30,7 @@ const kEdits = [
 
 test("the Markdown preview renders each edit as a fresh render of the text", async({ page }) => {
   const renders = await page.evaluate(async(edits) => {
-    const module = "/src/markdown/MarkdownView.ts";
+    const module = "/src/panes/markdown/MarkdownView.ts";
     await import(module);
     function html(
       markdown: string,
@@ -52,7 +52,7 @@ test("the Markdown preview renders each edit as a fresh render of the text", asy
 
 test("the Markdown preview keeps the elements of the blocks an edit leaves alone", async({ page }) => {
   const kept = await page.evaluate(async({ before, after }) => {
-    const module = "/src/markdown/MarkdownView.ts";
+    const module = "/src/panes/markdown/MarkdownView.ts";
     await import(module);
     const view = document.createElement("jolly-markdown");
     function paragraphs(): HTMLParagraphElement[] {

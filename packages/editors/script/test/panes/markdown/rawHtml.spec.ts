@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { marked } from "marked";
 
 // Import Internal Dependencies
-import { leavesElementsOpen } from "#src/markdown/rawHtml.ts";
+import { leavesElementsOpen } from "#src/panes/markdown/rawHtml.ts";
 
 function opensAcrossBlocks(
   markdown: string
