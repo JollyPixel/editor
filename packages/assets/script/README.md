@@ -6,7 +6,7 @@ Private asset workspace for three text kinds:
 - `shader`: a `.tsl.ts` file (it wins over `.ts`), created from a template that returns a `MeshStandardNodeMaterial`.
 - `text`: a `.md`, `.txt`, `.json`, `.jsonc`, `.yml`, `.yaml`, `.toml`, `.xml`, `.html` or `.css` file, created empty.
 
-All three load as UTF-8 with LF line endings and share one edit protocol:
+All three load as UTF-8. The room edits the text with LF line endings and saves it with the file's own ending, so a CRLF file stays CRLF. A file mixing both is saved with its first one. They share one edit protocol:
 
 - An edit is `{ at, insert }` or `{ at, delete }` in UTF-16 offsets. The room rebases it over the edits committed since its `basis` version and keeps the last 1,000.
 - An edit based on an older version, or whose deleted text no longer matches, is refused; its author resyncs from the snapshot.

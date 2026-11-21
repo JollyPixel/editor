@@ -86,7 +86,7 @@ export function textKindHandler<TRelay extends object = never>(
         );
       }
 
-      state.replace(text.replaceAll("\r\n", "\n"));
+      state.load(text);
     },
 
     clear(
@@ -98,7 +98,7 @@ export function textKindHandler<TRelay extends object = never>(
     serialize(
       state: ScriptText
     ): Promise<Uint8Array> {
-      return Promise.resolve(kEncoder.encode(state.text));
+      return Promise.resolve(kEncoder.encode(state.file));
     },
 
     commands: {
