@@ -5,20 +5,17 @@ import { errorMessage } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
-  AssistantAnswers,
-  AssistantMessage,
-  AssistantQuestion,
-  AssistantReply
-} from "./assistantProtocol.ts";
+  LanguageAnswers,
+  LanguageMessage,
+  LanguageQuestion,
+  LanguageReply
+} from "./languageProtocol.ts";
 
-type AssistantQuestionMessage = Exclude<AssistantMessage, { type: "open"; }>;
-
-// CONSTANTS
-const kScope = self as unknown as Worker;
+type LanguageQuestionMessage = Exclude<LanguageMessage, { type: "open"; }>;
 
 let service: ScriptLanguageService | null = null;
 
-kScope.addEventListener("message", (event: MessageEvent<AssistantMessage>) => {
+self.addEventListener("message", (event: MessageEvent<LanguageMessage>) => {
   const message = event.data;
   if (message.type === "open") {
     service?.dispose();
@@ -27,12 +24,12 @@ kScope.addEventListener("message", (event: MessageEvent<AssistantMessage>) => {
     return;
   }
 
-  kScope.postMessage(reply(message));
+  self.postMessage(reply(message));
 });
 
 function reply(
-  message: AssistantQuestionMessage
-): AssistantReply {
+  message: LanguageQuestionMessage
+): LanguageReply {
   const { id } = message;
   if (service === null) {
     return {
@@ -56,16 +53,16 @@ function reply(
 }
 
 function answer(
-  open: ScriptLanguageService,
-  message: AssistantQuestionMessage
-): AssistantAnswers[AssistantQuestion] {
+  languageService: ScriptLanguageService,
+  message: LanguageQuestionMessage
+): LanguageAnswers[LanguageQuestion] {
   const { text, offset } = message;
   switch (message.type) {
     case "diagnostics":
-      return open.diagnostics(text);
+      return languageService.diagnostics(text);
     case "completions":
-      return open.completions(text, offset);
+      return languageService.completions(text, offset);
     case "quickInfo":
-      return open.quickInfo(text, offset);
+      return languageService.quickInfo(text, offset);
   }
 }

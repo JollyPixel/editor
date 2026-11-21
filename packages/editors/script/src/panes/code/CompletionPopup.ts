@@ -9,7 +9,7 @@ import {
 import { styleMap } from "lit/directives/style-map.js";
 
 // Import Internal Dependencies
-import type { CodeAssistant } from "../../language/CodeAssistant.ts";
+import type { LanguageQuestions } from "../../language/languageProtocol.ts";
 import { LatestQuestion } from "../../language/LatestQuestion.ts";
 import {
   CompletionList,
@@ -18,7 +18,7 @@ import {
 import type { CodeLayout } from "./CodeViewport.ts";
 
 export interface CompletionPopupSources {
-  readonly assistant: CodeAssistant;
+  questions(): Pick<LanguageQuestions, "completions">;
   text(): string;
   caret(): number | null;
   accept(accepted: AcceptedCompletion): void;
@@ -85,7 +85,7 @@ export class CompletionPopup {
     }
 
     this.#question.ask(
-      (text) => this.#sources.assistant.completions(text, caret),
+      (text) => this.#sources.questions().completions(text, caret),
       (items, text) => this.#show(CompletionList.from(text, items))
     );
   }

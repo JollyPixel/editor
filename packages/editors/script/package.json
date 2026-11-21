@@ -25,10 +25,10 @@
     "runtime": "./runtime"
   },
   "exports": {
-    ".": "./src/scene/index.ts",
-    "./scene": "./src/scene/index.ts",
+    ".": "./src/sceneComponents/index.ts",
+    "./scene": "./src/sceneComponents/index.ts",
     "./runtime": "./src/runtime/index.ts",
-    "./markdown": "./src/markdown/MarkdownView.ts"
+    "./markdown": "./src/panes/markdown/MarkdownView.ts"
   },
   "scripts": {
     "dev": "vite",

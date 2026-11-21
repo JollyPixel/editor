@@ -4,22 +4,20 @@ import type {
   ScriptDiagnostic,
   ScriptDiagnosticSeverity
 } from "@jolly-pixel/scripting";
+import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { TextLines } from "../text/TextLines.ts";
 
 export type DiagnosticSource = "lint" | "types";
 
-export class CodeDiagnostics {
-  #onChange: () => void;
+export type CodeDiagnosticsEvents = {
+  change: () => void;
+};
+
+export class CodeDiagnostics extends Emitter<CodeDiagnosticsEvents> {
   #sources = new Map<DiagnosticSource, readonly ScriptDiagnostic[]>();
   #all: readonly ScriptDiagnostic[] = [];
-
-  constructor(
-    onChange: () => void
-  ) {
-    this.#onChange = onChange;
-  }
 
   get all(): readonly ScriptDiagnostic[] {
     return this.#all;
@@ -93,6 +91,6 @@ export class CodeDiagnostics {
     this.#all = Array.from(this.#sources.values())
       .flat()
       .sort((left, right) => left.start - right.start);
-    this.#onChange();
+    this.emit("change");
   }
 }

@@ -11,9 +11,9 @@ import type { ScriptDiagnostic } from "@jolly-pixel/scripting";
 import type { ScriptQuickInfo } from "@jolly-pixel/scripting/language";
 
 // Import Internal Dependencies
-import type { CodeDiagnostics } from "../../diagnostics/CodeDiagnostics.ts";
-import type { CodeAssistant } from "../../language/CodeAssistant.ts";
+import type { CodeDiagnostics } from "../../language/CodeDiagnostics.ts";
 import { LatestQuestion } from "../../language/LatestQuestion.ts";
+import type { LanguageQuestions } from "../../language/languageProtocol.ts";
 import type { TextLines } from "../../text/TextLines.ts";
 import type {
   CodeLayout,
@@ -21,8 +21,8 @@ import type {
 } from "./CodeViewport.ts";
 
 export interface HoverHintSources {
-  readonly assistant: CodeAssistant;
-  readonly diagnostics: CodeDiagnostics;
+  questions(): Pick<LanguageQuestions, "quickInfo">;
+  diagnostics(): CodeDiagnostics;
   lines(): TextLines;
   pointAt(x: number, y: number): CodePoint | null;
 }
@@ -170,14 +170,14 @@ export class HoverHint {
   ): void {
     const hover: CodeHover = {
       offset,
-      diagnostics: this.#sources.diagnostics.at(offset),
+      diagnostics: this.#sources.diagnostics().at(offset),
       info: null
     };
     this.#hover = hover;
     this.#host.requestUpdate();
 
     this.#question.ask(
-      (text) => this.#sources.assistant.quickInfo(text, offset),
+      (text) => this.#sources.questions().quickInfo(text, offset),
       (info) => {
         this.#hover = {
           ...hover,

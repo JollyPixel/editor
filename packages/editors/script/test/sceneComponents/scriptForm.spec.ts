@@ -9,7 +9,7 @@ import type { ScriptOutline } from "@jolly-pixel/scripting";
 import {
   scriptForm,
   scriptSignals
-} from "#src/scene/scriptForm.ts";
+} from "#src/sceneComponents/scriptForm.ts";
 
 // CONSTANTS
 const kOutline: ScriptOutline = {

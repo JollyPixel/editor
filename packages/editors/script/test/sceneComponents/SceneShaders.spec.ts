@@ -11,7 +11,7 @@ import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { SceneShaders } from "../../src/scene/SceneShaders.ts";
+import { SceneShaders } from "#src/sceneComponents/SceneShaders.ts";
 
 // CONSTANTS
 const kReference = {
