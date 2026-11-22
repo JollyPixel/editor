@@ -6,7 +6,7 @@
 flowchart TB
     Game["Game code, scene files"]
     Glue["physics/ecs<br/>PhysicsSystem, RigidBody"]
-    Outline["physics/three<br/>ColliderOutline"]
+    Outline["backend.three/physics<br/>ColliderOutline"]
     Contract["physics<br/>PhysicsWorld, PhysicsBody, shapes"]
     Rapier["physics.rapier"]
     Voxel["voxel.renderer<br/>PhysicsVoxelCollider"]
@@ -24,9 +24,9 @@ flowchart TB
 - Engine-specific features stay reachable through each adapter's `native`
   field.
 - Code: `src/` (contract), `src/ecs/` (renderer-agnostic engine
-  components), `src/three/` (three.js collider outline), `src/testing/`
-  (contract cases every backend runs). `three` is an optional peer, needed
-  only by `./three`.
+  components), `src/testing/` (contract cases every backend runs).
+- Nothing here depends on a renderer. The three.js collider outline lives in
+  `backend.three`, which takes physics as an optional peer.
 - One `RigidBody` owns one body and all its colliders, so no collider ever
   changes body. Hierarchy compounds (a collider on a child actor joining its
   parent's body) were dropped for that reason.

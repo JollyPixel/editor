@@ -1,7 +1,9 @@
 # @jolly-pixel/physics
 
-An engine-neutral physics contract, the components that plug it into the
-JollyPixel engine, and a three.js view of the colliders. The simulation itself comes from a [backend](#backends).
+An engine-neutral physics contract and the components that plug it into the
+JollyPixel engine. The simulation itself comes from a [backend](#backends).
+The three.js collider outline is `ColliderOutline` in
+`@jolly-pixel/backend.three/physics`.
 
 ## 💃 Getting Started
 
@@ -79,14 +81,6 @@ import { RigidBody } from "@jolly-pixel/physics/ecs";
 
 - [`PhysicsSystem`](docs/ecs/PhysicsSystem.md)
 - [`RigidBody`](docs/ecs/RigidBody.md)
-
-### three.js
-
-```ts
-import { ColliderOutline } from "@jolly-pixel/physics/three";
-```
-
-- [`ColliderOutline`](docs/three/ColliderOutline.md)
 
 ### Testing
 

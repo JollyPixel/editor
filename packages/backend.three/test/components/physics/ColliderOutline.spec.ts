@@ -3,17 +3,16 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as THREE from "three";
-import { ThreeSceneGraph } from "@jolly-pixel/backend.three";
-
-// Import Internal Dependencies
-import type { ColliderShape } from "#src/ColliderShape.ts";
-import { ColliderOutline } from "#src/three/ColliderOutline.ts";
+import * as THREE from "three/webgpu";
+import type { ColliderShape } from "@jolly-pixel/physics";
 import {
   RIGID_BODY_DEFAULTS,
   COLLIDER_SETTINGS_DEFAULTS
-} from "#src/ecs/RigidBody.ts";
-import { createEngineWorld } from "../helpers/engineWorld.ts";
+} from "@jolly-pixel/physics/ecs";
+
+// Import Internal Dependencies
+import { ColliderOutline } from "../../../src/components/physics/ColliderOutline.ts";
+import { createThreeSceneSetup } from "../../helpers/scene/threeSceneSetup.ts";
 
 interface ShapeCase {
   shape: ColliderShape;
@@ -51,7 +50,7 @@ function outlineActor(
   shape: ColliderShape,
   scale: THREE.Vector3Tuple
 ) {
-  const world = createEngineWorld(new ThreeSceneGraph());
+  const { world } = createThreeSceneSetup();
   const actor = world.createActor("collider");
   actor.transform.local.position = new THREE.Vector3(3, 0, 0);
   actor.transform.local.scale = new THREE.Vector3(...scale);

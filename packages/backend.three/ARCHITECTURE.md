@@ -52,6 +52,9 @@ flowchart TB
 - `createDefaultAssetLoaders()` shares one `THREE.LoadingManager`.
 - Camera, light, audio, mesh, model and text components have a definition,
   so an ECS `FileScene` can build them.
+- `src/components/physics/` is the `./physics` entry, the only code that
+  imports the optional `@jolly-pixel/physics` peer. The root entry never
+  reaches it; `test/bundle.spec.ts` checks that.
 
 Code: `src/assets/`, `src/components/`, `src/audio/`, `src/ui/`.
 

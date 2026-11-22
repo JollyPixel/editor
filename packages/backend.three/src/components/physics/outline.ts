@@ -1,12 +1,10 @@
 // Import Third-party Dependencies
-import * as THREE from "three";
-import type { Vector3Like } from "@jolly-pixel/math";
-
-// Import Internal Dependencies
+import * as THREE from "three/webgpu";
 import type {
-  ColliderDesc,
-  ColliderShape
-} from "../../ColliderShape.ts";
+  ColliderShape,
+  Vector3Like
+} from "@jolly-pixel/physics";
+import type { ColliderSettings } from "@jolly-pixel/physics/ecs";
 
 // CONSTANTS
 const kCircleSegments = 32;
@@ -24,26 +22,18 @@ interface Arc {
 }
 
 export function outlineGeometry(
-  collider: ColliderDesc
+  collider: Readonly<ColliderSettings>
 ): THREE.BufferGeometry {
   const points: number[] = [];
   outlineShape(points, collider.shape);
 
+  const { x, y, z } = collider.offset;
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute(
     "position",
     new THREE.Float32BufferAttribute(points, 3)
   );
-  if (collider.rotation !== undefined) {
-    const { x, y, z, w } = collider.rotation;
-    geometry.applyQuaternion(
-      new THREE.Quaternion(x, y, z, w)
-    );
-  }
-  if (collider.offset !== undefined) {
-    const { x, y, z } = collider.offset;
-    geometry.translate(x, y, z);
-  }
+  geometry.translate(x, y, z);
 
   return geometry;
 }

@@ -3,13 +3,15 @@ import {
   type Actor,
   ActorComponent
 } from "@jolly-pixel/ecs";
-import type {} from "@jolly-pixel/backend.three";
-import * as THREE from "three";
+import {
+  scaleCollider,
+  type RigidBodyEditView,
+  type RigidBodySettings
+} from "@jolly-pixel/physics/ecs";
+import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import { scaleCollider } from "../ecs/shapes/scale.ts";
-import { outlineGeometry } from "./shapes/outline.ts";
-import type { RigidBodySettings } from "../ecs/RigidBody.ts";
+import { outlineGeometry } from "./outline.ts";
 
 // CONSTANTS
 const kWorldMatrix = new THREE.Matrix4();
@@ -20,7 +22,8 @@ const kOutlineRenderOrder = 999;
 const kSolidColor = 0x4ade80;
 const kSensorColor = 0xfbbf24;
 
-export class ColliderOutline extends ActorComponent {
+export class ColliderOutline extends ActorComponent
+  implements RigidBodyEditView {
   readonly #root = new THREE.Group();
   readonly #materials = {
     solid: outlineMaterial(kSolidColor),

@@ -8,6 +8,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./physics": {
+      "types": "./dist/components/physics/index.d.ts",
+      "default": "./dist/components/physics/index.js"
     }
   },
   "imports": {
@@ -58,9 +62,16 @@
   },
   "devDependencies": {
     "@jolly-pixel/bench": "workspace:*",
-    "@jolly-pixel/e2e": "workspace:*"
+    "@jolly-pixel/e2e": "workspace:*",
+    "@jolly-pixel/physics": "workspace:*"
   },
   "peerDependencies": {
+    "@jolly-pixel/physics": "workspace:*",
     "three": "^0.187.0"
+  },
+  "peerDependenciesMeta": {
+    "@jolly-pixel/physics": {
+      "optional": true
+    }
   }
 }

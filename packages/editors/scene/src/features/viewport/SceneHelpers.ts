@@ -9,7 +9,7 @@ import {
   CameraComponent,
   LightComponent
 } from "@jolly-pixel/backend.three";
-import { ColliderOutline } from "@jolly-pixel/physics/three";
+import { ColliderOutline } from "@jolly-pixel/backend.three/physics";
 import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies

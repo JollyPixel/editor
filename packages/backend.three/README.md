@@ -123,6 +123,9 @@ the build setup differs.
 - [Light](./docs/components/light.md)
 - [Audio components](./docs/components/audio.md) — `AudioSource`,
   `AudioListener` and `AudioZone`.
+- [Collider Outline](./docs/components/collider-outline.md): the
+  `@jolly-pixel/physics` colliders as lines, from
+  `@jolly-pixel/backend.three/physics`.
 - [Scene file definitions](./docs/components/definitions.md) — how a
   `FileScene` builds these components.
 
