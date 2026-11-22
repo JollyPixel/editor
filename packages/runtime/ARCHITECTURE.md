@@ -70,7 +70,7 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     Backend["Backend metrics<br/>runtime.metrics.renderer"] --> Recorder["StatsRecorder<br/>runtime.stats"]
-    Sources["Other sources<br/>runtime.metrics.addSource()"] --> Recorder
+    Sources["Other sources<br/>runtime.stats.addSource()"] --> Recorder
     Frames["Every frame<br/>stats.begin() and stats.end()"] --> Recorder
     Recorder --> HUD["Corner HUD"]
     Recorder --> Panel["Readout panel"]

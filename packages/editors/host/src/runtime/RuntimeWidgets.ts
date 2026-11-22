@@ -29,9 +29,9 @@ const kMissingMessages: Readonly<Record<RuntimeWidget, string>> = {
 export type RuntimeWidget = typeof kWidgets[number];
 
 export interface RuntimeWidgetHost {
-  readonly statsHud: Pick<PerformanceStatsHud, "hidden"> | null;
   readonly viewHelper: Pick<ViewHelperSettings, "hidden"> | null;
   readonly metrics: {
+    readonly hud: Pick<PerformanceStatsHud, "hidden"> | null;
     readonly panel: Pick<MetricsPanel, "hidden"> | null;
   };
 }
@@ -51,7 +51,7 @@ export class RuntimeWidgets {
     host: RuntimeWidgetHost
   ) {
     this.#targets = {
-      stats: () => host.statsHud,
+      stats: () => host.metrics.hud,
       viewHelper: () => host.viewHelper,
       metrics: () => host.metrics.panel
     };

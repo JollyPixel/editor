@@ -1,5 +1,4 @@
 // Import Third-party Dependencies
-import type { AssetCatalog } from "@jolly-pixel/asset";
 import {
   StatsRecorder,
   type MetricSource
@@ -12,9 +11,9 @@ import {
 
 // Import Internal Dependencies
 import {
-  bootstrapRuntime,
+  prepareRuntime,
   type RuntimeCoreLoadOptions
-} from "./startup/bootstrapRuntime.ts";
+} from "./startup/prepareRuntime.ts";
 import type {
   RuntimeBackend,
   RuntimeWorld
@@ -24,28 +23,15 @@ import {
   type RuntimeLogger
 } from "./contract/RuntimeLogger.ts";
 import { RuntimeMetrics } from "./metrics/RuntimeMetrics.ts";
-import type {
-  MetricsPanel,
-  MetricsPanelOptions
-} from "./metrics/MetricsPanel.ts";
-import { RuntimeSession } from "./session/RuntimeSession.ts";
+import { attachRuntimeSession } from "./session/attachRuntimeSession.ts";
 import {
   RuntimeSessionSettings,
   type RuntimeSessionOptions
 } from "./session/RuntimeSessionSettings.ts";
 import {
-  PerformanceStatsHud,
-  type PerformanceStatsOption
-} from "./metrics/PerformanceStatsHud.ts";
-import {
   OverlayLayer,
   type OverlayLayerOptions
 } from "./overlay/OverlayLayer.ts";
-import { resolveElement } from "./overlay/resolveElement.ts";
-import {
-  resolveRuntimeAssetCatalog,
-  type RuntimeAssetCatalog
-} from "./startup/resolveRuntimeAssetCatalog.ts";
 
 // CONSTANTS
 const kRenderOnDemandIdleDelay = 2000;
@@ -78,20 +64,7 @@ export class RuntimeCore<
   #backend: RuntimeBackend<TWorld, TScene, TMetrics>;
   #sessionSettings: RuntimeSessionSettings;
   #logger: RuntimeLogger;
-  #session: RuntimeSession | null = null;
-  #statsHud: PerformanceStatsHud | null = null;
-
-  protected static resolveCanvas(
-    target: HTMLCanvasElement | string
-  ): HTMLCanvasElement {
-    return resolveElement(target, HTMLCanvasElement);
-  }
-
-  protected static resolveCatalog(
-    input?: RuntimeAssetCatalog
-  ): Promise<AssetCatalog> {
-    return resolveRuntimeAssetCatalog(input);
-  }
+  #session: AbortController | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -105,7 +78,6 @@ export class RuntimeCore<
     this.#logger = options.logger ?? new SilentLogger();
     this.#sessionSettings = new RuntimeSessionSettings(options);
     this.overlay = new OverlayLayer(canvas, options.overlay);
-    this.metrics = new RuntimeMetrics(this.stats, backend.metrics);
 
     this.loop = new GameLoop({
       source: backend.frameSource,
@@ -118,6 +90,13 @@ export class RuntimeCore<
     this.loop.on("start", () => this.stats.skipGap());
     this.loop.on("wake", () => this.stats.skipGap());
     this.world.on("invalidate", () => this.loop.invalidate());
+
+    this.metrics = new RuntimeMetrics(backend.metrics, {
+      recorder: this.stats,
+      overlay: this.overlay,
+      loop: this.loop,
+      keyboard: this.world.input.keyboard
+    });
   }
 
   get running() {
@@ -128,22 +107,21 @@ export class RuntimeCore<
     return this.#sessionSettings.renderOnDemand;
   }
 
-  get idle(): boolean {
-    return this.loop.sleeping;
-  }
-
-  get statsHud(): PerformanceStatsHud | null {
-    return this.#statsHud;
-  }
-
-  load(
+  async load(
     options: RuntimeCoreLoadOptions<TScene> = {}
   ): Promise<void> {
-    return bootstrapRuntime(
+    await prepareRuntime(
       this,
       this.#backend,
-      options,
-      this.#logger
+      this.#logger,
+      options
+    );
+    this.start();
+
+    void this.#logger.step(
+      "first frame",
+      () => this.nextFrame(),
+      { visibility: this.canvas.ownerDocument.visibilityState }
     );
   }
 
@@ -166,31 +144,17 @@ export class RuntimeCore<
     }
   }
 
-  async mountPerformanceStats(
-    option: PerformanceStatsOption = true
-  ): Promise<PerformanceStatsHud | null> {
-    const hud = await PerformanceStatsHud.mount(this, option);
-    this.#statsHud?.dispose();
-    this.#statsHud = hud;
-
-    return hud;
-  }
-
-  mountMetricsPanel(
-    options: MetricsPanelOptions = {}
-  ): Promise<MetricsPanel> {
-    return this.metrics.mountPanel({
-      keyboard: this.world.input.keyboard,
-      ...options
-    });
-  }
-
   start() {
     if (this.#session !== null) {
       return;
     }
 
-    this.#session = new RuntimeSession(this, this.#sessionSettings);
+    this.#session = new AbortController();
+    attachRuntimeSession(
+      this,
+      this.#sessionSettings,
+      this.#session.signal
+    );
     this.#backend.start();
     this.loop.start({
       frame: (schedule) => {
@@ -213,15 +177,16 @@ export class RuntimeCore<
     this.#session = null;
     this.#backend.stop();
     this.loop.stop();
-    session.dispose();
+    session.abort();
   }
 
   dispose() {
     this.stop();
-    this.#statsHud?.dispose();
-    this.#statsHud = null;
     this.metrics.dispose();
     this.overlay.dispose();
     this.#backend.dispose();
+    if (Reflect.get(globalThis, "game") === this.world) {
+      Reflect.deleteProperty(globalThis, "game");
+    }
   }
 }

@@ -15,15 +15,12 @@ export interface FocusHintOptions {
   text?: string;
 }
 
-export interface MountedFocusHint {
-  dispose(): void;
-}
-
 export function mountFocusHint(
   canvas: HTMLCanvasElement,
   layer: OverlayLayer,
-  options: FocusHintOptions = {}
-): MountedFocusHint {
+  options: FocusHintOptions,
+  signal: AbortSignal
+): void {
   const {
     position = kDefaultPosition,
     inset = kDefaultInset,
@@ -60,15 +57,12 @@ export function mountFocusHint(
     element.style.opacity = focused ? "0" : "1";
   }
 
-  canvas.addEventListener("focus", updateVisibility);
-  canvas.addEventListener("blur", updateVisibility);
+  canvas.addEventListener("focus", updateVisibility, { signal });
+  canvas.addEventListener("blur", updateVisibility, { signal });
+  signal.addEventListener(
+    "abort",
+    () => mounted.dispose(),
+    { once: true }
+  );
   updateVisibility();
-
-  return {
-    dispose() {
-      canvas.removeEventListener("focus", updateVisibility);
-      canvas.removeEventListener("blur", updateVisibility);
-      mounted.dispose();
-    }
-  };
 }

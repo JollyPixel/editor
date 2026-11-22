@@ -21,13 +21,13 @@ describe("RuntimeWidgets", () => {
 
     new RuntimeWidgets(host).follow(preferences);
 
-    assert.equal(host.statsHud?.hidden, true);
+    assert.equal(host.metrics.hud?.hidden, true);
     assert.equal(host.metrics.panel?.hidden, false);
     assert.equal(host.viewHelper?.hidden, false);
 
     preferences.receive("runtime", {});
 
-    assert.equal(host.statsHud?.hidden, false);
+    assert.equal(host.metrics.hud?.hidden, false);
     assert.equal(host.metrics.panel?.hidden, true);
   });
 

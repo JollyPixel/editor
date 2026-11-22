@@ -62,9 +62,9 @@ function recordingRuntimes() {
   const created: Array<EditorRuntime> = [];
   let disposed = 0;
   const runtime: Pick<Runtime, "dispose"> & RuntimeWidgetHost = {
-    statsHud: null,
     viewHelper: null,
     metrics: {
+      hud: null,
       panel: null
     },
     dispose: () => {

@@ -12,7 +12,7 @@ import {
 } from "@jolly-pixel/ui/facade";
 
 // Import Internal Dependencies
-import type { MetricsPanelKeyboard } from "../contract/RuntimeBackend.ts";
+import type { RuntimeKeyboard } from "../contract/RuntimeBackend.ts";
 import { groupMetrics } from "./groupMetrics.ts";
 
 // CONSTANTS
@@ -42,7 +42,6 @@ export interface MetricsPanelOptions {
    * Key code toggling the readout, as `KeyboardEvent.code`.
    */
   toggleKey?: string;
-  keyboard?: MetricsPanelKeyboard;
   hidden?: boolean;
   /**
    * @default true
@@ -113,8 +112,8 @@ export class MetricsPanel {
   #recorder: StatsRecorder;
   #filter: (definition: MetricDefinition) => boolean;
   #pane: Pane | null = null;
-  #keyboard: MetricsPanelKeyboard | null = null;
-  #toggleKey: string | null = null;
+  #keyboard: RuntimeKeyboard;
+  #toggleKey: string | null;
   #items = new PanelItems();
   #visibility: Visibility;
   #values: StatsSnapshot = {};
@@ -133,9 +132,12 @@ export class MetricsPanel {
 
   constructor(
     recorder: StatsRecorder,
+    keyboard: RuntimeKeyboard,
     options: MetricsPanelOptions = {}
   ) {
     this.#recorder = recorder;
+    this.#keyboard = keyboard;
+    this.#toggleKey = options.toggleKey ?? null;
     this.#filter = options.filter ?? (() => true);
 
     const { target, hidden = false } = options;
@@ -163,11 +165,8 @@ export class MetricsPanel {
       (snapshot) => this.#sync(snapshot)
     );
 
-    const { keyboard, toggleKey } = options;
-    if (keyboard !== undefined && toggleKey !== undefined) {
-      this.#keyboard = keyboard;
-      this.#toggleKey = toggleKey;
-      keyboard.on(toggleKey, this.#onToggleKey);
+    if (this.#toggleKey !== null) {
+      keyboard.on(this.#toggleKey, this.#onToggleKey);
     }
   }
 
@@ -184,10 +183,10 @@ export class MetricsPanel {
   dispose(): void {
     this.#unsubscribe?.();
     this.#unsubscribe = null;
-    if (this.#keyboard !== null && this.#toggleKey !== null) {
+    if (this.#toggleKey !== null) {
       this.#keyboard.off(this.#toggleKey, this.#onToggleKey);
+      this.#toggleKey = null;
     }
-    this.#keyboard = null;
     this.#items.clear();
     this.#pane?.dispose();
     this.#pane = null;

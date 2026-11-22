@@ -6,10 +6,9 @@ export type {
 } from "./contract/RuntimeLogger.ts";
 export type {
   RuntimeCoreLoadOptions
-} from "./startup/bootstrapRuntime.ts";
-export type {
-  RuntimeAssetCatalog
-} from "./startup/resolveRuntimeAssetCatalog.ts";
+} from "./startup/prepareRuntime.ts";
+export * from "./startup/resolveRuntimeAssetCatalog.ts";
+export * from "./startup/resolveRuntimeCanvas.ts";
 export * from "./overlay/OverlayLayer.ts";
 export type {
   OverlayPosition

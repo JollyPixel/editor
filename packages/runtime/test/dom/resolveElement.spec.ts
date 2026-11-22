@@ -3,7 +3,7 @@ import { beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { resolveElement } from "../../src/overlay/resolveElement.ts";
+import { resolveElement } from "../../src/dom/resolveElement.ts";
 
 describe("resolveElement", () => {
   beforeEach(() => {

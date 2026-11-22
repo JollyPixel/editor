@@ -1,11 +1,10 @@
 export type RuntimeLogMeta = Record<string, unknown>;
 
 export interface RuntimeLogger {
-  debug(
+  warn(
     message: string,
     meta?: RuntimeLogMeta
   ): void;
-  isNamespaceEnabled(): boolean;
   step<T>(
     name: string,
     run: () => Promise<T>,
@@ -14,12 +13,8 @@ export interface RuntimeLogger {
 }
 
 export class SilentLogger implements RuntimeLogger {
-  debug(): void {
+  warn(): void {
     return;
-  }
-
-  isNamespaceEnabled(): boolean {
-    return false;
   }
 
   step<T>(

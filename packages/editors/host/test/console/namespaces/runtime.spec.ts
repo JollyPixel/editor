@@ -45,14 +45,17 @@ describe("runtime console", () => {
     await commands.submit("runtime.stats off");
     await commands.submit("runtime.viewHelper off");
 
-    assert.equal(runtime.statsHud?.hidden, true);
+    assert.equal(runtime.metrics.hud?.hidden, true);
     assert.equal(runtime.viewHelper?.hidden, true);
   });
 
   test("stats and viewHelper are absent without their widget", async() => {
     const commands = registerRuntime(createWidgetHost({
-      statsHud: null,
-      viewHelper: null
+      viewHelper: null,
+      metrics: {
+        hud: null,
+        panel: null
+      }
     }));
 
     await commands.submit("runtime.stats off");
@@ -77,6 +80,7 @@ describe("runtime console", () => {
   test("metrics reports an error until a performance pane is mounted", async() => {
     const runtime = createWidgetHost({
       metrics: {
+        hud: null,
         panel: null
       }
     });

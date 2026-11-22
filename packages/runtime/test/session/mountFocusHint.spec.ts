@@ -11,7 +11,13 @@ describe("mountFocusHint", () => {
     const { canvas, layer } = createFixture();
     canvas.focus();
 
-    const hint = mountFocusHint(canvas, layer);
+    const hint = new AbortController();
+    mountFocusHint(
+      canvas,
+      layer,
+      {},
+      hint.signal
+    );
 
     try {
       const element = queryHint(layer);
@@ -22,7 +28,7 @@ describe("mountFocusHint", () => {
       assert.strictEqual(element.getAttribute("aria-hidden"), "true");
     }
     finally {
-      hint.dispose();
+      hint.abort();
       disposeFixture(canvas, layer);
     }
   });
@@ -31,7 +37,13 @@ describe("mountFocusHint", () => {
     const { canvas, layer } = createFixture();
     canvas.focus();
 
-    const hint = mountFocusHint(canvas, layer);
+    const hint = new AbortController();
+    mountFocusHint(
+      canvas,
+      layer,
+      {},
+      hint.signal
+    );
 
     try {
       canvas.blur();
@@ -41,14 +53,20 @@ describe("mountFocusHint", () => {
       assert.strictEqual(element.style.opacity, "1");
     }
     finally {
-      hint.dispose();
+      hint.abort();
       disposeFixture(canvas, layer);
     }
   });
 
   test("anchors the hint at the top center by default", () => {
     const { canvas, layer } = createFixture();
-    const hint = mountFocusHint(canvas, layer);
+    const hint = new AbortController();
+    mountFocusHint(
+      canvas,
+      layer,
+      {},
+      hint.signal
+    );
 
     try {
       const slot = queryHint(layer).parentElement;
@@ -58,18 +76,24 @@ describe("mountFocusHint", () => {
       assert.strictEqual(slot.style.pointerEvents, "none");
     }
     finally {
-      hint.dispose();
+      hint.abort();
       disposeFixture(canvas, layer);
     }
   });
 
   test("honors the position, text and inset options", () => {
     const { canvas, layer } = createFixture();
-    const hint = mountFocusHint(canvas, layer, {
-      position: "bottom-left",
-      inset: 24,
-      text: "Focus me"
-    });
+    const hint = new AbortController();
+    mountFocusHint(
+      canvas,
+      layer,
+      {
+        position: "bottom-left",
+        inset: 24,
+        text: "Focus me"
+      },
+      hint.signal
+    );
 
     try {
       const element = queryHint(layer);
@@ -80,18 +104,24 @@ describe("mountFocusHint", () => {
       assert.strictEqual(slot.style.bottom, "24px");
     }
     finally {
-      hint.dispose();
+      hint.abort();
       disposeFixture(canvas, layer);
     }
   });
 
-  test("removes the hint and stops reacting once disposed", () => {
+  test("removes the hint and stops reacting once aborted", () => {
     const { canvas, layer } = createFixture();
     canvas.focus();
 
-    const hint = mountFocusHint(canvas, layer);
+    const hint = new AbortController();
+    mountFocusHint(
+      canvas,
+      layer,
+      {},
+      hint.signal
+    );
     const element = queryHint(layer);
-    hint.dispose();
+    hint.abort();
 
     assert.strictEqual(layer.element.childElementCount, 0);
 

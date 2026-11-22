@@ -10,6 +10,7 @@ import {
   configureRuntimeDevice,
   isMobileDevice
 } from "../../src/startup/configureRuntimeDevice.ts";
+import { SilentLogger } from "../../src/contract/RuntimeLogger.ts";
 import { stubProperty } from "../helpers/stubProperty.ts";
 
 describe("configureRuntimeDevice", () => {
@@ -23,6 +24,7 @@ describe("configureRuntimeDevice", () => {
     await configureRuntimeDevice(
       loop,
       { adaptPixelRatio },
+      new SilentLogger(),
       { maxFps: 144 }
     );
 
@@ -45,6 +47,7 @@ describe("configureRuntimeDevice", () => {
         await configureRuntimeDevice(
           { scheduler: { maxFps: 0 } } as Pick<GameLoop, "scheduler">,
           { adaptPixelRatio },
+          new SilentLogger(),
           { maxFps: 60 }
         );
 

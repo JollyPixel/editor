@@ -16,7 +16,8 @@ describe("RuntimeLoadingScreen", () => {
 
     RuntimeLoadingScreen.mount(
       canvas,
-      container
+      container,
+      0
     );
 
     assert.strictEqual(canvas.style.opacity, "0");
@@ -32,9 +33,10 @@ describe("RuntimeLoadingScreen", () => {
 
     const screen = RuntimeLoadingScreen.mount(
       canvas,
-      container
+      container,
+      0
     );
-    screen.updateProgress(2, 5);
+    screen.progress({ completed: 2, total: 5 }, null);
     screen.error(new Error("load failed"));
 
     assert.strictEqual(container.childElementCount, 1);
@@ -49,21 +51,23 @@ describe("RuntimeLoadingScreen", () => {
     const container = document.createElement("div");
     const screen = RuntimeLoadingScreen.mount(
       canvas,
-      container
+      container,
+      0
     );
     const loading = container.querySelector("jolly-loading");
     assert.ok(loading instanceof Loading);
 
-    screen.update({
-      status: "ready",
-      completed: 3,
-      total: 7,
-      record: AssetRecord.parse({
+    screen.progress(
+      {
+        completed: 3,
+        total: 7
+      },
+      AssetRecord.parse({
         id: "texture:world",
         kind: "texture",
         path: "http://localhost:5173/api/game/builds/world/f00d/World%20Atlas.png"
       })
-    });
+    );
 
     assert.strictEqual(loading.assetName, "World Atlas.png");
     assert.strictEqual(loading.progress, 3);
@@ -75,16 +79,23 @@ describe("RuntimeLoadingScreen", () => {
     const container = document.createElement("div");
     const screen = RuntimeLoadingScreen.mount(
       canvas,
-      container
+      container,
+      0
     );
     const loading = container.querySelector("jolly-loading");
     assert.ok(loading instanceof Loading);
 
-    screen.showAsset(AssetRecord.parse({
-      id: "texture:sale",
-      kind: "texture",
-      path: "textures/100%.png"
-    }));
+    screen.progress(
+      {
+        completed: 0,
+        total: 1
+      },
+      AssetRecord.parse({
+        id: "texture:sale",
+        kind: "texture",
+        path: "textures/100%.png"
+      })
+    );
 
     assert.strictEqual(loading.assetName, "100%.png");
   });
@@ -94,7 +105,8 @@ describe("RuntimeLoadingScreen", () => {
     const container = document.createElement("div");
     const screen = RuntimeLoadingScreen.mount(
       canvas,
-      container
+      container,
+      0
     );
     const loading = container.querySelector("jolly-loading");
     assert.ok(loading instanceof Loading);
@@ -120,12 +132,13 @@ describe("RuntimeLoadingScreen", () => {
     t.after(() => container.remove());
     const screen = RuntimeLoadingScreen.mount(
       canvas,
-      container
+      container,
+      0
     );
     const loading = container.querySelector("jolly-loading");
     assert.ok(loading instanceof Loading);
 
-    screen.updateProgress(0, 0);
+    screen.progress({ completed: 0, total: 0 }, null);
     const completion = screen.complete();
 
     assert.strictEqual(loading.progress, 1);

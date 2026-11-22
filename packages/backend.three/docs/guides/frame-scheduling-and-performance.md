@@ -60,7 +60,7 @@ The detected pixel ratio is skipped when `Runtime.create()` received
 ## Show performance statistics
 
 The runtime always records. `runtime.stats` is a `StatsRecorder` the loop
-brackets around every frame, and `runtime.metrics` is where metrics are
+brackets around every frame, and the recorder is where metrics are
 registered. `includePerformanceStats` only decides what is displayed.
 
 Set it to `true` to mount the default HUD in the top-left corner of the
@@ -105,10 +105,10 @@ for the recorder API.
 ## Record what a subsystem counts
 
 The HUD cycles one metric at a time. Anything a subsystem counts joins it
-through `runtime.metrics`, as a source describing its own metrics:
+through `runtime.stats`, as a source describing its own metrics:
 
 ```ts
-const release = runtime.metrics.addSource(engine.inspector);
+const release = runtime.stats.addSource(engine.inspector);
 ```
 
 Hold `release` whenever the subsystem is torn down before the runtime is,
@@ -157,7 +157,7 @@ the application already owns, mount it once the pane exists and give it a
 target:
 
 ```ts
-const panel = await runtime.mountMetricsPanel({
+const panel = await runtime.metrics.mountPanel({
   target: inspectorPane,
   toggleKey: "F3"
 });
@@ -171,7 +171,7 @@ A readout that should stay a window, yet be dockable, targets the
 `jolly-dock-layout` with `floating`:
 
 ```ts
-const panel = await runtime.mountMetricsPanel({
+const panel = await runtime.metrics.mountPanel({
   target: document.querySelector("jolly-dock-layout"),
   floating: true,
   key: "performance",

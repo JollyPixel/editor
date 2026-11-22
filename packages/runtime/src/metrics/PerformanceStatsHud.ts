@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { ResolvedThemeMode } from "@jolly-pixel/ui";
+import { documentThemeMode } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/scope";
 import "@jolly-pixel/ui/elements/stats";
 import type { StatsRecorder } from "@jolly-pixel/ui/stats";
@@ -7,7 +7,6 @@ import type { GameLoop } from "@jolly-pixel/loop";
 
 // Import Internal Dependencies
 import type {
-  MetricsPanel,
   MetricsPanelOptions
 } from "./MetricsPanel.ts";
 import type {
@@ -25,26 +24,20 @@ const kDefaultStatsInset = 8;
 export type PerformanceStatsPosition = OverlayPosition;
 
 export interface PerformanceStatsHost {
-  readonly stats: StatsRecorder;
+  readonly recorder: StatsRecorder;
   readonly overlay: OverlayLayer;
   readonly loop: GameLoop;
-
-  mountMetricsPanel(
-    options?: MetricsPanelOptions
-  ): Promise<MetricsPanel>;
 }
-
-export type PerformanceStatsOption = true | {
-  mount?: boolean;
-  position?: PerformanceStatsPosition;
-  inset?: number;
-  panel?: boolean | MetricsPanelOptions;
-};
 
 export interface PerformanceStatsPlacement {
-  position: PerformanceStatsPosition;
-  inset: number;
+  position?: PerformanceStatsPosition;
+  inset?: number;
 }
+
+export type PerformanceStatsOption = true | PerformanceStatsPlacement & {
+  mount?: boolean;
+  panel?: boolean | MetricsPanelOptions;
+};
 
 export class PerformanceStatsHud {
   #host: PerformanceStatsHost;
@@ -53,44 +46,15 @@ export class PerformanceStatsHud {
   #mounted: MountedOverlay;
   #unsubscribers: Array<() => void>;
 
-  static async mount(
-    host: PerformanceStatsHost,
-    option: PerformanceStatsOption
-  ): Promise<PerformanceStatsHud | null> {
-    const settings = typeof option === "object" ? option : {};
-    let hud: PerformanceStatsHud | null = null;
-
-    if (settings.mount ?? true) {
-      const { documentThemeMode } = await import("@jolly-pixel/ui");
-      hud = new PerformanceStatsHud(
-        host,
-        {
-          position: settings.position ?? kDefaultStatsPosition,
-          inset: settings.inset ?? kDefaultStatsInset
-        },
-        documentThemeMode()
-      );
-    }
-
-    if (settings.panel) {
-      await host.mountMetricsPanel(
-        settings.panel === true ? {} : settings.panel
-      );
-    }
-
-    return hud;
-  }
-
   constructor(
     host: PerformanceStatsHost,
-    placement: PerformanceStatsPlacement,
-    theme: ResolvedThemeMode | null
+    placement: PerformanceStatsPlacement = {}
   ) {
     this.#host = host;
     const document = host.overlay.element.ownerDocument;
 
     const stats = document.createElement("jolly-stats");
-    stats.recorder = host.stats;
+    stats.recorder = host.recorder;
     stats.style.width = "100%";
     stats.style.height = "100%";
 
@@ -126,6 +90,7 @@ export class PerformanceStatsHud {
 
     const scope = document.createElement("jolly-scope");
     scope.style.display = "contents";
+    const theme = documentThemeMode();
     if (theme !== null) {
       scope.setAttribute("theme", theme);
     }
@@ -139,7 +104,8 @@ export class PerformanceStatsHud {
       host.loop.subscribe("wake", this.#showIdle)
     ];
     this.#mounted = host.overlay.mount(scope, {
-      ...placement,
+      position: placement.position ?? kDefaultStatsPosition,
+      inset: placement.inset ?? kDefaultStatsInset,
       interactive: true
     });
   }

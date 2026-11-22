@@ -10,7 +10,7 @@ export interface RuntimeSessionOptions {
 
 export class RuntimeSessionSettings {
   readonly focusCanvas: boolean;
-  readonly focusHint: Readonly<Partial<FocusHintOptions>> | null;
+  readonly focusHint: Readonly<FocusHintOptions> | null;
   readonly renderOnDemand: boolean;
   readonly suspendWhenHidden: boolean;
 
@@ -18,7 +18,7 @@ export class RuntimeSessionSettings {
     options: RuntimeSessionOptions = {}
   ) {
     this.focusCanvas = options.focusCanvas ?? true;
-    this.focusHint = resolveToggle(
+    this.focusHint = resolveFocusHint(
       options.focusHint
     );
     this.renderOnDemand = options.renderOnDemand ?? false;
@@ -28,9 +28,9 @@ export class RuntimeSessionSettings {
   }
 }
 
-function resolveToggle<TOptions extends object>(
-  option: boolean | TOptions | undefined
-): Readonly<Partial<TOptions>> | null {
+function resolveFocusHint(
+  option: boolean | FocusHintOptions | undefined
+): Readonly<FocusHintOptions> | null {
   if (!option) {
     return null;
   }

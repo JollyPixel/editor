@@ -2,10 +2,13 @@
 import type * as THREE from "three/webgpu";
 import { Systems } from "@jolly-pixel/ecs";
 import {
+  type RuntimeCanvasTarget,
   type RuntimeCoreLoadOptions,
   RuntimeCore,
   type RuntimeCoreOptions,
-  type PerformanceStatsOption
+  type PerformanceStatsOption,
+  resolveRuntimeAssetCatalog,
+  resolveRuntimeCanvas
 } from "@jolly-pixel/runtime";
 
 // Import Internal Dependencies
@@ -17,7 +20,7 @@ import {
 } from "./ThreeRuntimeBackend.ts";
 import type { ViewHelperSettings } from "./viewHelper/ViewHelperSettings.ts";
 
-export type RuntimeCanvasTarget = HTMLCanvasElement | string;
+export type { RuntimeCanvasTarget };
 
 export type RuntimeLoadOptions<
   TContext = Systems.WorldDefaultContext
@@ -63,10 +66,10 @@ export class Runtime<
     options: RuntimeOptions<TContext> = Object.create(null)
   ): Promise<Runtime<TContext>> {
     const logger = options.logger ?? new Systems.Logger();
-    const canvas = Runtime.resolveCanvas(target);
+    const canvas = resolveRuntimeCanvas(target);
     const catalog = await logger.step(
       "catalog",
-      () => Runtime.resolveCatalog(options.assets?.catalog)
+      () => resolveRuntimeAssetCatalog(options.assets?.catalog)
     );
     const renderer = await logger.step(
       "renderer",
@@ -90,7 +93,7 @@ export class Runtime<
     if (stats) {
       await logger.step(
         "stats",
-        () => runtime.mountPerformanceStats(stats)
+        () => runtime.metrics.mount(stats)
       );
     }
 

@@ -298,8 +298,8 @@ controlsFolder
   })
   .on("change", () => setTileBlending(controls.blending));
 
-runtime.metrics.addSource(voxels.inspector);
-await runtime.mountMetricsPanel({
+runtime.stats.addSource(voxels.inspector);
+await runtime.metrics.mountPanel({
   target: pane,
   filter: (metric) => metric.tile === false
 });

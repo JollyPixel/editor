@@ -121,8 +121,8 @@ test("performance stats accept a readout panel", () => {
   >();
 });
 
-test("every metric goes through runtime.metrics", () => {
-  expect(runtime.metrics.addSource).type.toBeCallableWith({
+test("every metric goes through runtime.stats", () => {
+  expect(runtime.stats.addSource).type.toBeCallableWith({
     metrics: [
       {
         id: "chunks",
@@ -132,7 +132,7 @@ test("every metric goes through runtime.metrics", () => {
       }
     ]
   });
-  expect(runtime.metrics.addSource).type.not.toBeCallableWith({
+  expect(runtime.stats.addSource).type.not.toBeCallableWith({
     metrics: [{ label: "chunks" }]
   });
 });

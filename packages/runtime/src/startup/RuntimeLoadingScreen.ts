@@ -1,26 +1,55 @@
 // Import Third-party Dependencies
 import type {
-  AssetLoadProgress,
   AssetPath,
   AssetRecord
 } from "@jolly-pixel/asset";
 import { Loading } from "@jolly-pixel/ui/elements/loading";
+import { delay } from "@jolly-pixel/utils";
 
-export class RuntimeLoadingScreen {
+// CONSTANTS
+const kSkippedLoadingScreen: LoadingScreen = {
+  start: () => Promise.resolve(),
+  progress: () => undefined,
+  complete: () => Promise.resolve(),
+  error: () => undefined
+};
+
+export interface LoadingProgress {
+  readonly completed: number;
+  readonly total: number;
+}
+
+export interface LoadingScreen {
+  start(): Promise<void>;
+  progress(
+    progress: LoadingProgress,
+    asset: AssetRecord | null
+  ): void;
+  complete(): Promise<void>;
+  error(
+    error: Error
+  ): void;
+}
+
+export class RuntimeLoadingScreen implements LoadingScreen {
   #canvas: HTMLCanvasElement;
   #loading: Loading;
+  #minimumDelay: number;
 
   private constructor(
     canvas: HTMLCanvasElement,
-    loading: Loading
+    loading: Loading,
+    minimumDelay: number
   ) {
     this.#canvas = canvas;
     this.#loading = loading;
+    this.#minimumDelay = minimumDelay;
   }
 
   static mount(
     canvas: HTMLCanvasElement,
-    container: HTMLElement
+    container: HTMLElement,
+    minimumDelay: number
   ): RuntimeLoadingScreen {
     canvas.style.opacity = "0";
     canvas.style.transition = "opacity 0.5s ease-in";
@@ -34,37 +63,36 @@ export class RuntimeLoadingScreen {
 
     return new RuntimeLoadingScreen(
       canvas,
-      loading
+      loading,
+      minimumDelay
     );
   }
 
-  start(): Promise<void> {
-    return this.#loading.start();
+  static skip(
+    canvas: HTMLCanvasElement
+  ): LoadingScreen {
+    canvas.style.opacity = "1";
+
+    return kSkippedLoadingScreen;
   }
 
-  update(
-    progress: AssetLoadProgress
+  async start(): Promise<void> {
+    await Promise.all([
+      this.#loading.start(),
+      delay(this.#minimumDelay)
+    ]);
+  }
+
+  progress(
+    progress: LoadingProgress,
+    asset: AssetRecord | null
   ): void {
-    this.showAsset(progress.record);
-    this.updateProgress(
+    if (asset !== null) {
+      this.#loading.showAsset(fileName(asset.path));
+    }
+    this.#loading.updateProgress(
       progress.completed,
       progress.total
-    );
-  }
-
-  showAsset(
-    asset: AssetRecord
-  ): void {
-    this.#loading.showAsset(fileName(asset.path));
-  }
-
-  updateProgress(
-    completed: number,
-    total: number
-  ): void {
-    this.#loading.updateProgress(
-      completed,
-      total
     );
   }
 

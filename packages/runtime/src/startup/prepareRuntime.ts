@@ -1,33 +1,30 @@
 // Import Third-party Dependencies
 import type {
-  AssetLoadProgress,
+  AssetCoordinator,
   AssetReference
 } from "@jolly-pixel/asset";
 import type { GameLoop } from "@jolly-pixel/loop";
-import { asError, delay } from "@jolly-pixel/utils";
+import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import type {
   RuntimeBackend,
-  RuntimeSceneProgress,
   RuntimeWorld
 } from "../contract/RuntimeBackend.ts";
+import type { RuntimeLogger } from "../contract/RuntimeLogger.ts";
 import {
-  SilentLogger,
-  type RuntimeLogger
-} from "../contract/RuntimeLogger.ts";
-import { RuntimeLoadingScreen } from "./RuntimeLoadingScreen.ts";
+  RuntimeLoadingScreen,
+  type LoadingScreen
+} from "./RuntimeLoadingScreen.ts";
 import { configureRuntimeDevice } from "./configureRuntimeDevice.ts";
 
-export interface RuntimeBootstrapHost {
+export interface RuntimeStartupHost {
   readonly canvas: HTMLCanvasElement;
   readonly loop: Pick<GameLoop, "scheduler">;
   readonly world: Pick<RuntimeWorld, "assetCoordinator">;
-  start(): void;
-  nextFrame(): Promise<void>;
 }
 
-export type RuntimeBootstrapBackend<TScene> = Pick<
+export type RuntimeStartupBackend<TScene> = Pick<
   RuntimeBackend<RuntimeWorld, TScene>,
   "adaptPixelRatio" | "loadScene"
 >;
@@ -65,11 +62,11 @@ export interface RuntimeCoreLoadOptions<
   maxFps?: number;
 }
 
-export async function bootstrapRuntime<TScene>(
-  runtime: RuntimeBootstrapHost,
-  backend: RuntimeBootstrapBackend<TScene>,
-  options: RuntimeCoreLoadOptions<TScene> = {},
-  logger: RuntimeLogger = new SilentLogger()
+export async function prepareRuntime<TScene>(
+  runtime: RuntimeStartupHost,
+  backend: RuntimeStartupBackend<TScene>,
+  logger: RuntimeLogger,
+  options: RuntimeCoreLoadOptions<TScene> = {}
 ): Promise<void> {
   const {
     loadingDelay = 850,
@@ -80,34 +77,35 @@ export async function bootstrapRuntime<TScene>(
     maxFps
   } = options;
 
-  let loadingScreen: RuntimeLoadingScreen | null = null;
-  if (skipLoadingScreen) {
-    runtime.canvas.style.opacity = "1";
-  }
-  else {
-    loadingScreen = RuntimeLoadingScreen.mount(
+  const screen = skipLoadingScreen ?
+    RuntimeLoadingScreen.skip(runtime.canvas) :
+    RuntimeLoadingScreen.mount(
       runtime.canvas,
-      loadingContainer
+      loadingContainer,
+      loadingDelay
     );
-  }
 
   try {
     await Promise.all([
-      loadingScreen?.start(),
+      screen.start(),
       logger.step(
         "device",
         () => configureRuntimeDevice(
           runtime.loop,
           backend,
+          logger,
           { maxFps }
         )
-      ),
-      delay(skipLoadingScreen ? 0 : loadingDelay)
+      )
     ]);
 
     await logger.step(
       "assets",
-      () => loadInitialAssets(runtime, loadingScreen, assets)
+      () => loadInitialAssets(
+        runtime.world.assetCoordinator,
+        screen,
+        assets
+      )
     );
 
     if (scene !== undefined) {
@@ -115,66 +113,30 @@ export async function bootstrapRuntime<TScene>(
         "scene",
         () => backend.loadScene(
           scene,
-          (progress) => reportSceneProgress(loadingScreen, progress)
+          (progress) => screen.progress(progress, progress.currentAsset)
         )
       );
     }
 
-    await loadingScreen?.complete();
-    runtime.start();
-    traceFirstFrame(runtime, logger);
+    await screen.complete();
   }
   catch (value: unknown) {
     const error = asError(value);
-    loadingScreen?.error(error);
+    screen.error(error);
 
     throw error;
   }
 }
 
 async function loadInitialAssets(
-  runtime: RuntimeBootstrapHost,
-  loadingScreen: RuntimeLoadingScreen | null,
+  coordinator: AssetCoordinator,
+  screen: LoadingScreen,
   assets: Iterable<AssetReference<unknown>>
 ): Promise<void> {
-  const batch = runtime.world.assetCoordinator.loadBatch(assets, {
-    onProgress: (progress: AssetLoadProgress) => {
-      loadingScreen?.update(progress);
-    }
+  const batch = coordinator.loadBatch(assets, {
+    onProgress: (progress) => screen.progress(progress, progress.record)
   });
-  loadingScreen?.updateProgress(
-    batch.completed,
-    batch.total
-  );
+  screen.progress(batch, null);
 
   await batch.done;
-}
-
-function reportSceneProgress(
-  loadingScreen: RuntimeLoadingScreen | null,
-  progress: RuntimeSceneProgress
-): void {
-  loadingScreen?.updateProgress(
-    progress.completed,
-    progress.total
-  );
-  if (progress.currentAsset !== null) {
-    loadingScreen?.showAsset(progress.currentAsset);
-  }
-}
-
-function traceFirstFrame(
-  runtime: RuntimeBootstrapHost,
-  logger: RuntimeLogger
-): void {
-  if (!logger.isNamespaceEnabled()) {
-    return;
-  }
-
-  logger.debug("waiting for first frame", {
-    visibility: document.visibilityState
-  });
-  void runtime.nextFrame().then(
-    () => logger.debug("first frame")
-  );
 }
