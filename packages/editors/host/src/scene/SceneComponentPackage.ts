@@ -4,7 +4,7 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 import type {
   SignalEvent,
   Systems
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { AssetDocumentKind } from "../lease/AssetLease.ts";

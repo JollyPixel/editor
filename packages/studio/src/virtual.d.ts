@@ -8,6 +8,6 @@ declare module "virtual:jolly-pixel/contributions/scene" {
 }
 
 declare module "virtual:jolly-pixel/contributions/runtime" {
-  const contributions: readonly import("@jolly-pixel/runtime").RuntimeContribution[];
+  const contributions: readonly import("./play/runtimeContributions.ts").RuntimeContribution[];
   export default contributions;
 }

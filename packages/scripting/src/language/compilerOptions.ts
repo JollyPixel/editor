@@ -10,7 +10,7 @@ export const SCRIPT_COMPILER_OPTIONS: ts.CompilerOptions = {
   module: ts.ModuleKind.ESNext,
   moduleResolution: ts.ModuleResolutionKind.Bundler,
   lib: ["lib.es2023.d.ts", "lib.dom.d.ts"],
-  types: [],
+  types: ["@jolly-pixel/backend.three"],
   strict: true,
   allowJs: true,
   allowImportingTsExtensions: true,

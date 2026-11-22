@@ -7,7 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine/core";
+import { Systems } from "@jolly-pixel/ecs";
 import {
   ALL_FORMATS,
   BufferSource,

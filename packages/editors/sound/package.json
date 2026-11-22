@@ -50,11 +50,11 @@
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.sound": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
-    "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
-    "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0",

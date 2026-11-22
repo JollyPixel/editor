@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { isVisibleInHierarchy } from "@jolly-pixel/engine";
+import { isVisibleInHierarchy } from "@jolly-pixel/backend.three";
 
 // CONSTANTS
 const kPivotMaxDistance = 100;

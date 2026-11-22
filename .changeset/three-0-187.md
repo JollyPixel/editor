@@ -1,6 +1,5 @@
 ---
 "@jolly-pixel/three": patch
-"@jolly-pixel/engine": patch
 "@jolly-pixel/runtime": patch
 "@jolly-pixel/physics": patch
 "@jolly-pixel/voxel.renderer": patch

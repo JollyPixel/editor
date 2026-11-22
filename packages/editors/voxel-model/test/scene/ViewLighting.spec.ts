@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { Preferences } from "@jolly-pixel/preferences";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
+import { ThreeSceneGraph, type BakedRoomEnvironment } from "@jolly-pixel/backend.three";
 import * as THREE from "three/webgpu";
 import {
   EnvironmentDocument,
@@ -34,7 +35,7 @@ function createPreview(): PreviewEnvironment {
 }
 
 function createHarness() {
-  const graph = new Systems.ThreeSceneGraph();
+  const graph = new ThreeSceneGraph();
   const { scene } = graph;
   const view = new ViewSettingsStore(new Preferences());
   const environment = new THREE.RenderTarget();
@@ -56,7 +57,7 @@ function createHarness() {
   const lighting = new ViewLighting({
     world: world as unknown as Systems.World<THREE.WebGPURenderer, any>,
     view,
-    room: room as unknown as Systems.BakedRoomEnvironment,
+    room: room as unknown as BakedRoomEnvironment,
     preview,
     casters: () => [],
     theme: "dark"

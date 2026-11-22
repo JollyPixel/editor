@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { VoxelDocument } from "../../document/VoxelDocument.ts";

@@ -2,10 +2,12 @@
 import * as THREE from "three";
 import {
   Systems,
-  findActor,
   type Actor,
   type Component
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  findActor
+} from "@jolly-pixel/backend.three";
 import {
   ComponentChange,
   ownedCopy,

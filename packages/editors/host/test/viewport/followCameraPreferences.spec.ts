@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import {
   ORBIT_FLY_DEFAULT_KEYS,
   OrbitFlyKeys
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies

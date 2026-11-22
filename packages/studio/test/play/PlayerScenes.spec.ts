@@ -11,7 +11,7 @@ import {
   AssetKindMismatchError,
   AssetRecord
 } from "@jolly-pixel/asset";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import { PlayerScenes } from "../../src/play/PlayerScenes.ts";

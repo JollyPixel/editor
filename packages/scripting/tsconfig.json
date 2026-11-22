@@ -8,13 +8,16 @@
       "path": "../asset"
     },
     {
-      "path": "../engine"
-    },
-    {
       "path": "../network"
     },
     {
       "path": "../utils"
+    },
+    {
+      "path": "../ecs"
+    },
+    {
+      "path": "../backend.three"
     }
   ]
 }

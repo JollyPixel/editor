@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
 import {
   ActorComponent,
-  type Actor,
+  type Actor
+} from "@jolly-pixel/ecs";
+import {
   type Model,
   type OrbitFlyCamera
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import type { Grid } from "@jolly-pixel/three";
 import * as THREE from "three/webgpu";
 

@@ -23,10 +23,10 @@
       "path": "../../golem-kit"
     },
     {
-      "path": "../../engine"
+      "path": "../../ecs"
     },
     {
-      "path": "../../runtime"
+      "path": "../../backend.three"
     }
   ]
 }

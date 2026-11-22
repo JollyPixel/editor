@@ -2,9 +2,11 @@
 import * as THREE from "three";
 import {
   ActorComponent,
-  type Actor,
+  type Actor
+} from "@jolly-pixel/ecs";
+import {
   type OrbitFlyCamera
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import type { ModelBlocks } from "../../scene/blocks/index.ts";

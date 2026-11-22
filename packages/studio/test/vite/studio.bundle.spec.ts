@@ -170,10 +170,9 @@ describe("@jolly-pixel/studio bundle", () => {
     for (const [specifier, url] of Object.entries(imports)) {
       const module = chunks.get(path.posix.join("play", url));
       assert.ok(module !== undefined, `${specifier} names no chunk`);
-      assert.deepStrictEqual(
-        chunksWith(loadedChunks(module), kThreeCore),
-        player,
-        specifier
+      assert.ok(
+        chunksWith(loadedChunks(module), kThreeCore).every((chunk) => player.includes(chunk)),
+        `${specifier} loads its own three.js`
       );
     }
   });

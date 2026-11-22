@@ -34,7 +34,7 @@ describe("SceneBinding", () => {
     const root = binding.actor(rootId)!;
     const child = binding.actor(childId)!;
     assert.strictEqual(child.parent, root);
-    assert.deepEqual(root.transform.local.position.toArray(), [1, 2, 3]);
+    assert.deepEqual(root.transform.local.position, { x: 1, y: 2, z: 3 });
     assert.strictEqual((binding.component("probe") as Probe).label, "sun");
     assert.deepEqual(environments, [document.tree.environment]);
   });
@@ -99,7 +99,7 @@ describe("SceneBinding", () => {
 
     const child = binding.actor(childId)!;
     assert.strictEqual(child.parent, null);
-    assert.deepEqual(child.transform.local.position.toArray(), [4, 0, 0]);
+    assert.deepEqual(child.transform.local.position, { x: 4, y: 0, z: 0 });
     assert.ok(Math.abs(child.transform.local.eulerAngles.y - (Math.PI / 2)) < 1e-9);
   });
 
@@ -125,7 +125,7 @@ describe("SceneBinding", () => {
 
     const coin = binding.actor(coinId)!;
     assert.strictEqual(coin.parent, binding.actor(mapId));
-    assert.deepEqual(coin.transform.global.position.toArray(), [5, 1, 0]);
+    assert.deepEqual(coin.transform.global.position, { x: 5, y: 1, z: 0 });
     assert.deepEqual([...binding.anchors(mapId)].map(({ anchor }) => anchor.label), ["Spawn"]);
   });
 

@@ -32,13 +32,13 @@
       "path": "../pixel-art"
     },
     {
-      "path": "../../engine"
-    },
-    {
-      "path": "../../runtime"
-    },
-    {
       "path": "../../pixel-draw-renderer"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

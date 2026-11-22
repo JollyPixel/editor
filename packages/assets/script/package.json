@@ -60,11 +60,11 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
-    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/golem.kit": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
-    "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/scripting": "workspace:*",
     "@openally/emitt": "1.1.0",
     "picomatch": "4.0.7",

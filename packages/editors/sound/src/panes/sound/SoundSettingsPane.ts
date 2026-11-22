@@ -6,7 +6,7 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import { Systems } from "@jolly-pixel/engine/core";
+import { Systems } from "@jolly-pixel/ecs";
 import {
   SubscriptionController,
   type JollyChangeDetail,

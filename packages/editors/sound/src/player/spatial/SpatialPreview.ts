@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine/core";
+import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { PlaybackMode } from "../PlaybackMode.ts";

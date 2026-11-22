@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { SceneDocument } from "@jolly-pixel/asset.scene/client";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 import {
   PeerMarks,
   type PresencePeer

@@ -16,7 +16,7 @@ import type { DeclaredProperty } from "@jolly-pixel/editor.host/scene";
 import {
   SCENE_PROPERTY_TYPES,
   type ScenePropertyType
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import type {
   JollyChangeDetail,
   JollyOption

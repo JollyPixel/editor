@@ -3,19 +3,20 @@ import {
   CameraDefinition,
   LightDefinition,
   MeshDefinition,
-  TextDefinition
-} from "@jolly-pixel/engine";
-import { RigidBodyDefinition } from "@jolly-pixel/physics/engine";
-import type { RuntimeComponentPackage } from "@jolly-pixel/runtime";
+  TextDefinition,
+  type ThreeComponentPackage
+} from "@jolly-pixel/backend.three";
+import { RigidBodyDefinition } from "@jolly-pixel/physics/ecs";
+import { ColliderOutline } from "@jolly-pixel/physics/three";
 
 // CONSTANTS
 export const CAMERA_DEFINITION = new CameraDefinition();
 export const LIGHT_DEFINITION = new LightDefinition();
 export const MESH_DEFINITION = new MeshDefinition();
 export const TEXT_DEFINITION = new TextDefinition();
-export const RIGID_BODY_DEFINITION = new RigidBodyDefinition();
+export const RIGID_BODY_DEFINITION = new RigidBodyDefinition(ColliderOutline);
 
-export const RUNTIME_COMPONENTS: RuntimeComponentPackage = {
+export const RUNTIME_COMPONENTS: ThreeComponentPackage = {
   definitions: [
     CAMERA_DEFINITION,
     LIGHT_DEFINITION,

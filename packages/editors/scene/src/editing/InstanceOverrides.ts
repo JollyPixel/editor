@@ -6,7 +6,7 @@ import {
   type SceneDocument,
   type SceneOverridesJSON
 } from "@jolly-pixel/asset.scene/client";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import { ActorWrites } from "./ActorWrites.ts";

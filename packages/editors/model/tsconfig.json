@@ -20,13 +20,7 @@
       "path": "../../asset-server"
     },
     {
-      "path": "../../engine"
-    },
-    {
       "path": "../../preferences"
-    },
-    {
-      "path": "../../runtime"
     },
     {
       "path": "../../three"
@@ -36,6 +30,12 @@
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

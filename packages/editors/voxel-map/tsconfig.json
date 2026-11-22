@@ -17,12 +17,6 @@
       "path": "../../assets/voxel-map"
     },
     {
-      "path": "../../engine"
-    },
-    {
-      "path": "../../runtime"
-    },
-    {
       "path": "../../voxel-renderer"
     },
     {
@@ -75,6 +69,12 @@
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

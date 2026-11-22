@@ -77,15 +77,15 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.common": "workspace:*",
-    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
     "@jolly-pixel/golem.kit": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/physics": "workspace:*",
-    "@jolly-pixel/runtime": "workspace:*",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@jolly-pixel/engine": "workspace:*"
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*"
   }
 }

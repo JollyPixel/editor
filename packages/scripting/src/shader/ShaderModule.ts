@@ -5,7 +5,7 @@ import {
   type Shader,
   type ShaderUniformValue,
   type ShaderUniformValues
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import { is } from "@jolly-pixel/utils";
 import * as TSL from "three/tsl";
 import * as THREE from "three/webgpu";

@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type * as network from "@jolly-pixel/network";
-import type { Systems } from "@jolly-pixel/engine/core";
+import type { Systems } from "@jolly-pixel/ecs";
 
 export type SoundSettings = Systems.SoundSettings;
 export type SoundSettingsChange = Partial<SoundSettings>;

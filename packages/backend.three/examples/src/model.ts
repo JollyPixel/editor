@@ -1,0 +1,65 @@
+// Import Third-party Dependencies
+import {
+  Systems
+} from "@jolly-pixel/ecs";
+import {
+  Camera3DControls,
+  ModelRenderer,
+  AssetTypes
+} from "@jolly-pixel/backend.three";
+import { AssetReference } from "@jolly-pixel/asset";
+import * as THREE from "three";
+
+// Import Internal Dependencies
+import { PlayerBehavior } from "./components/PlayerBehavior.ts";
+import { bootstrapRuntime } from "./utils/bootstrapRuntime.ts";
+
+// CONSTANTS
+const kTinyWitchModel = new AssetReference("tinywitch", AssetTypes.model);
+const kStandardModel = new AssetReference("standard", AssetTypes.model);
+
+class ModelsScene extends Systems.Scene {
+  constructor() {
+    super("models", {
+      assets: [kTinyWitchModel, kStandardModel]
+    });
+  }
+
+  override awake(): void {
+    const scene = this.world.sceneManager.graph.scene;
+    scene.background = null;
+    scene.add(
+      new THREE.GridHelper(
+        10,
+        10,
+        new THREE.Color("#888888")
+      ),
+      new THREE.AmbientLight(new THREE.Color("#ffffff"), 1)
+    );
+
+    const { transform } = this.world.createActor("camera")
+      .addComponent(Camera3DControls, { speed: 0.25, rotationSpeed: 0.50 });
+    transform.local.position = { x: 5, y: 5, z: 5 };
+    transform.lookAt({ x: 0, y: 0, z: 0 });
+
+    this.world.createActor("tinyWitchModel")
+      .addComponent(ModelRenderer, {
+        asset: kTinyWitchModel
+      })
+      .transform.local.position = { x: -5, y: 0, z: 0 };
+
+    this.world.createActor("player")
+      .addComponent(ModelRenderer, {
+        asset: kStandardModel
+      })
+      .addComponent(PlayerBehavior);
+  }
+}
+
+await bootstrapRuntime({
+  includePerformanceStats: true,
+  assets: {
+    catalog: "./assets.json"
+  },
+  scene: new ModelsScene()
+});

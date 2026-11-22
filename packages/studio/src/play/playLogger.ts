@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 
 export function playLoggerOptions(
   warned: (message: string) => void

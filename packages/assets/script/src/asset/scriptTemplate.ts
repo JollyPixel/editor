@@ -10,7 +10,7 @@ const kLeadingDigit = /^\p{Nd}/u;
 export function scriptTemplate(
   path: AssetPath | undefined
 ): string {
-  return `import { Behavior } from "@jolly-pixel/engine";
+  return `import { Behavior } from "@jolly-pixel/ecs";
 
 export class ${behaviorName(path)} extends Behavior {
   // Runs once, when the scene starts or when the actor is added.

@@ -20,9 +20,6 @@
       "path": "../../asset-server"
     },
     {
-      "path": "../../engine"
-    },
-    {
       "path": "../../assets/pixel-art"
     },
     {
@@ -44,9 +41,6 @@
       "path": "../../pixel-draw-renderer"
     },
     {
-      "path": "../../runtime"
-    },
-    {
       "path": "../../three"
     },
     {
@@ -60,6 +54,12 @@
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

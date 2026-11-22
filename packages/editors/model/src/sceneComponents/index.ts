@@ -8,7 +8,7 @@ import {
 import type {
   ModelAssets,
   ModelData
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import { MODEL_DEFINITION } from "@jolly-pixel/asset.model/runtime";
 
 // Import Internal Dependencies

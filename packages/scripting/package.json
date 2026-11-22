@@ -65,7 +65,8 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset": "workspace:*",
-    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",
     "@swc/wasm-typescript-esm": "1.16.22",

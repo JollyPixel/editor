@@ -2,7 +2,7 @@
 import {
   type Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import * as THREE from "three";
 import type {
   UVMap,
@@ -97,7 +97,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
       this.mesh,
       ...this.#shape.decorations
     );
-    this.#targetPosition = this.actor.transform.local.position.clone();
+    this.#targetPosition = new THREE.Vector3().copy(this.actor.transform.local.position);
   }
 
   get rotation(): THREE.Euler {

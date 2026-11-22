@@ -203,7 +203,7 @@ new preference after the state changes.
 ## Listener types
 
 `InputListenerType` is the dot-path union used by consumers that bind Input
-and device events through one name, such as `@jolly-pixel/engine`'s
+and device events through one name, such as `@jolly-pixel/ecs`'s
 `@InputListener` decorator.
 
 ```ts

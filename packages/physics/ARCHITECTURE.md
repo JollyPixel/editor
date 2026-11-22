@@ -5,12 +5,15 @@
 ```mermaid
 flowchart TB
     Game["Game code, scene files"]
-    Glue["physics/engine<br/>PhysicsSystem, RigidBody"]
+    Glue["physics/ecs<br/>PhysicsSystem, RigidBody"]
+    Outline["physics/three<br/>ColliderOutline"]
     Contract["physics<br/>PhysicsWorld, PhysicsBody, shapes"]
     Rapier["physics.rapier"]
     Voxel["voxel.renderer<br/>PhysicsVoxelCollider"]
 
     Game --> Glue
+    Game --> Outline
+    Outline --> Glue
     Glue --> Contract
     Rapier -->|"implements"| Contract
     Voxel -.->|"types only"| Contract
@@ -20,8 +23,10 @@ flowchart TB
   `physics-rapier`.
 - Engine-specific features stay reachable through each adapter's `native`
   field.
-- Code: `src/` (contract), `src/engine/` (engine components), `src/testing/`
-  (contract cases every backend runs).
+- Code: `src/` (contract), `src/ecs/` (renderer-agnostic engine
+  components), `src/three/` (three.js collider outline), `src/testing/`
+  (contract cases every backend runs). `three` is an optional peer, needed
+  only by `./three`.
 - One `RigidBody` owns one body and all its colliders, so no collider ever
   changes body. Hierarchy compounds (a collider on a child actor joining its
   parent's body) were dropped for that reason.
@@ -48,5 +53,6 @@ flowchart TB
 
 - The world steps on the engine `World`'s `afterFixedUpdate`, once per fixed
   step.
-- Physics only runs in play mode. In edit mode the scene definition builds a
-  `ColliderOutline`, which draws the colliders and creates no body.
+- Physics only runs in play mode. In edit mode the scene definition builds
+  the edit view it was given, such as `ColliderOutline`, which draws the
+  colliders and creates no body.

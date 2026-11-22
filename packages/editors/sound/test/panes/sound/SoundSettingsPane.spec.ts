@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { oggContentFromAudio } from "@jolly-pixel/asset.sound";
 import type { SoundDocument } from "@jolly-pixel/asset.sound/client";
-import { Systems } from "@jolly-pixel/engine/core";
+import { Systems } from "@jolly-pixel/ecs";
 import type { Button } from "@jolly-pixel/ui/elements/button";
 import type { NumberField } from "@jolly-pixel/ui/elements/number";
 

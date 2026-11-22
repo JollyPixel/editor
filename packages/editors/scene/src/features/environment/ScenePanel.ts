@@ -6,7 +6,7 @@ import {
   nothing,
   type TemplateResult
 } from "lit";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import { SCENE_ENVIRONMENT_KIND } from "@jolly-pixel/asset.scene/client";
 import {
   SubscriptionController,

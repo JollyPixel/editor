@@ -11,10 +11,7 @@
       "path": "../../network"
     },
     {
-      "path": "../../engine"
-    },
-    {
-      "path": "../../runtime"
+      "path": "../../backend.three"
     }
   ]
 }

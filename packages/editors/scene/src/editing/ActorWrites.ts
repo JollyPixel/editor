@@ -8,7 +8,7 @@ import {
   type SceneDocument,
   type SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 export class ActorWrites {
   #document: SceneDocument;

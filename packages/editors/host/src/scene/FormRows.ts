@@ -3,7 +3,7 @@ import type { AssetType } from "@jolly-pixel/asset";
 import type {
   ScenePropertyType,
   Systems
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 
 type DataKey<TData> = TData extends object ? keyof TData & string : never;
 type DataField<TData, TKey extends string> = TData extends object ?

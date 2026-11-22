@@ -5,7 +5,7 @@ import { ScriptImportPolicy } from "./ScriptImportPolicy.ts";
 const kThreeModules = ["three", "three/webgpu", "three/tsl"];
 
 export const SCRIPT_IMPORTS = new ScriptImportPolicy({
-  modules: ["@jolly-pixel/engine", ...kThreeModules],
+  modules: ["@jolly-pixel/ecs", "@jolly-pixel/backend.three", ...kThreeModules],
   relative: true
 });
 

@@ -2,7 +2,10 @@
 import {
   Actor,
   Systems
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  ThreeSceneGraph
+} from "@jolly-pixel/backend.three";
 
 export interface EditWorld {
   world: Systems.World;
@@ -10,7 +13,7 @@ export interface EditWorld {
 }
 
 export function createEditWorld(): EditWorld {
-  const sceneManager = new Systems.SceneManager(new Systems.ThreeSceneGraph());
+  const sceneManager = new Systems.SceneManager(new ThreeSceneGraph());
   const world = {
     logger: new Systems.Logger(),
     sceneManager,

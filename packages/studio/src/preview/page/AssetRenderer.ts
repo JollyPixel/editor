@@ -5,7 +5,8 @@ import {
   type SessionConnection
 } from "@jolly-pixel/editor.host";
 import type { SceneAssetResolver } from "@jolly-pixel/editor.host/scene";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
+import { BakedRoomEnvironment } from "@jolly-pixel/backend.three";
 import { withTimeout } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
@@ -32,7 +33,7 @@ export class AssetRenderer {
   static async create(
     options: AssetRendererOptions
   ): Promise<AssetRenderer> {
-    void Systems.BakedRoomEnvironment.load();
+    void BakedRoomEnvironment.load();
     const editorRuntime = await EditorRuntime.create(options.canvas, {
       framed: true,
       focusCanvas: false

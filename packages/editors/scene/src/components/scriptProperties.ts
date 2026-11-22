@@ -8,7 +8,7 @@ import {
   inferScenePropertyType,
   Systems,
   type ScenePropertyType
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 
 export type ScriptListType = Extract<ScenePropertyType, `${string}[]`>;
 

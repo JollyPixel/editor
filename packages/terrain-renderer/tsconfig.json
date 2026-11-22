@@ -2,7 +2,10 @@
   "extends": "../../tsconfig/lib.json",
   "references": [
     {
-      "path": "../engine"
+      "path": "../ecs"
+    },
+    {
+      "path": "../backend.three"
     }
   ]
 }

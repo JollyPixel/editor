@@ -7,14 +7,16 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
+import {
+  type MetricsPanel,
+  type MetricsPanelOptions
+} from "@jolly-pixel/runtime";
 import {
   Runtime,
-  type MetricsPanel,
-  type MetricsPanelOptions,
   type RuntimeLoadOptions,
   type RuntimeOptions
-} from "@jolly-pixel/runtime";
+} from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";

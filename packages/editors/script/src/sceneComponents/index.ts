@@ -10,10 +10,12 @@ import type {
   SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
 import {
-  SCRIPT_ASSET_TYPES,
   ScriptDefinition,
   type ScriptData
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  SCRIPT_ASSET_TYPES
+} from "@jolly-pixel/backend.three";
 import type { ScriptOutline } from "@jolly-pixel/scripting";
 
 // Import Internal Dependencies

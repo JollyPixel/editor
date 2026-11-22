@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Runtime } from "@jolly-pixel/runtime";
+import type { Runtime } from "@jolly-pixel/backend.three";
 import {
   TERRAIN_KIND,
   terrainDocumentKind,

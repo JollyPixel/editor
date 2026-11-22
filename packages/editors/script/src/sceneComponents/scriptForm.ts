@@ -9,10 +9,12 @@ import type {
 import {
   ASSET_PROPERTY_TYPES,
   SCENE_PROPERTY_TYPES,
-  SCRIPT_ASSET_TYPES,
   scriptPropertySlot,
   type ScriptData
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  SCRIPT_ASSET_TYPES
+} from "@jolly-pixel/backend.three";
 import type { ScriptOutline } from "@jolly-pixel/scripting";
 
 // CONSTANTS

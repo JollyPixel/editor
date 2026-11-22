@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 import type { CatalogClient } from "@jolly-pixel/asset-server/client";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import type { PeerIdentity } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

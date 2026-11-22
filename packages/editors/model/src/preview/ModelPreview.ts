@@ -3,7 +3,7 @@ import {
   disposeObject3D,
   parseModel,
   type Model
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies

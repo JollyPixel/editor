@@ -26,16 +26,16 @@
       "path": "../../asset"
     },
     {
-      "path": "../../engine"
-    },
-    {
-      "path": "../../runtime"
-    },
-    {
       "path": "../../scripting"
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

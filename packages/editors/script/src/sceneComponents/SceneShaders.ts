@@ -11,7 +11,7 @@ import type {
   SceneAssetResolver,
   SceneAssetUpdates
 } from "@jolly-pixel/editor.host/scene";
-import type { Shader } from "@jolly-pixel/engine";
+import type { Shader } from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import type { ShaderCompilation } from "../shader/ShaderCompilation.ts";

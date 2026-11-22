@@ -2,7 +2,8 @@
 
 A JollyPixel actor component that runs a [`VoxelView`](../core/VoxelView.md):
 it attaches and initializes the view on `awake()`, ticks it on `update()` and
-disposes it on `destroy()`. Requires the optional peer `@jolly-pixel/engine`.
+disposes it on `destroy()`. Requires the optional peers `@jolly-pixel/ecs` and
+`@jolly-pixel/backend.three`.
 
 ```ts
 import { VoxelRenderer } from "@jolly-pixel/voxel.renderer/engine";

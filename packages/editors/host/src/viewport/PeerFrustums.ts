@@ -3,7 +3,7 @@ import type * as THREE from "three";
 import {
   Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import type { Room } from "@jolly-pixel/network/client";
 import {
   PeerFrustumSync,

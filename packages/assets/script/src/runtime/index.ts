@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
 import {
-  SCRIPT_ASSET_TYPES,
   SCRIPT_MODULE_ASSET,
-  ScriptDefinition,
-  ShaderAssetType
-} from "@jolly-pixel/engine";
-import type { RuntimeComponentPackage } from "@jolly-pixel/runtime";
+  ScriptDefinition
+} from "@jolly-pixel/ecs";
+import {
+  SCRIPT_ASSET_TYPES,
+  ShaderAssetType,
+  type ThreeComponentPackage
+} from "@jolly-pixel/backend.three";
 import {
   ScriptModuleLoader,
   ShaderModuleLoader
@@ -16,7 +18,7 @@ export const SCRIPT_DEFINITION = new ScriptDefinition({}, {
   assetTypes: SCRIPT_ASSET_TYPES
 });
 
-export const RUNTIME_COMPONENTS: RuntimeComponentPackage = {
+export const RUNTIME_COMPONENTS: ThreeComponentPackage = {
   definitions: [SCRIPT_DEFINITION],
   loaders: [
     {

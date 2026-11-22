@@ -2,7 +2,7 @@
 import {
   Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import {
   PresenceChannel,
   type PresenceChange

@@ -9,7 +9,7 @@ import {
 } from "@jolly-pixel/asset.font/client";
 import { SceneDocument } from "@jolly-pixel/asset.scene/client";
 import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
-import type { TextRenderer } from "@jolly-pixel/engine";
+import type { TextRenderer } from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import {

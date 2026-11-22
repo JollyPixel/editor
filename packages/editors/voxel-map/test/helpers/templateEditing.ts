@@ -3,7 +3,7 @@ import {
   VoxelLayerVisibility,
   VoxelWorld
 } from "@jolly-pixel/voxel.renderer";
-import type { CameraPose } from "@jolly-pixel/engine";
+import type { CameraPose } from "@jolly-pixel/backend.three";
 import {
   LogQueue,
   type PresencePeer

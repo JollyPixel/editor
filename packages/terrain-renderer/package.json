@@ -40,14 +40,19 @@
     "three": "0.187.0"
   },
   "peerDependencies": {
-    "@jolly-pixel/engine": "workspace:*"
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@jolly-pixel/engine": {
+    "@jolly-pixel/backend.three": {
+      "optional": true
+    },
+    "@jolly-pixel/ecs": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@jolly-pixel/engine": "workspace:*"
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*"
   }
 }

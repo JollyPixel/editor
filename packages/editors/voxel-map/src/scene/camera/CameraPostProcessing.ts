@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
+import type { PostProcessing } from "@jolly-pixel/backend.three";
 import {
   voxelTransparencyPass,
   type VoxelTransparencyPassOptions
@@ -18,13 +18,13 @@ const kBloomRadius = 0.2;
 export class CameraPostProcessing {
   readonly #options: VoxelTransparencyPassOptions;
 
-  readonly plain: Systems.PostProcessing = ({ scene, camera }) => voxelTransparencyPass(
+  readonly plain: PostProcessing = ({ scene, camera }) => voxelTransparencyPass(
     scene,
     camera,
     this.#options
   );
 
-  readonly glow: Systems.PostProcessing = ({ scene, camera }) => {
+  readonly glow: PostProcessing = ({ scene, camera }) => {
     const scenePass = voxelTransparencyPass(
       scene,
       camera,
@@ -50,7 +50,7 @@ export class CameraPostProcessing {
 
   select(
     glow: boolean
-  ): Systems.PostProcessing {
+  ): PostProcessing {
     return glow ? this.glow : this.plain;
   }
 }

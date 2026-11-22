@@ -1,0 +1,69 @@
+// Import Node.js Dependencies
+import { mock } from "node:test";
+
+// Import Third-party Dependencies
+import * as THREE from "three/webgpu";
+import { Systems } from "@jolly-pixel/ecs";
+
+// Import Internal Dependencies
+import type { ThreeRenderComponent } from "../../../src/rendering/ThreeRenderComponent.ts";
+import type {
+  PostProcessing
+} from "../../../src/rendering/compositing/PostProcessing.ts";
+
+export interface RenderComponentStubOptions {
+  depth?: number;
+  viewport?: Systems.RenderViewport | null;
+  camera?: THREE.Camera;
+  postProcessing?: PostProcessing | null;
+}
+
+export function createRenderComponent(
+  options: RenderComponentStubOptions = {}
+) {
+  const {
+    depth = 0,
+    viewport = null,
+    camera = new THREE.PerspectiveCamera(),
+    postProcessing = null
+  } = options;
+
+  return {
+    threeCamera: camera,
+    depth,
+    viewport: viewport === null ? null : new Systems.Viewport(viewport),
+    postProcessing,
+    prepareRender: mock.fn((
+      _canvas: Systems.CanvasDimensions
+    ) => {
+    })
+  } satisfies ThreeRenderComponent & { prepareRender: ReturnType<typeof mock.fn>; };
+}
+
+export function createPipelineSpy(
+  outputNode: THREE.Node,
+  onRender: () => void = () => void 0
+) {
+  return {
+    outputNode,
+    render: mock.fn(onRender),
+    dispose: mock.fn()
+  };
+}
+
+export function createRendererSpy() {
+  return {
+    setViewport: mock.fn(),
+    setScissor: mock.fn(),
+    setScissorTest: mock.fn(),
+    setSize: mock.fn(),
+    clear: mock.fn(),
+    render: mock.fn(),
+    dispose: mock.fn(),
+    getSize: (target: THREE.Vector2) => target.set(800, 600),
+    getPixelRatio: () => 1,
+    getRenderTarget: () => null,
+    setRenderTarget: mock.fn(),
+    outputColorSpace: THREE.SRGBColorSpace
+  };
+}

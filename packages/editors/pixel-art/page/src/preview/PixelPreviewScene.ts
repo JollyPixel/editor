@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
-import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
+import { OrbitFlyCamera } from "@jolly-pixel/backend.three";
 import * as THREE from "three";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";

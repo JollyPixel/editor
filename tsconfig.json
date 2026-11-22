@@ -41,7 +41,7 @@
       "path": "./packages/asset-source"
     },
     {
-      "path": "./packages/engine"
+      "path": "./packages/ecs"
     },
     {
       "path": "./packages/physics"
@@ -51,6 +51,9 @@
     },
     {
       "path": "./packages/runtime"
+    },
+    {
+      "path": "./packages/backend.three"
     },
     {
       "path": "./packages/scripting"

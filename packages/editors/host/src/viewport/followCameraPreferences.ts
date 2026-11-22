@@ -2,7 +2,7 @@
 import {
   OrbitFlyKeys,
   type OrbitFlyCamera
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import type {
   Preferences,
   PreferenceValues

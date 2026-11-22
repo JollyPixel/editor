@@ -9,7 +9,7 @@ import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import { BINARY_KIND } from "@jolly-pixel/asset-server";
-import type { Runtime } from "@jolly-pixel/runtime";
+import type { Runtime } from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import { bootStandalone, type OfflineProject } from "#src/boot/bootStandalone.ts";

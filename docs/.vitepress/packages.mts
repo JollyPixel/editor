@@ -12,7 +12,8 @@ export const packageGroups: PackageGroup[] = [
   {
     text: "Engine",
     packages: [
-      { dir: "engine", text: "Engine" },
+      { dir: "ecs", text: "ECS" },
+      { dir: "backend.three", text: "Backend Three" },
       { dir: "runtime", text: "Runtime" },
       { dir: "loop", text: "Loop" },
       { dir: "controls", text: "Controls" },

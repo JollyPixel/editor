@@ -6,7 +6,7 @@ any backend works; install `@jolly-pixel/physics`, an optional peer
 dependency, to use it.
 
 ```ts
-import { PhysicsSystem } from "@jolly-pixel/physics/engine";
+import { PhysicsSystem } from "@jolly-pixel/physics/ecs";
 import { RapierBackend } from "@jolly-pixel/physics.rapier";
 import { PhysicsVoxelCollider, VoxelView } from "@jolly-pixel/voxel.renderer";
 

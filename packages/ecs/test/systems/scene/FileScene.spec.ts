@@ -1,0 +1,297 @@
+// Import Node.js Dependencies
+import { describe, test, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import type { AssetReference } from "@jolly-pixel/asset";
+
+// Import Internal Dependencies
+import { Actor } from "../../../src/actor/Actor.ts";
+import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
+import { Scene } from "../../../src/systems/scene/Scene.ts";
+import { HeadlessSceneGraph } from "../../../src/systems/scene/HeadlessSceneGraph.ts";
+import type { SceneEnvironment } from "../../../src/systems/scene/SceneGraph.ts";
+import {
+  ComponentDefinitions,
+  FileScene,
+  type ComponentDefinition,
+  type ScenePrefabFile
+} from "../../../src/systems/scene/file/index.ts";
+import {
+  ENVIRONMENT_PRESETS,
+  type EnvironmentFile
+} from "../../../src/systems/environment/index.ts";
+import {
+  createSceneSetup,
+  type SceneSetupOptions
+} from "../../helpers/scene/sceneSetup.ts";
+import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
+import {
+  createActorFile,
+  createComponentFile,
+  createSceneFile,
+  createWarningLogger
+} from "../../helpers/scene/sceneFile.ts";
+
+class ModelComponent extends ActorComponent {
+  readonly model: string | null;
+
+  constructor(
+    actor: Actor,
+    options: { model: string | null; }
+  ) {
+    super({ actor, typeName: "Model" });
+    this.model = options.model;
+  }
+}
+
+class EnvironmentProbeGraph extends HeadlessSceneGraph {
+  readonly applied: EnvironmentFile[] = [];
+  disposals = 0;
+
+  override createEnvironment(): SceneEnvironment {
+    return {
+      apply: (file) => {
+        this.applied.push(file);
+      },
+      dispose: () => {
+        this.disposals++;
+      }
+    };
+  }
+}
+
+// CONSTANTS
+const kDusk: EnvironmentFile = {
+  ...ENVIRONMENT_PRESETS.default,
+  sky: { kind: "color", color: "#ff0000" },
+  fog: { kind: "linear", color: "#ffffff", near: 2, far: 40 },
+  glow: { strength: 1, radius: 0.4 }
+};
+
+function createModelSetup(
+  options: Omit<SceneSetupOptions, "assets"> = {}
+) {
+  const assets = createSceneAssets(["knight", "mage"], { dusk: kDusk });
+  const { type } = assets.reference("knight");
+  const definition: ComponentDefinition<null, ModelComponent, { model: string; }> = {
+    type: "Model",
+    assets: { model: type },
+    parse: () => null,
+    create: (actor, _data, context) => actor.addComponentAndGet(ModelComponent, {
+      model: context.assets.resolve("model")
+    })
+  };
+  const components = new ComponentDefinitions().register(definition);
+  const file = createSceneFile(
+    [
+      createActorFile("hero", {
+        components: [
+          createComponentFile("model", "Model", {}, { model: { id: "knight", kind: type.kind.value } })
+        ]
+      })
+    ],
+    { id: "dusk", kind: "environment" }
+  );
+
+  return { ...createSceneSetup({ ...options, assets }), assets, components, file };
+}
+
+async function loadKeepInstance() {
+  const setup = createModelSetup();
+  const [hero] = setup.file.actors;
+  const prefabs = {
+    find: (sceneId: string) => (sceneId === "keep" ? { actors: [hero] } : null)
+  };
+  const file = createSceneFile([
+    createActorFile("castle", { prefab: { id: "keep", kind: "scene" } })
+  ]);
+  const scene = new FileScene("level", file, {
+    components: setup.components,
+    prefabs
+  });
+  const load = setup.sm.loadScene(scene);
+  setup.assets.loader.resolve("knight");
+  await load.done;
+  setup.sm.beginFrame();
+
+  return { ...setup, scene };
+}
+
+function declaredAssets(
+  scene: FileScene
+): AssetReference<unknown>[] {
+  return [...scene.assetsToLoad({ canLoad: () => true })];
+}
+
+describe("Systems.FileScene", () => {
+  beforeEach(() => {
+    Scene.Id.clear();
+  });
+
+  test("declares the assets of its components and its environment", () => {
+    const { assets, components, file } = createModelSetup();
+
+    const scene = new FileScene("level", file, { components });
+    const [model, environment] = declaredAssets(scene);
+
+    assert.strictEqual(declaredAssets(scene).length, 2);
+    assert.ok(model.equals(assets.reference("knight")));
+    assert.deepEqual(environment.toJSON(), file.environment);
+  });
+
+  test("loads a deferred file when it prepares, then builds its actors from it", async() => {
+    const { sm, assets, components, file } = createModelSetup();
+    const scene = new FileScene("level", async() => file, { components });
+    assert.throws(() => scene.file, /Scene "level" has not loaded its file yet/);
+
+    const load = sm.loadScene(scene);
+    assets.loader.resolve("knight");
+    await load.done;
+    sm.beginFrame();
+
+    const [hero] = sm.tree.children;
+    assert.strictEqual(scene.file, file);
+    assert.strictEqual(hero.findComponent(ModelComponent)!.model, "knight");
+  });
+
+  test("declares and builds the assets of the scenes its prefabs include", async() => {
+    const { sm, assets, scene } = await loadKeepInstance();
+
+    const [castle] = sm.tree.children;
+    const [hero] = castle.children;
+    assert.ok(declaredAssets(scene).some((reference) => reference.equals(assets.reference("knight"))));
+    assert.strictEqual(hero.findComponent(ModelComponent)!.model, "knight");
+  });
+
+  test("declares and builds the asset an instance override puts in a slot", async() => {
+    const { sm, assets, components, file } = createModelSetup();
+    const kind = assets.reference("mage").type.kind.value;
+    const scene = new FileScene("level", createSceneFile([
+      createActorFile("castle", {
+        prefab: { id: "keep", kind: "scene" },
+        overrides: { components: { model: { assets: { model: { id: "mage", kind } } } } }
+      })
+    ]), {
+      components,
+      prefabs: {
+        find: () => {
+          return { actors: file.actors };
+        }
+      }
+    });
+
+    const load = sm.loadScene(scene);
+    assets.loader.resolve("mage");
+    await load.done;
+    sm.beginFrame();
+
+    const [hero] = sm.tree.children[0].children;
+    assert.ok(declaredAssets(scene).some((reference) => reference.equals(assets.reference("mage"))));
+    assert.strictEqual(hero.findComponent(ModelComponent)!.model, "mage");
+  });
+
+  test("captures a prefab instance as the actors it expanded", async() => {
+    const { scene } = await loadKeepInstance();
+
+    const captured = scene.capture().actors;
+
+    assert.deepEqual(
+      captured.map(({ id, parentId, prefab }) => [id, parentId, prefab]),
+      [["castle", null, undefined], ["castle/hero", "castle", undefined]]
+    );
+  });
+
+  test("never includes its own scene through a prefab cycle", async() => {
+    const { sm, assets, components, file } = createModelSetup();
+    const level = createSceneFile([
+      ...file.actors,
+      createActorFile("castle", { prefab: { id: "keep", kind: "scene" } })
+    ]);
+    const scenes = new Map<string, ScenePrefabFile>([
+      ["level", level],
+      ["keep", { actors: [createActorFile("back", { prefab: { id: "level", kind: "scene" } })] }]
+    ]);
+    const scene = new FileScene("level", level, {
+      components,
+      prefabs: { find: (sceneId) => scenes.get(sceneId) ?? null },
+      sceneId: "level"
+    });
+
+    const load = sm.loadScene(scene);
+    assets.loader.resolve("knight");
+    await load.done;
+    sm.beginFrame();
+
+    const [, castle] = sm.tree.children;
+    const [back] = castle.children;
+    assert.strictEqual(declaredAssets(scene).length, 1);
+    assert.deepEqual(back.children, []);
+  });
+
+  test("builds its actors with loaded assets once activated", async() => {
+    const { sm, assets, components, file } = createModelSetup();
+    const scene = new FileScene("level", file, { components });
+
+    const load = sm.loadScene(scene);
+    sm.beginFrame();
+    assert.strictEqual(sm.tree.children.length, 0);
+
+    assets.loader.resolve("knight");
+    await load.done;
+    sm.beginFrame();
+
+    const [hero] = sm.tree.children;
+    const model = hero.findComponent(ModelComponent)!;
+    assert.strictEqual(sm.tree.children.length, 1);
+    assert.strictEqual(model.actor, hero);
+    assert.strictEqual(model.model, "knight");
+  });
+
+  for (const [cause, missing] of [
+    ["is gone from the catalog", { id: "ghost", kind: "scene-asset" }],
+    ["is of another kind than its slot", { id: "mage", kind: "texture" }]
+  ] as const) {
+    test(`skips a component whose asset ${cause} and builds the rest`, async() => {
+      const { logger, warnings } = createWarningLogger();
+      const { sm, assets, components, file } = createModelSetup({ logger });
+      const scene = new FileScene("level", createSceneFile([
+        ...file.actors,
+        createActorFile("ghost", {
+          components: [createComponentFile("broken", "Model", {}, { model: missing })]
+        })
+      ]), { components });
+
+      const load = sm.loadScene(scene);
+      assets.loader.resolve("knight");
+      await load.done;
+      sm.beginFrame();
+
+      const [hero, ghost] = sm.tree.children;
+      assert.strictEqual(hero.findComponent(ModelComponent)!.model, "knight");
+      assert.strictEqual(ghost.findComponent(ModelComponent), null);
+      assert.deepEqual(warnings().map(([, meta]) => meta), [{
+        actor: "ghost",
+        type: "Model",
+        assetId: missing.id
+      }]);
+    });
+  }
+
+  test("applies its referenced environment and disposes it when unloaded", async() => {
+    const graph = new EnvironmentProbeGraph();
+    const { sm, assets, components, file } = createModelSetup({ graph });
+    const scene = new FileScene("level", file, { components });
+    const load = sm.loadScene(scene);
+    assets.loader.resolve("knight");
+    await load.done;
+    sm.beginFrame();
+
+    assert.deepEqual(graph.applied, [kDusk]);
+    assert.strictEqual(graph.disposals, 0);
+
+    sm.unloadScene(scene);
+
+    assert.strictEqual(graph.disposals, 1);
+  });
+});

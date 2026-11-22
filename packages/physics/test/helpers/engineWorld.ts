@@ -1,9 +1,9 @@
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import type { FrameSchedule } from "@jolly-pixel/loop";
 
 // Import Internal Dependencies
-import { PhysicsSystem } from "#src/engine/PhysicsSystem.ts";
+import { PhysicsSystem } from "#src/ecs/PhysicsSystem.ts";
 import { FakePhysicsBackend } from "./fakePhysics.ts";
 
 // CONSTANTS
@@ -14,8 +14,10 @@ export interface TickOptions {
   alpha?: number;
 }
 
-export function createEngineWorld() {
-  const sceneManager = new Systems.SceneManager(new Systems.ThreeSceneGraph());
+export function createEngineWorld(
+  sceneGraph: Systems.SceneGraph = new Systems.HeadlessSceneGraph()
+) {
+  const sceneManager = new Systems.SceneManager(sceneGraph);
   const world = new Systems.World(
     {
       canvas: {},

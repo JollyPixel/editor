@@ -9,7 +9,7 @@ import {
 } from "./support/game.ts";
 
 // CONSTANTS
-const kPing = `import { Behavior } from "@jolly-pixel/engine";
+const kPing = `import { Behavior } from "@jolly-pixel/ecs";
 import { pong } from "./pong";
 
 export function ping(): string {

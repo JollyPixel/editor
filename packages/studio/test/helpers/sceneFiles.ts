@@ -3,7 +3,7 @@ import type {
   AssetReference,
   AssetReferenceData
 } from "@jolly-pixel/asset";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { SceneFileSource } from "../../src/play/GameScenes.ts";

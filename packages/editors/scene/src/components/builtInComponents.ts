@@ -13,11 +13,11 @@ import type {
   MeshAssets,
   MeshData,
   TextSettings
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import type {
   RigidBody,
   SceneRigidBodySettings
-} from "@jolly-pixel/physics/engine";
+} from "@jolly-pixel/physics/ecs";
 import {
   CAMERA_DEFINITION,
   LIGHT_DEFINITION,

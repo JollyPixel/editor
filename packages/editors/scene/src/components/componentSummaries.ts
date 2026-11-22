@@ -6,8 +6,8 @@ import type {
   MeshGeometryKind,
   MeshSettings,
   TextSettings
-} from "@jolly-pixel/engine";
-import type { SceneRigidBodySettings } from "@jolly-pixel/physics/engine";
+} from "@jolly-pixel/backend.three";
+import type { SceneRigidBodySettings } from "@jolly-pixel/physics/ecs";
 
 type ColliderType = SceneRigidBodySettings["colliders"][number]["shape"]["type"];
 

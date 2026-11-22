@@ -1,11 +1,11 @@
 # VoxelMapDefinition
 
-The `VoxelMap` component type for `@jolly-pixel/engine` scene files. It draws
+The `VoxelMap` component type for `@jolly-pixel/ecs` scene files. It draws
 a voxel map, read from the entry's `map` asset slot, through a
 [`VoxelRenderer`](./VoxelRenderer.md).
 
 ```ts
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import { VoxelMapDefinition } from "@jolly-pixel/voxel.renderer/engine";
 
 const components = new Systems.ComponentDefinitions().register(
@@ -50,7 +50,7 @@ off, or when the definition has no `collider`. Changing `collision` on a live
 component has no effect.
 
 ```ts
-import { PhysicsSystem } from "@jolly-pixel/physics/engine";
+import { PhysicsSystem } from "@jolly-pixel/physics/ecs";
 import { PhysicsVoxelCollider } from "@jolly-pixel/voxel.renderer";
 
 const definition = new VoxelMapDefinition({

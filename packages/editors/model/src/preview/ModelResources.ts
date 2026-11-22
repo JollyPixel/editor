@@ -3,7 +3,7 @@ import {
   AssetPath,
   type AssetRecordData
 } from "@jolly-pixel/asset";
-import { modelTextureNames } from "@jolly-pixel/engine";
+import { modelTextureNames } from "@jolly-pixel/backend.three";
 import * as THREE from "three/webgpu";
 import { fileExtension } from "@jolly-pixel/utils";
 

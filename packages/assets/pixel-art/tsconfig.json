@@ -35,7 +35,7 @@
       "path": "../../golem-kit"
     },
     {
-      "path": "../../runtime"
+      "path": "../../backend.three"
     }
   ]
 }

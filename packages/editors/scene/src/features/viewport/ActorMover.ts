@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import * as THREE from "three";
-import type { OrbitFlyCamera } from "@jolly-pixel/engine";
+import type { OrbitFlyCamera } from "@jolly-pixel/backend.three";
 import type { SceneTransformPatch } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies

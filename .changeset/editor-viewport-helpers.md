@@ -1,5 +1,4 @@
 ---
-"@jolly-pixel/engine": minor
 "@jolly-pixel/three": minor
 ---
 

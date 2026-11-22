@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Model } from "@jolly-pixel/engine";
+import type { Model } from "@jolly-pixel/backend.three";
 import * as THREE from "three/webgpu";
 
 export class ModelStats {

@@ -1,19 +1,20 @@
 // Import Third-party Dependencies
 import type * as THREE from "three/webgpu";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
+import type { ThreeRenderComponent, PostProcessing } from "@jolly-pixel/backend.three";
 
 export type PreDrawStep = () => void;
 
-export class ViewportRenderer implements Systems.ThreeRenderComponent {
+export class ViewportRenderer implements ThreeRenderComponent {
   readonly viewport = null;
   readonly depth: number;
-  postProcessing: Systems.PostProcessing | null = null;
+  postProcessing: PostProcessing | null = null;
 
-  #camera: Systems.ThreeRenderComponent;
+  #camera: ThreeRenderComponent;
   #steps: PreDrawStep[] = [];
 
   constructor(
-    camera: Systems.ThreeRenderComponent
+    camera: ThreeRenderComponent
   ) {
     this.#camera = camera;
     this.depth = camera.depth;

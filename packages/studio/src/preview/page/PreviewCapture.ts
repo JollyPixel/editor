@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
+import type { ThreeRenderer } from "@jolly-pixel/backend.three";
 import {
   ReadbackPixels,
   renderToTarget
@@ -17,12 +17,12 @@ const kMaxSize = 1024;
 const kMaxCompileRounds = 8;
 
 export interface PreviewCaptureOptions {
-  renderer: Systems.ThreeRenderer;
+  renderer: ThreeRenderer;
   scene: THREE.Scene;
 }
 
 export class PreviewCapture {
-  readonly #renderer: Systems.ThreeRenderer;
+  readonly #renderer: ThreeRenderer;
   readonly #scene: THREE.Scene;
   readonly #camera = new THREE.PerspectiveCamera(kFov, 1, 0.01, 100);
 

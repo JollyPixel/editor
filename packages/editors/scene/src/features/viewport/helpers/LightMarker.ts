@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { LightComponent } from "@jolly-pixel/engine";
+import type { LightComponent } from "@jolly-pixel/backend.three";
 import { LightGizmo } from "@jolly-pixel/three";
 
 // Import Internal Dependencies

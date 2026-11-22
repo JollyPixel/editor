@@ -2,13 +2,15 @@
 import * as THREE from "three";
 import {
   ActorComponent,
-  AudioSourceComponent,
-  CameraComponent,
-  LightComponent,
   type Actor,
   type Component
-} from "@jolly-pixel/engine";
-import { ColliderOutline } from "@jolly-pixel/physics/engine";
+} from "@jolly-pixel/ecs";
+import {
+  AudioSourceComponent,
+  CameraComponent,
+  LightComponent
+} from "@jolly-pixel/backend.three";
+import { ColliderOutline } from "@jolly-pixel/physics/three";
 import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies

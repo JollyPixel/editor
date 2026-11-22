@@ -2,8 +2,8 @@
 import {
   Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
-import { RigidBody } from "@jolly-pixel/physics/engine";
+} from "@jolly-pixel/ecs";
+import { RigidBody } from "@jolly-pixel/physics/ecs";
 
 export interface SphereBehaviorOptions {
   force?: number;

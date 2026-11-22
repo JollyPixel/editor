@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
 import { Emitter } from "@openally/emitt";
-import type { OrbitFlyCamera } from "@jolly-pixel/engine";
+import type { OrbitFlyCamera } from "@jolly-pixel/backend.three";
 import type { BlockTransformJSON } from "@jolly-pixel/asset.voxel-model/client";
 import {
   COMPACT_GIZMO_APPEARANCE,

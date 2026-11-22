@@ -16,7 +16,7 @@ const pipeline = new THREE.RenderPipeline(renderer, voxelTransparencyPass(scene,
 renderer.setAnimationLoop(() => pipeline.render());
 ```
 
-With `@jolly-pixel/engine`, return it from a camera's `postProcessing`:
+With `@jolly-pixel/backend.three`, return it from a camera's `postProcessing`:
 
 ```ts
 camera.postProcessing = ({ scene, camera }) => voxelTransparencyPass(scene, camera);

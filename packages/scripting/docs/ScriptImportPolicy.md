@@ -10,8 +10,8 @@ await SCRIPT_IMPORTS.check(code); // throws ScriptImportError
 
 ## Policies
 
-- `SCRIPT_IMPORTS`: `@jolly-pixel/engine`, `three`, `three/webgpu`,
-  `three/tsl`, and other scripts by a `./` or `../` path.
+- `SCRIPT_IMPORTS`: `@jolly-pixel/ecs`, `@jolly-pixel/backend.three`, `three`,
+  `three/webgpu`, `three/tsl`, and other scripts by a `./` or `../` path.
 - `SHADER_IMPORTS`: `three`, `three/webgpu` and `three/tsl` only.
 
 A dynamic `import()` is always refused. `import.meta` is allowed.

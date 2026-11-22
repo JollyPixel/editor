@@ -8,9 +8,6 @@
       "path": "../../asset-server"
     },
     {
-      "path": "../../engine"
-    },
-    {
       "path": "../../event-store"
     },
     {
@@ -20,7 +17,10 @@
       "path": "../../network"
     },
     {
-      "path": "../../runtime"
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

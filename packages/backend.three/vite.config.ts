@@ -1,0 +1,28 @@
+// Import Node.js Dependencies
+import { fileURLToPath } from "node:url";
+
+// Import Third-party Dependencies
+import { defineConfig } from "vite";
+import checker from "vite-plugin-checker";
+import glsl from "vite-plugin-glsl";
+import wasm from "vite-plugin-wasm";
+
+export default defineConfig({
+  root: "examples",
+  resolve: {
+    alias: [
+      {
+        find: /^@jolly-pixel\/backend\.three$/,
+        replacement: fileURLToPath(new URL("src/index.ts", import.meta.url))
+      }
+    ]
+  },
+  plugins: [
+    checker({
+      typescript: true
+    }),
+    glsl(),
+    wasm()
+  ]
+});
+

@@ -183,7 +183,7 @@ type SceneComponentCategory =
 ```
 
 `definition` is the engine definition a game registers too. Import it from
-the asset kind package's `jollypixel.runtime` entry (`RuntimeComponentPackage`
+the asset kind package's `jollypixel.runtime` entry (`ThreeComponentPackage`
 in `@jolly-pixel/runtime`), so the editor and the game share one object. Its
 `assets` slots decide which asset pickers open when the component is added.
 

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { OrbitFlyCamera } from "@jolly-pixel/engine";
+import type { OrbitFlyCamera } from "@jolly-pixel/backend.three";
 import type {
   SceneChange,
   SceneDocument,

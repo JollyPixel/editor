@@ -45,7 +45,7 @@ function importWithEngineStub(
   code: string
 ): Promise<Record<string, any>> {
   const linked = code.replaceAll(
-    "\"@jolly-pixel/engine\"",
+    "\"@jolly-pixel/ecs\"",
     JSON.stringify(`data:text/javascript,${encodeURIComponent(kEngineStub)}`)
   );
 
@@ -63,7 +63,7 @@ async function specifiers(
 describe("script build", () => {
   test("builds a behavior whose property decorators run as standard decorators", async() => {
     const code = await build(scriptAssetKind(), [
-      "import { Behavior, SceneProperty } from \"@jolly-pixel/engine\";",
+      "import { Behavior, SceneProperty } from \"@jolly-pixel/ecs\";",
       "export class Mover extends Behavior {",
       "  @SceneProperty({ type: \"number\" })",
       "  speed = 1;",
@@ -91,7 +91,7 @@ describe("script build", () => {
 
   test("keeps the imports a script uses as values and drops the ones used as types", async() => {
     const code = await build(scriptAssetKind(), [
-      "import { Behavior } from \"@jolly-pixel/engine\";",
+      "import { Behavior } from \"@jolly-pixel/ecs\";",
       "import type { Enemy } from \"./Enemy.ts\";",
       "import { Target } from \"../ai/Target.ts\";",
       "import { Path } from \"./Path.ts\";",
@@ -103,7 +103,7 @@ describe("script build", () => {
     ].join("\n"));
 
     assert.deepEqual(await specifiers(code), [
-      "@jolly-pixel/engine",
+      "@jolly-pixel/ecs",
       "../ai/Target.ts"
     ]);
   });
@@ -114,8 +114,8 @@ describe("script build", () => {
       [scriptAssetKind(), "await import(\"./Enemy.ts\");", "dynamically"],
       [
         shaderAssetKind(),
-        "import { Behavior } from \"@jolly-pixel/engine\";\nBehavior;",
-        "\"@jolly-pixel/engine\""
+        "import { Behavior } from \"@jolly-pixel/ecs\";\nBehavior;",
+        "\"@jolly-pixel/ecs\""
       ],
       [shaderAssetKind(), "import { noise } from \"./noise.ts\";\nnoise;", "\"./noise.ts\""]
     ];

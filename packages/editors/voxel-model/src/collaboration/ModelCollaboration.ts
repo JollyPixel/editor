@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import { PeerFrustums } from "@jolly-pixel/editor.host/viewport";
 import type * as THREE from "three";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 import {
   PeerRoster,
   RoomFieldLocks

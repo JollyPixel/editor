@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Behavior } from "@jolly-pixel/engine";
+import { Behavior } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import { compileScript } from "#src/compiler/node.ts";
@@ -25,7 +25,7 @@ interface RegisteredBehavior {
 // CONSTANTS
 const kBehaviorMetadata = Symbol.for("BehaviorMetadata");
 const kScript = `
-import { Behavior, SceneProperty } from "@jolly-pixel/engine";
+import { Behavior, SceneProperty } from "@jolly-pixel/ecs";
 
 export class Idle extends Behavior {}
 

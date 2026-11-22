@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import { ModelFileDocument } from "@jolly-pixel/asset.model/client";
 import type { SceneAssetContext } from "@jolly-pixel/editor.host/scene";
-import type { Model } from "@jolly-pixel/engine";
+import type { Model } from "@jolly-pixel/backend.three";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies

@@ -4,7 +4,8 @@ Asset loaders that import the build of a script or shader asset in the page.
 The code runs with the rights of the viewer, as a game would.
 
 ```ts
-import { SCRIPT_MODULE_ASSET, ShaderAssetType } from "@jolly-pixel/engine";
+import { SCRIPT_MODULE_ASSET } from "@jolly-pixel/ecs";
+import { ShaderAssetType } from "@jolly-pixel/backend.three";
 import {
   ScriptModuleLoader,
   ShaderModuleLoader
@@ -33,7 +34,8 @@ through the import map of the page.
 
 The page must map each import a script may make:
 
-- `three`, `three/webgpu`, `three/tsl` and `@jolly-pixel/engine` to modules
+- `three`, `three/webgpu`, `three/tsl`, `@jolly-pixel/ecs` and
+  `@jolly-pixel/backend.three` to modules
   that re-export the game's own copy, so a script extends the same
   `Behavior` class the game runs;
 - each script, under every form a `./` or `../` import may name it, to the

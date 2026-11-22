@@ -1,0 +1,240 @@
+// Import Node.js Dependencies
+import { describe, test, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Internal Dependencies
+import { Actor } from "../../../src/actor/Actor.ts";
+import { ActorComponent } from "../../../src/actor/ActorComponent.ts";
+import { Scene } from "../../../src/systems/scene/Scene.ts";
+import {
+  ComponentDefinitions,
+  FileScene,
+  type ComponentDefinition,
+  type SceneFile
+} from "../../../src/systems/scene/file/index.ts";
+import { Behavior } from "../../../src/components/script/Behavior.ts";
+import { SceneProperty } from "../../../src/components/script/BehaviorDecorators.ts";
+import { ScriptDefinition } from "../../../src/components/script/ScriptDefinition.ts";
+import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
+import { createSceneAssets } from "../../helpers/scene/sceneAssets.ts";
+import {
+  createActorFile,
+  createComponentFile,
+  createSceneFile
+} from "../../helpers/scene/sceneFile.ts";
+import { MARKERS_DEFINITION } from "../../helpers/scene/sceneAnchors.ts";
+
+// CONSTANTS
+const kCoinDefinition: ComponentDefinition<number, CoinComponent> = {
+  type: "Coin",
+  parse: (data) => (typeof data.value === "number" ? data.value : 1),
+  create: (actor, value) => {
+    const coin = actor.addComponentAndGet(CoinComponent);
+    coin.value = value;
+
+    return coin;
+  },
+  owns: (component) => component instanceof CoinComponent,
+  capture: (coin) => {
+    return { value: coin.value };
+  }
+};
+
+class ModelComponent extends ActorComponent {
+  readonly model: string | null;
+
+  constructor(
+    actor: Actor,
+    options: { model: string | null; }
+  ) {
+    super({ actor, typeName: "Model" });
+    this.model = options.model;
+  }
+}
+
+class CoinComponent extends ActorComponent {
+  value = 1;
+
+  constructor(
+    actor: Actor
+  ) {
+    super({ actor, typeName: "Coin" });
+  }
+}
+
+class Patrol extends Behavior {
+  speed = 1;
+  target: Actor | null = null;
+}
+SceneProperty({ type: "number" })(Patrol.prototype, "speed");
+SceneProperty({ type: "Actor" })(Patrol.prototype, "target");
+
+function createLevel() {
+  const assets = createSceneAssets(["knight"]);
+  const { type } = assets.reference("knight");
+  const model: ComponentDefinition<string, ModelComponent, { model: string; }> = {
+    type: "Model",
+    assets: { model: type },
+    parse: (data) => (typeof data.skin === "string" ? data.skin : "plain"),
+    create: (actor, _skin, context) => actor.addComponentAndGet(ModelComponent, {
+      model: context.assets.resolve("model")
+    })
+  };
+  const components = new ComponentDefinitions().register(
+    model,
+    kCoinDefinition,
+    new ScriptDefinition({ Patrol })
+  );
+  const knight = { id: "knight", kind: type.kind.value };
+  const file = createSceneFile([
+    createActorFile("hero", {
+      components: [
+        createComponentFile("model", "Model", { skin: "gold" }, { model: knight }),
+        createComponentFile("patrol", "Script", {
+          behavior: "Patrol",
+          properties: { speed: 2, target: "door" }
+        })
+      ]
+    }),
+    createActorFile("hand", { parentId: "hero" }),
+    createActorFile("door")
+  ]);
+
+  return { assets, components, file, knight };
+}
+
+async function load(
+  file: SceneFile,
+  level: ReturnType<typeof createLevel>
+) {
+  const { sm, world } = createSceneSetup({ assets: level.assets });
+  const scene = new FileScene("level", file, { components: level.components });
+  const sceneLoad = sm.loadScene(scene);
+  level.assets.loader.resolve("knight");
+  await sceneLoad.done;
+  sm.beginFrame();
+
+  return { sm, world, scene };
+}
+
+describe("Systems.FileScene capture", () => {
+  beforeEach(() => {
+    Scene.Id.clear();
+  });
+
+  test("writes every live actor back with file ids, data and asset slots", async() => {
+    const level = createLevel();
+    const { sm, world, scene } = await load(level.file, level);
+    const hero = sm.findActor("hero")!;
+    hero.transform.local.position = { x: 4, y: 0, z: 0 };
+    hero.findComponent(Patrol)!.speed = 7;
+    const coin = new Actor(world as any, { name: "coin", parent: hero });
+    coin.addComponentAndGet(CoinComponent).value = 3;
+
+    const { actors } = scene.capture();
+
+    assert.deepEqual(
+      actors.map(({ id, name, parentId }) => [id, name, parentId]),
+      [
+        ["hero", "hero", null],
+        ["hand", "hand", "hero"],
+        [coin.persistentId, "coin", "hero"],
+        ["door", "door", null]
+      ]
+    );
+    assert.deepEqual(actors[0].transform.position, { x: 4, y: 0, z: 0 });
+    assert.deepEqual(actors[0].components, [
+      createComponentFile("model", "Model", { skin: "gold" }, { model: level.knight }),
+      createComponentFile("patrol", "Script", {
+        behavior: "Patrol",
+        properties: { speed: 7, target: "door" }
+      })
+    ]);
+    assert.deepEqual(
+      actors[2].components.map(({ type, data }) => [type, data]),
+      [["Coin", { value: 3 }]]
+    );
+  });
+
+  test("captures the data last applied when the definition cannot capture", () => {
+    const { world } = createSceneSetup();
+    const sign = new Actor(world as any, { name: "sign" });
+    const components = new ComponentDefinitions().register({
+      type: "Label",
+      parse: (data) => data,
+      create: (actor) => new ActorComponent({ actor, typeName: "Label" }),
+      apply: () => undefined
+    });
+    const entry = createComponentFile("label", "Label", { text: "old" });
+    const label = components.create(sign, entry, {
+      mode: "edit",
+      resolver: { resolve: () => null as never }
+    })!;
+
+    components.apply(label, "Label", { text: "new" });
+
+    assert.deepEqual(
+      components.capture(label),
+      createComponentFile("label", "Label", { text: "new" })
+    );
+  });
+
+  test("keeps the built data when apply declines the patch", () => {
+    const { world } = createSceneSetup();
+    const sign = new Actor(world as any, { name: "sign" });
+    const components = new ComponentDefinitions().register({
+      type: "Label",
+      parse: (data) => data,
+      create: (actor) => new ActorComponent({ actor, typeName: "Label" }),
+      apply: () => false
+    });
+    const entry = createComponentFile("label", "Label", { text: "old" });
+    const label = components.create(sign, entry, {
+      mode: "edit",
+      resolver: { resolve: () => null as never }
+    })!;
+
+    assert.strictEqual(components.apply(label, "Label", { text: "new" }), false);
+    assert.deepEqual(components.capture(label), entry);
+  });
+
+  test("reloads a capture into the state it was taken from", async() => {
+    const level = createLevel();
+    const first = await load(level.file, level);
+    const hero = first.sm.findActor("hero")!;
+    hero.transform.local.position = { x: 4, y: 0, z: 0 };
+    hero.findComponent(Patrol)!.speed = 7;
+    first.world.createActor("coin").addComponentAndGet(CoinComponent).value = 3;
+    const capture = first.scene.capture();
+
+    const { sm } = await load(capture, level);
+
+    const reloaded = sm.findActor("hero")!;
+    const patrol = reloaded.findComponent(Patrol)!;
+    assert.strictEqual(reloaded.transform.local.position.x, 4);
+    assert.strictEqual(patrol.speed, 7);
+    assert.strictEqual(patrol.target, sm.findActor("door"));
+    assert.strictEqual(reloaded.findComponent(ModelComponent)!.model, "knight");
+    assert.strictEqual(sm.findActor("coin")!.findComponent(CoinComponent)!.value, 3);
+  });
+
+  test("keeps the anchor an actor sits on", async() => {
+    const { sm } = createSceneSetup();
+    const anchor = { component: "markers", key: "spawn" };
+    const scene = new FileScene("map", createSceneFile([
+      createActorFile("map", {
+        components: [createComponentFile("markers", "Markers", { spawn: 5 })]
+      }),
+      createActorFile("hero", { parentId: "map", anchor })
+    ]), {
+      components: new ComponentDefinitions().register(MARKERS_DEFINITION)
+    });
+    await sm.loadScene(scene).done;
+    sm.beginFrame();
+
+    const [, hero] = scene.capture().actors;
+
+    assert.deepEqual(hero.anchor, anchor);
+    assert.deepEqual(hero.transform.position, { x: 0, y: 0, z: 0 });
+  });
+});

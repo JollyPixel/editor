@@ -9,7 +9,7 @@ const PIXEL_ART_DOCUMENT: AssetType<PixelDocument>;
 
 function pixelArtDocument(file: PixelArtFile): PixelDocument;
 
-const RUNTIME_COMPONENTS: RuntimeComponentPackage;
+const RUNTIME_COMPONENTS: ThreeComponentPackage;
 ```
 
 - `RUNTIME_COMPONENTS` declares no component and one loader, for

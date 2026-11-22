@@ -3,7 +3,7 @@ import {
   expect,
   test
 } from "tstyche";
-import type { SignalEvent } from "@jolly-pixel/engine";
+import type { SignalEvent } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { SignalKey } from "#src/scene/index.ts";

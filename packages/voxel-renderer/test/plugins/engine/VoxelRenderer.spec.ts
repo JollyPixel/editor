@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 
 // Import Third-party Dependencies
 import * as THREE from "three";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import { VoxelRenderer } from "../../../src/plugins/engine/VoxelRenderer.ts";

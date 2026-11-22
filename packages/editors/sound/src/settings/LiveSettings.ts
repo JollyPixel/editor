@@ -3,7 +3,7 @@ import type {
   SoundDocument,
   SoundSettingsChange
 } from "@jolly-pixel/asset.sound/client";
-import { Systems } from "@jolly-pixel/engine/core";
+import { Systems } from "@jolly-pixel/ecs";
 import { Emitter } from "@openally/emitt";
 
 export type LiveSettingsEvents = {

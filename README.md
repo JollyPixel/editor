@@ -68,8 +68,9 @@ Planned. It will turn a project's assets into the catalog manifest the runtime l
 
 #### Core
 
-- [runtime](./packages/runtime) - Game runtime for web browsers and Electron
-- [engine](./packages/engine) - Minimal ECS framework on top of Three.js
+- [runtime](./packages/runtime) - Renderer-agnostic game runtime for web browsers and Electron (boot, overlay, session, metrics)
+- [ecs](./packages/ecs) - Minimal, renderer-agnostic ECS framework (actors, behaviors, scenes, world)
+- [backend.three](./packages/backend.three) - Three.js backend for the ECS: rendering, audio, assets, UI and the browser `Runtime`
 - [loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
 - [controls](./packages/controls) - Input controls (screen, mouse, touchpad, keyboard, gamepad)
 - [scripting](./packages/scripting) - Compiles, outlines and loads the game's TypeScript scripts and TSL shaders
@@ -110,9 +111,9 @@ Generic packages used by more than one sub-domain.
 Public packages are published on npm and can be installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com). The studio, editors, formats, tooling and 🚧 renderers are private workspaces.
 
 ```bash
-$ npm i @jolly-pixel/engine
+$ npm i @jolly-pixel/ecs @jolly-pixel/backend.three
 # or
-$ yarn add @jolly-pixel/engine
+$ yarn add @jolly-pixel/ecs @jolly-pixel/backend.three
 ```
 
 ### Build

@@ -3,7 +3,7 @@ import type * as THREE from "three/webgpu";
 import {
   ActorComponent,
   type Actor
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import type { Preferences } from "@jolly-pixel/preferences";
 import {
   MeshHighlight,

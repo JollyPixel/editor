@@ -4,7 +4,7 @@ import {
   ActorComponent,
   Systems,
   type Actor
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import type { NamedSceneComponentPackage } from "@jolly-pixel/editor.host/scene";
 
 // Import Internal Dependencies

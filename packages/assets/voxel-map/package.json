@@ -74,13 +74,12 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
-    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
     "@jolly-pixel/golem.kit": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/physics": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
-    "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/voxel.renderer": "workspace:*",
     "@openally/emitt": "1.1.0",
     "three": "0.187.0",
@@ -89,6 +88,7 @@
   "devDependencies": {
     "@jolly-pixel/asset-source": "workspace:*",
     "@jolly-pixel/asset.common": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*"
   }
 }

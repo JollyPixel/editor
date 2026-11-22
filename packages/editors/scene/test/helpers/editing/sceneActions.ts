@@ -4,7 +4,7 @@ import {
   type AssetReferenceData
 } from "@jolly-pixel/asset";
 import { SceneDocument } from "@jolly-pixel/asset.scene/client";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import { SceneActions } from "../../../src/editing/SceneActions.ts";

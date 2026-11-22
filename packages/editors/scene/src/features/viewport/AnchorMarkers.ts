@@ -4,7 +4,7 @@ import {
   ActorComponent,
   type Actor,
   type Systems
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
@@ -20,6 +20,7 @@ import { AnchorMarker } from "./helpers/AnchorMarker.ts";
 const kMarkerColor = "#6bc4f5";
 const kHangingColor = "#f5c46b";
 const kPickRadius = 0.25;
+const kOwnerWorld = new THREE.Matrix4();
 
 export interface AnchorMarkersOptions {
   live: Pick<
@@ -121,7 +122,7 @@ export class AnchorMarkers extends ActorComponent {
     drawn.marker.root.visible = owner?.transform.visibleInHierarchy ?? false;
     if (owner !== null) {
       drawn.marker.place(
-        owner.transform.global.matrix,
+        kOwnerWorld.fromArray(owner.transform.global.matrix),
         drawn.anchor.pose
       );
     }

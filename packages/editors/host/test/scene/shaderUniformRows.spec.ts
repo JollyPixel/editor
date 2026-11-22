@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   TEXTURE_ASSET,
   type Shader
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies

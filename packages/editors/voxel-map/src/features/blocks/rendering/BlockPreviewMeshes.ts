@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type * as THREE from "three";
-import { disposeObject3D } from "@jolly-pixel/engine";
+import { disposeObject3D } from "@jolly-pixel/backend.three";
 import type {
   BlockPieces,
   ResolvedBlockDefinition

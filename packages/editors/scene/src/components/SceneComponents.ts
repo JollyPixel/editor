@@ -14,7 +14,7 @@ import {
   type SceneComponentOrigin,
   type SceneComponentSummary
 } from "@jolly-pixel/editor.host/scene";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 // CONSTANTS
 export const EMPTY_ACTOR_ICON = "actor-empty";

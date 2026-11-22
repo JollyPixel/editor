@@ -7,7 +7,7 @@ import {
   type SceneTransformJSON,
   type SceneTransformPatch
 } from "@jolly-pixel/asset.scene/client";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies

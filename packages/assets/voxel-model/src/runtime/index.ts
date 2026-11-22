@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { RuntimeComponentPackage } from "@jolly-pixel/runtime";
+import type { ThreeComponentPackage } from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import { VoxelModelDefinition } from "./VoxelModelDefinition.ts";
@@ -18,7 +18,7 @@ export * from "./blocks/paintBlockSurface.ts";
 // CONSTANTS
 export const VOXEL_MODEL_DEFINITION = new VoxelModelDefinition();
 
-export const RUNTIME_COMPONENTS: RuntimeComponentPackage = {
+export const RUNTIME_COMPONENTS: ThreeComponentPackage = {
   definitions: [VOXEL_MODEL_DEFINITION],
   loaders: [
     {
