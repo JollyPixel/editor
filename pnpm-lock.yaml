@@ -902,12 +902,12 @@ importers:
       '@jolly-pixel/loop':
         specifier: workspace:*
         version: link:../loop
+      '@jolly-pixel/math':
+        specifier: workspace:*
+        version: link:../math
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
-      math:
-        specifier: 0.1.0
-        version: 0.1.0
     devDependencies:
       '@jolly-pixel/bench':
         specifier: workspace:*
@@ -1687,6 +1687,15 @@ importers:
         specifier: workspace:*
         version: link:../ui
 
+  packages/math:
+    devDependencies:
+      '@jolly-pixel/bench':
+        specifier: workspace:*
+        version: link:../bench
+      three:
+        specifier: 0.187.0
+        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
+
   packages/network:
     dependencies:
       '@jolly-pixel/history':
@@ -1747,9 +1756,9 @@ importers:
 
   packages/physics:
     dependencies:
-      math:
-        specifier: 0.1.0
-        version: 0.1.0
+      '@jolly-pixel/math':
+        specifier: workspace:*
+        version: link:../math
       three:
         specifier: ^0.187.0
         version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)

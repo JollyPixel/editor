@@ -1,18 +1,14 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
   quat,
   vec3,
-  loadEuler,
-  loadQuaternion,
-  loadVector3,
-  writeEuler,
-  writeQuaternion,
-  writeVector3,
   type EulerLike,
   type Quat,
   type QuaternionLike,
   type Vector3Like
-} from "../../math.ts";
+} from "@jolly-pixel/math";
+
+// Import Internal Dependencies
 import type { TransformPose } from "./TransformPose.ts";
 
 // CONSTANTS
@@ -50,46 +46,46 @@ export class LocalSpace {
   }
 
   get position(): Readonly<Vector3Like> {
-    return writeVector3(this.#position, this.#pose.position);
+    return vec3.write(this.#position, this.#pose.position);
   }
 
   set position(
     value: Readonly<Vector3Like>
   ) {
-    loadVector3(this.#pose.position, value);
+    vec3.load(this.#pose.position, value);
     this.#pose.changed();
   }
 
   get orientation(): Readonly<QuaternionLike> {
-    return writeQuaternion(this.#orientation, this.#pose.quaternion);
+    return quat.write(this.#orientation, this.#pose.quaternion);
   }
 
   set orientation(
     value: Readonly<QuaternionLike>
   ) {
-    loadQuaternion(this.#pose.quaternion, value);
+    quat.load(this.#pose.quaternion, value);
     this.#pose.changed();
   }
 
   get eulerAngles(): Readonly<EulerLike> {
-    return writeEuler(this.#eulerAngles, this.#pose.quaternion);
+    return quat.writeEuler(this.#eulerAngles, this.#pose.quaternion);
   }
 
   set eulerAngles(
     value: Readonly<EulerLike>
   ) {
-    loadEuler(this.#pose.quaternion, value);
+    quat.loadEuler(this.#pose.quaternion, value);
     this.#pose.changed();
   }
 
   get scale(): Readonly<Vector3Like> {
-    return writeVector3(this.#scale, this.#pose.scale);
+    return vec3.write(this.#scale, this.#pose.scale);
   }
 
   set scale(
     value: Readonly<Vector3Like>
   ) {
-    loadVector3(this.#pose.scale, value);
+    vec3.load(this.#pose.scale, value);
     this.#pose.changed();
   }
 
@@ -98,9 +94,9 @@ export class LocalSpace {
     quaternion: Readonly<QuaternionLike>,
     scale: Readonly<Vector3Like>
   ): this {
-    loadVector3(this.#pose.position, position);
-    loadQuaternion(this.#pose.quaternion, quaternion);
-    loadVector3(this.#pose.scale, scale);
+    vec3.load(this.#pose.position, position);
+    quat.load(this.#pose.quaternion, quaternion);
+    vec3.load(this.#pose.scale, scale);
     this.#pose.changed();
 
     return this;
@@ -110,7 +106,7 @@ export class LocalSpace {
     offset: Readonly<Vector3Like>
   ): this {
     const { position } = this.#pose;
-    vec3.add(position, position, loadVector3(kOffset, offset));
+    vec3.add(position, position, vec3.load(kOffset, offset));
     this.#pose.changed();
 
     return this;
@@ -119,13 +115,13 @@ export class LocalSpace {
   rotate(
     quaternion: Readonly<QuaternionLike>
   ): this {
-    return this.#premultiply(loadQuaternion(kRotation, quaternion));
+    return this.#premultiply(quat.load(kRotation, quaternion));
   }
 
   rotateEulerAngles(
     eulerAngles: Readonly<EulerLike>
   ): this {
-    return this.#premultiply(loadEuler(kRotation, eulerAngles));
+    return this.#premultiply(quat.loadEuler(kRotation, eulerAngles));
   }
 
   #premultiply(

@@ -1,13 +1,15 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { Vector3Like } from "@jolly-pixel/math";
+
 // Import Internal Dependencies
 import type { PhysicsBody } from "../PhysicsBody.ts";
 import type {
   ContactEvent,
   PhysicsWorld
 } from "../PhysicsWorld.ts";
-import type { Vector3Like } from "../vectors.ts";
 
 // CONSTANTS
 const kStep = 1 / 60;

@@ -1,10 +1,12 @@
-// Import Internal Dependencies
-import type { Actor } from "../../actor/Actor.ts";
+// Import Third-party Dependencies
 import type {
   Mat4,
   Quat,
   Vec3
-} from "../../math.ts";
+} from "@jolly-pixel/math";
+
+// Import Internal Dependencies
+import type { Actor } from "../../actor/Actor.ts";
 import type {
   World,
   WorldAudio

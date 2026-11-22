@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import { clamp } from "@jolly-pixel/math";
+
 // Import Internal Dependencies
-import { clamp } from "../../math.ts";
 import {
   ComponentData,
   isJSONObject

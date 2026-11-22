@@ -2,12 +2,11 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { Mat4, Vector3Like } from "@jolly-pixel/math";
+
 // Import Internal Dependencies
 import { Transform } from "../src/actor/transform/Transform.ts";
-import type {
-  Mat4,
-  Vector3Like
-} from "../src/math.ts";
 import {
   assertQuaternionClose,
   assertVectorClose,

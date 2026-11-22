@@ -1,5 +1,7 @@
+// Import Third-party Dependencies
+import { mat4 } from "@jolly-pixel/math";
+
 // Import Internal Dependencies
-import { mat4 } from "../../../../math.ts";
 import type { Actor } from "../../../../actor/Actor.ts";
 import type { TransformSocket } from "../../../../actor/transform/Transform.ts";
 import type {

@@ -1,16 +1,15 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
   mat4,
   quat,
   vec3,
-  loadQuaternion,
-  loadVector3,
-  lookRotation,
   type Mat4,
   type QuaternionLike,
   type Vec3,
   type Vector3Like
-} from "../../math.ts";
+} from "@jolly-pixel/math";
+
+// Import Internal Dependencies
 import {
   DETACHED_ACTOR_NODE,
   type ActorNode
@@ -32,7 +31,7 @@ const kWorld = mat4.create();
 const kEye = vec3.create();
 const kTarget = vec3.create();
 const kUp = vec3.create();
-const kDefaultUp = vec3.fromValues(0, 1, 0);
+const kDefaultUp = vec3.create(0, 1, 0);
 const kOffset = vec3.create();
 const kOrientation = quat.create();
 const kTargetOrientation = quat.create();
@@ -57,7 +56,7 @@ export class Transform {
   #socket: TransformSocket | null = null;
   #position = vec3.create();
   #quaternion = quat.create();
-  #scale = vec3.fromValues(1, 1, 1);
+  #scale = vec3.create(1, 1, 1);
   #visible = true;
   #local = mat4.create();
   #localDirty = false;
@@ -161,7 +160,7 @@ export class Transform {
   ) {
     const targetPosition = target instanceof Transform || "transform" in target ?
       worldPosition(Transform.resolveTransform(target).#pose, kTarget) :
-      loadVector3(kTarget, target);
+      vec3.load(kTarget, target);
 
     return this.#lookAt(targetPosition, up);
   }
@@ -173,7 +172,7 @@ export class Transform {
     vec3.subtract(
       kTarget,
       worldPosition(this.#pose, kTarget),
-      loadVector3(kOffset, direction)
+      vec3.load(kOffset, direction)
     );
 
     return this.#lookAt(kTarget, up);
@@ -182,7 +181,7 @@ export class Transform {
   moveOriented(
     offset: Readonly<Vector3Like>
   ) {
-    vec3.transformQuat(kOffset, loadVector3(kOffset, offset), this.#quaternion);
+    vec3.transformQuat(kOffset, vec3.load(kOffset, offset), this.#quaternion);
     vec3.add(this.#position, this.#position, kOffset);
 
     return this.#changed();
@@ -219,7 +218,7 @@ export class Transform {
     target: Readonly<Vector3Like>,
     alpha: number
   ) {
-    vec3.lerp(this.#position, this.#position, loadVector3(kTarget, target), alpha);
+    vec3.lerp(this.#position, this.#position, vec3.load(kTarget, target), alpha);
 
     return this.#changed();
   }
@@ -231,7 +230,7 @@ export class Transform {
     quat.slerp(
       this.#quaternion,
       this.#quaternion,
-      loadQuaternion(kTargetOrientation, target),
+      quat.load(kTargetOrientation, target),
       alpha
     );
 
@@ -242,11 +241,11 @@ export class Transform {
     target: Vec3,
     up?: Readonly<Vector3Like>
   ): this {
-    lookRotation(
+    quat.lookAt(
       kOrientation,
       worldPosition(this.#pose, kEye),
       target,
-      up ? loadVector3(kUp, up) : kDefaultUp
+      up ? vec3.load(kUp, up) : kDefaultUp
     );
     orientInWorld(this.#pose, kOrientation);
 
@@ -287,10 +286,10 @@ export class Transform {
 
   #localMatrix(): Mat4 {
     if (this.#localDirty) {
-      mat4.fromRotationTranslationScale(
+      mat4.compose(
         this.#local,
-        this.#quaternion,
         this.#position,
+        this.#quaternion,
         this.#scale
       );
       if (this.#socket !== null) {

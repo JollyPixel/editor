@@ -13,13 +13,11 @@ three.js `Euler` is read in XYZ order whatever its `order` says. Matrices are
 `Mat4`: 16 numbers in column-major order, the layout of three.js
 `Matrix4.elements`. The package exports these types.
 
-Code that computes with pmndrs `math` tuples converts at the edge with
-`loadVector3(out, value)`, `loadQuaternion(out, value)` and
-`loadMatrix(out, value)`, which fill a tuple, and `writeVector3(out, value)`
-and `writeQuaternion(out, value)`, which fill a plain object. Each returns
-`out`. `decomposeMatrix(matrix, position, quaternion, scale)` splits a `Mat4`
-into tuples like three.js `Matrix4.decompose`: a mirrored matrix gets a
-negative x scale.
+Code that computes with `@jolly-pixel/math` tuples converts at the edge with
+`vec3.load(out, value)` and `quat.load(out, value)`, which fill a tuple, and
+`vec3.write(out, value)` and `quat.write(out, value)`, which fill a plain
+object. `mat4.decompose(matrix, position, quaternion, scale)` splits a `Mat4`
+into tuples.
 
 `transform.local` and `transform.global` expose the pose in each space
 as properties. Reading one returns a read-only copy owned by the transform:

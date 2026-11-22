@@ -1,9 +1,9 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import type {
   Mat4,
   Quat,
   Vec3
-} from "../../math.ts";
+} from "@jolly-pixel/math";
 
 export interface TransformPose {
   readonly position: Vec3;

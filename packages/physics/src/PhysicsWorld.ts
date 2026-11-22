@@ -1,10 +1,12 @@
+// Import Third-party Dependencies
+import type { Vector3Like } from "@jolly-pixel/math";
+
 // Import Internal Dependencies
 import type {
   BodyDesc,
   PhysicsBody
 } from "./PhysicsBody.ts";
 import type { PhysicsCollider } from "./PhysicsCollider.ts";
-import type { Vector3Like } from "./vectors.ts";
 
 export interface ContactEvent {
   started: boolean;

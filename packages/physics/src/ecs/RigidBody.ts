@@ -2,21 +2,17 @@
 import {
   type Actor,
   ActorComponent,
-  SignalEvent,
-  decomposeMatrix,
-  loadMatrix,
-  loadQuaternion,
-  loadVector3,
-  writeQuaternion,
-  writeVector3
+  SignalEvent
 } from "@jolly-pixel/ecs";
 import {
   mat4,
   quat,
   vec3,
   type Quat,
-  type Vec3
-} from "math";
+  type QuaternionLike,
+  type Vec3,
+  type Vector3Like
+} from "@jolly-pixel/math";
 
 // Import Internal Dependencies
 import {
@@ -29,10 +25,6 @@ import {
   type PhysicsBody
 } from "../PhysicsBody.ts";
 import type { PhysicsCollider } from "../PhysicsCollider.ts";
-import type {
-  QuaternionLike,
-  Vector3Like
-} from "../vectors.ts";
 import {
   PhysicsSystem,
   type ActorContact,
@@ -41,7 +33,6 @@ import {
 import { scaleCollider } from "./shapes/scale.ts";
 
 // CONSTANTS
-const kMatrix = mat4.create();
 const kPosition = vec3.create();
 const kRotation = quat.create();
 const kScale = vec3.create();
@@ -128,8 +119,8 @@ export class RigidBody extends ActorComponent {
     this.settings = settings;
 
     const system = PhysicsSystem.require(actor.world);
-    decomposeMatrix(
-      loadMatrix(kMatrix, actor.transform.global.matrix),
+    mat4.decompose(
+      actor.transform.global.matrix,
       this.#current.position,
       this.#current.rotation,
       kScale
@@ -141,10 +132,10 @@ export class RigidBody extends ActorComponent {
       .ownedBodies(actor, (contact) => this.#contact(contact))
       .createBody({
         ...bodySettings,
-        position: writeVector3(kActorPosition, this.#current.position),
-        rotation: writeQuaternion(kActorRotation, this.#current.rotation)
+        position: vec3.write(kActorPosition, this.#current.position),
+        rotation: quat.write(kActorRotation, this.#current.rotation)
       });
-    const scale = writeVector3(kActorScale, kScale);
+    const scale = vec3.write(kActorScale, kScale);
     this.colliders = colliders.map(
       (collider) => this.body.attach(scaleCollider(collider, scale))
     );
@@ -156,8 +147,8 @@ export class RigidBody extends ActorComponent {
     rotation: QuaternionLike = this.body.rotation
   ): void {
     this.body.teleport(position, rotation);
-    loadVector3(this.#current.position, position);
-    loadQuaternion(this.#current.rotation, rotation);
+    vec3.load(this.#current.position, position);
+    quat.load(this.#current.rotation, rotation);
     this.#snap();
     this.#writeActorPose(this.#current.position, this.#current.rotation);
   }
@@ -225,8 +216,8 @@ export class RigidBody extends ActorComponent {
 
   #captureDynamicPose(): void {
     this.#snap();
-    loadVector3(this.#current.position, this.body.position);
-    loadQuaternion(this.#current.rotation, this.body.rotation);
+    vec3.load(this.#current.position, this.body.position);
+    quat.load(this.#current.rotation, this.body.rotation);
   }
 
   #snap(): void {
@@ -239,8 +230,8 @@ export class RigidBody extends ActorComponent {
     rotation: Readonly<Quat>
   ): void {
     const { transform } = this.actor;
-    transform.global.position = writeVector3(kActorPosition, position);
-    transform.global.orientation = writeQuaternion(kActorRotation, rotation);
+    transform.global.position = vec3.write(kActorPosition, position);
+    transform.global.orientation = quat.write(kActorRotation, rotation);
   }
 }
 

@@ -36,7 +36,7 @@ flowchart TB
     Transform -->|"pushes each change"| Node
 ```
 
-- Math runs on pmndrs `math` tuples; the API takes `{ x, y, z }` objects.
+- Math runs on `@jolly-pixel/math` tuples; the API takes `{ x, y, z }` objects.
 - A pose written on the node is overwritten by the next transform change.
 
 Code: `src/actor/`, `src/components/script/`.

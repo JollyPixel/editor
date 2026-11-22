@@ -51,6 +51,7 @@ export const packageGroups: PackageGroup[] = [
   {
     text: "Shared",
     packages: [
+      { dir: "math", text: "Math" },
       { dir: "utils", text: "Utils" }
     ]
   },

@@ -93,6 +93,7 @@ Generic packages used by more than one sub-domain.
 - [three](./packages/three) - Three.js components and utilities (grid, transform controls, selection highlight...)
 - [color](./packages/color) - Color parsing, palettes, color spaces and conversions
 - [image](./packages/image) - PNG codecs and browser raster decoding
+- [math](./packages/math) - Vector, quaternion and matrix math on plain number tuples
 - [utils](./packages/utils) - Small standalone helpers
 
 ## 🛠️ Tooling

@@ -43,8 +43,8 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
     "@jolly-pixel/loop": "workspace:*",
-    "@openally/emitt": "1.1.0",
-    "math": "0.1.0"
+    "@jolly-pixel/math": "workspace:*",
+    "@openally/emitt": "1.1.0"
   },
   "devDependencies": {
     "@jolly-pixel/bench": "workspace:*"

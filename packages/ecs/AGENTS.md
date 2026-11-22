@@ -22,9 +22,5 @@ pnpm's isolated `node_modules` make such an import fail typecheck.
 - `declare module "@jolly-pixel/ecs"` merges only into top-level exports, not
   into members of `Systems`. A type a backend augments must be exported at the
   top level, as `SceneBackend` is.
-- pmndrs `math` differs from three.js: `mat4.decompose` is wrong for
-  non-uniform scale and mirrored matrices, `mat4.invert` returns `null` on a
-  singular matrix, and `mat4.targetTo` has no degenerate fallbacks. Use
-  `decomposeMatrix`, `invertMatrix` and `lookRotation` from `src/math.ts`.
 - A quaternion check through `|dot| > 1 - ε` passes for a non-unit
   quaternion; assert the unit length too.

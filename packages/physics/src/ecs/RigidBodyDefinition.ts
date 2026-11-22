@@ -4,11 +4,11 @@ import {
   type Component,
   Systems
 } from "@jolly-pixel/ecs";
+import type { Vector3Like } from "@jolly-pixel/math";
 
 // Import Internal Dependencies
 import type { BodyKind } from "../PhysicsBody.ts";
 import type { ColliderShape } from "../ColliderShape.ts";
-import type { Vector3Like } from "../vectors.ts";
 import {
   COLLIDER_SETTINGS_DEFAULTS,
   RigidBody,
