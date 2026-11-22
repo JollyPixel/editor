@@ -1,13 +1,8 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
   mat4,
   quat,
   vec3,
-  loadEuler,
-  loadQuaternion,
-  loadVector3,
-  writeEuler,
-  writeQuaternion,
   DEGREES_TO_RADIANS,
   RADIANS_TO_DEGREES,
   type EulerLike,
@@ -15,7 +10,9 @@ import {
   type Quat,
   type QuaternionLike,
   type Vector3Like
-} from "../../../math.ts";
+} from "@jolly-pixel/math";
+
+// Import Internal Dependencies
 import type { Transform } from "../../../actor/transform/Transform.ts";
 import type {
   SceneTransformFile,
@@ -50,7 +47,7 @@ export function writeSceneTransform(
 ): void {
   transform.local.place(
     file.position,
-    writeQuaternion(kOrientation, loadFileRotation(file.rotation)),
+    quat.write(kOrientation, loadFileRotation(file.rotation)),
     file.scale
   );
 }
@@ -69,9 +66,9 @@ export function readSceneTransform(
   pose: Readonly<SceneTransformPose>
 ): SceneTransformFile {
   const { position, scale } = pose;
-  const rotation = writeEuler(
+  const rotation = quat.writeEuler(
     kRotation,
-    loadQuaternion(kQuaternion, pose.quaternion)
+    quat.load(kQuaternion, pose.quaternion)
   );
 
   return {
@@ -97,11 +94,11 @@ export function composeSceneTransform(
   transform: SceneTransformFile,
   target = mat4.create()
 ): Mat4 {
-  return mat4.fromRotationTranslationScale(
+  return mat4.compose(
     target,
+    vec3.load(kPosition, transform.position),
     loadFileRotation(transform.rotation),
-    loadVector3(kPosition, transform.position),
-    loadVector3(kScale, transform.scale)
+    vec3.load(kScale, transform.scale)
   );
 }
 
@@ -112,5 +109,5 @@ function loadFileRotation(
   kRotation.y = rotation.y * DEGREES_TO_RADIANS;
   kRotation.z = rotation.z * DEGREES_TO_RADIANS;
 
-  return loadEuler(kQuaternion, kRotation);
+  return quat.loadEuler(kQuaternion, kRotation);
 }

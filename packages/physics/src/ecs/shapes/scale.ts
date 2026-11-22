@@ -1,9 +1,11 @@
+// Import Third-party Dependencies
+import type { Vector3Like } from "@jolly-pixel/math";
+
 // Import Internal Dependencies
 import type {
   ColliderDesc,
   ColliderShape
 } from "../../ColliderShape.ts";
-import type { Vector3Like } from "../../vectors.ts";
 
 type PlacedCollider = ColliderDesc & Required<Pick<ColliderDesc, "offset">>;
 

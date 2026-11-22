@@ -54,7 +54,7 @@
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "math": "0.1.0"
+    "@jolly-pixel/math": "workspace:*"
   },
   "peerDependencies": {
     "@jolly-pixel/backend.three": "workspace:*",

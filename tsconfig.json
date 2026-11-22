@@ -5,6 +5,9 @@
       "path": "./packages/utils"
     },
     {
+      "path": "./packages/math"
+    },
+    {
       "path": "./packages/controls"
     },
     {

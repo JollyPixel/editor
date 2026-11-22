@@ -21,18 +21,8 @@ export type {
   Quat,
   QuaternionLike,
   Vec3,
-  Vector2Like,
-  Vector3Like,
-  Vector4Like
-} from "./math.ts";
-export {
-  decomposeMatrix,
-  loadMatrix,
-  loadQuaternion,
-  loadVector3,
-  writeQuaternion,
-  writeVector3
-} from "./math.ts";
+  Vector3Like
+} from "@jolly-pixel/math";
 
 export {
   Input,

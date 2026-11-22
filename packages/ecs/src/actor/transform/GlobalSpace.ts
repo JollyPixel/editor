@@ -1,20 +1,15 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
   mat4,
   quat,
   vec3,
-  loadEuler,
-  loadMatrix,
-  loadQuaternion,
-  loadVector3,
-  writeEuler,
-  writeQuaternion,
-  writeVector3,
   type EulerLike,
   type Mat4,
   type QuaternionLike,
   type Vector3Like
-} from "../../math.ts";
+} from "@jolly-pixel/math";
+
+// Import Internal Dependencies
 import type { TransformPose } from "./TransformPose.ts";
 import {
   moveInWorld,
@@ -29,7 +24,6 @@ import {
 } from "./worldPose.ts";
 
 // CONSTANTS
-const kMatrix = mat4.create();
 const kVector = vec3.create();
 const kQuaternion = quat.create();
 
@@ -81,21 +75,21 @@ export class GlobalSpace {
   set matrix(
     value: Readonly<Mat4>
   ) {
-    placeInWorld(this.#pose, loadMatrix(kMatrix, value));
+    placeInWorld(this.#pose, value);
   }
 
   get position(): Readonly<Vector3Like> {
-    return writeVector3(this.#position, worldPosition(this.#pose, kVector));
+    return vec3.write(this.#position, worldPosition(this.#pose, kVector));
   }
 
   set position(
     value: Readonly<Vector3Like>
   ) {
-    moveInWorldTo(this.#pose, loadVector3(kVector, value));
+    moveInWorldTo(this.#pose, vec3.load(kVector, value));
   }
 
   get orientation(): Readonly<QuaternionLike> {
-    return writeQuaternion(
+    return quat.write(
       this.#orientation,
       worldOrientation(this.#pose, kQuaternion)
     );
@@ -104,11 +98,11 @@ export class GlobalSpace {
   set orientation(
     value: Readonly<QuaternionLike>
   ) {
-    orientInWorld(this.#pose, loadQuaternion(kQuaternion, value));
+    orientInWorld(this.#pose, quat.load(kQuaternion, value));
   }
 
   get eulerAngles(): Readonly<EulerLike> {
-    return writeEuler(
+    return quat.writeEuler(
       this.#eulerAngles,
       worldOrientation(this.#pose, kQuaternion)
     );
@@ -117,7 +111,7 @@ export class GlobalSpace {
   set eulerAngles(
     value: Readonly<EulerLike>
   ) {
-    orientInWorld(this.#pose, loadEuler(kQuaternion, value));
+    orientInWorld(this.#pose, quat.loadEuler(kQuaternion, value));
   }
 
   get forward(): Readonly<Vector3Like> {
@@ -135,7 +129,7 @@ export class GlobalSpace {
   move(
     offset: Readonly<Vector3Like>
   ): this {
-    moveInWorld(this.#pose, loadVector3(kVector, offset));
+    moveInWorld(this.#pose, vec3.load(kVector, offset));
 
     return this;
   }
@@ -143,7 +137,7 @@ export class GlobalSpace {
   rotate(
     quaternion: Readonly<QuaternionLike>
   ): this {
-    rotateInWorld(this.#pose, loadQuaternion(kQuaternion, quaternion));
+    rotateInWorld(this.#pose, quat.load(kQuaternion, quaternion));
 
     return this;
   }
@@ -151,7 +145,7 @@ export class GlobalSpace {
   rotateEulerAngles(
     eulerAngles: Readonly<EulerLike>
   ): this {
-    rotateInWorld(this.#pose, loadEuler(kQuaternion, eulerAngles));
+    rotateInWorld(this.#pose, quat.loadEuler(kQuaternion, eulerAngles));
 
     return this;
   }
@@ -160,6 +154,6 @@ export class GlobalSpace {
     out: Vector3Like,
     axis: WorldAxis
   ): Vector3Like {
-    return writeVector3(out, worldDirection(this.#pose, kVector, axis));
+    return vec3.write(out, worldDirection(this.#pose, kVector, axis));
   }
 }

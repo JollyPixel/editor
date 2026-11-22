@@ -1,8 +1,8 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import type {
   QuaternionLike,
   Vector3Like
-} from "./vectors.ts";
+} from "@jolly-pixel/math";
 
 export interface BoxShape {
   type: "box";

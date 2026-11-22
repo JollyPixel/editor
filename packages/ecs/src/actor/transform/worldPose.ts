@@ -1,14 +1,14 @@
-// Import Internal Dependencies
+// Import Third-party Dependencies
 import {
   mat4,
   quat,
   vec3,
-  decomposeMatrix,
-  invertMatrix,
   type Mat4,
   type Quat,
   type Vec3
-} from "../../math.ts";
+} from "@jolly-pixel/math";
+
+// Import Internal Dependencies
 import type { TransformPose } from "./TransformPose.ts";
 
 export type WorldAxis = "forward" | "right" | "up";
@@ -22,23 +22,23 @@ const kOrientation = quat.create();
 const kParentOrientation = quat.create();
 const kRotation = quat.create();
 const kAxes: Record<WorldAxis, Vec3> = {
-  forward: vec3.fromValues(0, 0, -1),
-  right: vec3.fromValues(1, 0, 0),
-  up: vec3.fromValues(0, 1, 0)
+  forward: vec3.create(0, 0, -1),
+  right: vec3.create(1, 0, 0),
+  up: vec3.create(0, 1, 0)
 };
 
 export function worldPosition(
   pose: TransformPose,
   out: Vec3
 ): Vec3 {
-  return mat4.getTranslation(out, pose.globalMatrix());
+  return mat4.extractTranslation(out, pose.globalMatrix());
 }
 
 export function worldOrientation(
   pose: TransformPose,
   out: Quat
 ): Quat {
-  decomposeMatrix(pose.globalMatrix(), kPosition, out, kScale);
+  mat4.decompose(pose.globalMatrix(), kPosition, out, kScale);
 
   return out;
 }
@@ -57,10 +57,10 @@ export function worldDirection(
 
 export function placeInWorld(
   pose: TransformPose,
-  matrix: Mat4
+  matrix: Readonly<Mat4>
 ): void {
   mat4.multiply(kMatrix, inverseParentFrame(pose), matrix);
-  decomposeMatrix(kMatrix, pose.position, pose.quaternion, pose.scale);
+  mat4.decompose(kMatrix, pose.position, pose.quaternion, pose.scale);
   pose.changed();
 }
 
@@ -86,7 +86,7 @@ export function orientInWorld(
   pose: TransformPose,
   orientation: Quat
 ): void {
-  decomposeMatrix(
+  mat4.decompose(
     pose.parentFrame(kFrame),
     kPosition,
     kParentOrientation,
@@ -113,5 +113,5 @@ export function rotateInWorld(
 function inverseParentFrame(
   pose: TransformPose
 ): Mat4 {
-  return invertMatrix(kFrame, pose.parentFrame(kFrame));
+  return mat4.invert(kFrame, pose.parentFrame(kFrame));
 }

@@ -1,10 +1,12 @@
-// Import Internal Dependencies
-import type { ColliderDesc } from "./ColliderShape.ts";
-import type { PhysicsCollider } from "./PhysicsCollider.ts";
+// Import Third-party Dependencies
 import type {
   QuaternionLike,
   Vector3Like
-} from "./vectors.ts";
+} from "@jolly-pixel/math";
+
+// Import Internal Dependencies
+import type { ColliderDesc } from "./ColliderShape.ts";
+import type { PhysicsCollider } from "./PhysicsCollider.ts";
 
 export type BodyKind = "dynamic" | "kinematic" | "fixed";
 

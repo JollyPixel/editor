@@ -1,11 +1,8 @@
 // Import Node.js Dependencies
 import assert from "node:assert/strict";
 
-// Import Internal Dependencies
-import type {
-  QuaternionLike,
-  Vector3Like
-} from "../../../src/math.ts";
+// Import Third-party Dependencies
+import type { QuaternionLike, Vector3Like } from "@jolly-pixel/math";
 
 export function assertQuaternionClose(
   actual: Readonly<QuaternionLike>,
