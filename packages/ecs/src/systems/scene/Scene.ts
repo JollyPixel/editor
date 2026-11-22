@@ -53,7 +53,7 @@ export abstract class Scene<
 
   get logger(): Logger {
     this.#logger ??= this.world.logger.child({
-      namespace: `Scene.${this.name}`
+      namespace: `scene.${this.name.replaceAll(".", "-")}`
     });
 
     return this.#logger;

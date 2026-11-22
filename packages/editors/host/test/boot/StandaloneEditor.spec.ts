@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { StandaloneEditor } from "#src/boot/StandaloneEditor.ts";
-import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
+import { silentLogger } from "../helpers/logs.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { parseFrameMessage } from "#src/shell/protocol.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
@@ -36,7 +36,7 @@ describe("StandaloneEditor", () => {
     ];
     const editor = new StandaloneEditor(definition(
       (context) => Promise.resolve(editorHandle(context.session))
-    ), readDebugLogger());
+    ), silentLogger());
 
     await assert.rejects(
       editor.mount({

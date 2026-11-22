@@ -1,15 +1,15 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type Component,
   Systems
 } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
+import { ConfigurableDefinition } from "../../ConfigurableDefinition.ts";
 import {
   FontAssetType,
   type Font
-} from "../../../assets/font.ts";
+} from "../../../assets/loaders/FontAssetLoader.ts";
 import {
   captureMeshSurface,
   parseMeshSurface
@@ -32,12 +32,13 @@ const kTextAligns: Record<TextAlign, true> = {
   right: true
 };
 
-export class TextDefinition implements Systems.ComponentDefinition<
+export class TextDefinition extends ConfigurableDefinition<
   TextSettings,
   TextRenderer<any>,
   TextAssets
 > {
   readonly type = "Text";
+  protected readonly component = TextRenderer;
   readonly assets = {
     font: FontAssetType
   };
@@ -70,19 +71,6 @@ export class TextDefinition implements Systems.ComponentDefinition<
       ...data,
       font: context.assets.resolve("font")
     });
-  }
-
-  apply(
-    component: TextRenderer<any>,
-    data: TextSettings
-  ): void {
-    component.configure(data);
-  }
-
-  owns(
-    component: Component
-  ): component is TextRenderer<any> {
-    return component instanceof TextRenderer;
   }
 
   capture(

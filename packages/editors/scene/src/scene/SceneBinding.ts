@@ -3,7 +3,7 @@ import * as THREE from "three";
 import {
   Systems,
   type Actor,
-  type Component
+  type ActorComponent
 } from "@jolly-pixel/ecs";
 import {
   findActor
@@ -40,14 +40,14 @@ export interface SceneBindingOptions {
 }
 
 export interface BoundComponent {
-  component: Component;
+  component: ActorComponent<any>;
   actorId: string;
 }
 
 export type SceneBindingEvents = {
   actorsChange: () => void;
   componentBuilt: (bound: BoundComponent) => void;
-  componentDropped: (component: Component) => void;
+  componentDropped: (component: ActorComponent<any>) => void;
   anchorsChange: () => void;
 };
 
@@ -126,7 +126,7 @@ export class SceneBinding
 
   component(
     id: string
-  ): Component | null {
+  ): ActorComponent<any> | null {
     return this.#instance.component(id);
   }
 

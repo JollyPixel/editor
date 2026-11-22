@@ -31,21 +31,13 @@ export interface BenchWorld {
 export function createBenchWorld(
   steps = 1
 ): BenchWorld {
-  const sceneManager = new Systems.SceneManager(
-    new Systems.HeadlessSceneGraph()
-  );
   const world: Systems.World = new Systems.World(
     createRenderer(),
     {
-      sceneManager,
+      graph: new Systems.HeadlessSceneGraph(),
       input: createInput(),
       audio: {} as any,
-      assetCoordinator: {} as any,
-      globalsAdapter: {
-        exposeGame() {
-          return;
-        }
-      }
+      assetCoordinator: {} as any
     }
   );
   const schedule = createSchedule(steps);

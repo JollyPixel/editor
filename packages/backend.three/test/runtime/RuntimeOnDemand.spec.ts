@@ -60,7 +60,7 @@ describe("Runtime renderOnDemand", () => {
     runtime.world.invalidate();
 
     assert.equal(runtime.renderOnDemand, false);
-    assert.equal(runtime.idle, false);
+    assert.equal(runtime.loop.sleeping, false);
     assert.equal(renderer.source.looping, true);
     assert.equal(renderer.draws, 10);
     dispose();
@@ -72,7 +72,7 @@ describe("Runtime renderOnDemand", () => {
 
     tick(10);
 
-    assert.equal(runtime.idle, true);
+    assert.equal(runtime.loop.sleeping, true);
     assert.equal(runtime.loop.running, true);
     assert.equal(renderer.source.looping, false);
     assert.equal(renderer.draws, 3);
@@ -88,7 +88,7 @@ describe("Runtime renderOnDemand", () => {
       new PointerEvent("pointermove", { bubbles: true })
     );
 
-    assert.equal(runtime.idle, false);
+    assert.equal(runtime.loop.sleeping, false);
     assert.equal(renderer.source.looping, true);
     dispose();
   });
@@ -100,7 +100,7 @@ describe("Runtime renderOnDemand", () => {
 
     renderer.emit("compiled");
 
-    assert.equal(runtime.idle, false);
+    assert.equal(runtime.loop.sleeping, false);
     assert.equal(renderer.source.looping, true);
     dispose();
   });
@@ -116,11 +116,11 @@ describe("Runtime renderOnDemand", () => {
       new PointerEvent("pointermove", { bubbles: true })
     );
     tick(124);
-    assert.equal(runtime.idle, false);
+    assert.equal(runtime.loop.sleeping, false);
     assert.equal(renderer.source.looping, true);
 
     tick(10);
-    assert.equal(runtime.idle, true);
+    assert.equal(runtime.loop.sleeping, true);
     dispose();
   });
 
@@ -160,7 +160,7 @@ describe("Runtime renderOnDemand", () => {
     tick();
     await frame;
 
-    assert.equal(runtime.idle, false);
+    assert.equal(runtime.loop.sleeping, false);
     dispose();
   });
 
@@ -175,7 +175,7 @@ describe("Runtime renderOnDemand", () => {
 
     animating = false;
     tick(50);
-    assert.equal(runtime.idle, true);
+    assert.equal(runtime.loop.sleeping, true);
     dispose();
   });
 
@@ -188,12 +188,12 @@ describe("Runtime renderOnDemand", () => {
 
     runtime.world.invalidate();
     tick(10, 4);
-    assert.equal(runtime.idle, false);
+    assert.equal(runtime.loop.sleeping, false);
     assert.equal(renderer.draws, draws);
 
     tick(100, 4);
     assert.equal(renderer.draws, draws + 3);
-    assert.equal(runtime.idle, true);
+    assert.equal(runtime.loop.sleeping, true);
     dispose();
   });
 });

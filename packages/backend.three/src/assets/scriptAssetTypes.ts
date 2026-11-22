@@ -2,7 +2,7 @@
 import type { ScriptAssetTypes } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import { SoundAssetType } from "./sound.ts";
+import { SoundAssetType } from "./loaders/SoundAssetLoader.ts";
 
 // CONSTANTS
 export const SCRIPT_ASSET_TYPES: Readonly<ScriptAssetTypes> = Object.freeze({

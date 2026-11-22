@@ -69,9 +69,22 @@ export interface ThreeRendererOptions {
   output?: ThreeRendererOutputOptions;
 }
 
+export interface ThreeRendererConstructorOptions {
+  /**
+   * Lets `adaptPixelRatio()` change the pixel ratio.
+   * @default false
+   */
+  adaptivePixelRatio?: boolean;
+}
+
 export interface ResolvedRendererSettings {
   webgpu: Omit<THREE.WebGPURendererParameters, "canvas" | "context">;
   pixelRatio: number;
+  /**
+   * The pixel ratio follows the runtime's adaptive quality, true when
+   * neither `pixelRatio` nor `maxPixelRatio` is set.
+   */
+  adaptivePixelRatio: boolean;
   shadows: {
     enabled: boolean;
     type: THREE.ShadowMapType;
@@ -103,6 +116,8 @@ export function resolveRendererSettings(
       ...webgpu
     },
     pixelRatio,
+    adaptivePixelRatio: output.pixelRatio === undefined &&
+      output.maxPixelRatio === undefined,
     shadows: {
       enabled: shadows !== false,
       type: (shadows === false ? undefined : shadows.type) ?? THREE.PCFShadowMap
@@ -115,18 +130,21 @@ export function resolveRendererSettings(
 
 export class ThreeRenderer extends Emitter<ThreeRendererEvents>
   implements Systems.Renderer<THREE.WebGPURenderer> {
-  webGPURenderer: THREE.WebGPURenderer;
+  #source: THREE.WebGPURenderer;
 
   #compositor: CameraCompositor;
   #size = new Systems.CanvasSize();
   #resizeObserver: ResizeObserver | null = null;
   #compiles: PipelineCompiles | null = null;
+  #adaptivePixelRatio: boolean;
 
   constructor(
-    webGPURenderer: THREE.WebGPURenderer
+    webGPURenderer: THREE.WebGPURenderer,
+    options: ThreeRendererConstructorOptions = {}
   ) {
     super();
-    this.webGPURenderer = webGPURenderer;
+    this.#source = webGPURenderer;
+    this.#adaptivePixelRatio = options.adaptivePixelRatio ?? false;
     this.#compositor = new CameraCompositor(webGPURenderer);
 
     const { backend } = webGPURenderer;
@@ -152,16 +170,24 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents>
     canvas: HTMLCanvasElement,
     options: ThreeRendererOptions = {}
   ): Promise<ThreeRenderer> {
-    const webGPURenderer = await createWebGPURenderer(
-      canvas,
-      resolveRendererSettings(options)
-    );
+    const settings = resolveRendererSettings(options);
+    const webGPURenderer = await createWebGPURenderer(canvas, settings);
 
-    return new ThreeRenderer(webGPURenderer);
+    return new ThreeRenderer(webGPURenderer, {
+      adaptivePixelRatio: settings.adaptivePixelRatio
+    });
+  }
+
+  adaptPixelRatio(
+    ratio: number
+  ): void {
+    if (this.#adaptivePixelRatio) {
+      this.#source.setPixelRatio(ratio);
+    }
   }
 
   get canvas() {
-    return this.webGPURenderer.domElement;
+    return this.#source.domElement;
   }
 
   get ratio(): number | null {
@@ -173,7 +199,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents>
   }
 
   get source(): THREE.WebGPURenderer {
-    return this.webGPURenderer;
+    return this.#source;
   }
 
   get pendingCompiles(): number {
@@ -211,7 +237,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents>
   ): this {
     this.#size.layout = Systems.createCanvasFit(ratio);
     Object.assign(
-      this.webGPURenderer.domElement.style,
+      this.#source.domElement.style,
       this.#size.layout.styles
     );
     this.resize();
@@ -225,7 +251,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents>
     }
 
     const target = this.#size.layout.observeTarget(
-      this.webGPURenderer.domElement
+      this.#source.domElement
     );
     this.#resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -247,7 +273,7 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents>
       return;
     }
 
-    this.webGPURenderer.setSize(size.width, size.height, false);
+    this.#source.setSize(size.width, size.height, false);
     this.emit("resize", size);
   }
 
@@ -262,19 +288,19 @@ export class ThreeRenderer extends Emitter<ThreeRendererEvents>
     }
 
     this.#compositor.render(graph.scene, canvas, graph.postProcessing);
-    this.emit("draw", { source: this.webGPURenderer });
+    this.emit("draw", { source: this.#source });
   }
 
   clear() {
-    this.webGPURenderer.clear();
+    this.#source.clear();
   }
 
   dispose() {
     this.unobserveResize();
     this.#compositor.dispose();
 
-    this.webGPURenderer.setAnimationLoop(null);
-    this.webGPURenderer.dispose();
+    this.#source.setAnimationLoop(null);
+    this.#source.dispose();
   }
 }
 

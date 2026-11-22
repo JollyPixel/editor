@@ -16,41 +16,33 @@ export type ActorTreeNode<
   parent?: Actor<TContext>;
 };
 
-export interface ActorTreeOptions<
-  TContext = WorldDefaultContext
-> {
-  addCallback?: (actor: Actor<TContext>) => void;
-  removeCallback?: (actor: Actor<TContext>) => void;
-}
+type ActorLink = (
+  tree: ActorTree<any>,
+  actor: Actor<any>
+) => void;
+
+let link: ActorLink;
+let unlink: ActorLink;
 
 export class ActorTree<
   TContext = WorldDefaultContext
 > {
-  #addCallback?: (actor: Actor<TContext>) => void;
-  #removeCallback?: (actor: Actor<TContext>) => void;
-
-  children: Actor<TContext>[] = [];
-
-  constructor(
-    options: ActorTreeOptions<TContext> = {}
-  ) {
-    this.#addCallback = options.addCallback;
-    this.#removeCallback = options.removeCallback;
+  static {
+    link = (tree, actor) => {
+      tree.#children.push(actor);
+    };
+    unlink = (tree, actor) => {
+      const index = tree.#children.indexOf(actor);
+      if (index !== -1) {
+        tree.#children.splice(index, 1);
+      }
+    };
   }
 
-  add(
-    actor: Actor<TContext>
-  ): void {
-    this.children.push(actor);
-    this.#addCallback?.(actor);
-  }
+  #children: Actor<TContext>[] = [];
 
-  remove(actor: Actor<TContext>): void {
-    const index = this.children.indexOf(actor);
-    if (index !== -1) {
-      this.children.splice(index, 1);
-      this.#removeCallback?.(actor);
-    }
+  get children(): readonly Actor<TContext>[] {
+    return this.#children;
   }
 
   * findActors(
@@ -91,7 +83,7 @@ export class ActorTree<
   #findActorByPath(
     path: string
   ): Actor<TContext> | null {
-    let candidates: Actor<TContext>[] = this.children;
+    let candidates: readonly Actor<TContext>[] = this.children;
     let current: Actor<TContext> | null = null;
 
     for (const part of splitPath(path)) {
@@ -107,31 +99,9 @@ export class ActorTree<
     return current;
   }
 
-  destroyActor(
-    actor: Actor<TContext>
-  ) {
-    if (!actor.pendingForDestruction) {
-      actor.markDestructionPending();
-    }
-  }
-
-  destroyAllActors() {
-    for (const { actor } of this.walk()) {
-      this.destroyActor(actor);
-    }
-  }
-
   * walk(): IterableIterator<ActorTreeNode<TContext>> {
     for (const child of this.children) {
-      yield* walkDepthFirst(child, undefined);
-    }
-  }
-
-  * walkFromNode(
-    rootNode: Actor<TContext>
-  ): IterableIterator<ActorTreeNode<TContext>> {
-    for (const child of rootNode.children) {
-      yield* walkDepthFirst(child, rootNode);
+      yield* walkDepthFirst(child);
     }
   }
 
@@ -151,13 +121,15 @@ function splitPath(
 }
 
 function* walkDepthFirst<TContext>(
-  node: Actor<TContext>,
-  parentNode?: Actor<TContext>
+  node: Actor<TContext>
 ): IterableIterator<ActorTreeNode<TContext>> {
-  yield { actor: node, parent: parentNode };
+  yield {
+    actor: node,
+    parent: node.parent ?? undefined
+  };
 
   for (const child of node.children) {
-    yield* walkDepthFirst(child, node);
+    yield* walkDepthFirst(child);
   }
 }
 
@@ -198,3 +170,8 @@ function* matchPath<TContext>(
     }
   }
 }
+
+export {
+  link as linkActor,
+  unlink as unlinkActor
+};

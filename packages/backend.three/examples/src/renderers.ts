@@ -7,7 +7,7 @@ import {
   AudioBackground,
   SoundAssetType,
   TextRenderer,
-  AssetTypes
+  FontAssetType
 } from "@jolly-pixel/backend.three";
 import { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three";
@@ -16,7 +16,7 @@ import * as THREE from "three";
 import { bootstrapRuntime } from "./utils/bootstrapRuntime.ts";
 
 // CONSTANTS
-const kHelvetikerRegularFont = new AssetReference("helvetiker_regular", AssetTypes.font);
+const kHelvetikerRegularFont = new AssetReference("helvetiker_regular", FontAssetType);
 
 class RenderersScene extends Systems.Scene {
   audioBackground!: AudioBackground;

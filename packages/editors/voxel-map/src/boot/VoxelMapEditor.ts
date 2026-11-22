@@ -142,7 +142,7 @@ export class VoxelMapEditor {
       () => scene.ready
     );
     shell.adoptEditing(editing);
-    const removeInspectorMetrics = runtime.metrics.addSource(
+    const removeInspectorMetrics = runtime.stats.addSource(
       editing.view.inspector
     );
 

@@ -54,6 +54,10 @@ export class ManagedSceneLoad<
     return this.#activationAllowed;
   }
 
+  get activatable(): boolean {
+    return this.#status === "ready" && this.#activationAllowed;
+  }
+
   get completed(): number {
     return this.#completed;
   }

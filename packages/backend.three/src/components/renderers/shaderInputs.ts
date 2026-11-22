@@ -9,8 +9,8 @@ import {
   type Shader,
   type ShaderUniformValue,
   type ShaderUniformValues
-} from "../../assets/shader.ts";
-import { TEXTURE_ASSET } from "../../assets/texture.ts";
+} from "../../assets/Shader.ts";
+import { TEXTURE_ASSET } from "../../assets/loaders/TextureAssetLoader.ts";
 
 export type ShaderAssets = {
   shader: Shader;

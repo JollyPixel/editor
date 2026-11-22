@@ -1,32 +1,16 @@
-// Import Internal Dependencies
-import {
-  ModelAssetLoader,
-  ModelAssetType
-} from "./model.ts";
-import {
-  FontAssetLoader,
-  FontAssetType
-} from "./font.ts";
-
-export * from "./sound.ts";
+export * from "./loaders/SoundAssetLoader.ts";
 export * from "./scriptAssetTypes.ts";
-export * from "./sceneFile.ts";
-export * from "./environmentFile.ts";
-export * from "./texture.ts";
+export * from "./loaders/JSONFileAssetLoader.ts";
+export * from "./loaders/TextureAssetLoader.ts";
 export * from "./createDefaultAssetLoaders.ts";
-export {
-  ModelAssetLoader,
-  ModelAssetType,
-  modelTextureNames,
-  parseModel,
-  type Model,
-  type ModelParseOptions
-} from "./model.ts";
+export type * from "./ThreeComponentPackage.ts";
+export * from "./loaders/ModelAssetLoader.ts";
+export * from "./loaders/parseModel.ts";
 export {
   FontAssetLoader,
   FontAssetType,
   type Font
-} from "./font.ts";
+} from "./loaders/FontAssetLoader.ts";
 export {
   ShaderAssetType,
   describeShaderUniform,
@@ -37,14 +21,4 @@ export {
   type ShaderUniformDescription,
   type ShaderUniformValue,
   type ShaderUniformValues
-} from "./shader.ts";
-
-export const AssetLoaders = {
-  model: ModelAssetLoader,
-  font: FontAssetLoader
-} as const;
-
-export const AssetTypes = {
-  model: ModelAssetType,
-  font: FontAssetType
-} as const;
+} from "./Shader.ts";

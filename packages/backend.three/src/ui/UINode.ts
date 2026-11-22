@@ -7,7 +7,6 @@ import {
 } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import { UIRenderer } from "./UIRenderer.ts";
 import {
   UILayout,
   type UINodeOptions
@@ -23,18 +22,11 @@ export class UINode<TContext = Systems.WorldDefaultContext> extends ActorCompone
     super({ actor, typeName: "UINode" });
     this.layout = new UILayout(options);
 
-    const { world } = this.actor;
-    const uiRenderer = UIRenderer.for(world);
-    if (uiRenderer) {
-      uiRenderer.addChildren(this);
-      this.addTeardown(() => uiRenderer.removeChildren(this));
-    }
-    else {
-      const onResize = () => this.updateToWorldPosition();
-      this.updateToWorldPosition();
-      world.renderer.on("resize", onResize);
-      this.addTeardown(() => world.renderer.off("resize", onResize));
-    }
+    const { renderer } = this.actor.world;
+    const onResize = () => this.updateToWorldPosition();
+    this.updateToWorldPosition();
+    renderer.on("resize", onResize);
+    this.addTeardown(() => renderer.off("resize", onResize));
   }
 
   addChildren(

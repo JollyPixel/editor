@@ -26,7 +26,7 @@ class FakeResizeObserver {
 }
 
 describe("OverlayLayer", () => {
-  stubProperty(globalThis, "ResizeObserver", FakeResizeObserver);
+  stubProperty(window, "ResizeObserver", FakeResizeObserver);
   test("fills a container element without tracking", () => {
     const container = document.createElement("div");
     const canvas = createCanvas(container);

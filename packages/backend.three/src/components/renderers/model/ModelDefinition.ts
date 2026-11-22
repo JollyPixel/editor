@@ -2,14 +2,12 @@
 import { type Actor, Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import {
-  ModelAssetType,
-  type Model
-} from "../../../assets/model.ts";
+import { ModelAssetType } from "../../../assets/loaders/ModelAssetLoader.ts";
+import type { Model } from "../../../assets/loaders/parseModel.ts";
 import {
   ShaderAssetType,
   type Shader
-} from "../../../assets/shader.ts";
+} from "../../../assets/Shader.ts";
 import {
   parseUniformData,
   resolveShaderInputs

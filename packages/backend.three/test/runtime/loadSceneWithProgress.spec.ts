@@ -36,14 +36,14 @@ function createSceneManager() {
       load: () => Promise.withResolvers<string>().promise
     })
   });
-  const sceneManager = new Systems.SceneManager(new Systems.HeadlessSceneGraph());
-  sceneManager.bindWorld({
-    logger: new Systems.Logger(),
-    assetCoordinator: coordinator,
-    sceneManager
-  } as any);
 
-  return sceneManager;
+  return new Systems.SceneManager(
+    {
+      logger: new Systems.Logger(),
+      assetCoordinator: coordinator
+    } as any,
+    new Systems.HeadlessSceneGraph()
+  );
 }
 
 describe("loadSceneWithProgress", () => {

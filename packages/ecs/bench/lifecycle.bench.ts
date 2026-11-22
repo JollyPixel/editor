@@ -25,7 +25,7 @@ const suite = defineSuite("ecs / actor lifecycle", (bench) => {
       const actor = churn.createActor("churn");
       actor.addComponent(IdleBehavior);
       churn.tick();
-      churn.world.sceneManager.tree.destroyActor(actor);
+      actor.markDestructionPending();
       churn.tick();
     })
     .add("findComponent by class", () => {

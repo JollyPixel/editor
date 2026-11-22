@@ -5,25 +5,22 @@ import assert from "node:assert/strict";
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
 import { AssetReference } from "@jolly-pixel/asset";
-import { Actor, Systems } from "@jolly-pixel/ecs";
+import { Actor } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import { ThreeSceneGraph } from "../../../src/scene/ThreeSceneGraph.ts";
+import { fakeWorld } from "../../helpers/world/fakeWorld.ts";
 import { ModelRenderer } from "../../../src/components/renderers/model/ModelRenderer.ts";
-import {
-  ModelAssetType,
-  type Model
-} from "../../../src/assets/model.ts";
+import { ModelAssetType } from "../../../src/assets/loaders/ModelAssetLoader.ts";
+import type { Model } from "../../../src/assets/loaders/parseModel.ts";
 
 function createWorld(
   model: Model
 ) {
-  return {
-    sceneManager: new Systems.SceneManager(new ThreeSceneGraph()),
+  return fakeWorld({
     assetCoordinator: {
       get: () => model
     }
-  };
+  });
 }
 
 function createModel(): Model {
@@ -59,7 +56,7 @@ describe("Components.Renderers.ModelRenderer", () => {
     const [loaded] = model.object.children as THREE.Mesh[];
     loaded.castShadow = true;
     loaded.receiveShadow = true;
-    const renderer = new Actor({ sceneManager: new Systems.SceneManager(new ThreeSceneGraph()) } as any, {
+    const renderer = new Actor(fakeWorld() as any, {
       name: "lit"
     }).addComponentAndGet(ModelRenderer, {
       model,

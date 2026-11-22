@@ -6,17 +6,16 @@ import type { Systems } from "@jolly-pixel/ecs";
 import {
   BakedRoomEnvironment
 } from "../rendering/environment/BakedRoomEnvironment.ts";
-import { DaySky } from "../rendering/environment/sky/DaySky.ts";
-import { NightSky } from "../rendering/environment/sky/NightSky.ts";
-import type { SkyConstructor } from "../rendering/environment/sky/SkyConstructor.ts";
+import { daySky } from "../rendering/environment/sky/daySky.ts";
+import { nightSky } from "../rendering/environment/sky/nightSky.ts";
 import { EmissiveGlow } from "../rendering/compositing/EmissiveGlow.ts";
 import type { ThreeSceneGraph } from "./ThreeSceneGraph.ts";
 
 // CONSTANTS
 const kSunDistance = 24;
-const kSkies: Record<"day" | "night", SkyConstructor> = {
-  day: DaySky,
-  night: NightSky
+const kSkies: Record<"day" | "night", (direction: THREE.Vector3) => THREE.Node> = {
+  day: daySky,
+  night: nightSky
 };
 const kToneMappings: Record<Systems.EnvironmentToneMappingKind, THREE.ToneMapping> = {
   none: THREE.NoToneMapping,
@@ -42,6 +41,7 @@ export class ThreeSceneEnvironment implements Systems.SceneEnvironment {
   readonly ambient = new THREE.HemisphereLight();
 
   #world: Systems.World<any, any>;
+  #renderer: THREE.WebGPURenderer | null;
   #graph: ThreeSceneGraph;
   #logger: Systems.Logger;
   #glow = new EmissiveGlow();
@@ -65,18 +65,19 @@ export class ThreeSceneEnvironment implements Systems.SceneEnvironment {
     options: ThreeSceneEnvironmentOptions = {}
   ) {
     this.#world = world;
+    this.#renderer = world.renderer.source ?? null;
     this.#graph = graph;
     this.#loadedRoom = options.room ?? null;
     this.#logger = world.logger.child({
-      namespace: "Systems.SceneEnvironment"
+      namespace: "three.scene-environment"
     });
 
-    const output = this.#output();
-    this.#initialOutput = output === null ?
+    const renderer = this.#renderer;
+    this.#initialOutput = renderer === null ?
       null :
       {
-        toneMapping: output.toneMapping,
-        toneMappingExposure: output.toneMappingExposure
+        toneMapping: renderer.toneMapping,
+        toneMappingExposure: renderer.toneMappingExposure
       };
 
     this.sun.intensity = 0;
@@ -87,41 +88,16 @@ export class ThreeSceneEnvironment implements Systems.SceneEnvironment {
   apply(
     file: Readonly<Systems.EnvironmentFile>
   ): void {
-    const { scene } = this.#graph;
-
     this.#applySun(file.sun);
-    this.ambient.color.set(file.ambient.skyColor);
-    this.ambient.groundColor.set(file.ambient.groundColor);
-    this.ambient.intensity = file.ambient.intensity;
+    this.#applyAmbient(file.ambient);
     this.#applySky(file.sky);
-    scene.fog = createFog(file.fog);
-
-    scene.environmentIntensity = file.reflections.intensity;
-    this.#wantsRoom = file.reflections.kind === "room";
-    scene.environment = this.#wantsRoom ?
-      this.#room?.texture ?? null :
-      null;
-
-    const output = this.#output();
-    if (output !== null) {
-      output.toneMapping = kToneMappings[file.toneMapping.kind];
-      output.toneMappingExposure = file.toneMapping.exposure;
-    }
-
+    this.#graph.scene.fog = createFog(file.fog);
+    this.#applyToneMapping(file.toneMapping);
+    this.#applyReflections(file.reflections);
     this.#graph.postProcessing = file.glow ?
       this.#glow.apply(file.glow) :
       null;
     this.#graph.environment = file;
-
-    if (this.#wantsRoom && this.#room === null && output !== null) {
-      if (this.#loadedRoom === null) {
-        this.#loadRoom(output);
-      }
-      else {
-        this.#room = this.#loadedRoom.createRenderTarget(output);
-        scene.environment = this.#room.texture;
-      }
-    }
   }
 
   get fallbackSky(): THREE.Node | null {
@@ -169,6 +145,46 @@ export class ThreeSceneEnvironment implements Systems.SceneEnvironment {
     this.aimSun();
   }
 
+  #applyAmbient(
+    ambient: Readonly<Systems.EnvironmentFile["ambient"]>
+  ): void {
+    this.ambient.color.set(ambient.skyColor);
+    this.ambient.groundColor.set(ambient.groundColor);
+    this.ambient.intensity = ambient.intensity;
+  }
+
+  #applyToneMapping(
+    toneMapping: Readonly<Systems.EnvironmentFile["toneMapping"]>
+  ): void {
+    if (this.#renderer !== null) {
+      this.#renderer.toneMapping = kToneMappings[toneMapping.kind];
+      this.#renderer.toneMappingExposure = toneMapping.exposure;
+    }
+  }
+
+  #applyReflections(
+    reflections: Readonly<Systems.EnvironmentFile["reflections"]>
+  ): void {
+    const { scene } = this.#graph;
+    scene.environmentIntensity = reflections.intensity;
+    this.#wantsRoom = reflections.kind === "room";
+    scene.environment = this.#wantsRoom ? this.#roomTexture() : null;
+  }
+
+  #roomTexture(): THREE.Texture | null {
+    const renderer = this.#renderer;
+    if (this.#room === null && renderer !== null) {
+      if (this.#loadedRoom === null) {
+        this.#loadRoom(renderer);
+      }
+      else {
+        this.#room = this.#loadedRoom.createRenderTarget(renderer);
+      }
+    }
+
+    return this.#room?.texture ?? null;
+  }
+
   #applySky(
     sky: Readonly<Systems.EnvironmentSkyFile>
   ): void {
@@ -196,15 +212,11 @@ export class ThreeSceneEnvironment implements Systems.SceneEnvironment {
   ): THREE.Node {
     let node = this.#skies.get(kind);
     if (node === undefined) {
-      node = new kSkies[kind](this.#sunDirection).node;
+      node = kSkies[kind](this.#sunDirection);
       this.#skies.set(kind, node);
     }
 
     return node;
-  }
-
-  #output(): THREE.WebGPURenderer | null {
-    return this.#world.renderer.source ?? null;
   }
 
   #loadRoom(
@@ -244,10 +256,9 @@ export class ThreeSceneEnvironment implements Systems.SceneEnvironment {
     this.#graph.postProcessing = null;
     this.#graph.environment = null;
 
-    const output = this.#output();
-    if (output !== null && this.#initialOutput !== null) {
-      output.toneMapping = this.#initialOutput.toneMapping;
-      output.toneMappingExposure = this.#initialOutput.toneMappingExposure;
+    if (this.#renderer !== null && this.#initialOutput !== null) {
+      this.#renderer.toneMapping = this.#initialOutput.toneMapping;
+      this.#renderer.toneMappingExposure = this.#initialOutput.toneMappingExposure;
     }
 
     this.#room?.dispose();

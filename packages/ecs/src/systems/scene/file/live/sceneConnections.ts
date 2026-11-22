@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import { SignalEvent } from "../../../../actor/Signal.ts";
-import type { Component } from "../../../../components/types.ts";
+import type { ActorComponent } from "../../../../actor/ActorComponent.ts";
 import type { Logger } from "../../../Logger.ts";
 import type { SceneConnectionFile } from "../SceneFile.ts";
 import type { SceneInstanceComponent } from "./SceneInstance.ts";
@@ -8,7 +8,7 @@ import type { SceneInstanceComponent } from "./SceneInstance.ts";
 export interface SceneConnectionSources {
   component(
     id: string
-  ): Component | null;
+  ): ActorComponent<any> | null;
   components(): Iterable<SceneInstanceComponent>;
 }
 
@@ -32,7 +32,7 @@ export function connectSceneSignals(
 }
 
 function connectSignal(
-  source: Component,
+  source: ActorComponent<any>,
   connection: SceneConnectionFile,
   sources: SceneConnectionSources
 ): string | null {
@@ -49,11 +49,8 @@ function connectSignal(
     return "method not found";
   }
 
-  const handle = signal.connect((...args: unknown[]) => {
-    if (target.pendingForDestruction) {
-      handle.disconnect();
-    }
-    else {
+  target.listen(signal, (...args: unknown[]) => {
+    if (!target.pendingForDestruction) {
       Reflect.apply(method, target, args);
     }
   }, { once: connection.once ?? false });

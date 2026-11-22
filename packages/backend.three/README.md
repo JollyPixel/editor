@@ -6,18 +6,6 @@
 
 The three.js backend of `@jolly-pixel/ecs`. It draws the world with a `THREE.WebGPURenderer` and adds the renderers, cameras, lights, audio, in-game UI, asset loaders and the browser `Runtime` that boots a game on a canvas.
 
-> [!WARNING]
-> The backend is still in a heavy phase of development (expect frequent API breaking changes).
-
-## 💡 Features
-
-- WebGPU rendering with a WebGL2 fallback, post-processing and asynchronous pipeline compiles
-- Built-in renderers (3D models, 3D text, sprites, meshes)
-- Cameras, lights and environments (sky, fog, reflections, glow)
-- Audio (background music, sound library, spatial audio, audio zones)
-- UI toolkit for minimal in-game interfaces
-- Browser and [Electron][electron] runtime with a loading screen and performance statistics
-
 ## 💃 Getting Started
 
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].
@@ -158,7 +146,6 @@ Manages sound playback. It provides a global volume controller, a factory for cr
 
 - [Audio](./docs/audio/audio.md) — plays sounds through a mixer of
   categories, with voice limits, fades and positional sound.
-  - [AudioLibrary](./docs/audio/audio-library.md)
   - [AudioBackground](./docs/audio/audio-background.md) —
     playlist-based background music with sequential track playback,
     pause/resume/stop, and playlist chaining.

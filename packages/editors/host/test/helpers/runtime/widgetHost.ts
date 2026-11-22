@@ -3,9 +3,9 @@ export interface FakeWidget {
 }
 
 export interface FakeWidgetHost {
-  statsHud: FakeWidget | null;
   viewHelper: FakeWidget | null;
   metrics: {
+    hud: FakeWidget | null;
     panel: FakeWidget | null;
   };
 }
@@ -14,13 +14,13 @@ export function createWidgetHost(
   overrides: Partial<FakeWidgetHost> = {}
 ): FakeWidgetHost {
   return {
-    statsHud: {
-      hidden: false
-    },
     viewHelper: {
       hidden: false
     },
     metrics: {
+      hud: {
+        hidden: false
+      },
       panel: {
         hidden: true
       }

@@ -13,16 +13,19 @@ export interface EditWorld {
 }
 
 export function createEditWorld(): EditWorld {
-  const sceneManager = new Systems.SceneManager(new ThreeSceneGraph());
   const world = {
     logger: new Systems.Logger(),
-    sceneManager,
+    sceneManager: null as unknown as Systems.SceneManager,
     invalidate: () => undefined,
     createActor(name: string) {
       return new Actor(world as unknown as Systems.World, { name });
     }
   };
-  sceneManager.bindWorld(world as unknown as Systems.World);
+  const sceneManager = new Systems.SceneManager(
+    world as unknown as Systems.World,
+    new ThreeSceneGraph()
+  );
+  world.sceneManager = sceneManager;
 
   return {
     world: world as unknown as Systems.World,

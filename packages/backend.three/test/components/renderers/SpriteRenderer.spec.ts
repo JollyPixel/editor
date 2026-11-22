@@ -4,16 +4,16 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AssetReference } from "@jolly-pixel/asset";
-import { Actor, Systems } from "@jolly-pixel/ecs";
+import { Actor } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import { TEXTURE_ASSET } from "../../../src/assets/texture.ts";
+import { fakeWorld } from "../../helpers/world/fakeWorld.ts";
+import { TEXTURE_ASSET } from "../../../src/assets/loaders/TextureAssetLoader.ts";
 import { SpriteRenderer } from "../../../src/components/renderers/sprite/SpriteRenderer.ts";
-import { ThreeSceneGraph } from "../../../src/scene/ThreeSceneGraph.ts";
 
 describe("Components.Renderers.SpriteRenderer", () => {
   test("should request updates only while an animation plays", () => {
-    const world = { sceneManager: new Systems.SceneManager(new ThreeSceneGraph()) };
+    const world = fakeWorld();
     const actor = new Actor(world as any, { name: "sprite" });
     const renderer = actor.addComponentAndGet(SpriteRenderer, {
       texture: new AssetReference("sprite", TEXTURE_ASSET),

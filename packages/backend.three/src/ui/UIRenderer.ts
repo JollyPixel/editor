@@ -8,12 +8,11 @@ import {
 } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import type { UINode } from "./UINode.ts";
 import type { ThreeRenderComponent } from "../rendering/ThreeRenderComponent.ts";
 
 // CONSTANTS
-const kOrthographicCameraZIndex = 10;
-const kRenderersByWorld = new WeakMap<Systems.World<any, any>, UIRenderer<any>>();
+const kRenderDepth = 10;
+const kDefaultZIndex = 10;
 
 export interface UIRendererOptions {
   near?: number;
@@ -24,19 +23,10 @@ export interface UIRendererOptions {
 export class UIRenderer<
   TContext = Systems.WorldDefaultContext
 > extends ActorComponent<TContext> {
-  static for<TContext>(
-    world: Systems.World<any, TContext>
-  ): UIRenderer<TContext> | undefined {
-    return kRenderersByWorld.get(world);
-  }
-
-  camera: THREE.OrthographicCamera;
-  nodes: UINode<TContext>[] = [];
+  readonly camera: THREE.OrthographicCamera;
 
   #renderComponent: ThreeRenderComponent;
-  #cssRenderer: ThreeCSS2DRenderer;
-  #boundDraw: () => void;
-  #boundResize: () => void;
+  #cssRenderer = new ThreeCSS2DRenderer();
 
   constructor(
     actor: Actor<TContext>,
@@ -47,108 +37,56 @@ export class UIRenderer<
     const {
       near = 0.1,
       far = 2000,
-      zIndex = kOrthographicCameraZIndex
+      zIndex = kDefaultZIndex
     } = options;
     const { world } = actor;
-
-    const screenBounds = world.input.screen.bounds;
+    const { bounds } = world.input.screen;
 
     this.camera = new THREE.OrthographicCamera(
-      screenBounds.left,
-      screenBounds.right,
-      screenBounds.top,
-      screenBounds.bottom,
+      bounds.left,
+      bounds.right,
+      bounds.top,
+      bounds.bottom,
       near,
       far
     );
     this.camera.position.z = zIndex;
     this.actor.node.object3D.add(this.camera);
 
-    this.#cssRenderer = new ThreeCSS2DRenderer();
-    this.#cssRenderer.domElement.style.position = "absolute";
-    this.#cssRenderer.domElement.style.top = "0";
-    this.#cssRenderer.domElement.style.left = "0";
-    this.#cssRenderer.domElement.style.pointerEvents = "none";
+    const { style } = this.#cssRenderer.domElement;
+    style.position = "absolute";
+    style.top = "0";
+    style.left = "0";
+    style.pointerEvents = "none";
+    world.renderer.canvas.parentElement?.appendChild(this.#cssRenderer.domElement);
+    this.#fitOverlay();
 
-    const canvas = world.renderer.canvas;
-    canvas.parentElement?.appendChild(this.#cssRenderer.domElement);
-
-    const { width, height } = canvas.getBoundingClientRect();
-    this.#cssRenderer.setSize(width, height);
-
-    const camera = this.camera;
     this.#renderComponent = {
-      threeCamera: camera,
-      depth: kOrthographicCameraZIndex,
+      threeCamera: this.camera,
+      depth: kRenderDepth,
       viewport: null,
       prepareRender: () => void 0
     };
     world.renderer.addRenderComponent(this.#renderComponent);
+    world.renderer.on("resize", this.#fitOverlay);
+    world.renderer.on("draw", this.#draw);
 
-    this.#boundResize = this.#onResize.bind(this);
-    this.#boundDraw = this.#onDraw.bind(this);
-    world.renderer.on("resize", this.#boundResize);
-    world.renderer.on("draw", this.#boundDraw);
-
-    kRenderersByWorld.set(world, this);
-    this.addTeardown(() => this.clear());
+    this.addTeardown(() => {
+      world.renderer.removeRenderComponent(this.#renderComponent);
+      world.renderer.off("resize", this.#fitOverlay);
+      world.renderer.off("draw", this.#draw);
+      this.#cssRenderer.domElement.remove();
+    });
   }
 
-  addChildren(
-    node: UINode<TContext>
-  ): void {
-    const nodeIndex = this.nodes.indexOf(node);
-    if (nodeIndex !== -1) {
-      return;
-    }
-
-    node.updateToWorldPosition();
-    this.nodes.push(node);
-  }
-
-  removeChildren(
-    node: UINode<TContext>
-  ): void {
-    const nodeIndex = this.nodes.indexOf(node);
-    if (nodeIndex !== -1) {
-      this.nodes.splice(nodeIndex, 1);
-    }
-  }
-
-  updateWorldPosition(): void {
-    for (const node of this.nodes) {
-      node.updateToWorldPosition();
-    }
-  }
-
-  #onResize(): void {
-    const canvas = this.actor.world.renderer.canvas;
-    const { width, height } = canvas.getBoundingClientRect();
+  readonly #fitOverlay = (): void => {
+    const { width, height } = this.actor.world.renderer.canvas
+      .getBoundingClientRect();
     this.#cssRenderer.setSize(width, height);
+  };
 
-    this.updateWorldPosition();
-  }
-
-  #onDraw(): void {
-    const scene = this.actor.world.sceneManager.graph.scene;
+  readonly #draw = (): void => {
+    const { scene } = this.actor.world.sceneManager.graph;
     this.#cssRenderer.render(scene, this.camera);
-  }
-
-  clear(): void {
-    for (const node of [...this.nodes]) {
-      node.destroy();
-    }
-    this.nodes = [];
-
-    const { world } = this.actor;
-    world.renderer.removeRenderComponent(this.#renderComponent);
-    world.renderer.off("resize", this.#boundResize);
-    world.renderer.off("draw", this.#boundDraw);
-
-    this.#cssRenderer.domElement.remove();
-
-    if (kRenderersByWorld.get(world) === this) {
-      kRenderersByWorld.delete(world);
-    }
-  }
+  };
 }

@@ -172,7 +172,7 @@ describe("Systems.FileScene signals", () => {
       assert.deepEqual(find(["door"], Door).forces, [1]);
       assert.deepEqual(
         warnings().map(([message]) => message),
-        [`[WARN] [Systems.FileScene] Signal connection skipped: ${problem}`]
+        [`[WARN] [ecs.file-scene] Signal connection skipped: ${problem}`]
       );
     });
   }

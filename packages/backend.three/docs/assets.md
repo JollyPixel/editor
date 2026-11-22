@@ -10,9 +10,9 @@ Built-in model and text renderers accept typed references instead of paths:
 
 ```ts
 import { AssetReference } from "@jolly-pixel/asset";
-import { AssetTypes, ModelRenderer } from "@jolly-pixel/backend.three";
+import { ModelAssetType, ModelRenderer } from "@jolly-pixel/backend.three";
 
-const knight = new AssetReference("model.knight", AssetTypes.model);
+const knight = new AssetReference("model.knight", ModelAssetType);
 
 actor.addComponent(ModelRenderer, {
   asset: knight
@@ -23,12 +23,12 @@ actor.addComponent(ModelRenderer, {
 
 | Type | Kind | Loader | Supported formats |
 | ---- | ---- | ------ | ----------------- |
-| `AssetTypes.model` | `model` | `AssetLoaders.model` | OBJ, FBX, glTF, GLB (including `EXT_meshopt_compression`) |
-| `AssetTypes.font` | `font` | `AssetLoaders.font` | Three.js typeface JSON |
+| `ModelAssetType` | `model` | `ModelAssetLoader` | OBJ, FBX, glTF, GLB (including `EXT_meshopt_compression`) |
+| `FontAssetType` | `font` | `FontAssetLoader` | Three.js typeface JSON |
 | `SoundAssetType` | `sound` | `SoundAssetLoader` | Formats `decodeAudioData` supports, with [sound settings](./audio/audio.md#sound) read from an Ogg header |
 | `TEXTURE_ASSET` | `texture` | `TextureAssetLoader` | Formats supported by `THREE.TextureLoader`, plus KTX2 (see below) |
-| `SceneFileAssetType` | `scene` | `SceneFileAssetLoader` | A `SceneFile` as JSON, read by `FileScene` |
-| `Systems.ENVIRONMENT_ASSET` | `environment` | `EnvironmentFileAssetLoader` | An `EnvironmentFile` as JSON |
+| `SceneFileAssetType` | `scene` | `JSONFileAssetLoader` | A `SceneFile` as JSON, read by `FileScene` |
+| `Systems.ENVIRONMENT_ASSET` | `environment` | `JSONFileAssetLoader` | An `EnvironmentFile` as JSON |
 
 `Systems.ENVIRONMENT_ASSET` comes from `@jolly-pixel/ecs`.
 
@@ -41,6 +41,21 @@ const loaders = createDefaultAssetLoaders(new THREE.LoadingManager());
 const coordinator = new AssetCoordinator({
   catalog,
   loaders
+});
+```
+
+`options.loaders` registers more loaders after the built-in ones, each built
+with the same manager. A definition for a kind the built-in loaders already
+handle throws `AssetLoaderAlreadyExistsError`.
+
+```ts
+const loaders = createDefaultAssetLoaders(manager, {
+  loaders: [
+    {
+      type: TILE_MAP_ASSET,
+      create: (manager) => new TileMapAssetLoader(manager)
+    }
+  ]
 });
 ```
 

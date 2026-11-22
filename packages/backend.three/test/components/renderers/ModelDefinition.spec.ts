@@ -8,8 +8,8 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 import { Actor, Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import type { Model } from "../../../src/assets/model.ts";
-import type { Shader } from "../../../src/assets/shader.ts";
+import type { Model } from "../../../src/assets/loaders/parseModel.ts";
+import type { Shader } from "../../../src/assets/Shader.ts";
 import { ModelDefinition } from "../../../src/components/renderers/model/ModelDefinition.ts";
 import { createThreeSceneSetup } from "../../helpers/scene/threeSceneSetup.ts";
 
@@ -55,7 +55,6 @@ function createModel(
     })
   });
   renderer?.awake();
-  renderer?.start();
   renderer?.update(0);
 
   return renderer;

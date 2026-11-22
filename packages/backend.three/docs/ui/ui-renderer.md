@@ -3,8 +3,8 @@
 `UIRenderer` draws a 2D overlay over the 3D scene with its own
 `OrthographicCamera`, plus a `CSS2DRenderer` for text, so
 [UINode](./ui-node.md) and [UISprite](./ui-sprite.md) elements stay
-screen-aligned. Add one per world, usually on a dedicated actor; nodes
-register with it on their own.
+screen-aligned. Add one per world, usually on a dedicated actor. Nodes do not
+register with it: each one follows canvas resizes on its own.
 
 ```ts
 import { Actor } from "@jolly-pixel/ecs";
@@ -14,7 +14,7 @@ const camera2D = new Actor(world, { name: "camera2D" })
   .addComponent(UIRenderer, { near: 1 });
 ```
 
-On a canvas resize it resizes the overlay and repositions every node.
+On a canvas resize it resizes the CSS overlay.
 
 ## Constructor
 
@@ -66,38 +66,16 @@ button.clicked.connect(() => {
 });
 ```
 
-## Updating positions at runtime
-
-After changing a node's offset or anchor, `updateWorldPosition()` lays out
-every node again:
-
-```ts
-const uiRenderer = camera2D.findComponent(UIRenderer)!;
-uiRenderer.updateWorldPosition();
-```
-
 ## Cleanup
 
-`clear()` destroys every registered node, removes the CSS overlay and stops
-listening to the renderer. Destroying the component calls it:
-
-```ts
-uiRenderer.clear();
-```
+Destroying the component removes its camera from the renderer, the CSS
+overlay and its renderer listeners. UI nodes stay: their actors own them.
 
 ## API
 
 ```ts
 class UIRenderer extends ActorComponent {
-  /** The renderer registered for this world, if any. */
-  static for(world: World): UIRenderer | undefined;
-  camera: THREE.OrthographicCamera;
-  nodes: UINode[];
-
-  addChildren(node: UINode): void;
-  removeChildren(node: UINode): void;
-  updateWorldPosition(): void;
-  clear(): void;
+  readonly camera: THREE.OrthographicCamera;
 }
 ```
 

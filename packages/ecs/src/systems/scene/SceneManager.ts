@@ -51,17 +51,21 @@ export class SceneManager<
 
   #currentScene: Scene<TContext> | null = null;
   #sceneStartPending = false;
-  #world: World<any, TContext> | null = null;
-  #logger!: Logger;
+  #world: World<any, TContext>;
+  #logger: Logger;
 
   #replacementLoad: ManagedSceneLoad<TContext> | null = null;
-  #readyLoads: Set<ManagedSceneLoad<TContext>> = new Set();
   #appended: AppendedScenes<TContext>;
 
   constructor(
+    world: World<any, TContext>,
     graph: SceneGraph
   ) {
     super();
+    this.#world = world;
+    this.#logger = world.logger.child({
+      namespace: "ecs.scene-manager"
+    });
     this.graph = graph as BackendSceneGraph;
     this.actors = new ActorRegistry(graph);
     this.#appended = new AppendedScenes(
@@ -84,21 +88,11 @@ export class SceneManager<
   }
 
   get hasPendingScene(): boolean {
-    return this.#replacementLoad !== null &&
-      this.#readyLoads.has(this.#replacementLoad);
+    return this.#replacementLoad?.activatable ?? false;
   }
 
   get sceneLoad(): SceneLoad<TContext> | null {
     return this.#replacementLoad;
-  }
-
-  bindWorld(
-    world: World<any, TContext>
-  ): void {
-    this.#world = world;
-    this.#logger = world.logger.child({
-      namespace: "Systems.SceneManager"
-    });
   }
 
   awake() {
@@ -115,10 +109,7 @@ export class SceneManager<
     const load = new ManagedSceneLoad(
       scene,
       options,
-      (changed) => this.#handleLoadChange(
-        changed,
-        this.#replacementLoad === changed
-      )
+      (changed) => this.emit("sceneLoadChanged", changed)
     );
     this.#replacementLoad = load;
     this.emit("sceneLoadRequested", load);
@@ -145,35 +136,13 @@ export class SceneManager<
     const load = new ManagedSceneLoad(
       scene,
       options,
-      (changed) => this.#handleLoadChange(
-        changed,
-        this.#appended.tracks(changed)
-      )
+      (changed) => this.emit("sceneLoadChanged", changed)
     );
     this.#appended.request(load);
     this.emit("sceneLoadRequested", load);
     this.#startSceneLoad(load);
 
     return load;
-  }
-
-  #handleLoadChange(
-    load: ManagedSceneLoad<TContext>,
-    tracked: boolean
-  ): void {
-    this.emit("sceneLoadChanged", load);
-
-    if (!tracked) {
-      return;
-    }
-
-    if (load.status === "ready" && load.activationAllowed) {
-      this.#readyLoads.add(load);
-    }
-    else if (load.status === "failed" || load.status === "cancelled") {
-      this.#readyLoads.delete(load);
-      this.#appended.forget(load);
-    }
   }
 
   #startSceneLoad(
@@ -202,7 +171,7 @@ export class SceneManager<
       return;
     }
 
-    const coordinator = this.#world!.assetCoordinator;
+    const coordinator = this.#world.assetCoordinator;
     const batch = coordinator.loadBatch(
       load.scene.assetsToLoad(coordinator),
       {
@@ -235,7 +204,7 @@ export class SceneManager<
       scene: scene.name
     });
 
-    scene.world = this.#world!;
+    scene.world = this.#world;
     this.#currentScene = scene;
 
     scene.awake();
@@ -268,7 +237,7 @@ export class SceneManager<
       { scene: scene.name }
     );
 
-    this.#appended.activate(scene, this.#world!);
+    this.#appended.activate(scene, this.#world);
     this.emit("sceneAppended", scene);
   }
 
@@ -326,25 +295,17 @@ export class SceneManager<
   }
 
   #activateReadyLoads(): void {
-    if (this.#readyLoads.size === 0) {
-      return;
-    }
-
     const replacement = this.#replacementLoad;
-    if (replacement !== null && this.#readyLoads.delete(replacement)) {
+    if (replacement?.activatable) {
       this.#activateScene(replacement.scene);
       replacement.activate();
 
       return;
     }
 
-    const readyLoads = [...this.#readyLoads];
-    this.#readyLoads.clear();
-
-    for (const load of readyLoads) {
+    for (const load of this.#appended.takeActivatable()) {
       this.#activateAppendedScene(load.scene);
       load.activate();
-      this.#appended.forget(load);
     }
   }
 

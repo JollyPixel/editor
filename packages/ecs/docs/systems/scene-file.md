@@ -241,7 +241,7 @@ interface SceneConnectionFile {
 One definition per component `type`:
 
 ```ts
-interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
+interface ComponentDefinition<TData, TComponent extends ActorComponent, TAssets> {
   readonly type: string;
   readonly assets?: { [TSlot in keyof TAssets]: AssetType<TAssets[TSlot]> };
 
@@ -252,7 +252,7 @@ interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
     context: ComponentContext<TAssets>
   ): TComponent | null;
   apply?(component: TComponent, data: TData): boolean | void;
-  owns?(component: Component): component is TComponent;
+  owns?(component: ActorComponent): component is TComponent;
   capture?(component: TComponent, stored: Readonly<JSONObject>): JSONObject;
   anchors?(component: TComponent): ComponentAnchors;
   slotType?(slot: string, reference: AssetReferenceData): AssetType<unknown> | null;
@@ -329,7 +329,7 @@ uniform. Returns `null` when the slot holds another asset kind.
 
 - `register(...definitions): this` throws when a type is already registered.
 - `find(type): ComponentDefinition | null`
-- `create(actor, entry, { mode, resolver }): Component | null` builds the
+- `create(actor, entry, { mode, resolver }): ActorComponent | null` builds the
   component of a `SceneComponentFile` and remembers the entry it came from.
   Returns `null` for an unknown type or when the definition builds nothing.
 - `apply(component, type, data): boolean` patches a live component through
@@ -457,13 +457,13 @@ interface SceneInstanceOptions<TContext> {
 interface SceneInstanceComponent {
   id: string;
   actorId: string;
-  component: Component;
+  component: ActorComponent;
   connections: readonly SceneConnectionFile[]; // as in the file it was built from
 }
 
 type SceneInstanceEvents = {
   componentBuilt: (built: SceneInstanceComponent) => void;
-  componentDropped: (component: Component) => void;
+  componentDropped: (component: ActorComponent) => void;
   anchorsChange: () => void;
 };
 ```

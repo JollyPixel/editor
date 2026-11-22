@@ -16,7 +16,7 @@ import {
   SceneProperty,
   type Vector3Like
 } from "../src/index.ts";
-import { createWorld } from "./helpers/actor/mockWorld.ts";
+import { createHeadlessWorld } from "./helpers/world/headlessWorld.ts";
 
 class Sibling extends ActorComponent {
   constructor(
@@ -54,7 +54,7 @@ class ChildBehavior extends BehaviorOne {}
 
 function createRealActor() {
   return new Actor(
-    createWorld() as any,
+    createHeadlessWorld() as any,
     { name: "test" }
   );
 }
@@ -232,7 +232,7 @@ describe("Behavior bindings", () => {
       off: mock.fn()
     };
     const actor = new Actor(
-      { ...createWorld(), input: { keyboard } } as any,
+      createHeadlessWorld({ input: { keyboard } as any }),
       { name: "test" }
     );
     const listener = actor.addComponentAndGet(KeyListener);

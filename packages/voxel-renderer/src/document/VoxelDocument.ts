@@ -128,7 +128,7 @@ export class VoxelDocument extends BlockDocument<VoxelCommand> {
     }
 
     this.#logger = logger.child({
-      namespace: "VoxelDocument"
+      namespace: "voxel.document"
     });
 
     this.world = new VoxelWorld(chunkSize);

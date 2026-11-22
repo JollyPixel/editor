@@ -17,7 +17,7 @@ import type {
   ComponentDefinition
 } from "../../systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../systems/scene/file/SceneFile.ts";
-import type { Component } from "../types.ts";
+import type { ActorComponent } from "../../actor/ActorComponent.ts";
 import {
   Behavior,
   type BehaviorOptions
@@ -113,7 +113,10 @@ export class ScriptDefinition implements ComponentDefinition<
       context.assets.resolve("script") ?? this.#registered
     );
     if (behavior === null) {
-      actor.world.logger.warn("Unregistered behavior skipped", {
+      const logger = actor.world.logger.child({
+        namespace: "ecs.behavior"
+      });
+      logger.warn("Unregistered behavior skipped", {
         behavior: data.behavior,
         actor: actor.name
       });
@@ -143,7 +146,7 @@ export class ScriptDefinition implements ComponentDefinition<
   }
 
   owns(
-    component: Component
+    component: ActorComponent<any>
   ): component is Behavior<any> {
     return this.#names.has(component.constructor);
   }

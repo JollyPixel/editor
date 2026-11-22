@@ -35,3 +35,7 @@ export function captureLogs(
     })
   };
 }
+
+export function silentLogger(): Systems.Logger {
+  return new Systems.Logger({ level: "void" });
+}

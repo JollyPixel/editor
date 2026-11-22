@@ -5,7 +5,7 @@ import type {
 } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies
-import type { Component } from "../types.ts";
+import type { ComponentClass } from "../types.ts";
 import type { BehaviorPropertyType } from "./ScenePropertyValue.ts";
 
 export interface ScenePropertyOptions {
@@ -39,7 +39,7 @@ export type BehaviorInputListenerMetadata = {
 
 export type BehaviorMetadata = {
   properties: Map<BehaviorKey, BehaviorPropertyMetadata>;
-  components: Map<BehaviorKey, SceneActorComponentType>;
+  components: Map<BehaviorKey, ComponentClass>;
   inputListeners: BehaviorInputListenerMetadata[];
 };
 
@@ -101,10 +101,8 @@ export function SceneProperty(
   };
 }
 
-export type SceneActorComponentType = abstract new (...args: any[]) => Component;
-
 export function SceneActorComponent(
-  classObject: SceneActorComponentType
+  classObject: ComponentClass
 ): BehaviorFieldDecorator {
   return function fn(
     target: object | undefined,

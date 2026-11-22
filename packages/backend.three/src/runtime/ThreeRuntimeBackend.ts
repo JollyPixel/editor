@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import type { AssetCatalog } from "@jolly-pixel/asset";
+import {
+  AssetCoordinator,
+  type AssetCatalog
+} from "@jolly-pixel/asset";
 import {
   Systems
 } from "@jolly-pixel/ecs";
@@ -11,6 +14,7 @@ import type {
 } from "@jolly-pixel/runtime";
 
 // Import Internal Dependencies
+import { createDefaultAssetLoaders } from "../assets/createDefaultAssetLoaders.ts";
 import type { GlobalAudio } from "../audio/GlobalAudio.ts";
 import type {
   ThreeRendererOptions,
@@ -18,12 +22,9 @@ import type {
 } from "../rendering/ThreeRenderer.ts";
 import { ThreeSceneGraph } from "../scene/ThreeSceneGraph.ts";
 import {
-  createRuntimeAssetCoordinator
-} from "./assets/createRuntimeAssetCoordinator.ts";
-import {
   LazyCompressedTextureLoader
-} from "./assets/LazyCompressedTextureLoader.ts";
-import type { RuntimeAssetOptions } from "./assets/RuntimeAssetOptions.ts";
+} from "../assets/loaders/LazyCompressedTextureLoader.ts";
+import type { RuntimeAssetOptions } from "./RuntimeAssetOptions.ts";
 import { loadSceneWithProgress } from "./loadSceneWithProgress.ts";
 import { RendererMetrics } from "./RendererMetrics.ts";
 import {
@@ -44,10 +45,6 @@ export interface ThreeRuntimeBackendOptions<TContext> {
    * Forwarded to `ThreeRenderer.create()`.
    */
   renderer?: ThreeRendererOptions;
-  /**
-   * Forwarded to the world's `logger`.
-   */
-  worldLogger?: Systems.LoggerOptions;
 }
 
 export class ThreeRuntimeBackend<
@@ -64,8 +61,7 @@ export class ThreeRuntimeBackend<
   readonly metrics: RendererMetrics;
   readonly viewHelper: ViewHelperSettings | null;
 
-  #adaptivePixelRatio: boolean;
-  #ktx2: LazyCompressedTextureLoader | null;
+  #ktx2: LazyCompressedTextureLoader | undefined;
   #mountedViewHelper: MountedViewHelper | null = null;
 
   constructor(
@@ -78,35 +74,28 @@ export class ThreeRuntimeBackend<
     this.frameSource = new AnimationLoopFrameSource(renderer.source);
     this.metrics = new RendererMetrics(renderer.source);
 
-    const output = options.renderer?.output;
-    this.#adaptivePixelRatio = output?.pixelRatio === undefined &&
-      output?.maxPixelRatio === undefined;
-
     const ktx2 = options.assets?.ktx2;
     this.#ktx2 = ktx2 === undefined ?
-      null :
+      undefined :
       LazyCompressedTextureLoader.ktx2(
         this.manager,
-        ktx2,
+        ktx2.transcoderPath,
         renderer.source
       );
 
     const world = new Systems.World<THREE.WebGPURenderer, TContext>(renderer, {
       enableOnExit: true,
-      sceneManager: new Systems.SceneManager<TContext>(
-        new ThreeSceneGraph()
-      ),
+      graph: new ThreeSceneGraph(),
       context: options.context,
       audio: options.audio,
-      logger: options.worldLogger,
-      assetCoordinator: createRuntimeAssetCoordinator(
-        this.manager,
+      logger,
+      assetCoordinator: new AssetCoordinator({
         catalog,
-        {
-          loaders: options.assets?.loaders,
-          ktx2: this.#ktx2 ?? undefined
-        }
-      )
+        loaders: createDefaultAssetLoaders(this.manager, {
+          ktx2: this.#ktx2,
+          loaders: options.assets?.loaders
+        })
+      })
     });
     this.world = world;
 
@@ -131,9 +120,7 @@ export class ThreeRuntimeBackend<
   adaptPixelRatio(
     ratio: number
   ): void {
-    if (this.#adaptivePixelRatio) {
-      this.renderer.source.setPixelRatio(ratio);
-    }
+    this.renderer.adaptPixelRatio(ratio);
   }
 
   loadScene(
@@ -154,14 +141,11 @@ export class ThreeRuntimeBackend<
         this.viewHelper
       );
     }
-    this.world.input.exited = false;
-    this.world.connect();
-    this.world.start();
+    this.world.connect().start();
   }
 
   stop(): void {
     this.world.stop();
-    this.world.input.exited = true;
     this.#mountedViewHelper?.dispose();
     this.#mountedViewHelper = null;
     this.world.disconnect();
@@ -171,7 +155,7 @@ export class ThreeRuntimeBackend<
     this.renderer.off("draw", this.#captureFrame);
     this.world.dispose();
     this.#ktx2?.dispose();
-    this.#ktx2 = null;
+    this.#ktx2 = undefined;
   }
 
   readonly #captureFrame = (): void => {

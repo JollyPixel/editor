@@ -2,8 +2,8 @@
 
 A `UINode` positions an actor in screen space from an anchor, an offset and
 a pivot, and follows canvas resizes. [UISprite](./ui-sprite.md) extends it
-with visuals and interaction. It registers itself with the world's
-[UIRenderer](./ui-renderer.md) when there is one.
+with visuals and interaction. Draw it through the world's
+[UIRenderer](./ui-renderer.md).
 
 ```ts
 import { Actor } from "@jolly-pixel/ecs";

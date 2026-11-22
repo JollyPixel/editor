@@ -14,6 +14,7 @@ import type {
   SoundInstance,
   SoundStopOptions
 } from "../../audio/SoundInstance.ts";
+import { mergeDefined } from "../../utils/mergeDefined.ts";
 
 export interface AudioSourceOptions {
   sound?: Sound | null;
@@ -90,10 +91,7 @@ export class AudioSourceComponent<
   configure(
     options: Omit<AudioSourceOptions, "sound">
   ): this {
-    const settings = {
-      ...this.#settings,
-      ...options
-    };
+    const settings = mergeDefined(this.#settings, options);
     this.#settings = {
       ...settings,
       volume: THREE.MathUtils.clamp(settings.volume, 0, 1)

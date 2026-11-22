@@ -10,17 +10,9 @@ import {
   Actor,
   type ActorOptions
 } from "../actor/index.ts";
-import {
-  type SceneManager
-} from "./scene/SceneManager.ts";
-import {
-  type GlobalsAdapter,
-  BrowserGlobalsAdapter
-} from "../adapters/global.ts";
-import {
-  Logger,
-  type LoggerOptions
-} from "./Logger.ts";
+import { SceneManager } from "./scene/SceneManager.ts";
+import type { SceneGraph } from "./scene/SceneGraph.ts";
+import { Logger } from "./Logger.ts";
 import { WorldTime } from "./WorldTime.ts";
 import { Timers } from "./Timers.ts";
 import type { BackendAudio } from "./SceneBackend.ts";
@@ -44,26 +36,30 @@ export interface WorldOptions<
 > {
   enableOnExit?: boolean;
   /**
-   * Enables debug mode. When true, the logger is pre-configured with level "trace"
-   * and all namespaces enabled ("*"), unless overridden by the `logger` option.
+   * When no `logger` is given, the default one writes every level and
+   * namespace.
    */
   debug?: boolean;
   /**
-   * Logger configuration. Individual options override the defaults derived from `debug`.
+   * Shared as `world.logger`; the world, its scenes and their components log
+   * through children of it.
+   * @default a logger that writes warnings and errors
    */
-  logger?: LoggerOptions;
+  logger?: Logger;
 
-  sceneManager: SceneManager<TContext>;
+  /**
+   * Mirrors the actors on the backend; the world's `SceneManager` is built
+   * on it.
+   */
+  graph: SceneGraph;
   input?: Input;
   /**
    * Master volume owner.
-   * @default sceneManager.graph.createAudio()
+   * @default graph.createAudio()
    */
   audio?: BackendAudio;
   context?: TContext;
   assetCoordinator: AssetCoordinator;
-
-  globalsAdapter?: GlobalsAdapter;
 }
 
 export interface WorldDefaultContext {
@@ -80,7 +76,7 @@ export class World<
 > extends Emitter<WorldEvents> {
   renderer: Renderer<T>;
   input: Input;
-  sceneManager: SceneManager<TContext>;
+  readonly sceneManager: SceneManager<TContext>;
   audio: BackendAudio;
   context: TContext;
   assetCoordinator: AssetCoordinator;
@@ -101,36 +97,32 @@ export class World<
     super();
 
     const {
-      sceneManager,
+      graph,
       input = new Input(
         renderer.canvas,
         { enableOnExit: options.enableOnExit ?? false }
       ),
-      audio = sceneManager.graph.createAudio(),
+      audio = graph.createAudio(),
       context = Object.create(null),
-      globalsAdapter = new BrowserGlobalsAdapter(),
       assetCoordinator
     } = options;
 
     this.debug = options.debug ?? false;
-    this.logger = new Logger({
+    this.logger = options.logger ?? new Logger({
       level: this.debug ? "trace" : "info",
-      namespaces: this.debug ? ["*"] : [],
-      ...options.logger
+      namespaces: this.debug ? ["*"] : []
     });
     this.#worldLogger = this.logger.child({
-      namespace: "Systems.World"
+      namespace: "ecs.world"
     });
 
     this.renderer = renderer;
-    this.sceneManager = sceneManager;
     this.input = input;
     this.audio = audio;
     this.context = context;
     this.assetCoordinator = assetCoordinator;
+    this.sceneManager = new SceneManager(this, graph);
 
-    sceneManager.bindWorld(this);
-    globalsAdapter.exposeGame(this);
     this.keepAlive(() => this.timers.pending);
   }
 
@@ -195,6 +187,7 @@ export class World<
 
   start() {
     this.#worldLogger.debug("Starting world");
+    this.input.exited = false;
     this.#running = true;
 
     return this;
@@ -203,6 +196,7 @@ export class World<
   stop() {
     this.#worldLogger.debug("Stopping world");
     this.#running = false;
+    this.input.exited = true;
 
     return this;
   }

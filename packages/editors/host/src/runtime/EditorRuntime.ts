@@ -113,7 +113,7 @@ export class EditorRuntime {
 
     logger.step(
       "metrics",
-      () => this.runtime.mountMetricsPanel({
+      () => this.runtime.metrics.mountPanel({
         target,
         floating: true,
         key: kPerformancePaneKey,

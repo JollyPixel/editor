@@ -11,7 +11,7 @@ import {
 
 // Import Internal Dependencies
 import type {
-  MetricsPanelKeyboard
+  RuntimeKeyboard
 } from "../../src/contract/RuntimeBackend.ts";
 import { MetricsPanel } from "../../src/metrics/MetricsPanel.ts";
 
@@ -24,7 +24,7 @@ describe("MetricsPanel", () => {
     recorder.addMetric(voxelMetric("chunks"));
     const target = new FakeContainer();
 
-    const panel = new MetricsPanel(recorder, {
+    const panel = new MetricsPanel(recorder, new FakeKeyboard(), {
       target: target.facade
     });
 
@@ -42,7 +42,7 @@ describe("MetricsPanel", () => {
     recorder.addMetric(voxelMetric("chunks"));
     const target = new FakeContainer();
 
-    const panel = new MetricsPanel(recorder, {
+    const panel = new MetricsPanel(recorder, new FakeKeyboard(), {
       target: target.facade,
       filter: (metric) => metric.tile === false
     });
@@ -54,7 +54,7 @@ describe("MetricsPanel", () => {
   it("filters metrics registered after mounting", () => {
     const { recorder, advance } = createRecorder();
     const target = new FakeContainer();
-    const panel = new MetricsPanel(recorder, {
+    const panel = new MetricsPanel(recorder, new FakeKeyboard(), {
       target: target.facade,
       filter: (metric) => metric.tile === false
     });
@@ -70,7 +70,7 @@ describe("MetricsPanel", () => {
     const { recorder, advance } = createRecorder();
     recorder.addMetric(voxelMetric("chunks"));
     const target = new FakeContainer();
-    const panel = new MetricsPanel(recorder, {
+    const panel = new MetricsPanel(recorder, new FakeKeyboard(), {
       target: target.facade,
       hidden: true
     });
@@ -94,9 +94,8 @@ describe("MetricsPanel", () => {
     const { recorder } = createRecorder();
     const element = document.createElement("div");
     const keyboard = new FakeKeyboard();
-    const panel = new MetricsPanel(recorder, {
+    const panel = new MetricsPanel(recorder, keyboard, {
       target: element,
-      keyboard,
       toggleKey: "F3"
     });
     const pane = element.firstElementChild;
@@ -119,9 +118,8 @@ describe("MetricsPanel", () => {
     const { recorder, advance } = createRecorder();
     const target = new FakeContainer();
     const keyboard = new FakeKeyboard();
-    const panel = new MetricsPanel(recorder, {
+    const panel = new MetricsPanel(recorder, keyboard, {
       target: target.facade,
-      keyboard,
       toggleKey: "F3"
     });
 
@@ -136,7 +134,7 @@ describe("MetricsPanel", () => {
   it("dispose removes its own pane", () => {
     const { recorder } = createRecorder();
     const element = document.createElement("div");
-    const panel = new MetricsPanel(recorder, {
+    const panel = new MetricsPanel(recorder, new FakeKeyboard(), {
       target: element
     });
 
@@ -178,7 +176,7 @@ function createRecorder() {
 
 type KeyHandler = (event: KeyboardEvent) => void;
 
-class FakeKeyboard implements MetricsPanelKeyboard {
+class FakeKeyboard implements RuntimeKeyboard {
   #handlers = new Map<string, Set<KeyHandler>>();
 
   on(

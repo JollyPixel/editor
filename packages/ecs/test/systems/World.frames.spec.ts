@@ -9,9 +9,9 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import type { World } from "../../src/systems/World.ts";
+import { Logger } from "../../src/systems/Logger.ts";
 import {
   createWorldHarness,
-  SCENE_GRAPH,
   type WorldHarness
 } from "../helpers/world/worldHarness.ts";
 
@@ -65,13 +65,31 @@ describe("Systems.World", () => {
   });
 
   describe("logger", () => {
-    test("should let explicit logger options override the debug defaults", () => {
-      const { world: debugWorld } = createWorldHarness({
-        debug: true,
-        logger: { level: "warn" }
-      });
+    test("should log through the logger it is given", () => {
+      const log = mock.fn();
+      const logger = new Logger({
+        level: "debug",
+        namespaces: ["host.*"],
+        adapter: {
+          log,
+          warn: mock.fn(),
+          error: mock.fn()
+        }
+      }).child({ namespace: "host" });
+      const { world: loggedWorld } = createWorldHarness({ logger });
 
-      assert.strictEqual(debugWorld.logger.level, "warn");
+      loggedWorld.start();
+
+      assert.strictEqual(loggedWorld.logger, logger);
+      assert.deepEqual(log.mock.calls.map((call) => call.arguments), [
+        ["[DEBUG] [host.ecs.world] Starting world"]
+      ]);
+    });
+
+    test("should write every level and namespace in debug without a logger", () => {
+      const { world: debugWorld } = createWorldHarness({ debug: true });
+
+      assert.strictEqual(debugWorld.logger.isLevelEnabled("trace"), true);
       assert.strictEqual(debugWorld.logger.isNamespaceEnabled(), true);
     });
   });
@@ -81,7 +99,7 @@ describe("Systems.World", () => {
       world.start();
       tick(kFixedDelta60);
 
-      assert.strictEqual(renderer.draw.mock.calls[0].arguments[0], SCENE_GRAPH);
+      assert.strictEqual(renderer.draw.mock.calls[0].arguments[0], world.sceneManager.graph);
     });
   });
 });

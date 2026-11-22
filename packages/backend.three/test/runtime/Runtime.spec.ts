@@ -109,20 +109,16 @@ describe("Runtime pixel ratio", () => {
     assert.equal(renderer.source.pixelRatios.length, 1);
     dispose();
   });
+});
 
-  test("keeps a pixel ratio fixed by the renderer options", async() => {
-    const { runtime, renderer, dispose } = createRuntime({
-      renderer: {
-        output: { pixelRatio: 2 }
-      }
-    });
+describe("Runtime logger", () => {
+  stubProperty(globalThis.navigator, "getGamepads", () => []);
 
-    await runtime.load({
-      skipLoadingScreen: true,
-      maxFps: 60
-    });
+  test("hands its logger to the world", () => {
+    const logger = new Systems.Logger({ level: "void" });
+    const { runtime, dispose } = createRuntime({ logger });
 
-    assert.deepEqual(renderer.source.pixelRatios, []);
+    assert.strictEqual(runtime.world.logger, logger);
     dispose();
   });
 });

@@ -35,12 +35,12 @@ export interface LoggerOptions {
    */
   level?: LogLevel;
   /**
-   * Namespace glob patterns to enable. Uses dot-notation with wildcard support:
-   *   "systems.*"        → matches systems, systems.sceneManager, systems.asset.queue, ...
-   *   "systems.asset.*"  → matches systems.asset, systems.asset.registry, ...
-   *   "*"                → matches all namespaces (equivalent to debug mode)
+   * Namespace glob patterns that enable trace, debug and info messages.
+   * Warnings and errors are written whatever their namespace:
+   *   "ecs.*"  → matches ecs, ecs.world, ecs.scene-manager, ...
+   *   "*"      → matches all namespaces (equivalent to debug mode)
    *
-   * Default: [] (nothing is logged)
+   * Default: [] (only warnings and errors are written)
    */
   namespaces?: string[];
   /**
@@ -54,7 +54,7 @@ export interface LoggerOptions {
 }
 
 export interface LogEntry {
-  readonly level: Exclude<LogLevel, "void">;
+  readonly level: EmittedLogLevel;
   readonly namespace: string;
   readonly message: string;
   readonly meta: Record<string, unknown> | undefined;
@@ -158,7 +158,12 @@ export class Logger {
   enableNamespace(
     ...patterns: string[]
   ): void {
-    this.#root.namespaces.push(...patterns);
+    const { namespaces } = this.#root;
+    for (const pattern of patterns) {
+      if (!namespaces.includes(pattern)) {
+        namespaces.push(pattern);
+      }
+    }
     this.#root.invalidateMatchers();
   }
 
@@ -284,7 +289,7 @@ export class Logger {
   ): void {
     if (
       !this.isLevelEnabled(level) ||
-      !this.isNamespaceEnabled()
+      (kLogLevelValue[level] < kLogLevelValue.warn && !this.isNamespaceEnabled())
     ) {
       return;
     }
@@ -293,12 +298,26 @@ export class Logger {
     const args = meta === undefined ? [formatted] : [formatted, meta];
 
     this.#root.adapter[kAdapterMethod[level]](...args);
-    this.#root.listener?.({
+    this.#notify({
       level,
       namespace: this.namespace,
       message: msg,
       meta
     });
+  }
+
+  #notify(
+    entry: LogEntry
+  ): void {
+    try {
+      this.#root.listener?.(entry);
+    }
+    catch (error) {
+      this.#root.adapter.error(
+        `[ERROR] [${this.#label}] log listener failed`,
+        { error }
+      );
+    }
   }
 }
 

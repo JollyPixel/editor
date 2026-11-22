@@ -154,11 +154,13 @@ describe("EditorRuntime", () => {
 
   test("mounts a hidden floating performance pane until disposed", () => {
     const mounts: MetricsPanelOptions[] = [];
-    const runtime: Pick<Runtime, "mountMetricsPanel"> = {
-      mountMetricsPanel: (options = {}) => {
-        mounts.push(options);
+    const runtime = {
+      metrics: {
+        mountPanel: (options: MetricsPanelOptions = {}) => {
+          mounts.push(options);
 
-        return Promise.withResolvers<MetricsPanel>().promise;
+          return Promise.withResolvers<MetricsPanel>().promise;
+        }
       }
     };
     const target = document.createElement("div");

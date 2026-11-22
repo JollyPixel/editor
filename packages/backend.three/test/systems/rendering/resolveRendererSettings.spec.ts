@@ -67,6 +67,18 @@ describe("Systems.Rendering.resolveRendererSettings", () => {
 
       assert.strictEqual(settings.pixelRatio, 4);
     });
+
+    test("should adapt the pixel ratio only when the options leave it unset", () => {
+      assert.strictEqual(resolveRendererSettings({}, 1).adaptivePixelRatio, true);
+      assert.strictEqual(
+        resolveRendererSettings({ output: { pixelRatio: 2 } }, 1).adaptivePixelRatio,
+        false
+      );
+      assert.strictEqual(
+        resolveRendererSettings({ output: { maxPixelRatio: 1 } }, 1).adaptivePixelRatio,
+        false
+      );
+    });
   });
 
   describe("shadows", () => {

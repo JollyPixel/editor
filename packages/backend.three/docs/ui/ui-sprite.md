@@ -37,7 +37,7 @@ interface UISpriteStyle {
 | Property | Default | Description |
 | -------- | ------- | ----------- |
 | `color` | `0xffffff` | Fill color of the material |
-| `map` | `null` | Texture applied to the mesh |
+| `map` | `null` | Texture applied to the mesh; the sprite never disposes it |
 | `opacity` | `1` | Transparency (0 fully transparent – 1 opaque) |
 
 ```ts
@@ -149,7 +149,7 @@ All [UINode options](./ui-node.md) (`anchor`, `offset`, `size`,
 
 ```ts
 class UISprite extends UINode {
-  mesh: THREE.Mesh;
+  readonly mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
 
   readonly pointerEntered: SignalEvent;
   readonly pointerExited: SignalEvent;

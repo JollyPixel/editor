@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { resolveElement } from "./resolveElement.ts";
+import { resolveElement } from "../dom/resolveElement.ts";
 import {
   resolveOverlayAnchor,
   type OverlayPosition
@@ -107,8 +107,9 @@ export class OverlayLayer {
 
     this.#view?.addEventListener("resize", this.#track);
     this.#view?.addEventListener("scroll", this.#track, true);
-    if (typeof ResizeObserver !== "undefined") {
-      this.#observer = new ResizeObserver(this.#track);
+    const view = document.defaultView;
+    if (view?.ResizeObserver !== undefined) {
+      this.#observer = new view.ResizeObserver(this.#track);
       this.#observer.observe(this.#canvas);
     }
     this.#track();

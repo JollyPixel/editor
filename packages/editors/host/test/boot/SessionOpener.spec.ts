@@ -14,7 +14,7 @@ import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 // Import Internal Dependencies
 import { SessionOpener } from "#src/boot/SessionOpener.ts";
 import type { EditorDefinition, EditorHandle } from "#src/contract/EditorDefinition.ts";
-import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
+import { silentLogger } from "../helpers/logs.ts";
 import { CatalogShare } from "#src/shell/catalog/CatalogShare.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { LaunchIdentity } from "#src/shell/protocol.ts";
@@ -82,7 +82,7 @@ function opener(
       };
     },
     queried,
-    logger: readDebugLogger()
+    logger: silentLogger()
   });
 }
 
@@ -114,7 +114,7 @@ describe("SessionOpener", () => {
 
     const sessions = new SessionOpener({
       definition: kDefinition,
-      logger: readDebugLogger()
+      logger: silentLogger()
     });
     const session = await sessions.open(shell.launch);
     sessions.dispose();

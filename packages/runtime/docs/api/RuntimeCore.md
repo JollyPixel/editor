@@ -47,8 +47,7 @@ interface FocusHintOptions {
 }
 
 interface RuntimeLogger {
-  debug(message: string, meta?: Record<string, unknown>): void;
-  isNamespaceEnabled(): boolean;
+  warn(message: string, meta?: Record<string, unknown>): void;
   step<T>(
     name: string,
     run: () => Promise<T>,
@@ -63,7 +62,7 @@ Nothing runs until `load()` or `start()`.
 
 ```ts
 interface RuntimeCore<TWorld, TScene, TMetrics> {
-  /** The backend's world. */
+  /** The backend's world, also assigned to `globalThis.game` for the devtools console. */
   readonly world: TWorld;
   /** Configure its scheduler before `start()` or `load()`. */
   readonly loop: GameLoop;
@@ -72,15 +71,11 @@ interface RuntimeCore<TWorld, TScene, TMetrics> {
   readonly overlay: OverlayLayer;
   /** Times every frame, with or without a HUD. */
   readonly stats: StatsRecorder;
-  /** Metric registry and readout panel. */
+  /** Backend metrics, corner HUD and readout panel. */
   readonly metrics: RuntimeMetrics<TMetrics>;
-  /** The corner HUD, or `null` when none is mounted. Set its `hidden` to hide it without unmounting. */
-  readonly statsHud: PerformanceStatsHud | null;
   /** `true` between `start()` and `stop()`. */
   readonly running: boolean;
   readonly renderOnDemand: boolean;
-  /** `true` while on-demand rendering sleeps. */
-  readonly idle: boolean;
 }
 ```
 
@@ -115,23 +110,8 @@ Requests a frame and resolves once a frame has rendered and emitted
 
 Awaits `nextFrame()` `count` times.
 
-### mountPerformanceStats(option?): Promise\<PerformanceStatsHud | null\>
-
-Mounts the corner HUD and disposes the previous one. Resolves to the HUD, or
-`null` with `mount: false`.
-
-```ts
-type PerformanceStatsOption = true | {
-  mount?: boolean; // true
-  position?: OverlayPosition; // "top-left"
-  inset?: number; // 8, pixels from the canvas edges
-  panel?: boolean | MetricsPanelOptions; // false; also mounts the readout panel
-};
-```
-
-### mountMetricsPanel(options?): Promise\<MetricsPanel\>
-
-`metrics.mountPanel()` with the world keyboard as `keyboard`.
+The corner HUD and the readout panel mount through
+[`runtime.metrics`](./RuntimeMetrics.md).
 
 ## Loading and startup
 
@@ -174,17 +154,19 @@ started, the runtime requests frames on:
   `true`;
 - every `invalidate` event of the world.
 
-The HUD shows an `IDLE` badge while `idle` is `true`. The runtime calls
+The HUD shows an `IDLE` badge while `loop.sleeping` is `true`. The runtime calls
 `stats.skipGap()` whenever the loop starts or wakes, so the idle time never
 shows up as an FPS drop.
 
 ## Startup tracing
 
 `logger.step()` records the `device` and `assets` steps of `load()`, and
-`scene` when a scene is given. Once started, an enabled logger writes
-`waiting for first frame` with `visibility` (`document.visibilityState`), then
-`first frame`. A missing `first frame` next to `visibility: "hidden"`
-explains a scene that never woke.
+`scene` when a scene is given. Once started, `load()` opens a `first frame`
+step with `visibility` (`document.visibilityState`) that ends on the first
+rendered frame. A `first frame` that never ends next to
+`visibility: "hidden"` explains a scene that never woke.
+
+The GPU benchmark reports an undetermined GPU tier through `logger.warn()`.
 
 ## RuntimeBackend
 
@@ -223,7 +205,7 @@ interface RuntimeWorld {
   readonly animating: boolean;
   readonly input: {
     readonly wasActive: boolean;
-    readonly keyboard: MetricsPanelKeyboard;
+    readonly keyboard: RuntimeKeyboard;
     readonly gamepad: GamepadPoller;
   };
   readonly assetCoordinator: AssetCoordinator;
@@ -240,19 +222,21 @@ interface RuntimeWorld {
 - `nextFrame()` resolves on the next `afterUpdate`.
 - `animating` and `input.wasActive` keep an on-demand loop awake.
 - `load()` loads its `assets` option through `assetCoordinator`.
+- `input.keyboard` emits the `toggleKey` of the readout panel.
 
 ## Helpers for backends
 
-A backend subclass calls these protected statics from its own factory, before
-it builds its renderer.
+A backend factory calls these before it builds its renderer.
 
-### RuntimeCore.resolveCanvas(target): HTMLCanvasElement
+### resolveRuntimeCanvas(target): HTMLCanvasElement
 
 Returns `target` when it is a canvas, or the canvas a CSS selector matches.
 Throws when the selector matches nothing, and a `TypeError` when the element
 is not a canvas.
 
-### RuntimeCore.resolveCatalog(input?): Promise\<AssetCatalog\>
+`target` is a `RuntimeCanvasTarget`: `HTMLCanvasElement | string`.
+
+### resolveRuntimeAssetCatalog(input?): Promise\<AssetCatalog\>
 
 Returns an `AssetCatalog` as is, an empty one when `input` is omitted, and
 fetches and parses a string or `URL`. Rejects when the response is not ok.

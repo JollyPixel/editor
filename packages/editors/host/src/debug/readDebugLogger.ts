@@ -27,7 +27,7 @@ export function readDebugLogger(
     readStoredPatterns(options.storage);
 
   return new Systems.Logger({
-    level: "debug",
+    level: "trace",
     namespaces: patterns === null ? [] : parsePatterns(patterns)
   });
 }

@@ -48,6 +48,17 @@ describe("Systems.World", () => {
       assert.strictEqual(renderer.clear.mock.callCount(), 1);
     });
 
+    test("should resume ticking when started again after an exit", () => {
+      world.start();
+      input.exited = true;
+      tick();
+
+      world.stop();
+      world.start();
+
+      assert.strictEqual(tick(), false);
+    });
+
     test("should return false when input.exited is false", () => {
       world.start();
 
@@ -81,7 +92,7 @@ describe("Systems.World", () => {
 
       tick(70);
 
-      const [deltaTime, alpha] = sceneManager.update.mock.calls.at(-1)!.arguments;
+      const [deltaTime, alpha = Number.NaN] = sceneManager.update.mock.calls.at(-1)!.arguments;
       assert.strictEqual(deltaTime, 0.07);
       assert.ok(Math.abs(alpha - 0.7) < 1e-9, `alpha was ${alpha}`);
     });

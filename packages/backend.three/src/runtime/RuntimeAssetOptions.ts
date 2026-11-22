@@ -1,9 +1,12 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/ecs";
-import type * as THREE from "three/webgpu";
 import type {
   RuntimeAssetCatalog
 } from "@jolly-pixel/runtime";
+
+// Import Internal Dependencies
+import type {
+  ThreeAssetLoaderDefinition
+} from "../assets/createDefaultAssetLoaders.ts";
 
 export interface RuntimeAssetOptions {
   readonly catalog?: RuntimeAssetCatalog;
@@ -18,7 +21,3 @@ export interface RuntimeKTX2Options {
    */
   readonly transcoderPath: string;
 }
-
-export type ThreeAssetLoaderDefinition<
-  TValue = unknown
-> = Systems.AssetLoaderDefinition<THREE.LoadingManager, TValue>;

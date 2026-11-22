@@ -9,10 +9,13 @@ import {
 } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import type { Font } from "../../../assets/font.ts";
+import type { Font } from "../../../assets/loaders/FontAssetLoader.ts";
+import {
+  mergeDefined,
+  sameFields
+} from "../../../utils/mergeDefined.ts";
 import {
   MESH_SURFACE_DEFAULTS,
-  mergeMeshSurface,
   type MeshSurfaceOptions,
   type MeshSurfaceSettings
 } from "../mesh/MeshSurface.ts";
@@ -88,8 +91,7 @@ export type TextSettings = TextShape & MeshSurfaceSettings;
 type TextSettingsOptions = TextShapeOptions & MeshSurfaceOptions;
 
 // CONSTANTS
-export const TEXT_RENDERER_DEFAULTS = {
-  ...MESH_SURFACE_DEFAULTS,
+const kShapeDefaults = {
   text: "",
   size: 1,
   depth: 0.2,
@@ -98,18 +100,13 @@ export const TEXT_RENDERER_DEFAULTS = {
   bevelThickness: 0.05,
   bevelSize: 0.02,
   align: "center"
-} as const satisfies TextSettings;
+} as const satisfies TextShape;
+const kShapeKeys = Object.keys(kShapeDefaults) as (keyof TextShape)[];
 
-const kShapeKeys: Record<keyof TextShape, true> = {
-  text: true,
-  size: true,
-  depth: true,
-  curveSegments: true,
-  bevel: true,
-  bevelThickness: true,
-  bevelSize: true,
-  align: true
-};
+export const TEXT_RENDERER_DEFAULTS = {
+  ...MESH_SURFACE_DEFAULTS,
+  ...kShapeDefaults
+} as const satisfies TextSettings;
 
 export class TextRenderer<
   TContext = Systems.WorldDefaultContext
@@ -173,7 +170,7 @@ export class TextRenderer<
     const previous = this.#settings;
     this.#settings = mergeSettings(previous, options);
 
-    if (!isSameShape(this.#settings, previous)) {
+    if (!sameFields<TextShape>(this.#settings, previous, kShapeKeys)) {
       this.#surface.replaceGeometry(this.#createGeometry());
     }
     this.#surface.configure(this.#settings);
@@ -223,27 +220,14 @@ function alignOffset(
   }
 }
 
-function isSameShape(
-  left: TextShape,
-  right: TextShape
-): boolean {
-  return (Object.keys(kShapeKeys) as (keyof TextShape)[])
-    .every((key) => left[key] === right[key]);
-}
-
 function mergeSettings(
   settings: TextSettings,
   options: TextSettingsOptions
 ): TextSettings {
+  const { material = {}, ...rest } = options;
+
   return {
-    ...mergeMeshSurface(settings, options),
-    text: options.text ?? settings.text,
-    size: options.size ?? settings.size,
-    depth: options.depth ?? settings.depth,
-    curveSegments: options.curveSegments ?? settings.curveSegments,
-    bevel: options.bevel ?? settings.bevel,
-    bevelThickness: options.bevelThickness ?? settings.bevelThickness,
-    bevelSize: options.bevelSize ?? settings.bevelSize,
-    align: options.align ?? settings.align
+    ...mergeDefined(settings, rest),
+    material: mergeDefined(settings.material, material)
   };
 }

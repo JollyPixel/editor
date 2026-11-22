@@ -23,7 +23,7 @@ class Walker extends Behavior {
 function createHeadlessWorld() {
   const renderer = new Systems.HeadlessRenderer({} as HTMLCanvasElement);
   const world = new Systems.World(renderer, {
-    sceneManager: new Systems.SceneManager(new Systems.HeadlessSceneGraph()),
+    graph: new Systems.HeadlessSceneGraph(),
     input: {
       connect: () => undefined,
       disconnect: () => undefined,
@@ -31,10 +31,7 @@ function createHeadlessWorld() {
       publish: () => undefined,
       exited: false
     } as unknown as Systems.WorldOptions["input"],
-    assetCoordinator: {} as Systems.WorldOptions["assetCoordinator"],
-    globalsAdapter: {
-      exposeGame: () => undefined
-    }
+    assetCoordinator: {} as Systems.WorldOptions["assetCoordinator"]
   });
 
   return { renderer, world };

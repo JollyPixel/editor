@@ -12,7 +12,7 @@ import {
 } from "./GameManifestClient.ts";
 import { attachPhysics } from "./gamePhysics.ts";
 import { PlayerScenes } from "./PlayerScenes.ts";
-import { playLoggerOptions } from "./playLogger.ts";
+import { playLogger } from "./playLogger.ts";
 import { contributedRuntimePackages } from "./runtimeContributions.ts";
 import {
   PLAY_ERROR,
@@ -23,31 +23,50 @@ import {
 // CONSTANTS
 const kCanvas = "#game-canvas";
 const kStartParam = "start";
+const kLoggedErrors = new WeakSet<object>();
 
 function report(
   error: unknown
 ): void {
   const message = errorMessage(error);
-  console.error("[play]", error);
   const failure = document.querySelector<HTMLElement>("#play-error");
   if (failure !== null) {
     failure.textContent = message;
     failure.hidden = false;
   }
+  if (isObject(error) && kLoggedErrors.has(error)) {
+    return;
+  }
+
+  console.error("[play]", error);
   tellOpener({
     type: PLAY_ERROR,
     message
   });
 }
 
-function warn(
-  message: string
-): void {
-  tellOpener({
+function isObject(
+  value: unknown
+): value is object {
+  return typeof value === "object" && value !== null;
+}
+
+const logger = playLogger({
+  search: location.search,
+  warned: (message) => tellOpener({
     type: PLAY_WARNING,
     message
-  });
-}
+  }),
+  failed: (message, cause) => {
+    if (isObject(cause)) {
+      kLoggedErrors.add(cause);
+    }
+    tellOpener({
+      type: PLAY_ERROR,
+      message
+    });
+  }
+});
 
 function tellOpener(
   data: PlayReport
@@ -85,7 +104,7 @@ async function play(): Promise<void> {
       catalog: game.catalog,
       loaders
     },
-    worldLogger: playLoggerOptions(warn)
+    logger
   });
   runtime.manager.setURLModifier(game.resolveURL);
   const scenes = new PlayerScenes({

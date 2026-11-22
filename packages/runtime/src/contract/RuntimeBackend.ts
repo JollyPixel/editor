@@ -9,7 +9,7 @@ import type {
 } from "@jolly-pixel/loop";
 import type { MetricSource } from "@jolly-pixel/ui/stats";
 
-export interface MetricsPanelKeyboard {
+export interface RuntimeKeyboard {
   on(
     type: string,
     handler: (event: KeyboardEvent) => void
@@ -28,7 +28,7 @@ export interface GamepadPoller {
 
 export interface RuntimeInput {
   readonly wasActive: boolean;
-  readonly keyboard: MetricsPanelKeyboard;
+  readonly keyboard: RuntimeKeyboard;
   readonly gamepad: GamepadPoller;
 }
 

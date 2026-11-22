@@ -11,16 +11,18 @@ import type {
   ShadedMaterial,
   Shader,
   ShaderUniformValues
-} from "../../../assets/shader.ts";
+} from "../../../assets/Shader.ts";
+import {
+  mergeDefined,
+  sameFields
+} from "../../../utils/mergeDefined.ts";
 import {
   type MeshGeometry,
   MESH_GEOMETRY_DEFAULTS,
-  createMeshGeometry,
-  isSameMeshGeometry
+  createMeshGeometry
 } from "./MeshGeometry.ts";
 import {
   MESH_SURFACE_DEFAULTS,
-  mergeMeshSurface,
   type MeshSurfaceOptions,
   type MeshSurfaceSettings
 } from "./MeshSurface.ts";
@@ -115,7 +117,7 @@ export class MeshRenderer<
     const previous = this.#settings;
     this.#settings = mergeSettings(previous, options);
 
-    if (!isSameMeshGeometry(this.#settings.geometry, previous.geometry)) {
+    if (!sameFields(this.#settings.geometry, previous.geometry)) {
       this.#surface.replaceGeometry(createMeshGeometry(this.#settings.geometry));
     }
     this.#surface.configure(this.#settings);
@@ -136,8 +138,10 @@ function mergeSettings(
   settings: MeshSettings,
   options: MeshRendererOptions
 ): MeshSettings {
+  const { material = {}, ...rest } = options;
+
   return {
-    ...mergeMeshSurface(settings, options),
-    geometry: options.geometry ?? settings.geometry
+    ...mergeDefined(settings, rest),
+    material: mergeDefined(settings.material, material)
   };
 }

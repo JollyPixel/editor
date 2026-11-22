@@ -17,7 +17,10 @@ import type { HostLogger } from "#src/debug/readDebugLogger.ts";
 import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import { EditorRuntime } from "#src/runtime/EditorRuntime.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
-import { captureLogs } from "../helpers/logs.ts";
+import {
+  captureLogs,
+  silentLogger
+} from "../helpers/logs.ts";
 import {
   ASSET_ID,
   definition,
@@ -41,7 +44,8 @@ describe("mountStandalone", () => {
 
     await assert.rejects(
       mountStandalone(editor, {
-        sources: [{ read: () => Promise.resolve(undefined) }]
+        sources: [{ read: () => Promise.resolve(undefined) }],
+        logger: silentLogger()
       }),
       LaunchNotFoundError
     );

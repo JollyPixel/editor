@@ -17,41 +17,27 @@ import {
 import { OverlayLayer } from "../../src/overlay/OverlayLayer.ts";
 
 describe("PerformanceStatsHud", () => {
-  test("mounts nothing when mount is false", async() => {
-    const { host, dispose } = createHost(0);
-
-    try {
-      const hud = await PerformanceStatsHud.mount(host, { mount: false });
-
-      assert.equal(hud, null);
-      assert.equal(host.overlay.element.childElementCount, 0);
-    }
-    finally {
-      dispose();
-    }
-  });
-
-  test("shows the idle badge on a loop already asleep", async() => {
+  test("shows the idle badge on a loop already asleep", () => {
     const { host, source, dispose } = createHost(0);
     host.loop.start();
     assert.equal(source.running, false);
 
-    const hud = await PerformanceStatsHud.mount(host, true);
+    const hud = new PerformanceStatsHud(host);
 
     try {
       assert.equal(queryBadge(host).hidden, false);
     }
     finally {
-      hud?.dispose();
+      hud.dispose();
       dispose();
     }
   });
 
-  test("the idle badge follows the loop sleeping and waking", async() => {
+  test("the idle badge follows the loop sleeping and waking", () => {
     const { host, source, dispose } = createHost(1);
     host.loop.start();
 
-    const hud = await PerformanceStatsHud.mount(host, true);
+    const hud = new PerformanceStatsHud(host);
 
     try {
       const badge = queryBadge(host);
@@ -68,15 +54,14 @@ describe("PerformanceStatsHud", () => {
       assert.equal(badge.hidden, true);
     }
     finally {
-      hud?.dispose();
+      hud.dispose();
       dispose();
     }
   });
 
-  test("hidden hides the mounted HUD until shown again", async() => {
+  test("hidden hides the mounted HUD until shown again", () => {
     const { host, dispose } = createHost(0);
-    const hud = await PerformanceStatsHud.mount(host, true);
-    assert.ok(hud);
+    const hud = new PerformanceStatsHud(host);
     const frame = queryBadge(host).parentElement!;
 
     try {
@@ -95,13 +80,13 @@ describe("PerformanceStatsHud", () => {
     }
   });
 
-  test("dispose() unmounts the HUD and stops following the loop", async() => {
+  test("dispose() unmounts the HUD and stops following the loop", () => {
     const { host, source, dispose } = createHost(1);
     host.loop.start();
-    const hud = await PerformanceStatsHud.mount(host, true);
+    const hud = new PerformanceStatsHud(host);
     const badge = queryBadge(host);
 
-    hud?.dispose();
+    hud.dispose();
     source.step(16);
 
     assert.equal(host.overlay.element.childElementCount, 0);
@@ -117,14 +102,13 @@ function createHost(
   document.body.appendChild(canvas);
   const source = new ManualFrameSource();
   const host: PerformanceStatsHost = {
-    stats: new StatsRecorder(),
+    recorder: new StatsRecorder(),
     overlay: new OverlayLayer(canvas),
     loop: new GameLoop({
       source,
       keepAlive: () => false,
       trailingRenders
-    }),
-    mountMetricsPanel: () => Promise.reject(new Error("unexpected panel"))
+    })
   };
 
   return {

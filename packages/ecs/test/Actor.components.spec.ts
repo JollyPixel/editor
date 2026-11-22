@@ -8,8 +8,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { Actor, ActorComponent } from "../src/actor/index.ts";
-import { SceneManager } from "../src/systems/scene/SceneManager.ts";
-import { HeadlessSceneGraph } from "../src/systems/scene/HeadlessSceneGraph.ts";
+import { createHeadlessWorld } from "./helpers/world/headlessWorld.ts";
 
 class Health extends ActorComponent {
   constructor(
@@ -28,8 +27,8 @@ class Weapon extends ActorComponent {
 }
 
 function createActors() {
-  const sceneManager = new SceneManager(new HeadlessSceneGraph());
-  const world = { sceneManager } as any;
+  const world = createHeadlessWorld();
+  const { sceneManager } = world;
 
   return {
     sceneManager,

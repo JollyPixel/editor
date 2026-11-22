@@ -8,7 +8,7 @@ import * as THREE from "three/webgpu";
 import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import { Sound } from "../audio/Sound.ts";
+import { Sound } from "../../audio/Sound.ts";
 
 export const SoundAssetType = new AssetType<Sound>("sound");
 

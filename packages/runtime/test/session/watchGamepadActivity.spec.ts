@@ -10,9 +10,9 @@ import {
 
 // Import Internal Dependencies
 import {
-  GamepadActivity,
+  watchGamepadActivity,
   type GamepadActivityView
-} from "../../src/session/GamepadActivity.ts";
+} from "../../src/session/watchGamepadActivity.ts";
 
 class FakeView extends EventTarget implements GamepadActivityView {
   #frames = new Map<number, FrameRequestCallback>();
@@ -67,11 +67,12 @@ function setup() {
     keepAlive: () => gamepad.held,
     trailingRenders: 0
   });
-  const activity = new GamepadActivity(
+  const activity = new AbortController();
+  watchGamepadActivity(
     gamepad,
     loop,
     view,
-    () => loop.invalidate()
+    activity.signal
   );
   const wakes: number[] = [];
   loop.on("wake", () => wakes.push(gamepad.samples));
@@ -87,7 +88,7 @@ function setup() {
   };
 }
 
-describe("GamepadActivity", () => {
+describe("watchGamepadActivity", () => {
   test("polls a connected gamepad while asleep and wakes once it is held", () => {
     const { loop, view, gamepad, wakes } = setup();
     assert.equal(loop.sleeping, true);
@@ -142,10 +143,10 @@ describe("GamepadActivity", () => {
     assert.equal(view.pending, 0);
   });
 
-  test("stops polling and listening once disposed", () => {
+  test("stops polling and listening once aborted", () => {
     const { view, activity, wakes } = setup();
 
-    activity.dispose();
+    activity.abort();
     assert.equal(view.pending, 0);
 
     view.dispatchEvent(new Event("gamepadconnected"));

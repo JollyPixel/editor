@@ -12,11 +12,8 @@ import type { SoundPlayOptions } from "../../audio/GlobalAudio.ts";
 import type { Sound } from "../../audio/Sound.ts";
 import { SoundChannel } from "../../audio/SoundChannel.ts";
 import type { SoundInstance } from "../../audio/SoundInstance.ts";
+import { mergeDefined } from "../../utils/mergeDefined.ts";
 import { AUDIO_SOURCE_DEFAULTS } from "./AudioSourceComponent.ts";
-import {
-  AUDIO_ZONE_PLAYBACKS,
-  type AudioZoneTrack
-} from "./AudioZonePlayback.ts";
 import {
   AudioZoneShape,
   type AudioZoneShapeSettings
@@ -83,6 +80,7 @@ export const AUDIO_ZONE_DEFAULTS = Object.freeze({
 
 const kTargetPosition = new THREE.Vector3();
 const kWorldMatrix = new THREE.Matrix4();
+const kExitFade = 0.25;
 
 export class AudioZoneComponent<
   TContext = Systems.WorldDefaultContext
@@ -96,7 +94,6 @@ export class AudioZoneComponent<
   #shape: AudioZoneShape;
   #inside = false;
   #channel = new SoundChannel();
-  #track!: AudioZoneTrack;
 
   constructor(
     actor: Actor<TContext>,
@@ -109,11 +106,8 @@ export class AudioZoneComponent<
 
     const { sound = null, ...settings } = options;
     this.sound = sound;
-    this.#settings = {
-      ...AUDIO_ZONE_DEFAULTS
-    };
+    this.#settings = resolveSettings(AUDIO_ZONE_DEFAULTS, settings);
     this.#shape = new AudioZoneShape(this.#settings);
-    this.configure(settings);
     this.addTeardown(() => {
       this.#channel.stop();
       this.entered.clear();
@@ -140,21 +134,8 @@ export class AudioZoneComponent<
   configure(
     options: Partial<AudioZoneSettings>
   ): this {
-    const settings = {
-      ...this.#settings,
-      ...options
-    };
-    this.#settings = {
-      ...settings,
-      falloff: Math.max(settings.falloff, 0),
-      volume: THREE.MathUtils.clamp(settings.volume, 0, 1)
-    };
+    this.#settings = resolveSettings(this.#settings, options);
     this.#shape = new AudioZoneShape(this.#settings);
-    this.#track = {
-      channel: this.#channel,
-      settings: this.#settings,
-      play: this.#play
-    };
 
     return this;
   }
@@ -165,19 +146,53 @@ export class AudioZoneComponent<
       Number.POSITIVE_INFINITY :
       this.#distanceTo(target.position);
     const inside = distance === 0;
-    const playback = AUDIO_ZONE_PLAYBACKS[this.#settings.mode];
+    const { mode } = this.#settings;
 
     if (inside !== this.#inside) {
       this.#inside = inside;
       (inside ? this.entered : this.exited).emit(target?.actor ?? null);
-      playback.cross?.(this.#track, inside);
+      if (mode === "trigger") {
+        this.#cross(inside);
+      }
     }
-    playback.follow?.(this.#track, distance);
+    if (mode === "ambient") {
+      this.#follow(distance);
+    }
   }
 
-  #play = (
+  #cross(
+    inside: boolean
+  ): void {
+    if (inside) {
+      this.#play();
+    }
+    else if (this.#settings.stopOnExit) {
+      this.#channel.stop({ fade: kExitFade });
+    }
+  }
+
+  #follow(
+    distance: number
+  ): void {
+    const { falloff } = this.#settings;
+    const gain = falloff === 0 ?
+      Number(distance === 0) :
+      1 - THREE.MathUtils.clamp(distance / falloff, 0, 1);
+    if (gain === 0) {
+      this.#channel.stop();
+
+      return;
+    }
+
+    const instance = this.#channel.instance ?? this.#play({ loop: true });
+    if (instance !== null) {
+      instance.volume = instance.settings.volume * gain;
+    }
+  }
+
+  #play(
     options: SoundPlayOptions = {}
-  ): SoundInstance | null => {
+  ): SoundInstance | null {
     const { sound } = this;
 
     return sound === null ?
@@ -186,7 +201,7 @@ export class AudioZoneComponent<
         ...options,
         gain: this.#settings.volume
       }));
-  };
+  }
 
   #target(): ZoneTarget | null {
     const { world } = this.actor;
@@ -219,4 +234,17 @@ export class AudioZoneComponent<
       kWorldMatrix.fromArray(this.actor.transform.global.matrix)
     );
   }
+}
+
+function resolveSettings(
+  current: Readonly<AudioZoneSettings>,
+  options: Partial<AudioZoneSettings>
+): AudioZoneSettings {
+  const settings = mergeDefined<AudioZoneSettings>(current, options);
+
+  return {
+    ...settings,
+    falloff: Math.max(settings.falloff, 0),
+    volume: THREE.MathUtils.clamp(settings.volume, 0, 1)
+  };
 }

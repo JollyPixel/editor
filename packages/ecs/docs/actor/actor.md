@@ -170,7 +170,8 @@ if (player.hasDescendant(pickedActor)) {
 
 ## Re-parenting
 
-`reparent` keeps the actor's global position and orientation by default.
+`parent` is read-only: `reparent` is the only way to move an actor, and it
+keeps the actor's global position and orientation by default.
 
 ```ts
 hand.reparent(otherActor);

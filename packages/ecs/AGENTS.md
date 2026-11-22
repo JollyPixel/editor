@@ -2,20 +2,14 @@
 
 ## Boundaries
 
-Never import `three`, `@jolly-pixel/backend.three` or `@jolly-pixel/runtime`.
-pnpm's isolated `node_modules` make such an import fail typecheck.
+Never import `three`, `@jolly-pixel/backend.three` or `@jolly-pixel/runtime`:
+the ECS stays renderer-agnostic.
 
 ## Scene lifecycle gotchas
 
-- `loadScene()` never activates at once. A ready load activates on the next
-  `sceneManager.beginFrame()`: `scene.awake()` and the actor awakes run there,
-  then the scene's `start()`. `await load.done` resolves before any of them,
-  so a test ticks a frame before asserting actor state.
-- An actor created after `world.connect()` awakes on the next `beginFrame()`,
-  not at creation. Its components start in that same `beginFrame()`, after
-  the awake.
-- `fixedUpdate()` and `update()` only visit actors that already held a
-  component with `needUpdate` when the frame began.
+- Nothing runs at creation. Actors awake, components start and scene loads
+  activate on the next `sceneManager.beginFrame()`; `await load.done`
+  resolves before any of it. A test ticks a frame before asserting.
 
 ## Types and math
 
@@ -24,3 +18,6 @@ pnpm's isolated `node_modules` make such an import fail typecheck.
   top level, as `SceneBackend` is.
 - A quaternion check through `|dot| > 1 - ε` passes for a non-unit
   quaternion; assert the unit length too.
+- Never declare lifecycle hooks on `ActorComponent`: `noImplicitOverride` would
+  force `override` on every script. Engine code calls them through
+  `HookedComponent`.

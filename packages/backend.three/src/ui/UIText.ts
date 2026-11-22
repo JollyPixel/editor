@@ -95,6 +95,7 @@ export class UIText<TContext = Systems.WorldDefaultContext> {
   }
 
   destroy(): void {
+    this.#cssObject.removeFromParent();
     this.#element.remove();
   }
 }

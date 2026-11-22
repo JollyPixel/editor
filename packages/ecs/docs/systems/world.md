@@ -10,11 +10,10 @@ runs the frame loop. A game has one world, reached as `actor.world`.
 import { Systems } from "@jolly-pixel/ecs";
 
 const canvas = document.querySelector("canvas")!;
-const sceneManager = new Systems.SceneManager(new Systems.HeadlessSceneGraph());
 const renderer = new Systems.HeadlessRenderer(canvas);
 
 const game = new Systems.World(renderer, {
-  sceneManager,
+  graph: new Systems.HeadlessSceneGraph(),
   assetCoordinator
 });
 ```
@@ -27,24 +26,22 @@ The constructor accepts a [Renderer](renderer.md) and a
 
 ```ts
 interface WorldOptions {
-  /** The scene that manages actors and components. */
-  sceneManager: SceneManager;
+  /** Mirrors the actors on the backend. The world builds its `sceneManager` on it. */
+  graph: SceneGraph;
   /** Loads the assets scenes declare. */
   assetCoordinator: AssetCoordinator;
   /** Input system for keyboard, mouse, gamepad, etc. @default auto-created from canvas */
   input?: Input;
-  /** Master volume. @default sceneManager.graph.createAudio() */
+  /** Master volume. @default graph.createAudio() */
   audio?: WorldAudio;
   /** Read by components as `this.context`. @default {} */
   context?: TContext;
   /** Enable the exit mechanism on the input system. @default false */
   enableOnExit?: boolean;
-  /** Abstraction over global references (useful for testing). @default BrowserGlobalsAdapter */
-  globalsAdapter?: GlobalsAdapter;
-  /** Logs everything (level "trace", namespaces ["*"]). @default false */
+  /** Without `logger`, the default logger writes every level and namespace. @default false */
   debug?: boolean;
-  /** Logger settings. Each option set here overrides the `debug` default. */
-  logger?: LoggerOptions;
+  /** Becomes `world.logger`. @default a logger that writes warnings and errors */
+  logger?: Logger;
 }
 ```
 
@@ -97,6 +94,9 @@ function loop(now: number) {
 
 requestAnimationFrame(loop);
 ```
+
+`tick()` returns `true` once the input requested an exit. `stop()` sets that
+request and `start()` clears it, so a world started again ticks again.
 
 Under a runtime, its `GameLoop` calls `tick()`. Configure timing
 there:

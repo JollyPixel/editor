@@ -3,6 +3,7 @@ import type { GameLoop } from "@jolly-pixel/loop";
 
 // Import Internal Dependencies
 import type { RuntimeBackend } from "../contract/RuntimeBackend.ts";
+import type { RuntimeLogger } from "../contract/RuntimeLogger.ts";
 
 export interface ConfigureRuntimeDeviceOptions {
   /**
@@ -17,24 +18,15 @@ export type DeviceNavigator = Pick<
   "userAgent" | "platform" | "maxTouchPoints"
 >;
 
-interface DeviceProfile {
-  fps?: number;
-  isMobile: boolean;
-}
-
 export async function configureRuntimeDevice(
   loop: Pick<GameLoop, "scheduler">,
   backend: Pick<RuntimeBackend, "adaptPixelRatio">,
+  logger: Pick<RuntimeLogger, "warn">,
   options: ConfigureRuntimeDeviceOptions = {}
 ): Promise<void> {
-  const profile: DeviceProfile = options.maxFps === undefined ?
-    await benchmarkDevice() :
-    { isMobile: isMobileDevice() };
-  const { fps, isMobile } = profile;
-
-  loop.scheduler.maxFps = options.maxFps ?? fps ?? Infinity;
+  loop.scheduler.maxFps = options.maxFps ?? await benchmarkFps(logger);
   backend.adaptPixelRatio(
-    getDevicePixelRatio(isMobile)
+    cappedPixelRatio(isMobileDevice())
   );
 }
 
@@ -48,27 +40,22 @@ export function isMobileDevice(
     (platform === "MacIntel" && maxTouchPoints > 0);
 }
 
-async function benchmarkDevice(): Promise<DeviceProfile> {
+async function benchmarkFps(
+  logger: Pick<RuntimeLogger, "warn">
+): Promise<number> {
   const { getGPUTier } = await import("@pmndrs/detect-gpu");
-  const {
-    fps,
-    isMobile = false,
-    tier
-  } = await getGPUTier();
+  const { fps = Infinity, tier } = await getGPUTier();
 
   if (tier < 1) {
-    console.warn(
+    logger.warn(
       "GPU tier could not be determined; falling back to default settings."
     );
   }
 
-  return {
-    fps,
-    isMobile
-  };
+  return fps;
 }
 
-function getDevicePixelRatio(
+function cappedPixelRatio(
   isMobile: boolean
 ): number {
   const maxPixelRatio = isMobile ? 1.5 : 2;

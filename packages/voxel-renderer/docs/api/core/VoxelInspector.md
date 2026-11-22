@@ -80,7 +80,7 @@ recorder. `VoxelMetric` is compatible with `MetricDefinition` from
 `@jolly-pixel/ui/stats`.
 
 ```ts
-runtime.metrics.addSource(view.inspector);
+runtime.stats.addSource(view.inspector);
 ```
 
 | Metric | Unit | Value |

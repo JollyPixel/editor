@@ -14,8 +14,7 @@ import {
   ActorComponent,
   SignalEvent
 } from "../src/index.ts";
-import { Timers } from "../src/systems/Timers.ts";
-import { createWorld } from "./helpers/actor/mockWorld.ts";
+import { createHeadlessWorld } from "./helpers/world/headlessWorld.ts";
 
 class AssetConsumer extends ActorComponent {
   constructor(
@@ -42,10 +41,9 @@ test("ActorComponent reads a prepared asset synchronously", () => {
   const get = mock.fn(
     (_reference: AssetReference<string>) => "prepared dialogue"
   );
-  const world = {
-    ...createWorld(),
-    assetCoordinator: { get }
-  };
+  const world = createHeadlessWorld({
+    assetCoordinator: { get } as any
+  });
   const actor = new Actor(world as any, {
     name: "reader"
   });
@@ -61,11 +59,8 @@ test("ActorComponent reads a prepared asset synchronously", () => {
 });
 
 test("ActorComponent timers stop firing once the component is removed or destroyed", () => {
-  const timers = new Timers();
-  const world = {
-    ...createWorld(),
-    timers
-  };
+  const world = createHeadlessWorld();
+  const { timers } = world;
   const actor = new Actor(world as any, {
     name: "spawner"
   });
@@ -89,7 +84,7 @@ test("ActorComponent timers stop firing once the component is removed or destroy
 });
 
 test("ActorComponent.listen calls the listener on the component until it is destroyed", () => {
-  const actor = new Actor(createWorld() as any, {
+  const actor = new Actor(createHeadlessWorld() as any, {
     name: "listener"
   });
   const component = new AssetConsumer(actor);

@@ -9,21 +9,7 @@ import {
   World,
   type WorldOptions
 } from "../../../src/systems/World.ts";
-
-// CONSTANTS
-export const SCENE_GRAPH = { isGraph: true };
-
-function createMockSceneManager() {
-  return {
-    graph: SCENE_GRAPH,
-    awake: mock.fn(),
-    beginFrame: mock.fn(),
-    update: mock.fn(),
-    fixedUpdate: mock.fn(),
-    endFrame: mock.fn(),
-    bindWorld: mock.fn()
-  };
-}
+import { HeadlessSceneGraph } from "../../../src/systems/scene/HeadlessSceneGraph.ts";
 
 function createMockRenderer() {
   return {
@@ -47,10 +33,27 @@ function createMockInput() {
   };
 }
 
+function skip() {
+  return undefined;
+}
+
+function spyFrame(
+  world: World
+) {
+  const { sceneManager } = world;
+
+  return {
+    awake: mock.method(sceneManager, "awake", skip),
+    beginFrame: mock.method(sceneManager, "beginFrame", skip),
+    update: mock.method(sceneManager, "update", skip),
+    fixedUpdate: mock.method(sceneManager, "fixedUpdate", skip),
+    endFrame: mock.method(sceneManager, "endFrame", skip)
+  };
+}
+
 export function createWorldHarness(
   options: Pick<WorldOptions, "debug" | "logger"> = {}
 ) {
-  const sceneManager = createMockSceneManager();
   const renderer = createMockRenderer();
   const input = createMockInput();
   const scheduler = new FrameScheduler();
@@ -58,22 +61,17 @@ export function createWorldHarness(
 
   const world: World = new World(renderer as any, {
     ...options,
-    sceneManager: sceneManager as any,
+    graph: new HeadlessSceneGraph(),
     input: input as any,
     audio: {
-      listener: {},
-      setVolume: mock.fn(),
-      getVolume: mock.fn()
-    } as any,
-    assetCoordinator: {} as any,
-    globalsAdapter: {
-      exposeGame: mock.fn()
-    }
+      volume: 1
+    },
+    assetCoordinator: {} as any
   });
 
   return {
     world,
-    sceneManager,
+    sceneManager: spyFrame(world),
     renderer,
     input,
     scheduler,

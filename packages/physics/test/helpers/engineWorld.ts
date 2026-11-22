@@ -17,7 +17,6 @@ export interface TickOptions {
 export function createEngineWorld(
   sceneGraph: Systems.SceneGraph = new Systems.HeadlessSceneGraph()
 ) {
-  const sceneManager = new Systems.SceneManager(sceneGraph);
   const world = new Systems.World(
     {
       canvas: {},
@@ -28,7 +27,7 @@ export function createEngineWorld(
       dispose: () => undefined
     } as unknown as Systems.Renderer,
     {
-      sceneManager,
+      graph: sceneGraph,
       input: {
         connect: () => undefined,
         disconnect: () => undefined,
@@ -37,10 +36,7 @@ export function createEngineWorld(
         exited: false
       } as unknown as Systems.WorldOptions["input"],
       audio: {} as Systems.WorldOptions["audio"],
-      assetCoordinator: {} as Systems.WorldOptions["assetCoordinator"],
-      globalsAdapter: {
-        exposeGame: () => undefined
-      }
+      assetCoordinator: {} as Systems.WorldOptions["assetCoordinator"]
     }
   );
   world.connect().start();

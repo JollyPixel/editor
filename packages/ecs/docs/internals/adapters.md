@@ -20,15 +20,3 @@ interface ConsoleAdapter {
 ```
 
 Default: the global `console`.
-
-## Globals
-
-Used by `World` (`globalsAdapter` option) to publish the world instance.
-
-```ts
-interface GlobalsAdapter {
-  exposeGame(instance: World<any, any>): void;
-}
-```
-
-Default: `BrowserGlobalsAdapter` (assigns `globalThis.game`).

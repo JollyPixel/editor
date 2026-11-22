@@ -1,11 +1,11 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type Component,
   Systems
 } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
+import { ConfigurableDefinition } from "../ConfigurableDefinition.ts";
 import {
   CameraComponent,
   CAMERA_DEFAULTS,
@@ -21,11 +21,12 @@ const kProjectionModes: Record<CameraProjectionMode, true> = {
 
 export type CameraData = Required<CameraSettings>;
 
-export class CameraDefinition implements Systems.ComponentDefinition<
+export class CameraDefinition extends ConfigurableDefinition<
   CameraData,
   CameraComponent<any>
 > {
   readonly type = "Camera";
+  protected readonly component = CameraComponent;
 
   parse(
     data: Readonly<Systems.JSONObject>
@@ -59,19 +60,6 @@ export class CameraDefinition implements Systems.ComponentDefinition<
       ...data,
       render: context.mode === "play"
     });
-  }
-
-  apply(
-    component: CameraComponent<any>,
-    data: CameraData
-  ): void {
-    component.configure(data);
-  }
-
-  owns(
-    component: Component
-  ): component is CameraComponent<any> {
-    return component instanceof CameraComponent;
   }
 
   capture(

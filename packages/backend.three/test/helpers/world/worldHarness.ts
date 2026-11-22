@@ -5,21 +5,6 @@ import { mock } from "node:test";
 import { FrameScheduler } from "@jolly-pixel/loop";
 import { Systems } from "@jolly-pixel/ecs";
 
-// CONSTANTS
-const kSceneGraph = { isGraph: true };
-
-function createMockSceneManager() {
-  return {
-    graph: kSceneGraph,
-    awake: mock.fn(),
-    beginFrame: mock.fn(),
-    update: mock.fn(),
-    fixedUpdate: mock.fn(),
-    endFrame: mock.fn(),
-    bindWorld: mock.fn()
-  };
-}
-
 function createMockRenderer() {
   return {
     canvas: { addEventListener: mock.fn(), removeEventListener: mock.fn() },
@@ -45,7 +30,6 @@ function createMockInput() {
 export function createWorldHarness(
   options: Pick<Systems.WorldOptions, "debug" | "logger"> = {}
 ) {
-  const sceneManager = createMockSceneManager();
   const renderer = createMockRenderer();
   const input = createMockInput();
   const scheduler = new FrameScheduler();
@@ -53,22 +37,18 @@ export function createWorldHarness(
 
   const world: Systems.World = new Systems.World(renderer as any, {
     ...options,
-    sceneManager: sceneManager as any,
+    graph: new Systems.HeadlessSceneGraph(),
     input: input as any,
     audio: {
       listener: {},
       setVolume: mock.fn(),
       getVolume: mock.fn()
     } as any,
-    assetCoordinator: {} as any,
-    globalsAdapter: {
-      exposeGame: mock.fn()
-    }
+    assetCoordinator: {} as any
   });
 
   return {
     world,
-    sceneManager,
     renderer,
     input,
     scheduler,

@@ -10,16 +10,16 @@ import {
 
 // Import Internal Dependencies
 import {
-  RuntimeSession,
+  attachRuntimeSession,
   type RuntimeSessionHost
-} from "../../src/session/RuntimeSession.ts";
+} from "../../src/session/attachRuntimeSession.ts";
 import {
   RuntimeSessionSettings,
   type RuntimeSessionOptions
 } from "../../src/session/RuntimeSessionSettings.ts";
 import { OverlayLayer } from "../../src/overlay/OverlayLayer.ts";
 
-describe("RuntimeSession", () => {
+describe("attachRuntimeSession", () => {
   test("claims canvas focus and keypresses with every option off", () => {
     const { host, session, dispose } = startSession({ focusCanvas: false });
 
@@ -30,7 +30,7 @@ describe("RuntimeSession", () => {
       assert.equal(document.activeElement, host.canvas);
       assert.equal(keypress.defaultPrevented, true);
 
-      session.dispose();
+      session.abort();
       const afterDispose = new KeyboardEvent("keypress", { cancelable: true });
       host.canvas.dispatchEvent(afterDispose);
       assert.equal(afterDispose.defaultPrevented, false);
@@ -40,7 +40,7 @@ describe("RuntimeSession", () => {
     }
   });
 
-  test("refocuses the canvas on a page click until disposed", () => {
+  test("refocuses the canvas on a page click until aborted", () => {
     const { host, session, dispose } = startSession({});
 
     try {
@@ -48,7 +48,7 @@ describe("RuntimeSession", () => {
       document.body.click();
       assert.equal(document.activeElement, host.canvas);
 
-      session.dispose();
+      session.abort();
       host.canvas.blur();
       document.body.click();
       assert.notEqual(document.activeElement, host.canvas);
@@ -58,13 +58,13 @@ describe("RuntimeSession", () => {
     }
   });
 
-  test("mounts the focus hint and removes it on dispose", () => {
+  test("mounts the focus hint and removes it on abort", () => {
     const { host, session, dispose } = startSession({ focusHint: true });
 
     try {
       assert.equal(host.overlay.element.childElementCount, 1);
 
-      session.dispose();
+      session.abort();
       assert.equal(host.overlay.element.childElementCount, 0);
     }
     finally {
@@ -84,7 +84,7 @@ describe("RuntimeSession", () => {
       assert.equal(continuousWake.mock.callCount(), 0);
       assert.equal(onDemandWake.mock.callCount(), 2);
 
-      onDemand.session.dispose();
+      onDemand.session.abort();
       document.dispatchEvent(new KeyboardEvent("keydown"));
       window.dispatchEvent(new window.Event("gamepadconnected"));
       assert.equal(onDemandWake.mock.callCount(), 2);
@@ -133,16 +133,18 @@ function startSession(
       }
     }
   };
-  const session = new RuntimeSession(
+  const session = new AbortController();
+  attachRuntimeSession(
     host,
-    new RuntimeSessionSettings(options)
+    new RuntimeSessionSettings(options),
+    session.signal
   );
 
   return {
     host,
     session,
     dispose(): void {
-      session.dispose();
+      session.abort();
       host.overlay.dispose();
       canvas.remove();
     }

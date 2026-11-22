@@ -1,31 +1,32 @@
 // Import Internal Dependencies
 import type {
-  Component,
-  ComponentClass
-} from "../components/types.ts";
+  ActorComponent,
+  HookedComponent
+} from "./ActorComponent.ts";
+import type { ComponentClass } from "../components/types.ts";
 
-export class ActorComponents implements Iterable<Component> {
-  #all: Component[] = [];
-  #updating: readonly Component[] = [];
+export class ActorComponents implements Iterable<HookedComponent> {
+  #all: HookedComponent[] = [];
+  #updating: readonly HookedComponent[] = [];
 
   get updating(): boolean {
     return this.#updating.length > 0;
   }
 
   has(
-    component: Component
+    component: HookedComponent
   ): boolean {
     return this.#all.includes(component);
   }
 
   attach(
-    component: Component
+    component: HookedComponent
   ): void {
     this.#all.push(component);
   }
 
   detach(
-    component: Component
+    component: HookedComponent
   ): void {
     const index = this.#all.indexOf(component);
     if (index !== -1) {
@@ -34,7 +35,7 @@ export class ActorComponents implements Iterable<Component> {
   }
 
   requireUpdate(
-    component: Component,
+    component: HookedComponent,
     required: boolean
   ): void {
     const index = this.#updating.indexOf(component);
@@ -47,7 +48,7 @@ export class ActorComponents implements Iterable<Component> {
       this.#updating.toSpliced(index, 1);
   }
 
-  find<T extends Component>(
+  find<T extends ActorComponent<any>>(
     type: string | ComponentClass<T>
   ): T | null {
     for (const component of this) {
@@ -62,7 +63,7 @@ export class ActorComponents implements Iterable<Component> {
     return null;
   }
 
-  * matching<T extends Component>(
+  * matching<T extends ActorComponent<any>>(
     type: ComponentClass<T>
   ): IterableIterator<T> {
     for (const component of this) {
@@ -72,7 +73,7 @@ export class ActorComponents implements Iterable<Component> {
     }
   }
 
-  * [Symbol.iterator](): IterableIterator<Component> {
+  * [Symbol.iterator](): IterableIterator<HookedComponent> {
     for (const component of this.#all) {
       if (!component.pendingForDestruction) {
         yield component;

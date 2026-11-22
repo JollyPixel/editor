@@ -12,6 +12,7 @@ import { DEBUG_HANDLE } from "#src/boot/StandaloneEditor.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import { OfflineServer } from "#src/offline/server/OfflineServer.ts";
 import type { StandaloneConnection } from "#src/connection/StandaloneConnection.ts";
+import { silentLogger } from "./logs.ts";
 
 // CONSTANTS
 export const ASSET_ID = "debug-target";
@@ -48,7 +49,8 @@ export function offlineOptions(
         read: () => Promise.resolve(EditorLaunch.fromTarget(ASSET_ID))
       }
     ],
-    connect: () => server.connect()
+    connect: () => server.connect(),
+    logger: silentLogger()
   };
 }
 
