@@ -1,14 +1,17 @@
 # ColliderOutline
 
-An actor component that draws the colliders of a
-[`RigidBody`](../ecs/RigidBody.md) as three.js lines, at the size the body
-gets. It creates no body and needs no [`PhysicsSystem`](../ecs/PhysicsSystem.md).
-Passed to `RigidBodyDefinition`, it is the edit view of scene rigid bodies; a
-game can add one next to a `RigidBody` to see its colliders.
+An actor component that draws the colliders of a `RigidBody` from
+`@jolly-pixel/physics/ecs` as three.js lines, at the size the body gets. It
+creates no body and needs no `PhysicsSystem`. Passed to `RigidBodyDefinition`,
+it is the edit view of scene rigid bodies; a game can add one next to a
+`RigidBody` to see its colliders.
+
+It lives in its own entry point so that games without physics do not need
+`@jolly-pixel/physics`, an optional peer dependency of this package.
 
 ```ts
 import { RigidBody } from "@jolly-pixel/physics/ecs";
-import { ColliderOutline } from "@jolly-pixel/physics/three";
+import { ColliderOutline } from "@jolly-pixel/backend.three/physics";
 
 const crate = actor.addComponentAndGet(RigidBody);
 actor.addComponent(ColliderOutline, crate.settings);

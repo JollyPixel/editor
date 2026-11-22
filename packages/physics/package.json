@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/physics",
-  "description": "Engine-neutral physics contract, JollyPixel ECS components and three.js collider outlines",
+  "description": "Engine-neutral physics contract and JollyPixel ECS components",
   "version": "1.0.0",
   "type": "module",
   "sideEffects": false,
@@ -12,10 +12,6 @@
     "./ecs": {
       "types": "./dist/ecs/index.d.ts",
       "default": "./dist/ecs/index.js"
-    },
-    "./three": {
-      "types": "./dist/three/index.d.ts",
-      "default": "./dist/three/index.js"
     },
     "./testing": {
       "types": "./dist/testing/index.d.ts",
@@ -57,23 +53,14 @@
     "@jolly-pixel/math": "workspace:*"
   },
   "peerDependencies": {
-    "@jolly-pixel/backend.three": "workspace:*",
-    "@jolly-pixel/ecs": "workspace:*",
-    "three": "^0.187.0"
+    "@jolly-pixel/ecs": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@jolly-pixel/backend.three": {
-      "optional": true
-    },
     "@jolly-pixel/ecs": {
-      "optional": true
-    },
-    "three": {
       "optional": true
     }
   },
   "devDependencies": {
-    "@jolly-pixel/backend.three": "workspace:*",
     "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/loop": "workspace:*"
   }

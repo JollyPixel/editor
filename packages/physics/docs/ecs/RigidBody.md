@@ -100,6 +100,12 @@ pose. `rotation` defaults to the current one.
 - `fixed`: neither moves after creation.
 - Destroying the component removes the body and its colliders.
 
+### scaleCollider(collider: ColliderSettings, scale: Vector3Like): ColliderSettings
+
+Returns the collider as `RigidBody` builds it on an actor with that world
+scale, by the rules above. An edit view uses it to draw colliders at the size
+the body gets.
+
 ## Scene files
 
 `RigidBodyDefinition` registers the component under the type `"RigidBody"`. In
@@ -110,7 +116,7 @@ a `RigidBody` with a trimesh collider.
 
 ```ts
 import { RigidBodyDefinition } from "@jolly-pixel/physics/ecs";
-import { ColliderOutline } from "@jolly-pixel/physics/three";
+import { ColliderOutline } from "@jolly-pixel/backend.three/physics";
 
 definitions.register(new RigidBodyDefinition(ColliderOutline));
 ```
@@ -132,7 +138,8 @@ class RigidBodyDefinition {
 }
 ```
 
-[`ColliderOutline`](../three/ColliderOutline.md) is the three.js edit view.
+`ColliderOutline`, from `@jolly-pixel/backend.three/physics`, is the three.js
+edit view.
 
 ```ts
 interface RigidBodyData {

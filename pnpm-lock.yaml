@@ -822,6 +822,9 @@ importers:
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../e2e
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../physics
 
   packages/bench:
     devDependencies:
@@ -1759,13 +1762,7 @@ importers:
       '@jolly-pixel/math':
         specifier: workspace:*
         version: link:../math
-      three:
-        specifier: ^0.187.0
-        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
     devDependencies:
-      '@jolly-pixel/backend.three':
-        specifier: workspace:*
-        version: link:../backend.three
       '@jolly-pixel/ecs':
         specifier: workspace:*
         version: link:../ecs

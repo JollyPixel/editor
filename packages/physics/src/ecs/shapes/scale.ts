@@ -2,17 +2,13 @@
 import type { Vector3Like } from "@jolly-pixel/math";
 
 // Import Internal Dependencies
-import type {
-  ColliderDesc,
-  ColliderShape
-} from "../../ColliderShape.ts";
-
-type PlacedCollider = ColliderDesc & Required<Pick<ColliderDesc, "offset">>;
+import type { ColliderShape } from "../../ColliderShape.ts";
+import type { ColliderSettings } from "../RigidBody.ts";
 
 export function scaleCollider(
-  collider: Readonly<PlacedCollider>,
+  collider: Readonly<ColliderSettings>,
   scale: Vector3Like
-): ColliderDesc {
+): ColliderSettings {
   const {
     shape, offset, ...material
   } = collider;

@@ -14,9 +14,7 @@ export interface TickOptions {
   alpha?: number;
 }
 
-export function createEngineWorld(
-  sceneGraph: Systems.SceneGraph = new Systems.HeadlessSceneGraph()
-) {
+export function createEngineWorld() {
   const world = new Systems.World(
     {
       canvas: {},
@@ -27,7 +25,7 @@ export function createEngineWorld(
       dispose: () => undefined
     } as unknown as Systems.Renderer,
     {
-      graph: sceneGraph,
+      graph: new Systems.HeadlessSceneGraph(),
       input: {
         connect: () => undefined,
         disconnect: () => undefined,

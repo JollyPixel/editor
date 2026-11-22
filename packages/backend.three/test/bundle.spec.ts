@@ -1,5 +1,5 @@
 // Import Node.js Dependencies
-import { describe, test } from "node:test";
+import { before, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 
@@ -13,9 +13,13 @@ import {
 const kPackageRoot = path.join(import.meta.dirname, "..");
 const kOnDemandModules =
   /\/(KTX2Loader|GLTFLoader|FBXLoader|OBJLoader|MTLLoader|meshopt_decoder\.module)\.js$/;
+const kPhysicsModules = /\/physics\//;
 
 describe("@jolly-pixel/backend.three bundle", () => {
-  test("loads the three.js texture and model loaders on demand", async() => {
+  let chunks: Map<string, Rolldown.OutputChunk>;
+  let moduleIds: string[];
+
+  before(async() => {
     const result = await build({
       configFile: false,
       logLevel: "silent",
@@ -29,11 +33,15 @@ describe("@jolly-pixel/backend.three bundle", () => {
         }
       }
     }) as Rolldown.RolldownOutput;
-    const chunks = new Map(
+    chunks = new Map(
       result.output.flatMap(
         (file) => (file.type === "chunk" ? [[file.fileName, file]] : [])
       )
     );
+    moduleIds = [...chunks.values()].flatMap((chunk) => chunk.moduleIds);
+  });
+
+  test("loads the three.js texture and model loaders on demand", () => {
     const eager = new Set(
       [...chunks.values()].filter((chunk) => chunk.isEntry)
     );
@@ -42,7 +50,6 @@ describe("@jolly-pixel/backend.three bundle", () => {
         eager.add(chunks.get(name)!);
       }
     }
-    const moduleIds = [...chunks.values()].flatMap((chunk) => chunk.moduleIds);
 
     assert.deepStrictEqual(
       [...eager]
@@ -53,6 +60,13 @@ describe("@jolly-pixel/backend.three bundle", () => {
     assert.equal(
       moduleIds.filter((id) => kOnDemandModules.test(id)).length,
       6
+    );
+  });
+
+  test("keeps @jolly-pixel/physics out of the root entry", () => {
+    assert.deepStrictEqual(
+      moduleIds.filter((id) => kPhysicsModules.test(id)),
+      []
     );
   });
 });

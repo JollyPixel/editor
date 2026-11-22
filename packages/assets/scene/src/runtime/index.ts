@@ -7,7 +7,7 @@ import {
   type ThreeComponentPackage
 } from "@jolly-pixel/backend.three";
 import { RigidBodyDefinition } from "@jolly-pixel/physics/ecs";
-import { ColliderOutline } from "@jolly-pixel/physics/three";
+import { ColliderOutline } from "@jolly-pixel/backend.three/physics";
 
 // CONSTANTS
 export const CAMERA_DEFINITION = new CameraDefinition();

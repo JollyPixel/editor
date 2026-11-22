@@ -5,9 +5,6 @@
       "path": "../math"
     },
     {
-      "path": "../backend.three"
-    },
-    {
       "path": "../ecs"
     }
   ]
