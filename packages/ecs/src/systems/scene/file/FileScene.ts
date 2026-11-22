@@ -113,7 +113,7 @@ export class FileScene<
     instance.add(this.file.actors);
     connectSceneSignals(
       instance,
-      this.world.logger.child({ namespace: "Systems.FileScene" })
+      this.world.logger.child({ namespace: "ecs.file-scene" })
     );
 
     this.#environment = this.world.sceneManager.graph.createEnvironment(

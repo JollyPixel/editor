@@ -64,7 +64,7 @@ export class SceneManager<
     super();
     this.#world = world;
     this.#logger = world.logger.child({
-      namespace: "Systems.SceneManager"
+      namespace: "ecs.scene-manager"
     });
     this.graph = graph as BackendSceneGraph;
     this.actors = new ActorRegistry(graph);

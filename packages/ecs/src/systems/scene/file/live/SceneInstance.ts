@@ -96,7 +96,7 @@ export class SceneInstance<
     this.#prefabs = options.prefabs ?? NO_SCENE_PREFABS;
     this.#chain = options.sceneId === undefined ? [] : [options.sceneId];
     this.#logger = options.world.logger.child({
-      namespace: "Systems.SceneInstance"
+      namespace: "ecs.scene-instance"
     });
   }
 

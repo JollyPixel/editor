@@ -110,3 +110,15 @@ describe("Runtime pixel ratio", () => {
     dispose();
   });
 });
+
+describe("Runtime logger", () => {
+  stubProperty(globalThis.navigator, "getGamepads", () => []);
+
+  test("hands its logger to the world", () => {
+    const logger = new Systems.Logger({ level: "void" });
+    const { runtime, dispose } = createRuntime({ logger });
+
+    assert.strictEqual(runtime.world.logger, logger);
+    dispose();
+  });
+});

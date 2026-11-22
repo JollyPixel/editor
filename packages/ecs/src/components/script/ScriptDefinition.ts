@@ -113,7 +113,10 @@ export class ScriptDefinition implements ComponentDefinition<
       context.assets.resolve("script") ?? this.#registered
     );
     if (behavior === null) {
-      actor.world.logger.warn("Unregistered behavior skipped", {
+      const logger = actor.world.logger.child({
+        namespace: "ecs.behavior"
+      });
+      logger.warn("Unregistered behavior skipped", {
         behavior: data.behavior,
         actor: actor.name
       });

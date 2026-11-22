@@ -53,7 +53,7 @@ export function createSceneSetup(
 ) {
   const {
     assets = createSceneAssets(),
-    logger = new Logger(),
+    logger = new Logger({ level: "void" }),
     graph = new HeadlessSceneGraph(),
     audio = graph.createAudio()
   } = options;

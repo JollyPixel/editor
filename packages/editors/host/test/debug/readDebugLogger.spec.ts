@@ -42,7 +42,7 @@ describe("readDebugLogger", () => {
       storage: storageWith("editor")
     });
 
-    assert.equal(logger.isLevelEnabled("debug"), true);
+    assert.equal(logger.isLevelEnabled("trace"), true);
     assert.equal(enabled(logger, "host.boot"), true);
     assert.equal(enabled(logger, "studio.tabs"), true);
     assert.equal(enabled(logger, "editor"), false);

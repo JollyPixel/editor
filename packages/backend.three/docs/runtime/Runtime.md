@@ -43,10 +43,8 @@ interface RuntimeOptions<TContext> {
    * or `output.maxPixelRatio` survives `load()`.
    */
   renderer?: ThreeRendererOptions;
-  /** Receives the startup steps and a lost GPU device. @default every namespace disabled */
+  /** Startup steps, a lost GPU device, and `world.logger`. @default a logger that writes warnings and errors */
   logger?: Systems.Logger;
-  /** `LoggerOptions` of `world.logger`, such as a `listener` that forwards scene warnings. */
-  worldLogger?: Systems.LoggerOptions;
   /** `true` or an object mounts the corner HUD. @default false */
   includePerformanceStats?: false | PerformanceStatsOption;
   /**
@@ -121,3 +119,8 @@ with `includePerformanceStats`, before the `RuntimeCore` steps of `load()`.
 When the renderer emits [`deviceLost`](../systems/renderer.md#events), the
 logger writes an error with `api`, `message` and `reason`. The canvas stays
 blank until the page reloads.
+
+The world logs through the same logger, so one `listener` or one set of
+`namespaces` covers the startup steps, the world, its scenes and their
+components. The backend adds `three.scene-environment` (an unavailable room
+environment) and `three.sprite-renderer` (a missing sprite animation).

@@ -10,6 +10,7 @@ import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { AssetDocumentKind } from "#src/lease/AssetLease.ts";
 import { fakeConnection, MAP } from "../helpers/session/connection.ts";
+import { silentLogger } from "../helpers/logs.ts";
 import {
   changedMessage,
   fakeDocumentKind,
@@ -36,7 +37,8 @@ async function startOpen(
       new AssetId(options.target ?? "map")
     ),
     kinds: options.kinds ?? [],
-    accepts: options.accepts ?? "voxelmap"
+    accepts: options.accepts ?? "voxelmap",
+    logger: silentLogger()
   });
   pending.catch(() => undefined);
 

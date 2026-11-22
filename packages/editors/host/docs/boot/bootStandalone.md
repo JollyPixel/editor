@@ -97,8 +97,9 @@ The toolbar opens another asset or version without reloading the page:
 
 ## Debug logging
 
-Boot steps go to a `HostLogger`. Nothing is logged until namespaces are
-enabled, as comma-separated globs:
+Boot steps go to a `HostLogger`. Warnings and errors are always written; trace,
+debug and info messages wait until their namespaces are enabled, as
+comma-separated globs:
 
 - `?debug=host.*,editor.*` in the URL; a bare `?debug` enables everything.
 - `localStorage.setItem("jolly-pixel:debug", "*")` for pages framed by the
@@ -106,4 +107,6 @@ enabled, as comma-separated globs:
 
 `host.boot`, `host.launch`, `host.session`, `host.switch` and `host.console`
 trace the host. `editor` is `context.logger`, and `editor.runtime` the logger
-passed to `createRuntime`.
+passed to `createRuntime`. The runtime's world logs below it, so
+`editor.runtime.ecs.*` traces the world and its scene files, and
+`editor.runtime.scene.*` the scenes' own `scene.logger`.

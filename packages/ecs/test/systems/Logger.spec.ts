@@ -42,25 +42,65 @@ describe("Systems.Logger", () => {
     assert.strictEqual(adapter.error.mock.callCount(), 1);
   });
 
+  test("should write warnings and errors whatever their namespace", () => {
+    const adapter = createAdapter();
+    const logger = new Logger({ adapter }).child({ namespace: "editor" });
+
+    logger.info("info");
+    logger.warn("warn");
+    logger.error("error");
+
+    assert.strictEqual(adapter.log.mock.callCount(), 0);
+    assert.deepEqual(adapter.warn.mock.calls[0].arguments, ["[WARN] [editor] warn"]);
+    assert.deepEqual(adapter.error.mock.calls[0].arguments, ["[ERROR] [editor] error"]);
+  });
+
   test("should hand each written message to its listener as an entry", () => {
     const entries: LogEntry[] = [];
     const logger = new Logger({
       level: "warn",
-      namespaces: ["systems.*"],
+      namespaces: ["*"],
       adapter: createAdapter(),
       listener: (entry) => entries.push(entry)
     });
 
-    logger.child({ namespace: "systems" }).warn("warn", { reason: "test" });
-    logger.child({ namespace: "systems" }).info("info");
-    logger.child({ namespace: "editor" }).error("error");
+    logger.child({ namespace: "ecs" }).warn("warn", { reason: "test" });
+    logger.child({ namespace: "ecs" }).info("info");
 
     assert.deepEqual(entries, [{
       level: "warn",
-      namespace: "systems",
+      namespace: "ecs",
       message: "warn",
       meta: { reason: "test" }
     }]);
+  });
+
+  test("should report a failing listener to the adapter instead of the caller", () => {
+    const adapter = createAdapter();
+    const error = new Error("closed");
+    const logger = new Logger({
+      adapter,
+      listener: () => {
+        throw error;
+      }
+    });
+
+    logger.warn("warn");
+
+    assert.deepEqual(adapter.error.mock.calls[0].arguments, [
+      "[ERROR] [root] log listener failed",
+      { error }
+    ]);
+  });
+
+  test("should disable a pattern enabled twice", () => {
+    const logger = new Logger();
+
+    logger.enableNamespace("*");
+    logger.enableNamespace("*");
+    logger.disableNamespace("*");
+
+    assert.strictEqual(logger.isNamespaceEnabled(), false);
   });
 
   test("should silence every level with void", () => {

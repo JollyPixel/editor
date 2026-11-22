@@ -64,7 +64,7 @@ export class SpriteRenderer extends ActorComponent<any> {
       () => {
         this.needUpdate = true;
       },
-      actor.world.logger
+      actor.world.logger.child({ namespace: "three.sprite-renderer" })
     );
     this.threeObject = new THREE.Sprite(new THREE.SpriteMaterial());
   }

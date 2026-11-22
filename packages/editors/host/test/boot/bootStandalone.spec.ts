@@ -26,6 +26,7 @@ import { LaunchNotFoundError } from "#src/launch/errors/LaunchNotFoundError.ts";
 import type { LaunchSource } from "#src/launch/sources/LaunchSource.ts";
 import { editorHandle } from "../helpers/editorHandle.ts";
 import { withoutWebNavigator } from "../helpers/navigator.ts";
+import { silentLogger } from "../helpers/logs.ts";
 
 // CONSTANTS
 const kAssetId = "offline-target";
@@ -162,7 +163,8 @@ describe("bootStandalone", () => {
 
     const editor = await bootStandalone(definition(mounted), {
       sources: missingLaunch(),
-      offline: project
+      offline: project,
+      logger: silentLogger()
     });
     editor.dispose();
 
@@ -211,7 +213,8 @@ describe("bootStandalone", () => {
 
     const pending = bootStandalone(definition(mounted), {
       sources: missingLaunch(),
-      offline: project
+      offline: project,
+      logger: silentLogger()
     });
     await answerOffer("offline");
     const editor = await pending;
@@ -230,7 +233,8 @@ describe("bootStandalone", () => {
         projects++;
 
         return project();
-      }
+      },
+      logger: silentLogger()
     });
     await answerOffer("retry");
     await answerOffer("cancel");
@@ -254,7 +258,8 @@ describe("bootStandalone", () => {
       }
     }, {
       sources: missingLaunch(),
-      offline: project
+      offline: project,
+      logger: silentLogger()
     });
     await answerOffer("offline");
     const editor = await pending;

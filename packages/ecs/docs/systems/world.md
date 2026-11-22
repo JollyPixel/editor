@@ -38,10 +38,10 @@ interface WorldOptions {
   context?: TContext;
   /** Enable the exit mechanism on the input system. @default false */
   enableOnExit?: boolean;
-  /** Logs everything (level "trace", namespaces ["*"]). @default false */
+  /** Without `logger`, the default logger writes every level and namespace. @default false */
   debug?: boolean;
-  /** Logger settings. Each option set here overrides the `debug` default. */
-  logger?: LoggerOptions;
+  /** Becomes `world.logger`. @default a logger that writes warnings and errors */
+  logger?: Logger;
 }
 ```
 

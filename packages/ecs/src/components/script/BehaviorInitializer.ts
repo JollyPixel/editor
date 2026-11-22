@@ -52,7 +52,10 @@ export class BehaviorInitializer {
     kind: string,
     name: PropertyKey
   ): void {
-    this.#behavior.actor.world.logger.warn(`Behavior ${kind} not found`, {
+    const logger = this.#behavior.actor.world.logger.child({
+      namespace: "ecs.behavior"
+    });
+    logger.warn(`Behavior ${kind} not found`, {
       behavior: this.behaviorName,
       name: String(name)
     });

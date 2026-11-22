@@ -69,7 +69,7 @@ export class ThreeSceneEnvironment implements Systems.SceneEnvironment {
     this.#graph = graph;
     this.#loadedRoom = options.room ?? null;
     this.#logger = world.logger.child({
-      namespace: "Systems.SceneEnvironment"
+      namespace: "three.scene-environment"
     });
 
     const renderer = this.#renderer;

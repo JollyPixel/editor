@@ -29,6 +29,7 @@ import {
   fakeDocumentKind,
   snapshotMessage
 } from "../helpers/rooms.ts";
+import { silentLogger } from "../helpers/logs.ts";
 
 const kServerLink: ServerConnection = {
   ready: true,
@@ -49,7 +50,8 @@ describe("SessionConnection.connect", () => {
     const connecting = SessionConnection.connect({
       identity: PEER_IDENTITY,
       client,
-      server: kServerLink
+      server: kServerLink,
+      logger: silentLogger()
     });
     await setImmediate();
     t.mock.timers.tick(CATALOG_TIMEOUT_MS);
@@ -99,7 +101,8 @@ describe("SessionConnection.connect", () => {
       SessionConnection.connect({
         identity: PEER_IDENTITY,
         client,
-        openCatalog: () => Promise.reject(failure)
+        openCatalog: () => Promise.reject(failure),
+        logger: silentLogger()
       }),
       failure
     );

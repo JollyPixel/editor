@@ -45,10 +45,6 @@ export interface ThreeRuntimeBackendOptions<TContext> {
    * Forwarded to `ThreeRenderer.create()`.
    */
   renderer?: ThreeRendererOptions;
-  /**
-   * Forwarded to the world's `logger`.
-   */
-  worldLogger?: Systems.LoggerOptions;
 }
 
 export class ThreeRuntimeBackend<
@@ -92,7 +88,7 @@ export class ThreeRuntimeBackend<
       graph: new ThreeSceneGraph(),
       context: options.context,
       audio: options.audio,
-      logger: options.worldLogger,
+      logger,
       assetCoordinator: new AssetCoordinator({
         catalog,
         loaders: createDefaultAssetLoaders(this.manager, {

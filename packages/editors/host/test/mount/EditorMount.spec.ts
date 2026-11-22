@@ -17,7 +17,7 @@ import {
 import { BootTrace } from "#src/mount/BootTrace.ts";
 import type { EditorHandle } from "#src/contract/EditorDefinition.ts";
 import { EditorMount } from "#src/mount/EditorMount.ts";
-import { readDebugLogger } from "#src/debug/readDebugLogger.ts";
+import { silentLogger } from "../helpers/logs.ts";
 import { EditorLaunch } from "#src/launch/EditorLaunch.ts";
 import type { LaunchHistory } from "#src/launch/LaunchHistory.ts";
 import { PageState } from "#src/mount/PageState.ts";
@@ -96,11 +96,11 @@ async function startMount(
       };
     },
     history,
-    logger: readDebugLogger()
+    logger: silentLogger()
   });
   await mount.start(
     new EditorLaunch(new AssetId(kFirst)),
-    new BootTrace(readDebugLogger(), new PageState())
+    new BootTrace(silentLogger(), new PageState())
   );
   events.length = 0;
 

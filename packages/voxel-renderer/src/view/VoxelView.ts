@@ -258,7 +258,7 @@ export class VoxelView {
 
     this.range = new VoxelRange(range);
     this.#logger = logger.child({
-      namespace: "VoxelView"
+      namespace: "voxel.view"
     });
 
     this.inspector = new VoxelInspector(

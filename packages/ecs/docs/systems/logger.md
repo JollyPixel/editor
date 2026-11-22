@@ -40,15 +40,30 @@ interface LogEntry {
 }
 ```
 
-A message is written when its level is at least `level` and its logger's
-namespace matches one of `namespaces`. With no namespaces, nothing is written;
-`"void"` silences every level. Patterns use dots: `"boot.*"` matches `boot`
-and everything below it, `"*"` matches every namespace. Elsewhere a `*`
-segment matches one level (`"boot.*.assets"`), `**` any number of levels, and
-`*` or `?` inside a segment any characters or one. `adapter` is described
-in [Adapters](../internals/adapters.md#console). `listener` receives each
-written message after the adapter, unformatted, with the namespace of the
-logger that wrote it.
+A message is written when its level is at least `level`. A `trace`, `debug`
+or `info` message also needs its logger's namespace to match one of
+`namespaces`; `warn`, `error` and `fatal` are written whatever the namespace.
+With no namespaces, only warnings and errors are written; `"void"` silences
+every level. Patterns use dots and match case: `"boot.*"` matches `boot` and
+everything below it, `"*"` matches every namespace. Elsewhere a `*` segment
+matches one level (`"boot.*.assets"`), `**` any number of levels, and `*` or
+`?` inside a segment any characters or one.
+
+`adapter` is described in [Adapters](../internals/adapters.md#console).
+`listener` receives each written message after the adapter, unformatted, with
+the namespace of the logger that wrote it. A listener that throws does not
+reach the code that logged: the logger writes `log listener failed` with the
+`error` to `adapter.error` instead.
+
+The engine logs on children of `world.logger`:
+
+- `ecs.world`: connect, start, stop and dispose.
+- `ecs.scene-manager`: scene changes and teardown.
+- `ecs.file-scene` and `ecs.scene-instance`: skipped actors, components,
+  assets, prefabs and signal connections of a scene file.
+- `ecs.behavior`: unregistered behaviors and missing behavior members.
+- `scene.<name>`: `scene.logger` of the scene named `<name>`, with each `.`
+  of the name replaced by `-`.
 
 ## Children
 

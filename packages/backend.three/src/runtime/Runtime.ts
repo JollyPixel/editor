@@ -31,7 +31,7 @@ export interface RuntimeOptions<
 > extends RuntimeCoreOptions, ThreeRuntimeBackendOptions<TContext> {
   includePerformanceStats?: false | PerformanceStatsOption;
   /**
-   * @default a logger with every namespace disabled
+   * @default a logger that writes warnings and errors
    */
   logger?: Systems.Logger;
 }

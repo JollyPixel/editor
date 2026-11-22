@@ -12,10 +12,7 @@ import {
 } from "../actor/index.ts";
 import { SceneManager } from "./scene/SceneManager.ts";
 import type { SceneGraph } from "./scene/SceneGraph.ts";
-import {
-  Logger,
-  type LoggerOptions
-} from "./Logger.ts";
+import { Logger } from "./Logger.ts";
 import { WorldTime } from "./WorldTime.ts";
 import { Timers } from "./Timers.ts";
 import type { BackendAudio } from "./SceneBackend.ts";
@@ -39,14 +36,16 @@ export interface WorldOptions<
 > {
   enableOnExit?: boolean;
   /**
-   * Enables debug mode. When true, the logger is pre-configured with level "trace"
-   * and all namespaces enabled ("*"), unless overridden by the `logger` option.
+   * When no `logger` is given, the default one writes every level and
+   * namespace.
    */
   debug?: boolean;
   /**
-   * Logger configuration. Individual options override the defaults derived from `debug`.
+   * Shared as `world.logger`; the world, its scenes and their components log
+   * through children of it.
+   * @default a logger that writes warnings and errors
    */
-  logger?: LoggerOptions;
+  logger?: Logger;
 
   /**
    * Mirrors the actors on the backend; the world's `SceneManager` is built
@@ -109,13 +108,12 @@ export class World<
     } = options;
 
     this.debug = options.debug ?? false;
-    this.logger = new Logger({
+    this.logger = options.logger ?? new Logger({
       level: this.debug ? "trace" : "info",
-      namespaces: this.debug ? ["*"] : [],
-      ...options.logger
+      namespaces: this.debug ? ["*"] : []
     });
     this.#worldLogger = this.logger.child({
-      namespace: "Systems.World"
+      namespace: "ecs.world"
     });
 
     this.renderer = renderer;
