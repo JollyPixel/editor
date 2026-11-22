@@ -3,10 +3,13 @@ import {
   ActorComponents,
   Systems,
   type Actor
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  ThreeSceneGraph
+} from "@jolly-pixel/backend.three";
 
 export function sceneActor(): Actor {
-  const graph = new Systems.ThreeSceneGraph();
+  const graph = new ThreeSceneGraph();
   const actor: Record<string, unknown> = {
     components: new ActorComponents(),
     world: {

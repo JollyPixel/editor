@@ -36,7 +36,7 @@ import {
 } from "@jolly-pixel/scripting";
 
 const source = `
-import { Behavior, SceneProperty } from "@jolly-pixel/engine";
+import { Behavior, SceneProperty } from "@jolly-pixel/ecs";
 
 export class Player extends Behavior {
   @SceneProperty({ type: "number", label: "Speed" })
@@ -96,7 +96,7 @@ import files from "@jolly-pixel/scripting/types";
 
 ### Three
 
-Needs three.js and `@jolly-pixel/engine`.
+Needs three.js and `@jolly-pixel/backend.three`.
 
 ```ts
 import { loadShader } from "@jolly-pixel/scripting/three";
@@ -113,8 +113,8 @@ The `#compiler`, `#linter`, `#outliner` and `#stripper` imports resolve to
 `dist/`, so tests need a build first. `src/types/scriptTypes.ts` is left out
 of the `tsc` project: only `scripts/bundleTypes.ts` writes
 `dist/types/scriptTypes.js`, with the declaration files of the built
-`@jolly-pixel/engine` and `@types/three`. A consumer's `tsc -b` therefore
-never writes over it:
+`@jolly-pixel/ecs`, `@jolly-pixel/backend.three` and `@types/three`. A
+consumer's `tsc -b` therefore never writes over it:
 
 ```bash
 $ pnpm run build

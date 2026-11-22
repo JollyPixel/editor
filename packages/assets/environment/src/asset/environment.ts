@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
-import { Systems } from "@jolly-pixel/engine/core";
+import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type {

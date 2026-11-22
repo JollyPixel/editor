@@ -22,6 +22,8 @@ Scripts and shaders build to `text/javascript` with `buildScript` or `buildShade
 
 Browser code imports `@jolly-pixel/asset.script/client`; the package root pulls in server dependencies. The golem entry (`@jolly-pixel/asset.script/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
+The runtime entry (`@jolly-pixel/asset.script/runtime`) runs scripts and shaders in a game. Its `Script` component is the engine's `ScriptDefinition`, which takes the behavior from the exports of the slotted script. It registers the script and shader loaders of `@jolly-pixel/scripting/three`, which link each build against the game's own three.js and engine.
+
 ## 🚀 Building
 
 ```bash

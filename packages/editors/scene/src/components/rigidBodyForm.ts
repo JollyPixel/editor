@@ -11,7 +11,7 @@ import {
   type SceneColliderSettings,
   type SceneColliderShape,
   type SceneRigidBodySettings
-} from "@jolly-pixel/physics/engine";
+} from "@jolly-pixel/physics/ecs";
 
 // CONSTANTS
 const kBody = new FormRows<SceneRigidBodySettings>();

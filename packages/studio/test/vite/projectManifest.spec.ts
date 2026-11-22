@@ -43,8 +43,7 @@ const kManifest = {
       package: "@jolly-pixel/editor.voxel-map",
       kinds: ["voxelmap"],
       preferences: [],
-      sharedPreferences: [],
-      sceneComponents: []
+      sharedPreferences: []
     }
   ],
   kinds: [
@@ -66,7 +65,15 @@ const kManifest = {
     {
       name: "@jolly-pixel/asset.voxel-map",
       kinds: [BLOCKSET_ASSET.kind, VOXEL_MAP_ASSET.kind],
-      configurable: true
+      configurable: true,
+      sceneComponents: [
+        {
+          type: "VoxelMap",
+          assets: {
+            map: VOXEL_MAP_ASSET.kind
+          }
+        }
+      ]
     }
   ],
   maxContentBytes: DEFAULT_CATALOG_MAX_CONTENT_BYTES

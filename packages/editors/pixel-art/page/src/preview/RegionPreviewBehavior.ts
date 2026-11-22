@@ -2,16 +2,16 @@
 import {
   type Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import * as THREE from "three";
 import type {
   UVMap,
   UVRegion,
   Vec2
 } from "@jolly-pixel/pixel-draw.renderer";
+import { UVGeometryBinding } from "@jolly-pixel/asset.pixel-art/runtime";
 
 // Import Internal Dependencies
-import { UVGeometryBinding } from "#src/mesh-texturing/index.ts";
 import type { PreviewShape } from "./PreviewShape.ts";
 import { resolvePreviewShape } from "./resolvePreviewShape.ts";
 
@@ -97,7 +97,7 @@ export class RegionPreviewBehavior extends ActorComponent implements RegionPrevi
       this.mesh,
       ...this.#shape.decorations
     );
-    this.#targetPosition = this.actor.transform.local.position.clone();
+    this.#targetPosition = new THREE.Vector3().copy(this.actor.transform.local.position);
   }
 
   get rotation(): THREE.Euler {

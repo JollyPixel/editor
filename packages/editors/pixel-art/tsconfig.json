@@ -5,12 +5,6 @@
       "path": "../host"
     },
     {
-      "path": "../../asset"
-    },
-    {
-      "path": "../../runtime"
-    },
-    {
       "path": "../../assets/pixel-art"
     },
     {
@@ -39,6 +33,12 @@
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

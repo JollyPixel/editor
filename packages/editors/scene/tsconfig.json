@@ -32,9 +32,6 @@
       "path": "../../controls"
     },
     {
-      "path": "../../engine"
-    },
-    {
       "path": "../../history"
     },
     {
@@ -42,9 +39,6 @@
     },
     {
       "path": "../../physics"
-    },
-    {
-      "path": "../../runtime"
     },
     {
       "path": "../../three"
@@ -57,6 +51,12 @@
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

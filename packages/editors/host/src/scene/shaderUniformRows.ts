@@ -1,11 +1,13 @@
 // Import Third-party Dependencies
 import {
+  type Systems
+} from "@jolly-pixel/ecs";
+import {
   TEXTURE_ASSET,
   describeShaderUniform,
   shaderTextureSlot,
-  type Shader,
-  type Systems
-} from "@jolly-pixel/engine";
+  type Shader
+} from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import {

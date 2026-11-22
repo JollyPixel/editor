@@ -1,6 +1,6 @@
 # Skies
 
-A TSL background node for an editor viewport: a neutral studio gradient. The class builds its node once in the constructor and exposes it as `node`. It requires `THREE.WebGPURenderer`. Outdoor skies belong to environments, which `@jolly-pixel/engine` applies.
+A TSL background node for an editor viewport: a neutral studio gradient. The class builds its node once in the constructor and exposes it as `node`. It requires `THREE.WebGPURenderer`. Outdoor skies belong to environments, which `@jolly-pixel/backend.three` applies.
 
 ```ts
 import { StudioSky } from "@jolly-pixel/three";

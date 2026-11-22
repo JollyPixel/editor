@@ -1,5 +1,4 @@
 ---
-"@jolly-pixel/engine": major
 "@jolly-pixel/asset-server": minor
 "@jolly-pixel/history": minor
 ---

@@ -20,16 +20,10 @@
       "path": "../../controls"
     },
     {
-      "path": "../../engine"
-    },
-    {
       "path": "../../history"
     },
     {
       "path": "../../network"
-    },
-    {
-      "path": "../../runtime"
     },
     {
       "path": "../../terrain-renderer"
@@ -42,6 +36,12 @@
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

@@ -11,7 +11,10 @@ import {
   ActorComponents,
   Systems,
   type Actor
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  ThreeSceneGraph
+} from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import { PeerFrustums } from "#src/viewport/PeerFrustums.ts";
@@ -27,7 +30,7 @@ function createFrustums(): FrustumsHarness {
   const room = new FakeRoom("voxel-map:test");
   let invalidations = 0;
 
-  const graph = new Systems.ThreeSceneGraph();
+  const graph = new ThreeSceneGraph();
   const actor = {
     components: new ActorComponents(),
     world: {

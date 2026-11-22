@@ -32,7 +32,9 @@ describe("Network browser compatibility", () => {
         const nodeOnlyPaths = [
           "server/auth/password",
           "server/auth/providers/PasswordAuthentication",
-          "server/extension/worker/"
+          "server/extension/worker/",
+          "protocol/runtime/node",
+          "ata-validator"
         ];
         assert.equal(inputs.some((input) => nodeOnlyPaths.some(
           (nodeOnlyPath) => input.includes(nodeOnlyPath)

@@ -1,0 +1,263 @@
+// Import Node.js Dependencies
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
+
+// Import Third-party Dependencies
+import { AssetReference } from "@jolly-pixel/asset";
+
+// Import Internal Dependencies
+import { Actor } from "../../../src/actor/Actor.ts";
+import {
+  Behavior,
+  SceneProperty,
+  SCRIPT_MODULE_ASSET,
+  ScriptDefinition,
+  type ScriptAssets,
+  type ScriptModule,
+  type Vector3Like
+} from "../../../src/index.ts";
+import {
+  ComponentAssets,
+  type ComponentContext,
+  type SceneMode
+} from "../../../src/systems/scene/file/definitions/ComponentDefinition.ts";
+import type { JSONObject } from "../../../src/systems/scene/file/SceneFile.ts";
+import { createSceneSetup } from "../../helpers/scene/sceneSetup.ts";
+import { createWarningLogger } from "../../helpers/scene/sceneFile.ts";
+
+// CONSTANTS
+const kScriptReference = new AssetReference("player-script", SCRIPT_MODULE_ASSET);
+
+class Mover extends Behavior {
+  speed = 5;
+  label = "idle";
+  offset: Vector3Like = { x: 0, y: 0, z: 0 };
+  tint = "#ffffff";
+  speedSeenInAwake = 0;
+
+  awake() {
+    this.speedSeenInAwake = this.speed;
+  }
+}
+SceneProperty({ type: "number" })(Mover.prototype, "speed");
+SceneProperty({ type: "string" })(Mover.prototype, "label");
+SceneProperty({ type: "Vector3" })(Mover.prototype, "offset");
+SceneProperty({ type: "Color" })(Mover.prototype, "tint");
+
+class Follower extends Behavior {
+  target: Actor | null = null;
+}
+SceneProperty({ type: "Actor" })(Follower.prototype, "target");
+
+function scriptContext(
+  definition: ScriptDefinition,
+  mode: SceneMode,
+  module: ScriptModule | null = null
+): ComponentContext<ScriptAssets> {
+  return {
+    mode,
+    assets: new ComponentAssets(
+      definition.assets,
+      module === null ? {} : { script: kScriptReference.toJSON() },
+      {
+        resolve: <TValue>() => module as TValue
+      }
+    )
+  };
+}
+
+function createScript(
+  mode: SceneMode,
+  data: JSONObject
+) {
+  const { logger, warnings } = createWarningLogger();
+  const { world } = createSceneSetup({ logger });
+  const actor = new Actor(world as any, { name: "player" });
+  const definition = new ScriptDefinition({ Mover });
+  const component = definition.create(
+    actor,
+    definition.parse(data),
+    scriptContext(definition, mode)
+  );
+  actor.awake();
+
+  return { actor, component, warnings };
+}
+
+function createModuleScript(
+  module: ScriptModule,
+  behavior: string
+) {
+  const { logger, warnings } = createWarningLogger();
+  const { world } = createSceneSetup({ logger });
+  const actor = new Actor(world as any, { name: "player" });
+  const definition = new ScriptDefinition();
+  const component = definition.create(
+    actor,
+    definition.parse({ behavior }),
+    scriptContext(definition, "play", module)
+  );
+
+  return { actor, component, definition, warnings };
+}
+
+describe("Components.ScriptDefinition", () => {
+  test("builds the registered behavior with its declared properties converted", () => {
+    const { actor, component } = createScript("play", {
+      behavior: "Mover",
+      properties: {
+        speed: 3,
+        label: 4,
+        offset: [0, 1, 0],
+        tint: "#ff0000",
+        extra: [1, 2]
+      }
+    });
+
+    const mover = component as Mover & { extra?: unknown; };
+    assert.ok(mover instanceof Mover);
+    assert.deepEqual([...actor.findComponents(Mover)], [mover]);
+    assert.strictEqual(mover.speed, 3);
+    assert.strictEqual(mover.speedSeenInAwake, 3);
+    assert.strictEqual(mover.label, "idle");
+    assert.deepEqual(mover.offset, { x: 0, y: 1, z: 0 });
+    assert.strictEqual(mover.tint, "#ff0000");
+    assert.strictEqual(mover.extra, undefined);
+  });
+
+  test("builds nothing in edit mode", () => {
+    const { actor, component, warnings } = createScript("edit", {
+      behavior: "Mover",
+      properties: { speed: 3 }
+    });
+
+    assert.strictEqual(component, null);
+    assert.deepEqual([...actor.components], []);
+    assert.strictEqual(warnings().length, 0);
+  });
+
+  test("builds nothing, with a warning, when the behavior is not registered", () => {
+    const { actor, component, warnings } = createScript("play", {
+      behavior: "Jumper"
+    });
+
+    assert.strictEqual(component, null);
+    assert.deepEqual([...actor.components], []);
+    assert.strictEqual(warnings().length, 1);
+  });
+
+  test("builds the behavior its script asset exports under the stored name", () => {
+    const { component, definition } = createModuleScript({
+      Mover,
+      Follower
+    }, "Follower");
+
+    assert.ok(component instanceof Follower);
+    assert.strictEqual(definition.owns(component), true);
+    assert.deepEqual(definition.capture(component), {
+      behavior: "Follower",
+      properties: { target: null }
+    });
+  });
+
+  test("builds nothing, with a warning, when the script asset exports no behavior under the name", () => {
+    const { actor, component, warnings } = createModuleScript({
+      Mover,
+      speed: 3
+    }, "speed");
+
+    assert.strictEqual(component, null);
+    assert.deepEqual([...actor.components], []);
+    assert.strictEqual(warnings().length, 1);
+  });
+
+  test("captures the declared properties a registered behavior holds now", () => {
+    const { component } = createScript("play", {
+      behavior: "Mover",
+      properties: { speed: 3 }
+    });
+    const mover = component as Mover;
+    mover.speed = 8;
+    mover.offset = { x: 1, y: 2, z: 3 };
+    const definition = new ScriptDefinition({ Mover });
+
+    assert.deepEqual(definition.capture(mover), {
+      behavior: "Mover",
+      properties: {
+        speed: 8,
+        label: "idle",
+        offset: [1, 2, 3],
+        tint: "#ffffff"
+      }
+    });
+  });
+
+  test("captures a subclass property on the subclass only", () => {
+    class TaggedMover extends Mover {
+      tag = "red";
+    }
+    SceneProperty({ type: "string" })(TaggedMover.prototype, "tag");
+    const { actor, component } = createScript("play", {
+      behavior: "Mover"
+    });
+    const tagged = actor.addComponentAndGet(TaggedMover);
+    const properties = {
+      speed: 5,
+      label: "idle",
+      offset: [0, 0, 0],
+      tint: "#ffffff"
+    };
+
+    assert.deepEqual(new ScriptDefinition({ Mover }).capture(component!), {
+      behavior: "Mover",
+      properties
+    });
+    assert.deepEqual(new ScriptDefinition({ TaggedMover }).capture(tagged), {
+      behavior: "TaggedMover",
+      properties: {
+        ...properties,
+        tag: "red"
+      }
+    });
+  });
+
+  test("owns registered behaviors only, by their exact class", () => {
+    class FastMover extends Mover {}
+    const { actor, component } = createScript("play", {
+      behavior: "Mover"
+    });
+    const definition = new ScriptDefinition({ Mover });
+
+    assert.strictEqual(definition.owns(component!), true);
+    assert.strictEqual(new ScriptDefinition({}).owns(component!), false);
+    assert.strictEqual(definition.owns(actor.addComponentAndGet(Follower)), false);
+    assert.strictEqual(definition.owns(actor.addComponentAndGet(FastMover)), false);
+  });
+
+  test("resolves an Actor property to the actor holding that persistent id", () => {
+    const { logger, warnings } = createWarningLogger();
+    const { world } = createSceneSetup({ logger });
+    const door = new Actor(world as any, { name: "door", persistentId: "door-1" });
+    const guard = new Actor(world as any, { name: "guard" });
+    const definition = new ScriptDefinition({ Follower });
+    const context = scriptContext(definition, "play");
+
+    const follower = definition.create(guard, definition.parse({
+      behavior: "Follower",
+      properties: { target: "door-1" }
+    }), context) as Follower;
+    const lost = definition.create(guard, definition.parse({
+      behavior: "Follower",
+      properties: { target: "gone" }
+    }), context) as Follower;
+    guard.awake();
+
+    assert.strictEqual(follower.target, door);
+    assert.strictEqual(lost.target, null);
+    assert.strictEqual(warnings().length, 1);
+    assert.deepEqual(definition.capture(follower), {
+      behavior: "Follower",
+      properties: { target: "door-1" }
+    });
+  });
+});

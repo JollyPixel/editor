@@ -45,7 +45,7 @@ A scene is a tree of actors. Each actor has an `id`, a `name`, a `parentId` (`nu
 
 ## Scene components
 
-The golem refuses a type, a slot or an asset kind that the studio's editors do not declare, and the error lists the types the studio has. These are the first-party ones:
+The golem refuses a type, a slot or an asset kind that the studio's kind packages do not declare, and the error lists the types the studio has. These are the first-party ones:
 
 | Type | Asset slots | Draws |
 |---|---|---|

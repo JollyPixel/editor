@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine/core";
+import { Systems } from "@jolly-pixel/ecs";
 import * as z from "zod/mini";
 
 // Import Internal Dependencies

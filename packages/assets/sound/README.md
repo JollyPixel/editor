@@ -8,7 +8,7 @@ Private asset workspace for sounds (kind `sound`). A sound asset is an Ogg file 
 - Sounds are read-only and the studio's New asset menu does not offer them (`creatable: false`).
 - A client reads a sound from its room snapshot: `soundDocumentKind()` from `@jolly-pixel/asset.sound/client` gives a `SoundDocument` whose `bytes` are `null` until the snapshot arrives.
 
-Browser code imports `@jolly-pixel/asset.sound/client`. The package root loads Mediabunny only when a conversion runs.
+Browser code imports `@jolly-pixel/asset.sound/client`. The package root loads Mediabunny only when a conversion runs. The runtime entry (`@jolly-pixel/asset.sound/runtime`) gives a game the `AudioSource`, `AudioListener` and `AudioZone` components.
 
 ## 🚀 Building
 

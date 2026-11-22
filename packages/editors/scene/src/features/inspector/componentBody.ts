@@ -16,7 +16,7 @@ import type {
   DeclaredProperty,
   VectorRow
 } from "@jolly-pixel/editor.host/scene";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import type { JollyChangeDetail } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
 import "@jolly-pixel/ui/elements/checkbox";

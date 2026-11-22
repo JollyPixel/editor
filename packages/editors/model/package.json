@@ -13,21 +13,13 @@
       "page": "index.html"
     },
     "scene": "./scene",
-    "sceneComponents": {
-      "Model": {
-        "assets": {
-          "model": "model",
-          "shader": "shader"
-        }
-      }
-    },
-    "runtime": "./runtime",
-    "preview": ["model"]
+    "preview": [
+      "model"
+    ]
   },
   "exports": {
     ".": "./src/sceneComponents/index.ts",
-    "./scene": "./src/sceneComponents/index.ts",
-    "./runtime": "./src/runtime/index.ts"
+    "./scene": "./src/sceneComponents/index.ts"
   },
   "scripts": {
     "dev": "vite",
@@ -61,10 +53,10 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset.model": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
-    "@jolly-pixel/engine": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
-    "@jolly-pixel/runtime": "workspace:*",
     "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",

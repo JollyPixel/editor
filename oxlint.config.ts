@@ -138,30 +138,15 @@ export default defineConfig(typescriptConfig({
     },
     ...kAssetServerLayers.slice(0, -1).map(assetServerLayer),
     {
-      files: ["packages/runtime/src/core/**"],
+      files: ["packages/physics/src/ecs/**"],
       rules: {
         "no-restricted-imports": [
           "error", {
             patterns: [
               {
-                group: ["three", "three/*", "@jolly-pixel/engine", "**/three/**"],
-                message: "The runtime core stays renderer-agnostic: three.js code lives in src/three/."
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      files: ["packages/engine/src/core/**"],
-      rules: {
-        "no-restricted-imports": [
-          "error", {
-            patterns: [
-              {
-                group: ["three", "three/*", "**/three/**"],
-                message: "The engine core stays renderer-agnostic: three.js math comes from" +
-                  "core/math.ts, the rest lives in src/three/."
+                group: ["three", "three/*", "@jolly-pixel/backend.three", "**/three/**"],
+                message: "The physics ECS components stay renderer-agnostic: import " +
+                  "@jolly-pixel/ecs, three.js code lives in src/three/."
               }
             ]
           }
@@ -208,12 +193,6 @@ export default defineConfig(typescriptConfig({
         "packages/server/src/http/node/**",
         "packages/server/src/server/node/ServerApi.ts"
       ],
-      rules: {
-        "no-restricted-imports": "off"
-      }
-    },
-    {
-      files: ["packages/engine/src/core/math.ts"],
       rules: {
         "no-restricted-imports": "off"
       }

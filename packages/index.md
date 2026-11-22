@@ -11,18 +11,21 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /engine/docs/guides/hello-world
+      link: /backend.three/docs/guides/hello-world
     - theme: alt
-      text: Engine reference
-      link: /engine/README
+      text: ECS reference
+      link: /ecs/README
     - theme: alt
       text: View on GitHub
       link: https://github.com/JollyPixel/editor
 
 features:
   - title: ECS Architecture
-    details: Actors, Components and Scenes on top of Three.js, with Godot-like signals and decorator-driven behavior scripts.
-    link: /engine/README
+    details: Renderer-agnostic Actors, Components and Scenes, with Godot-like signals and decorator-driven behavior scripts.
+    link: /ecs/README
+  - title: Three.js Backend
+    details: WebGPU rendering, cameras, lights, audio, in-game UI and the browser runtime that boots a game on a canvas.
+    link: /backend.three/README
   - title: Frame Loop
     details: The game loop, clock, frame budget and scheduler that drive every runtime, split out of the engine.
     link: /loop/README

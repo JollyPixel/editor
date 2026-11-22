@@ -7,21 +7,19 @@ import {
   type MaterialSurfaceJSON,
   type MirrorAxes
 } from "@jolly-pixel/asset.voxel-model/client";
-import { clampUvRegion } from "@jolly-pixel/editor.pixel-art/mesh-texturing";
-
-// Import Internal Dependencies
+import { clampUvRegion } from "@jolly-pixel/asset.pixel-art/runtime";
 import {
   BlockBody,
-  type BlockMesh
-} from "./BlockBody.ts";
+  paintBlockMaterial,
+  paintBlockSurface,
+  type BlockMesh,
+  type BlockShapeChanges
+} from "@jolly-pixel/asset.voxel-model/runtime";
+
+// Import Internal Dependencies
 import { PivotMarker } from "./PivotMarker.ts";
 import { RenderOrder } from "../renderOrder.ts";
-import {
-  paintBlockMaterial,
-  paintBlockSurface
-} from "./paintBlockSurface.ts";
 import type { FlatShading } from "./FlatShading.ts";
-import type { BlockShapeChanges } from "./BlockShapeMesh.ts";
 
 // CONSTANTS
 const kDefaultEmphasisOwner = "default";

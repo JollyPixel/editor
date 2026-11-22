@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/physics",
-  "description": "Engine-neutral physics contract and JollyPixel engine components",
+  "description": "Engine-neutral physics contract, JollyPixel ECS components and three.js collider outlines",
   "version": "1.0.0",
   "type": "module",
   "sideEffects": false,
@@ -9,9 +9,13 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./engine": {
-      "types": "./dist/engine/index.d.ts",
-      "default": "./dist/engine/index.js"
+    "./ecs": {
+      "types": "./dist/ecs/index.d.ts",
+      "default": "./dist/ecs/index.js"
+    },
+    "./three": {
+      "types": "./dist/three/index.d.ts",
+      "default": "./dist/three/index.js"
     },
     "./testing": {
       "types": "./dist/testing/index.d.ts",
@@ -49,12 +53,19 @@
   },
   "author": "GENTILHOMME Thomas <gentilhomme.thomas@gmail.com>",
   "license": "MIT",
+  "dependencies": {
+    "math": "0.1.0"
+  },
   "peerDependencies": {
-    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "three": "^0.187.0"
   },
   "peerDependenciesMeta": {
-    "@jolly-pixel/engine": {
+    "@jolly-pixel/backend.three": {
+      "optional": true
+    },
+    "@jolly-pixel/ecs": {
       "optional": true
     },
     "three": {
@@ -62,7 +73,8 @@
     }
   },
   "devDependencies": {
-    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/loop": "workspace:*"
   }
 }

@@ -3,11 +3,13 @@ import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
 import type { Preferences } from "@jolly-pixel/preferences";
 import * as THREE from "three";
 import {
+  type Systems
+} from "@jolly-pixel/ecs";
+import {
   bindOrbitFocus,
   type CameraPose,
-  OrbitFlyCamera,
-  type Systems
-} from "@jolly-pixel/engine";
+  OrbitFlyCamera
+} from "@jolly-pixel/backend.three";
 import { clientToNdc } from "@jolly-pixel/three";
 import type { LogQueue } from "@jolly-pixel/ui";
 

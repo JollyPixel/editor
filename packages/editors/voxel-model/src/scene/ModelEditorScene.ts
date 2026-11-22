@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
-import { Systems, OrbitFlyCamera } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
+import { OrbitFlyCamera, type BakedRoomEnvironment } from "@jolly-pixel/backend.three";
 import {
   ShortcutLabels,
   type KeyBindingSettings,
@@ -89,7 +90,7 @@ export interface ModelEditorSceneOptions {
   archives: EditorArchives;
   view: ViewSettingsStore;
   environments: PreviewEnvironmentOptions;
-  roomEnvironment: Systems.BakedRoomEnvironment | null;
+  roomEnvironment: BakedRoomEnvironment | null;
   preferences: Preferences;
   keyBindings: KeyBindingSettings<ModelAction>;
   keyboardLayout: KeyboardLayoutStore;

@@ -24,10 +24,6 @@
       "types": "./dist/scene/index.d.ts",
       "default": "./dist/scene/index.js"
     },
-    "./testing": {
-      "types": "./dist/testing/sceneComponentDeclarations.d.ts",
-      "default": "./dist/testing/sceneComponentDeclarations.js"
-    },
     "./ui": {
       "types": "./dist/ui/index.d.ts",
       "default": "./dist/ui/index.js"
@@ -70,9 +66,10 @@
     "@jolly-pixel/asset": "workspace:*",
     "@jolly-pixel/asset-server": "workspace:*",
     "@jolly-pixel/asset-source": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
     "@jolly-pixel/console": "workspace:*",
     "@jolly-pixel/controls": "workspace:*",
-    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
     "@jolly-pixel/lantern": "workspace:*",
     "@jolly-pixel/network": "workspace:*",

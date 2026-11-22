@@ -8,7 +8,7 @@ import {
 
 // CONSTANTS
 const kScript = [
-  "import { Behavior } from \"@jolly-pixel/engine\";",
+  "import { Behavior } from \"@jolly-pixel/ecs\";",
   "",
   "export class Player extends Behavior {",
   "  speed: number = \"fast\";",

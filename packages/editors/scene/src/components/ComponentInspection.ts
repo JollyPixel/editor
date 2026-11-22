@@ -12,7 +12,7 @@ import type {
   ListRow,
   SceneComponentKind
 } from "@jolly-pixel/editor.host/scene";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import {

@@ -148,7 +148,7 @@ the renderer package does not depend on an ECS runtime.
 ### Serialization and integration
 
 - [Serialization](docs/api/serialization/serialization.md): the world codec
-- [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md): `@jolly-pixel/engine`
+- [`VoxelRenderer`](docs/api/engine/VoxelRenderer.md): `@jolly-pixel/ecs`
   actor component wrapping a `VoxelDocument` and a `VoxelView`
 - [`VoxelMapDefinition`](docs/api/engine/VoxelMapDefinition.md): the `VoxelMap`
   scene-file component type
@@ -187,7 +187,7 @@ Pass a custom logger to `VoxelDocument` and `VoxelView` when they are not
 hosted by a runtime:
 
 ```ts
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import {
   VoxelDocument,
   VoxelView

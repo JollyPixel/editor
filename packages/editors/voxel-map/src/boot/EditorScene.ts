@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import { PeerFrustums } from "@jolly-pixel/editor.host/viewport";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
+import { type BakedRoomEnvironment } from "@jolly-pixel/backend.three";
 import {
   Grid,
   type GridOptions
@@ -129,7 +130,7 @@ export interface EditorSceneOptions {
   state: EditorState;
   session: EditorSceneSession;
   samples?: number;
-  roomEnvironment: Systems.BakedRoomEnvironment | null;
+  roomEnvironment: BakedRoomEnvironment | null;
 }
 
 export class EditorScene extends Systems.Scene {

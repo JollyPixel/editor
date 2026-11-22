@@ -6,7 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import { playLoggerOptions } from "../../src/play/playLogger.ts";

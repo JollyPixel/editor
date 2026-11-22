@@ -92,8 +92,7 @@ describe("JollyServer", () => {
           package: "@jolly-pixel/editor.voxel-map",
           kinds: ["voxelmap"],
           preferences: [],
-          sharedPreferences: [],
-          sceneComponents: []
+          sharedPreferences: []
         }
       ]
     );

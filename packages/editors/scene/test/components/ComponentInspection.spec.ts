@@ -8,7 +8,7 @@ import {
   LIGHT_DEFAULTS,
   MESH_GEOMETRY_DEFAULTS,
   type Shader
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import * as THREE from "three/webgpu";
 import {
   ComponentChange,

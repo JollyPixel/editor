@@ -8,10 +8,10 @@ import {
 import type {
   ModelAssets,
   ModelData
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
+import { MODEL_DEFINITION } from "@jolly-pixel/asset.model/runtime";
 
 // Import Internal Dependencies
-import { MODEL_DEFINITION } from "../runtime/index.ts";
 import { modelForm } from "./modelForm.ts";
 import {
   MODEL_FILE_DOCUMENT_KIND,

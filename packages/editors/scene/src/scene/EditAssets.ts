@@ -8,7 +8,7 @@ import type {
   SceneAssetResolver,
   SceneAssetUpdates
 } from "@jolly-pixel/editor.host/scene";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { SceneComponents } from "../components/SceneComponents.ts";

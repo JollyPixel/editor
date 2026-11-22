@@ -2,9 +2,11 @@
 
 ## Boundaries
 
-- A component type ships in its own package, declared with `jollypixel.scene`
-  in that package's `package.json` (see `editors/model`). Never add one by
-  editing this workspace.
+- A component type ships in its asset kind package: the definition in its
+  `jollypixel.runtime` entry and the slot kinds in `jollypixel.sceneComponents`
+  (see `assets/model`). Its forms go in the kind's editor, under
+  `jollypixel.scene`. Never add one by editing this workspace; the built-in
+  ones live in `assets/scene`.
 - This workspace depends on no component package. Its standalone page edits a
   seed scene; try components through the studio.
 - Each component kind sets `category` (`SceneComponentPackage.ts` in

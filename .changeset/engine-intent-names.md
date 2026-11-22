@@ -1,5 +1,4 @@
 ---
-"@jolly-pixel/engine": major
 "@jolly-pixel/voxel.renderer": major
 "@jolly-pixel/runtime": patch
 "@jolly-pixel/physics": patch

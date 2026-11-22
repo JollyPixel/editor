@@ -5,9 +5,11 @@ import {
   type AssetRecord
 } from "@jolly-pixel/asset";
 import {
-  SceneFileAssetType,
   Systems
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  SceneFileAssetType
+} from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import {

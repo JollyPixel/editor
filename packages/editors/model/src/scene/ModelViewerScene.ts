@@ -1,10 +1,12 @@
 // Import Third-party Dependencies
 import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
 import {
-  bindOrbitFocus,
-  OrbitFlyCamera,
   Systems
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  bindOrbitFocus,
+  OrbitFlyCamera
+} from "@jolly-pixel/backend.three";
 import { Teardown } from "@jolly-pixel/utils";
 import type { Preferences } from "@jolly-pixel/preferences";
 

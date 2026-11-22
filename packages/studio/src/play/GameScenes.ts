@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
 import { AssetReference } from "@jolly-pixel/asset";
 import {
-  SceneFileAssetType,
   Systems
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  SceneFileAssetType
+} from "@jolly-pixel/backend.three";
 
 // CONSTANTS
 const kSceneKind = SceneFileAssetType.kind.value;

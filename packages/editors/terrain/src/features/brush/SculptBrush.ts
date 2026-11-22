@@ -7,7 +7,7 @@ import { InputCombination } from "@jolly-pixel/controls";
 import {
   Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import {
   raycastTerrain,
   type TerrainHit

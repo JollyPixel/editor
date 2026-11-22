@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
+import { type BakedRoomEnvironment, ThreeSceneEnvironment } from "@jolly-pixel/backend.three";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 import { StudioSky } from "@jolly-pixel/three";
 import type { PreviewEnvironment } from "@jolly-pixel/asset.environment/client";
@@ -52,7 +53,7 @@ export interface ViewLightingOptions {
   world: Systems.World<THREE.WebGPURenderer, any>;
   view: ViewSettingsStore;
   preview: Pick<PreviewEnvironment, "linked" | "resolve" | "subscribe">;
-  room: Systems.BakedRoomEnvironment | null;
+  room: BakedRoomEnvironment | null;
   casters: () => Iterable<ShadowCaster>;
   theme: ResolvedThemeMode;
 }
@@ -63,7 +64,7 @@ export class ViewLighting {
   readonly shadow: KeyLightShadow;
 
   #scene: THREE.Scene;
-  #environment: Systems.ThreeSceneEnvironment;
+  #environment: ThreeSceneEnvironment;
   #view: ViewSettingsStore;
   #preview: ViewLightingOptions["preview"];
   #theme: ResolvedThemeMode;
@@ -95,7 +96,7 @@ export class ViewLighting {
     const { world } = options;
     const { graph } = world.sceneManager;
     this.#scene = graph.scene;
-    this.#environment = new Systems.ThreeSceneEnvironment(graph, world, {
+    this.#environment = new ThreeSceneEnvironment(graph, world, {
       room: options.room
     });
     this.#environment.fallbackSky = new StudioSky(options.theme).node;

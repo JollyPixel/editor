@@ -11,6 +11,11 @@ import {
   type ModelDocument,
   type NodeTransformJSON
 } from "@jolly-pixel/asset.voxel-model/client";
+import {
+  BlockNode,
+  type BlockMesh,
+  type BlockShapeChanges
+} from "@jolly-pixel/asset.voxel-model/runtime";
 
 // Import Internal Dependencies
 import type { BlockPoses } from "../../model/index.ts";
@@ -18,12 +23,8 @@ import type {
   BlockSelectionStore,
   MaterialPreviews
 } from "../../state/index.ts";
-import { BlockNode } from "./BlockNode.ts";
 import { ModelBlock } from "./ModelBlock.ts";
-import type { BlockMesh } from "./BlockBody.ts";
 import { FlatShading } from "./FlatShading.ts";
-import type { BlockShapeChanges } from "./BlockShapeMesh.ts";
-import { plainVector3 } from "./plainVector3.ts";
 import {
   mirrorRotation,
   mirrorSignFromAxes,
@@ -456,4 +457,14 @@ export class ModelBlocks extends Emitter<ModelBlocksEvents> implements BlockPose
       this.#scene :
       this.#blocks.get(parentUuid)?.node ?? this.#scene;
   }
+}
+
+function plainVector3(
+  value: THREE.Vector3Like
+): THREE.Vector3Like {
+  return {
+    x: value.x,
+    y: value.y,
+    z: value.z
+  };
 }

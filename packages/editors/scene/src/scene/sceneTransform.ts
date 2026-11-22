@@ -6,7 +6,7 @@ import type {
   SceneTreeReader,
   Vector3JSON
 } from "@jolly-pixel/asset.scene/client";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import { roundTo } from "@jolly-pixel/utils";
 
 // CONSTANTS
@@ -66,8 +66,9 @@ function worldMatrix(
   for (const actorId of [id, ...tree.ancestorIds(id)]) {
     const actor = tree.actor(actorId);
     if (actor !== undefined) {
+      Systems.composeSceneTransform(actor.transform, local.elements);
       matrix
-        .premultiply(Systems.composeSceneTransform(actor.transform, local))
+        .premultiply(local)
         .premultiply(placementMatrix(anchors, actor));
     }
   }
@@ -84,9 +85,12 @@ function placementMatrix(
     undefined :
     anchors.findAnchor(parentId, anchor)?.pose;
 
-  return pose === undefined ?
-    new THREE.Matrix4() :
-    Systems.composeSceneTransform({ ...pose, scale: kUnitScale }, new THREE.Matrix4());
+  const matrix = new THREE.Matrix4();
+  if (pose !== undefined) {
+    Systems.composeSceneTransform({ ...pose, scale: kUnitScale }, matrix.elements);
+  }
+
+  return matrix;
 }
 
 export function roundedVector(

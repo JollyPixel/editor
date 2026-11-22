@@ -7,7 +7,7 @@ import {
 import type {
   Model,
   ModelSettings
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 
 // CONSTANTS
 const kRows = new FormRows<ModelSettings>();

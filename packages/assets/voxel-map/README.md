@@ -8,6 +8,8 @@ Private asset workspace for `.voxelmap.json` worlds (kind `voxelmap`) and the `.
 
 Browser code imports `@jolly-pixel/asset.voxel-map/client`; the package root and `@jolly-pixel/asset.voxel-map/server` pull in server dependencies. The golem entry (`@jolly-pixel/asset.voxel-map/golem`, `src/golem/`) is what gives agents this kind: see [Golem](./docs/Golem.md).
 
+The runtime entry (`@jolly-pixel/asset.voxel-map/runtime`, `src/runtime/`) gives a game the `VoxelMap` component with a `voxelmap` and a `blockset` loader. A map loads each blockset it links, copies the blockset's blocks into the blockset's slot and draws its pixels as the atlas with `BlocksetAtlasBridge`. Both builds are the stored content. The voxel-map editor imports `BlocksetEntry`, `BlocksetSurface` and `BlocksetAtlasBridge` from the same entry.
+
 ## 🚀 Building
 
 ```bash

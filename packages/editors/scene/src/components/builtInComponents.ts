@@ -13,20 +13,20 @@ import type {
   MeshAssets,
   MeshData,
   TextSettings
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import type {
   RigidBody,
   SceneRigidBodySettings
-} from "@jolly-pixel/physics/engine";
-
-// Import Internal Dependencies
+} from "@jolly-pixel/physics/ecs";
 import {
   CAMERA_DEFINITION,
   LIGHT_DEFINITION,
   MESH_DEFINITION,
   RIGID_BODY_DEFINITION,
   TEXT_DEFINITION
-} from "../runtime/index.ts";
+} from "@jolly-pixel/asset.scene/runtime";
+
+// Import Internal Dependencies
 import {
   cameraForm,
   lightForm,

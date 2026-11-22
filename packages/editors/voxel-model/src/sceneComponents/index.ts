@@ -6,12 +6,14 @@ import {
   type SceneComponentKind,
   type SceneComponentPackage
 } from "@jolly-pixel/editor.host/scene";
+import {
+  VOXEL_MODEL_DEFINITION,
+  type VoxelModelSettings,
+  type VoxelModelSource
+} from "@jolly-pixel/asset.voxel-model/runtime";
 
 // Import Internal Dependencies
-import { VOXEL_MODEL_DEFINITION } from "../runtime/index.ts";
 import { VoxelModelViewer } from "../viewer/VoxelModelViewer.ts";
-import type { VoxelModelSource } from "../viewer/VoxelModelSource.ts";
-import type { VoxelModelSettings } from "./VoxelModelDefinition.ts";
 
 // CONSTANTS
 const kRows = new FormRows<VoxelModelSettings>();

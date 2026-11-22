@@ -3,7 +3,7 @@ import {
   expect,
   test
 } from "tstyche";
-import type { Runtime } from "@jolly-pixel/runtime";
+import type { Runtime } from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import type {

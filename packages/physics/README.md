@@ -1,7 +1,7 @@
 # @jolly-pixel/physics
 
-An engine-neutral physics contract, and the components that plug it into the
-JollyPixel engine. The simulation itself comes from a [backend](#backends).
+An engine-neutral physics contract, the components that plug it into the
+JollyPixel engine, and a three.js view of the colliders. The simulation itself comes from a [backend](#backends).
 
 ## 💃 Getting Started
 
@@ -18,11 +18,11 @@ $ yarn add @jolly-pixel/physics
 The example below uses the Rapier backend.
 
 ```ts
-import { Runtime } from "@jolly-pixel/runtime";
+import { Runtime } from "@jolly-pixel/backend.three";
 import {
   PhysicsSystem,
   RigidBody
-} from "@jolly-pixel/physics/engine";
+} from "@jolly-pixel/physics/ecs";
 import { RapierBackend } from "@jolly-pixel/physics.rapier";
 
 const { world } = await Runtime.create("canvas");
@@ -71,15 +71,22 @@ import { PhysicsWorld } from "@jolly-pixel/physics";
 - [`PhysicsBody`](docs/PhysicsBody.md): bodies and colliders
 - [`ColliderShape`](docs/ColliderShape.md): shapes and collider options
 
-### Engine
+### ECS
 
 ```ts
-import { RigidBody } from "@jolly-pixel/physics/engine";
+import { RigidBody } from "@jolly-pixel/physics/ecs";
 ```
 
-- [`PhysicsSystem`](docs/engine/PhysicsSystem.md)
-- [`RigidBody`](docs/engine/RigidBody.md)
-- [`ColliderOutline`](docs/engine/ColliderOutline.md)
+- [`PhysicsSystem`](docs/ecs/PhysicsSystem.md)
+- [`RigidBody`](docs/ecs/RigidBody.md)
+
+### three.js
+
+```ts
+import { ColliderOutline } from "@jolly-pixel/physics/three";
+```
+
+- [`ColliderOutline`](docs/three/ColliderOutline.md)
 
 ### Testing
 

@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { AudioSourceComponent } from "@jolly-pixel/engine";
+import type { AudioSourceComponent } from "@jolly-pixel/backend.three";
 import { AudioGizmo } from "@jolly-pixel/three";
 
 // Import Internal Dependencies

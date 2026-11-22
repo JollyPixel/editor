@@ -1,5 +1,5 @@
-// Import Internal Dependencies
-import type { FaceRanges } from "#src/mesh-texturing/index.ts";
+// Import Third-party Dependencies
+import type { FaceRanges } from "@jolly-pixel/asset.pixel-art/runtime";
 
 // CONSTANTS
 const kBoxFaceRanges: FaceRanges = {

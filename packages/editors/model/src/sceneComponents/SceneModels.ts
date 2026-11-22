@@ -10,7 +10,7 @@ import type {
   SceneAssetResolver,
   SceneAssetUpdates
 } from "@jolly-pixel/editor.host/scene";
-import type { Model } from "@jolly-pixel/engine";
+import type { Model } from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import { ModelFile } from "../file/ModelFile.ts";

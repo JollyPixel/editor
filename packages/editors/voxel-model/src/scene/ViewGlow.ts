@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
+import type { PostProcessing } from "@jolly-pixel/backend.three";
 import {
   emissive,
   mrt,
@@ -20,7 +20,7 @@ const kBloomStrength = 1;
 const kBloomRadius = 0.4;
 
 export interface GlowTarget {
-  postProcessing: Systems.PostProcessing | null;
+  postProcessing: PostProcessing | null;
 }
 
 export interface ViewGlowOptions {
@@ -35,7 +35,7 @@ export class ViewGlow {
   #unfollow: () => void;
   #strength = uniform(1);
 
-  readonly #postProcessing: Systems.PostProcessing = ({ scene, camera }) => {
+  readonly #postProcessing: PostProcessing = ({ scene, camera }) => {
     const scenePass = pass(scene, camera);
     scenePass.setMRT(mrt({
       output,

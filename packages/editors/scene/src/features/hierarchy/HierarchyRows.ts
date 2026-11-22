@@ -4,7 +4,7 @@ import type {
   SceneComponentView,
   SceneTreeReader
 } from "@jolly-pixel/asset.scene/client";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import {
   resolveReparentMoves,
   type PeerMarks,

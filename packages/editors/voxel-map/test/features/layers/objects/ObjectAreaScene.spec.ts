@@ -6,7 +6,7 @@ import {
 } from "node:test";
 
 // Import Third-party Dependencies
-import type { Actor } from "@jolly-pixel/engine";
+import type { Actor } from "@jolly-pixel/ecs";
 import { VoxelWorld } from "@jolly-pixel/voxel.renderer";
 
 // Import Internal Dependencies

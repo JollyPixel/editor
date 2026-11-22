@@ -284,7 +284,7 @@ export class Golem {
       onClose: () => this.#forget(asset),
       studio: {
         catalog: this.catalog,
-        editors: this.#manifest.editors,
+        kindPackages: this.#manifest.kindPackages,
         open: <TKind extends GolemKindName>(otherId: string, otherKind: TKind) => (
           this.#hold(otherId, otherKind, assetId) as Promise<GolemAssets[TKind]>
         )

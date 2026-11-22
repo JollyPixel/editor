@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
-import { disposeObject3D, type Actor } from "@jolly-pixel/engine";
+import { type Actor } from "@jolly-pixel/ecs";
+import { disposeObject3D } from "@jolly-pixel/backend.three";
 import * as THREE from "three";
 
 // Import Internal Dependencies

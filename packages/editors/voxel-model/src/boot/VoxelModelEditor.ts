@@ -1,6 +1,6 @@
 // Import Third-party Dependencies
 import type { RegistrationHandle } from "@jolly-pixel/console";
-import type { Runtime } from "@jolly-pixel/runtime";
+import { type Runtime, BakedRoomEnvironment } from "@jolly-pixel/backend.three";
 import type { PixelDocument } from "@jolly-pixel/pixel-draw.renderer";
 import {
   pixelArtDocumentKind,
@@ -28,7 +28,6 @@ import {
   pixelArtConsole
 } from "@jolly-pixel/editor.pixel-art";
 import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
-import { Systems } from "@jolly-pixel/engine";
 
 // Import Internal Dependencies
 import {
@@ -82,7 +81,7 @@ export class VoxelModelEditor {
   static createRuntime(
     logger: HostLogger
   ): Promise<EditorRuntime> {
-    void Systems.BakedRoomEnvironment.load();
+    void BakedRoomEnvironment.load();
 
     return EditorRuntime.create(kCanvas, {
       includePerformanceStats: {
@@ -113,7 +112,7 @@ export class VoxelModelEditor {
     );
     const target = session.targetLease(kModelKind);
     await texture.ready;
-    const roomEnvironment = await Systems.BakedRoomEnvironment.load()
+    const roomEnvironment = await BakedRoomEnvironment.load()
       .catch((error: unknown) => {
         console.warn("[voxel-model] No environment map for the viewport.", error);
 

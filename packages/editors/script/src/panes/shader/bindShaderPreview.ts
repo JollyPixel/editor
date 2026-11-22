@@ -4,7 +4,7 @@ import {
   EditorRuntime,
   type EditorContext
 } from "@jolly-pixel/editor.host";
-import type { MeshGeometryKind } from "@jolly-pixel/engine";
+import type { MeshGeometryKind } from "@jolly-pixel/backend.three";
 import {
   readDetail,
   type JollyChangeDetail,

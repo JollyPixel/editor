@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import type { RegistrationHandle } from "@jolly-pixel/console";
 import type { Lantern } from "@jolly-pixel/lantern";
-import type { Runtime } from "@jolly-pixel/runtime";
+import { type Runtime, BakedRoomEnvironment } from "@jolly-pixel/backend.three";
 import {
   EditorRuntime,
   provideTourKeys,
@@ -15,7 +15,6 @@ import {
   VOXEL_MAP_KIND,
   type SyncedVoxelMap
 } from "@jolly-pixel/asset.voxel-map/client";
-import { Systems } from "@jolly-pixel/engine";
 import { PIXEL_ART_KEYBINDINGS } from "@jolly-pixel/editor.pixel-art/preferences";
 import type { PaneVisibilityDetail } from "@jolly-pixel/ui";
 
@@ -72,7 +71,7 @@ export class VoxelMapEditor {
   static createRuntime(
     logger: HostLogger
   ): Promise<EditorRuntime> {
-    void Systems.BakedRoomEnvironment.load();
+    void BakedRoomEnvironment.load();
 
     return EditorRuntime.create(kCanvas, {
       includePerformanceStats: {
@@ -108,7 +107,7 @@ export class VoxelMapEditor {
       keyboardLayout: context.keyboardLayout
     });
     const target = session.targetLease(VOXEL_MAP_DOCUMENT_KIND);
-    const roomEnvironment = await Systems.BakedRoomEnvironment.load()
+    const roomEnvironment = await BakedRoomEnvironment.load()
       .catch((error: unknown) => {
         console.warn("[voxel-map] No environment map for reflections.", error);
 

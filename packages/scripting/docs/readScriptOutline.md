@@ -7,7 +7,7 @@ methods, for the scene inspector and Signals pane.
 import { readScriptOutline } from "@jolly-pixel/scripting";
 
 const outline = await readScriptOutline(`
-import { Behavior, SceneProperty } from "@jolly-pixel/engine";
+import { Behavior, SceneProperty } from "@jolly-pixel/ecs";
 
 export class Player extends Behavior {
   @SceneProperty({ type: "string[]" })

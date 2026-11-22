@@ -2,9 +2,11 @@
 import { PeerFrustums } from "@jolly-pixel/editor.host/viewport";
 import type * as THREE from "three";
 import type {
-  CameraPose,
   Systems
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import type {
+  CameraPose
+} from "@jolly-pixel/backend.three";
 import {
   SCENE_SELECTION_PRESENCE_KEY,
   type SceneRoom

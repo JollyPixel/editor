@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
 import {
   Actor,
-  ActorComponent,
+  ActorComponent
+} from "@jolly-pixel/ecs";
+import {
   disposeObject3D
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import {
   PresenceChannel,
   type PresenceChange,

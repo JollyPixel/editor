@@ -8,10 +8,13 @@
       "path": "../asset"
     },
     {
-      "path": "../engine"
+      "path": "../physics"
     },
     {
-      "path": "../physics"
+      "path": "../ecs"
+    },
+    {
+      "path": "../backend.three"
     }
   ]
 }

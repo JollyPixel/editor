@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
 import type {
+  Systems
+} from "@jolly-pixel/ecs";
+import type {
   CameraData,
   CameraProjectionMode,
   LightKind,
@@ -9,10 +12,9 @@ import type {
   MeshData,
   MeshSettings,
   MeshSurfaceSettings,
-  Systems,
   TextAlign,
   TextSettings
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import {
   FormRows,
   shaderUniformRows,

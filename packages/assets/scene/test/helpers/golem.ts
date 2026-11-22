@@ -43,9 +43,9 @@ export async function openScene(
 ): Promise<OpenedScene> {
   const studio = new TestStudio({
     kinds: GOLEM_KINDS,
-    editors: [
+    kindPackages: [
       {
-        name: "scene",
+        name: "@jolly-pixel/asset.scene",
         sceneComponents: kSceneComponents
       }
     ]

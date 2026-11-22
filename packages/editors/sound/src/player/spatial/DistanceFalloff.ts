@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine/core";
+import type { Systems } from "@jolly-pixel/ecs";
 import { clamp } from "@jolly-pixel/utils";
 
 type SpatialSettings = Readonly<Systems.SoundSpatialSettings>;

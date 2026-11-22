@@ -1,5 +1,4 @@
 ---
-"@jolly-pixel/engine": major
 "@jolly-pixel/physics": major
 ---
 

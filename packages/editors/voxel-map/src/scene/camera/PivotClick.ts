@@ -4,7 +4,7 @@ import { InputCombination } from "@jolly-pixel/controls";
 import {
   Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { PointerCapture } from "../../state/PointerCapture.ts";

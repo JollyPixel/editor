@@ -1,0 +1,614 @@
+# Scene files
+
+A `SceneFile` describes a tree of actors, each with an ordered list of
+components, as plain JSON. `FileScene` turns one into live actors through the
+component definitions the game registers.
+
+```ts
+import {
+  Systems,
+  ScriptDefinition,
+  loadJSON
+} from "@jolly-pixel/ecs";
+import {
+  CameraDefinition,
+  LightDefinition,
+  MeshDefinition,
+  TextDefinition
+} from "@jolly-pixel/backend.three";
+
+const components = new Systems.ComponentDefinitions().register(
+  new CameraDefinition(),
+  new LightDefinition(),
+  new MeshDefinition(),
+  new TextDefinition(),
+  new ScriptDefinition({ Player: PlayerBehavior })
+);
+
+const file = await loadJSON<Systems.SceneFile>("level-1.scene.json");
+world.sceneManager.loadScene(
+  new Systems.FileScene("Level 1", file, { components })
+);
+```
+
+Nothing is registered by default: a game ships only the definitions it uses.
+
+## File format
+
+```ts
+interface SceneFile {
+  version: 1;
+  environment: { id: string; kind: "environment"; } | null;
+  actors: SceneActorFile[];
+}
+
+interface SceneActorFile {
+  id: string;
+  name: string;
+  parentId: string | null;
+  visible: boolean;
+  transform: {
+    position: Vector3JSON;
+    rotation: Vector3JSON; // Euler angles in degrees, XYZ order
+    scale: Vector3JSON;
+  };
+  components: SceneComponentFile[];
+  prefab?: AssetReferenceData; // a scene expanded under this actor
+  overrides?: SceneOverridesFile; // changes to the actors `prefab` expands
+  anchor?: SceneAnchorFile; // a place on a component of the parent
+}
+
+interface SceneAnchorFile {
+  component: string; // id of a component of the parent
+  key: string;
+}
+
+interface SceneComponentFile {
+  id: string;
+  type: string;
+  data: JSONObject;
+  assets: Record<string, AssetReferenceData | null>;
+  connections?: SceneConnectionFile[]; // signals wired to other components
+}
+
+type ColorJSON = string; // "#rrggbb"
+```
+
+- `environment` references an [environment](environment.md) asset; `null`
+  renders the `default` preset.
+- `actors` is in tree order: an actor follows its parent, and siblings follow
+  their display order.
+- Ids are unique within one file. A built actor takes its file id as its
+  `persistentId`, unless an actor pending destruction still holds that id:
+  it then gets a new random one.
+- ECS reads the decoded form. A file with an identity transform or
+  `visible: true` left out must be decoded before it reaches ECS.
+
+## Prefab instances
+
+An actor with `prefab` is an instance of another scene. Its name, visibility
+and transform form the instance root, and the root actors of the referenced
+scene are built under it, in edit and play mode alike.
+
+```ts
+interface ScenePrefabs {
+  find(sceneId: string): Readonly<ScenePrefabFile> | null;
+}
+
+type ScenePrefabFile = Pick<SceneFile, "actors">;
+```
+
+- ECS loads no scene file itself: the game or editor passes a
+  `ScenePrefabs` that finds them by asset id. A scene it does not find
+  leaves the instance root empty.
+- An expanded actor or component gets the path id
+  `<instance id>/<id in its scene>`, so several instances of one scene never
+  collide. A nested instance adds one segment per level.
+- A scene already being expanded on the way down is skipped with a warning,
+  so a cycle stops instead of recursing.
+- Nothing writes back to the referenced scene.
+
+`expandedSceneActors(actors, prefabs, sceneId?)` yields each actor of
+`actors`, followed by the actors its instance expands, nested instances
+included, with path ids and overrides applied. `sceneId` names the scene of
+`actors`, so an instance of it is never expanded. `NO_SCENE_PREFABS` finds no
+scene.
+
+`InstancePath` reads and builds path ids.
+
+```ts
+class InstancePath {
+  static join(instanceId: string, path: string): string;
+  static parse(id: string): InstancePath | null; // null for an id with no /
+
+  readonly instanceId: string; // the outermost instance: "a" in "a/b/c"
+  readonly path: string; // the rest: "b/c"
+  get ownerId(): string; // the instance that expanded it: "a/b"
+}
+```
+
+### Overrides
+
+`overrides` changes what an instance expands without touching the referenced
+scene.
+
+```ts
+interface SceneOverridesFile {
+  actors?: Record<string, SceneActorOverrideFile>; // keyed by path
+  components?: Record<string, SceneComponentOverrideFile>; // keyed by path
+}
+
+interface SceneActorOverrideFile {
+  name?: string;
+  visible?: boolean;
+  transform?: Partial<SceneTransformFile>;
+}
+
+interface SceneComponentOverrideFile {
+  data?: JSONObject; // top-level fields that replace the component's
+  assets?: Record<string, AssetReferenceData | null>;
+}
+```
+
+- A path is the expanded id without the instance id: `door` for the actor
+  `door` of the referenced scene, `room/lamp` for the actor `lamp` of the
+  nested instance `room`.
+- An actor override replaces the name, the visibility and each transform
+  field it sets. A component override replaces the top-level data fields
+  and asset slots it sets.
+- Overrides under a nested instance's path are handed down to it and win,
+  field by field, over the overrides the referenced scene gives that
+  instance.
+- A path the referenced scene does not have is ignored.
+
+## Anchors
+
+A component can publish anchors: named places inside the asset it draws, such
+as a layer or an object of a voxel map. An actor with `anchor` hangs from one
+of them instead of from its parent's origin, and follows it when the asset
+moves it.
+
+```ts
+interface ComponentAnchors {
+  list(): Iterable<ComponentAnchor>;
+  subscribe(listener: () => void): () => void;
+}
+
+interface ComponentAnchor {
+  key: string; // unique within the component, stable across asset edits
+  label: string;
+  kind: string; // such as "layer" or "object"
+  pose: {
+    position: Vector3JSON; // relative to the component's actor
+    rotation: Vector3JSON; // Euler angles in degrees, XYZ order
+  };
+}
+```
+
+- The actor stays a child of its parent in the actor tree. Its transform is
+  [seated](../actor/actor-transform.md#hierarchy) on a socket at
+  the anchor's pose, so its local pose is relative to the anchor. Re-parenting
+  without an anchor drops the socket.
+- `subscribe` calls the listener when an anchor is added, removed or moved.
+  Every socket of the component then takes the new pose.
+- When the parent's component does not list the anchor, or is not built, the
+  socket sits at the parent's origin. The actor keeps its `anchor` and goes
+  back to the anchor once it exists again.
+- Inside a [prefab instance](#prefab-instances), `anchor.component` gets the
+  same path id as the component it names.
+
+## Connections
+
+A component's `connections` wire its [signals](../components/signal.md) to
+methods of other components of the scene.
+
+```ts
+interface SceneConnectionFile {
+  id: string; // unique among the connections of its component
+  signal: string; // field of the component holding a SignalEvent
+  target: string; // id of the component whose method is called
+  method: string;
+  once?: boolean; // disconnect after the first emit
+}
+```
+
+```json
+{
+  "id": "lever-script",
+  "type": "Script",
+  "data": { "behavior": "Lever", "properties": {} },
+  "assets": { "script": { "id": "scripts-1", "kind": "script" } },
+  "connections": [
+    { "id": "c1", "signal": "pulled", "target": "door-script", "method": "open" }
+  ]
+}
+```
+
+- `FileScene` wires them once every actor of the file is built, before the
+  actors awake, so a signal emitted in `awake()` reaches its targets. Edit mode
+  wires nothing.
+- The method receives the signal's arguments.
+- A connection whose signal, target or method is missing logs a warning and
+  is skipped. A component that was not built wires none of its connections.
+- A target destroyed later stops receiving the signal.
+- Inside a [prefab instance](#prefab-instances), `target` gets the same path
+  id as the component it names, so each instance wires its own components.
+- [`capture()`](#saving-a-running-scene) keeps the connections of each built
+  component.
+
+## Component definitions
+
+One definition per component `type`:
+
+```ts
+interface ComponentDefinition<TData, TComponent extends Component, TAssets> {
+  readonly type: string;
+  readonly assets?: { [TSlot in keyof TAssets]: AssetType<TAssets[TSlot]> };
+
+  parse(data: Readonly<JSONObject>): TData;
+  create(
+    actor: Actor,
+    data: TData,
+    context: ComponentContext<TAssets>
+  ): TComponent | null;
+  apply?(component: TComponent, data: TData): boolean | void;
+  owns?(component: Component): component is TComponent;
+  capture?(component: TComponent, stored: Readonly<JSONObject>): JSONObject;
+  anchors?(component: TComponent): ComponentAnchors;
+  slotType?(slot: string, reference: AssetReferenceData): AssetType<unknown> | null;
+}
+
+interface ComponentContext<TAssets> {
+  readonly mode: "edit" | "play";
+  readonly assets: ComponentAssets<TAssets>;
+}
+```
+
+- `parse` turns the stored `data` into the definition's data, with a default
+  for each missing or mistyped field. `ComponentData` wraps a `JSONObject`
+  with `number`, `string`, `boolean`, `color`, `choice` and `object` readers
+  that take the fallback. `choice` takes a record keyed by the accepted
+  values.
+- `create` returns `null` when the mode needs no component, such as a
+  script in edit mode.
+- `apply` patches a live component with the full data. Without it, or when
+  it returns `false`, a data change rebuilds the component.
+- `capture` is the inverse of `parse`: it writes the current state of a live
+  component as `data`. `stored` is the data the component was built with,
+  after the last `apply`, or `{}` for a component the scene file did not
+  build; it keeps the fields the live component does not hold. `owns` tells
+  whether a component the scene file did
+  not build is one the definition captures; without it, only the components
+  the definition built are captured. See
+  [Saving a running scene](#saving-a-running-scene).
+- `anchors` returns the [anchors](#anchors) of a component it built. It is
+  called once per built component.
+- `assets` maps each asset slot the component reads to its `AssetType`. The
+  filled slots are loaded before the scene activates.
+- `slotType` gives the type of a filled slot that `assets` does not list,
+  such as the `property:<field>` slot of a `Sound` script property, or
+  `null` to leave it out. Those slots are loaded and checked like the listed
+  ones.
+- In edit mode a definition builds nothing that runs the game: the camera
+  never renders and no script is built.
+
+A definition for a game's own `Skin` component, which takes a texture:
+
+```ts
+const skin: Systems.ComponentDefinition<
+  null,
+  Skin,
+  { texture: THREE.Texture; }
+> = {
+  type: "Skin",
+  assets: { texture: TEXTURE_ASSET },
+  parse: () => null,
+  create: (actor, _data, context) => actor.addComponentAndGet(Skin, {
+    texture: context.assets.resolve("texture")
+  })
+};
+```
+
+### ComponentAssets.resolve(slot): TAssets[slot] | null
+
+Resolves one slot of the component's `assets` map with the type the
+definition declares for it. Returns `null` for an empty or missing slot.
+`FileScene` resolves through `world.assetCoordinator`
+(`CoordinatorAssetResolver`). An editor passes its own
+`ComponentAssetResolver` to `SceneInstance`. Its `resolve` returns `null`
+for an asset that is still loading; the editor rebuilds the component once
+the asset arrives.
+
+### ComponentAssets.resolveSlot(slot, type): TValue | null
+
+Resolves any slot of the component's `assets` map with the given type, for
+slots the definition does not declare, such as the texture slots of a shader
+uniform. Returns `null` when the slot holds another asset kind.
+
+### ComponentDefinitions
+
+- `register(...definitions): this` throws when a type is already registered.
+- `find(type): ComponentDefinition | null`
+- `create(actor, entry, { mode, resolver }): Component | null` builds the
+  component of a `SceneComponentFile` and remembers the entry it came from.
+  Returns `null` for an unknown type or when the definition builds nothing.
+- `apply(component, type, data): boolean` patches a live component through
+  its definition's `apply` and remembers `data` as the component's latest.
+  Returns `false`, remembering nothing, when the definition has no `apply`
+  or its `apply` returns `false`.
+- `anchors(component): ComponentAnchors | null` returns the anchors of a
+  component it built, or `null` when its definition has no `anchors`.
+- `capture(component): SceneComponentFile | null` writes a live component
+  back as a file entry. See
+  [Saving a running scene](#saving-a-running-scene).
+- `assets(file)` yields the asset references of every known component in the
+  file, except a reference that names another kind than its slot. It reads
+  only `file.actors`.
+- `missingAsset(entry, loadable): MissingComponentAsset | null` returns the
+  first filled slot of the entry whose reference names another kind than the
+  slot or that `loadable` cannot load. Returns `null` when every slot can load.
+
+```ts
+type LoadableAssets = Pick<AssetCoordinator, "canLoad">;
+
+interface MissingComponentAsset {
+  readonly slot: string;
+  readonly reference: AssetReferenceData;
+}
+```
+
+## FileScene
+
+```ts
+type SceneFileLoad = () => Promise<SceneFile>;
+
+class FileScene<TContext> extends Scene<TContext> {
+  readonly file: SceneFile;
+
+  constructor(
+    name: string,
+    file: SceneFile | SceneFileLoad,
+    options: {
+      components: ComponentDefinitions;
+      prefabs?: ScenePrefabs;
+      sceneId?: string;
+    }
+  );
+
+  capture(): SceneFile;
+}
+```
+
+- Given a `SceneFileLoad`, `prepare()` calls it, so
+  [`SceneManager`](scene-manager.md#loading-a-scene) loads the file before
+  the assets. Reading `file` before then throws.
+- Its `assetsToLoad` returns the definitions' assets that the world's
+  `assetCoordinator` can load. With `prefabs`, they include the assets of
+  every actor its instances expand, overridden slots included, so `prefabs`
+  must find each of those scenes when the scene loads. A component whose
+  asset is missing from the catalog, of another kind than its slot, or
+  without a loader is skipped with a warning instead of failing the load.
+  Its `assets` stay empty.
+- `assetsToLoad` also returns the referenced environment when the
+  coordinator can load it. When it cannot, the scene renders the `default`
+  preset.
+- `sceneId` is the asset id of `file`. Pass it so a prefab cycle back to this
+  scene stops at once, as in the editor, instead of one level down.
+- `awake()` builds the actors in play mode and applies the environment.
+- `destroy()` disposes the [environment](environment.md).
+
+## Saving a running scene
+
+`scene.capture()` returns a `SceneFile` of the world as it is now, with the
+environment of the scene's own file. Loading it in a new `FileScene` restores
+that state, so a save game is a scene file:
+
+```ts
+localStorage.setItem("save", JSON.stringify(scene.capture()));
+
+const save = JSON.parse(localStorage.getItem("save")!) as Systems.SceneFile;
+world.sceneManager.loadScene(new Systems.FileScene("Level 1", save, { components }));
+```
+
+`captureSceneActors(tree, components)` does the same for any `ActorTree`,
+such as `world.sceneManager.tree` under a scene written in code. It returns
+the actor files only.
+
+What a capture holds:
+
+- Every actor of the tree that is not pending destruction, in tree order:
+  those built from a file, those created at runtime, those of appended
+  scenes, and persistent ones. Ids are `actor.persistentId`.
+- The local transform, name and visibility of each actor.
+- The `anchor` of an actor that hangs from one.
+- A prefab instance as the actors it expanded, with their path ids and no
+  `prefab` field: loading the save rebuilds them without the referenced scene.
+- For a component built from a scene file by the same `ComponentDefinitions`:
+  its file id and asset slots, and the `data` its definition's `capture`
+  returns. A definition without `capture` keeps the data the component was
+  built or last applied with.
+- For any other component: the first definition, in registration order,
+  that `owns` it and has a `capture`, with a new id and no asset slot.
+  Components no definition owns are left out, so a runtime component that
+  needs an asset does not come back.
+- For a behavior: the `@SceneProperty` fields, written by
+  [`ScriptDefinition`](../components/behavior.md#scene-files). Other fields
+  are not saved.
+
+A save captured in edit mode lacks the scripts, which edit mode never
+builds.
+
+## SceneInstance
+
+Keeps the live actors and components of a scene file, by file id. `FileScene`
+fills one in play mode. An editor keeps one in edit mode and applies each
+document change to it.
+
+```ts
+interface SceneInstanceOptions<TContext> {
+  world: World<any, TContext>;
+  mode: "edit" | "play";
+  components: ComponentDefinitions;
+  assets: ComponentAssetResolver;
+  prefabs?: ScenePrefabs;
+  sceneId?: string;
+}
+
+interface SceneInstanceComponent {
+  id: string;
+  actorId: string;
+  component: Component;
+  connections: readonly SceneConnectionFile[]; // as in the file it was built from
+}
+
+type SceneInstanceEvents = {
+  componentBuilt: (built: SceneInstanceComponent) => void;
+  componentDropped: (component: Component) => void;
+  anchorsChange: () => void;
+};
+```
+
+`prefabs` finds the scenes [prefab instances](#prefab-instances) expand.
+`sceneId` names the scene this instance builds, so an instance of it is
+skipped at once.
+
+`actor(id)` and `component(id)` return the built actor or component, or
+`null`. An expanded actor or component goes by its path id.
+`actorId(actor)` returns the file id of a built actor, or `null`. `components()` iterates
+the built components.
+
+`SceneInstance` is a `SceneAnchorsReader`:
+
+```ts
+interface SceneAnchorsReader {
+  anchors(actorId: string): IterableIterator<SceneActorAnchor>;
+  findAnchor(actorId: string, anchor: SceneAnchorFile): ComponentAnchor | null;
+}
+
+interface SceneActorAnchor {
+  component: string;
+  anchor: ComponentAnchor;
+}
+```
+
+`anchors(actorId)` iterates the anchors of the actor's built components.
+`findAnchor(actorId, anchor)` returns the anchor a `SceneAnchorFile` names,
+or `null` when the component is not the actor's or does not list it.
+`anchorsChange` fires when a component with anchors is built or dropped, and
+when its anchors change.
+
+### add(actors): void
+
+Creates the actors in order, under the actor of their `parentId` or at the
+root. The parent may come from the same call or an earlier one.
+
+- An actor whose parent was not built is skipped with a warning, and so is
+  its subtree. So is a duplicate id.
+- An actor whose id belongs to a live actor of the world, such as a
+  [persistent actor](../actor/actor.md#persistent-actors), is skipped
+  without a warning, with its subtree: the live actor is kept.
+- A component type without a definition is skipped, with a warning in play
+  mode only. So is a `null` from `create`, without a warning.
+- In play mode, a component with a slot asset that `missingAsset` reports
+  against the world's `assetCoordinator` is skipped with a
+  `Missing asset skipped` warning naming the actor, component type and asset
+  ID. Edit mode builds it anyway.
+- Transforms are written to `actor.transform`.
+- An actor with `prefab` gets its scene's actors built under it.
+- An actor with `anchor` is placed on that anchor of its parent.
+
+### refresh(sceneId): void
+
+Destroys what every instance of `sceneId` expanded, nested instances
+included, and expands them again from `prefabs`. Call it when that scene
+changes.
+
+### override(instanceId, overrides): void
+
+Gives a built instance new [overrides](#overrides), or none for `undefined`.
+The expanded actors take the new name, visibility and transform in place. A
+component whose override changed is patched through its definition's
+`apply`, and rebuilt when the definition has none or an asset slot changed.
+The other components are kept.
+
+### expandedActors(instanceId): IterableIterator\<SceneActorFile\>
+
+Yields the files of the actors built under an instance, nested instances
+included, in tree order, with path ids and overrides applied.
+
+### expandedActor(id): SceneActorFile | null
+
+### expandedComponent(id): SceneComponentFile | null
+
+Return the file of the expanded actor, or of the built component, with that
+path id, as the latest overrides leave it. Both return `null` for an id that
+no instance expanded.
+
+### prefabSceneIds(): IterableIterator\<string\>
+
+Yields the scene id of every instance built, nested ones included, once
+each. An editor releases the scenes this no longer yields.
+
+### remove(id): void
+
+Destroys the actor and its subtree, and forgets their ids and components.
+Emits `componentDropped` for each component it forgets.
+
+### reparent(id, parentId, anchor?): void
+
+Moves the actor under the actor of `parentId`, or to the root for `null`,
+keeping its local transform. With `anchor`, the actor hangs from that anchor
+of the new parent; without it, from the parent's origin.
+
+### write(id, { name, visible, transform }): void
+
+Writes the name, visibility and transform of an actor file to a built actor.
+
+### rebuildComponent(actorId, entry): void
+
+Destroys the component with the id of `entry`, if any, and creates it again
+on the actor of `actorId`.
+
+### removeComponent(id): void
+
+Destroys the component and forgets it.
+
+### applyComponent(id, type, data): boolean
+
+Parses `data` with the definition of `type` and passes it to the definition's
+`apply`. Returns `false` when the component is not built, the definition has
+no `apply`, or its `apply` returns `false`; rebuild the component in that case.
+
+### clear(): void
+
+Destroys every actor it built and forgets every id.
+
+## Scene transforms
+
+### writeSceneTransform(transform, file): void
+
+Writes a `SceneTransformFile` (rotation in degrees) as the local pose of a
+[Transform](../actor/actor-transform.md).
+
+### localSceneTransform(transform): SceneTransformFile
+
+Reads the local pose of a `Transform` back into a `SceneTransformFile`.
+
+### readSceneTransform(pose): SceneTransformFile
+
+Reads a `{ position, quaternion, scale }` pose, such as a decomposed matrix,
+into a `SceneTransformFile`, rotation in degrees.
+
+### composeSceneTransform(transform, target?): Mat4
+
+Composes the local matrix `writeSceneTransform` would give a transform, into
+`target` or a new matrix. A `Mat4` is column-major, the layout of three.js
+`Matrix4.elements`.
+
+## Built-in definitions
+
+- `ScriptDefinition` (`Script`): a [behavior](../components/behavior.md#scene-files)
+  taken from its `script` asset, or found by name in the record it was given.
+
+The camera, light, audio, mesh, model and text definitions come from the
+backend, such as `@jolly-pixel/backend.three`.

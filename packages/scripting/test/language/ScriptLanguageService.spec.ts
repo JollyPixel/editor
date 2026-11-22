@@ -9,7 +9,7 @@ import files from "@jolly-pixel/scripting/types";
 import { ScriptLanguageService } from "#src/language/ScriptLanguageService.ts";
 
 // CONSTANTS
-const kScript = `import { Behavior, SceneProperty } from "@jolly-pixel/engine";
+const kScript = `import { Behavior, SceneProperty } from "@jolly-pixel/ecs";
 import { Vector3 } from "three";
 import { color } from "three/tsl";
 import { Enemy } from "./Enemy.ts";
@@ -23,6 +23,7 @@ export class Player extends Behavior {
   enemy?: Enemy;
 
   update() {
+    this.actor.node.object3D.visible = true;
   }
 }
 `;
@@ -31,7 +32,7 @@ describe("ScriptLanguageService", () => {
   const service = new ScriptLanguageService(files, "scripts/Player.ts");
   after(() => service.dispose());
 
-  test("checks a behavior against the engine and three types, ignoring other scripts", () => {
+  test("checks a behavior against the ecs, three.js backend and three types, ignoring other scripts", () => {
     assert.deepEqual(service.diagnostics(kScript), []);
   });
 

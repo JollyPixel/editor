@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig/lib.json",
+  "references": [
+    {
+      "path": "../asset"
+    },
+    {
+      "path": "../controls"
+    },
+    {
+      "path": "../ecs"
+    },
+    {
+      "path": "../loop"
+    },
+    {
+      "path": "../runtime"
+    },
+    {
+      "path": "../ui"
+    }
+  ]
+}

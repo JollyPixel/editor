@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
+import { type BakedRoomEnvironment, ThreeSceneEnvironment } from "@jolly-pixel/backend.three";
 import type { ResolvedThemeMode } from "@jolly-pixel/ui";
 import { StudioSky } from "@jolly-pixel/three";
 import type { PreviewEnvironment } from "@jolly-pixel/asset.environment/client";
@@ -30,7 +31,7 @@ export interface ShadowCasters {
 
 export interface SceneEnvironmentOptions {
   world: Systems.World<THREE.WebGPURenderer, any>;
-  roomEnvironment: Systems.BakedRoomEnvironment | null;
+  roomEnvironment: BakedRoomEnvironment | null;
   preview: Pick<PreviewEnvironment, "resolve">;
   chunks: ChunkRendering;
   casters: ShadowCasters;
@@ -39,10 +40,10 @@ export interface SceneEnvironmentOptions {
 
 export class SceneEnvironment {
   #renderer: Systems.Renderer<THREE.WebGPURenderer>;
-  #environment: Systems.ThreeSceneEnvironment;
+  #environment: ThreeSceneEnvironment;
   #preview: Pick<PreviewEnvironment, "resolve">;
   #file: Readonly<Systems.EnvironmentFile>;
-  #roomEnvironment: Systems.BakedRoomEnvironment | null;
+  #roomEnvironment: BakedRoomEnvironment | null;
   #chunks: ChunkRendering;
   #casters: ShadowCasters;
   #casterVersion = -1;
@@ -62,7 +63,7 @@ export class SceneEnvironment {
     const { world } = options;
     const { graph } = world.sceneManager;
     this.#renderer = world.renderer;
-    this.#environment = new Systems.ThreeSceneEnvironment(graph, world, {
+    this.#environment = new ThreeSceneEnvironment(graph, world, {
       room: options.roomEnvironment
     });
     this.#environment.fallbackSky = new StudioSky(options.theme).node;

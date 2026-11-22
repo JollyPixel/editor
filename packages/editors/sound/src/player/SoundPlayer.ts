@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine/core";
+import { Systems } from "@jolly-pixel/ecs";
 import { Emitter } from "@openally/emitt";
 import { clamp } from "@jolly-pixel/utils";
 

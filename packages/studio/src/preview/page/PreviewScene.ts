@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 import { Teardown } from "@jolly-pixel/utils";
 
 export class PreviewScene extends Systems.Scene {

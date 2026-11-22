@@ -1,10 +1,11 @@
 // Import Third-party Dependencies
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 import {
+  type ThreeRendererOptions,
   Runtime,
   type RuntimeCanvasTarget,
   type RuntimeOptions
-} from "@jolly-pixel/runtime";
+} from "@jolly-pixel/backend.three";
 import { inputLayers } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -143,8 +144,8 @@ export class EditorRuntime {
 }
 
 function trackTimestamps(
-  options: Systems.ThreeRendererOptions
-): Systems.ThreeRendererOptions {
+  options: ThreeRendererOptions
+): ThreeRendererOptions {
   return {
     ...options,
     webgpu: {

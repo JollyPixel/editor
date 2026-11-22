@@ -7,20 +7,22 @@ import type {
   SignalKey
 } from "@jolly-pixel/editor.host/scene";
 import type {
+  Systems
+} from "@jolly-pixel/ecs";
+import type {
   AudioSourceAssets,
   AudioSourceSettings,
   AudioZoneAssets,
   AudioZoneComponent,
-  AudioZoneSettings,
-  Systems
-} from "@jolly-pixel/engine";
-
-// Import Internal Dependencies
+  AudioZoneSettings
+} from "@jolly-pixel/backend.three";
 import {
   AUDIO_LISTENER_DEFINITION,
   AUDIO_SOURCE_DEFINITION,
   AUDIO_ZONE_DEFINITION
-} from "../runtime/index.ts";
+} from "@jolly-pixel/asset.sound/runtime";
+
+// Import Internal Dependencies
 import {
   audioSourceForm,
   audioZoneForm

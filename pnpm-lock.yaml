@@ -361,16 +361,20 @@ importers:
         specifier: 6.2.8
         version: 6.2.8
 
-  packages/assets/common: {}
+  packages/assets/common:
+    devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
 
   packages/assets/environment:
     dependencies:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
-      '@jolly-pixel/engine':
+      '@jolly-pixel/ecs':
         specifier: workspace:*
-        version: link:../../engine
+        version: link:../../ecs
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -386,6 +390,10 @@ importers:
       zod:
         specifier: 4.6.7
         version: 4.6.7
+    devDependencies:
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
 
   packages/assets/font:
     dependencies:
@@ -417,6 +425,9 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -426,15 +437,25 @@ importers:
       zod:
         specifier: 4.6.7
         version: 4.6.7
+    devDependencies:
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
 
   packages/assets/pixel-art:
     dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
       '@jolly-pixel/asset.common':
         specifier: workspace:*
         version: link:../common
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
@@ -453,13 +474,16 @@ importers:
       '@jolly-pixel/utils':
         specifier: workspace:*
         version: link:../../utils
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      three:
+        specifier: 0.187.0
+        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
       zod:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../../asset
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
@@ -481,6 +505,9 @@ importers:
       '@jolly-pixel/asset.common':
         specifier: workspace:*
         version: link:../common
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -490,19 +517,28 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../../physics
       zod:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@jolly-pixel/engine':
+      '@jolly-pixel/ecs':
         specifier: workspace:*
-        version: link:../../engine
+        version: link:../../ecs
 
   packages/assets/script:
     dependencies:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -528,6 +564,9 @@ importers:
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../../asset
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -546,9 +585,12 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
-      '@jolly-pixel/engine':
+      '@jolly-pixel/backend.three':
         specifier: workspace:*
-        version: link:../../engine
+        version: link:../../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -568,6 +610,9 @@ importers:
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../../asset
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -639,12 +684,18 @@ importers:
 
   packages/assets/voxel-map:
     dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../../asset
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -654,6 +705,9 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
+      '@jolly-pixel/physics':
+        specifier: workspace:*
+        version: link:../../physics
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
@@ -663,16 +717,22 @@ importers:
       '@openally/emitt':
         specifier: 1.1.0
         version: 1.1.0
+      three:
+        specifier: 0.187.0
+        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
       zod:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../../asset
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../common
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -694,6 +754,12 @@ importers:
       '@jolly-pixel/asset.voxel-animation':
         specifier: workspace:*
         version: link:../voxel-animation
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/golem.kit':
         specifier: workspace:*
         version: link:../../golem-kit
@@ -709,6 +775,9 @@ importers:
       '@jolly-pixel/utils':
         specifier: workspace:*
         version: link:../../utils
+      three:
+        specifier: 0.187.0
+        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
       zod:
         specifier: 4.6.7
         version: 4.6.7
@@ -719,6 +788,40 @@ importers:
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
+
+  packages/backend.three:
+    dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../asset
+      '@jolly-pixel/controls':
+        specifier: workspace:*
+        version: link:../controls
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../ecs
+      '@jolly-pixel/loop':
+        specifier: workspace:*
+        version: link:../loop
+      '@jolly-pixel/runtime':
+        specifier: workspace:*
+        version: link:../runtime
+      '@jolly-pixel/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      three:
+        specifier: ^0.187.0
+        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
+    devDependencies:
+      '@jolly-pixel/bench':
+        specifier: workspace:*
+        version: link:../bench
+      '@jolly-pixel/e2e':
+        specifier: workspace:*
+        version: link:../e2e
 
   packages/bench:
     devDependencies:
@@ -788,6 +891,28 @@ importers:
         specifier: 2.0.2
         version: 2.0.2
 
+  packages/ecs:
+    dependencies:
+      '@jolly-pixel/asset':
+        specifier: workspace:*
+        version: link:../asset
+      '@jolly-pixel/controls':
+        specifier: workspace:*
+        version: link:../controls
+      '@jolly-pixel/loop':
+        specifier: workspace:*
+        version: link:../loop
+      '@openally/emitt':
+        specifier: 1.1.0
+        version: 1.1.0
+      math:
+        specifier: 0.1.0
+        version: 0.1.0
+    devDependencies:
+      '@jolly-pixel/bench':
+        specifier: workspace:*
+        version: link:../bench
+
   packages/editors/environment:
     dependencies:
       '@jolly-pixel/asset-server':
@@ -796,24 +921,24 @@ importers:
       '@jolly-pixel/asset.environment':
         specifier: workspace:*
         version: link:../../assets/environment
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
@@ -845,15 +970,18 @@ importers:
       '@jolly-pixel/asset-source':
         specifier: workspace:*
         version: link:../../asset-source
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/console':
         specifier: workspace:*
         version: link:../../console
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
-      '@jolly-pixel/engine':
+      '@jolly-pixel/ecs':
         specifier: workspace:*
-        version: link:../../engine
+        version: link:../../ecs
       '@jolly-pixel/event-store':
         specifier: workspace:*
         version: link:../../event-store
@@ -912,18 +1040,18 @@ importers:
       '@jolly-pixel/asset.model':
         specifier: workspace:*
         version: link:../../assets/model
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/three':
         specifier: workspace:*
         version: link:../../three
@@ -949,9 +1077,6 @@ importers:
 
   packages/editors/pixel-art:
     dependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../../asset
       '@jolly-pixel/asset.pixel-art':
         specifier: workspace:*
         version: link:../../assets/pixel-art
@@ -979,9 +1104,6 @@ importers:
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
@@ -1004,12 +1126,15 @@ importers:
       '@jolly-pixel/asset-server':
         specifier: workspace:*
         version: link:../../asset-server
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../../e2e
-      '@jolly-pixel/engine':
+      '@jolly-pixel/ecs':
         specifier: workspace:*
-        version: link:../../engine
+        version: link:../../ecs
 
   packages/editors/scene:
     dependencies:
@@ -1031,15 +1156,18 @@ importers:
       '@jolly-pixel/asset.scene':
         specifier: workspace:*
         version: link:../../assets/scene
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -1052,9 +1180,6 @@ importers:
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/three':
         specifier: workspace:*
         version: link:../../three
@@ -1089,18 +1214,18 @@ importers:
       '@jolly-pixel/asset.script':
         specifier: workspace:*
         version: link:../../assets/script
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/scripting':
         specifier: workspace:*
         version: link:../../scripting
@@ -1147,21 +1272,21 @@ importers:
       '@jolly-pixel/asset.sound':
         specifier: workspace:*
         version: link:../../assets/sound
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../../ui
@@ -1190,15 +1315,18 @@ importers:
       '@jolly-pixel/asset.terrain':
         specifier: workspace:*
         version: link:../../assets/terrain
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -1208,9 +1336,6 @@ importers:
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/terrain.renderer':
         specifier: workspace:*
         version: link:../../terrain-renderer
@@ -1282,6 +1407,9 @@ importers:
       '@jolly-pixel/asset.voxel-map':
         specifier: workspace:*
         version: link:../../assets/voxel-map
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
@@ -1291,15 +1419,15 @@ importers:
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
       '@jolly-pixel/editor.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -1309,9 +1437,6 @@ importers:
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../../network
-      '@jolly-pixel/physics':
-        specifier: workspace:*
-        version: link:../../physics
       '@jolly-pixel/pixel-draw.renderer':
         specifier: workspace:*
         version: link:../../pixel-draw-renderer
@@ -1321,9 +1446,6 @@ importers:
       '@jolly-pixel/resize-handle':
         specifier: workspace:*
         version: link:../../resize-handle
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/three':
         specifier: workspace:*
         version: link:../../three
@@ -1370,6 +1492,9 @@ importers:
       '@jolly-pixel/asset.voxel-model':
         specifier: workspace:*
         version: link:../../assets/voxel-model
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../../backend.three
       '@jolly-pixel/color':
         specifier: workspace:*
         version: link:../../color
@@ -1379,15 +1504,15 @@ importers:
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../../controls
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
       '@jolly-pixel/editor.pixel-art':
         specifier: workspace:*
         version: link:../pixel-art
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../../engine
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
@@ -1400,9 +1525,6 @@ importers:
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../../runtime
       '@jolly-pixel/three':
         specifier: workspace:*
         version: link:../../three
@@ -1425,28 +1547,6 @@ importers:
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../../e2e
-
-  packages/engine:
-    dependencies:
-      '@jolly-pixel/asset':
-        specifier: workspace:*
-        version: link:../asset
-      '@jolly-pixel/controls':
-        specifier: workspace:*
-        version: link:../controls
-      '@jolly-pixel/loop':
-        specifier: workspace:*
-        version: link:../loop
-      '@openally/emitt':
-        specifier: 1.1.0
-        version: 1.1.0
-      three:
-        specifier: ^0.187.0
-        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
-    devDependencies:
-      '@jolly-pixel/bench':
-        specifier: workspace:*
-        version: link:../bench
 
   packages/event-store:
     dependencies:
@@ -1647,13 +1747,19 @@ importers:
 
   packages/physics:
     dependencies:
+      math:
+        specifier: 0.1.0
+        version: 0.1.0
       three:
         specifier: ^0.187.0
         version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
     devDependencies:
-      '@jolly-pixel/engine':
+      '@jolly-pixel/backend.three':
         specifier: workspace:*
-        version: link:../engine
+        version: link:../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../ecs
       '@jolly-pixel/loop':
         specifier: workspace:*
         version: link:../loop
@@ -1711,9 +1817,6 @@ importers:
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../asset
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../engine
       '@jolly-pixel/loop':
         specifier: workspace:*
         version: link:../loop
@@ -1726,13 +1829,7 @@ importers:
       '@pmndrs/detect-gpu':
         specifier: 6.0.30
         version: 6.0.30
-      three:
-        specifier: ^0.187.0
-        version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
     devDependencies:
-      '@jolly-pixel/e2e':
-        specifier: workspace:*
-        version: link:../e2e
       electron:
         specifier: 45.3.1
         version: 45.3.1(supports-color@10.2.2)
@@ -1742,9 +1839,12 @@ importers:
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../asset
-      '@jolly-pixel/engine':
+      '@jolly-pixel/backend.three':
         specifier: workspace:*
-        version: link:../engine
+        version: link:../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../ecs
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
@@ -1848,18 +1948,21 @@ importers:
       '@jolly-pixel/asset.voxel-model':
         specifier: workspace:*
         version: link:../assets/voxel-model
+      '@jolly-pixel/backend.three':
+        specifier: workspace:*
+        version: link:../backend.three
       '@jolly-pixel/controls':
         specifier: workspace:*
         version: link:../controls
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../ecs
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../editors/host
       '@jolly-pixel/editor.script':
         specifier: workspace:*
         version: link:../editors/script
-      '@jolly-pixel/engine':
-        specifier: workspace:*
-        version: link:../engine
       '@jolly-pixel/network':
         specifier: workspace:*
         version: link:../network
@@ -1875,9 +1978,6 @@ importers:
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../preferences
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../runtime
       '@jolly-pixel/server':
         specifier: workspace:*
         version: link:../server
@@ -1903,6 +2003,9 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      '@jolly-pixel/asset.common':
+        specifier: workspace:*
+        version: link:../assets/common
       '@jolly-pixel/cdp':
         specifier: workspace:*
         version: link:../cdp
@@ -1922,9 +2025,12 @@ importers:
         specifier: 0.187.0
         version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
     devDependencies:
-      '@jolly-pixel/engine':
+      '@jolly-pixel/backend.three':
         specifier: workspace:*
-        version: link:../engine
+        version: link:../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../ecs
 
   packages/three:
     dependencies:
@@ -1984,9 +2090,12 @@ importers:
       '@jolly-pixel/asset':
         specifier: workspace:*
         version: link:../asset
-      '@jolly-pixel/engine':
+      '@jolly-pixel/backend.three':
         specifier: workspace:*
-        version: link:../engine
+        version: link:../backend.three
+      '@jolly-pixel/ecs':
+        specifier: workspace:*
+        version: link:../ecs
       '@jolly-pixel/loop':
         specifier: workspace:*
         version: link:../loop
@@ -1996,9 +2105,6 @@ importers:
       '@jolly-pixel/physics.rapier':
         specifier: workspace:*
         version: link:../physics-rapier
-      '@jolly-pixel/runtime':
-        specifier: workspace:*
-        version: link:../runtime
       '@jolly-pixel/ui':
         specifier: workspace:*
         version: link:../ui

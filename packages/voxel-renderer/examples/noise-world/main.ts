@@ -1,6 +1,5 @@
 // Import Third-party Dependencies
-import { OrbitFlyCamera } from "@jolly-pixel/engine";
-import { Runtime } from "@jolly-pixel/runtime";
+import { OrbitFlyCamera, Runtime } from "@jolly-pixel/backend.three";
 import {
   loadBlocksets,
   ViewDistance,

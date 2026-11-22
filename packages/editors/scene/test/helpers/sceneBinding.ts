@@ -3,7 +3,7 @@ import type {
   SceneDocument,
   SceneEnvironmentJSON
 } from "@jolly-pixel/asset.scene/client";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { PrefabScenes } from "../../src/scene/PrefabScenes.ts";

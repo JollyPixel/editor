@@ -9,9 +9,9 @@ import {
   type ResolvedBlockDefinition
 } from "@jolly-pixel/voxel.renderer";
 import { SearchQuery } from "@jolly-pixel/ui";
+import { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
-import { BlocksetEntry } from "../../../../src/viewer/BlocksetEntry.ts";
 import { BlockLibraryOrder } from "../../../../src/features/blocks/library/BlockLibraryOrder.ts";
 import { BlockLibraryScope } from "../../../../src/features/blocks/library/BlockLibraryScope.ts";
 import { BlockLibraryView } from "../../../../src/features/blocks/library/BlockLibraryView.ts";

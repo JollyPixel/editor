@@ -6,7 +6,7 @@
 
 Private editor workspace for [`@jolly-pixel/asset.voxel-model`][asset-voxel-model] models, booted through [`@jolly-pixel/editor.host`][editor-host].
 
-The package exports a read-only model viewer from `src/viewer/` and the `VoxelModel` scene component from `src/sceneComponents/` (`@jolly-pixel/editor.voxel-model/scene`). The component draws the model with the pixel-art texture the model links. Its runtime entry (`./runtime`) adds the same component to a game and a `voxelmodel` loader, which reads the model's build and loads its texture through the pixel-art runtime loader. The build is the model file with the transform and UV fields the stored form omits; animations do not play in a game yet.
+The package exports a read-only model viewer from `src/viewer/` and the `VoxelModel` scene component from `src/sceneComponents/` (`@jolly-pixel/editor.voxel-model/scene`). The component draws the model with the pixel-art texture the model links. The component definition and `ModelView`, which draws the model, come from `@jolly-pixel/asset.voxel-model/runtime`, which also gives a game the component and its loader.
 
 ## 🚀 Running the editor
 

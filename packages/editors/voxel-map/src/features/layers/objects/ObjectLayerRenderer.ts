@@ -3,7 +3,7 @@ import * as THREE from "three";
 import {
   type Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import {
   BoxControls,
   clientToNdc,

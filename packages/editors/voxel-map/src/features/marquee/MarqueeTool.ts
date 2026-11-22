@@ -7,7 +7,7 @@ import {
 import {
   type Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import { MarqueeBox } from "@jolly-pixel/three";
 import type {
   VoxelCoord,

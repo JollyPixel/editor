@@ -4,7 +4,7 @@ import { InputCombination } from "@jolly-pixel/controls";
 import {
   Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import type { TerrainRay } from "@jolly-pixel/terrain.renderer";
 import * as THREE from "three";
 

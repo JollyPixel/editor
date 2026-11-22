@@ -5,9 +5,6 @@
       "path": "../../asset-server"
     },
     {
-      "path": "../../engine"
-    },
-    {
       "path": "../../golem-kit"
     },
     {
@@ -15,6 +12,9 @@
     },
     {
       "path": "../../network"
+    },
+    {
+      "path": "../../ecs"
     }
   ]
 }

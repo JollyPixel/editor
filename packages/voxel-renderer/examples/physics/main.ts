@@ -1,11 +1,9 @@
 // Import Third-party Dependencies
-import {
-  CameraComponent
-} from "@jolly-pixel/engine";
+import { CameraComponent, Runtime } from "@jolly-pixel/backend.three";
 import {
   PhysicsSystem,
   RigidBody
-} from "@jolly-pixel/physics/engine";
+} from "@jolly-pixel/physics/ecs";
 import { RapierBackend } from "@jolly-pixel/physics.rapier";
 import {
   Face,
@@ -17,7 +15,6 @@ import {
 import {
   VoxelRenderer
 } from "@jolly-pixel/voxel.renderer/engine";
-import { Runtime } from "@jolly-pixel/runtime";
 import * as THREE from "three";
 
 // Import Internal Dependencies

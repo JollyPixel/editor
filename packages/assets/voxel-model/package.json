@@ -14,6 +14,10 @@
       "types": "./dist/network/client.d.ts",
       "default": "./dist/network/client.js"
     },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
+    },
     "./server": {
       "types": "./dist/network/server.d.ts",
       "default": "./dist/network/server.js"
@@ -27,12 +31,20 @@
     "#src/*": "./src/*"
   },
   "jollypixel": {
-    "golem": "./golem"
+    "golem": "./golem",
+    "runtime": "./runtime",
+    "sceneComponents": {
+      "VoxelModel": {
+        "assets": {
+          "model": "voxelmodel"
+        }
+      }
+    }
   },
   "scripts": {
     "prepublishOnly": "rimraf ./dist ./tsconfig.tsbuildinfo && tsc -b",
     "build": "tsc -b && node -e \"fs.cpSync('src/golem/guide.md', 'dist/golem/guide.md')\"",
-    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
+    "test-only": "node --import ./test/setup.ts --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "lint": "oxlint src test",
     "typecheck": "tsc --noEmit -p test/tsconfig.json"
@@ -59,11 +71,14 @@
     "@jolly-pixel/asset.common": "workspace:*",
     "@jolly-pixel/asset.pixel-art": "workspace:*",
     "@jolly-pixel/asset.voxel-animation": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/golem.kit": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/pixel-draw.renderer": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",
+    "three": "0.187.0",
     "zod": "4.6.7"
   },
   "devDependencies": {

@@ -3,9 +3,11 @@ import * as THREE from "three";
 import {
   ActorComponent,
   InputCombination,
-  type Actor,
+  type Actor
+} from "@jolly-pixel/ecs";
+import {
   type OrbitFlyCamera
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import type { InputDevices } from "@jolly-pixel/controls";
 
 // Import Internal Dependencies

@@ -2,7 +2,8 @@
 import {
   Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import type {} from "@jolly-pixel/backend.three";
 import type * as THREE from "three";
 
 // Import Internal Dependencies

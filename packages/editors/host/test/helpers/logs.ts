@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 export interface CapturedLogs {
   logger: Systems.Logger;

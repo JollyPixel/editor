@@ -8,7 +8,7 @@ import {
   type SceneComponentJSON,
   type SceneDocument
 } from "@jolly-pixel/asset.scene/client";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { SceneComponents } from "../components/SceneComponents.ts";

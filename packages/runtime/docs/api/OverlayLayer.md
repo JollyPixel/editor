@@ -1,8 +1,8 @@
 # OverlayLayer
 
 `runtime.overlay` holds the HTML drawn above the canvas: the performance HUD,
-the focus hint, and the application's own elements. It exists once
-`Runtime.create()` resolves and is removed by `runtime.dispose()`.
+the focus hint, and the application's own elements. It exists once the
+runtime is constructed and is removed by `runtime.dispose()`.
 
 The layer never receives pointer events. By default it is a `position: fixed`
 element on `document.body` that follows the canvas box. It sets no `z-index`,

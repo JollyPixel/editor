@@ -20,7 +20,8 @@ export const PLAYER_MODULES: Readonly<Record<string, string>> = {
   three: "three.ts",
   "three/webgpu": "three.ts",
   "three/tsl": "three-tsl.ts",
-  "@jolly-pixel/engine": "engine.ts"
+  "@jolly-pixel/ecs": "ecs.ts",
+  "@jolly-pixel/backend.three": "backend.three.ts"
 };
 
 export function playerModules(): Plugin {

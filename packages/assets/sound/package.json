@@ -13,6 +13,10 @@
     "./client": {
       "types": "./dist/network/client.d.ts",
       "default": "./dist/network/client.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
     }
   },
   "imports": {
@@ -45,7 +49,8 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
-    "@jolly-pixel/engine": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
     "@mediabunny/server": "1.65.2",
@@ -54,6 +59,23 @@
   },
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset.common": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*"
+  },
+  "jollypixel": {
+    "runtime": "./runtime",
+    "sceneComponents": {
+      "AudioSource": {
+        "assets": {
+          "sound": "sound"
+        }
+      },
+      "AudioListener": {},
+      "AudioZone": {
+        "assets": {
+          "sound": "sound"
+        }
+      }
+    }
   }
 }

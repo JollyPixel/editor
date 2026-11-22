@@ -3,7 +3,7 @@ import * as THREE from "three/webgpu";
 import {
   Actor,
   ActorComponent
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 
 // CONSTANTS
 const kSnapDistanceSq = 8 * 8;

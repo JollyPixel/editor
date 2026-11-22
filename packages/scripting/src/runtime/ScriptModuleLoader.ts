@@ -3,7 +3,7 @@ import type {
   AssetLoader,
   AssetRecord
 } from "@jolly-pixel/asset";
-import type { ScriptModule } from "@jolly-pixel/engine";
+import type { ScriptModule } from "@jolly-pixel/ecs";
 import type { LoadingManager } from "three/webgpu";
 
 // Import Internal Dependencies

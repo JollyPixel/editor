@@ -31,12 +31,12 @@ describe("ChangeSet.selectors", () => {
 
   it("keeps test and docs changes from reaching dependent workspaces", () => {
     const local = [
-      "packages/engine/test/camera/OrbitFlyCamera.spec.ts",
+      "packages/ecs/test/camera/OrbitFlyCamera.spec.ts",
       "packages/editors/scene/test/e2e/smoke.e2e.ts",
-      "packages/engine/docs/components/orbit-fly-camera.md"
+      "packages/ecs/docs/components/orbit-fly-camera.md"
     ];
     const shared = [
-      "packages/engine/src/components/camera/orbit-fly/OrbitFlyCamera.ts",
+      "packages/ecs/src/components/camera/orbit-fly/OrbitFlyCamera.ts",
       "packages/editors/host/package.json"
     ];
     function isLocal(

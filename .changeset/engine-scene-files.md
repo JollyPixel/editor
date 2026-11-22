@@ -1,5 +1,4 @@
 ---
-"@jolly-pixel/engine": major
 "@jolly-pixel/three": minor
 "@jolly-pixel/history": minor
 "@jolly-pixel/ui": minor

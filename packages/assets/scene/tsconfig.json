@@ -11,9 +11,6 @@
       "path": "../../asset-server"
     },
     {
-      "path": "../../engine"
-    },
-    {
       "path": "../../history"
     },
     {
@@ -21,6 +18,15 @@
     },
     {
       "path": "../../golem-kit"
+    },
+    {
+      "path": "../../physics"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

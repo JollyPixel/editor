@@ -1,15 +1,17 @@
 // Import Third-party Dependencies
 import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
 import {
+  Systems,
+  type Actor
+} from "@jolly-pixel/ecs";
+import {
   MESH_GEOMETRY_DEFAULTS,
   MeshRenderer,
   OrbitFlyCamera,
-  Systems,
-  type Actor,
   type MeshGeometry,
   type MeshGeometryKind,
   type Shader
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import type { EditorContext } from "@jolly-pixel/editor.host";
 import { Teardown } from "@jolly-pixel/utils";
 import * as THREE from "three/webgpu";

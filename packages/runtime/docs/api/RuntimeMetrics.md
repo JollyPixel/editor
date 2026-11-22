@@ -1,8 +1,7 @@
 # RuntimeMetrics
 
 `runtime.metrics` registers metrics on `runtime.stats`, the one recorder behind
-the corner HUD and the readout panel. Setup recipes are in
-[frame scheduling and performance](../guides/frame-scheduling-and-performance.md).
+the corner HUD and the readout panel.
 
 ```ts
 const release = runtime.metrics.addSource(engine.inspector);
@@ -12,7 +11,7 @@ const release = runtime.metrics.addSource(engine.inspector);
 
 | Property | Type | Description |
 |---|---|---|
-| `renderer` | `RendererMetrics` | The [renderer counters](#renderer-counters). On a [`RuntimeCore`](./RuntimeCore.md), the backend's `metrics`. |
+| `renderer` | `TMetrics` | The backend's `metrics` source, such as the renderer counters of the three.js backend. |
 | `panel` | `MetricsPanel \| null` | The mounted [readout panel](#metricspanel). |
 
 ## Methods
@@ -25,43 +24,6 @@ const release = runtime.metrics.addSource(engine.inspector);
 | `track(id, value)` | Pushes a value to a metric, as [`StatsRecorder.track()`](../../../ui/docs/api/stats/stats-recorder.md#custom-metrics). |
 | `mountPanel(options?)` | Mounts the readout panel and disposes the previous one. `runtime.mountMetricsPanel()` adds the world keyboard. |
 | `dispose()` | Called by `runtime.dispose()`. |
-
-## Renderer counters
-
-The runtime registers the `WebGPURenderer` counters under the `renderer` group,
-outside the HUD cycle: `calls`, `renderedTriangles`, `geometries`, `textures`,
-and the byte counts `geometryMemory` and `textureMemory`.
-
-A renderer created with timestamp tracking also gets `gpuTime`, the GPU
-milliseconds of the last drawn frame, read back after every `"draw"`:
-
-```ts
-const runtime = await Runtime.create(canvas, {
-  renderer: {
-    webgpu: {
-      trackTimestamp: true
-    }
-  }
-});
-```
-
-Three.js turns tracking off on a device without the `timestamp-query`
-feature, and the metric is then absent. Every read-back copies the queries
-out of the GPU, so keep tracking off outside measurements. A frame drawn while
-the previous read-back is still pending is added to the next value.
-
-Three.js resets `renderer.info.render` on every animation-loop tick, including
-the ticks the `maxFps` cap skips, so a read outside a `"draw"` handler mostly
-sees zero. Read `renderer.frame` instead:
-
-```ts
-const { drawCalls, triangles } = runtime.metrics.renderer.frame;
-```
-
-It returns a new `RendererFrameStats` on every read. `drawCalls` and
-`triangles` come from the last drawn frame; `geometries` and `textures` are
-live. To refresh a display at the recorder's pace, read it from
-[`runtime.stats.subscribe()`](../../../ui/docs/api/stats/stats-recorder.md#reading).
 
 ## MetricsPanel
 

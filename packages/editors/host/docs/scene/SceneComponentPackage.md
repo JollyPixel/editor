@@ -15,22 +15,12 @@ import {
 ```
 
 A package exports its `SceneComponentPackage` as `SCENE_COMPONENTS` from an
-export subpath, and names that subpath in its manifest. `sceneComponents`
-declares each component type with the asset kind of each `definition.assets`
-slot, so Node clients such as golem can check a component without loading
-the module:
+export subpath, and names that subpath in its manifest:
 
 ```json
 {
   "jollypixel": {
-    "scene": "./scene",
-    "sceneComponents": {
-      "VoxelMap": {
-        "assets": {
-          "map": "voxelmap"
-        }
-      }
-    }
+    "scene": "./scene"
   },
   "exports": {
     "./scene": "./src/sceneComponents/index.ts"
@@ -39,22 +29,12 @@ the module:
 ```
 
 The scene editor loads the package when the project file lists it under
-`editors` or `kinds`. The studio refuses a `scene` contribution without
-`sceneComponents`, and a component type that two packages declare.
-
-Nothing compares the declaration with the module at runtime, so the package
-pins it with a spec. `assertDeclaresSceneComponents(packageDir, components)`
-from `@jolly-pixel/editor.host/testing` reads `packageDir/package.json` and
-fails unless its `sceneComponents` is the object the `SceneComponentPackage`
-implies, with `assets` left out of a component that has no slot:
-
-```ts
-import { assertDeclaresSceneComponents } from "@jolly-pixel/editor.host/testing";
-
-test("matches the scene components the package declares", () => {
-  assertDeclaresSceneComponents(kPackageDir, SCENE_COMPONENTS);
-});
-```
+`editors` or `kinds`. Component types and their engine definitions belong to
+the asset kind package's `runtime` contribution, which also declares them in
+`jollypixel.sceneComponents` for Node clients such as golem. The editor's
+`scene` contribution adds only the forms, labels and live viewers. The studio
+refuses an editor manifest that sets `jollypixel.runtime` or
+`jollypixel.sceneComponents`.
 
 ```ts
 const kRows = new FormRows<VoxelMapSettings>();
@@ -203,8 +183,8 @@ type SceneComponentCategory =
 ```
 
 `definition` is the engine definition a game registers too. Import it from
-the package's `jollypixel.runtime` entry (`RuntimeComponentPackage` in
-`@jolly-pixel/runtime`), so the editor and the game share one object. Its
+the asset kind package's `jollypixel.runtime` entry (`ThreeComponentPackage`
+in `@jolly-pixel/runtime`), so the editor and the game share one object. Its
 `assets` slots decide which asset pickers open when the component is added.
 
 The component shows `icon`, the name of an icon the package registers with

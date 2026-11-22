@@ -29,7 +29,7 @@ export interface TestStudioOptions {
   /**
    * @default []
    */
-  editors?: readonly unknown[];
+  kindPackages?: readonly unknown[];
 }
 
 export interface HostedAsset<TState> {
@@ -54,7 +54,7 @@ export class TestStudio {
   constructor(
     options: TestStudioOptions
   ) {
-    const { kinds, editors = [] } = options;
+    const { kinds, kindPackages = [] } = options;
     this.#kinds = new Map(
       kinds.map((contribution) => [contribution.kind, contribution])
     );
@@ -64,7 +64,7 @@ export class TestStudio {
         records: () => this.#records.values(),
         dependencies: this.dependencies
       },
-      editors,
+      kindPackages,
       open: (assetId, kind) => this.open(assetId, kind)
     };
   }

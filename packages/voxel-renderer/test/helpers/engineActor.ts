@@ -3,7 +3,10 @@ import {
   ActorComponents,
   Systems,
   type Actor
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
+import {
+  ThreeSceneGraph
+} from "@jolly-pixel/backend.three";
 
 // Import Internal Dependencies
 import { makeLogger } from "./fakes.ts";
@@ -16,7 +19,7 @@ export interface FrameRequests {
 export function makeActor(
   frames: FrameRequests = { invalidations: 0, keepAlives: [] }
 ): Actor {
-  const graph = new Systems.ThreeSceneGraph();
+  const graph = new ThreeSceneGraph();
   const actor: Record<string, unknown> = {
     components: new ActorComponents(),
     addComponentAndGet: (

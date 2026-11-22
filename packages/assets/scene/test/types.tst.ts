@@ -4,7 +4,7 @@ import {
   expect,
   test
 } from "tstyche";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type {

@@ -3,7 +3,7 @@ import type { PhysicsBackend } from "@jolly-pixel/physics";
 import {
   PhysicsSystem,
   type EngineWorld
-} from "@jolly-pixel/physics/engine";
+} from "@jolly-pixel/physics/ecs";
 import type {
   PhysicsEngine,
   PhysicsSection

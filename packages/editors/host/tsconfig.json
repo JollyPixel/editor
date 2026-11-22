@@ -20,13 +20,7 @@
       "path": "../../network"
     },
     {
-      "path": "../../runtime"
-    },
-    {
       "path": "../../ui"
-    },
-    {
-      "path": "../../engine"
     },
     {
       "path": "../../three"
@@ -45,6 +39,15 @@
     },
     {
       "path": "../../utils"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
+    },
+    {
+      "path": "../../runtime"
     }
   ]
 }

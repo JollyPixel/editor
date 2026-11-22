@@ -1,0 +1,13 @@
+{
+  "extends": [
+    "../tsconfig.json",
+    "../../../tsconfig/examples.json"
+  ],
+  "compilerOptions": {
+    "paths": {
+      "@jolly-pixel/backend.three": [
+        "../src/index.ts"
+      ]
+    }
+  }
+}

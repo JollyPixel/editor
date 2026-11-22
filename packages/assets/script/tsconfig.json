@@ -21,6 +21,12 @@
     },
     {
       "path": "../../golem-kit"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

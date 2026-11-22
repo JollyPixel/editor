@@ -4,7 +4,7 @@ import type {
   AudioZoneMode,
   AudioZoneSettings,
   AudioZoneShapeKind
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import {
   FormRows,
   type ChoiceOption,

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import {
   MODEL_DEFAULTS,
   type Model
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/backend.three";
 import type { ChoiceRow } from "@jolly-pixel/editor.host/scene";
 import * as THREE from "three/webgpu";
 

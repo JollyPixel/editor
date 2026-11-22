@@ -1,9 +1,11 @@
 // Import Third-party Dependencies
 import type {
   MetricsPanel,
-  PerformanceStatsHud,
-  ViewHelperSettings
+  PerformanceStatsHud
 } from "@jolly-pixel/runtime";
+import type {
+  ViewHelperSettings
+} from "@jolly-pixel/backend.three";
 import type {
   Preferences,
   PreferenceValues

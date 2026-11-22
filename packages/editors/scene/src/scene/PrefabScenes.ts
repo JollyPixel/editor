@@ -4,7 +4,7 @@ import {
   type SceneDocument
 } from "@jolly-pixel/asset.scene/client";
 import type { AssetLease } from "@jolly-pixel/editor.host";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 import { Emitter } from "@openally/emitt";
 
 export type SceneLease = Pick<

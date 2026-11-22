@@ -6,7 +6,7 @@ import { describe, it } from "node:test";
 import {
   Systems,
   type Actor
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 import type { AssetReferenceData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies

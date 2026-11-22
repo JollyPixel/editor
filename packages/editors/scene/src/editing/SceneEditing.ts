@@ -9,7 +9,7 @@ import type {
   SceneDocument
 } from "@jolly-pixel/asset.scene/client";
 import type { ShortcutLabels } from "@jolly-pixel/controls";
-import type { Systems } from "@jolly-pixel/engine";
+import type { Systems } from "@jolly-pixel/ecs";
 import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies

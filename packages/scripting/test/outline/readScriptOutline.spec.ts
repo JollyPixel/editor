@@ -7,7 +7,7 @@ import { readScriptOutline } from "#src/outline/outliner/node.ts";
 
 // CONSTANTS
 const kScript = `
-import { Behavior, SceneProperty } from "@jolly-pixel/engine";
+import { Behavior, SceneProperty } from "@jolly-pixel/ecs";
 import * as THREE from "three";
 
 export class PlayerBehavior extends Behavior {
@@ -96,7 +96,7 @@ describe("readScriptOutline", () => {
 
   test("lists the signals and public methods of a behavior", async() => {
     const outline = await readScriptOutline(`
-      import { Behavior, SignalEvent } from "@jolly-pixel/engine";
+      import { Behavior, SignalEvent } from "@jolly-pixel/ecs";
 
       export class Health extends Behavior {
         readonly damaged = new SignalEvent<[amount: number, source: string]>();

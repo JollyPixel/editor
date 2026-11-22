@@ -27,6 +27,18 @@
     },
     {
       "path": "../../golem-kit"
+    },
+    {
+      "path": "../../physics"
+    },
+    {
+      "path": "../../pixel-draw-renderer"
+    },
+    {
+      "path": "../../ecs"
+    },
+    {
+      "path": "../../backend.three"
     }
   ]
 }

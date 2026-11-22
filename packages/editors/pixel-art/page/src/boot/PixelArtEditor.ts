@@ -11,7 +11,7 @@ import {
   type PageEditorDefinition
 } from "@jolly-pixel/editor.host";
 import type { PixelArtCanvas } from "@jolly-pixel/pixel-draw.renderer";
-import type { Runtime } from "@jolly-pixel/runtime";
+import type { Runtime } from "@jolly-pixel/backend.three";
 import { LocalStorageAdapter } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies

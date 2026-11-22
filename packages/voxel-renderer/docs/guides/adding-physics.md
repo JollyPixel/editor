@@ -6,7 +6,7 @@ voxels to a `@jolly-pixel/physics` world; `@jolly-pixel/physics.rapier`
 provides one backed by Rapier.
 
 ```ts
-import { PhysicsSystem } from "@jolly-pixel/physics/engine";
+import { PhysicsSystem } from "@jolly-pixel/physics/ecs";
 import { RapierBackend } from "@jolly-pixel/physics.rapier";
 import {
   PhysicsVoxelCollider,

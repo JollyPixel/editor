@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { InvalidAssetFileError } from "@jolly-pixel/asset-server";
-import { Systems } from "@jolly-pixel/engine/core";
+import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import {

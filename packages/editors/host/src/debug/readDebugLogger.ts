@@ -1,5 +1,5 @@
 // Import Third-party Dependencies
-import { Systems } from "@jolly-pixel/engine";
+import { Systems } from "@jolly-pixel/ecs";
 
 // CONSTANTS
 export const DEBUG_QUERY_PARAM = "debug";

@@ -6,7 +6,7 @@
 
 Private workspace for heightfield terrains: the headless chunk data and surface queries, and a CDLOD `TerrainView` drawn with Three.js. Terrains are edited in `@jolly-pixel/editor.terrain`, whose design notes cover the data model and rendering.
 
-The `@jolly-pixel/terrain.renderer/engine` entry adds the `TerrainRenderer` component for `@jolly-pixel/engine`.
+The `@jolly-pixel/terrain.renderer/engine` entry adds the `TerrainRenderer` component for `@jolly-pixel/ecs` worlds drawn by `@jolly-pixel/backend.three`.
 
 ## 🚀 Building
 

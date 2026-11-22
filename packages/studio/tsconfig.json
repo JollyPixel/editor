@@ -43,9 +43,6 @@
       "path": "../editors/host"
     },
     {
-      "path": "../engine"
-    },
-    {
       "path": "../three"
     },
     {
@@ -68,6 +65,12 @@
     },
     {
       "path": "../utils"
+    },
+    {
+      "path": "../ecs"
+    },
+    {
+      "path": "../backend.three"
     }
   ]
 }

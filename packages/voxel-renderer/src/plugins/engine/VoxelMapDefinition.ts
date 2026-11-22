@@ -2,7 +2,7 @@
 import {
   Systems,
   type Actor
-} from "@jolly-pixel/engine";
+} from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import type { VoxelColliderFactory } from "../../view/collision/VoxelCollider.ts";

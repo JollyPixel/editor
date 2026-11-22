@@ -32,7 +32,7 @@ describe("ScriptModules", () => {
 
   test("follows each relative import to the script it names, with or without an extension", async() => {
     const imported = await scripts.imported(player, [
-      "import { Behavior } from \"@jolly-pixel/engine\";",
+      "import { Behavior } from \"@jolly-pixel/ecs\";",
       "import { zero } from \"./math/vector\";",
       "import { one } from \"./math/vector.js\";",
       "import { two } from \"./math/vector.ts\";",

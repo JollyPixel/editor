@@ -8,9 +8,9 @@ import {
   type VoxelView
 } from "@jolly-pixel/voxel.renderer";
 import { Emitter } from "@openally/emitt";
+import { BlocksetEntry } from "@jolly-pixel/asset.voxel-map/runtime";
 
 // Import Internal Dependencies
-import { BlocksetEntry } from "./BlocksetEntry.ts";
 import {
   LinkedBlockset,
   type LinkedBlocksetHook

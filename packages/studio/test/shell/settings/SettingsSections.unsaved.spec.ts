@@ -36,7 +36,8 @@ function setup() {
       {
         name: kKindPackage,
         kinds: ["voxelmap"],
-        configurable: true
+        configurable: true,
+        sceneComponents: []
       }
     ]
   });

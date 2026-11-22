@@ -1,6 +1,5 @@
 ---
 "@jolly-pixel/asset": minor
-"@jolly-pixel/engine": minor
 "@jolly-pixel/runtime": minor
 ---
 

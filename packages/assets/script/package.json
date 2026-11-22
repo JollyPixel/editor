@@ -14,6 +14,10 @@
       "types": "./dist/network/client.d.ts",
       "default": "./dist/network/client.js"
     },
+    "./runtime": {
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
+    },
     "./golem": {
       "types": "./dist/golem/index.d.ts",
       "default": "./dist/golem/index.js"
@@ -23,7 +27,15 @@
     "#src/*": "./src/*"
   },
   "jollypixel": {
-    "golem": "./golem"
+    "golem": "./golem",
+    "runtime": "./runtime",
+    "sceneComponents": {
+      "Script": {
+        "assets": {
+          "script": "script"
+        }
+      }
+    }
   },
   "scripts": {
     "build": "tsc -b && node -e \"fs.cpSync('src/golem/guide.md', 'dist/golem/guide.md')\"",
@@ -48,6 +60,8 @@
   "license": "MIT",
   "dependencies": {
     "@jolly-pixel/asset-server": "workspace:*",
+    "@jolly-pixel/backend.three": "workspace:*",
+    "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/golem.kit": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
     "@jolly-pixel/network": "workspace:*",
@@ -58,6 +72,7 @@
   },
   "devDependencies": {
     "@jolly-pixel/asset": "workspace:*",
+    "@jolly-pixel/asset.common": "workspace:*",
     "@jolly-pixel/event-store": "workspace:*",
     "@types/picomatch": "^4.0.3",
     "es-module-lexer": "3.0.4",

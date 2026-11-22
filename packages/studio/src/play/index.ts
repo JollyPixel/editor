@@ -1,9 +1,7 @@
 // Import Third-party Dependencies
 import contributions from "virtual:jolly-pixel/contributions/runtime";
-import {
-  Runtime,
-  contributedRuntimeComponents
-} from "@jolly-pixel/runtime";
+import { Systems } from "@jolly-pixel/ecs";
+import { Runtime } from "@jolly-pixel/backend.three";
 import { errorMessage } from "@jolly-pixel/utils";
 import { GAME_URL_PATH, GAME_MANIFEST_META } from "@jolly-pixel/server";
 
@@ -15,6 +13,7 @@ import {
 import { attachPhysics } from "./gamePhysics.ts";
 import { PlayerScenes } from "./PlayerScenes.ts";
 import { playLoggerOptions } from "./playLogger.ts";
+import { contributedRuntimePackages } from "./runtimeContributions.ts";
 import {
   PLAY_ERROR,
   PLAY_WARNING,
@@ -78,8 +77,8 @@ async function loadGame(): Promise<Game> {
 
 async function play(): Promise<void> {
   const game = await loadGame();
-  const { components, loaders, usesPhysics } = contributedRuntimeComponents(
-    contributions
+  const { components, loaders, usesPhysics } = Systems.contributedComponents(
+    contributedRuntimePackages(contributions)
   );
   const runtime = await Runtime.create(kCanvas, {
     assets: {
