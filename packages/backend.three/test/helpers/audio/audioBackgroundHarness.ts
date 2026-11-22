@@ -6,7 +6,7 @@ import { setImmediate } from "node:timers/promises";
 import { AssetReference } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { SoundAssetType } from "../../../src/assets/sound.ts";
+import { SoundAssetType } from "../../../src/assets/loaders/SoundAssetLoader.ts";
 import {
   AudioBackground,
   type AudioBackgroundOptions,

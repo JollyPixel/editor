@@ -48,6 +48,17 @@ describe("Systems.World", () => {
       assert.strictEqual(renderer.clear.mock.callCount(), 1);
     });
 
+    test("should resume ticking when started again after an exit", () => {
+      world.start();
+      input.exited = true;
+      tick();
+
+      world.stop();
+      world.start();
+
+      assert.strictEqual(tick(), false);
+    });
+
     test("should return false when input.exited is false", () => {
       world.start();
 

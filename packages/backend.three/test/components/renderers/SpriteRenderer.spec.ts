@@ -8,7 +8,7 @@ import { Actor } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import { fakeWorld } from "../../helpers/world/fakeWorld.ts";
-import { TEXTURE_ASSET } from "../../../src/assets/texture.ts";
+import { TEXTURE_ASSET } from "../../../src/assets/loaders/TextureAssetLoader.ts";
 import { SpriteRenderer } from "../../../src/components/renderers/sprite/SpriteRenderer.ts";
 
 describe("Components.Renderers.SpriteRenderer", () => {

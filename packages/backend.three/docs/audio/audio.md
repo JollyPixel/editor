@@ -243,5 +243,4 @@ class SoundVoices<TVoice extends SoundVoice> implements Iterable<TVoice> {
 ## See also
 
 - [AudioBackground](audio-background.md)
-- [AudioLibrary](audio-library.md)
 - [Audio components](../components/audio.md)

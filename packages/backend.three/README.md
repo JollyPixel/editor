@@ -146,7 +146,6 @@ Manages sound playback. It provides a global volume controller, a factory for cr
 
 - [Audio](./docs/audio/audio.md) — plays sounds through a mixer of
   categories, with voice limits, fades and positional sound.
-  - [AudioLibrary](./docs/audio/audio-library.md)
   - [AudioBackground](./docs/audio/audio-background.md) —
     playlist-based background music with sequential track playback,
     pause/resume/stop, and playlist chaining.

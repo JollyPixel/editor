@@ -42,7 +42,7 @@ export class AudioZoneOutline extends ActorComponent {
     return this.#settings;
   }
 
-  draw(
+  configure(
     settings: Readonly<AudioZoneSettings>
   ): void {
     this.#settings = settings;

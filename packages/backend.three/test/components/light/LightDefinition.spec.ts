@@ -81,6 +81,19 @@ describe("Components.LightDefinition", () => {
     assert.deepEqual(light.shadow.mapSize.toArray(), [2048, 2048]);
   });
 
+  test("configure keeps the settings it is given as undefined", () => {
+    const { component } = createLight({ kind: "point", intensity: 3 });
+
+    component.configure({
+      intensity: undefined,
+      distance: 12
+    });
+
+    assert.strictEqual(component.settings.intensity, 3);
+    assert.strictEqual(component.threeLight.intensity, 3);
+    assert.strictEqual(component.settings.distance, 12);
+  });
+
   test("apply with another kind swaps the light under the actor", () => {
     const { actor, definition, component } = createLight({ kind: "point" });
     const previous = component.threeLight;

@@ -6,6 +6,9 @@ import {
   type Systems
 } from "@jolly-pixel/ecs";
 
+// Import Internal Dependencies
+import { mergeDefined } from "../../utils/mergeDefined.ts";
+
 export type LightKind =
   | "ambient"
   | "hemisphere"
@@ -170,10 +173,7 @@ export class LightComponent<
       typeName: "Light"
     });
 
-    this.#settings = {
-      ...LIGHT_DEFAULTS,
-      ...options
-    };
+    this.#settings = mergeDefined<LightSettings>(LIGHT_DEFAULTS, options);
     this.#rig = this.#mountRig();
     this.addTeardown(() => this.#unmountRig());
   }
@@ -194,10 +194,7 @@ export class LightComponent<
     options: LightOptions
   ): this {
     const previousKind = this.#settings.kind;
-    this.#settings = {
-      ...this.#settings,
-      ...options
-    };
+    this.#settings = mergeDefined(this.#settings, options);
 
     if (this.#settings.kind === previousKind) {
       this.#rig.write(this.#settings);

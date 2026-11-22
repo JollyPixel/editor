@@ -3,6 +3,9 @@ import { AssetType } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 import { Systems } from "@jolly-pixel/ecs";
 
+// Import Internal Dependencies
+import { toHexColor } from "../utils/toHexColor.ts";
+
 export type ShaderUniformValue =
   | number
   | THREE.Color
@@ -103,7 +106,7 @@ function uniformToJSON(
     return value;
   }
   if (value instanceof THREE.Color) {
-    return `#${value.getHexString()}`;
+    return toHexColor(value);
   }
 
   const components = value.toArray();

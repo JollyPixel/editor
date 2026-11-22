@@ -12,7 +12,7 @@ import {
   shaderTextureSlot,
   type Shader,
   type ShaderUniformValues
-} from "../../../src/assets/shader.ts";
+} from "../../../src/assets/Shader.ts";
 import { MeshDefinition } from "../../../src/components/renderers/mesh/MeshDefinition.ts";
 import { createThreeSceneSetup } from "../../helpers/scene/threeSceneSetup.ts";
 import { createComponentFile } from "../../helpers/scene/sceneFile.ts";

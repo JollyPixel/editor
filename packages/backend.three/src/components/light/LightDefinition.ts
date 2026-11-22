@@ -1,12 +1,12 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type ActorComponent,
   Systems
 } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
 import { toHexColor } from "../../utils/toHexColor.ts";
+import { ConfigurableDefinition } from "../ConfigurableDefinition.ts";
 import {
   LightComponent,
   LIGHT_DEFAULTS,
@@ -23,11 +23,12 @@ const kLightKinds: Record<LightKind, true> = {
   spot: true
 };
 
-export class LightDefinition implements Systems.ComponentDefinition<
+export class LightDefinition extends ConfigurableDefinition<
   LightSettings,
   LightComponent<any>
 > {
   readonly type = "Light";
+  protected readonly component = LightComponent;
 
   parse(
     data: Readonly<Systems.JSONObject>
@@ -54,19 +55,6 @@ export class LightDefinition implements Systems.ComponentDefinition<
     data: LightSettings
   ): LightComponent<any> {
     return actor.addComponentAndGet(LightComponent, data);
-  }
-
-  apply(
-    component: LightComponent<any>,
-    data: LightSettings
-  ): void {
-    component.configure(data);
-  }
-
-  owns(
-    component: ActorComponent<any>
-  ): component is LightComponent<any> {
-    return component instanceof LightComponent;
   }
 
   capture(

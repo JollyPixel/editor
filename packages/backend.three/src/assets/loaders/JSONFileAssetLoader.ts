@@ -1,12 +1,15 @@
 // Import Third-party Dependencies
-import type {
-  AssetLoader,
-  AssetRecord
+import {
+  AssetType,
+  type AssetLoader,
+  type AssetRecord
 } from "@jolly-pixel/asset";
 import * as THREE from "three/webgpu";
 import type { Systems } from "@jolly-pixel/ecs";
 
-export class EnvironmentFileAssetLoader implements AssetLoader<Systems.EnvironmentFile> {
+export const SceneFileAssetType = new AssetType<Systems.SceneFile>("scene");
+
+export class JSONFileAssetLoader<T> implements AssetLoader<T> {
   #manager: THREE.LoadingManager;
 
   constructor(
@@ -17,12 +20,10 @@ export class EnvironmentFileAssetLoader implements AssetLoader<Systems.Environme
 
   async load(
     record: AssetRecord
-  ): Promise<Systems.EnvironmentFile> {
+  ): Promise<T> {
     const text = await new THREE.FileLoader(this.#manager)
       .loadAsync(record.path.toString());
 
-    const file: Systems.EnvironmentFile = JSON.parse(String(text));
-
-    return file;
+    return JSON.parse(String(text));
   }
 }

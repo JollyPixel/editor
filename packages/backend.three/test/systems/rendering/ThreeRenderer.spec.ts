@@ -33,6 +33,19 @@ describe("Systems.Rendering.ThreeRenderer", () => {
     assert.deepStrictEqual(calls, ["three", "engine"]);
   });
 
+  test("should adapt the pixel ratio only when built adaptive", () => {
+    const ratios: number[] = [];
+    const source = {
+      ...createRendererSpy(),
+      setPixelRatio: (ratio: number) => ratios.push(ratio)
+    };
+
+    new ThreeRenderer(source as any).adaptPixelRatio(1.5);
+    new ThreeRenderer(source as any, { adaptivePixelRatio: true }).adaptPixelRatio(2);
+
+    assert.deepStrictEqual(ratios, [2]);
+  });
+
   describe("pipeline compiles", () => {
     function compilingRenderer() {
       const compiles: PromiseWithResolvers<void>[] = [];

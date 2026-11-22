@@ -109,20 +109,4 @@ describe("Runtime pixel ratio", () => {
     assert.equal(renderer.source.pixelRatios.length, 1);
     dispose();
   });
-
-  test("keeps a pixel ratio fixed by the renderer options", async() => {
-    const { runtime, renderer, dispose } = createRuntime({
-      renderer: {
-        output: { pixelRatio: 2 }
-      }
-    });
-
-    await runtime.load({
-      skipLoadingScreen: true,
-      maxFps: 60
-    });
-
-    assert.deepEqual(renderer.source.pixelRatios, []);
-    dispose();
-  });
 });

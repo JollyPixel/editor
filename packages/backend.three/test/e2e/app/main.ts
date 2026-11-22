@@ -7,7 +7,7 @@ import {
 } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { TEXTURE_ASSET } from "../../../src/assets/texture.ts";
+import { TEXTURE_ASSET } from "../../../src/assets/loaders/TextureAssetLoader.ts";
 import { Runtime } from "../../../src/index.ts";
 
 export interface BootOptions {

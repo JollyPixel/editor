@@ -5,12 +5,12 @@ import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
 import { type Actor, ActorComponent } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import type { Model } from "../../../assets/model.ts";
+import type { Model } from "../../../assets/loaders/parseModel.ts";
 import type {
   ShadedMaterial,
   Shader,
   ShaderUniformValues
-} from "../../../assets/shader.ts";
+} from "../../../assets/Shader.ts";
 import {
   ModelAnimation,
   type ModelAnimationClipNameRewriter
@@ -41,10 +41,6 @@ export type ModelRendererOptions<
   TClipName extends string = string
 > = ModelSource & {
   /**
-   * @default false
-   */
-  debug?: boolean;
-  /**
    * Omitted, every mesh keeps the flag set by the model loader.
    */
   castShadow?: boolean;
@@ -71,13 +67,11 @@ export class ModelRenderer<
   group: THREE.Group<THREE.Object3DEventMap>;
 
   #source: ModelSource;
-  #debug = false;
   #castShadow: boolean | undefined;
   #receiveShadow: boolean | undefined;
   #shader: Shader | null;
   #uniforms: ShaderUniformValues;
   #shading: ShadedMaterial | null = null;
-  #mixer: THREE.AnimationMixer | null = null;
 
   animation = new ModelAnimation<TClipName>(() => {
     this.needUpdate = true;
@@ -94,7 +88,6 @@ export class ModelRenderer<
     });
 
     this.#source = options;
-    this.#debug = options.debug ?? false;
     this.#castShadow = options.castShadow;
     this.#receiveShadow = options.receiveShadow;
     this.#shader = options.shader ?? null;
@@ -117,9 +110,6 @@ export class ModelRenderer<
   awake() {
     const { object, animations } = this.#source.model ??
       this.resolveAsset(this.#source.asset);
-    if (this.#debug) {
-      console.log({ object, animations });
-    }
 
     this.group = cloneSkinned(object) as THREE.Group<THREE.Object3DEventMap>;
     const shading = this.#shader?.createMaterial(this.#uniforms) ?? null;
@@ -138,12 +128,7 @@ export class ModelRenderer<
     });
     this.actor.node.object3D.add(this.group);
 
-    this.#mixer = new THREE.AnimationMixer(this.group);
-    this.animation.bind(this.#mixer, animations);
-  }
-
-  start() {
-    this.animation.start();
+    this.animation.bind(new THREE.AnimationMixer(this.group), animations);
   }
 
   update(
@@ -156,8 +141,7 @@ export class ModelRenderer<
   }
 
   protected override onDestroy(): void {
-    this.#mixer?.stopAllAction();
-    this.#mixer?.uncacheRoot(this.group);
+    this.animation.dispose();
     this.group?.removeFromParent();
     this.#shading?.material.dispose();
     this.#shading = null;

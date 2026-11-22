@@ -39,7 +39,6 @@ export class ThreeActorNode implements Systems.ActorNode {
     scene: THREE.Scene
   ) {
     this.#scene = scene;
-    this.object3D.userData.isActor = true;
     kActors.set(this.object3D, actor);
   }
 
@@ -119,7 +118,7 @@ export class ThreeActorNode implements Systems.ActorNode {
   dispose(): void {
     disposeObject3D(
       this.object3D,
-      { stopAtActors: true }
+      { stopAt: isActorObject }
     );
     this.#socket?.removeFromParent();
     this.#socket = null;
@@ -197,6 +196,12 @@ export function findActor(
   }
 
   return null;
+}
+
+function isActorObject(
+  object: THREE.Object3D
+): boolean {
+  return kActors.has(object);
 }
 
 function requireThreeNode(

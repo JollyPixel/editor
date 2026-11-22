@@ -95,6 +95,9 @@ function loop(now: number) {
 requestAnimationFrame(loop);
 ```
 
+`tick()` returns `true` once the input requested an exit. `stop()` sets that
+request and `start()` clears it, so a world started again ticks again.
+
 Under a runtime, its `GameLoop` calls `tick()`. Configure timing
 there:
 

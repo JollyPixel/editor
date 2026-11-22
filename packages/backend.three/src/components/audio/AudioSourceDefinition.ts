@@ -1,13 +1,13 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type ActorComponent,
   Systems
 } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import { SoundAssetType } from "../../assets/sound.ts";
+import { SoundAssetType } from "../../assets/loaders/SoundAssetLoader.ts";
 import type { Sound } from "../../audio/Sound.ts";
+import { ConfigurableDefinition } from "../ConfigurableDefinition.ts";
 import {
   AUDIO_SOURCE_DEFAULTS,
   AudioSourceComponent,
@@ -18,12 +18,13 @@ export type AudioSourceAssets = {
   sound: Sound;
 };
 
-export class AudioSourceDefinition implements Systems.ComponentDefinition<
+export class AudioSourceDefinition extends ConfigurableDefinition<
   AudioSourceSettings,
   AudioSourceComponent<any>,
   AudioSourceAssets
 > {
   readonly type = "AudioSource";
+  protected readonly component = AudioSourceComponent;
   readonly assets = {
     sound: SoundAssetType
   };
@@ -52,18 +53,5 @@ export class AudioSourceDefinition implements Systems.ComponentDefinition<
       playOnStart: context.mode === "play" && data.playOnStart,
       sound: context.assets.resolve("sound")
     });
-  }
-
-  apply(
-    component: AudioSourceComponent<any>,
-    data: AudioSourceSettings
-  ): void {
-    component.configure(data);
-  }
-
-  owns(
-    component: ActorComponent<any>
-  ): component is AudioSourceComponent<any> {
-    return component instanceof AudioSourceComponent;
   }
 }

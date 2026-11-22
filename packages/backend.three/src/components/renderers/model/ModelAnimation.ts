@@ -151,7 +151,21 @@ export class ModelAnimation<
       this.#clips.set(this.#clipNameRewriter(clip.name), mixer.clipAction(clip));
     }
 
+    const pending = this.#pending;
+    this.#pending = null;
+    if (pending !== null) {
+      this.play(pending.name, pending.options);
+    }
+
     return this;
+  }
+
+  dispose(): void {
+    const mixer = this.#mixer;
+    if (mixer !== null) {
+      mixer.stopAllAction();
+      mixer.uncacheRoot(mixer.getRoot());
+    }
   }
 
   renameClips(
@@ -235,13 +249,6 @@ export class ModelAnimation<
     this.#requireMixer().timeScale = 1;
     this.#state = "playing";
     this.#requestUpdate();
-  }
-
-  start() {
-    if (this.#pending) {
-      this.play(this.#pending.name, this.#pending.options);
-      this.#pending = null;
-    }
   }
 
   update(

@@ -2,8 +2,7 @@
 import type * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
-import type { CompressedTextureLoader } from "../../assets/texture.ts";
-import type { RuntimeKTX2Options } from "./RuntimeAssetOptions.ts";
+import type { CompressedTextureLoader } from "./TextureAssetLoader.ts";
 
 export interface DisposableCompressedTextureLoader
   extends CompressedTextureLoader {
@@ -16,7 +15,7 @@ export class LazyCompressedTextureLoader implements CompressedTextureLoader {
 
   static ktx2(
     manager: THREE.LoadingManager,
-    options: RuntimeKTX2Options,
+    transcoderPath: string,
     renderer: THREE.WebGPURenderer
   ): LazyCompressedTextureLoader {
     return new LazyCompressedTextureLoader(async() => {
@@ -25,7 +24,7 @@ export class LazyCompressedTextureLoader implements CompressedTextureLoader {
       );
 
       return new KTX2Loader(manager)
-        .setTranscoderPath(options.transcoderPath)
+        .setTranscoderPath(transcoderPath)
         .detectSupport(renderer);
     });
   }

@@ -72,7 +72,13 @@ await ThreeRenderer.create(canvas, {
 | `toneMappingExposure` | `1.25` | Lower it if bright surfaces clip to white |
 
 `resolveRendererSettings(options, devicePixelRatio)` returns the merged
-settings without creating a context.
+settings without creating a context. Its `adaptivePixelRatio` is `true` when
+the options set neither `pixelRatio` nor `maxPixelRatio`.
+
+`adaptPixelRatio(ratio)` sets the pixel ratio of a renderer built adaptive,
+and does nothing otherwise. `ThreeRenderer.create()` builds it adaptive from
+`adaptivePixelRatio`; `new ThreeRenderer(source, { adaptivePixelRatio })`
+chooses directly and defaults to `false`. The runtime calls it on `load()`.
 
 `shadows.type` supports `THREE.BasicShadowMap`, `THREE.PCFShadowMap`, and
 `THREE.VSMShadowMap`. `THREE.PCFSoftShadowMap` was removed from

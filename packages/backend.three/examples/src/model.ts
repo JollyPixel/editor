@@ -5,7 +5,7 @@ import {
 import {
   Camera3DControls,
   ModelRenderer,
-  AssetTypes
+  ModelAssetType
 } from "@jolly-pixel/backend.three";
 import { AssetReference } from "@jolly-pixel/asset";
 import * as THREE from "three";
@@ -15,8 +15,8 @@ import { PlayerBehavior } from "./components/PlayerBehavior.ts";
 import { bootstrapRuntime } from "./utils/bootstrapRuntime.ts";
 
 // CONSTANTS
-const kTinyWitchModel = new AssetReference("tinywitch", AssetTypes.model);
-const kStandardModel = new AssetReference("standard", AssetTypes.model);
+const kTinyWitchModel = new AssetReference("tinywitch", ModelAssetType);
+const kStandardModel = new AssetReference("standard", ModelAssetType);
 
 class ModelsScene extends Systems.Scene {
   constructor() {

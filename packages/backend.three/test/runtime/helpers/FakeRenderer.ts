@@ -54,6 +54,12 @@ export class FakeRenderer {
     this.canvas = canvas;
   }
 
+  adaptPixelRatio(
+    ratio: number
+  ): void {
+    this.source.setPixelRatio(ratio);
+  }
+
   on(
     type: string,
     listener: Listener

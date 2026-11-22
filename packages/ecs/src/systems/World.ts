@@ -189,6 +189,7 @@ export class World<
 
   start() {
     this.#worldLogger.debug("Starting world");
+    this.input.exited = false;
     this.#running = true;
 
     return this;
@@ -197,6 +198,7 @@ export class World<
   stop() {
     this.#worldLogger.debug("Stopping world");
     this.#running = false;
+    this.input.exited = true;
 
     return this;
   }

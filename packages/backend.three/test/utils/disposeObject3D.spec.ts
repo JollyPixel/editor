@@ -188,21 +188,21 @@ describe("disposeObject3D", () => {
     assert.deepEqual(parent.children, [root]);
   });
 
-  test("stops the traversal on nested actors when asked to", () => {
+  test("leaves out the subtrees stopAt picks, never the root", () => {
     const nestedGeometry = new THREE.BoxGeometry();
     const nested = new THREE.Group();
-    nested.userData.isActor = true;
     nested.add(new THREE.Mesh(nestedGeometry, new THREE.MeshBasicMaterial()));
 
     const ownGeometry = new THREE.BoxGeometry();
     const root = new THREE.Group();
-    root.userData.isActor = true;
     root.add(new THREE.Mesh(ownGeometry, new THREE.MeshBasicMaterial()), nested);
 
     const nestedDisposals = countDisposals(nestedGeometry);
     const ownDisposals = countDisposals(ownGeometry);
 
-    disposeObject3D(root, { stopAtActors: true });
+    disposeObject3D(root, {
+      stopAt: (object) => object === nested || object === root
+    });
 
     assert.equal(ownDisposals(), 1);
     assert.equal(nestedDisposals(), 0);

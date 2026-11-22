@@ -34,7 +34,7 @@ export interface UISpriteOptions extends UINodeOptions {
 export class UISprite<
   TContext = Systems.WorldDefaultContext
 > extends UINode<TContext> {
-  mesh: THREE.Mesh;
+  readonly mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
 
   #isHovered = false;
   #isPressed = false;
@@ -64,27 +64,25 @@ export class UISprite<
     if (options.text) {
       this.#text = new UIText(this, options.text);
     }
-  }
 
-  awake() {
     const { width, height } = this.layout.size;
-    const geometry = new THREE.PlaneGeometry(width, height);
-    const material = new THREE.MeshBasicMaterial({
-      color: this.#style.color ?? 0xffffff,
-      map: this.#style.map ?? null,
-      opacity: this.#style.opacity ?? 1,
-      transparent: true,
-      side: THREE.DoubleSide
-    });
-
-    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, height),
+      new THREE.MeshBasicMaterial({
+        color: this.#style.color ?? 0xffffff,
+        map: this.#style.map ?? null,
+        opacity: this.#style.opacity ?? 1,
+        transparent: true,
+        side: THREE.DoubleSide
+      })
+    );
     this.addChildren(this.mesh);
   }
 
   #applyStyle(
     style: UISpriteStyle
   ): void {
-    const material = this.mesh.material as THREE.MeshBasicMaterial;
+    const { material } = this.mesh;
 
     material.color.set(style.color ?? this.#style.color ?? 0xffffff);
     material.map = style.map ?? this.#style.map ?? null;
@@ -148,13 +146,7 @@ export class UISprite<
 
   protected override onDestroy(): void {
     this.#text?.destroy();
-    if (!this.mesh) {
-      return;
-    }
-
-    const material = this.mesh.material as THREE.MeshBasicMaterial;
-    material.map?.dispose();
-    material.dispose();
+    this.mesh.material.dispose();
     this.mesh.geometry.dispose();
   }
 }

@@ -27,7 +27,6 @@ actor.addComponent(ModelRenderer, {
 | ------ | ------- | ----------- |
 | `asset` | — | Typed model reference declared by the owning scene |
 | `model` | — | An already loaded model, used instead of `asset` |
-| `debug` | `false` | Log loaded object and animations to the console |
 | `castShadow` | as loaded | Set on every mesh of the clone |
 | `receiveShadow` | as loaded | Set on every mesh of the clone |
 | `animations.default` | — | Name of the animation clip to play on start |

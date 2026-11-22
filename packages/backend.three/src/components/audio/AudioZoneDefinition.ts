@@ -6,7 +6,7 @@ import {
 } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import { SoundAssetType } from "../../assets/sound.ts";
+import { SoundAssetType } from "../../assets/loaders/SoundAssetLoader.ts";
 import type { Sound } from "../../audio/Sound.ts";
 import {
   AUDIO_ZONE_DEFAULTS,
@@ -83,15 +83,8 @@ export class AudioZoneDefinition implements Systems.ComponentDefinition<
   apply(
     component: SceneAudioZone,
     data: AudioZoneSettings
-  ): boolean {
-    if (component instanceof AudioZoneOutline) {
-      component.draw(data);
-    }
-    else {
-      component.configure(data);
-    }
-
-    return true;
+  ): void {
+    component.configure(data);
   }
 
   owns(

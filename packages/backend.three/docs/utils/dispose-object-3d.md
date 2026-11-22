@@ -28,7 +28,7 @@ is detached from its parent and its children are removed.
 |---|---|---|
 | `textures` | `false` | Dispose the textures reachable from the traversed materials. |
 | `detach` | `true` | Detach the root from its parent before disposing it. |
-| `stopAtActors` | `false` | Stop the traversal on nested actor `object3D`. |
+| `stopAt` | none | Leaves out each descendant it returns true for, with its subtree. |
 
 ### textures
 
@@ -42,10 +42,16 @@ Only pass `true` when the subtree owns its textures. It covers material
 texture properties (`map`, `normalMap`, ...) and `ShaderMaterial` uniforms,
 and closes `ImageBitmap` sources.
 
-### stopAtActors
+### stopAt
 
-The traversal does not descend into a nested actor, which owns its own
-destruction. `Actor` uses this on `destroy()`.
+The root is always traversed. Use it to keep a subtree that another owner
+disposes; destroying an actor skips nested actors this way.
+
+```ts
+disposeObject3D(root, {
+  stopAt: (object) => object === sharedRig
+});
+```
 
 ## What gets disposed
 

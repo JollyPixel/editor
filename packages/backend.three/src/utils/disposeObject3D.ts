@@ -15,11 +15,10 @@ export interface DisposeObject3DOptions {
    */
   detach?: boolean;
   /**
-   * Stop the traversal on nested actor object3D (they own their own
-   * destruction). The root is always traversed.
-   * @default false
+   * Leaves out a descendant, and its subtree, for which it returns true.
+   * The root is always traversed.
    */
-  stopAtActors?: boolean;
+  stopAt?: (object: THREE.Object3D) => boolean;
 }
 
 interface Disposable {
@@ -33,7 +32,7 @@ export function disposeObject3D(
   const {
     textures: disposeTextures = false,
     detach = true,
-    stopAtActors = false
+    stopAt
   } = options;
 
   const geometries = new Set<THREE.BufferGeometry>();
@@ -68,7 +67,7 @@ export function disposeObject3D(
     object: THREE.Object3D,
     isRoot: boolean
   ): void {
-    if (!isRoot && stopAtActors && object.userData.isActor === true) {
+    if (!isRoot && stopAt?.(object) === true) {
       return;
     }
 

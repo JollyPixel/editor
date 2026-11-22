@@ -10,10 +10,8 @@ import { Actor } from "@jolly-pixel/ecs";
 // Import Internal Dependencies
 import { fakeWorld } from "../../helpers/world/fakeWorld.ts";
 import { ModelRenderer } from "../../../src/components/renderers/model/ModelRenderer.ts";
-import {
-  ModelAssetType,
-  type Model
-} from "../../../src/assets/model.ts";
+import { ModelAssetType } from "../../../src/assets/loaders/ModelAssetLoader.ts";
+import type { Model } from "../../../src/assets/loaders/parseModel.ts";
 
 function createWorld(
   model: Model

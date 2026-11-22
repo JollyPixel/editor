@@ -78,20 +78,6 @@ export const MESH_SURFACE_DEFAULTS = {
   receiveShadow: false
 } as const satisfies MeshSurfaceSettings;
 
-export function mergeMeshSurface(
-  settings: MeshSurfaceSettings,
-  options: MeshSurfaceOptions
-): MeshSurfaceSettings {
-  return {
-    material: {
-      ...settings.material,
-      ...options.material
-    },
-    castShadow: options.castShadow ?? settings.castShadow,
-    receiveShadow: options.receiveShadow ?? settings.receiveShadow
-  };
-}
-
 export function parseMeshSurface(
   fields: Systems.ComponentData
 ): MeshSurfaceSettings {

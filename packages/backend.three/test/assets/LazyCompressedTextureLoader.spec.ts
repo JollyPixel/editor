@@ -9,7 +9,7 @@ import * as THREE from "three/webgpu";
 import {
   LazyCompressedTextureLoader,
   type DisposableCompressedTextureLoader
-} from "../../../src/runtime/assets/LazyCompressedTextureLoader.ts";
+} from "../../src/assets/loaders/LazyCompressedTextureLoader.ts";
 
 class RecordingLoader implements DisposableCompressedTextureLoader {
   readonly requested: string[] = [];

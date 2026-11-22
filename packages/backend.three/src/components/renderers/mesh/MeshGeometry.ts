@@ -184,15 +184,3 @@ export function createMeshGeometry(
       );
   }
 }
-
-export function isSameMeshGeometry(
-  left: MeshGeometry,
-  right: MeshGeometry
-): boolean {
-  const leftFields: Readonly<Record<string, unknown>> = left;
-  const rightFields: Readonly<Record<string, unknown>> = right;
-  const keys = Object.keys(leftFields);
-
-  return keys.length === Object.keys(rightFields).length &&
-    keys.every((key) => leftFields[key] === rightFields[key]);
-}

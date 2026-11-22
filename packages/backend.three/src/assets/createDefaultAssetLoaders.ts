@@ -7,44 +7,56 @@ import { Systems } from "@jolly-pixel/ecs";
 import {
   SoundAssetLoader,
   SoundAssetType
-} from "./sound.ts";
+} from "./loaders/SoundAssetLoader.ts";
 import {
   FontAssetLoader,
   FontAssetType
-} from "./font.ts";
+} from "./loaders/FontAssetLoader.ts";
 import {
   ModelAssetLoader,
   ModelAssetType
-} from "./model.ts";
-import { EnvironmentFileAssetLoader } from "./environmentFile.ts";
+} from "./loaders/ModelAssetLoader.ts";
 import {
-  SceneFileAssetLoader,
+  JSONFileAssetLoader,
   SceneFileAssetType
-} from "./sceneFile.ts";
+} from "./loaders/JSONFileAssetLoader.ts";
 import {
   TEXTURE_ASSET,
   TextureAssetLoader,
   type CompressedTextureLoader
-} from "./texture.ts";
+} from "./loaders/TextureAssetLoader.ts";
+
+export type ThreeAssetLoaderDefinition<
+  TValue = unknown
+> = Systems.AssetLoaderDefinition<THREE.LoadingManager, TValue>;
 
 export interface DefaultAssetLoadersOptions {
   /**
    * Loads `.ktx2` texture sources.
    */
   ktx2?: CompressedTextureLoader;
+  /**
+   * Registered after the built-in loaders, each built with the same manager.
+   * A kind the built-in loaders already handle throws.
+   */
+  loaders?: Iterable<ThreeAssetLoaderDefinition>;
 }
 
 export function createDefaultAssetLoaders(
   manager: THREE.LoadingManager,
   options: DefaultAssetLoadersOptions = {}
 ): AssetLoaderRegistry {
-  return new AssetLoaderRegistry()
+  const { ktx2, loaders = [] } = options;
+  const registry = new AssetLoaderRegistry()
     .register(ModelAssetType, new ModelAssetLoader(manager))
-    .register(SceneFileAssetType, new SceneFileAssetLoader(manager))
-    .register(Systems.ENVIRONMENT_ASSET, new EnvironmentFileAssetLoader(manager))
+    .register(SceneFileAssetType, new JSONFileAssetLoader(manager))
+    .register(Systems.ENVIRONMENT_ASSET, new JSONFileAssetLoader(manager))
     .register(FontAssetType, new FontAssetLoader(manager))
     .register(SoundAssetType, new SoundAssetLoader(manager))
-    .register(TEXTURE_ASSET, new TextureAssetLoader(manager, {
-      ktx2: options.ktx2
-    }));
+    .register(TEXTURE_ASSET, new TextureAssetLoader(manager, { ktx2 }));
+  for (const definition of loaders) {
+    registry.register(definition.type, definition.create(manager));
+  }
+
+  return registry;
 }
