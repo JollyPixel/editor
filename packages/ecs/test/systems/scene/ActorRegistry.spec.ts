@@ -7,8 +7,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { HeadlessSceneGraph } from "../../../src/systems/scene/HeadlessSceneGraph.ts";
-import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
+import { createRegistry } from "../../helpers/scene/actorRegistry.ts";
 import { Actor, ActorComponent } from "../../../src/actor/index.ts";
 
 // CONSTANTS
@@ -56,19 +55,6 @@ class Logger extends ActorComponent {
     this.#log.push(this.actor.name);
     this.onUpdate();
   }
-}
-
-function createRegistry() {
-  const sceneManager = new SceneManager(new HeadlessSceneGraph());
-  const world = { sceneManager } as any;
-
-  return {
-    world,
-    registry: sceneManager.actors,
-    createActor(name: string, parent: Actor | null = null) {
-      return new Actor(world, { name, parent });
-    }
-  };
 }
 
 describe("Systems.Scene.ActorRegistry", () => {
@@ -133,11 +119,13 @@ describe("Systems.Scene.ActorRegistry", () => {
     assert.deepStrictEqual(log, ["first", "first"]);
   });
 
-  test("should report updating only while an actor holds an updating component", () => {
+  test("should report updating only while an actor holds a started updating component", () => {
     const { registry, createActor } = createRegistry();
     const empty = registry.updating;
     const actor = createActor("actor");
     const recorder = actor.addComponentAndGet(Recorder);
+    const unstarted = registry.updating;
+    registry.beginFrame();
     const started = registry.updating;
 
     recorder.needUpdate = false;
@@ -146,8 +134,8 @@ describe("Systems.Scene.ActorRegistry", () => {
     actor.destroy();
 
     assert.deepStrictEqual(
-      [empty, started, paused, registry.updating],
-      [false, true, false, false]
+      [empty, unstarted, started, paused, registry.updating],
+      [false, false, true, false, false]
     );
   });
 
@@ -193,19 +181,20 @@ describe("Systems.Scene.ActorRegistry", () => {
     );
 
     registry.beginFrame();
-    registry.tree.destroyActor(parent);
+    parent.markDestructionPending();
     registry.endFrame();
 
     assert.deepEqual(destroyCalls.map((call) => call.mock.callCount()), [1, 1, 1]);
     assert.strictEqual(registry.tree.findActor("parent"), null);
   });
 
-  test("should destroy the roots of collected actors and skip the ones already gone", () => {
+  test("should destroy the actors created for an owner and skip the ones already gone", () => {
     const { registry, createActor } = createRegistry();
     const kept = createActor("kept");
     let parent: Actor | null = null;
     let gone: Actor | null = null;
-    const collected = registry.collect(() => {
+    const owner = {};
+    registry.ownedBy(owner, () => {
       parent = createActor("parent");
       createActor("child", parent);
       gone = createActor("gone");
@@ -213,7 +202,7 @@ describe("Systems.Scene.ActorRegistry", () => {
     const destroyGone = mock.method(gone!, "destroy");
     gone!.destroy();
 
-    registry.destroyRoots(collected);
+    registry.destroyOwned(owner);
 
     assert.deepStrictEqual(registry.tree.children, [kept]);
     assert.strictEqual(destroyGone.mock.callCount(), 1);

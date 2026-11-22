@@ -4,12 +4,9 @@
 and swaps scenes at frame boundaries. Any component can request a scene
 synchronously.
 
-It is built on a [scene graph](scene-graph.md), which receives a node for
-every actor:
-
-```ts
-const sceneManager = new Systems.SceneManager(new Systems.HeadlessSceneGraph());
-```
+The world builds it on the [scene graph](scene-graph.md) passed as the
+`graph` option, which receives a node for every actor. It is reached as
+`world.sceneManager`.
 
 ## Loading a scene
 
@@ -120,7 +117,12 @@ const load = sceneManager.appendScene(
 
 Different appended scenes load independently. Calling `removeScene()` before
 one activates cancels its load. A replacement takes priority at a frame
-boundary and cancels additive requests that have not activated yet.
+boundary and cancels additive requests that have not activated yet, ready
+ones included: their `done` has already resolved, so check `status` before
+relying on the scene.
+
+An appended scene owns the actors created while its `awake()`, `start()`,
+`update()` or `fixedUpdate()` runs, and `removeScene()` destroys them.
 
 ## Unloading the current scene
 
@@ -175,7 +177,8 @@ interface SceneLoad<TContext> {
 }
 
 class SceneManager<TContext> {
-  constructor(graph: SceneGraph);
+  /** Called by `World`, which passes itself and its `graph` option. */
+  constructor(world: World<any, TContext>, graph: SceneGraph);
 
   /** Typed as the registered backend graph, such as `ThreeSceneGraph`. */
   readonly graph: SceneGraph;
@@ -219,7 +222,7 @@ class ActorRegistry<TContext> {
   has(actor: Actor<TContext>): boolean;
   /** The actor holding this persistent id, pending destruction or not. */
   find(persistentId: string): Actor<TContext> | null;
-  /** `true` while an actor holds a component with `needUpdate`. */
+  /** `true` while an actor holds a started component with `needUpdate`. */
   get updating(): boolean;
 }
 ```
@@ -230,11 +233,16 @@ Replacing, unloading or removing a scene destroys its actors except
 ## Frame lifecycle
 
 `beginFrame()` activates ready scene loads, starts pending scenes, awakes
-every actor created since the last frame, then starts pending components.
-`fixedUpdate()` and `update()` only visit active actors holding a component
-with `needUpdate`, in creation order, so static actors cost nothing per frame.
-An actor that gains its first updating component during a frame joins on
-the next one; within an actor, a pass runs the components it started with.
+every actor created since the last frame, along with the actors those awakes
+create, then starts the pending components of awoken actors. An actor created
+by a component's `start()` awakes and starts on the next frame, so a component
+never starts before its actor awakes.
+
+`fixedUpdate()` and `update()` only visit active actors holding a started
+component with `needUpdate`, in creation order, so static actors cost nothing
+per frame. A component joins its actor's pass when it starts: one added during
+a frame starts at the next `beginFrame()` and is updated from that frame on.
+Within an actor, a pass runs the components it started with.
 `endFrame()` destroys the components passed to `destroyLater()`, then
 every actor marked for destruction. Destroying an actor destroys its
 children first, so each actor is destroyed once.

@@ -8,7 +8,7 @@ import {
 // Import Internal Dependencies
 import type { Actor } from "../../../../actor/Actor.ts";
 import type { LoadableAssets } from "../../Scene.ts";
-import type { Component } from "../../../../components/types.ts";
+import type { ActorComponent } from "../../../../actor/ActorComponent.ts";
 import { randomPersistentId } from "../../../generators/randomPersistentId.ts";
 import {
   type ComponentAssetResolver,
@@ -57,7 +57,7 @@ export interface ComponentBuildOptions {
 
 export class ComponentDefinitions {
   #definitions = new Map<string, AnyComponentDefinition>();
-  #built = new WeakMap<Component, SceneComponentFile>();
+  #built = new WeakMap<ActorComponent<any>, SceneComponentFile>();
 
   register(
     ...definitions: AnyComponentDefinition[]
@@ -84,7 +84,7 @@ export class ComponentDefinitions {
     actor: Actor<any>,
     entry: SceneComponentFile,
     options: ComponentBuildOptions
-  ): Component | null {
+  ): ActorComponent<any> | null {
     const definition = this.#definitions.get(
       entry.type
     );
@@ -92,7 +92,7 @@ export class ComponentDefinitions {
       return null;
     }
 
-    const component: Component | null = definition.create(
+    const component: ActorComponent<any> | null = definition.create(
       actor,
       definition.parse(entry.data),
       {
@@ -112,7 +112,7 @@ export class ComponentDefinitions {
   }
 
   apply(
-    component: Component,
+    component: ActorComponent<any>,
     type: string,
     data: Readonly<JSONObject>
   ): boolean {
@@ -136,7 +136,7 @@ export class ComponentDefinitions {
   }
 
   anchors(
-    component: Component
+    component: ActorComponent<any>
   ): ComponentAnchors | null {
     const built = this.#built.get(component);
     if (built === undefined) {
@@ -149,7 +149,7 @@ export class ComponentDefinitions {
   }
 
   capture(
-    component: Component
+    component: ActorComponent<any>
   ): SceneComponentFile | null {
     const built = this.#built.get(component);
     if (built !== undefined) {

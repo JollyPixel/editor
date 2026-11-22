@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type Component,
+  type ActorComponent,
   Systems
 } from "@jolly-pixel/ecs";
 
@@ -62,7 +62,7 @@ export class AudioSourceDefinition implements Systems.ComponentDefinition<
   }
 
   owns(
-    component: Component
+    component: ActorComponent<any>
   ): component is AudioSourceComponent<any> {
     return component instanceof AudioSourceComponent;
   }

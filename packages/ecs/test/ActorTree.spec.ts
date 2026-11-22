@@ -1,243 +1,91 @@
 // Import Node.js Dependencies
-import {
-  describe,
-  test,
-  mock
-} from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ActorTree } from "../src/index.ts";
-import { createFakeActor } from "./helpers/actor/fakeActor.ts";
+import type { Actor } from "../src/index.ts";
+import { createHeadlessWorld } from "./helpers/world/headlessWorld.ts";
+
+function createTree() {
+  const world = createHeadlessWorld();
+  const { tree } = world.sceneManager;
+
+  return {
+    tree,
+    createActor(
+      name: string,
+      parent: Actor | null = null
+    ) {
+      return world.createActor(name, { parent });
+    }
+  };
+}
 
 describe("ActorTree", () => {
-  describe("add", () => {
-    test("should add a new root actor to the tree", () => {
-      const actorTree = new ActorTree();
-      const actor = {} as any;
-
-      actorTree.add(actor);
-
-      assert.ok(actorTree.children.includes(actor));
-      assert.equal(actorTree.children.length, 1);
-    });
-
-    test("should call addCallback when adding a new root actor", () => {
-      const addCallback = mock.fn();
-
-      const actorTree = new ActorTree({
-        addCallback
-      });
-      const actor = {} as any;
-
-      actorTree.add(actor);
-
-      assert.equal(addCallback.mock.calls.length, 1);
-      assert.equal(addCallback.mock.calls[0].arguments[0], actor);
-    });
-  });
-
-  describe("remove", () => {
-    test("should remove existing actor from the tree", () => {
-      const actorTree = new ActorTree();
-      const actor = {} as any;
-
-      actorTree.add(actor);
-      assert.equal(actorTree.children.length, 1);
-
-      actorTree.remove(actor);
-
-      assert.equal(actorTree.children.length, 0);
-      assert.ok(!actorTree.children.includes(actor));
-    });
-
-    test("should call removeCallback when removing an actor", () => {
-      const removeCallback = mock.fn();
-      const actorTree = new ActorTree({
-        removeCallback
-      });
-      const actor = {} as any;
-
-      actorTree.add(actor);
-      actorTree.remove(actor);
-
-      assert.equal(removeCallback.mock.calls.length, 1);
-      assert.equal(removeCallback.mock.calls[0].arguments[0], actor);
-    });
-
-    test("should handle removing non-existent actor", () => {
-      const removeCallback = mock.fn();
-      const actorTree = new ActorTree({
-        removeCallback
-      });
-      const actor1 = {} as any;
-      const actor2 = {} as any;
-
-      actorTree.add(actor1);
-
-      actorTree.remove(actor2);
-
-      assert.equal(actorTree.children.length, 1);
-      assert.equal(removeCallback.mock.calls.length, 0);
-    });
-  });
-
   describe("findActor", () => {
-    test("should find actor by name", () => {
-      const actorTree = new ActorTree();
-      const targetActor = createFakeActor({
-        name: "Player"
-      });
-      const otherActor = createFakeActor({
-        name: "Enemy"
-      });
+    test("should find an actor by name at any depth", () => {
+      const { tree, createActor } = createTree();
+      const player = createActor("Player");
+      const weapon = createActor("Weapon", player);
+      createActor("Enemy");
 
-      // @ts-expect-error
-      actorTree.children.push(targetActor, otherActor);
-
-      const result = actorTree.findActor("Player");
-      assert.equal(result, targetActor);
-    });
-
-    test("should return null for non-existent actor", () => {
-      const actorTree = new ActorTree();
-      const actor = createFakeActor({
-        name: "Player"
-      });
-
-      // @ts-expect-error
-      actorTree.children.push(actor);
-
-      const result = actorTree.findActor("NonExistent");
-      assert.equal(result, null);
+      assert.strictEqual(tree.findActor("Player"), player);
+      assert.strictEqual(tree.findActor("Weapon"), weapon);
+      assert.strictEqual(tree.findActor("NonExistent"), null);
     });
 
     test("should ignore actors pending destruction", () => {
-      const actorTree = new ActorTree();
-      const actor = createFakeActor({
-        name: "Player"
-      });
-      actor.pendingForDestruction = true;
+      const { tree, createActor } = createTree();
+      createActor("Player").markDestructionPending();
 
-      // @ts-expect-error
-      actorTree.children.push(actor);
-
-      const result = actorTree.findActor("Player");
-      assert.equal(result, null);
+      assert.strictEqual(tree.findActor("Player"), null);
     });
   });
 
-  describe("[Symbol.iterator]", () => {
-    test("should yield only non-destroyed root actors", () => {
-      const actorTree = new ActorTree();
-      const validActor = createFakeActor();
-      const destroyedActor = createFakeActor();
-      destroyedActor.pendingForDestruction = true;
+  test("should iterate over its live root actors only", () => {
+    const { tree, createActor } = createTree();
+    const root = createActor("root");
+    createActor("child", root);
+    createActor("pending").markDestructionPending();
 
-      // @ts-expect-error
-      actorTree.children.push(validActor, destroyedActor);
-
-      const result = Array.from(actorTree);
-      assert.deepEqual(result, [validActor]);
-    });
-
-    test("should return empty iterator when no valid actors", () => {
-      const actorTree = new ActorTree();
-      const destroyedActor = createFakeActor();
-      destroyedActor.pendingForDestruction = true;
-
-      // @ts-expect-error
-      actorTree.children.push(destroyedActor);
-
-      const result = Array.from(actorTree);
-      assert.deepEqual(result, []);
-    });
+    assert.deepEqual([...tree], [root]);
   });
 
-  describe("destroyActor", () => {
-    test("should mark a live actor for destruction", () => {
-      const actorTree = new ActorTree();
-      const actor = createFakeActor();
-
-      // @ts-expect-error
-      actorTree.destroyActor(actor);
-
-      assert.equal(actor.markDestructionPending.mock.calls.length, 1);
-    });
-
-    test("should not add already pending actor", () => {
-      const actorTree = new ActorTree();
-      const actor = createFakeActor();
-      actor.pendingForDestruction = true;
-
-      // @ts-expect-error
-      actorTree.destroyActor(actor);
-
-      assert.equal(actor.markDestructionPending.mock.calls.length, 0);
-    });
-  });
-
-  test("should walk and return all root actors", () => {
-    const actors = [
-      createFakeActor(),
-      createFakeActor(),
-      createFakeActor()
-    ];
-
-    const actorTree = new ActorTree();
-    actorTree.children.push(...actors as any);
+  test("should walk every actor depth-first with its parent", () => {
+    const { tree, createActor } = createTree();
+    const first = createActor("first");
+    const child = createActor("child", first);
+    const grandChild = createActor("grandChild", child);
+    const sibling = createActor("sibling", first);
+    const second = createActor("second");
+    const other = createActor("other", second);
 
     assert.deepEqual(
-      Array.from(actorTree.walk()).map((node) => node.actor),
-      actors
+      [...tree.walk()].map(({ actor, parent }) => [actor, parent]),
+      [
+        [first, undefined],
+        [child, first],
+        [grandChild, child],
+        [sibling, first],
+        [second, undefined],
+        [other, second]
+      ]
     );
   });
 
-  test("should walk nested actors depth-first", () => {
-    const grandChildActor = createFakeActor();
-    const childActor1 = createFakeActor({
-      children: [grandChildActor]
-    });
-    const childActor2 = createFakeActor();
-    const rootActor = createFakeActor({
-      children: [childActor1, childActor2]
-    });
-
-    const actorTree = new ActorTree();
-    actorTree.children.push(rootActor as any);
-
-    const walkResult = Array.from(actorTree.walk());
-    const expectedOrder = [rootActor, childActor1, grandChildActor, childActor2];
+  test("should walk the descendants of an actor with their parent", () => {
+    const { createActor } = createTree();
+    const root = createActor("root");
+    const child = createActor("child", root);
+    const grandChild = createActor("grandChild", child);
 
     assert.deepEqual(
-      walkResult.map((node) => node.actor),
-      expectedOrder
+      [...root.walk()].map(({ actor, parent }) => [actor, parent]),
+      [
+        [child, root],
+        [grandChild, child]
+      ]
     );
-  });
-
-  test("should provide correct parent references when walking", () => {
-    const grandChildActor = createFakeActor();
-    const childActor = createFakeActor({
-      children: [grandChildActor]
-    });
-    const rootActor = createFakeActor({
-      children: [childActor]
-    });
-
-    const actorTree = new ActorTree();
-    actorTree.children.push(rootActor as any);
-
-    const walkResult = Array.from(actorTree.walk());
-
-    assert.equal(walkResult[0].parent, undefined);
-    assert.equal(walkResult[1].parent, rootActor);
-    assert.equal(walkResult[2].parent, childActor);
-  });
-
-  test("should return empty iterator when tree is empty", () => {
-    const actorTree = new ActorTree();
-    const walkResult = Array.from(actorTree.walk());
-
-    assert.deepEqual(walkResult, []);
+    assert.deepEqual([...grandChild.walk()], []);
   });
 });

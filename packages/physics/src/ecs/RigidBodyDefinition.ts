@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type Component,
+  type ActorComponent,
   Systems
 } from "@jolly-pixel/ecs";
 import type { Vector3Like } from "@jolly-pixel/math";
@@ -41,7 +41,7 @@ export interface SceneRigidBodySettings extends RigidBodySettings {
   colliders: readonly Readonly<SceneColliderSettings>[];
 }
 
-export interface RigidBodyEditView extends Component {
+export interface RigidBodyEditView extends ActorComponent<any> {
   readonly settings: Readonly<RigidBodySettings>;
 
   draw(
@@ -109,7 +109,7 @@ export class RigidBodyDefinition implements Systems.ComponentDefinition<
   }
 
   owns(
-    component: Component
+    component: ActorComponent<any>
   ): component is RigidBody {
     return component instanceof RigidBody &&
       component.settings.colliders.every(

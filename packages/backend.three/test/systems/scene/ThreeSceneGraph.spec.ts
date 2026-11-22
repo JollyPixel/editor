@@ -4,9 +4,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { Actor, Systems } from "@jolly-pixel/ecs";
+import { Actor } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
+import { fakeWorld } from "../../helpers/world/fakeWorld.ts";
 import {
   ThreeSceneGraph,
   findActor
@@ -18,7 +19,7 @@ import {
 } from "../../helpers/scene/sceneFile.ts";
 
 function createWorld() {
-  const world = { sceneManager: new Systems.SceneManager(new ThreeSceneGraph()) } as any;
+  const world = fakeWorld() as any;
 
   return {
     world,

@@ -3,15 +3,14 @@ import { describe, test, mock } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { Actor, Systems } from "@jolly-pixel/ecs";
+import { Actor } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
+import { fakeWorld } from "../helpers/world/fakeWorld.ts";
 import { UINode } from "../../src/ui/UINode.ts";
-import { ThreeSceneGraph } from "../../src/scene/ThreeSceneGraph.ts";
 
 function createWorld() {
-  return {
-    sceneManager: new Systems.SceneManager(new ThreeSceneGraph()),
+  return fakeWorld({
     input: {
       screen: {
         bounds: { left: -1, right: 1, top: 1, bottom: -1 }
@@ -21,7 +20,7 @@ function createWorld() {
       on: mock.fn(),
       off: mock.fn()
     }
-  };
+  });
 }
 
 describe("UI.UINode", () => {

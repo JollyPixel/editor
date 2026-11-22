@@ -4,7 +4,7 @@ import {
   ActorTree
 } from "../../actor/index.ts";
 import type { WorldDefaultContext } from "../World.ts";
-import type { Component } from "../../components/types.ts";
+import type { HookedComponent } from "../../actor/ActorComponent.ts";
 import { IntegerIncrement } from "../generators/IntegerIncrement.ts";
 import { randomPersistentId } from "../generators/randomPersistentId.ts";
 import type { SceneGraph } from "./SceneGraph.ts";
@@ -20,10 +20,12 @@ export class ActorRegistry<
   #actors = new Map<string, Actor<TContext>>();
   #updatingActors: readonly Actor<TContext>[] = [];
   #frameActors: readonly Actor<TContext>[] = [];
-  #hasActorsToAwake = false;
-  #componentsToStart: Component[] = [];
-  #componentsToDestroy: Component[] = [];
+  #actorsToAwake: Actor<TContext>[] = [];
+  #componentsToStart = new Set<HookedComponent>();
+  #componentsToDestroy: HookedComponent[] = [];
   #actorsToDestroy = new Set<Actor<TContext>>();
+  #owner: object | null = null;
+  #owners = new Map<Actor<TContext>, object>();
 
   constructor(
     graph: SceneGraph
@@ -74,25 +76,11 @@ export class ActorRegistry<
       );
     }
 
-    (actor.parent ?? this.tree).add(actor);
-    actor.transform.attach(actor.parent?.transform ?? null);
-
     this.#actors.set(actor.persistentId, actor);
-    this.#hasActorsToAwake = true;
-  }
-
-  reparent(
-    actor: Actor<TContext>,
-    parent: Actor<TContext> | null,
-    keepLocal: boolean
-  ): void {
-    actor.transform.attach(parent?.transform ?? null, !keepLocal);
-
-    (actor.parent ?? this.tree).remove(actor);
-    actor.parent = parent;
-    (parent ?? this.tree).add(actor);
-
-    this.reschedule(actor);
+    this.#actorsToAwake.push(actor);
+    if (this.#owner !== null) {
+      this.#owners.set(actor, this.#owner);
+    }
   }
 
   detach(
@@ -100,33 +88,27 @@ export class ActorRegistry<
   ): void {
     if (this.has(actor)) {
       this.#actors.delete(actor.persistentId);
-      if (actor.components.updating) {
-        this.#stopUpdating(actor);
-      }
+      this.#stopUpdating(actor);
     }
-    (actor.parent ?? this.tree).remove(actor);
-    actor.transform.detach();
+    this.#owners.delete(actor);
   }
 
   requireUpdate(
-    component: Component,
-    required: boolean
+    component: HookedComponent
   ): void {
-    const { components } = component.actor;
-    const wasUpdating = components.updating;
-    components.requireUpdate(component, required);
-
-    if (
-      components.updating === wasUpdating ||
-      !this.has(component.actor)
-    ) {
+    if (this.#componentsToStart.has(component)) {
       return;
     }
-    if (!components.updating) {
-      this.#stopUpdating(component.actor);
-    }
-    else if (component.actor.activeInHierarchy) {
-      this.#startUpdating(component.actor);
+
+    const { actor } = component;
+    const wasUpdating = actor.components.updating;
+    actor.components.requireUpdate(component, component.needUpdate);
+
+    if (
+      actor.components.updating !== wasUpdating &&
+      this.has(actor)
+    ) {
+      this.#reschedule(actor);
     }
   }
 
@@ -161,40 +143,55 @@ export class ActorRegistry<
   }
 
   attachComponent(
-    component: Component
+    component: HookedComponent
   ): void {
     component.actor.components.attach(component);
-    this.#componentsToStart.push(component);
+    this.#componentsToStart.add(component);
   }
 
   detachComponent(
-    component: Component
+    component: HookedComponent
   ): void {
-    this.#cancelStart(component);
+    this.#componentsToStart.delete(component);
     component.actor.components.detach(component);
   }
 
   destroyLater(
-    component: Component
+    component: HookedComponent
   ): void {
     this.#componentsToDestroy.push(component);
-    this.#cancelStart(component);
+    this.#componentsToStart.delete(component);
   }
 
-  collect(
-    build: () => void
-  ): ReadonlySet<Actor<TContext>> {
-    const before = new Set(this.#actors.values());
-    build();
+  ownedBy<T>(
+    owner: object,
+    run: () => T
+  ): T {
+    const previous = this.#owner;
+    this.#owner = owner;
+    try {
+      return run();
+    }
+    finally {
+      this.#owner = previous;
+    }
+  }
 
-    const collected = new Set<Actor<TContext>>();
-    for (const actor of this.#actors.values()) {
-      if (!before.has(actor)) {
-        collected.add(actor);
+  destroyOwned(
+    owner: object
+  ): void {
+    const owned = new Set<Actor<TContext>>();
+    for (const [actor, actorOwner] of this.#owners) {
+      if (actorOwner === owner) {
+        owned.add(actor);
       }
     }
 
-    return collected;
+    this.destroyRoots(new Set(
+      [...owned].filter(
+        ({ root }) => !root.persistent || !owned.has(root)
+      )
+    ));
   }
 
   destroyRoots(
@@ -210,31 +207,22 @@ export class ActorRegistry<
     }
   }
 
-  destroySceneActors(
-    actors: ReadonlySet<Actor<TContext>>
-  ): void {
-    this.destroyRoots(new Set(
-      [...actors].filter(
-        ({ root }) => !root.persistent || !actors.has(root)
-      )
-    ));
-  }
-
   awake(): void {
-    this.#hasActorsToAwake = false;
-    for (const { actor } of this.tree.walk()) {
-      if (!actor.awoken) {
-        actor.awake();
+    while (this.#actorsToAwake.length > 0) {
+      const actors = this.#actorsToAwake;
+      this.#actorsToAwake = [];
+      for (const actor of actors) {
+        if (this.has(actor) && !actor.awoken) {
+          actor.awake();
+        }
       }
     }
   }
 
   beginFrame(): void {
-    if (this.#hasActorsToAwake) {
-      this.awake();
-    }
-    this.#frameActors = this.#updatingActors;
+    this.awake();
     this.#startComponents();
+    this.#frameActors = this.#updatingActors;
   }
 
   fixedUpdate(
@@ -282,9 +270,11 @@ export class ActorRegistry<
       this.tree.children.map((actor) => actor.node)
     );
 
-    this.#componentsToStart = this.#componentsToStart.filter(
-      (component) => this.has(component.actor)
-    );
+    for (const component of this.#componentsToStart) {
+      if (!this.has(component.actor)) {
+        this.#componentsToStart.delete(component);
+      }
+    }
     this.#componentsToDestroy = this.#componentsToDestroy.filter(
       (component) => this.has(component.actor)
     );
@@ -293,6 +283,7 @@ export class ActorRegistry<
         this.#actorsToDestroy.delete(actor);
       }
     }
+    this.#owners.clear();
     this.#frameActors = this.#updatingActors;
   }
 
@@ -327,26 +318,12 @@ export class ActorRegistry<
   }
 
   #startComponents(): void {
-    const components = this.#componentsToStart;
-    let i = 0;
-    while (i < components.length) {
-      const component = components[i];
-      if (this.has(component.actor)) {
-        components.splice(i, 1);
+    for (const component of this.#componentsToStart) {
+      if (this.has(component.actor) && component.actor.awoken) {
+        this.#componentsToStart.delete(component);
+        this.requireUpdate(component);
         component.start?.();
       }
-      else {
-        i++;
-      }
-    }
-  }
-
-  #cancelStart(
-    component: Component
-  ): void {
-    const index = this.#componentsToStart.indexOf(component);
-    if (index !== -1) {
-      this.#componentsToStart.splice(index, 1);
     }
   }
 }

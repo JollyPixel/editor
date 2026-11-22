@@ -17,7 +17,7 @@ import type {
   ComponentDefinition
 } from "../../systems/scene/file/definitions/ComponentDefinition.ts";
 import type { JSONObject } from "../../systems/scene/file/SceneFile.ts";
-import type { Component } from "../types.ts";
+import type { ActorComponent } from "../../actor/ActorComponent.ts";
 import {
   Behavior,
   type BehaviorOptions
@@ -143,7 +143,7 @@ export class ScriptDefinition implements ComponentDefinition<
   }
 
   owns(
-    component: Component
+    component: ActorComponent<any>
   ): component is Behavior<any> {
     return this.#names.has(component.constructor);
   }

@@ -4,11 +4,11 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { Actor } from "../src/index.ts";
-import { createWorld } from "./helpers/actor/mockWorld.ts";
+import { createHeadlessWorld } from "./helpers/world/headlessWorld.ts";
 
 describe("Actor.reparent", () => {
   test("should keep the world position when reparenting", () => {
-    const world = createWorld();
+    const world = createHeadlessWorld();
     const parent = new Actor(world as any, { name: "parent" });
     parent.transform.local.position = { x: 10, y: 0, z: 0 };
     const child = new Actor(world as any, { name: "child" });
@@ -23,7 +23,7 @@ describe("Actor.reparent", () => {
   });
 
   test("should move an actor back to the scene root", () => {
-    const world = createWorld();
+    const world = createHeadlessWorld();
     const parent = new Actor(world as any, { name: "parent" });
     parent.transform.local.position = { x: 10, y: 0, z: 0 };
     const child = new Actor(world as any, { name: "child", parent });

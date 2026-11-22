@@ -1,13 +1,13 @@
 # ActorTree
 
-A list of child actors with depth-first traversal and name, path and glob
-lookups. `Actor` extends `ActorTree`, so every actor is the tree of its own
-children.
+A read-only list of child actors with depth-first traversal and name, path
+and glob lookups. `world.sceneManager.tree` holds the root actors, and
+`Actor` extends `ActorTree`, so every actor is the tree of its own children.
+The list changes only through the actor API: creating, reparenting or
+destroying an actor.
 
 ```ts
-import { ActorTree } from "@jolly-pixel/ecs";
-
-const tree = new ActorTree();
+const { tree } = world.sceneManager;
 
 // Iterate over root actors
 for (const actor of tree) {
@@ -36,35 +36,18 @@ for (const { actor, parent } of tree.walk()) {
 }
 ```
 
-## Constructor
-
-### `new ActorTree(options?)`
+## Members
 
 ```ts
 type ActorTreeNode = {
   actor: Actor;
   parent?: Actor;
 };
-
-interface ActorTreeOptions {
-  addCallback?: (actor: Actor) => void;
-  removeCallback?: (actor: Actor) => void;
-}
-
-new ActorTree(options?: ActorTreeOptions);
 ```
 
-The callbacks run when an actor joins or leaves `children`, the list of
-direct child actors.
+### `children: readonly Actor[]`
 
-### `add(actor)`
-
-Appends `actor` to `children` and calls `addCallback`.
-
-### `remove(actor)`
-
-Removes `actor` from `children` and calls `removeCallback`. No-op if the
-actor is not a direct child.
+The direct child actors, in the order they joined, pending ones included.
 
 ### `findActor(name): Actor | null`
 
@@ -89,24 +72,11 @@ every other character, `.` included, matches itself. Supports:
 
 Actors pending for destruction are excluded.
 
-### `destroyActor(actor)`
-
-Marks `actor` as pending for destruction; it is destroyed at the end of the
-frame.
-
-### `destroyAllActors()`
-
-Marks every actor in the tree as pending for destruction.
-
 ### `walk(): IterableIterator<ActorTreeNode>`
 
-Performs a depth-first traversal of the entire tree, yielding
-`{ actor, parent }` pairs starting from each root child.
-
-### `walkFromNode(rootNode): IterableIterator<ActorTreeNode>`
-
-Performs a depth-first traversal starting from `rootNode`'s
-children, yielding `{ actor, parent }` pairs.
+Performs a depth-first traversal below the tree, yielding `{ actor, parent }`
+pairs. `parent` is the actor's parent, or `undefined` for a root actor.
+`actor.walk()` walks the descendants of one actor.
 
 ### `[Symbol.iterator](): IterableIterator<Actor>`
 

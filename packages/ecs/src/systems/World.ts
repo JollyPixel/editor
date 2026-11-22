@@ -10,13 +10,8 @@ import {
   Actor,
   type ActorOptions
 } from "../actor/index.ts";
-import {
-  type SceneManager
-} from "./scene/SceneManager.ts";
-import {
-  type GlobalsAdapter,
-  BrowserGlobalsAdapter
-} from "../adapters/global.ts";
+import { SceneManager } from "./scene/SceneManager.ts";
+import type { SceneGraph } from "./scene/SceneGraph.ts";
 import {
   Logger,
   type LoggerOptions
@@ -53,17 +48,19 @@ export interface WorldOptions<
    */
   logger?: LoggerOptions;
 
-  sceneManager: SceneManager<TContext>;
+  /**
+   * Mirrors the actors on the backend; the world's `SceneManager` is built
+   * on it.
+   */
+  graph: SceneGraph;
   input?: Input;
   /**
    * Master volume owner.
-   * @default sceneManager.graph.createAudio()
+   * @default graph.createAudio()
    */
   audio?: BackendAudio;
   context?: TContext;
   assetCoordinator: AssetCoordinator;
-
-  globalsAdapter?: GlobalsAdapter;
 }
 
 export interface WorldDefaultContext {
@@ -80,7 +77,7 @@ export class World<
 > extends Emitter<WorldEvents> {
   renderer: Renderer<T>;
   input: Input;
-  sceneManager: SceneManager<TContext>;
+  readonly sceneManager: SceneManager<TContext>;
   audio: BackendAudio;
   context: TContext;
   assetCoordinator: AssetCoordinator;
@@ -101,14 +98,13 @@ export class World<
     super();
 
     const {
-      sceneManager,
+      graph,
       input = new Input(
         renderer.canvas,
         { enableOnExit: options.enableOnExit ?? false }
       ),
-      audio = sceneManager.graph.createAudio(),
+      audio = graph.createAudio(),
       context = Object.create(null),
-      globalsAdapter = new BrowserGlobalsAdapter(),
       assetCoordinator
     } = options;
 
@@ -123,14 +119,12 @@ export class World<
     });
 
     this.renderer = renderer;
-    this.sceneManager = sceneManager;
     this.input = input;
     this.audio = audio;
     this.context = context;
     this.assetCoordinator = assetCoordinator;
+    this.sceneManager = new SceneManager(this, graph);
 
-    sceneManager.bindWorld(this);
-    globalsAdapter.exposeGame(this);
     this.keepAlive(() => this.timers.pending);
   }
 

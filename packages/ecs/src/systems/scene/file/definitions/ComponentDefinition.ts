@@ -6,7 +6,7 @@ import type {
 
 // Import Internal Dependencies
 import type { Actor } from "../../../../actor/Actor.ts";
-import type { Component } from "../../../../components/types.ts";
+import type { ActorComponent } from "../../../../actor/ActorComponent.ts";
 import type { JSONObject } from "../SceneFile.ts";
 import type { ComponentAnchors } from "./ComponentAnchors.ts";
 
@@ -73,7 +73,7 @@ export interface ComponentContext<
 
 export interface ComponentDefinition<
   TData = unknown,
-  TComponent extends Component = Component,
+  TComponent extends ActorComponent = ActorComponent,
   TAssets extends ComponentAssetValues = ComponentAssetValues
 > {
   readonly type: string;
@@ -92,7 +92,7 @@ export interface ComponentDefinition<
     data: TData
   ): boolean | void;
   owns?(
-    component: Component
+    component: ActorComponent<any>
   ): component is TComponent;
   capture?(
     component: TComponent,

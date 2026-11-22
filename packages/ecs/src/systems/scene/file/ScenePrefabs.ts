@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { PrefabOverrides } from "./PrefabOverrides.ts";
+import { PrefabInstance } from "./PrefabInstance.ts";
 import type {
   SceneActorFile,
   SceneFile
@@ -33,19 +33,10 @@ function* expand(
   for (const actor of actors) {
     yield actor;
 
-    const { prefab } = actor;
-    if (prefab === undefined || chain.includes(prefab.id)) {
-      continue;
-    }
-
-    const scene = prefabs.find(prefab.id);
-    if (scene !== null) {
-      const overrides = PrefabOverrides.from(actor.overrides);
-      yield* expand(
-        scene.actors.map((file) => overrides.scope(file, actor.id)),
-        prefabs,
-        [...chain, prefab.id]
-      );
+    const instance = PrefabInstance.parse(actor, chain);
+    const files = instance?.expand(prefabs) ?? null;
+    if (instance !== null && files !== null) {
+      yield* expand(files, prefabs, instance.innerChain);
     }
   }
 }

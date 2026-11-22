@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type Component,
+  type ActorComponent,
   Systems
 } from "@jolly-pixel/ecs";
 
@@ -95,7 +95,7 @@ export class AudioZoneDefinition implements Systems.ComponentDefinition<
   }
 
   owns(
-    component: Component
+    component: ActorComponent<any>
   ): component is SceneAudioZone {
     return component instanceof AudioZoneComponent ||
       component instanceof AudioZoneOutline;

@@ -78,7 +78,7 @@ describe("Scene", () => {
       assert.strictEqual(appended.startSpy.mock.calls.length, 1);
     });
 
-    test("owns the actors created during awake, not the pre-existing ones", () => {
+    test("owns the actors its hooks create, not the pre-existing ones", () => {
       const { sm, world } = createSceneSetup();
 
       class MainScene extends ConcreteScene {
@@ -93,16 +93,31 @@ describe("Scene", () => {
           super.awake();
           world.createActor("PrefabActor");
         }
+
+        override start() {
+          super.start();
+          world.createActor("StartActor");
+        }
+
+        override update(deltaTime: number) {
+          super.update(deltaTime);
+          world.createActor("UpdateActor");
+        }
       }
 
       activateScene(sm, new MainScene("main"));
       activateAppendedScene(sm, new PrefabScene("prefab"));
       assert.ok(sm.findActor("PrefabActor") !== null);
 
+      sm.beginFrame();
+      sm.update(kDeltaTime);
       sm.removeScene("prefab");
 
       assert.ok(sm.findActor("MainActor") !== null, "pre-existing actor should survive removeScene");
-      assert.strictEqual(sm.findActor("PrefabActor"), null, "owned actor should be destroyed");
+      assert.deepStrictEqual(
+        ["PrefabActor", "StartActor", "UpdateActor"].map((name) => sm.findActor(name)),
+        [null, null, null]
+      );
     });
 
     test("multiple appended scenes run update and fixedUpdate each frame", () => {

@@ -19,9 +19,4 @@ export {
   type BehaviorPropertyType
 } from "./script/ScenePropertyValue.ts";
 
-export type {
-  Component,
-  ComponentClass,
-  FreeComponentEnum,
-  StrictComponentEnum
-} from "./types.ts";
+export type { ComponentClass } from "./types.ts";

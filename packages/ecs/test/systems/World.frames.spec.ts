@@ -11,7 +11,6 @@ import assert from "node:assert/strict";
 import type { World } from "../../src/systems/World.ts";
 import {
   createWorldHarness,
-  SCENE_GRAPH,
   type WorldHarness
 } from "../helpers/world/worldHarness.ts";
 
@@ -81,7 +80,7 @@ describe("Systems.World", () => {
       world.start();
       tick(kFixedDelta60);
 
-      assert.strictEqual(renderer.draw.mock.calls[0].arguments[0], SCENE_GRAPH);
+      assert.strictEqual(renderer.draw.mock.calls[0].arguments[0], world.sceneManager.graph);
     });
   });
 });

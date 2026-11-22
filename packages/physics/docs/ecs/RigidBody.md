@@ -116,7 +116,7 @@ definitions.register(new RigidBodyDefinition(ColliderOutline));
 ```
 
 ```ts
-interface RigidBodyEditView extends Component {
+interface RigidBodyEditView extends ActorComponent {
   readonly settings: Readonly<RigidBodySettings>;
 
   draw(settings: Readonly<RigidBodySettings>): void;

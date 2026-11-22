@@ -4,19 +4,7 @@
 
 ## 📌 About
 
-Minimal and opinionated [ECS][ecs] inspired by [Superpowers][superpowers] and [Craftstudio][craftstudio]. It holds actors, components, behaviors, scenes, scene files and transforms, and imports no renderer: a backend such as `@jolly-pixel/backend.three` draws the world.
-
-> [!WARNING]
-> The ECS is still in a heavy phase of development (expect frequent API breaking changes).
-
-## 💡 Features
-
-- [ECS][ecs] architecture with Actors, Components, and Scenes
-- Godot-like [Signals][signals]
-- Behavior scripts with decorator-driven scene properties
-- Scene files, prefabs and environments as plain JSON
-- Input controls (mouse, keyboard, gamepads, touchpad)
-- A headless backend that runs a world without a GPU
+Minimal and opinionated [ECS][ecs] inspired by [Superpowers][superpowers] and [Craftstudio][craftstudio].
 
 ## 💃 Getting Started
 
@@ -58,10 +46,9 @@ Systems drive the game loop and manage shared resources such as assets. They ope
 ```ts
 import { Systems } from "@jolly-pixel/ecs";
 
-const sceneManager = new Systems.SceneManager(new Systems.HeadlessSceneGraph());
 const game = new Systems.World(new Systems.HeadlessRenderer(canvas), {
   enableOnExit: true,
-  sceneManager,
+  graph: new Systems.HeadlessSceneGraph(),
   assetCoordinator
 });
 
@@ -142,13 +129,6 @@ new Actor(world, { name: "player" })
 ```
 
 </details>
-
-### 🎮 Device Controls
-
-ECS re-exports `Input`, `InputCombination`, `Axis` and `AxisMap` from `@jolly-pixel/controls`.
-
-> [!TIP]
-> In ActorComponent or Behavior input are accessible through this.actor.world.input
 
 ## 🧪 Benchmarks
 

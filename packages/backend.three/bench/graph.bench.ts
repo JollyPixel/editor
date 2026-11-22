@@ -39,15 +39,10 @@ function createBenchWorld(): BenchWorld {
   const world: Systems.World = new Systems.World(
     createRenderer(),
     {
-      sceneManager: new Systems.SceneManager(new ThreeSceneGraph()),
+      graph: new ThreeSceneGraph(),
       input: createInput(),
       audio: {} as any,
-      assetCoordinator: {} as any,
-      globalsAdapter: {
-        exposeGame() {
-          return;
-        }
-      }
+      assetCoordinator: {} as any
     }
   );
   const schedule = createSchedule();
@@ -170,7 +165,7 @@ const suite = defineSuite("backend.three / ThreeSceneGraph", (bench) => {
       const actor = churn.createActor("churn");
       actor.addComponent(IdleBehavior);
       churn.tick();
-      churn.world.sceneManager.tree.destroyActor(actor);
+      actor.markDestructionPending();
       churn.tick();
     })
     .add("findComponent by class", () => {

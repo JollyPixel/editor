@@ -1,39 +1,8 @@
 // Import Internal Dependencies
-import type { Actor } from "../actor/Actor.ts";
+import type { ActorComponent } from "../actor/ActorComponent.ts";
 
-export type StrictComponentEnum =
-  | "ScriptBehavior"
-  | "Camera"
-  | "VoxelRenderer"
-  | "SpriteRenderer"
-  | "ModelRenderer"
-  | "MeshRenderer"
-  | "Light"
-  | "TextRenderer";
-
-export type FreeComponentEnum = StrictComponentEnum | (string & {});
-
-export interface Component {
-  actor: Actor<any>;
-  typeName: FreeComponentEnum;
-  needUpdate: boolean;
-  readonly pendingForDestruction: boolean;
-
-  bind?(): void;
-  awake?(): void;
-  start?(): void;
-  update?(
-    deltaTime: number,
-    alpha?: number
-  ): void;
-  fixedUpdate?(
-    deltaTime: number,
-    stepIndex?: number
-  ): void;
-  markDestructionPending(): void;
-  destroy(): void;
-}
-
-export type ComponentClass<T extends Component = Component> = abstract new (
+export type ComponentClass<
+  T extends ActorComponent<any> = ActorComponent<any>
+> = abstract new (
   ...args: any[]
 ) => T;

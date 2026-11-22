@@ -1,7 +1,10 @@
 export * from "./Actor.ts";
 export * from "./ActorComponent.ts";
 export * from "./ActorComponents.ts";
-export * from "./ActorTree.ts";
+export {
+  ActorTree,
+  type ActorTreeNode
+} from "./ActorTree.ts";
 export { Transform, type TransformLike } from "./transform/Transform.ts";
 export type { LocalSpace } from "./transform/LocalSpace.ts";
 export type { GlobalSpace } from "./transform/GlobalSpace.ts";

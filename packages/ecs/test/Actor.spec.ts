@@ -4,12 +4,12 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { Actor } from "../src/index.ts";
-import { createWorld } from "./helpers/actor/mockWorld.ts";
+import { createHeadlessWorld } from "./helpers/world/headlessWorld.ts";
 
 describe("Actor", () => {
   describe("status", () => {
     test("should move from alive to pending to destroyed", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
       const statuses = [actor.status];
 
       actor.markDestructionPending();
@@ -24,7 +24,7 @@ describe("Actor", () => {
 
   describe("lifecycle", () => {
     test("should call awake on all components", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
 
       const component = { awake: mock.fn() };
       actor.components.attach(component as any);
@@ -34,7 +34,7 @@ describe("Actor", () => {
     });
 
     test("should awake components added during awake", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
 
       const secondAwake = mock.fn();
       const firstComponent = {
@@ -51,7 +51,7 @@ describe("Actor", () => {
     });
 
     test("should call update on components requiring update", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
       actor.components.requireUpdate(component as any, true);
@@ -61,7 +61,7 @@ describe("Actor", () => {
     });
 
     test("should not call update on components not in componentsRequiringUpdate", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
       actor.components.attach(component as any);
@@ -71,7 +71,7 @@ describe("Actor", () => {
     });
 
     test("should not call update if actor is marked for destruction", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
 
       const component = { update: mock.fn() };
       actor.components.requireUpdate(component as any, true);
@@ -82,7 +82,7 @@ describe("Actor", () => {
     });
 
     test("should call fixedUpdate on components requiring update", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
 
       const component = { fixedUpdate: mock.fn() };
       actor.components.requireUpdate(component as any, true);
@@ -92,7 +92,7 @@ describe("Actor", () => {
     });
 
     test("should not call fixedUpdate if actor is marked for destruction", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
 
       const component = { fixedUpdate: mock.fn() };
       actor.components.requireUpdate(component as any, true);
@@ -103,7 +103,7 @@ describe("Actor", () => {
     });
 
     test("should skip components without fixedUpdate in fixedUpdate loop", () => {
-      const actor = new Actor(createWorld() as any, { name: "foobar" });
+      const actor = new Actor(createHeadlessWorld() as any, { name: "foobar" });
 
       const componentWithUpdate = { update: mock.fn() };
       const componentWithFixed = { fixedUpdate: mock.fn() };
@@ -116,7 +116,7 @@ describe("Actor", () => {
     });
 
     test("should call destroy on all components", () => {
-      const world = createWorld();
+      const world = createHeadlessWorld();
 
       const actor = new Actor(world as any, { name: "foobar" });
 
@@ -129,7 +129,7 @@ describe("Actor", () => {
     });
 
     test("should destroy all components even when destroy splices the components array", () => {
-      const world = createWorld();
+      const world = createHeadlessWorld();
       const actor = new Actor(world as any, { name: "foobar" });
 
       const destroySpies: ReturnType<typeof mock.fn>[] = [];
@@ -157,23 +157,18 @@ describe("Actor", () => {
   });
 
   describe("markDestructionPending", () => {
-    test("should set the actor's destruction pending flag and notify children", () => {
-      const world = createWorld();
-      const actor = new Actor(
-        world as any,
-        { name: "foobar" }
-      );
-      const fakeActorChildren = {
-        children: [],
-        markDestructionPending: mock.fn()
-      };
+    test("should mark the actor and every descendant pending", () => {
+      const world = createHeadlessWorld();
+      const actor = world.createActor("foobar");
+      const child = world.createActor("child", { parent: actor });
+      const grandChild = world.createActor("grandChild", { parent: child });
 
-      actor.add(fakeActorChildren as any);
-      actor.add(fakeActorChildren as any);
       actor.markDestructionPending();
 
-      assert.strictEqual(actor.pendingForDestruction, true);
-      assert.strictEqual(fakeActorChildren.markDestructionPending.mock.calls.length, 2);
+      assert.deepEqual(
+        [actor, child, grandChild].map(({ status }) => status),
+        ["pending", "pending", "pending"]
+      );
     });
   });
 });

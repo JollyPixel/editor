@@ -3,8 +3,7 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { SceneManager } from "../../../src/systems/scene/SceneManager.ts";
-import { HeadlessSceneGraph } from "../../../src/systems/scene/HeadlessSceneGraph.ts";
+import { createHeadlessWorld } from "../../helpers/world/headlessWorld.ts";
 import { Actor } from "../../../src/actor/index.ts";
 import { UpdateProbe } from "../../helpers/actor/updateProbe.ts";
 
@@ -12,8 +11,8 @@ import { UpdateProbe } from "../../helpers/actor/updateProbe.ts";
 const kDeltaTime = 16.67;
 
 function createFrames() {
-  const sceneManager = new SceneManager(new HeadlessSceneGraph());
-  const world = { sceneManager } as any;
+  const world = createHeadlessWorld();
+  const { sceneManager } = world;
 
   return {
     createProbe(

@@ -81,7 +81,7 @@ describe("Systems.World", () => {
 
       tick(70);
 
-      const [deltaTime, alpha] = sceneManager.update.mock.calls.at(-1)!.arguments;
+      const [deltaTime, alpha = Number.NaN] = sceneManager.update.mock.calls.at(-1)!.arguments;
       assert.strictEqual(deltaTime, 0.07);
       assert.ok(Math.abs(alpha - 0.7) < 1e-9, `alpha was ${alpha}`);
     });

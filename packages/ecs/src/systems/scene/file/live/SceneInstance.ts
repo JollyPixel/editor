@@ -3,7 +3,7 @@ import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import { Actor } from "../../../../actor/Actor.ts";
-import type { Component } from "../../../../components/types.ts";
+import type { ActorComponent } from "../../../../actor/ActorComponent.ts";
 import type { World, WorldDefaultContext } from "../../../World.ts";
 import type { Logger } from "../../../Logger.ts";
 import type {
@@ -17,6 +17,7 @@ import type {
 } from "../definitions/ComponentAnchors.ts";
 import type { ComponentDefinitions } from "../definitions/ComponentDefinitions.ts";
 import { InstancePath } from "../InstancePath.ts";
+import { PrefabInstance } from "../PrefabInstance.ts";
 import { PrefabOverrides } from "../PrefabOverrides.ts";
 import type {
   JSONObject,
@@ -53,25 +54,16 @@ export interface SceneInstanceOptions<
 export interface SceneInstanceComponent {
   id: string;
   actorId: string;
-  component: Component;
+  component: ActorComponent<any>;
   /**
    * Connections of the file the component was built from.
    */
   connections: readonly SceneConnectionFile[];
 }
 
-interface PrefabInstance {
-  sceneId: string;
-  chain: readonly string[];
-  roots: string[];
-  overrides: PrefabOverrides;
-  files: readonly SceneActorFile[];
-  expanded: Map<string, SceneActorFile>;
-}
-
 export type SceneInstanceEvents = {
   componentBuilt: (built: SceneInstanceComponent) => void;
-  componentDropped: (component: Component) => void;
+  componentDropped: (component: ActorComponent<any>) => void;
   anchorsChange: () => void;
 };
 
@@ -122,7 +114,7 @@ export class SceneInstance<
 
   component(
     id: string
-  ): Component | null {
+  ): ActorComponent<any> | null {
     return this.#components.get(id)?.component ?? null;
   }
 
@@ -193,7 +185,7 @@ export class SceneInstance<
   ): void {
     const instance = this.#instances.get(instanceId);
     if (instance !== undefined) {
-      this.#override(instanceId, instance, PrefabOverrides.from(overrides));
+      this.#override(instance, PrefabOverrides.from(overrides));
     }
   }
 
@@ -364,7 +356,7 @@ export class SceneInstance<
     if (instance === undefined) {
       return;
     }
-    if (instance.chain.includes(instance.sceneId)) {
+    if (instance.cyclic) {
       this.#logger.warn("Prefab cycle skipped", {
         id: instanceId,
         sceneId: instance.sceneId
@@ -373,55 +365,26 @@ export class SceneInstance<
       return;
     }
 
-    const scene = this.#prefabs.find(instance.sceneId);
-    if (scene !== null) {
-      instance.files = scene.actors;
-      const files = scene.actors.map(
-        (file) => instance.overrides.scope(file, instanceId)
-      );
-      instance.roots = files
-        .filter((file) => file.parentId === instanceId)
-        .map((file) => file.id);
-      this.#add(files, [...instance.chain, instance.sceneId]);
-      instance.expanded = new Map(
-        files
-          .filter((file) => this.#actors.has(file.id))
-          .map((file) => [file.id, file])
-      );
+    const files = instance.expand(this.#prefabs);
+    if (files !== null) {
+      this.#add(files, instance.innerChain);
+      instance.retain((id) => this.#actors.has(id));
     }
   }
 
   #collapse(
     instanceId: string
   ): void {
-    const instance = this.#instances.get(instanceId);
-    if (instance === undefined) {
-      return;
-    }
-
-    for (const id of instance.roots) {
+    for (const id of this.#instances.get(instanceId)?.collapse() ?? []) {
       this.remove(id);
     }
-    instance.roots = [];
-    instance.files = [];
-    instance.expanded = new Map();
   }
 
   #override(
-    instanceId: string,
     instance: PrefabInstance,
     overrides: PrefabOverrides
   ): void {
-    instance.overrides = overrides;
-
-    for (const file of instance.files) {
-      const scoped = overrides.scope(file, instanceId);
-      const previous = instance.expanded.get(scoped.id);
-      if (previous === undefined) {
-        continue;
-      }
-
-      instance.expanded.set(scoped.id, scoped);
+    for (const { previous, scoped } of instance.rescope(overrides)) {
       this.write(scoped.id, scoped);
       for (const [index, entry] of scoped.components.entries()) {
         this.#overrideComponent(scoped.id, previous.components[index]!, entry);
@@ -429,7 +392,7 @@ export class SceneInstance<
 
       const nested = this.#instances.get(scoped.id);
       if (nested !== undefined) {
-        this.#override(scoped.id, nested, PrefabOverrides.from(scoped.overrides));
+        this.#override(nested, PrefabOverrides.from(scoped.overrides));
       }
     }
   }
@@ -471,15 +434,9 @@ export class SceneInstance<
       this.#buildComponent(file.id, actor, entry);
     }
 
-    if (file.prefab !== undefined) {
-      this.#instances.set(file.id, {
-        sceneId: file.prefab.id,
-        chain,
-        roots: [],
-        overrides: PrefabOverrides.from(file.overrides),
-        files: [],
-        expanded: new Map()
-      });
+    const instance = PrefabInstance.parse(file, chain);
+    if (instance !== null) {
+      this.#instances.set(file.id, instance);
       this.#expand(file.id);
     }
   }

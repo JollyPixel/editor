@@ -1,15 +1,20 @@
 // Import Internal Dependencies
-import { ActorTree } from "./ActorTree.ts";
+import {
+  ActorTree,
+  linkActor,
+  unlinkActor
+} from "./ActorTree.ts";
 import { Transform } from "./transform/Transform.ts";
 import { ActorComponents } from "./ActorComponents.ts";
 import type { World, WorldDefaultContext } from "../systems/World.ts";
 import type { BackendActorNode } from "../systems/SceneBackend.ts";
 import type {
-  Component,
-  ComponentClass
-} from "../components/types.ts";
+  ActorComponent,
+  HookedComponent
+} from "./ActorComponent.ts";
+import type { ComponentClass } from "../components/types.ts";
 
-type ComponentConstructor = new (actor: Actor<any>, ...args: any[]) => Component;
+type ComponentConstructor = new (actor: Actor<any>, ...args: any[]) => ActorComponent<any>;
 
 type RequiresOptions<T extends ComponentConstructor> =
   T extends new (actor: Actor<any>, options: infer O, ...args: any[]) => any
@@ -42,13 +47,13 @@ export class Actor<
   readonly id: number;
   readonly persistentId: string;
   persistent: boolean;
-  parent: Actor<TContext> | null = null;
 
   readonly components = new ActorComponents();
   readonly node: BackendActorNode;
   readonly transform: Transform;
 
   #name: string;
+  #parent: Actor<TContext> | null;
   #active = true;
   #awoken = false;
   #status: ActorStatus = "alive";
@@ -78,7 +83,7 @@ export class Actor<
     this.world = world;
     this.id = actors.nextActorId();
     this.#name = name;
-    this.parent = parent;
+    this.#parent = parent;
     this.persistentId = persistentId ?? actors.newPersistentId();
     this.persistent = persistent;
 
@@ -94,6 +99,12 @@ export class Actor<
     this.transform.visible = visible;
 
     actors.attach(this);
+    linkActor(parent ?? actors.tree, this);
+    this.transform.attach(parent?.transform ?? null);
+  }
+
+  get parent(): Actor<TContext> | null {
+    return this.#parent;
   }
 
   get name(): string {
@@ -167,7 +178,7 @@ export class Actor<
     componentClass: T,
     ...args: ComponentOptionsArgs<T>
   ): InstanceType<T> {
-    const component = new componentClass(this, args[0]);
+    const component: HookedComponent = new componentClass(this, args[0]);
     if (this.#awoken) {
       component.bind?.();
       component.awake?.();
@@ -176,13 +187,13 @@ export class Actor<
     return component as InstanceType<T>;
   }
 
-  findComponent<T extends Component>(
+  findComponent<T extends ActorComponent<any>>(
     typeNameOrClass: string | ComponentClass<T>
   ): T | null {
     return this.components.find(typeNameOrClass);
   }
 
-  findComponents<T extends Component>(
+  findComponents<T extends ActorComponent<any>>(
     componentClass: ComponentClass<T>
   ): IterableIterator<T> {
     return this.components.matching(componentClass);
@@ -208,7 +219,7 @@ export class Actor<
   }
 
   removeComponent(
-    componentOrClass: Component | ComponentClass
+    componentOrClass: ActorComponent<any> | ComponentClass
   ): boolean {
     const component = typeof componentOrClass === "function" ?
       this.components.find(componentOrClass) :
@@ -226,7 +237,7 @@ export class Actor<
     return true;
   }
 
-  findComponentInChildren<T extends Component>(
+  findComponentInChildren<T extends ActorComponent<any>>(
     componentClass: ComponentClass<T>
   ): T | null {
     for (const { actor } of this.walk()) {
@@ -241,7 +252,7 @@ export class Actor<
     return null;
   }
 
-  findComponentInParent<T extends Component>(
+  findComponentInParent<T extends ActorComponent<any>>(
     componentClass: ComponentClass<T>
   ): T | null {
     let ancestor = this.parent;
@@ -296,7 +307,10 @@ export class Actor<
     }
     this.components.destroy();
 
-    this.world.sceneManager.actors.detach(this);
+    const { actors } = this.world.sceneManager;
+    actors.detach(this);
+    unlinkActor(this.#parent ?? actors.tree, this);
+    this.transform.detach();
     this.node.dispose();
   }
 
@@ -307,7 +321,9 @@ export class Actor<
     this.#status = "pending";
 
     this.world.sceneManager.actors.destroyActorLater(this);
-    this.destroyAllActors();
+    for (const child of this.children) {
+      child.markDestructionPending();
+    }
   }
 
   reparent(
@@ -321,12 +337,18 @@ export class Actor<
       throw new Error("Cannot reparent actor to destroyed actor");
     }
 
-    this.world.sceneManager.actors.reparent(this, newParent, keepLocal);
+    const { actors } = this.world.sceneManager;
+    this.transform.attach(newParent?.transform ?? null, !keepLocal);
+    unlinkActor(this.#parent ?? actors.tree, this);
+    this.#parent = newParent;
+    linkActor(newParent ?? actors.tree, this);
+
+    actors.reschedule(this);
   }
 }
 
 function isInstance<T extends ComponentConstructor>(
-  component: Component,
+  component: ActorComponent<any>,
   componentClass: T
 ): component is InstanceType<T> {
   return component instanceof componentClass;

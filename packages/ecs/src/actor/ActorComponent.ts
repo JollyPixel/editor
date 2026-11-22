@@ -19,26 +19,38 @@ import type {
   SignalConnection,
   SignalEvent
 } from "./Signal.ts";
-import type {
-  Component,
-  FreeComponentEnum
-} from "../components/types.ts";
 
 export interface ActorComponentOptions<
   TContext = WorldDefaultContext
 > {
   actor: Actor<TContext>;
-  typeName: FreeComponentEnum;
+  typeName: string;
   needUpdate?: boolean;
 }
 
+export interface ComponentHooks {
+  bind?(): void;
+  awake?(): void;
+  start?(): void;
+  update?(
+    deltaTime: number,
+    alpha?: number
+  ): void;
+  fixedUpdate?(
+    deltaTime: number,
+    stepIndex?: number
+  ): void;
+}
+
+export type HookedComponent = ActorComponent<any> & ComponentHooks;
+
 export class ActorComponent<
   TContext = WorldDefaultContext
-> implements Component {
+> {
   readonly id: number;
   readonly persistentId = randomPersistentId();
   actor: Actor<TContext>;
-  typeName: FreeComponentEnum;
+  typeName: string;
 
   #needUpdate = false;
   #status: ActorStatus = "alive";
@@ -65,7 +77,7 @@ export class ActorComponent<
     value: boolean
   ) {
     this.#needUpdate = value;
-    this.actor.world.sceneManager.actors.requireUpdate(this, value);
+    this.actor.world.sceneManager.actors.requireUpdate(this);
   }
 
   get status(): ActorStatus {
@@ -162,7 +174,7 @@ export class ActorComponent<
 }
 
 function hasUpdateHook(
-  component: Component
+  component: HookedComponent
 ): boolean {
   return typeof component.update === "function" ||
     typeof component.fixedUpdate === "function";

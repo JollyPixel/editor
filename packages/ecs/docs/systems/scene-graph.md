@@ -80,7 +80,7 @@ behaviors and its transforms without a GPU.
 import { Systems } from "@jolly-pixel/ecs";
 
 const world = new Systems.World(new Systems.HeadlessRenderer(canvas), {
-  sceneManager: new Systems.SceneManager(new Systems.HeadlessSceneGraph()),
+  graph: new Systems.HeadlessSceneGraph(),
   assetCoordinator
 });
 ```

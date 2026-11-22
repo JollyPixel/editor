@@ -63,7 +63,7 @@ Nothing runs until `load()` or `start()`.
 
 ```ts
 interface RuntimeCore<TWorld, TScene, TMetrics> {
-  /** The backend's world. */
+  /** The backend's world, also assigned to `globalThis.game` for the devtools console. */
   readonly world: TWorld;
   /** Configure its scheduler before `start()` or `load()`. */
   readonly loop: GameLoop;

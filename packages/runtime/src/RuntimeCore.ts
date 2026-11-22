@@ -100,6 +100,7 @@ export class RuntimeCore<
   ) {
     this.canvas = canvas;
     this.world = backend.world;
+    Reflect.set(globalThis, "game", this.world);
     this.#backend = backend;
     this.#logger = options.logger ?? new SilentLogger();
     this.#sessionSettings = new RuntimeSessionSettings(options);

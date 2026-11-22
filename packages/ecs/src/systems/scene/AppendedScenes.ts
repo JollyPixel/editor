@@ -1,5 +1,4 @@
 // Import Internal Dependencies
-import type { Actor } from "../../actor/index.ts";
 import type {
   World,
   WorldDefaultContext
@@ -8,27 +7,13 @@ import type { Scene } from "./Scene.ts";
 import type { ManagedSceneLoad } from "./ManagedSceneLoad.ts";
 import type { ActorRegistry } from "./ActorRegistry.ts";
 
-export type AppendedSceneEntry<TContext> = {
-  scene: Scene<TContext>;
-  /**
-   * All actors created during the scene's awake(),
-   * tracked for cleanup on removeScene.
-   *
-   */
-  ownedActors: ReadonlySet<Actor<TContext>>;
-};
-
-export type AppendedSceneMatcher<TContext> = (
-  scene: Scene<TContext>
-) => boolean;
-
 export class AppendedScenes<
   TContext = WorldDefaultContext
 > {
   #actors: ActorRegistry<TContext>;
   #onRemoved: (scene: Scene<TContext>) => void;
   #loads = new Map<number, ManagedSceneLoad<TContext>>();
-  #entries = new Map<number, AppendedSceneEntry<TContext>>();
+  #scenes = new Map<number, Scene<TContext>>();
   #pendingStart = new Set<number>();
 
   constructor(
@@ -46,24 +31,27 @@ export class AppendedScenes<
     this.#loads.set(load.scene.id, load);
   }
 
-  tracks(
-    load: ManagedSceneLoad<TContext>
-  ): boolean {
-    return this.#loads.get(load.scene.id) === load;
-  }
-
-  forget(
-    load: ManagedSceneLoad<TContext>
-  ): void {
-    if (this.tracks(load)) {
-      this.#loads.delete(load.scene.id);
-    }
-  }
-
   cancelLoads(): void {
-    for (const load of [...this.#loads.values()]) {
+    const loads = [...this.#loads.values()];
+    this.#loads.clear();
+    for (const load of loads) {
       load.cancel();
     }
+  }
+
+  takeActivatable(): ManagedSceneLoad<TContext>[] {
+    const activatable: ManagedSceneLoad<TContext>[] = [];
+    for (const [id, load] of this.#loads) {
+      if (load.activatable) {
+        activatable.push(load);
+        this.#loads.delete(id);
+      }
+      else if (load.status === "failed" || load.status === "cancelled") {
+        this.#loads.delete(id);
+      }
+    }
+
+    return activatable;
   }
 
   activate(
@@ -71,19 +59,21 @@ export class AppendedScenes<
     world: World<any, TContext>
   ): void {
     scene.world = world;
-    const ownedActors = this.#actors.collect(() => scene.awake());
-    this.#actors.awake();
-
-    this.#entries.set(scene.id, {
-      scene,
-      ownedActors
+    this.#actors.ownedBy(scene, () => {
+      scene.awake();
+      this.#actors.awake();
     });
+
+    this.#scenes.set(scene.id, scene);
     this.#pendingStart.add(scene.id);
   }
 
   startPending(): void {
     for (const id of this.#pendingStart) {
-      this.#entries.get(id)?.scene.start();
+      const scene = this.#scenes.get(id);
+      if (scene !== undefined) {
+        this.#actors.ownedBy(scene, () => scene.start());
+      }
     }
     this.#pendingStart.clear();
   }
@@ -92,8 +82,11 @@ export class AppendedScenes<
     deltaTime: number,
     stepIndex: number
   ): void {
-    for (const { scene } of this.#entries.values()) {
-      scene.fixedUpdate(deltaTime, stepIndex);
+    for (const scene of this.#scenes.values()) {
+      this.#actors.ownedBy(
+        scene,
+        () => scene.fixedUpdate(deltaTime, stepIndex)
+      );
     }
   }
 
@@ -101,21 +94,24 @@ export class AppendedScenes<
     deltaTime: number,
     alpha: number
   ): void {
-    for (const { scene } of this.#entries.values()) {
-      scene.update(deltaTime, alpha);
+    for (const scene of this.#scenes.values()) {
+      this.#actors.ownedBy(
+        scene,
+        () => scene.update(deltaTime, alpha)
+      );
     }
   }
 
   find(
     id: number
   ): Scene<TContext> | null {
-    return this.#entries.get(id)?.scene ?? null;
+    return this.#scenes.get(id) ?? null;
   }
 
   * named(
     name: string
   ): IterableIterator<Scene<TContext>> {
-    for (const { scene } of this.#entries.values()) {
+    for (const scene of this.#scenes.values()) {
       if (scene.name === name) {
         yield scene;
       }
@@ -123,26 +119,27 @@ export class AppendedScenes<
   }
 
   remove(
-    matches: AppendedSceneMatcher<TContext>
+    matches: (scene: Scene<TContext>) => boolean
   ): void {
-    for (const load of [...this.#loads.values()]) {
+    for (const [id, load] of this.#loads) {
       if (matches(load.scene)) {
+        this.#loads.delete(id);
         load.cancel();
       }
     }
 
-    for (const [id, { scene, ownedActors }] of this.#entries) {
+    for (const [id, scene] of this.#scenes) {
       if (matches(scene)) {
         this.#onRemoved(scene);
         scene.destroy();
-        this.#actors.destroySceneActors(ownedActors);
+        this.#actors.destroyOwned(scene);
         this.#forget(id);
       }
     }
   }
 
   clear(): void {
-    for (const [id, { scene }] of this.#entries) {
+    for (const [id, scene] of this.#scenes) {
       this.#onRemoved(scene);
       scene.destroy();
       this.#forget(id);
@@ -152,7 +149,7 @@ export class AppendedScenes<
   #forget(
     id: number
   ): void {
-    this.#entries.delete(id);
+    this.#scenes.delete(id);
     this.#pendingStart.delete(id);
   }
 }

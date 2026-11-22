@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type Component,
+  type ActorComponent,
   Systems
 } from "@jolly-pixel/ecs";
 
@@ -85,7 +85,7 @@ export class MeshDefinition implements Systems.ComponentDefinition<
   }
 
   owns(
-    component: Component
+    component: ActorComponent<any>
   ): component is MeshRenderer<any> {
     return component instanceof MeshRenderer;
   }

@@ -1,7 +1,7 @@
 // Import Third-party Dependencies
 import {
   type Actor,
-  type Component,
+  type ActorComponent,
   Systems
 } from "@jolly-pixel/ecs";
 
@@ -80,7 +80,7 @@ export class TextDefinition implements Systems.ComponentDefinition<
   }
 
   owns(
-    component: Component
+    component: ActorComponent<any>
   ): component is TextRenderer<any> {
     return component instanceof TextRenderer;
   }

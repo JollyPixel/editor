@@ -57,11 +57,10 @@ export function createSceneSetup(
     graph = new HeadlessSceneGraph(),
     audio = graph.createAudio()
   } = options;
-  const sm = new SceneManager(graph);
   const keepAlives = new Set<() => boolean>();
   const world = {
     logger,
-    sceneManager: sm,
+    sceneManager: null as unknown as SceneManager,
     assetCoordinator: assets.coordinator,
     audio,
     renderer: {
@@ -80,7 +79,8 @@ export function createSceneSetup(
       return new Actor(this as any, { name });
     }
   };
-  sm.bindWorld(world as any);
+  const sm = new SceneManager(world as any, graph);
+  world.sceneManager = sm;
 
   return { sm, world };
 }

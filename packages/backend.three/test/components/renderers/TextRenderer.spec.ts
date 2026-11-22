@@ -4,20 +4,20 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import * as THREE from "three/webgpu";
-import { Actor, Systems } from "@jolly-pixel/ecs";
+import { Actor } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
+import { fakeWorld } from "../../helpers/world/fakeWorld.ts";
 import {
   TextRenderer,
   type TextRendererOptions
 } from "../../../src/components/renderers/text/TextRenderer.ts";
-import { ThreeSceneGraph } from "../../../src/scene/ThreeSceneGraph.ts";
 import { blockFont } from "../../helpers/text/blockFont.ts";
 
 function createText(
   options: TextRendererOptions = {}
 ) {
-  const world = { sceneManager: new Systems.SceneManager(new ThreeSceneGraph()) };
+  const world = fakeWorld();
   const actor = new Actor(world as any, { name: "label" });
 
   return actor.addComponentAndGet(TextRenderer, options);

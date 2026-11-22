@@ -52,7 +52,7 @@ flowchart TB
 ```
 
 - The world has no accumulator: a runtime's `GameLoop` hands it the schedule.
-- Only actors holding a component with `needUpdate` are visited.
+- Only actors holding a started component with `needUpdate` are visited.
 
 ## Scene loading
 

@@ -3,18 +3,17 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { ActorTree } from "../src/index.ts";
-import { createFakeActor } from "./helpers/actor/fakeActor.ts";
+import { createHeadlessWorld } from "./helpers/world/headlessWorld.ts";
 
 describe("ActorTree path patterns", () => {
   function createTree() {
-    const weapon = createFakeActor({ name: "Weapon" });
-    const hand = createFakeActor({ name: "RightHand", children: [weapon] });
-    const mesh = createFakeActor({ name: "Mesh_Body" });
-    const body = createFakeActor({ name: "Body", children: [mesh, hand] });
-    const player = createFakeActor({ name: "Player", children: [body] });
-    const tree = new ActorTree();
-    tree.children.push(player as any);
+    const world = createHeadlessWorld();
+    const player = world.createActor("Player");
+    const body = world.createActor("Body", { parent: player });
+    const mesh = world.createActor("Mesh_Body", { parent: body });
+    const hand = world.createActor("RightHand", { parent: body });
+    const weapon = world.createActor("Weapon", { parent: hand });
+    const { tree } = world.sceneManager;
 
     return { tree, player, body, hand, weapon, mesh };
   }
@@ -53,7 +52,7 @@ describe("ActorTree path patterns", () => {
 
   test("should skip pending actors inside a path", () => {
     const { tree, hand } = createTree();
-    hand.pendingForDestruction = true;
+    hand.markDestructionPending();
 
     assert.deepEqual(names(tree.findActors("**/RightHand/Weapon")), []);
   });
@@ -67,7 +66,7 @@ describe("ActorTree path patterns", () => {
 
   test("should not resolve a path through a pending actor", () => {
     const { tree, body } = createTree();
-    body.pendingForDestruction = true;
+    body.markDestructionPending();
 
     assert.equal(tree.findActor("Player/Body/RightHand"), null);
   });

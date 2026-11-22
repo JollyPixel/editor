@@ -2,8 +2,7 @@
 import * as THREE from "three";
 import {
   ActorComponent,
-  type Actor,
-  type Component
+  type Actor
 } from "@jolly-pixel/ecs";
 import {
   AudioSourceComponent,
@@ -40,7 +39,7 @@ interface DrawnHelper {
 export class SceneHelpers extends ActorComponent {
   #binding: SceneBinding;
   #root = new THREE.Group();
-  #helpers = new Map<Component, DrawnHelper>();
+  #helpers = new Map<ActorComponent<any>, DrawnHelper>();
   #preferences: Preferences;
   #selection: SceneHelpersOptions["selection"];
 
@@ -70,7 +69,7 @@ export class SceneHelpers extends ActorComponent {
   };
 
   #drop = (
-    component: Component
+    component: ActorComponent<any>
   ): void => {
     const drawn = this.#helpers.get(component);
     if (drawn === undefined) {
@@ -138,7 +137,7 @@ export class SceneHelpers extends ActorComponent {
 }
 
 function createHelper(
-  component: Component
+  component: ActorComponent<any>
 ): ComponentHelper | null {
   if (component instanceof CameraComponent) {
     return new CameraFrustum(component);

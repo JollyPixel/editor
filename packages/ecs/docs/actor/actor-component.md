@@ -27,9 +27,9 @@ A new component registers itself on the actor and is queued for `start()`.
 | Hook | When it runs |
 | ---- | ------------ |
 | `awake()` | Once, when the scene starts or when the actor is added |
-| `start()` | Once, on the first frame after the component is created |
-| `fixedUpdate(deltaTime, stepIndex)` | Every fixed step, at a constant rate (default 60 Hz). Use for physics and deterministic logic. `stepIndex` counts the steps within the current frame |
-| `update(deltaTime, alpha)` | Every drawn frame, with the elapsed game time in seconds. `alpha` is how far the frame sits between the last fixed step and the next one, in `[0, 1)` |
+| `start()` | Once, on the first frame after the component is created, after its actor's `awake()` |
+| `fixedUpdate(deltaTime, stepIndex)` | From the frame of `start()` on, every fixed step, at a constant rate (default 60 Hz). Use for physics and deterministic logic. `stepIndex` counts the steps within the current frame |
+| `update(deltaTime, alpha)` | From the frame of `start()` on, every drawn frame, with the elapsed game time in seconds. `alpha` is how far the frame sits between the last fixed step and the next one, in `[0, 1)` |
 | `destroy()` | When the actor or component is removed from the scene |
 
 The `update` delta follows the loop time scale and is `0` while paused, when
@@ -44,7 +44,8 @@ super({ actor, typeName: "Sprite", needUpdate: false });
 ```
 
 Setting the property later adds the component to the update loop
-or removes it without destroying it.
+or removes it without destroying it. A component that has not started
+yet joins the loop when it starts.
 
 ## Destruction
 
@@ -118,25 +119,13 @@ class Door extends Behavior {
 ## API
 
 ```ts
-export type StrictComponentEnum =
-  | "ScriptBehavior"
-  | "Camera"
-  | "VoxelRenderer"
-  | "SpriteRenderer"
-  | "ModelRenderer"
-  | "MeshRenderer"
-  | "Light"
-  | "TextRenderer";
-
-export type FreeComponentEnum = StrictComponentEnum | (string & {});
-
 interface ActorComponent {
   /** Numeric identifier, counted from 0 in each world. */
   readonly id: number;
   /** Persistent random hex identifier (16 characters). */
   readonly persistentId: string;
   actor: Actor;
-  typeName: FreeComponentEnum;
+  typeName: string;
 
   /**
    * When true, the component receives update() and fixedUpdate()
