@@ -39,7 +39,8 @@ export interface ShareAccounts extends Disposable {
 }
 
 export async function shareAccounts(
-  closures: Record<string, string[]>
+  closures: Record<string, string[]>,
+  access = ProjectAccess.read({ version: 1 }, "project.json")
 ): Promise<ShareAccounts> {
   const accounts = await Accounts.open({});
   const realm = accounts.realm("project", {
@@ -64,7 +65,7 @@ export async function shareAccounts(
     shares: new ProjectShares({
       realm,
       project: {
-        access: ProjectAccess.read({ version: 1 }, "project.json")
+        access
       },
       catalog: sharedCatalog(closures)
     }),

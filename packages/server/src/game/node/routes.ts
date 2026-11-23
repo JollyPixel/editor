@@ -121,6 +121,7 @@ function sendArtifact(
   return reply
     .type(built.type)
     .header("cache-control", built.cacheControl)
+    .header("x-content-type-options", "nosniff")
     .send(Buffer.from(
       built.bytes.buffer,
       built.bytes.byteOffset,

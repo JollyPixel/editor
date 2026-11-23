@@ -61,8 +61,13 @@ export class ProjectShares {
     assetId: string,
     lifetime: ShareLifetime
   ): ShareLink {
-    this.#project.access.projectRights(account.role).require("share");
-    if (this.#catalog.record(assetId) === undefined) {
+    const { access } = this.#project;
+    access.projectRights(account.role).require("share");
+    const record = this.#catalog.record(assetId);
+    if (
+      record === undefined ||
+      !access.opens(account.role, new AssetRoom(record.kind, assetId).toString())
+    ) {
       throw new UnknownAssetError(assetId);
     }
 

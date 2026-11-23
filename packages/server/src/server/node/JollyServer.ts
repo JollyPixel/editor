@@ -89,7 +89,9 @@ export class JollyServer implements AsyncDisposable {
     this.#http = http.createServer((request, response) => {
       backend.middleware(request, response, () => shell(request, response));
     });
-    backend.attach(this.#http);
+    backend.attach(this.#http, {
+      ownsUpgrades: true
+    });
   }
 
   async listen(

@@ -61,7 +61,7 @@ describe("ProjectFolder", () => {
     );
   });
 
-  test("skips folders without a project file and slugs that leave the folder", async() => {
+  test("skips folders without a project file, slugs leaving the folder and other cases", async() => {
     const folder = await projectsFolder("castle");
     await fs.mkdir(path.join(folder, "notes"));
     const projects = new ProjectFolder(folder);
@@ -69,6 +69,7 @@ describe("ProjectFolder", () => {
     assert.equal(await projects.resolve("notes"), null);
     assert.equal(await projects.resolve(".."), null);
     assert.equal(await projects.resolve("castle/.."), null);
+    assert.equal(await projects.resolve("CASTLE"), null);
     assert.deepEqual(
       (await projects.list()).map((entry) => entry.slug),
       ["castle"]

@@ -32,6 +32,7 @@ import {
   createShell,
   requestUpgrade
 } from "../../helpers/jollyServer.ts";
+import { requestStatus } from "../../helpers/rawRequest.ts";
 import { createShareLink } from "../../helpers/shares.ts";
 import {
   createTempDir,
@@ -113,16 +114,38 @@ describe("JollyServer", () => {
     assert.match(await page.text(), /<title>Compiled Voxel Map<\/title>/);
   });
 
-  test("upgrades a WebSocket only for an allowed host", async() => {
+  test("answers HTTP only for an allowed host", async() => {
+    await using server = await openServer();
+    const url = await server.listen(0, "127.0.0.1");
+
+    function status(
+      host: string
+    ): Promise<number | undefined> {
+      return requestStatus(url, {
+        method: "GET",
+        headers: {
+          host
+        },
+        body: ""
+      });
+    }
+
+    assert.equal(await status(PUBLIC_HOST), 200);
+    assert.equal(await status("elsewhere.example.com"), 403);
+  });
+
+  test("upgrades a WebSocket only for an allowed host on the socket path", async() => {
     await using server = await openServer();
     const url = await server.listen(0, "127.0.0.1");
 
     const allowed = await requestUpgrade(url, PUBLIC_HOST);
     allowed.socket?.destroy();
     const refused = await requestUpgrade(url, "elsewhere.example.com");
+    const elsewhere = await requestUpgrade(url, PUBLIC_HOST, "/elsewhere");
 
     assert.equal(allowed.status, 101);
     assert.equal(refused.status, 403);
+    assert.equal(elsewhere.status, 404);
   });
 
   test("closes while a WebSocket is still open", { timeout: 10_000 }, async() => {
