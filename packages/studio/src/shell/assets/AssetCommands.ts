@@ -51,20 +51,17 @@ export type ConflictQuestion = (
 export interface AssetCommandsOptions {
   catalog: AssetCommandCatalog;
   notifications: Notifier;
-  onError: (message: string) => void;
 }
 
 export class AssetCommands {
   #catalog: AssetCommandCatalog;
   #notifications: Notifier;
-  #onError: (message: string) => void;
 
   constructor(
     options: AssetCommandsOptions
   ) {
     this.#catalog = options.catalog;
     this.#notifications = options.notifications;
-    this.#onError = options.onError;
   }
 
   async create(
@@ -82,7 +79,7 @@ export class AssetCommands {
       );
     }
     catch (error) {
-      this.#onError(`Could not create "${path.stem}": ${errorMessage(error)}`);
+      this.#fail(`Could not create "${path.stem}": ${errorMessage(error)}`);
 
       return null;
     }
@@ -108,7 +105,7 @@ export class AssetCommands {
     );
   }
 
-  async importArchive(
+  async importIfArchive(
     file: DroppedFile,
     askConflicts: ConflictQuestion
   ): Promise<boolean> {
@@ -129,7 +126,7 @@ export class AssetCommands {
       ) {
         return false;
       }
-      this.#onError(`Could not import "${file.name}": ${errorMessage(error)}`);
+      this.#fail(`Could not import "${file.name}": ${errorMessage(error)}`);
     }
 
     return true;
@@ -144,7 +141,7 @@ export class AssetCommands {
       return true;
     }
     catch (error) {
-      this.#onError(`Could not create "${path.name}": ${errorMessage(error)}`);
+      this.#fail(`Could not create "${path.name}": ${errorMessage(error)}`);
 
       return false;
     }
@@ -160,7 +157,7 @@ export class AssetCommands {
     const failed = relocationAt(relocations, report.applied);
     for (const relocation of relocations) {
       if (report.failure !== undefined && relocation === failed) {
-        this.#onError(relocationFailure({
+        this.#fail(relocationFailure({
           verb,
           relocations,
           failed,
@@ -188,7 +185,7 @@ export class AssetCommands {
       { force: true }
     ));
     if (report.failure !== undefined) {
-      this.#onError(
+      this.#fail(
         removalFailure(
           deletion.targets,
           report.applied,
@@ -205,7 +202,7 @@ export class AssetCommands {
         await this.#catalog.removeFolder(folder.toString());
       }
       catch (error) {
-        this.#onError(`Could not delete "${folder.name}": ${errorMessage(error)}`);
+        this.#fail(`Could not delete "${folder.name}": ${errorMessage(error)}`);
       }
     }
   }
@@ -214,13 +211,13 @@ export class AssetCommands {
     asset: AssetLeafData,
     file: DroppedFile,
     entry: AssetKindEntry | undefined
-  ): Promise<boolean> {
+  ): Promise<void> {
     const { name, extension } = asset.path;
     const sameFormat = file.name.toLowerCase().endsWith(extension.toLowerCase());
     if (!sameFormat && entry?.convertsFrom?.includes(file.format) !== true) {
-      this.#onError(`Could not replace "${name}" with "${file.name}": it is not a ${extension} file`);
+      this.#fail(`Could not replace "${name}" with "${file.name}": it is not a ${extension} file`);
 
-      return false;
+      return;
     }
 
     const replacing = this.#notifications.notify({
@@ -236,8 +233,6 @@ export class AssetCommands {
         tone: "success",
         title: `Replaced "${name}"`
       });
-
-      return true;
     }
     catch (error) {
       replacing.update({
@@ -245,8 +240,6 @@ export class AssetCommands {
         title: `Could not replace "${name}"`,
         message: errorMessage(error)
       });
-
-      return false;
     }
   }
 
@@ -261,8 +254,17 @@ export class AssetCommands {
       ).save();
     }
     catch (error) {
-      this.#onError(`Could not export "${asset.path.name}": ${errorMessage(error)}`);
+      this.#fail(`Could not export "${asset.path.name}": ${errorMessage(error)}`);
     }
+  }
+
+  #fail(
+    title: string
+  ): void {
+    this.#notifications.notify({
+      tone: "error",
+      title
+    });
   }
 
   async #import(
@@ -307,7 +309,7 @@ export class AssetCommands {
     }
     catch (error) {
       const doing = verb === "rename" ? "renaming" : "moving";
-      this.#onError(
+      this.#fail(
         `Could not finish ${doing} "${relocation.from.name}": ${errorMessage(error)}`
       );
     }

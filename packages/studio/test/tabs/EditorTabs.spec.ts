@@ -74,16 +74,15 @@ describe("EditorTabs", () => {
     assert.equal(strip.value, "model-1");
   });
 
-  test("starts on a fixed home tab that is not closable", () => {
-    const { tabs, strip, home } = harness();
-    const [item] = strip.children;
+  test("starts on the home tab it was given, which cannot close", () => {
+    const { tabs, strip, home, homeTab } = harness();
 
+    assert.equal(strip.firstElementChild, homeTab);
     assert.equal(tabs.active, HOME_TAB_ID);
     assert.equal(strip.value, HOME_TAB_ID);
     assert.equal(home.hidden, false);
-    assert.equal(Reflect.get(item, "fixed"), true);
-    assert.notEqual(Reflect.get(item, "closable"), true);
     assert.equal(tabs.close(HOME_TAB_ID), false);
+    assert.equal(strip.firstElementChild, homeTab);
     assert.deepEqual(tabs.ids(), []);
   });
 

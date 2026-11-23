@@ -21,7 +21,6 @@ import {
   supportsOfflinePlay
 } from "../play/offline/registerPlayWorker.ts";
 import { OfflineGameSettings } from "../project/OfflineGameSettings.ts";
-import { createStudioSeed } from "../../shared/seed.ts";
 import type { StudioConnection } from "./StudioConnection.ts";
 
 // CONSTANTS
@@ -34,7 +33,7 @@ export async function connect(): Promise<StudioConnection> {
     project: async() => {
       return {
         handlers: createHandlers(),
-        seed: await loadSeed(),
+        seed: loadSeed,
         serve: (assets) => new OfflinePlayHost({
           backend: assets,
           settings: game,
@@ -70,5 +69,10 @@ async function load(
 }
 
 async function loadSeed(): Promise<AssetSeedMap> {
-  return createStudioSeed(await load(kBlocksetUrl));
+  const [{ createStudioSeed }, blockset] = await Promise.all([
+    import("../../shared/seed.ts"),
+    load(kBlocksetUrl)
+  ]);
+
+  return createStudioSeed(blockset);
 }

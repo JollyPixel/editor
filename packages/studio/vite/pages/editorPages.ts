@@ -2,7 +2,10 @@
 import path from "node:path";
 
 // Import Third-party Dependencies
-import type { Plugin } from "vite";
+import type {
+  Plugin,
+  ViteDevServer
+} from "vite";
 
 // Import Internal Dependencies
 import type { EditorPageFiles } from "./EditorPageFiles.ts";
@@ -26,17 +29,41 @@ export interface EditorPagesPluginOptions {
   shellPages?: Iterable<string>;
 }
 
+export interface EditorPagesApi {
+  served(
+    server: ViteDevServer
+  ): ServedPages;
+}
+
+export interface EditorPagesPlugin extends Plugin<EditorPagesApi> {
+  api: EditorPagesApi;
+}
+
 export function editorPages(
   pages: EditorPageFiles,
   options: EditorPagesPluginOptions = {}
-): Plugin {
+): EditorPagesPlugin {
   const { shellPages = [] } = options;
   let outDir: string;
   let watcher: EditorPagesWatcher | null = null;
   const inputs = new Map<string, PageInput>();
+  const served = new WeakMap<ViteDevServer, ServedPages>();
+
+  const api: EditorPagesApi = {
+    served(server) {
+      let current = served.get(server);
+      if (current === undefined) {
+        current = new ServedPages(server, inputs.values());
+        served.set(server, current);
+      }
+
+      return current;
+    }
+  };
 
   return {
     name: "studio-editor-pages",
+    api,
     config(config, env) {
       const root = path.resolve(config.root ?? "");
       const compiled = [
@@ -95,7 +122,7 @@ export function editorPages(
     ...virtualPages(inputs),
     configureServer(server) {
       server.middlewares.use(
-        new ServedPages(server, inputs.values()).middleware
+        api.served(server).middleware
       );
       server.middlewares.use(
         pages.middleware

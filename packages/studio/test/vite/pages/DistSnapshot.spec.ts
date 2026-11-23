@@ -16,11 +16,11 @@ import {
 } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { DistSnapshot } from "../../vite/DistSnapshot.ts";
+import { DistSnapshot } from "../../../vite/pages/DistSnapshot.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 // CONSTANTS
 const kBuiltAt = new Date("2026-01-01T00:00:00.000Z");

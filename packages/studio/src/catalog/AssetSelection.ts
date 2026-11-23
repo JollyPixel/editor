@@ -5,41 +5,6 @@ import type {
   AssetTreeModel
 } from "./AssetTreeModel.ts";
 
-// CONSTANTS
-const kNewAssetActionPrefix = "new-asset:";
-
-export const ASSET_ACTIONS = [
-  "open",
-  "new-folder",
-  "rename",
-  "replace",
-  "export",
-  "share",
-  "delete"
-] as const;
-
-export type AssetAction = typeof ASSET_ACTIONS[number];
-
-export function isAssetAction(
-  id: string
-): id is AssetAction {
-  return ASSET_ACTIONS.some((action) => action === id);
-}
-
-export function newAssetAction(
-  kind: string
-): string {
-  return `${kNewAssetActionPrefix}${kind}`;
-}
-
-export function parseNewAssetKind(
-  id: string
-): string | null {
-  return id.startsWith(kNewAssetActionPrefix) ?
-    id.slice(kNewAssetActionPrefix.length) :
-    null;
-}
-
 export class AssetSelection {
   readonly nodeIds: readonly string[];
   readonly asset: AssetLeafData | null;
@@ -69,23 +34,5 @@ export class AssetSelection {
 
   get isEmpty(): boolean {
     return this.nodeIds.length === 0;
-  }
-
-  allows(
-    action: AssetAction
-  ): boolean {
-    switch (action) {
-      case "open":
-      case "replace":
-      case "export":
-      case "share":
-        return this.asset !== null;
-      case "rename":
-        return this.nodeIds.length === 1;
-      case "delete":
-        return !this.isEmpty;
-      default:
-        return true;
-    }
   }
 }

@@ -2,11 +2,11 @@
 import type { AssetPreview } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
-import type { PreviewSource } from "../shell/assets/AssetPreviewCache.ts";
 import {
   PREVIEW_IMAGE_TYPE,
   parsePreviewReply,
-  type PreviewRequest
+  type PreviewRequest,
+  type PreviewSource
 } from "./protocol.ts";
 
 // CONSTANTS

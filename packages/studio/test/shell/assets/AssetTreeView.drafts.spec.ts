@@ -37,7 +37,7 @@ describe("AssetTreeView drafts", () => {
 
     assert.equal(draft, "New voxel map.voxelmap.json");
     assert.equal(listedWhileNaming, 1);
-    assert.ok(view.expanded.has(folderNodeId(AssetPath.parse("maps"))));
+    assert.ok(view.expanded.includes(folderNodeId(AssetPath.parse("maps"))));
     assert.equal(catalog.byId.get("created-1")?.path, "maps/world.voxelmap.json");
     assert.deepEqual(revealed, [assetNodeId("created-1")]);
     assert.deepEqual(view.selected, [assetNodeId("created-1")]);

@@ -18,19 +18,31 @@ import {
   STUDIO_ROOT,
   studioBackendFiles
 } from "../node/studioFiles.ts";
-import { DevPlayer } from "./DevPlayer.ts";
+import { DevPlayer } from "./player/DevPlayer.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
-import { playerArchive } from "./offlinePlay.ts";
-import { PageInput } from "./PageInput.ts";
-import { playerModules } from "./playerModules.ts";
-import { projectContributions } from "./projectContributions.ts";
-import { ServedPages } from "./ServedPages.ts";
+import type { EditorPagesApi } from "./pages/editorPages.ts";
+import { playerArchive } from "./player/offlinePlay.ts";
+import { playerModules } from "./player/modules.ts";
+import { projectContributions } from "./project/contributions.ts";
+
+export interface BackendPluginOptions {
+  project: Project;
+  mode: RunMode;
+  settings: ServerSettings;
+  /**
+   * Serves the editor pages and renders the play page this back-end answers.
+   */
+  pages: EditorPagesApi;
+}
 
 export function backend(
-  project: Project,
-  mode: RunMode,
-  settings: ServerSettings
+  options: BackendPluginOptions
 ): Plugin {
+  const {
+    project,
+    mode,
+    settings
+  } = options;
   let opened: ServerBackend | null = null;
 
   return {
@@ -39,10 +51,7 @@ export function backend(
     async configureServer(server) {
       const hosting = settings.hosting(STUDIO_ROOT);
       const { root } = server.config;
-      const pages = new ServedPages(server, [
-        ...PageInput.editors(root, project.editors),
-        PageInput.shell(root, PLAY_PAGE_DIR)
-      ]);
+      const pages = options.pages.served(server);
       const player = new DevPlayer({
         root,
         plugins: [
@@ -67,7 +76,7 @@ export function backend(
           ...await studioBackendFiles(player),
           editorPages: pages,
           playPage: {
-            html: () => pages.render(PLAY_PAGE_DIR)
+            html: pages.claim(PLAY_PAGE_DIR)
           },
           allowedHosts: server.config.server.allowedHosts
         }

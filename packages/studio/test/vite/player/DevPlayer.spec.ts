@@ -18,11 +18,11 @@ import {
 } from "vite";
 
 // Import Internal Dependencies
-import { DevPlayer } from "../../vite/DevPlayer.ts";
+import { DevPlayer } from "../../../vite/player/DevPlayer.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 // CONSTANTS
 const kPage = [

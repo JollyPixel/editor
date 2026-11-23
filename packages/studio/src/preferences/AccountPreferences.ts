@@ -35,12 +35,6 @@ export interface AccountPreferencesOptions {
 }
 
 export class AccountPreferences implements Disposable {
-  static async load(
-    options: AccountPreferencesOptions
-  ): Promise<AccountPreferences> {
-    return new AccountPreferences(await options.client.list(), options);
-  }
-
   readonly preferences: Preferences;
 
   #accountId: string;

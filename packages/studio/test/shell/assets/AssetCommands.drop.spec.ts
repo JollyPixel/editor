@@ -71,13 +71,13 @@ describe("AssetCommands dropped files", () => {
     const dismissed = commandsFailingAt(-1, { plan: importPlan(2) });
     const asked: number[] = [];
 
-    await fresh.commands.importArchive(droppedFile("pack.zip"), async() => "copy");
-    await live.commands.importArchive(droppedFile("pack.zip"), async(plan) => {
+    await fresh.commands.importIfArchive(droppedFile("pack.zip"), async() => "copy");
+    await live.commands.importIfArchive(droppedFile("pack.zip"), async(plan) => {
       asked.push(plan.live.length);
 
       return "replace";
     });
-    await dismissed.commands.importArchive(droppedFile("pack.zip"), async() => null);
+    await dismissed.commands.importIfArchive(droppedFile("pack.zip"), async() => null);
 
     assert.deepEqual(fresh.imports, ["keep"]);
     assert.deepEqual(live.imports, ["replace"]);
@@ -92,11 +92,11 @@ describe("AssetCommands dropped files", () => {
     });
 
     assert.equal(
-      await refused.commands.importArchive(droppedFile("photos.zip"), async() => "keep"),
+      await refused.commands.importIfArchive(droppedFile("photos.zip"), async() => "keep"),
       false
     );
     assert.equal(
-      await offline.commands.importArchive(droppedFile("pack.zip"), async() => "keep"),
+      await offline.commands.importIfArchive(droppedFile("pack.zip"), async() => "keep"),
       true
     );
 
@@ -118,7 +118,7 @@ describe("AssetCommands dropped files", () => {
       ]
     });
 
-    await commands.importArchive(droppedFile("pack.zip"), async() => "keep");
+    await commands.importIfArchive(droppedFile("pack.zip"), async() => "keep");
 
     assert.deepEqual(errors, []);
     assert.deepEqual(readChips(notifications), [

@@ -11,6 +11,10 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import {
+  createRef,
+  ref
+} from "lit/directives/ref.js";
 import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 import type { CatalogShare } from "@jolly-pixel/editor.host";
 import {
@@ -18,6 +22,7 @@ import {
   NotificationQueue
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/notifications";
+import "@jolly-pixel/ui/elements/tab";
 import "@jolly-pixel/ui/elements/tabs";
 import "@jolly-pixel/ui/elements/toolbar";
 import { errorMessage } from "@jolly-pixel/utils";
@@ -41,6 +46,7 @@ import type { SettingsOpenEvent } from "./settings/SettingsOpenEvent.ts";
 import type { StudioPlay } from "../play/StudioPlay.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
+import { HOME_TAB_ID } from "../tabs/EditorTabs.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
 import { StudioAgentChat } from "../golem/StudioAgentChat.ts";
 import { CatalogPresence } from "../catalog/CatalogPresence.ts";
@@ -274,6 +280,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
   #presence: CatalogPresence | null = null;
   #scopes: PreferenceScopes | null = null;
   #browserState = new BrowserState();
+  #homeTab = createRef<HTMLElementTagNameMap["jolly-tab"]>();
   #settingsPage = new LazyTemplate(
     this,
     () => import("./settings/StudioSettings.ts")
@@ -299,8 +306,10 @@ export class Studio extends LitElement implements GolemConsoleHost {
     options: StudioOptions
   ): Promise<void> {
     await this.updateComplete;
+    const homeTab = this.#homeTab.value;
     if (
       this._strip === null ||
+      homeTab === undefined ||
       this._frames === null ||
       this._home === null ||
       this._settings === null
@@ -314,11 +323,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
     const session = new StudioSession({
       catalog,
       share,
-      user: user.online ? user : {
-        identity: null,
-        preferences: user.preferences,
-        renewal: null
-      },
+      user,
       scopes: options.scopes,
       editors: options.editors,
       console: options.console,
@@ -326,6 +331,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
       confirmClose: options.confirmClose,
       slots: {
         strip: this._strip,
+        homeTab,
         frames: this._frames,
         home: this._home,
         settings: this._settings
@@ -333,7 +339,6 @@ export class Studio extends LitElement implements GolemConsoleHost {
       browserState: this.#browserState,
       notifications: this.#notifications,
       onTabsChange: this.#onTabsChange,
-      projectSettings: user.online ? user.project : undefined,
       play: user.playTarget === null ?
         undefined :
         {
@@ -352,23 +357,25 @@ export class Studio extends LitElement implements GolemConsoleHost {
     this._sections = options.settings;
     this.#user.attach(user);
     this._agentChat?.dispose();
-    this._agentChat = user.online ?
-      StudioAgentChat.join(
+    this.#presence?.dispose();
+    if (user.online) {
+      this._agentChat = StudioAgentChat.join(
         user.client,
         this.#notifications,
         user.agentTokens
-      ) :
-      null;
-    this.#presence?.dispose();
-    this.#presence = user.online ?
-      new CatalogPresence(user.client.room(CATALOG_ROOM)) :
-      null;
+      );
+      this.#presence = new CatalogPresence(user.client.room(CATALOG_ROOM));
+    }
+    else {
+      this._agentChat = null;
+      this.#presence = null;
+    }
     this._assets = {
       catalog,
       kinds: session.kinds,
-      kindFilter: user.online ? user.project : null,
+      kindFilter: user.project,
       presence: this.#presence,
-      shares: user.online ? user.shares : null,
+      shares: user.shares,
       browserState: this.#browserState,
       notifications: this.#notifications,
       previews: session.previews
@@ -439,14 +446,24 @@ export class Studio extends LitElement implements GolemConsoleHost {
 
   override render(): TemplateResult {
     const user = this.#user.current;
-    const account = user?.online ? user.account : null;
+    const account = user?.account ?? null;
 
     return html`
       <header id="studio-header">
-        <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
+        <jolly-tabs id="editor-tabs" reorderable value=${HOME_TAB_ID}>
+          <jolly-tab
+            ${ref(this.#homeTab)}
+            value=${HOME_TAB_ID}
+            label="Home"
+            icon="home"
+            icon-only
+            fixed
+          ></jolly-tab>
+        </jolly-tabs>
         <jolly-toolbar id="studio-actions" label="Studio actions">
           <studio-play-button
             .play=${this._play}
+            ?pending=${this._assets === null}
             @settings-open=${this.#openSettings}
           ></studio-play-button>
           <div class="divider" role="separator"></div>

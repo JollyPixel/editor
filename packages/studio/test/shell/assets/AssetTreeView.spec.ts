@@ -55,9 +55,25 @@ describe("AssetTreeView", () => {
     view.refresh();
 
     assert.ok(view.model.has(world));
-    assert.ok(view.expanded.has(world));
+    assert.ok(view.expanded.includes(world));
     assert.deepEqual(view.selected, [world]);
     assert.ok(browserState.expandedFolders.has(world));
+  });
+
+  test("hands the tree the same expanded list until a folder toggles", () => {
+    const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
+    const { view } = treeView(catalog);
+    const maps = folderNodeId(AssetPath.parse("maps"));
+    view.toggle(maps, true);
+    const expanded = view.expanded;
+
+    view.select([assetNodeId(MAP_RECORD.id)]);
+    catalog.change();
+    view.refresh();
+
+    assert.equal(view.expanded, expanded);
+    view.toggle(maps, false);
+    assert.deepEqual(view.expanded, []);
   });
 
   test("asks once per convertible format and adds the dropped files in the folder", async() => {
@@ -94,7 +110,7 @@ describe("AssetTreeView", () => {
         "maps/tiles.pixelart"
       ]
     );
-    assert.ok(view.expanded.has(folderNodeId(AssetPath.parse("maps"))));
+    assert.ok(view.expanded.includes(folderNodeId(AssetPath.parse("maps"))));
     assert.deepEqual(errors, []);
     assert.deepEqual(readChips(notifications), ["success Added 4 files"]);
   });
@@ -219,7 +235,7 @@ describe("AssetTreeView actions", () => {
 
   test("replaces an asset with a file of its format or one its kind converts, refusing others", async() => {
     const catalog = new FakeTreeCatalog([MAP_RECORD, MODEL_RECORD], ["maps"]);
-    const { view, prompted, errors, notifications } = treeView(catalog, {
+    const { view, prompted, notifications } = treeView(catalog, {
       picks: [
         new File(["json"], "Hero.VoxelModel.json"),
         new File(["vox"], "tree.vox"),
@@ -239,10 +255,9 @@ describe("AssetTreeView actions", () => {
       { assetId: MODEL_RECORD.id, content: "json", from: undefined },
       { assetId: MODEL_RECORD.id, content: "vox", from: ".vox" }
     ]);
-    assert.deepEqual(errors, [
-      "Could not replace \"hero.voxelmodel.json\" with \"notes.txt\": it is not a .voxelmodel.json file"
-    ]);
     assert.deepEqual(readChips(notifications), [
+      "error Could not replace \"hero.voxelmodel.json\" with \"notes.txt\": " +
+      "it is not a .voxelmodel.json file",
       "success Replaced \"hero.voxelmodel.json\": with \"tree.vox\"",
       "success Replaced \"hero.voxelmodel.json\": with \"Hero.VoxelModel.json\""
     ]);

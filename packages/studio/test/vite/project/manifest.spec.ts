@@ -29,11 +29,11 @@ import {
 } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { projectManifest } from "../../vite/projectManifest.ts";
+import { projectManifest } from "../../../vite/project/manifest.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 // CONSTANTS
 const kManifest = {

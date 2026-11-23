@@ -11,15 +11,16 @@ import type { ContextMenuEntry } from "@jolly-pixel/ui";
 // Import Internal Dependencies
 import { AssetKindSet } from "../../../src/catalog/AssetKindSet.ts";
 import { AssetPath } from "../../../src/catalog/AssetPath.ts";
-import {
-  AssetSelection,
-  parseNewAssetKind
-} from "../../../src/catalog/AssetSelection.ts";
+import { AssetSelection } from "../../../src/catalog/AssetSelection.ts";
 import {
   assetNodeId,
   folderNodeId
 } from "../../../src/catalog/AssetTreeModel.ts";
-import { assetMenu } from "../../../src/shell/assets/assetMenu.ts";
+import { AssetActions } from "../../../src/shell/assets/AssetActions.ts";
+import {
+  assetMenu,
+  parseNewAssetKind
+} from "../../../src/shell/assets/assetMenu.ts";
 import { createCompanionModel } from "../../helpers/assetTree.ts";
 
 // CONSTANTS
@@ -75,7 +76,11 @@ function buildMenu(
   nodeIds: readonly string[],
   sharing = false
 ): ContextMenuEntry[] {
-  return assetMenu(new AssetSelection(kModel, nodeIds), kKinds, sharing);
+  return assetMenu(
+    new AssetSelection(kModel, nodeIds),
+    kKinds,
+    new AssetActions({ sharing })
+  );
 }
 
 describe("assetMenu", () => {

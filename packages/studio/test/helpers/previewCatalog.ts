@@ -3,7 +3,7 @@ import type { AssetPreview } from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import type { AssetPreviewTarget } from "../../src/catalog/AssetSummary.ts";
-import type { PreviewSource } from "../../src/shell/assets/AssetPreviewCache.ts";
+import type { PreviewSource } from "../../src/preview/protocol.ts";
 
 interface PendingPreview {
   readonly assetId: string;

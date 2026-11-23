@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import * as z from "zod/mini";
+import type { AssetPreview } from "@jolly-pixel/asset-server/client";
 
 // CONSTANTS
 export const PREVIEW_TARGET = "asset-preview";
@@ -31,6 +32,12 @@ const kReplySchema = z.discriminatedUnion("type", [
 export type PreviewRequests = z.output<typeof kRequestsSchema>;
 export type PreviewRequest = z.output<typeof kRequestSchema>;
 export type PreviewReply = z.output<typeof kReplySchema>;
+
+export interface PreviewSource {
+  preview(
+    assetId: string
+  ): Promise<AssetPreview | null>;
+}
 
 export function parsePreviewRequests(
   data: unknown

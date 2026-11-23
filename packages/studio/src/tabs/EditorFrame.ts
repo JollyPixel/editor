@@ -29,10 +29,12 @@ export class EditorFrame {
     this.#origin = options.origin;
   }
 
-  owns(
-    source: MessageEventSource | null
+  accepts(
+    event: MessageEvent
   ): boolean {
-    return source !== null && this.element.contentWindow === source;
+    return event.source !== null &&
+      event.source === this.element.contentWindow &&
+      event.origin === this.#origin;
   }
 
   launch(

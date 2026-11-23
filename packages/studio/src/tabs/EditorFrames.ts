@@ -74,7 +74,6 @@ export class EditorFrames {
   #notifications: FrameNotifications;
   #logger: HostLogger;
   #frames = new Map<string, EditorFrame>();
-  #unsentReveals = new Map<string, string>();
   #listening = new AbortController();
 
   constructor(
@@ -131,13 +130,7 @@ export class EditorFrames {
     id: string,
     key: string
   ): void {
-    const frame = this.#frames.get(id);
-    if (frame === undefined) {
-      this.#unsentReveals.set(id, key);
-    }
-    else {
-      frame.reveal(key);
-    }
+    this.#frames.get(id)?.reveal(key);
   }
 
   notifySessionRenewed(): void {
@@ -157,7 +150,6 @@ export class EditorFrames {
   remove(
     id: string
   ): void {
-    this.#unsentReveals.delete(id);
     this.#notifications.release(id);
     this.#frames.get(id)?.dispose();
     this.#frames.delete(id);
@@ -182,19 +174,12 @@ export class EditorFrames {
     element.src = tab.url;
     this.#container.append(element);
 
-    const frame = new EditorFrame({
+    return new EditorFrame({
       id: tab.id,
       element,
       reads: this.#scopes.readBy(tab.editor),
       origin: this.#launchOrigin
     });
-    const reveal = this.#unsentReveals.get(tab.id);
-    if (reveal !== undefined) {
-      this.#unsentReveals.delete(tab.id);
-      frame.reveal(reveal);
-    }
-
-    return frame;
   }
 
   #launch(
@@ -239,7 +224,7 @@ export class EditorFrames {
     event: MessageEvent
   ): void => {
     const frame = [...this.#frames.values()].find(
-      (candidate) => candidate.owns(event.source)
+      (candidate) => candidate.accepts(event)
     );
     if (frame === undefined) {
       return;

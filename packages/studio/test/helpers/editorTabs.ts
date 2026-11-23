@@ -12,8 +12,10 @@ import { EditorFrames } from "../../src/tabs/EditorFrames.ts";
 import { idleShare } from "./catalogShare.ts";
 import {
   EditorTabs,
+  HOME_TAB_ID,
   type EditorTab,
-  type EditorTabsOptions
+  type EditorTabsOptions,
+  type TabItem
 } from "../../src/tabs/EditorTabs.ts";
 
 // CONSTANTS
@@ -43,6 +45,7 @@ interface Harness {
   strip: HTMLElement & { value: string; };
   frames: HTMLElement;
   home: HTMLElement;
+  homeTab: TabItem;
   page: HTMLElement;
   itemValues(): string[];
   tabStatus(id: string): string;
@@ -61,6 +64,7 @@ export function harness(
   const frames = document.createElement("div");
   const home = document.createElement("section");
   const page = document.createElement("section");
+  const homeTab = createHomeTab();
   document.body.append(strip, frames, home, page);
   const editorFrames = new EditorFrames({
     container: frames,
@@ -73,6 +77,7 @@ export function harness(
     strip,
     frames: editorFrames,
     home,
+    homeTab,
     pages: [
       {
         id: PAGE_ID,
@@ -93,6 +98,7 @@ export function harness(
     strip,
     frames,
     home,
+    homeTab,
     page,
     itemValues: () => [...strip.children].map(
       (item) => String(Reflect.get(item, "value"))
@@ -117,6 +123,12 @@ export function harness(
   };
 
   return current;
+}
+
+export function createHomeTab(): TabItem {
+  return Object.assign(document.createElement("jolly-tab"), {
+    value: HOME_TAB_ID
+  });
 }
 
 export function disposeHarness(): void {

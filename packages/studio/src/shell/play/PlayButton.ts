@@ -71,6 +71,9 @@ export class PlayButton extends LitElement {
   @property({ attribute: false })
   declare play: StudioPlay | null;
 
+  @property({ type: Boolean })
+  declare pending: boolean;
+
   @query("jolly-context-menu")
   declare _menu: HTMLElementTagNameMap["jolly-context-menu"] | null;
 
@@ -79,6 +82,7 @@ export class PlayButton extends LitElement {
   constructor() {
     super();
     this.play = null;
+    this.pending = false;
   }
 
   override disconnectedCallback(): void {
@@ -99,10 +103,14 @@ export class PlayButton extends LitElement {
         { signal: this.#listening.signal }
       );
     }
-    this.hidden = this.#target() === null;
+    this.hidden = !this.pending && this.#target() === null;
   }
 
   override render(): TemplateResult | typeof nothing {
+    if (this.pending) {
+      return pendingButtons();
+    }
+
     const play = this.play;
     const target = this.#target();
     if (play === null || target === null) {
@@ -179,6 +187,24 @@ export class PlayButton extends LitElement {
         break;
     }
   };
+}
+
+function pendingButtons(): TemplateResult {
+  return html`
+    <jolly-button data-action="play" variant="success" disabled>
+      <jolly-icon name="play"></jolly-icon>
+      <span>Play</span>
+    </jolly-button>
+    <jolly-button
+      data-action="play-menu"
+      variant="success"
+      icon-only
+      label="Play options"
+      disabled
+    >
+      <jolly-icon name="chevron"></jolly-icon>
+    </jolly-button>
+  `;
 }
 
 function playMenu(

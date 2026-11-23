@@ -17,7 +17,7 @@ import {
   GAME_CHANGE,
   type StudioProjectSettings
 } from "../project/StudioProjectSettings.ts";
-import type { StudioCatalog } from "../shell/StudioSession.ts";
+import type { StudioCatalog } from "../catalog/StudioCatalog.ts";
 
 // CONSTANTS
 export const PLAY_CHANGE = "play-change";

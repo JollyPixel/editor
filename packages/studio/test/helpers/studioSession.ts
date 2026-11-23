@@ -12,12 +12,13 @@ import { PreferenceScopes } from "@jolly-pixel/server";
 import { SHELL_PREFERENCES } from "../../shared/preferences.ts";
 import { EditorRegistry } from "../../src/editors/EditorRegistry.ts";
 import { BrowserState } from "../../src/browser/BrowserState.ts";
+import type { StudioCatalog } from "../../src/catalog/StudioCatalog.ts";
 import {
   StudioSession,
-  type StudioCatalog,
   type StudioSessionOptions
 } from "../../src/shell/StudioSession.ts";
 import { idleShare } from "./catalogShare.ts";
+import { createHomeTab } from "./editorTabs.ts";
 
 // CONSTANTS
 export const MAP_RECORD: AssetRecordData = {
@@ -106,7 +107,8 @@ export function session(
     user: {
       identity: null,
       preferences: new Preferences(),
-      renewal: null
+      renewal: null,
+      project: null
     },
     scopes: new PreferenceScopes(SHELL_PREFERENCES, []),
     launchOrigin: "http://localhost",
@@ -114,6 +116,7 @@ export function session(
       strip,
       frames,
       home,
+      homeTab: createHomeTab(),
       settings
     },
     cap,

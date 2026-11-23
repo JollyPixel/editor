@@ -43,15 +43,21 @@ export class ServedPages implements EditorPageSource {
       this.#compile(input);
   }
 
-  async render(
+  claim(
     route: string
-  ): Promise<string> {
+  ): () => Promise<string> {
     const input = this.#inputs.get(route);
     if (input === undefined) {
       throw new Error(`No studio page is served at "/${route}/".`);
     }
 
-    return this.#compile(input);
+    for (const [url, served] of this.#urls) {
+      if (served === input) {
+        this.#urls.delete(url);
+      }
+    }
+
+    return () => this.#compile(input);
   }
 
   readonly middleware: Connect.NextHandleFunction = (

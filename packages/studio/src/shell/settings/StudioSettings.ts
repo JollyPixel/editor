@@ -19,11 +19,7 @@ import {
 import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/tab";
 import "@jolly-pixel/ui/elements/tabs";
-import type {
-  GameSection,
-  PhysicsSection,
-  PreferenceScopes
-} from "@jolly-pixel/server";
+import type { PreferenceScopes } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
@@ -33,10 +29,6 @@ import {
 } from "../../accounts/StudioUser.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
-import {
-  OFFLINE_GAME_CHANGE,
-  type OfflineGameSettings
-} from "../../project/OfflineGameSettings.ts";
 import type { ProjectDrafts } from "../../project/ProjectDrafts.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { cardStyles } from "../cardStyles.ts";
@@ -60,6 +52,7 @@ import "./project/ProjectGeneral.ts";
 import "./project/ProjectKindPackage.ts";
 import "./project/ProjectNewAccounts.ts";
 import "./project/ProjectSnapshot.ts";
+import "./project/OfflineGame.ts";
 
 // CONSTANTS
 const kWideKinds: ReadonlySet<SettingsSection["kind"]> = new Set([
@@ -69,7 +62,7 @@ const kWideKinds: ReadonlySet<SettingsSection["kind"]> = new Set([
 
 type ProjectSection = Exclude<
   SettingsSection,
-  { kind: "account" | "preferences"; }
+  { kind: "account" | "preferences" | "offline-game"; }
 >;
 
 @customElement("studio-settings")
@@ -202,10 +195,6 @@ export class StudioSettings extends LitElement {
 
   #user = new ChangeController<StudioUser>(this, STUDIO_USER_CHANGE);
   #project = new ProjectSettingsController(this);
-  #offlineGame = new ChangeController<OfflineGameSettings>(
-    this,
-    OFFLINE_GAME_CHANGE
-  );
   #visited = new Map<string, string>();
 
   constructor() {
@@ -223,11 +212,8 @@ export class StudioSettings extends LitElement {
     if (user !== null) {
       this.#user.attach(user);
     }
-    if (user?.online) {
+    if (user?.project) {
       this.#project.attach(user.project);
-    }
-    else if (user !== null) {
-      this.#offlineGame.attach(user.game);
     }
   }
 
@@ -395,7 +381,7 @@ export class StudioSettings extends LitElement {
       case "account":
         return html`
           <studio-account-settings
-            .account=${user?.online ? user.account : null}
+            .account=${user?.account ?? null}
             .preferences=${user?.preferences ?? null}
             .scopes=${this.scopes}
           ></studio-account-settings>
@@ -409,50 +395,21 @@ export class StudioSettings extends LitElement {
             .preferences=${user?.preferences ?? null}
           ></studio-preferences-page>
         `;
+      case "offline-game":
+        return html`
+          <studio-offline-game
+            .settings=${user?.online === false ? user.game : null}
+            .catalog=${this.catalog}
+          ></studio-offline-game>
+        `;
       default:
-        if (user?.online) {
-          return this.#projectContent(section, user);
-        }
-
-        return user !== null && section.kind === "general" ?
-          this.#gameFields(user.game.game, user.game.physics, false) :
-          nothing;
+        return user?.online ? this.#projectContent(section, user) : nothing;
     }
-  }
-
-  #gameFields(
-    game: GameSection | null,
-    physics: PhysicsSection | null,
-    disabled: boolean
-  ): TemplateResult {
-    return html`
-      <studio-project-game
-        .value=${game}
-        .catalog=${this.catalog}
-        ?disabled=${disabled}
-      ></studio-project-game>
-      <studio-project-physics
-        .value=${physics}
-        ?disabled=${disabled}
-      ></studio-project-physics>
-    `;
   }
 
   readonly #onEdit = (
     event: HTMLElementEventMap["settings-edit"]
   ): void => {
-    const user = this.#user.current;
-    if (user?.online === false) {
-      if (event.edits("game")) {
-        user.game.update({ game: event.value });
-      }
-      else if (event.edits("physics")) {
-        user.game.update({ physics: event.value });
-      }
-
-      return;
-    }
-
     this.#project.current?.drafts.edit(event.section, event.value);
   };
 
@@ -488,11 +445,15 @@ export class StudioSettings extends LitElement {
               .roster=${user.roster}
             ></studio-project-new-accounts>
           ` : nothing}
-          ${this.#gameFields(
-            drafts.section("game").current,
-            drafts.section("physics").current,
-            disabled
-          )}
+          <studio-project-game
+            .value=${drafts.section("game").current}
+            .catalog=${this.catalog}
+            ?disabled=${disabled}
+          ></studio-project-game>
+          <studio-project-physics
+            .value=${drafts.section("physics").current}
+            ?disabled=${disabled}
+          ></studio-project-physics>
           <studio-project-snapshot
             .value=${drafts.section("snapshot").current}
             ?disabled=${disabled}

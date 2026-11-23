@@ -21,16 +21,16 @@ import {
 import {
   EDITOR_PAGE_REBUILT_EVENT,
   type EditorPageRebuilt
-} from "../../shared/editorPageRebuilt.ts";
+} from "../../../shared/editorPageRebuilt.ts";
 import {
   EDITOR_PAGE_SETTLE_MS,
   EditorPagesWatcher,
   type EditorPagesServer
-} from "../../vite/EditorPagesWatcher.ts";
+} from "../../../vite/pages/EditorPagesWatcher.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 // CONSTANTS
 const kBuiltAt = new Date("2026-01-01T00:00:00.000Z");

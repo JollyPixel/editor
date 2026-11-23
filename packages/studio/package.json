@@ -26,6 +26,7 @@
     "perf:open": "node perf/open/measure.ts",
     "perf:ab": "node perf/open/ab.ts",
     "perf:summary": "node perf/open/summarize.ts",
+    "perf:boot": "node perf/boot/measure.ts",
     "typecheck": "tsc --noEmit -p test/tsconfig.json && tsc --noEmit -p node/tsconfig.json && tsc --noEmit -p shared/tsconfig.json && tsc --noEmit -p vite/tsconfig.json && tsc --noEmit -p perf/tsconfig.json",
     "lint": "oxlint src shared node test vite perf vite.config.ts && pnpm run lint:css",
     "lint:css": "stylelint \"public/**/*.css\" --cache"

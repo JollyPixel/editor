@@ -16,6 +16,7 @@ import type { PreferenceScopes } from "@jolly-pixel/server";
 // Import Internal Dependencies
 import type { AssetKindSet } from "../catalog/AssetKindSet.ts";
 import { AssetPath } from "../catalog/AssetPath.ts";
+import type { StudioCatalog } from "../catalog/StudioCatalog.ts";
 import type { EditorRegistry } from "../editors/EditorRegistry.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
 import {
@@ -27,6 +28,7 @@ import {
   type EditorTabOpenOptions,
   type EditorTabsOptions,
   type EditorTabTitle,
+  type TabItem,
   type TabStrip
 } from "../tabs/EditorTabs.ts";
 import { SavedTabs } from "../tabs/SavedTabs.ts";
@@ -40,20 +42,6 @@ import {
 
 // CONSTANTS
 export const SETTINGS_TAB_ID = "studio:settings";
-
-export interface StudioCatalog {
-  record(
-    assetId: string
-  ): AssetRecordData | undefined;
-  on(
-    event: "change",
-    listener: () => void
-  ): unknown;
-  off(
-    event: "change",
-    listener: () => void
-  ): unknown;
-}
 
 export interface AssetOpenOptions extends EditorTabOpenOptions {
   /**
@@ -76,6 +64,10 @@ export interface StudioSessionUser {
    */
   readonly preferences: Preferences;
   readonly renewal: StudioSessionRenewal | null;
+  /**
+   * Marks the Settings tab unsaved while its drafts differ from the project.
+   */
+  readonly project: StudioProjectSettings | null;
 }
 
 export interface StudioSessionConsole {
@@ -95,6 +87,7 @@ export interface StudioSessionSlots {
   strip: TabStrip;
   frames: HTMLElement;
   home: HTMLElement;
+  homeTab: TabItem;
   settings: HTMLElement;
 }
 
@@ -112,10 +105,6 @@ export interface StudioSessionOptions extends Pick<
   console?: StudioSessionConsole;
   onTabsChange?: () => void;
   play?: StudioSessionPlay;
-  /**
-   * Marks the Settings tab unsaved while its drafts differ from the project.
-   */
-  projectSettings?: StudioProjectSettings;
   /**
    * @default new BrowserState()
    */
@@ -173,6 +162,7 @@ export class StudioSession {
     this.tabs = new EditorTabs({
       strip: slots.strip,
       home: slots.home,
+      homeTab: slots.homeTab,
       pages: [
         {
           id: SETTINGS_TAB_ID,
@@ -209,9 +199,9 @@ export class StudioSession {
     window.addEventListener("beforeunload", this.#onBeforeUnload, {
       signal: this.#listening.signal
     });
-    const { projectSettings } = options;
-    projectSettings?.addEventListener(REMOTE_STATE_CHANGE, () => {
-      this.tabs.markUnsaved(SETTINGS_TAB_ID, projectSettings.drafts.changed);
+    const { project } = user;
+    project?.addEventListener(REMOTE_STATE_CHANGE, () => {
+      this.tabs.markUnsaved(SETTINGS_TAB_ID, project.drafts.changed);
     }, {
       signal: this.#listening.signal
     });

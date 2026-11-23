@@ -13,7 +13,7 @@ import { DistSnapshot } from "./DistSnapshot.ts";
 import {
   EDITOR_PAGE_REBUILT_EVENT,
   type EditorPageRebuilt
-} from "../shared/editorPageRebuilt.ts";
+} from "../../shared/editorPageRebuilt.ts";
 
 // CONSTANTS
 export const EDITOR_PAGE_SETTLE_MS = 300;

@@ -76,7 +76,7 @@ export interface AssetRelocation {
   renames: AssetRename[];
 }
 
-export type AssetDrop = Pick<JollyReparentDetail, "targetId" | "where">;
+export type AssetDropTarget = Pick<JollyReparentDetail, "targetId" | "where">;
 
 export interface AssetTreeOverlay {
   labels: ReadonlyMap<string, string>;
@@ -247,7 +247,7 @@ export class AssetTreeModel {
   }
 
   dropFolder(
-    drop: AssetDrop
+    drop: AssetDropTarget
   ): AssetPath | null {
     const data = this.#index.get(drop.targetId)?.data;
     if (data === undefined) {

@@ -12,17 +12,19 @@ import { createServer } from "vite";
 import {
   createDist,
   INDEX_HTML,
+  listen,
+  PASSED_ON_STATUS,
   voxelMapEditor
 } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { PageInput } from "../../vite/PageInput.ts";
-import { ServedPages } from "../../vite/ServedPages.ts";
-import { writeEditorPage } from "../helpers/editorPages.ts";
+import { PageInput } from "../../../vite/pages/PageInput.ts";
+import { ServedPages } from "../../../vite/pages/ServedPages.ts";
+import { writeEditorPage } from "../../helpers/editorPages.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 function createViteServer(
   root: string
@@ -73,7 +75,7 @@ describe("ServedPages", () => {
     }
   });
 
-  test("renders a shell page from pages/ with root URLs for the files it loads", async() => {
+  test("hands a claimed shell page to its owner, with root URLs for the files it loads", async() => {
     const root = await createTempDir("studio-root-");
     await fs.mkdir(path.join(root, "pages"));
     await fs.writeFile(
@@ -85,11 +87,17 @@ describe("ServedPages", () => {
 
     try {
       const pages = new ServedPages(vite, [PageInput.shell(root, "play")]);
+      await using server = await listen(pages.middleware);
+      const served = await server.fetch("/play/");
 
-      const html = await pages.render("play");
+      const html = await pages.claim("play")();
+      const claimed = await server.fetch("/play/");
+
+      assert.equal(served.status, 200);
+      assert.equal(claimed.status, PASSED_ON_STATUS);
       assert.match(html, /href="\/main\.css"/);
       assert.match(html, /src="\/src\/play\/index\.ts"/);
-      await assert.rejects(pages.render("preview"), /"\/preview\/"/);
+      assert.throws(() => pages.claim("preview"), /"\/preview\/"/);
     }
     finally {
       await vite.close();

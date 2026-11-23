@@ -13,9 +13,7 @@ import type { EditorFrames } from "./EditorFrames.ts";
 export const DEFAULT_TAB_CAP = 4;
 export const HOME_TAB_ID = "studio:home";
 const kTabTag = "jolly-tab";
-const kHomeLabel = "Home";
 const kFirstEditorIndex = 1;
-const kHomeIcon: IconName = "home";
 const kTabStatus: Record<EditorState, TabStatus> = {
   booting: "busy",
   switching: "busy",
@@ -46,6 +44,8 @@ export interface TabStrip extends HTMLElement {
   value: string;
 }
 
+export type TabItem = HTMLElementTagNameMap[typeof kTabTag];
+
 export interface EditorTabsOptions {
   strip: TabStrip;
   frames: EditorFrames;
@@ -54,6 +54,11 @@ export interface EditorTabsOptions {
    * closed and does not count toward `cap`.
    */
   home: HTMLElement;
+  /**
+   * The fixed tab of `home`, with the value `HOME_TAB_ID`. The caller
+   * renders it, so it shows before the tabs exist.
+   */
+  homeTab: TabItem;
   /**
    * Shell content opened on demand behind a closable tab that does not count
    * toward `cap`.
@@ -94,11 +99,7 @@ interface TabItemProperties {
   icon: IconName | "";
   tooltip?: string;
   closable?: boolean;
-  iconOnly?: boolean;
-  fixed?: boolean;
 }
-
-type TabItem = HTMLElementTagNameMap[typeof kTabTag];
 
 interface OpenTab {
   tab: EditorTab;
@@ -135,12 +136,7 @@ export class EditorTabs {
 
     const home: PageEntry = {
       element: options.home,
-      item: this.#createItem(HOME_TAB_ID, {
-        label: kHomeLabel,
-        icon: kHomeIcon,
-        iconOnly: true,
-        fixed: true
-      })
+      item: options.homeTab
     };
     this.#pages.set(HOME_TAB_ID, home);
     for (const page of options.pages ?? []) {
