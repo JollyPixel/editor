@@ -108,6 +108,37 @@ describe("Room — denied", () => {
       reason: "role \"viewer\" is not permitted to join this room"
     }]);
   });
+
+  test("a join denied after admission drops the peers and rights of the room", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+    room.join();
+    socket.receive({
+      room: "pixel-draw",
+      kind: "sync",
+      self: "A",
+      rights: { "voxel-set": "write" },
+      members: [
+        { clientId: "A", role: "editor", profile: {}, presence: {} },
+        { clientId: "B", role: "viewer", profile: {}, presence: {} }
+      ]
+    });
+    const left: string[] = [];
+    room.on("peer-left", (event) => left.push(event.clientId));
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "denied",
+      event: "$join",
+      reason: "role \"editor\" is not permitted to join this room"
+    });
+
+    assert.deepEqual(left, ["B"]);
+    assert.equal(room.peers.size, 0);
+    assert.strictEqual(room.clientId, null);
+    assert.equal(room.role, "default");
+    assert.equal(room.access, "void");
+  });
 });
 
 describe("Room — error", () => {

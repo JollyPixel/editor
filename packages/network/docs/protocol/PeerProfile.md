@@ -48,6 +48,6 @@ collaborator lists leave it out.
 Reads a profile into a readonly `PeerProfile` with the same five fields. It
 never throws: a field of the wrong type reads as `undefined`, and a missing or
 malformed `username` reads as `GUEST_USERNAME` (`"Guest"`). `avatar` is kept
-only when it is a same-origin path, starting with a single `/`, so a peer
-cannot point other clients at another origin. `metadata` may be `undefined`,
+only when it is a same-origin path, starting with a single `/` and holding no
+whitespace or `\`, so a peer cannot point other clients at another origin. `metadata` may be `undefined`,
 as `room.peers.get(clientId)?.profile` is for a peer that already left.

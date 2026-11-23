@@ -110,7 +110,11 @@ Peer changes; the peer map is already updated.
 
 #### denied / error / malformed
 
-Permission refusal, operation failure, or parser rejection.
+Permission refusal, operation failure, or parser rejection. A `denied` for
+`$join` also drops the room's peers and rights, with a `peer-left` for each
+peer: the server sends it when a join is refused, and when
+[replaced rights](../server/Server.md#replacerightsrights-defaultrole-void)
+remove a member.
 
 #### left
 

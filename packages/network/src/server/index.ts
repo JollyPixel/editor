@@ -13,4 +13,4 @@ export type {
   RoomResolution,
   RoomResolver
 } from "./room/RoomResolver.ts";
-export type { RoomLimits } from "./room/ServerRoom.ts";
+export type { RoomLimits } from "./room/RoomLimits.ts";

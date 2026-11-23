@@ -28,6 +28,22 @@ interface ServerOptions {
 `new Server(options?)` configures logging, [access](./Access.md), grace periods,
 and room limits.
 
+```ts
+interface RoomLimits {
+  profileLength?: number;
+  presenceLength?: number;
+  resumeLength?: number;
+  resyncIntervalMs?: number;
+}
+```
+
+Lengths count JSON characters, and bytes by their byte length. A join whose
+profile (default `16_384`), presence (default `1_048_576`) or `resume` (default
+`16_384`) is past its limit is refused with an `error` envelope. A presence
+update past the limit is refused the same way, and a server profile update
+past it is dropped. `resyncIntervalMs` (default `1_000`) coalesces the resyncs
+a member requests inside it into one at its end.
+
 `validateOutbound` defaults to `true`. With `false`, rooms name each outbound
 message from its tags (`MessageParser.identify`) without validating it, and
 drop a message no tag names. A server running in the browser uses it to skip
@@ -73,10 +89,12 @@ Activity is ordered per connection and room.
 ### `replaceRights(rights, defaultRole?): void`
 
 Swaps the rules of the [rights table](./Access.md#rights) for every room.
-Later checks use the new rules; connected sessions keep their role, and
-rooms they joined keep them. Revoke a subject to make it join again under
-the new rules. Throws a `TypeError` when the server was built without
-rights or `rights` is empty.
+Later checks use the new rules; connected sessions keep their role. Members
+whose role lost `$join` leave their rooms once their in-flight activity
+drains: each receives a `denied` envelope for `$join` and the others
+`peer-left`. The remaining members keep the rights of their last `sync`;
+revoke a subject to make it join again under the new rules. Throws a
+`TypeError` when the server was built without rights or `rights` is empty.
 
 ### `revoke(subject): void`
 

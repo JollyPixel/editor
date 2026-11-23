@@ -92,7 +92,7 @@ describe("Server — profile updates", () => {
 
   test("a change that would push a member's profile past the room limit is dropped", async() => {
     await using server = new Server({
-      limits: { peerMetadataLength: 64 }
+      limits: { profileLength: 64 }
     });
     server.register(new RecordingExtension("voxel"));
     const a = createClient("A");

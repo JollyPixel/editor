@@ -56,6 +56,9 @@ describe("parsePeerProfile", () => {
     assert.equal(parseAvatar("https://example.com/a.png"), undefined);
     assert.equal(parseAvatar("//example.com/a.png"), undefined);
     assert.equal(parseAvatar("/\\example.com/a.png"), undefined);
+    assert.equal(parseAvatar("/\t/example.com/a.png"), undefined);
+    assert.equal(parseAvatar("/\n/example.com/a.png"), undefined);
+    assert.equal(parseAvatar("/\r/example.com/a.png"), undefined);
     assert.equal(parseAvatar("data:image/png;base64,AA"), undefined);
   });
 });

@@ -4,9 +4,9 @@ import { errorMessage } from "@jolly-pixel/utils";
 // Import Internal Dependencies
 import {
   ServerRoom,
-  type RoomJoiner,
-  type RoomLimits
+  type RoomJoiner
 } from "./ServerRoom.ts";
+import type { RoomLimits } from "./RoomLimits.ts";
 import { UngatedExtensionError } from "../errors/UngatedExtensionError.ts";
 import type { Logger } from "../logger.ts";
 import type { RightsTable } from "../rights/RightsTable.ts";
@@ -28,6 +28,11 @@ interface RoomEntry {
 }
 
 export type RoomJoinResult = "joined" | "member" | "denied" | "unregistered";
+
+export interface RoomMember {
+  room: string;
+  clientId: string;
+}
 
 export interface RoomRegistryOptions {
   logger: Logger;
@@ -119,6 +124,33 @@ export class RoomRegistry {
     }
     finally {
       this.#syncEviction(name);
+    }
+  }
+
+  * deniedMembers(): IterableIterator<RoomMember> {
+    for (const { name, room } of this.#entries.values()) {
+      for (const clientId of room.deniedMembers()) {
+        yield {
+          room: name,
+          clientId
+        };
+      }
+    }
+  }
+
+  async expel(
+    member: RoomMember
+  ): Promise<boolean> {
+    const room = this.get(member.room);
+    if (room === undefined) {
+      return false;
+    }
+
+    try {
+      return await room.expel(member.clientId);
+    }
+    finally {
+      this.#syncEviction(member.room);
     }
   }
 

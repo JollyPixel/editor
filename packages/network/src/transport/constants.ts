@@ -1,3 +1,4 @@
 export const NORMAL_CLOSE_CODE = 1000;
 export const GOING_AWAY_CLOSE_CODE = 1001;
 export const PROTOCOL_ERROR_CLOSE_CODE = 1002;
+export const TRY_AGAIN_LATER_CLOSE_CODE = 1013;

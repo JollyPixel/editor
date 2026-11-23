@@ -112,6 +112,57 @@ describe("PasswordAuthentication — attempt limits", () => {
     });
   });
 
+  test("counts the failures of clients without a remote address together", async() => {
+    const auth = new PasswordAuthentication({
+      password: "hunter2",
+      role: "editor",
+      maxFailures: 2
+    });
+
+    await auth.authenticate(request("wrong"));
+    await auth.authenticate(request("wrong"));
+
+    assert.strictEqual(await auth.authenticate(request("hunter2")), null);
+  });
+
+  test("counts the failures of IPv6 addresses together by /64 block", async() => {
+    const auth = new PasswordAuthentication({
+      password: "hunter2",
+      role: "editor",
+      maxFailures: 2
+    });
+
+    await auth.authenticate(from("2001:db8:0:1::a", "wrong"));
+    await auth.authenticate(from("2001:db8:0:1:ffff::b", "wrong"));
+
+    assert.strictEqual(await auth.authenticate(from("2001:0DB8:0000:0001::c", "hunter2")), null);
+    assert.notStrictEqual(await auth.authenticate(from("2001:db8:0:2::1", "hunter2")), null);
+  });
+
+  test("clientKey names the client whose failures count together", async() => {
+    const auth = new PasswordAuthentication({
+      password: "hunter2",
+      role: "editor",
+      maxFailures: 2,
+      clientKey: (attempt) => String(attempt.headers["x-forwarded-for"])
+    });
+    function proxied(
+      client: string,
+      credential: string
+    ): AuthenticationRequest {
+      return {
+        ...from("10.0.0.1", credential),
+        headers: { "x-forwarded-for": client }
+      };
+    }
+
+    await auth.authenticate(proxied("203.0.113.1", "wrong"));
+    await auth.authenticate(proxied("203.0.113.1", "wrong"));
+
+    assert.strictEqual(await auth.authenticate(proxied("203.0.113.1", "hunter2")), null);
+    assert.notStrictEqual(await auth.authenticate(proxied("203.0.113.2", "hunter2")), null);
+  });
+
   test("a correct password clears the address's failures", async() => {
     const auth = new PasswordAuthentication({
       password: "hunter2",

@@ -7,10 +7,11 @@ import type { PeerMetadata } from "../types.ts";
 // CONSTANTS
 export const GUEST_USERNAME = "Guest";
 
+const kUnsafePathCharacter = /[\s\\]/u;
 const kSameOriginPathSchema = z.string().check(
   z.refine((value) => value.startsWith("/") &&
     !value.startsWith("//") &&
-    !value.startsWith("/\\"))
+    !kUnsafePathCharacter.test(value))
 );
 
 const kPeerProfileSchema = z.readonly(z.object({

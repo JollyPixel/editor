@@ -74,14 +74,38 @@ describe("ServerRoom — sync snapshot presence", () => {
   });
 });
 
-describe("ServerRoom — peer metadata length", () => {
+describe("ServerRoom — length limits", () => {
   function roomWithLimit(): ServerRoom {
     const extension = createExtension(actionProtocols);
 
     return new ServerRoom(extension.id, extension, undefined, {
-      limits: { peerMetadataLength: 64 }
+      limits: {
+        profileLength: 64,
+        presenceLength: 64,
+        resumeLength: 32
+      }
     });
   }
+
+  test("refuses a join whose resume is past the limit", async() => {
+    const room = roomWithLimit();
+    const a = createClient("A");
+
+    const admitted = await room.join({
+      handle: a.client,
+      identity: createIdentity("A"),
+      resume: { clientId: "x".repeat(32) }
+    });
+
+    assert.strictEqual(admitted, false);
+    assert.strictEqual(room.size, 0);
+    assert.deepEqual(a.sent, [{
+      room: "pixel-draw",
+      kind: "error",
+      event: "$join",
+      reason: "resume exceeds 32 JSON characters"
+    }]);
+  });
 
   test("refuses a join whose profile is past the limit", async() => {
     const room = roomWithLimit();

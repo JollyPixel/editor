@@ -7,7 +7,8 @@ import type {
 } from "../ClientSocket.ts";
 import {
   GOING_AWAY_CLOSE_CODE,
-  PROTOCOL_ERROR_CLOSE_CODE
+  PROTOCOL_ERROR_CLOSE_CODE,
+  TRY_AGAIN_LATER_CLOSE_CODE
 } from "../constants.ts";
 import type {
   ChannelPort,
@@ -21,6 +22,9 @@ import {
   toWireEvent,
   type ChannelMessage
 } from "./ChannelMessage.ts";
+
+// CONSTANTS
+const kDefaultMaxRelays = 64;
 
 export interface ChannelTransportHostOptions {
   /**
@@ -46,6 +50,12 @@ export interface ChannelTransportHostOptions {
    * closed with code `1002`.
    */
   socketPort?: ChannelSocketPortFactory;
+  /**
+   * Sockets relayed at once. Past it, a new socket is closed with code
+   * `1013`.
+   * @default 64
+   */
+  maxRelays?: number;
 }
 
 interface Relay {
@@ -61,6 +71,7 @@ export class ChannelTransportHost {
   readonly #port: ChannelPort;
   readonly #open: (options: SocketConnectOptions) => ClientSocket;
   readonly #socketPort: ChannelSocketPortFactory | undefined;
+  readonly #maxRelays: number;
   readonly #relays = new Map<string, Relay>();
   #closed = false;
 
@@ -92,6 +103,7 @@ export class ChannelTransportHost {
     this.#port = options.port;
     this.#open = options.open;
     this.#socketPort = options.socketPort;
+    this.#maxRelays = options.maxRelays ?? kDefaultMaxRelays;
     this.#port.addEventListener(
       "message",
       this.#onMessage
@@ -140,6 +152,18 @@ export class ChannelTransportHost {
       dedicated,
       credential
     } = message;
+    if (this.#relays.has(id)) {
+      return;
+    }
+    if (this.#relays.size >= this.#maxRelays) {
+      this.#postEvent(this.#port, id, "close", {
+        code: TRY_AGAIN_LATER_CLOSE_CODE,
+        reason: "The channel transport host relays too many sockets."
+      });
+
+      return;
+    }
+
     const port = dedicated ? this.#socketPort?.(id) ?? null : null;
     if (dedicated && port === null) {
       this.#postEvent(this.#port, id, "close", {

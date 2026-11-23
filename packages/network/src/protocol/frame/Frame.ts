@@ -15,6 +15,7 @@ const kAlignment = 8;
 const kU32Length = 4;
 const kFixedPrefixLength = 1 + kU32Length + kU32Length;
 const kPlaceholderKey = "$bytes";
+const kMinPlaceholderLength = JSON.stringify({ [kPlaceholderKey]: 0 }).length;
 const kUtf8Encoder = new TextEncoder();
 const kUtf8Decoder = new TextDecoder("utf-8", { fatal: true });
 
@@ -164,6 +165,9 @@ function unpack(
   const prefixLength = kFixedPrefixLength + (kU32Length * count);
   if (prefixLength + headerLength > frame.byteLength) {
     return invalidFrame("header overruns the frame");
+  }
+  if (count * kMinPlaceholderLength > headerLength) {
+    return invalidFrame("header is too short to place every attachment");
   }
 
   const attachments: Uint8Array[] = [];

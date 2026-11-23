@@ -122,7 +122,7 @@ when `value` holds a `Uint8Array`. It throws what `JSON.stringify` throws, and
 `encodeFrame` can produce, so a decoded value always encodes again.
 
 `encodedLength(value)` is the JSON length of `value`, counting each
-`Uint8Array` by its byte length. The server measures profiles and presence with
+`Uint8Array` by its byte length. The server measures profiles, presence and `resume` with
 it.
 
 A binary frame, with integers in little endian:
@@ -139,7 +139,9 @@ each attachment, starting on a multiple of 8 bytes from the frame start
 A placeholder is an object whose only key is `"$bytes"`. Its value must be the
 index of an attachment, and each attachment needs exactly one placeholder; an
 object with other keys besides `"$bytes"` stays an object. A text frame has no
-attachments, so any placeholder in it is an `invalid-frame`.
+attachments, so any placeholder in it is an `invalid-frame`. A placeholder takes
+at least 12 header bytes (`{"$bytes":0}`), so a frame whose attachment count
+needs more than its header length is rejected before its attachments are read.
 
 ## Parsing
 
