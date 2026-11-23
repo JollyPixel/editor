@@ -10,6 +10,8 @@
 - In a concern's `node/`, `routes.ts` is the HTTP edge: it calls the domain
   objects and exports the table mapping their errors to statuses. Page
   middlewares (`SharePage`, `PlayPage`, `ManifestRoute`) are the other edge.
+  A failure table another transport needs lives in the concern root, as
+  `game/gameFailures.ts` does for offline Play.
   Lint lets only `routes.ts`, `src/http/node/` and `ServerApi` import Fastify.
 - `src/http/` is the transport shared by every concern: the wire contract in
   `api.ts`, and in `node/` authentication, the error fallback, downloads and

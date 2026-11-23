@@ -20,6 +20,7 @@ import {
 } from "../node/studioFiles.ts";
 import { DevPlayer } from "./DevPlayer.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
+import { playerArchive } from "./offlinePlay.ts";
 import { PageInput } from "./PageInput.ts";
 import { playerModules } from "./playerModules.ts";
 import { projectContributions } from "./projectContributions.ts";
@@ -42,6 +43,14 @@ export function backend(
         ...PageInput.editors(root, project.editors),
         PageInput.shell(root, PLAY_PAGE_DIR)
       ]);
+      const player = new DevPlayer({
+        root,
+        plugins: [
+          projectContributions(project),
+          playerModules()
+        ],
+        logger: server.config.logger
+      });
       opened = await ServerBackend.open(
         {
           hosting,
@@ -55,16 +64,7 @@ export function backend(
               })
           ),
           ...backendOptions(mode, settings),
-          ...await studioBackendFiles(
-            new DevPlayer({
-              root,
-              plugins: [
-                projectContributions(project),
-                playerModules()
-              ],
-              logger: server.config.logger
-            })
-          ),
+          ...await studioBackendFiles(player),
           editorPages: pages,
           playPage: {
             html: () => pages.render(PLAY_PAGE_DIR)
@@ -72,6 +72,7 @@ export function backend(
           allowedHosts: server.config.server.allowedHosts
         }
       );
+      server.middlewares.use(playerArchive(player));
       server.middlewares.use(opened.middleware);
 
       if (server.httpServer !== null) {

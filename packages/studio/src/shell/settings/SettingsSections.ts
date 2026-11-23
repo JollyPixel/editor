@@ -234,7 +234,9 @@ export class SettingsSections implements Iterable<SettingsSection> {
           label: "Project",
           icon: "folder"
         },
-        projectGroups(user.rights, [...kindPackages], kinds)
+        user.online ?
+          projectGroups(user.rights, [...kindPackages], kinds) :
+          [group("project", undefined, [kPages.general])]
       )
     ].filter((entry) => entry !== null);
     this.#sections = this.tabs

@@ -66,7 +66,7 @@ describe("PlayPage", () => {
     });
 
     const { imports } = PlayerPage.parse(await response.text());
-    const build = game.manifest(gameAccount("player"), scene).artifacts[script];
+    const build = game.playable(gameAccount("player")).manifest(scene).artifacts[script];
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("cache-control"), "no-store");
     assert.equal(imports.three, "../assets/three.js");

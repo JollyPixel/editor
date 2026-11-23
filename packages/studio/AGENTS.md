@@ -22,6 +22,15 @@
   middleware also answers `/play/`. A bare
   specifier a script may import needs a module in `src/play/modules/` and an
   entry in `PLAYER_MODULES` (`vite/playerModules.ts`).
+- Offline Play goes through the play worker (`play/sw.js`), built on its own
+  by `vite/offlinePlay.ts`: keep `src/play/offline/playWorker.ts` and what it
+  imports free of DOM code. `studio.bundle.spec.ts` refuses `customElements`
+  in it. The static build writes `play/player.zip` for the offline export;
+  `pnpm dev` serves it from `DevPlayer`.
+- A kind handler's dependency that only the offline back-end imports is found
+  late by Vite, which then reloads every page, the tab serving offline Play
+  included. Exclude such an ESM dependency from `optimizeDeps` in
+  `vite.config.ts`, as `opentype.js` is.
 - On Windows, a recursive `fs.watch` fires `change` when a file is read. A
   watcher must compare mtime and size before treating an event as a rebuild,
   as `vite/DistSnapshot.ts` does.

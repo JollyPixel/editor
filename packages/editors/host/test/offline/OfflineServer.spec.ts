@@ -88,6 +88,21 @@ describe("OfflineServer", () => {
     }
   });
 
+  test("hands its open back-end to serve and stops serving on close", async() => {
+    const served: string[] = [];
+    const server = await openServer({
+      serve: (backend) => {
+        served.push(backend.catalog.record(kAssetId)?.path.value ?? "missing");
+
+        return () => served.push("stopped");
+      }
+    });
+
+    assert.deepEqual(served, ["notes/readme.bin"]);
+    await server.close();
+    assert.deepEqual(served, ["notes/readme.bin", "stopped"]);
+  });
+
   test("keeps serving clients until the last connection is destroyed", async() => {
     const server = await openServer();
     const first = server.connect();

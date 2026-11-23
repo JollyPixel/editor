@@ -6,12 +6,12 @@ import path from "node:path";
 import * as z from "zod";
 
 // Import Internal Dependencies
-import { GamePlayerError } from "./errors/GamePlayerError.ts";
+import { GamePlayerError } from "../errors/GamePlayerError.ts";
 import type {
   GamePlayer,
   PlayerBundle,
   PlayerPageSource
-} from "./GamePlayer.ts";
+} from "../GamePlayer.ts";
 import {
   PLAY_PAGE_DIR,
   PLAY_PAGE_PATH

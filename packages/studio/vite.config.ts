@@ -32,11 +32,13 @@ import { openStudioProject } from "./node/studioFiles.ts";
 import { backend } from "./vite/backend.ts";
 import { EditorPageFiles } from "./vite/EditorPageFiles.ts";
 import { editorPages } from "./vite/editorPages.ts";
+import { offlinePlay } from "./vite/offlinePlay.ts";
 import { playerModules } from "./vite/playerModules.ts";
 import { projectContributions } from "./vite/projectContributions.ts";
 import { projectManifest } from "./vite/projectManifest.ts";
 
 // CONSTANTS
+const kLazyKindDependencies = ["opentype.js"];
 const kViteDefaultDeny = [
   ".env",
   ".env.*",
@@ -62,6 +64,9 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     build: {
       manifest: true
     },
+    optimizeDeps: {
+      exclude: kLazyKindDependencies
+    },
     server: {
       ...mode.server,
       fs: {
@@ -82,6 +87,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       projectManifest(project),
       createProjectFileWatchPlugin(project.file),
       playerModules(),
+      offlinePlay(),
       mode.serve && backend(project, mode, settings),
       editorPages(
         new EditorPageFiles(project.editors),

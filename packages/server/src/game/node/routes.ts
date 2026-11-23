@@ -22,18 +22,12 @@ import {
   type ModuleParams,
   type ModuleQuery
 } from "../api.ts";
-import { GameBuildError } from "./errors/GameBuildError.ts";
-import { GameExportError } from "./errors/GameExportError.ts";
+import { GAME_FAILURES } from "../gameFailures.ts";
 import type { GameExport } from "./GameExport.ts";
-import type {
-  GameArtifact,
-  ProjectGame
-} from "./ProjectGame.ts";
+import type { GameArtifact } from "../PlayableGame.ts";
+import type { ProjectGame } from "./ProjectGame.ts";
 
-export const gameFailures = domainFailures([
-  [GameBuildError, 422, "build-failed"],
-  [GameExportError, 409, "not-exportable"]
-]);
+export const gameFailures = domainFailures(GAME_FAILURES);
 
 export interface GameRoutesOptions {
   game: RequestScoped<ProjectGame>;
@@ -70,10 +64,9 @@ export async function gameRoutes(
     schema: {
       querystring: gameQuerySchema
     },
-    handler: (request) => options.game(request).manifest(
-      signedInAccount(request),
-      request.query.start
-    )
+    handler: (request) => options.game(request)
+      .playable(signedInAccount(request))
+      .manifest(request.query.start)
   });
   app.route<ArtifactRoute>({
     method: artifact.method,
@@ -86,11 +79,9 @@ export async function gameRoutes(
     },
     handler: async(request, reply) => sendArtifact(
       reply,
-      await options.game(request).artifact(
-        signedInAccount(request),
-        request.params.assetId,
-        request.params.revision
-      )
+      await options.game(request)
+        .playable(signedInAccount(request))
+        .artifact(request.params.assetId, request.params.revision)
     )
   });
   app.route<ModuleRoute>({
@@ -105,11 +96,9 @@ export async function gameRoutes(
     },
     handler: async(request, reply) => sendArtifact(
       reply,
-      await options.game(request).module(
-        signedInAccount(request),
-        request.params["*"],
-        request.query.revision
-      )
+      await options.game(request)
+        .playable(signedInAccount(request))
+        .module(request.params["*"], request.query.revision)
     )
   });
   downloadRoute<GameExportQuery>(app, {

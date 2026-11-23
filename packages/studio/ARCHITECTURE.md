@@ -75,6 +75,20 @@ flowchart TB
 - The scopes come from the shell, the host and each editor package. The server drops unknown scopes and fields.
 - Code: `src/preferences/`, and `@jolly-pixel/server` for the scopes and their storage.
 
+## Offline Play
+
+```mermaid
+flowchart TB
+    Game["play window<br/>?offline=studio"] -->|"fetch"| Worker["play worker<br/>play/sw.js"]
+    Worker -->|"jolly-play:studio channel"| Owner["tab owning the<br/>offline back-end"]
+    Export["Export, any tab"] -->|"jolly-play:studio channel"| Owner
+    Owner --> Domain["PlayableGame, GameArchive<br/>from @jolly-pixel/server"]
+```
+
+- The owner answers the routes the server answers online, so the player has one code path. It reads them with `parseGameRequest` and maps their errors with `GAME_FAILURES`, both from `@jolly-pixel/server`. `OfflinePlayHost` runs from the `serve` hook of the offline back-end, only in the tab that holds its lock.
+- The worker is built on its own as one classic script: in the main build, the `ui` chunk group takes zod, and a worker sharing that graph would load lit.
+- Code: `src/play/offline/`, `vite/offlinePlay.ts`.
+
 ## Editor pages
 
 ```mermaid

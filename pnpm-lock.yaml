@@ -2009,6 +2009,9 @@ importers:
         specifier: 4.6.7
         version: 4.6.7
     devDependencies:
+      '@jolly-pixel/asset-source':
+        specifier: workspace:*
+        version: link:../asset-source
       '@jolly-pixel/asset.common':
         specifier: workspace:*
         version: link:../assets/common
@@ -2018,6 +2021,9 @@ importers:
       '@jolly-pixel/e2e':
         specifier: workspace:*
         version: link:../e2e
+      '@jolly-pixel/event-store':
+        specifier: workspace:*
+        version: link:../event-store
       '@jolly-pixel/scripting':
         specifier: workspace:*
         version: link:../scripting

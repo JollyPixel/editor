@@ -10,7 +10,7 @@ import { ACCOUNTS_URL_PATH } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
 import { GAME_URL_PATH } from "#src/game/api.ts";
-import { GameBuildError } from "#src/game/node/errors/GameBuildError.ts";
+import { GameBuildError } from "#src/game/errors/GameBuildError.ts";
 import { gameFailures } from "#src/game/node/routes.ts";
 import {
   browser,

@@ -15,7 +15,7 @@ import type { PeerIdentity } from "@jolly-pixel/network";
 // Import Internal Dependencies
 import type { ShareLifetime } from "../ShareLifetime.ts";
 import type { Project } from "../../project/node/Project.ts";
-import { UnknownAssetError } from "../../project/node/errors/UnknownAssetError.ts";
+import { UnknownAssetError } from "../../project/errors/UnknownAssetError.ts";
 
 export interface SharedCatalog {
   record(

@@ -65,8 +65,8 @@ const shaders = new ShaderModuleLoader(manager);
 
 ### Root
 
-Runs in Node and in a browser. `buildScript`, `lintScript` and
-`readScriptOutline` need Node; their browser builds refuse or answer `null`.
+Runs in Node and in a browser. `lintScript` and `readScriptOutline` need
+Node; their browser builds refuse or answer `null`.
 
 ```ts
 import { buildScript } from "@jolly-pixel/scripting";
@@ -109,7 +109,7 @@ import { loadShader } from "@jolly-pixel/scripting/three";
 
 ## ✨ Contributors guide
 
-The `#compiler`, `#linter`, `#outliner` and `#stripper` imports resolve to
+The `#linter`, `#outliner` and `#stripper` imports resolve to
 `dist/`, so tests need a build first. `src/types/scriptTypes.ts` is left out
 of the `tsc` project: only `scripts/bundleTypes.ts` writes
 `dist/types/scriptTypes.js`, with the declaration files of the built

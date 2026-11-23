@@ -1,7 +1,7 @@
 // Import Internal Dependencies
 import { SourceError } from "./errors/SourceError.ts";
 
-type TypeScript = typeof import("ts-morph").ts;
+type TypeScript = typeof import("typescript");
 
 // CONSTANTS
 const kSourceFileName = "script.ts";
@@ -11,7 +11,7 @@ let typescript: Promise<TypeScript> | null = null;
 export async function compileScript(
   source: string
 ): Promise<string> {
-  typescript ??= import("ts-morph").then((morph) => morph.ts);
+  typescript ??= import("typescript").then((module) => module.default);
   const ts = await typescript;
 
   const output = ts.transpileModule(source, {
@@ -36,7 +36,7 @@ export async function compileScript(
 
 function diagnosticError(
   ts: TypeScript,
-  diagnostic: import("ts-morph").ts.Diagnostic
+  diagnostic: import("typescript").Diagnostic
 ): SourceError {
   const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
   if (diagnostic.file === undefined || diagnostic.start === undefined) {

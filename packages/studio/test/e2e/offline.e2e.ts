@@ -28,7 +28,7 @@ test("opens Settings from the header actions without an account", async({ studio
   await studio.openOffline();
 
   await expect(studio.home.users).toHaveCount(0);
-  await expect(studio.header.action("Export")).toBeDisabled();
+  await expect(studio.header.action("Export")).toBeEnabled();
   await expect(studio.header.action("Open the golem chat")).toHaveCount(0);
   await studio.header.action("Settings").click();
 

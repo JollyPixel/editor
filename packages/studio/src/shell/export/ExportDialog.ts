@@ -29,7 +29,7 @@ import { BrowserState } from "../../browser/BrowserState.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
 import { ExportStartEvent } from "./ExportStartEvent.ts";
 import type { ExportTarget } from "./ExportTarget.ts";
-import { ExportTargets } from "./ExportTargets.ts";
+import type { ExportTargets } from "./ExportTargets.ts";
 
 @customElement("studio-export-dialog")
 export class ExportDialog extends LitElement {
@@ -69,22 +69,33 @@ export class ExportDialog extends LitElement {
   @query("jolly-dialog")
   declare _dialog: Dialog;
 
-  #targets = ExportTargets.STUDIO;
+  @property({ attribute: false })
+  declare targets: ExportTargets;
 
   constructor() {
     super();
     this.browserState = new BrowserState();
     this._defaultScene = null;
-    this._target = this.#targets.initial("", null);
     this._fileName = "";
     this._assets = "reachable";
+  }
+
+  protected override willUpdate(
+    changed: Map<string, unknown>
+  ): void {
+    if (changed.has("targets")) {
+      this._target = this.targets.initial(
+        this.browserState.exportTarget,
+        this._defaultScene
+      );
+    }
   }
 
   async open(
     defaultScene: AssetRecordData | null
   ): Promise<void> {
     this._defaultScene = defaultScene;
-    this._target = this.#targets.initial(
+    this._target = this.targets.initial(
       this.browserState.exportTarget,
       defaultScene
     );
@@ -108,7 +119,7 @@ export class ExportDialog extends LitElement {
         <jolly-button-group
           layout="tiles"
           aria-label="Export target"
-          .options=${this.#targets.options()}
+          .options=${this.targets.options()}
           .value=${this._target.name}
           @jolly-change=${this.#onTargetChange}
         ></jolly-button-group>
@@ -158,7 +169,7 @@ export class ExportDialog extends LitElement {
   #onTargetChange(
     event: CustomEvent<JollyChangeDetail<string>>
   ): void {
-    const target = this.#targets.find(event.detail.value);
+    const target = this.targets.find(event.detail.value);
     if (target === undefined) {
       return;
     }

@@ -6,10 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { GameBuildError } from "#src/game/node/errors/GameBuildError.ts";
+import { GameBuildError } from "#src/game/errors/GameBuildError.ts";
 import { ProjectGame } from "#src/game/node/ProjectGame.ts";
 import { DEFAULT_PHYSICS } from "#src/project/ProjectSections.ts";
-import { UnknownAssetError } from "#src/project/node/errors/UnknownAssetError.ts";
+import { UnknownAssetError } from "#src/project/errors/UnknownAssetError.ts";
 import {
   GAME_ACCESS,
   gameAccount as account,
@@ -41,8 +41,8 @@ describe("ProjectGame", () => {
     const scene = await project.create("levels/arena.scene.json", "{}");
     const texture = await project.create("textures/grass.png", "png");
 
-    const player = project.game.manifest(account("player"), scene);
-    const tester = project.game.manifest(account("tester"), scene);
+    const player = project.game.playable(account("player")).manifest(scene);
+    const tester = project.game.playable(account("tester")).manifest(scene);
 
     const revision = project.backend.catalog.record(texture)?.revision;
     assert.equal(player.start, scene);
@@ -68,11 +68,11 @@ describe("ProjectGame", () => {
     const texture = await project.create("textures/grass.png", "png");
 
     assert.throws(
-      () => project.game.manifest(account("player"), texture),
+      () => project.game.playable(account("player")).manifest(texture),
       UnknownAssetError
     );
     assert.throws(
-      () => project.game.manifest(account("player"), "missing"),
+      () => project.game.playable(account("player")).manifest("missing"),
       UnknownAssetError
     );
   });
@@ -82,8 +82,8 @@ describe("ProjectGame", () => {
     const texture = await project.create("textures/grass.png", "png");
     const revision = project.backend.catalog.record(texture)!.revision!;
 
-    const current = await project.game.artifact(account("player"), texture, revision);
-    const stale = await project.game.artifact(account("player"), texture, "older");
+    const current = await project.game.playable(account("player")).artifact(texture, revision);
+    const stale = await project.game.playable(account("player")).artifact(texture, "older");
 
     assert.equal(new TextDecoder().decode(current.bytes), "png");
     assert.equal(current.type, "image/png");
@@ -96,8 +96,10 @@ describe("ProjectGame", () => {
     const script = await project.create("scripts/my player.ts", "export {};");
     const revision = project.backend.catalog.record(script)!.revision!;
 
-    const current = await project.game.module(account("player"), "scripts/my player.ts.js", revision);
-    const unversioned = await project.game.module(account("player"), "scripts/my player.ts.js", undefined);
+    const player = project.game.playable(account("player"));
+
+    const current = await player.module("scripts/my player.ts.js", revision);
+    const unversioned = await player.module("scripts/my player.ts.js", undefined);
 
     assert.equal(new TextDecoder().decode(current.bytes), "export {};");
     assert.equal(current.type, "text/javascript");
@@ -105,7 +107,7 @@ describe("ProjectGame", () => {
     assert.equal(unversioned.cacheControl, "no-store");
     for (const path of ["scripts/my player.ts", "scripts/my player.js"]) {
       await assert.rejects(
-        project.game.module(account("player"), path, revision),
+        player.module(path, revision),
         UnknownAssetError
       );
     }
@@ -116,8 +118,8 @@ describe("ProjectGame", () => {
     await project.create("scripts/util.ts", "export const typed = 1;");
     await project.create("scripts/util.js", "export const plain = 1;");
 
-    const typed = await project.game.module(account("player"), "scripts/util.ts.js", undefined);
-    const plain = await project.game.module(account("player"), "scripts/util.js.js", undefined);
+    const typed = await project.game.playable(account("player")).module("scripts/util.ts.js", undefined);
+    const plain = await project.game.playable(account("player")).module("scripts/util.js.js", undefined);
 
     assert.equal(new TextDecoder().decode(typed.bytes), "export const typed = 1;");
     assert.equal(new TextDecoder().decode(plain.bytes), "export const plain = 1;");
@@ -128,7 +130,7 @@ describe("ProjectGame", () => {
     const texture = await project.create("textures/grass.png", "png");
 
     await assert.rejects(
-      project.game.artifact(account("tester"), texture, "any"),
+      project.game.playable(account("tester")).artifact(texture, "any"),
       UnknownAssetError
     );
   });
@@ -138,7 +140,7 @@ describe("ProjectGame", () => {
     const map = await project.create("maps/overworld.voxelmap.json", "{}");
 
     await assert.rejects(
-      project.game.artifact(account("player"), map, "any"),
+      project.game.playable(account("player")).artifact(map, "any"),
       (error) => error instanceof GameBuildError &&
         error.message.startsWith("\"maps/overworld.voxelmap.json\" cannot be built")
     );

@@ -9,7 +9,8 @@ import {
 import {
   customElement,
   property,
-  query
+  query,
+  state
 } from "lit/decorators.js";
 import {
   NotificationQueue,
@@ -32,6 +33,7 @@ import { ChangeController } from "../ChangeController.ts";
 import type { ExportDialog } from "../export/ExportDialog.ts";
 import "../export/ExportDialog.ts";
 import type { ExportStartEvent } from "../export/ExportStartEvent.ts";
+import { ExportTargets } from "../export/ExportTargets.ts";
 import { runExport } from "../export/runExport.ts";
 import { SettingsOpenEvent } from "../settings/SettingsOpenEvent.ts";
 
@@ -77,6 +79,9 @@ export class HeaderActions extends LitElement {
   @query("studio-export-dialog")
   declare _exportDialog: ExportDialog;
 
+  @state()
+  declare _exportTargets: ExportTargets | null;
+
   #user = new ChangeController<StudioUser>(this, STUDIO_USER_CHANGE);
   #chat = new ChangeController<StudioAgentChat>(this, AGENT_CHAT_CHANGE);
 
@@ -86,13 +91,15 @@ export class HeaderActions extends LitElement {
     this.agentChat = null;
     this.browserState = new BrowserState();
     this.notifications = new NotificationQueue();
+    this._exportTargets = null;
   }
 
   set user(
     user: StudioUser | null
   ) {
-    if (user !== null) {
+    if (user !== null && user !== this.#user.current) {
       this.#user.attach(user);
+      this._exportTargets = ExportTargets.offeredTo(user);
     }
   }
 
@@ -105,8 +112,7 @@ export class HeaderActions extends LitElement {
   }
 
   override render(): TemplateResult {
-    const user = this.#user.current;
-    const canExport = user?.online === true && user.rights.allows("export");
+    const canExport = this.#user.current?.rights.allows("export") === true;
 
     return html`
       <jolly-button
@@ -120,7 +126,7 @@ export class HeaderActions extends LitElement {
         icon="export"
         icon-only
         label="Export"
-        title=${user?.online ? "Export" : "Export needs the studio server"}
+        title="Export"
         ?disabled=${!canExport}
         @click=${this.#export}
       ></jolly-button>
@@ -132,10 +138,13 @@ export class HeaderActions extends LitElement {
         @click=${this.#openSettings}
       ></jolly-button>
       ${this.#golemButton(this.agentChat)}
-      <studio-export-dialog
-        .browserState=${this.browserState}
-        @export-start=${this.#startExport}
-      ></studio-export-dialog>
+      ${this._exportTargets === null ? nothing : html`
+        <studio-export-dialog
+          .browserState=${this.browserState}
+          .targets=${this._exportTargets}
+          @export-start=${this.#startExport}
+        ></studio-export-dialog>
+      `}
     `;
   }
 
@@ -181,16 +190,11 @@ export class HeaderActions extends LitElement {
   readonly #startExport = (
     event: ExportStartEvent
   ): void => {
-    const user = this.#user.current;
-    if (!user?.online) {
-      return;
-    }
-
     const { exportTarget, request } = event;
     void runExport(this.notifications, {
       label: exportTarget.label,
       fileName: request.fileName,
-      download: exportTarget.download(user, request)
+      download: exportTarget.download(request)
     });
   };
 }

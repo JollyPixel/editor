@@ -11,12 +11,10 @@ import {
 } from "vite";
 import {
   PLAY_PAGE_DIR,
-  PLAY_PAGE_PATH
+  PLAY_PAGE_PATH,
+  type GamePlayer,
+  type PlayerBundle
 } from "@jolly-pixel/server";
-import type {
-  GamePlayer,
-  PlayerBundle
-} from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
 import {

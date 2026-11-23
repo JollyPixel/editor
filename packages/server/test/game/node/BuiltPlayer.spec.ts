@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { BuiltPlayer } from "#src/game/node/BuiltPlayer.ts";
-import { GamePlayerError } from "#src/game/node/errors/GamePlayerError.ts";
+import { GamePlayerError } from "#src/game/errors/GamePlayerError.ts";
 import {
   createTempDir,
   removeTempDir

@@ -334,17 +334,17 @@ export class Studio extends LitElement implements GolemConsoleHost {
       notifications: this.#notifications,
       onTabsChange: this.#onTabsChange,
       projectSettings: user.online ? user.project : undefined,
-      play: user.online ?
+      play: user.playTarget === null ?
+        undefined :
         {
-          project: user.project,
+          ...user.playTarget,
           failed: (message) => this.#fail(`Game error: ${message}`),
           warned: (message) => this.#notifications.notify({
             tone: "warning",
             source: "Game",
             title: message
           })
-        } :
-        undefined
+        }
     });
     this.#session = session;
     this._play = session.play;

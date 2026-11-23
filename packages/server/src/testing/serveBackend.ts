@@ -17,7 +17,7 @@ import {
 import type {
   GamePlayer,
   PlayerPageSource
-} from "../game/node/GamePlayer.ts";
+} from "../game/GamePlayer.ts";
 import { NO_SHELL_PREFERENCES } from "../preferences/PreferenceScopes.ts";
 import type { Project } from "../project/node/Project.ts";
 import { ProjectHosting } from "../projects/node/ProjectHosting.ts";

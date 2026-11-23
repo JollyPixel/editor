@@ -13,9 +13,9 @@ import {
 } from "fflate";
 
 // Import Internal Dependencies
-import { GameBuildError } from "#src/game/node/errors/GameBuildError.ts";
-import { GameExportError } from "#src/game/node/errors/GameExportError.ts";
-import { GamePlayerError } from "#src/game/node/errors/GamePlayerError.ts";
+import { GameBuildError } from "#src/game/errors/GameBuildError.ts";
+import { GameExportError } from "#src/game/errors/GameExportError.ts";
+import { GamePlayerError } from "#src/game/errors/GamePlayerError.ts";
 import { GameExport } from "#src/game/node/GameExport.ts";
 import { ProjectGame } from "#src/game/node/ProjectGame.ts";
 import { PlayerPage } from "#src/game/PlayerPage.ts";
@@ -108,7 +108,7 @@ describe("GameExport", () => {
         physics: kMoonPhysics
       },
       backend: project.backend
-    }).manifest(gameAccount("publisher"), scene);
+    }).playable(gameAccount("publisher")).manifest(scene);
 
     const files = await unzip(
       await exporter.export(gameAccount("publisher"), "reachable")

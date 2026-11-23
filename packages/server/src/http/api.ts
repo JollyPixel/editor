@@ -27,6 +27,12 @@ export interface ApiRoute {
   readonly path: string;
 }
 
+export type DomainFailure = readonly [
+  type: new (...args: never[]) => Error,
+  status: number,
+  code: ApiFailureCode
+];
+
 export const apiFailureSchema = z.object({
   code: z.enum(kApiFailureCodes).catch("unknown"),
   message: z.string()

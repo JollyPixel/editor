@@ -13,16 +13,15 @@ const shader = await buildShader(shaderSource);
 
 ### buildScript(source: string): Promise\<string\>
 
-Transpiles with TypeScript's `transpileModule`, loaded from
-[ts-morph](https://github.com/dsherret/ts-morph) on the first call.
+Transpiles with TypeScript's `transpileModule`. The `typescript` package,
+about 9 MB, loads on the first call, in Node and in a browser alike, so both
+give the same output and the same errors.
 
 - Output: ES2022 modules with an inline source map.
 - Decorators compile as standard decorators, so `@SceneProperty` declares its
   field through `Symbol.metadata`.
 - Imports used only as types are dropped; the rest are checked against
   [`SCRIPT_IMPORTS`](./ScriptImportPolicy.md).
-
-In a browser it rejects with "Scripts are built by a hosted studio only."
 
 ### buildShader(source: string): Promise\<string\>
 

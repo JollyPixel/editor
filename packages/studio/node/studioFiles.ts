@@ -8,10 +8,10 @@ import type {
   PackageResolverOptions,
   ProjectFileOpenOptions
 } from "@jolly-pixel/asset-server/node";
+import type { GamePlayer } from "@jolly-pixel/server";
 import {
   Project,
   ServerSettings,
-  type GamePlayer,
   type ServerBackendOptions
 } from "@jolly-pixel/server/node";
 

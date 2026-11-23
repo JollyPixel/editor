@@ -88,7 +88,7 @@ export interface StudioSessionConsole {
 
 export type StudioSessionPlay = Pick<
   StudioPlayOptions,
-  "project" | "failed" | "warned"
+  "project" | "failed" | "warned" | "query"
 >;
 
 export interface StudioSessionSlots {
