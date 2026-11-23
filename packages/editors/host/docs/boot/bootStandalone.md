@@ -36,11 +36,15 @@ interface BootStandaloneOptions {
 interface OfflineProject {
   handlers: AssetKindHandler[];
   seed?: AssetSeedMap | (() => AssetSeedMap | Promise<AssetSeedMap>);
+  serve?: (backend: AssetBackend) => () => void;
 }
 ```
 
 - `offline` runs only in the tab that owns the offline data, so import its
   modules dynamically.
+- `serve` gets the asset back-end once it is open in that tab, to answer
+  other contexts from it, and its returned function runs when the back-end
+  closes.
 - `forceOffline` skips the server. Pass `import.meta.env.MODE === "static"`
   for a static build.
 - `dev` exposes the mounted handle as `window.jollyEditor`, and as

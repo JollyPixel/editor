@@ -17,7 +17,6 @@ export * from "./editors/node/EditorPackage.ts";
 export * from "./editors/node/EditorPackages.ts";
 export * from "./editors/node/EditorPageFolders.ts";
 export * from "./game/node/BuiltPlayer.ts";
-export * from "./game/node/GamePlayer.ts";
 export * from "./game/node/PlayPage.ts";
 export * from "./http/node/Middleware.ts";
 export * from "./http/node/requestPathname.ts";

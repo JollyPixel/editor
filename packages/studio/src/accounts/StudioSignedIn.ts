@@ -25,6 +25,7 @@ import type { StudioClients } from "../api/StudioClients.ts";
 import { AuditPages } from "../audit/AuditPages.ts";
 import type { FileDownload } from "../browser/FileDownload.ts";
 import { StudioAgentTokens } from "../golem/StudioAgentTokens.ts";
+import type { PlayTarget } from "../play/StudioPlay.ts";
 import { AccountPreferences } from "../preferences/AccountPreferences.ts";
 import { StudioProjectSettings } from "../project/StudioProjectSettings.ts";
 import { StudioShareLinks } from "../shares/StudioShareLinks.ts";
@@ -146,6 +147,12 @@ export class StudioSignedIn extends EventTarget {
 
   get rights(): ProjectRights {
     return this.project.rights;
+  }
+
+  get playTarget(): PlayTarget {
+    return {
+      project: this.project
+    };
   }
 
   get preferences(): Preferences {

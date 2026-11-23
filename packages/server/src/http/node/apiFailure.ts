@@ -1,17 +1,11 @@
 // Import Internal Dependencies
 import { ApiError } from "./errors/ApiError.ts";
-import type { ApiFailureCode } from "../api.ts";
+import type { DomainFailure } from "../api.ts";
 
 // CONSTANTS
 const kPayloadTooLarge = 413;
 
 export type DomainFailures = (error: Error) => ApiError | null;
-
-export type DomainFailure = readonly [
-  type: new (...args: never[]) => Error,
-  status: number,
-  code: ApiFailureCode
-];
 
 export interface FrameworkError extends Error {
   statusCode?: number;

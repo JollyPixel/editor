@@ -97,6 +97,7 @@ describe("@jolly-pixel/studio bundle", () => {
   let eager: Map<string, Set<Rolldown.OutputChunk>>;
   let pages: Map<string, string>;
   let editorPages: string[];
+  let workerSource: string | undefined;
 
   before(async() => {
     const project = await openStudioProject();
@@ -121,6 +122,11 @@ describe("@jolly-pixel/studio bundle", () => {
         .filter(isPageEntry)
         .map((entry) => [entry.name, loadedChunks(entry)])
     );
+    workerSource = result.output.flatMap((file) => (
+      file.type === "asset" && file.fileName === "play/sw.js" ?
+        [String(file.source)] :
+        []
+    ))[0];
     pages = new Map(
       result.output.flatMap((file) => (
         file.type === "asset" && file.fileName.endsWith("index.html") ?
@@ -175,6 +181,12 @@ describe("@jolly-pixel/studio bundle", () => {
         `${specifier} loads its own three.js`
       );
     }
+  });
+
+  test("ships the offline play worker as one script without ui code", () => {
+    assert.ok(workerSource !== undefined, "no play/sw.js in the build");
+    assert.doesNotMatch(workerSource, /\bimport\s*[("'{]/);
+    assert.doesNotMatch(workerSource, /customElements/);
   });
 
   test("loads the ui every page starts with from one shared chunk", () => {

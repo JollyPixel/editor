@@ -37,14 +37,14 @@ kind handler or editor code.
 
 The `<studio-header-actions>` buttons between Play and the account, on every tab:
 Search opens the console, Export opens the export dialog, Settings opens the
-Settings tab, and the chat button toggles the golem chat. Offline, Export is
-disabled and the chat button is gone.
+Settings tab, and the chat button toggles the golem chat. Offline, the chat
+button is gone.
 
 ### Export dialog
 
 The `<studio-export-dialog>` the Export action opens. Its tiles are the
 export targets: Web (the game export), Desktop and Android (disabled until
-they are built) and Project (the sources archive). A target the project
+they are built) and Project (the sources archive, disabled offline). A target the project
 cannot export yet, such as Web without a default scene, says why and links to
 the setting. The Web target offers Include every asset, for scripts that load
 an asset no scene uses. The dialog reopens on the last target and asset choice
@@ -196,13 +196,13 @@ What an account may do, a key of the project's `access.roles` rights table.
 
 What a role may do with the project rather than with assets: share, export,
 read or edit the settings, read the audit, manage access. The server answers
-them from the `access` section; offline, every one is false.
+them from the `access` section; offline, only export is allowed.
 
 ### Studio user
 
 Who the shell runs for: the signed-in account online, or nobody offline. It
-holds the project rights and the preferences; online only, it also holds the
-account, the roster, the share links and the agent tokens.
+holds the project rights, the preferences and what Play opens; online only, it
+also holds the account, the roster, the share links and the agent tokens.
 
 ### Project owner
 
@@ -296,7 +296,9 @@ while the asset keeps changing (30 s). One policy covers every asset kind.
 
 The scene the game starts from, the `game.start` asset ID of the project file,
 set in Settings › Project › General. Play and F5 run it; without one, they run
-the scene of the active tab.
+the scene of the active tab. Offline, the default scene and the physics
+settings are kept per browser, in `localStorage`, and every tab of the
+offline data sees them.
 
 ### Player
 
@@ -336,3 +338,19 @@ instead of the studio API. The game runs from any static HTTP server, not from
 The asset back-end the shell runs in the browser when the catalog is
 unreachable, under `?offline`, or in a static build. The shell and its editor
 frames share it as the `studio` offline data.
+
+### Offline Play
+
+Play and the game export without the server. The tab that owns the offline
+back-end answers the game's requests on the `jolly-play:<name>`
+`BroadcastChannel`: the player page with its import map, the game manifest,
+the builds, the script modules and the export zip, at the same URLs as online.
+The owner repeats its acceptance every second while it works; a request that
+hears nothing for five seconds answers `project-unavailable`.
+The play worker, a service worker at `play/sw.js` scoped to `play/`, relays
+the requests of a play window opened with `?offline=<name>`; the shell
+registers it when it starts offline. A play window the worker does not
+control yet reloads once. Scripts build in that tab with TypeScript, loaded
+on the first script build. The export ships the player from
+`play/player.zip`, which the static build writes. Service workers need https
+or localhost: elsewhere, Play is hidden offline.

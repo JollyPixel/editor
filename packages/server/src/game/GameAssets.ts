@@ -11,9 +11,9 @@ import {
 
 // Import Internal Dependencies
 import { GameBuildError } from "./errors/GameBuildError.ts";
-import type { GameBackend } from "./ProjectGame.ts";
-import type { GameExportAssets } from "../api.ts";
-import { SCENE_KIND } from "../GameManifest.ts";
+import type { GameBackend } from "./PlayableGame.ts";
+import type { GameExportAssets } from "./api.ts";
+import { SCENE_KIND } from "./GameManifest.ts";
 
 // CONSTANTS
 const kModelKind = "model";

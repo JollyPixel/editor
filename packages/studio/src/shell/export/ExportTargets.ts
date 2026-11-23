@@ -3,6 +3,8 @@ import type { AssetRecordData } from "@jolly-pixel/asset";
 import type { JollyOption } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import type { OfflineUser } from "../../accounts/OfflineUser.ts";
+import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
 import type { ExportTarget } from "./ExportTarget.ts";
 import { ProjectSourcesExport } from "./ProjectSourcesExport.ts";
 import { WebGameExport } from "./WebGameExport.ts";
@@ -36,15 +38,29 @@ const kStudioTiles: JollyOption<string>[] = [
     caption: "Sources"
   }
 ];
+const kOfflineTiles = kStudioTiles.map((tile) => (tile.value === "project" ?
+  {
+    ...tile,
+    caption: "Needs the server",
+    disabled: true
+  } :
+  tile));
+
+export type ExportUser =
+  | Pick<StudioSignedIn, "online" | "exportGame" | "exportProject">
+  | Pick<OfflineUser, "online" | "exportGame">;
 
 export class ExportTargets {
-  static readonly STUDIO = new ExportTargets(
-    kStudioTiles,
-    [
-      new WebGameExport(),
-      new ProjectSourcesExport()
-    ]
-  );
+  static offeredTo(
+    user: ExportUser
+  ): ExportTargets {
+    return user.online ?
+      new ExportTargets(kStudioTiles, [
+        new WebGameExport(user),
+        new ProjectSourcesExport(user)
+      ]) :
+      new ExportTargets(kOfflineTiles, [new WebGameExport(user)]);
+  }
 
   #tiles: readonly JollyOption<string>[];
   #targets: readonly ExportTarget[];

@@ -27,6 +27,8 @@ export type PlayProject = Pick<
   "game" | "addEventListener"
 >;
 
+export type PlayTarget = Pick<StudioPlayOptions, "project" | "query">;
+
 export interface StudioPlayOptions {
   catalog: Pick<StudioCatalog, "record">;
   project: PlayProject;
@@ -36,6 +38,10 @@ export interface StudioPlayOptions {
   activeAsset: () => string | null;
   failed: (message: string) => void;
   warned: (message: string) => void;
+  /**
+   * Parameters added to the play page URL.
+   */
+  query?: Readonly<Record<string, string>>;
   /**
    * @default document.baseURI
    */
@@ -94,9 +100,13 @@ export class StudioPlay extends EventTarget {
     }
 
     const url = new URL(
-      `${PLAY_PAGE_DIR}/?start=${encodeURIComponent(scene.id)}`,
+      `${PLAY_PAGE_DIR}/`,
       this.#options.baseUrl ?? document.baseURI
     );
+    url.searchParams.set("start", scene.id);
+    for (const [name, value] of Object.entries(this.#options.query ?? {})) {
+      url.searchParams.set(name, value);
+    }
     const open = this.#options.open ?? ((target, name) => window.open(target, name));
     this.#window = open(url, PLAY_WINDOW);
     this.#window?.focus();

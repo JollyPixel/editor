@@ -60,11 +60,16 @@ export interface OfflineServerOptions {
   storage?: OfflineStorage;
   name?: string;
   backend?: AssetBackendTuning;
+  /**
+   * Runs once the back-end is open, in the tab that owns it; the returned
+   * function runs when it closes.
+   */
+  serve?: (backend: AssetBackend) => () => void;
 }
 
 export type OfflineProject = Pick<
   OfflineServerOptions,
-  "handlers" | "seed" | "backend"
+  "handlers" | "seed" | "backend" | "serve"
 >;
 
 export type OfflineProjectLoader = () => OfflineProject | Promise<OfflineProject>;
@@ -80,6 +85,7 @@ export interface OfflineServerParts {
   eventStore: EventStore.TypedEventStore<AssetEventDataMap>;
   server: Server;
   detach: () => void;
+  unserve?: () => void;
   storage?: OfflineStorage;
   databaseName?: string;
   release?: () => void;
@@ -136,7 +142,8 @@ export class OfflineServer implements OfflineBackend {
       const {
         handlers,
         seed,
-        backend: tuning = {}
+        backend: tuning = {},
+        serve
       } = await project();
       eventStore = persistent ?
         await EventStore.persistence.indexeddb<AssetEventDataMap>({
@@ -178,6 +185,7 @@ export class OfflineServer implements OfflineBackend {
         eventStore,
         server,
         detach: backend.attach(server),
+        unserve: serve?.(backend),
         storage,
         databaseName,
         release
@@ -215,6 +223,7 @@ export class OfflineServer implements OfflineBackend {
   #server: Server;
   #transport: LoopbackTransport;
   #detach: () => void;
+  #unserve: (() => void) | undefined;
   #databaseName: string | undefined;
   #release: (() => void) | undefined;
   #closing: Promise<void> | undefined;
@@ -238,6 +247,7 @@ export class OfflineServer implements OfflineBackend {
     this.#eventStore = parts.eventStore;
     this.#server = parts.server;
     this.#detach = parts.detach;
+    this.#unserve = parts.unserve;
     this.#databaseName = parts.databaseName;
     this.#release = parts.release;
     this.#transport = new LoopbackTransport({
@@ -343,6 +353,7 @@ export class OfflineServer implements OfflineBackend {
       this.#onPageHide
     );
 
+    this.#unserve?.();
     this.#detach();
     await this.#server.close();
     await this.backend.flush();

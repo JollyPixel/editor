@@ -11,6 +11,7 @@ import {
   type Game
 } from "./GameManifestClient.ts";
 import { attachPhysics } from "./gamePhysics.ts";
+import { awaitPlayWorker } from "./offline/registerPlayWorker.ts";
 import { PlayerScenes } from "./PlayerScenes.ts";
 import { playLogger } from "./playLogger.ts";
 import { contributedRuntimePackages } from "./runtimeContributions.ts";
@@ -95,6 +96,7 @@ async function loadGame(): Promise<Game> {
 }
 
 async function play(): Promise<void> {
+  await awaitPlayWorker(location);
   const game = await loadGame();
   const { components, loaders, usesPhysics } = Systems.contributedComponents(
     contributedRuntimePackages(contributions)

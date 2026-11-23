@@ -9,7 +9,10 @@ import assert from "node:assert/strict";
 import type { AssetRecordData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import { ExportTargets } from "../../../src/shell/export/ExportTargets.ts";
+import {
+  ExportTargets,
+  type ExportUser
+} from "../../../src/shell/export/ExportTargets.ts";
 import { GENERAL_SECTION } from "../../../src/shell/settings/SettingsSections.ts";
 
 // CONSTANTS
@@ -18,7 +21,17 @@ const kScene: AssetRecordData = {
   kind: "scene",
   path: "scenes/main.scene.json"
 };
-const kTargets = ExportTargets.STUDIO;
+const kUnused = Promise.withResolvers<never>().promise;
+const kSignedIn: ExportUser = {
+  online: true,
+  exportGame: () => kUnused,
+  exportProject: () => kUnused
+};
+const kOffline: ExportUser = {
+  online: false,
+  exportGame: () => kUnused
+};
+const kTargets = ExportTargets.offeredTo(kSignedIn);
 
 describe("ExportTargets", () => {
   test("opens on the target picked last time while it can export", () => {
@@ -53,5 +66,16 @@ describe("ExportTargets", () => {
       .map((option) => option.value);
 
     assert.deepEqual(disabled, ["desktop", "android"]);
+  });
+
+  test("offers only the web game offline", () => {
+    const offline = ExportTargets.offeredTo(kOffline);
+    const disabled = offline.options()
+      .filter((option) => option.disabled === true)
+      .map((option) => option.value);
+
+    assert.deepEqual(disabled, ["desktop", "android", "project"]);
+    assert.equal(offline.find("project"), undefined);
+    assert.equal(offline.initial("project", kScene).name, "web");
   });
 });

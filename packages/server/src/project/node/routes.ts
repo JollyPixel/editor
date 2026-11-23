@@ -16,7 +16,7 @@ import { ProjectRightRefusedError } from "../errors/ProjectRightRefusedError.ts"
 import { InvalidSettingsError } from "./errors/InvalidSettingsError.ts";
 import { RoleInUseError } from "./errors/RoleInUseError.ts";
 import { StaleSettingsError } from "./errors/StaleSettingsError.ts";
-import { UnknownAssetError } from "./errors/UnknownAssetError.ts";
+import { UnknownAssetError } from "../errors/UnknownAssetError.ts";
 import type { ProjectArchive } from "./ProjectArchive.ts";
 import type { ProjectSettings } from "./ProjectSettings.ts";
 

@@ -5,6 +5,7 @@ import {
 } from "./fixtures.ts";
 import {
   GameSeed,
+  OfflineGameSeed,
   PlayerWindow
 } from "./support/game.ts";
 
@@ -46,5 +47,26 @@ test("plays a scene whose scripts import each other by value", async({
   await player.play(scene);
 
   await expect(page).toHaveTitle("ping pong after ping");
+  await expect(player.error).toBeHidden();
+});
+
+test("plays an offline scene whose scripts the studio builds in the browser", async({
+  studio,
+  page
+}) => {
+  await studio.openOffline();
+  const seed = new OfflineGameSeed(page);
+  const ping = await seed.create("scripts/ping.ts", kPing);
+  await seed.create("scripts/pong.ts", kPong);
+  const scene = await seed.createScene("arena.scene.json", {
+    scriptId: ping,
+    behavior: "Ping"
+  });
+  const game = await page.context().newPage();
+  const player = new PlayerWindow(game);
+
+  await player.play(scene, { offline: "studio" });
+
+  await expect(game).toHaveTitle("ping pong after ping");
   await expect(player.error).toBeHidden();
 });

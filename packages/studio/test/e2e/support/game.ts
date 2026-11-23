@@ -51,49 +51,89 @@ export class GameSeed implements Disposable {
     path: string,
     script: SceneScript
   ): Promise<string> {
-    return this.create(path, JSON.stringify({
-      version: 1,
-      environment: {
-        background: null,
-        environment: {
-          kind: "none",
-          intensity: 1
-        },
-        fog: {
-          kind: "none"
-        }
-      },
-      actors: [
-        actor("Camera", {
-          id: randomUUID(),
-          type: "Camera",
-          data: {
-            projectionMode: "perspective"
-          },
-          assets: {}
-        }),
-        actor(script.behavior, {
-          id: randomUUID(),
-          type: "Script",
-          data: {
-            behavior: script.behavior,
-            properties: {}
-          },
-          assets: {
-            script: {
-              id: script.scriptId,
-              kind: "script"
-            }
-          }
-        })
-      ]
-    }));
+    return this.create(path, sceneSource(script));
   }
 
   [Symbol.dispose](): void {
     this.#catalog.dispose();
     this.#client.destroy();
   }
+}
+
+export class OfflineGameSeed {
+  readonly #page: Page;
+
+  constructor(
+    page: Page
+  ) {
+    this.#page = page;
+  }
+
+  create(
+    path: string,
+    content: string
+  ): Promise<string> {
+    return this.#page.evaluate(async(asset) => {
+      const catalog = window.studio?._assets?.catalog;
+      if (catalog === undefined) {
+        throw new Error("the studio has no catalog yet");
+      }
+
+      return catalog.create(
+        asset.path,
+        new TextEncoder().encode(asset.content)
+      );
+    }, { path, content });
+  }
+
+  createScene(
+    path: string,
+    script: SceneScript
+  ): Promise<string> {
+    return this.create(path, sceneSource(script));
+  }
+}
+
+function sceneSource(
+  script: SceneScript
+): string {
+  return JSON.stringify({
+    version: 1,
+    environment: {
+      background: null,
+      environment: {
+        kind: "none",
+        intensity: 1
+      },
+      fog: {
+        kind: "none"
+      }
+    },
+    actors: [
+      actor("Camera", {
+        id: randomUUID(),
+        type: "Camera",
+        data: {
+          projectionMode: "perspective"
+        },
+        assets: {}
+      }),
+      actor(script.behavior, {
+        id: randomUUID(),
+        type: "Script",
+        data: {
+          behavior: script.behavior,
+          properties: {}
+        },
+        assets: {
+          script: {
+            id: script.scriptId,
+            kind: "script"
+          }
+        }
+      })
+    ]
+  });
 }
 
 export class PlayerWindow {
@@ -108,11 +148,14 @@ export class PlayerWindow {
   }
 
   async play(
-    sceneId: string
+    sceneId: string,
+    query: Readonly<Record<string, string>> = {}
   ): Promise<void> {
-    await this.#page.goto(
-      `/${PLAY_PAGE_DIR}/?start=${encodeURIComponent(sceneId)}`
-    );
+    const search = new URLSearchParams({
+      start: sceneId,
+      ...query
+    });
+    await this.#page.goto(`/${PLAY_PAGE_DIR}/?${search}`);
   }
 }
 

@@ -1,5 +1,5 @@
 // Import Internal Dependencies
-import { compileScript } from "#compiler";
+import { compileScript } from "./compileScript.ts";
 import { stripTypes } from "#stripper";
 import {
   SCRIPT_IMPORTS,

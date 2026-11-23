@@ -25,10 +25,6 @@
   },
   "imports": {
     "#src/*": "./src/*",
-    "#compiler": {
-      "browser": "./dist/compiler/browser.js",
-      "default": "./dist/compiler/node.js"
-    },
     "#outliner": {
       "browser": "./dist/outline/outliner/browser.js",
       "default": "./dist/outline/outliner/node.js"

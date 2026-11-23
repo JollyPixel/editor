@@ -2,7 +2,7 @@
 import type { AssetRecordData } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
-import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
+import type { StudioUser } from "../../accounts/StudioUser.ts";
 import type { FileDownload } from "../../browser/FileDownload.ts";
 import { GENERAL_SECTION } from "../settings/SettingsSections.ts";
 import type {
@@ -24,6 +24,14 @@ export class WebGameExport implements ExportTarget {
     "not from file://.";
   readonly prunesAssets = true;
 
+  #user: Pick<StudioUser, "exportGame">;
+
+  constructor(
+    user: Pick<StudioUser, "exportGame">
+  ) {
+    this.#user = user;
+  }
+
   blocker(
     defaultScene: AssetRecordData | null
   ): ExportBlocker | null {
@@ -31,9 +39,8 @@ export class WebGameExport implements ExportTarget {
   }
 
   download(
-    user: StudioSignedIn,
     request: ExportRequest
   ): Promise<FileDownload> {
-    return user.exportGame(request.assets);
+    return this.#user.exportGame(request.assets);
   }
 }

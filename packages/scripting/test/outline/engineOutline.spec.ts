@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { Behavior } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
-import { compileScript } from "#src/compiler/node.ts";
+import { compileScript } from "#src/compiler/compileScript.ts";
 import { readScriptOutline } from "#src/outline/outliner/node.ts";
 import { evaluateScript } from "../helpers/evaluateScript.ts";
 

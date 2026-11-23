@@ -61,6 +61,7 @@ function studioPlay(
     activeAsset: () => options.active ?? null,
     failed: (message) => failures.push(message),
     warned: (message) => warnings.push(message),
+    query: options.query,
     baseUrl: "http://localhost/studio/",
     open: (url, target) => {
       opened.push(`${target} ${url.href}`);
@@ -94,6 +95,17 @@ describe("StudioPlay", () => {
     ]);
     withDefault.play.dispose();
     withoutDefault.play.dispose();
+  });
+
+  test("opens an offline game with the offline project in the play URL", () => {
+    const offline = studioPlay({ start: "arena", query: { offline: "studio" } });
+
+    offline.play.play("game");
+
+    assert.deepStrictEqual(offline.opened, [
+      "jolly-play http://localhost/studio/play/?start=arena&offline=studio"
+    ]);
+    offline.play.dispose();
   });
 
   test("plays the current scene only from a scene tab", () => {

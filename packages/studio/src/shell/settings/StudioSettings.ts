@@ -19,7 +19,11 @@ import {
 import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/tab";
 import "@jolly-pixel/ui/elements/tabs";
-import type { PreferenceScopes } from "@jolly-pixel/server";
+import type {
+  GameSection,
+  PhysicsSection,
+  PreferenceScopes
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
@@ -29,6 +33,10 @@ import {
 } from "../../accounts/StudioUser.ts";
 import { BrowserState } from "../../browser/BrowserState.ts";
 import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
+import {
+  OFFLINE_GAME_CHANGE,
+  type OfflineGameSettings
+} from "../../project/OfflineGameSettings.ts";
 import type { ProjectDrafts } from "../../project/ProjectDrafts.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { cardStyles } from "../cardStyles.ts";
@@ -194,6 +202,10 @@ export class StudioSettings extends LitElement {
 
   #user = new ChangeController<StudioUser>(this, STUDIO_USER_CHANGE);
   #project = new ProjectSettingsController(this);
+  #offlineGame = new ChangeController<OfflineGameSettings>(
+    this,
+    OFFLINE_GAME_CHANGE
+  );
   #visited = new Map<string, string>();
 
   constructor() {
@@ -213,6 +225,9 @@ export class StudioSettings extends LitElement {
     }
     if (user?.online) {
       this.#project.attach(user.project);
+    }
+    else if (user !== null) {
+      this.#offlineGame.attach(user.game);
     }
   }
 
@@ -281,9 +296,7 @@ export class StudioSettings extends LitElement {
         </header>
         <div
           class="card-body ${wide ? "wide" : ""}"
-          @settings-edit=${(event: HTMLElementEventMap["settings-edit"]) => {
-            drafts?.edit(event.section, event.value);
-          }}
+          @settings-edit=${this.#onEdit}
         >
           ${current === undefined ? nothing : this.#content(current)}
         </div>
@@ -397,11 +410,51 @@ export class StudioSettings extends LitElement {
           ></studio-preferences-page>
         `;
       default:
-        return user?.online ?
-          this.#projectContent(section, user) :
+        if (user?.online) {
+          return this.#projectContent(section, user);
+        }
+
+        return user !== null && section.kind === "general" ?
+          this.#gameFields(user.game.game, user.game.physics, false) :
           nothing;
     }
   }
+
+  #gameFields(
+    game: GameSection | null,
+    physics: PhysicsSection | null,
+    disabled: boolean
+  ): TemplateResult {
+    return html`
+      <studio-project-game
+        .value=${game}
+        .catalog=${this.catalog}
+        ?disabled=${disabled}
+      ></studio-project-game>
+      <studio-project-physics
+        .value=${physics}
+        ?disabled=${disabled}
+      ></studio-project-physics>
+    `;
+  }
+
+  readonly #onEdit = (
+    event: HTMLElementEventMap["settings-edit"]
+  ): void => {
+    const user = this.#user.current;
+    if (user?.online === false) {
+      if (event.edits("game")) {
+        user.game.update({ game: event.value });
+      }
+      else if (event.edits("physics")) {
+        user.game.update({ physics: event.value });
+      }
+
+      return;
+    }
+
+    this.#project.current?.drafts.edit(event.section, event.value);
+  };
 
   #projectContent(
     section: ProjectSection,
@@ -435,15 +488,11 @@ export class StudioSettings extends LitElement {
               .roster=${user.roster}
             ></studio-project-new-accounts>
           ` : nothing}
-          <studio-project-game
-            .value=${drafts.section("game").current}
-            .catalog=${this.catalog}
-            ?disabled=${disabled}
-          ></studio-project-game>
-          <studio-project-physics
-            .value=${drafts.section("physics").current}
-            ?disabled=${disabled}
-          ></studio-project-physics>
+          ${this.#gameFields(
+            drafts.section("game").current,
+            drafts.section("physics").current,
+            disabled
+          )}
           <studio-project-snapshot
             .value=${drafts.section("snapshot").current}
             ?disabled=${disabled}

@@ -3,7 +3,6 @@ import type { AssetRecordData } from "@jolly-pixel/asset";
 import type { GameExportAssets } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
-import type { StudioSignedIn } from "../../accounts/StudioSignedIn.ts";
 import type { FileDownload } from "../../browser/FileDownload.ts";
 
 export type ExportTargetName = "web" | "project";
@@ -24,8 +23,5 @@ export interface ExportTarget {
   readonly summary: string;
   readonly prunesAssets: boolean;
   blocker(defaultScene: AssetRecordData | null): ExportBlocker | null;
-  download(
-    user: StudioSignedIn,
-    request: ExportRequest
-  ): Promise<FileDownload>;
+  download(request: ExportRequest): Promise<FileDownload>;
 }

@@ -38,7 +38,7 @@ import {
 import type {
   GamePlayer,
   PlayerPageSource
-} from "../../game/node/GamePlayer.ts";
+} from "../../game/GamePlayer.ts";
 import { GameExport } from "../../game/node/GameExport.ts";
 import { PlayPage } from "../../game/node/PlayPage.ts";
 import { ProjectGame } from "../../game/node/ProjectGame.ts";

@@ -13,13 +13,19 @@ export class ProjectSourcesExport implements ExportTarget {
     "another studio.";
   readonly prunesAssets = false;
 
+  #user: Pick<StudioSignedIn, "exportProject">;
+
+  constructor(
+    user: Pick<StudioSignedIn, "exportProject">
+  ) {
+    this.#user = user;
+  }
+
   blocker(): ExportBlocker | null {
     return null;
   }
 
-  download(
-    user: StudioSignedIn
-  ): Promise<FileDownload> {
-    return user.exportProject();
+  download(): Promise<FileDownload> {
+    return this.#user.exportProject();
   }
 }

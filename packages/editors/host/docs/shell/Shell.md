@@ -177,6 +177,9 @@ const share = await CatalogShare.open(backend.connect().client);
 const editorQuery = offlineQuery("studio"); // { offline: "studio" }
 ```
 
+The project's `serve(backend)` runs only in the tab that owns the data, so
+that tab alone answers what needs the back-end itself, such as builds.
+
 `joinOfflineBackend({ name?, observer? })` only joins the owning tab, and
 never runs a back-end of its own. With `observer: true`, its connections
 claim `observer` in their peer profile, so collaborator lists leave the page

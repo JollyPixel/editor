@@ -18,6 +18,14 @@ export class SettingsEditEvent<
     this.section = section;
     this.value = value;
   }
+
+  edits<TSection extends SettingsSectionName>(
+    section: TSection
+  ): this is SettingsEditEvent<TSection> {
+    const name: SettingsSectionName = this.section;
+
+    return name === section;
+  }
 }
 
 declare global {

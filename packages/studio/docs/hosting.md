@@ -36,7 +36,7 @@ The proxy must forward WebSocket upgrades on `/ws-sync`, or `/p/<slug>/ws-sync` 
 
 Rooms live in process memory, events go to `node:sqlite` and clients keep WebSockets open, so the server needs a long-running Node 24 process with a persistent disk. Serverless platforms do not fit.
 
-Play serves the player that `build:hosted` wrote to `dist/play/`, with the import map of the scripts the account opens written in. A game export (`GET /api/game/export`) ships the same player, found through `dist/.vite/manifest.json`. Rebuild the studio after changing the player or a runtime contribution.
+Play serves the player that `build:hosted` wrote to `dist/play/`, with the import map of the scripts the account opens written in. A game export (`GET /api/game/export`) ships the same player, found through `dist/.vite/manifest.json`. Rebuild the studio after changing the player or a runtime contribution. `build:static` also writes `dist/play/player.zip`, the player the offline export ships, and every build writes the offline play worker at `dist/play/sw.js`.
 
 Back up through `GET /api/project/archive` (`/p/<slug>/api/project/archive` in a projects folder) with an account allowed to export, or copy the project folder while the process is stopped. A copy taken while it runs can catch the SQLite WAL files halfway through a write.
 
