@@ -30,12 +30,13 @@ import { ServerSettings } from "@jolly-pixel/server/node";
 // Import Internal Dependencies
 import { openStudioProject } from "./node/studioFiles.ts";
 import { backend } from "./vite/backend.ts";
-import { EditorPageFiles } from "./vite/EditorPageFiles.ts";
-import { editorPages } from "./vite/editorPages.ts";
-import { offlinePlay } from "./vite/offlinePlay.ts";
-import { playerModules } from "./vite/playerModules.ts";
-import { projectContributions } from "./vite/projectContributions.ts";
-import { projectManifest } from "./vite/projectManifest.ts";
+import { bootPreloads } from "./vite/bootPreloads.ts";
+import { EditorPageFiles } from "./vite/pages/EditorPageFiles.ts";
+import { editorPages } from "./vite/pages/editorPages.ts";
+import { offlinePlay } from "./vite/player/offlinePlay.ts";
+import { playerModules } from "./vite/player/modules.ts";
+import { projectContributions } from "./vite/project/contributions.ts";
+import { projectManifest } from "./vite/project/manifest.ts";
 
 // CONSTANTS
 const kLazyKindDependencies = ["opentype.js"];
@@ -95,6 +96,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       createProjectKindsPlugin(project.kinds),
       projectContributions(project),
       projectManifest(project),
+      bootPreloads(),
       createProjectFileWatchPlugin(project.file),
       playerModules(),
       offlinePlay(),

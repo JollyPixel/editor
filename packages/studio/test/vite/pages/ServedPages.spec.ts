@@ -18,13 +18,13 @@ import {
 } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { PageInput } from "../../vite/PageInput.ts";
-import { ServedPages } from "../../vite/ServedPages.ts";
-import { writeEditorPage } from "../helpers/editorPages.ts";
+import { PageInput } from "../../../vite/pages/PageInput.ts";
+import { ServedPages } from "../../../vite/pages/ServedPages.ts";
+import { writeEditorPage } from "../../helpers/editorPages.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 function createViteServer(
   root: string

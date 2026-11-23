@@ -11,6 +11,10 @@ import {
   query,
   state
 } from "lit/decorators.js";
+import {
+  createRef,
+  ref
+} from "lit/directives/ref.js";
 import { CATALOG_ROOM } from "@jolly-pixel/asset-server/client";
 import type { CatalogShare } from "@jolly-pixel/editor.host";
 import {
@@ -18,6 +22,7 @@ import {
   NotificationQueue
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/notifications";
+import "@jolly-pixel/ui/elements/tab";
 import "@jolly-pixel/ui/elements/tabs";
 import "@jolly-pixel/ui/elements/toolbar";
 import { errorMessage } from "@jolly-pixel/utils";
@@ -41,6 +46,7 @@ import type { SettingsOpenEvent } from "./settings/SettingsOpenEvent.ts";
 import type { StudioPlay } from "../play/StudioPlay.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
+import { HOME_TAB_ID } from "../tabs/EditorTabs.ts";
 import type { StudioSettings } from "./settings/StudioSettings.ts";
 import { StudioAgentChat } from "../golem/StudioAgentChat.ts";
 import { CatalogPresence } from "../catalog/CatalogPresence.ts";
@@ -274,6 +280,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
   #presence: CatalogPresence | null = null;
   #scopes: PreferenceScopes | null = null;
   #browserState = new BrowserState();
+  #homeTab = createRef<HTMLElementTagNameMap["jolly-tab"]>();
   #settingsPage = new LazyTemplate(
     this,
     () => import("./settings/StudioSettings.ts")
@@ -299,8 +306,10 @@ export class Studio extends LitElement implements GolemConsoleHost {
     options: StudioOptions
   ): Promise<void> {
     await this.updateComplete;
+    const homeTab = this.#homeTab.value;
     if (
       this._strip === null ||
+      homeTab === undefined ||
       this._frames === null ||
       this._home === null ||
       this._settings === null
@@ -322,6 +331,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
       confirmClose: options.confirmClose,
       slots: {
         strip: this._strip,
+        homeTab,
         frames: this._frames,
         home: this._home,
         settings: this._settings
@@ -440,10 +450,20 @@ export class Studio extends LitElement implements GolemConsoleHost {
 
     return html`
       <header id="studio-header">
-        <jolly-tabs id="editor-tabs" reorderable></jolly-tabs>
+        <jolly-tabs id="editor-tabs" reorderable value=${HOME_TAB_ID}>
+          <jolly-tab
+            ${ref(this.#homeTab)}
+            value=${HOME_TAB_ID}
+            label="Home"
+            icon="home"
+            icon-only
+            fixed
+          ></jolly-tab>
+        </jolly-tabs>
         <jolly-toolbar id="studio-actions" label="Studio actions">
           <studio-play-button
             .play=${this._play}
+            ?pending=${this._assets === null}
             @settings-open=${this.#openSettings}
           ></studio-play-button>
           <div class="divider" role="separator"></div>

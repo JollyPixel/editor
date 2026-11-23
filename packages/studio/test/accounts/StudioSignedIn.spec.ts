@@ -1,5 +1,7 @@
 // Import Node.js Dependencies
 import {
+  afterEach,
+  beforeEach,
   describe,
   test
 } from "node:test";
@@ -8,7 +10,10 @@ import { setImmediate } from "node:timers/promises";
 
 // Import Third-party Dependencies
 import type { Member } from "@jolly-pixel/accounts";
-import { UNAUTHORIZED_CLOSE_CODE } from "@jolly-pixel/network";
+import {
+  UNAUTHORIZED_CLOSE_CODE,
+  type PeerMetadata
+} from "@jolly-pixel/network";
 import {
   Client,
   type ClientSocket,
@@ -72,6 +77,49 @@ class IdleSocket implements ClientSocket {
       listener(event);
     }
   }
+}
+
+interface ApiProbe {
+  api: StudioClients;
+  requests: string[];
+  signIn(): void;
+}
+
+function accountApi(): ApiProbe {
+  const requests: string[] = [];
+  let signedIn = false;
+  const replies: Record<string, unknown> = {
+    "/api/preferences/": { scopes: {} },
+    "/api/project/": {
+      ...ProjectRights.NONE.toJSON(),
+      share: true
+    },
+    "/api/project/sections": DEFAULT_PROJECT_SECTIONS
+  };
+
+  return {
+    requests,
+    signIn: () => {
+      signedIn = true;
+    },
+    api: StudioClients.at("http://localhost/", async(input) => {
+      const { pathname } = new URL(String(input));
+      requests.push(pathname);
+
+      return signedIn ?
+        Response.json(replies[pathname]) :
+        new Response(null, { status: 401 });
+    })
+  };
+}
+
+function idleConnect(
+  profile: PeerMetadata
+): Client {
+  return new Client({
+    profile,
+    socket: () => new IdleSocket()
+  });
 }
 
 interface SignedInProbe {
@@ -146,5 +194,73 @@ describe("StudioSignedIn", () => {
     assert.equal(signedIn.identity.avatar, "/api/accounts/avatars/alice-id?v=2");
     assert.equal(signedIn.identity.peerId, kAlice.id);
     assert.equal(changes, 1);
+  });
+});
+
+describe("StudioSignedIn.open", () => {
+  const channels: BroadcastChannel[] = [];
+  const NativeChannel = globalThis.BroadcastChannel;
+
+  beforeEach(() => {
+    globalThis.BroadcastChannel = class extends NativeChannel {
+      constructor(name: string) {
+        super(name);
+        channels.push(this);
+      }
+    };
+  });
+
+  afterEach(() => {
+    globalThis.BroadcastChannel = NativeChannel;
+    for (const channel of channels.splice(0)) {
+      channel.close();
+    }
+  });
+
+  test("reads the account state while it checks the session", async() => {
+    const { api, requests, signIn } = accountApi();
+    signIn();
+    const session = Promise.withResolvers<Member>();
+    const opening = StudioSignedIn.open({
+      accounts: {
+        me: () => session.promise,
+        replaceAvatar: async() => kAlice,
+        logout: async() => undefined
+      },
+      signIn: async() => kAlice,
+      api,
+      connect: idleConnect,
+      reload: () => undefined
+    });
+    await setImmediate();
+
+    assert.equal(requests.length, 3);
+    session.resolve(kAlice);
+    const signedIn = await opening;
+
+    assert.equal(requests.length, 3);
+    assert.equal(signedIn.rights.allows("share"), true);
+  });
+
+  test("reads the account state again once the user signs in", async() => {
+    const { api, signIn } = accountApi();
+
+    const signedIn = await StudioSignedIn.open({
+      accounts: {
+        me: async() => null,
+        replaceAvatar: async() => kAlice,
+        logout: async() => undefined
+      },
+      signIn: async() => {
+        signIn();
+
+        return kAlice;
+      },
+      api,
+      connect: idleConnect,
+      reload: () => undefined
+    });
+
+    assert.equal(signedIn.rights.allows("share"), true);
   });
 });

@@ -18,12 +18,12 @@ import {
   STUDIO_ROOT,
   studioBackendFiles
 } from "../node/studioFiles.ts";
-import { DevPlayer } from "./DevPlayer.ts";
+import { DevPlayer } from "./player/DevPlayer.ts";
 import { E2E_BACKEND_OPTIONS } from "./e2eBackend.ts";
-import type { EditorPagesApi } from "./editorPages.ts";
-import { playerArchive } from "./offlinePlay.ts";
-import { playerModules } from "./playerModules.ts";
-import { projectContributions } from "./projectContributions.ts";
+import type { EditorPagesApi } from "./pages/editorPages.ts";
+import { playerArchive } from "./player/offlinePlay.ts";
+import { playerModules } from "./player/modules.ts";
+import { projectContributions } from "./project/contributions.ts";
 
 export interface BackendPluginOptions {
   project: Project;

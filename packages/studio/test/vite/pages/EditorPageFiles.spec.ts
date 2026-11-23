@@ -25,13 +25,13 @@ import {
 } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { EditorPageFiles } from "../../vite/EditorPageFiles.ts";
-import { EDITOR_PAGE_SETTLE_MS } from "../../vite/EditorPagesWatcher.ts";
-import { voxelMapPages } from "../helpers/editorPages.ts";
+import { EditorPageFiles } from "../../../vite/pages/EditorPageFiles.ts";
+import { EDITOR_PAGE_SETTLE_MS } from "../../../vite/pages/EditorPagesWatcher.ts";
+import { voxelMapPages } from "../../helpers/editorPages.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 describe("EditorPageFiles", () => {
   let dist: string;

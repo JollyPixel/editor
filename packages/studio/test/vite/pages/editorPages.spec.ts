@@ -22,17 +22,17 @@ import {
 } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import type { EditorPageFiles } from "../../vite/EditorPageFiles.ts";
-import { editorPages } from "../../vite/editorPages.ts";
+import type { EditorPageFiles } from "../../../vite/pages/EditorPageFiles.ts";
+import { editorPages } from "../../../vite/pages/editorPages.ts";
 import {
   EDITOR_CSS,
   voxelMapPages,
   writeEditorPage
-} from "../helpers/editorPages.ts";
+} from "../../helpers/editorPages.ts";
 import {
   createTempDir,
   removeTempDir
-} from "../helpers/tempDir.ts";
+} from "../../helpers/tempDir.ts";
 
 // CONSTANTS
 const kScriptUrl = /(?:src|href)="([^"]+\.js)"/g;

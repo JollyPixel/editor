@@ -55,9 +55,25 @@ describe("AssetTreeView", () => {
     view.refresh();
 
     assert.ok(view.model.has(world));
-    assert.ok(view.expanded.has(world));
+    assert.ok(view.expanded.includes(world));
     assert.deepEqual(view.selected, [world]);
     assert.ok(browserState.expandedFolders.has(world));
+  });
+
+  test("hands the tree the same expanded list until a folder toggles", () => {
+    const catalog = new FakeTreeCatalog([MAP_RECORD], ["maps"]);
+    const { view } = treeView(catalog);
+    const maps = folderNodeId(AssetPath.parse("maps"));
+    view.toggle(maps, true);
+    const expanded = view.expanded;
+
+    view.select([assetNodeId(MAP_RECORD.id)]);
+    catalog.change();
+    view.refresh();
+
+    assert.equal(view.expanded, expanded);
+    view.toggle(maps, false);
+    assert.deepEqual(view.expanded, []);
   });
 
   test("asks once per convertible format and adds the dropped files in the folder", async() => {
@@ -94,7 +110,7 @@ describe("AssetTreeView", () => {
         "maps/tiles.pixelart"
       ]
     );
-    assert.ok(view.expanded.has(folderNodeId(AssetPath.parse("maps"))));
+    assert.ok(view.expanded.includes(folderNodeId(AssetPath.parse("maps"))));
     assert.deepEqual(errors, []);
     assert.deepEqual(readChips(notifications), ["success Added 4 files"]);
   });

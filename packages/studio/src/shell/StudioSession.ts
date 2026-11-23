@@ -28,6 +28,7 @@ import {
   type EditorTabOpenOptions,
   type EditorTabsOptions,
   type EditorTabTitle,
+  type TabItem,
   type TabStrip
 } from "../tabs/EditorTabs.ts";
 import { SavedTabs } from "../tabs/SavedTabs.ts";
@@ -86,6 +87,7 @@ export interface StudioSessionSlots {
   strip: TabStrip;
   frames: HTMLElement;
   home: HTMLElement;
+  homeTab: TabItem;
   settings: HTMLElement;
 }
 
@@ -160,6 +162,7 @@ export class StudioSession {
     this.tabs = new EditorTabs({
       strip: slots.strip,
       home: slots.home,
+      homeTab: slots.homeTab,
       pages: [
         {
           id: SETTINGS_TAB_ID,

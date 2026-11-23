@@ -8,7 +8,10 @@ import {
 } from "@jolly-pixel/accounts";
 import type { PeerMetadata } from "@jolly-pixel/network";
 import type { Client } from "@jolly-pixel/network/client";
-import type { Preferences } from "@jolly-pixel/preferences";
+import type {
+  PreferenceOverrides,
+  Preferences
+} from "@jolly-pixel/preferences";
 import {
   peerIdentity,
   type PeerIdentity
@@ -67,20 +70,20 @@ export class StudioSignedIn extends EventTarget {
   static async open(
     options: StudioSignInOptions
   ): Promise<StudioSignedIn> {
-    const account = await signedInMember(options.accounts) ??
-      await options.signIn();
-    const [preferences, rights, sections] = await Promise.all([
-      AccountPreferences.load({
-        accountId: account.id,
-        client: options.api.preferences
-      }),
-      options.api.project.rights(),
-      options.api.project.sections()
-    ]);
+    const early = readAccountState(options.api);
+    early.catch(() => undefined);
+    const member = await signedInMember(options.accounts);
+    const account = member ?? await options.signIn();
+    const [overrides, rights, sections] = member === null ?
+      await readAccountState(options.api) :
+      await early;
 
     return new StudioSignedIn(account, {
       ...options,
-      preferences,
+      preferences: new AccountPreferences(overrides, {
+        accountId: account.id,
+        client: options.api.preferences
+      }),
       rights,
       sections
     });
@@ -212,4 +215,18 @@ async function signedInMember(
 
     throw error;
   }
+}
+
+function readAccountState(
+  api: StudioClients
+): Promise<[
+  Map<string, PreferenceOverrides>,
+  ProjectRights,
+  ProjectSections
+]> {
+  return Promise.all([
+    api.preferences.list(),
+    api.project.rights(),
+    api.project.sections()
+  ]);
 }

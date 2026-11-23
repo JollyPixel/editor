@@ -88,6 +88,7 @@ export class AssetTreeView {
   #kindOptions: readonly JollyOption<string>[] = [kAllKinds];
   #recordKinds: ReadonlySet<string> = new Set();
   #expanded: ReadonlySet<string>;
+  #expandedIds: readonly string[];
   #createdFolders: ReadonlySet<string> = new Set();
   #selected: readonly string[] = [];
   #pendingLabels: ReadonlyMap<string, string> = new Map();
@@ -118,6 +119,7 @@ export class AssetTreeView {
     });
     this.#kind = options.browserState.assetKind;
     this.#expanded = options.browserState.expandedFolders;
+    this.#expandedIds = [...this.#expanded];
     this.#catalog.on("change", this.#onCatalogChange);
     this.#catalog.on("dependencies", this.#onDependenciesChange);
     this.#kindFilter?.addEventListener(
@@ -155,8 +157,8 @@ export class AssetTreeView {
     return this.#kindOptions;
   }
 
-  get expanded(): ReadonlySet<string> {
-    return this.#expanded;
+  get expanded(): readonly string[] {
+    return this.#expandedIds;
   }
 
   get selected(): readonly string[] {
@@ -509,6 +511,7 @@ export class AssetTreeView {
     expanded: ReadonlySet<string>
   ): void {
     this.#expanded = expanded;
+    this.#expandedIds = [...expanded];
     this.#browserState.expandedFolders = expanded;
     this.#onChange();
   }

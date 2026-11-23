@@ -20,7 +20,7 @@ import {
 import {
   PageInput,
   virtualPages
-} from "./PageInput.ts";
+} from "../pages/PageInput.ts";
 
 export interface DevPlayerOptions {
   /**

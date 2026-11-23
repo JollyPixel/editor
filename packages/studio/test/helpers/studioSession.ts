@@ -18,6 +18,7 @@ import {
   type StudioSessionOptions
 } from "../../src/shell/StudioSession.ts";
 import { idleShare } from "./catalogShare.ts";
+import { createHomeTab } from "./editorTabs.ts";
 
 // CONSTANTS
 export const MAP_RECORD: AssetRecordData = {
@@ -115,6 +116,7 @@ export function session(
       strip,
       frames,
       home,
+      homeTab: createHomeTab(),
       settings
     },
     cap,

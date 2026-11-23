@@ -87,7 +87,7 @@ flowchart TB
 
 - The owner answers the routes the server answers online, so the player has one code path. It reads them with `parseGameRequest` and maps their errors with `GAME_FAILURES`, both from `@jolly-pixel/server`. `OfflinePlayHost` runs from the `serve` hook of the offline back-end, only in the tab that holds its lock.
 - The worker is built on its own as one classic script: in the main build, the `ui` chunk group takes zod, and a worker sharing that graph would load lit.
-- Code: `src/play/offline/`, `vite/offlinePlay.ts`.
+- Code: `src/play/offline/`, `vite/player/offlinePlay.ts`.
 
 ## Editor pages
 
@@ -102,4 +102,4 @@ flowchart TB
 - A page without source HTML is served from its built folder; in dev, a rebuild of that folder reloads the editor's tabs.
 - The studio's other pages live in `pages/`: `pages/<route>.html` is served and built at `<route>/index.html`, like a compiled editor page. The preview frame page, `pages/preview.html` (`src/preview/`), reads the same scene contributions to render 3D asset previews.
 - `test/vite/studio.bundle.spec.ts` guards the shared chunks.
-- Code: `vite/editorPages.ts`, and `@jolly-pixel/server` for the editor packages. See [hosting](./docs/hosting.md).
+- Code: `vite/pages/editorPages.ts`, and `@jolly-pixel/server` for the editor packages. See [hosting](./docs/hosting.md).

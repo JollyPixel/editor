@@ -18,7 +18,7 @@ import {
 } from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
-import { PLAY_WORKER_PATH } from "../shared/playWorker.ts";
+import { PLAY_WORKER_PATH } from "../../shared/playWorker.ts";
 import {
   OnDemandBuild,
   PRODUCTION_BUILD,

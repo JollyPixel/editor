@@ -10,7 +10,7 @@ import {
 import { voxelMapEditor } from "@jolly-pixel/server/testing";
 
 // Import Internal Dependencies
-import { EditorPageFiles } from "../../vite/EditorPageFiles.ts";
+import { EditorPageFiles } from "../../vite/pages/EditorPageFiles.ts";
 
 // CONSTANTS
 export const EDITOR_CSS = "body { margin: 0; }";

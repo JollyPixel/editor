@@ -133,6 +133,18 @@ Unlike `--network`, it treats compressed and uncompressed frames alike. It throt
 
 Seed each server before a throttled run, by one round of an unthrottled variant against it: the first model or sound open on a server uploads its asset, and through the proxy that upload alone can exceed the harness's 30 s timeout.
 
+## Opening the shell
+
+[`perf/boot/measure.ts`](../../perf/boot/measure.ts) times the shell's own load, before any editor opens. It runs on the same build and server as `perf:open`:
+
+```bash
+$ pnpm run perf:boot --rounds 8 --variants baseline=http://localhost:3005/,change=http://localhost:3004/
+```
+
+An init script polls the shell on every animation frame and records, from navigation start, when each part first shows: `header` (the header actions), `home` (the Home tab), `play` (the Play button, disabled or not), `kinds` (the kind filter's buttons) and `tree` (the first asset row). The seed project has no default scene, so `play` only shows while the shell loads, then hides.
+
+Options: `--modes online,offline`, `--rounds 5`, `--variants label=url,...` (rounds alternate their order), `--reload` (measures a second load in the same context, with warm caches and a seeded offline project) and `--headless`. A boot that never shows its header, Home tab and tree within 30 s is logged and left out. On localhost the requests the shell makes before its tree take about a millisecond; put a [throttling proxy](#throttled-links) in front of each server to see what they cost.
+
 ## Editing a file
 
 [`perf/edit/measure.ts`](../../perf/edit/measure.ts) measures what typing costs in the script editor, once the editor has opened and settled. It runs on the same build and server as `perf:open`:

@@ -62,6 +62,7 @@ import "./AssetDetails.ts";
 
 // CONSTANTS
 const kNoKindOptions: readonly JollyOption<string>[] = [];
+const kNoExpanded: readonly string[] = [];
 const kNoActions = new AssetActions({ sharing: false });
 const kFilesType = "Files";
 const kDropQuestions: AssetDropQuestions = {
@@ -288,7 +289,7 @@ export class AssetBrowser extends LitElement {
           reserve-toggle="tree"
           activate-on-double-click
           .nodes=${view?.nodes ?? AssetTreeModel.EMPTY.nodes}
-          .expanded=${[...view?.expanded ?? []]}
+          .expanded=${view?.expanded ?? kNoExpanded}
           .selected=${view?.selected ?? []}
           .acceptDrop=${this.#acceptDrop}
           @jolly-select=${this.#onSelect}
