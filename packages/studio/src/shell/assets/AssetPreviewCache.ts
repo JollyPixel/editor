@@ -1,18 +1,12 @@
 // Import Third-party Dependencies
-import type { AssetPreview } from "@jolly-pixel/asset-server/client";
 import type { KindPreview } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import type { AssetPreviewTarget } from "../../catalog/AssetSummary.ts";
+import type { PreviewSource } from "../../preview/protocol.ts";
 
 // CONSTANTS
 const kDefaultCapacity = 32;
-
-export interface PreviewSource {
-  preview(
-    assetId: string
-  ): Promise<AssetPreview | null>;
-}
 
 export type PreviewSources = Readonly<Record<KindPreview, PreviewSource>>;
 

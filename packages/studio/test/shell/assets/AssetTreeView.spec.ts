@@ -219,7 +219,7 @@ describe("AssetTreeView actions", () => {
 
   test("replaces an asset with a file of its format or one its kind converts, refusing others", async() => {
     const catalog = new FakeTreeCatalog([MAP_RECORD, MODEL_RECORD], ["maps"]);
-    const { view, prompted, errors, notifications } = treeView(catalog, {
+    const { view, prompted, notifications } = treeView(catalog, {
       picks: [
         new File(["json"], "Hero.VoxelModel.json"),
         new File(["vox"], "tree.vox"),
@@ -239,10 +239,9 @@ describe("AssetTreeView actions", () => {
       { assetId: MODEL_RECORD.id, content: "json", from: undefined },
       { assetId: MODEL_RECORD.id, content: "vox", from: ".vox" }
     ]);
-    assert.deepEqual(errors, [
-      "Could not replace \"hero.voxelmodel.json\" with \"notes.txt\": it is not a .voxelmodel.json file"
-    ]);
     assert.deepEqual(readChips(notifications), [
+      "error Could not replace \"hero.voxelmodel.json\" with \"notes.txt\": " +
+      "it is not a .voxelmodel.json file",
       "success Replaced \"hero.voxelmodel.json\": with \"tree.vox\"",
       "success Replaced \"hero.voxelmodel.json\": with \"Hero.VoxelModel.json\""
     ]);

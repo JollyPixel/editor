@@ -32,6 +32,11 @@ const kOfflineRights = new ProjectRights({
 
 export class OfflineUser extends EventTarget {
   readonly online = false;
+  readonly identity = null;
+  readonly account = null;
+  readonly renewal = null;
+  readonly project = null;
+  readonly shares = null;
   readonly rights = kOfflineRights;
   readonly preferences: Preferences;
   readonly game: OfflineGameSettings;

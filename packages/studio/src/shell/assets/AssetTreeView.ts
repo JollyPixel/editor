@@ -20,10 +20,7 @@ import {
   type AssetKindSet
 } from "../../catalog/AssetKindSet.ts";
 import { AssetPath } from "../../catalog/AssetPath.ts";
-import {
-  AssetSelection,
-  type AssetAction
-} from "../../catalog/AssetSelection.ts";
+import { AssetSelection } from "../../catalog/AssetSelection.ts";
 import { CatalogLayout } from "../../catalog/CatalogLayout.ts";
 import {
   AssetTreeModel,
@@ -36,6 +33,11 @@ import {
 import { PendingAssets } from "../../catalog/PendingAssets.ts";
 import { DroppedFile } from "../../browser/DroppedFile.ts";
 import { KIND_FILTER_CHANGE } from "../../project/StudioProjectSettings.ts";
+import {
+  AssetActions,
+  type AssetAction,
+  type AssetLeafAction
+} from "./AssetActions.ts";
 import {
   AssetCommands,
   type RelocationVerb
@@ -73,10 +75,10 @@ export class AssetTreeView {
   #presence: OccupancySource | null;
   #browserState: AssetTreeState;
   #prompts: AssetActionPrompts;
+  #actions: AssetActions;
   #commands: AssetCommands;
   #notifications: Notifier;
   #onChange: () => void;
-  #onError: (message: string) => void;
   #onCreated: (nodeId: string) => void;
   #onRevealed: (nodeId: string) => void;
   #model = AssetTreeModel.EMPTY;
@@ -103,15 +105,16 @@ export class AssetTreeView {
     this.#presence = options.presence;
     this.#browserState = options.browserState;
     this.#prompts = options.prompts;
+    this.#actions = new AssetActions({
+      sharing: options.prompts.share !== null
+    });
     this.#onChange = options.onChange;
-    this.#onError = options.onError;
     this.#onCreated = options.onCreated;
     this.#onRevealed = options.onRevealed;
     this.#notifications = options.notifications;
     this.#commands = new AssetCommands({
       catalog: options.catalog,
-      notifications: options.notifications,
-      onError: options.onError
+      notifications: options.notifications
     });
     this.#kind = options.browserState.assetKind;
     this.#expanded = options.browserState.expandedFolders;
@@ -132,8 +135,8 @@ export class AssetTreeView {
     return this.#presence?.occupancy ?? AssetOccupancy.EMPTY;
   }
 
-  get sharing(): boolean {
-    return this.#prompts.share !== null;
+  get actions(): AssetActions {
+    return this.#actions;
   }
 
   get model(): AssetTreeModel {
@@ -311,8 +314,7 @@ export class AssetTreeView {
     action: AssetAction,
     nodeIds?: Iterable<string>
   ): boolean {
-    return (action !== "share" || this.sharing) &&
-      this.selection(nodeIds).allows(action);
+    return this.#actions.allows(action, this.selection(nodeIds));
   }
 
   run(
@@ -320,45 +322,46 @@ export class AssetTreeView {
     nodeIds?: Iterable<string>
   ): void {
     const selection = this.selection(nodeIds);
-    if (!this.allows(action, selection.nodeIds)) {
+    if (!this.#actions.allows(action, selection)) {
       return;
     }
 
-    const { asset, folder } = selection;
     switch (action) {
-      case "open":
-        if (asset !== null) {
-          this.#prompts.open(asset.id);
-        }
-        break;
       case "new-folder":
-        void this.createFolder(folder);
+        void this.createFolder(selection.folder);
         break;
       case "rename":
         this.#prompts.rename(selection.nodeIds[0]);
         break;
-      case "replace":
-        if (asset !== null) {
-          void this.#replace(asset);
-        }
-        break;
-      case "export":
-        if (asset !== null) {
-          void this.#commands.export(asset);
-        }
-        break;
-      case "share":
-        if (asset !== null) {
-          this.#prompts.share?.(asset);
-        }
-        break;
       case "delete":
         void this.#remove(selection.nodeIds);
         break;
-      default: {
-        const unhandled: never = action;
-        throw new Error(`Unhandled asset action: ${unhandled}`);
-      }
+      default:
+        if (selection.asset !== null) {
+          this.#runOnAsset(action, selection.asset);
+        }
+    }
+  }
+
+  #runOnAsset(
+    action: AssetLeafAction,
+    asset: AssetLeafData
+  ): void {
+    switch (action) {
+      case "open":
+        this.#prompts.open(asset.id);
+        break;
+      case "replace":
+        void this.#replace(asset);
+        break;
+      case "export":
+        void this.#commands.export(asset);
+        break;
+      case "share":
+        this.#prompts.share?.(asset);
+        break;
+      default:
+        action satisfies never;
     }
   }
 
@@ -409,7 +412,7 @@ export class AssetTreeView {
     const fitting: Upload[] = [];
     for (const upload of uploads) {
       if (upload.file.size > upload.limit) {
-        this.#onError(refusal(upload));
+        this.#fail(refusal(upload));
       }
       else {
         fitting.push(upload);
@@ -481,7 +484,7 @@ export class AssetTreeView {
     for (const upload of admitted) {
       if (
         !drop.archives.includes(upload.file) ||
-        !await this.#commands.importArchive(upload.file, questions.conflicts)
+        !await this.#commands.importIfArchive(upload.file, questions.conflicts)
       ) {
         adding.push(upload);
       }
@@ -668,10 +671,19 @@ export class AssetTreeView {
       return plan();
     }
     catch (error) {
-      this.#onError(errorMessage(error));
+      this.#fail(errorMessage(error));
 
       return null;
     }
+  }
+
+  #fail(
+    title: string
+  ): void {
+    this.#notifications.notify({
+      tone: "error",
+      title
+    });
   }
 
   #offerKinds(): void {

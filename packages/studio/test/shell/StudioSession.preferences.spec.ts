@@ -39,7 +39,8 @@ describe("StudioSession preferences", () => {
         user: {
           identity: null,
           preferences,
-          renewal: null
+          renewal: null,
+          project: null
         },
         scopes: new PreferenceScopes({
           scopes: [],

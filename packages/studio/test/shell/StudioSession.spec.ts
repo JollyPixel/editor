@@ -34,6 +34,7 @@ function postFromFrame(
 ): void {
   window.dispatchEvent(new MessageEvent("message", {
     source: document.querySelector("iframe")?.contentWindow ?? null,
+    origin: "http://localhost",
     data
   }));
 }
@@ -192,6 +193,7 @@ describe("StudioSession", () => {
       {
         user: {
           identity: null,
+          project: null,
           preferences: new Preferences(),
           renewal: {
             async renew() {

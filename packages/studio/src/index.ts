@@ -118,10 +118,10 @@ async function boot(): Promise<void> {
   });
 
   settingsConsole(editorConsole.commands, studio, settings);
-  if (user.online && user.rights.allows("manageAccess")) {
-    usersConsole(editorConsole.commands, user.roster);
-  }
   if (user.online) {
+    if (user.rights.allows("manageAccess")) {
+      usersConsole(editorConsole.commands, user.roster);
+    }
     golemConsole(editorConsole.commands, studio);
   }
 

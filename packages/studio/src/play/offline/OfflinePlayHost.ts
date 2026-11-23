@@ -7,6 +7,7 @@ import {
   PlayableGame,
   UnknownAssetError,
   parseGameRequest,
+  type DomainFailure,
   type GameArtifact,
   type GameBackend,
   type GameExportAssets,
@@ -33,6 +34,11 @@ const kNoStore = "no-store";
 const kJson = "application/json";
 const kHtml = "text/html; charset=utf-8";
 const kZip = "application/zip";
+const kUnknownFailure = [
+  Error,
+  500,
+  "unknown"
+] as const satisfies DomainFailure;
 
 export interface OfflinePlayHostOptions {
   backend: GameBackend;
@@ -212,15 +218,17 @@ function built(
 function failure(
   error: unknown
 ): PlayResponse {
-  const known = GAME_FAILURES.find(([type]) => error instanceof type);
+  const [, status, code] = GAME_FAILURES.find(
+    ([type]) => error instanceof type
+  ) ?? kUnknownFailure;
   const failed = reply(kJson, kNoStore, JSON.stringify({
-    code: known?.[2] ?? "unknown",
+    code,
     message: error instanceof Error ? error.message : String(error)
   }));
 
   return {
     ...failed,
-    status: known?.[1] ?? 500
+    status
   };
 }
 

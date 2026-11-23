@@ -15,6 +15,7 @@ import {
   AssetCommands,
   type AssetCommandCatalog
 } from "../../src/shell/assets/AssetCommands.ts";
+import { recordErrors } from "./notifications.ts";
 
 export interface CommandsProbe {
   commands: AssetCommands;
@@ -125,8 +126,7 @@ export function commandsFailingAt(
   return {
     commands: new AssetCommands({
       catalog,
-      notifications,
-      onError: (message) => errors.push(message)
+      notifications: recordErrors(notifications, errors)
     }),
     notifications,
     errors,

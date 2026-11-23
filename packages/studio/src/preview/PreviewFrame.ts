@@ -3,22 +3,22 @@ import type { AssetPreview } from "@jolly-pixel/asset-server/client";
 import {
   parseFrameMessage,
   type CatalogShare,
-  type LaunchIdentity,
-  type LaunchMessage,
-  type ShellMessage
+  type LaunchIdentity
 } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
-import type { PreviewSource } from "../shell/assets/AssetPreviewCache.ts";
+import { EditorFrame } from "../tabs/EditorFrame.ts";
 import { PreviewQueue } from "./PreviewQueue.ts";
 import {
   PREVIEW_REQUESTS,
   PREVIEW_TARGET,
-  type PreviewRequests
+  type PreviewRequests,
+  type PreviewSource
 } from "./protocol.ts";
 
 // CONSTANTS
 const kPreviewSize = 256;
+const kNoScopes: ReadonlySet<string> = new Set();
 const kHiddenStyle = [
   "position: fixed",
   "right: 0",
@@ -49,10 +49,9 @@ export class PreviewFrame implements PreviewSource {
   readonly #options: PreviewFrameOptions;
   readonly #origin: string;
   readonly #listening = new AbortController();
-  #element: HTMLIFrameElement | null = null;
+  #frame: EditorFrame | null = null;
   #queue: PreviewQueue;
   #unsentRequests: MessagePort | null;
-  #stopCatalog: (() => void) | null = null;
   #disposed = false;
 
   constructor(
@@ -68,15 +67,15 @@ export class PreviewFrame implements PreviewSource {
   preview(
     assetId: string
   ): Promise<AssetPreview> {
-    if (this.#element === null && !this.#disposed) {
-      this.#element = this.#createElement();
+    if (this.#frame === null && !this.#disposed) {
+      this.#frame = this.#createFrame();
     }
 
     return this.#queue.preview(assetId);
   }
 
   notifySessionRenewed(): void {
-    this.#post({
+    this.#frame?.post({
       type: "jolly-session-renewed"
     });
   }
@@ -87,13 +86,11 @@ export class PreviewFrame implements PreviewSource {
     this.#queue.dispose();
     this.#unsentRequests?.close();
     this.#unsentRequests = null;
-    this.#stopCatalog?.();
-    this.#stopCatalog = null;
-    this.#element?.remove();
-    this.#element = null;
+    this.#frame?.dispose();
+    this.#frame = null;
   }
 
-  #createElement(): HTMLIFrameElement {
+  #createFrame(): EditorFrame {
     const element = document.createElement("iframe");
     element.title = "Asset preview";
     element.tabIndex = -1;
@@ -105,7 +102,12 @@ export class PreviewFrame implements PreviewSource {
     });
     (this.#options.container ?? document.body).append(element);
 
-    return element;
+    return new EditorFrame({
+      id: PREVIEW_TARGET,
+      element,
+      reads: kNoScopes,
+      origin: this.#origin
+    });
   }
 
   #createQueue(
@@ -117,7 +119,9 @@ export class PreviewFrame implements PreviewSource {
     });
   }
 
-  #launch(): void {
+  #launch(
+    frame: EditorFrame
+  ): void {
     let requests = this.#unsentRequests;
     if (requests === null) {
       const channel = new MessageChannel();
@@ -127,46 +131,35 @@ export class PreviewFrame implements PreviewSource {
     }
     this.#unsentRequests = null;
 
-    this.#stopCatalog?.();
+    frame.closePorts();
     const catalog = new MessageChannel();
-    this.#stopCatalog = this.#options.share.serve(catalog.port1);
-    const launch: LaunchMessage = {
+    frame.launch({
       type: "jolly-launch",
-      target: PREVIEW_TARGET,
+      target: frame.id,
       identity: this.#options.identity(),
       preferences: {},
       ports: {
         catalog: catalog.port2
       }
-    };
+    }, [this.#options.share.serve(catalog.port1)]);
     const opened: PreviewRequests = {
       type: PREVIEW_REQUESTS,
       port: requests
     };
-    this.#post(launch, [catalog.port2]);
-    this.#post(opened, [requests]);
-  }
-
-  #post(
-    message: LaunchMessage | PreviewRequests | ShellMessage,
-    transfer: Transferable[] = []
-  ): void {
-    this.#element?.contentWindow?.postMessage(message, this.#origin, transfer);
+    frame.element.contentWindow?.postMessage(opened, this.#origin, [requests]);
   }
 
   readonly #onMessage = (
     event: MessageEvent
   ): void => {
-    if (
-      event.source !== this.#element?.contentWindow ||
-      event.origin !== this.#origin
-    ) {
+    const frame = this.#frame;
+    if (frame === null || !frame.accepts(event)) {
       return;
     }
 
     const message = parseFrameMessage(event.data);
     if (message?.type === "jolly-ready") {
-      this.#launch();
+      this.#launch(frame);
     }
     else if (message?.type === "jolly-session-refused") {
       this.#options.onRefused();

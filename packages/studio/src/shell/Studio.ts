@@ -314,11 +314,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
     const session = new StudioSession({
       catalog,
       share,
-      user: user.online ? user : {
-        identity: null,
-        preferences: user.preferences,
-        renewal: null
-      },
+      user,
       scopes: options.scopes,
       editors: options.editors,
       console: options.console,
@@ -333,7 +329,6 @@ export class Studio extends LitElement implements GolemConsoleHost {
       browserState: this.#browserState,
       notifications: this.#notifications,
       onTabsChange: this.#onTabsChange,
-      projectSettings: user.online ? user.project : undefined,
       play: user.playTarget === null ?
         undefined :
         {
@@ -352,23 +347,25 @@ export class Studio extends LitElement implements GolemConsoleHost {
     this._sections = options.settings;
     this.#user.attach(user);
     this._agentChat?.dispose();
-    this._agentChat = user.online ?
-      StudioAgentChat.join(
+    this.#presence?.dispose();
+    if (user.online) {
+      this._agentChat = StudioAgentChat.join(
         user.client,
         this.#notifications,
         user.agentTokens
-      ) :
-      null;
-    this.#presence?.dispose();
-    this.#presence = user.online ?
-      new CatalogPresence(user.client.room(CATALOG_ROOM)) :
-      null;
+      );
+      this.#presence = new CatalogPresence(user.client.room(CATALOG_ROOM));
+    }
+    else {
+      this._agentChat = null;
+      this.#presence = null;
+    }
     this._assets = {
       catalog,
       kinds: session.kinds,
-      kindFilter: user.online ? user.project : null,
+      kindFilter: user.project,
       presence: this.#presence,
-      shares: user.online ? user.shares : null,
+      shares: user.shares,
       browserState: this.#browserState,
       notifications: this.#notifications,
       previews: session.previews
@@ -439,7 +436,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
 
   override render(): TemplateResult {
     const user = this.#user.current;
-    const account = user?.online ? user.account : null;
+    const account = user?.account ?? null;
 
     return html`
       <header id="studio-header">

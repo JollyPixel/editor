@@ -94,6 +94,13 @@ const kPages = {
     icon: "history",
     tone: "violet",
     kind: "audit"
+  },
+  offlineGame: {
+    id: GENERAL_SECTION,
+    label: "General",
+    icon: "settings",
+    tone: "coral",
+    kind: "offline-game"
   }
 } satisfies Record<string, PageSection>;
 
@@ -113,7 +120,8 @@ type PageKind =
   | "access-keys"
   | "general"
   | "access"
-  | "audit";
+  | "audit"
+  | "offline-game";
 
 export type PageSection = {
   [TKind in PageKind]: SectionBase & { kind: TKind; };
@@ -236,7 +244,7 @@ export class SettingsSections implements Iterable<SettingsSection> {
         },
         user.online ?
           projectGroups(user.rights, [...kindPackages], kinds) :
-          [group("project", undefined, [kPages.general])]
+          [group("project", undefined, [kPages.offlineGame])]
       )
     ].filter((entry) => entry !== null);
     this.#sections = this.tabs

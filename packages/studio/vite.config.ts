@@ -58,6 +58,16 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     inMemory: mode.assetServer.inMemory,
     settings
   });
+  const pages = editorPages(
+    new EditorPageFiles(project.editors),
+    {
+      shellPages: [
+        PREVIEW_PAGE_DIR,
+        PLAY_PAGE_DIR,
+        PROJECTS_PAGE_DIR
+      ]
+    }
+  );
 
   return {
     base: "./",
@@ -88,17 +98,13 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       createProjectFileWatchPlugin(project.file),
       playerModules(),
       offlinePlay(),
-      mode.serve && backend(project, mode, settings),
-      editorPages(
-        new EditorPageFiles(project.editors),
-        {
-          shellPages: [
-            PREVIEW_PAGE_DIR,
-            PLAY_PAGE_DIR,
-            PROJECTS_PAGE_DIR
-          ]
-        }
-      )
+      mode.serve && backend({
+        project,
+        mode,
+        settings,
+        pages: pages.api
+      }),
+      pages
     ]
   };
 });

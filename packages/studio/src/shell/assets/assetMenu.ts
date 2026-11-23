@@ -6,76 +6,37 @@ import type {
 
 // Import Internal Dependencies
 import type { AssetKindSet } from "../../catalog/AssetKindSet.ts";
-import {
-  newAssetAction,
-  type AssetAction,
-  type AssetSelection
-} from "../../catalog/AssetSelection.ts";
+import type { AssetSelection } from "../../catalog/AssetSelection.ts";
+import type { AssetActions } from "./AssetActions.ts";
 
 // CONSTANTS
-const kItems = {
-  open: {
-    id: "open",
-    label: "Open",
-    icon: "file"
-  },
-  "new-folder": {
-    id: "new-folder",
-    label: "New folder",
-    icon: "new-folder"
-  },
-  rename: {
-    id: "rename",
-    label: "Rename",
-    icon: "pencil"
-  },
-  replace: {
-    id: "replace",
-    label: "Replace…",
-    icon: "replace"
-  },
-  export: {
-    id: "export",
-    label: "Export as ZIP",
-    icon: "export"
-  },
-  share: {
-    id: "share",
-    label: "Share link…",
-    icon: "share"
-  },
-  delete: {
-    id: "delete",
-    label: "Delete",
-    icon: "trash",
-    intent: "danger"
-  }
-} satisfies Record<AssetAction, AssetMenuItem>;
+const kNewAssetActionPrefix = "new-asset:";
 
-interface AssetMenuItem extends ContextMenuItem {
-  id: AssetAction;
+export function parseNewAssetKind(
+  id: string
+): string | null {
+  return id.startsWith(kNewAssetActionPrefix) ?
+    id.slice(kNewAssetActionPrefix.length) :
+    null;
 }
 
 export function assetMenu(
   selection: AssetSelection,
   kinds: AssetKindSet,
-  sharing: boolean
+  actions: AssetActions
 ): ContextMenuEntry[] {
   if (selection.asset !== null) {
     return [
-      kItems.open,
+      ...actions.menuItems(["open"]),
       "separator",
-      kItems.rename,
-      kItems.replace,
-      kItems.export,
-      ...(sharing ? [kItems.share] : []),
+      ...actions.menuItems(["rename", "replace", "export", "share"]),
       "separator",
-      kItems.delete
+      ...actions.menuItems(["delete"])
     ];
   }
 
   const creation: ContextMenuEntry[] = [
-    kItems["new-folder"],
+    ...actions.menuItems(["new-folder"]),
     {
       id: "new-asset",
       label: "New asset",
@@ -90,13 +51,13 @@ export function assetMenu(
     return [
       ...creation,
       "separator",
-      kItems.rename,
+      ...actions.menuItems(["rename"]),
       "separator",
-      kItems.delete
+      ...actions.menuItems(["delete"])
     ];
   }
 
-  return [kItems.delete];
+  return actions.menuItems(["delete"]);
 }
 
 export function newAssetMenu(
@@ -106,7 +67,7 @@ export function newAssetMenu(
     .filter((entry) => entry.creatable !== false)
     .map((entry) => {
       return {
-        id: newAssetAction(entry.kind),
+        id: `${kNewAssetActionPrefix}${entry.kind}`,
         label: entry.label,
         icon: kinds.kindIcon(entry.kind)
       };

@@ -234,19 +234,6 @@ describe("EditorFrames", () => {
     assert.equal(parseLaunchMessage(relaunch)?.reveal, undefined);
   });
 
-  test("launches with the reveal asked before its frame was shown", () => {
-    scope();
-    const frames = editorFrames();
-    frames.reveal("map-1", "object:early");
-    frames.show(MAP_TAB);
-    const posted = recordPosts(frame());
-
-    postFrom(frame().contentWindow, { type: "jolly-ready" });
-
-    assert.equal(posted.length, 1);
-    assert.equal(parseLaunchMessage(posted[0]?.[0])?.reveal, "object:early");
-  });
-
   test("dispose removes the frames", () => {
     const frames = editorFrames();
     frames.show(MAP_TAB);

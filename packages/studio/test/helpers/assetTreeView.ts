@@ -14,6 +14,7 @@ import type {
   OccupancySource
 } from "../../src/shell/assets/AssetTreeViewOptions.ts";
 import type { FakeTreeCatalog } from "./assetTree.ts";
+import { recordErrors } from "./notifications.ts";
 
 // CONSTANTS
 export const MAP_RECORD: AssetRecordData = {
@@ -128,9 +129,8 @@ export function treeView(
         return picks.shift() ?? null;
       }
     },
-    notifications,
+    notifications: recordErrors(notifications, errors),
     onChange: () => undefined,
-    onError: (message) => errors.push(message),
     onCreated: (nodeId) => created.push(nodeId),
     onRevealed: (nodeId) => revealed.push(nodeId)
   });

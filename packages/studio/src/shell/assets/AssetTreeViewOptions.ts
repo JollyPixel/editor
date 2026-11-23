@@ -95,7 +95,6 @@ export interface AssetTreeViewOptions {
   prompts: AssetActionPrompts;
   notifications: Notifier;
   onChange: () => void;
-  onError: (message: string) => void;
   /**
    * Called with a created folder, or the draft row of a new asset, to name it.
    */

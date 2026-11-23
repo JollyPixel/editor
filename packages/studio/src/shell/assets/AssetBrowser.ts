@@ -36,23 +36,17 @@ import type { AssetOccupant } from "../../catalog/AssetOccupancy.ts";
 import type { CatalogPresence } from "../../catalog/CatalogPresence.ts";
 import type { AssetPath } from "../../catalog/AssetPath.ts";
 import { summarizeSelection } from "../../catalog/AssetSummary.ts";
-import {
-  AssetSelection,
-  isAssetAction,
-  parseNewAssetKind
-} from "../../catalog/AssetSelection.ts";
+import { AssetSelection } from "../../catalog/AssetSelection.ts";
 import { AssetTreeModel } from "../../catalog/AssetTreeModel.ts";
 import type { BrowserState } from "../../browser/BrowserState.ts";
 import type { StudioShareLinks } from "../../shares/StudioShareLinks.ts";
 import { cardStyles } from "../cardStyles.ts";
-import { StudioErrorEvent } from "../StudioErrorEvent.ts";
+import { AssetActions } from "./AssetActions.ts";
 import { askConversion } from "./dialogs/askConversion.ts";
 import { askLargeFiles } from "./dialogs/askLargeFiles.ts";
 import { assetOpenEvent } from "./assetOpen.ts";
-import {
-  AssetPreviewCache,
-  type PreviewSource
-} from "./AssetPreviewCache.ts";
+import type { PreviewSource } from "../../preview/protocol.ts";
+import { AssetPreviewCache } from "./AssetPreviewCache.ts";
 import { previewRevision } from "../../catalog/previewRevision.ts";
 import { AssetTreeView } from "./AssetTreeView.ts";
 import type {
@@ -61,12 +55,14 @@ import type {
 } from "./AssetTreeViewOptions.ts";
 import {
   assetMenu,
-  newAssetMenu
+  newAssetMenu,
+  parseNewAssetKind
 } from "./assetMenu.ts";
 import "./AssetDetails.ts";
 
 // CONSTANTS
 const kNoKindOptions: readonly JollyOption<string>[] = [];
+const kNoActions = new AssetActions({ sharing: false });
 const kFilesType = "Files";
 const kDropQuestions: AssetDropQuestions = {
   conversion: askConversion,
@@ -161,7 +157,7 @@ export class AssetBrowser extends LitElement {
         --jolly-control-height: 26px;
       }
 
-      jolly-toolbar .rename {
+      jolly-toolbar [data-action="rename"] {
         margin-inline-start: auto;
       }
 
@@ -268,57 +264,18 @@ export class AssetBrowser extends LitElement {
             ?disabled=${this.#kinds.entries.length === 0}
             @click=${this.#openNewAssetMenu}
           ></jolly-button>
-          <jolly-button
-            icon="new-folder"
-            icon-only
-            label="New folder"
-            title="New folder"
-            @click=${this.#newFolder}
-          ></jolly-button>
-          <jolly-button
-            class="rename"
-            icon="pencil"
-            icon-only
-            label="Rename"
-            title="Rename (F2)"
-            ?disabled=${!(view?.allows("rename") ?? false)}
-            @click=${this.#beginRename}
-          ></jolly-button>
-          <jolly-button
-            icon="trash"
-            icon-only
-            variant="danger"
-            label="Delete"
-            title="Delete (Del)"
-            ?disabled=${!(view?.allows("delete") ?? false)}
-            @click=${this.#deleteSelected}
-          ></jolly-button>
-          <jolly-button
-            icon="replace"
-            icon-only
-            label="Replace"
-            title="Replace the content with a file"
-            ?disabled=${!(view?.allows("replace") ?? false)}
-            @click=${this.#replaceSelected}
-          ></jolly-button>
-          <jolly-button
-            icon="export"
-            icon-only
-            label="Export"
-            title="Export as a ZIP archive"
-            ?disabled=${!(view?.allows("export") ?? false)}
-            @click=${this.#exportSelected}
-          ></jolly-button>
-          ${view?.sharing ? html`
+          ${(view?.actions ?? kNoActions).buttons().map((button) => html`
             <jolly-button
-              icon="share"
+              data-action=${button.id}
+              icon=${button.icon}
               icon-only
-              label="Share"
-              title="Share a view-only link"
-              ?disabled=${!view.allows("share")}
-              @click=${this.#shareSelected}
+              variant=${button.intent ?? nothing}
+              label=${button.label}
+              title=${button.title}
+              ?disabled=${!(view?.allows(button.id) ?? false)}
+              @click=${this.#onActionClick}
             ></jolly-button>
-          ` : nothing}
+          `)}
         </jolly-toolbar>
         <jolly-tree
           virtual
@@ -422,7 +379,6 @@ export class AssetBrowser extends LitElement {
       },
       notifications: options.notifications,
       onChange: () => this.requestUpdate(),
-      onError: (message) => this.#error(message),
       onCreated: (nodeId) => {
         void this.#afterRender((tree) => {
           if (!tree.beginRename(nodeId)) {
@@ -470,18 +426,13 @@ export class AssetBrowser extends LitElement {
     }
   }
 
-  #error(
-    message: string
-  ): void {
-    this.dispatchEvent(new StudioErrorEvent(message));
-  }
-
   readonly #dialogFailed = (
     error: unknown
   ): void => {
-    this.#error(
-      `The dialog failed to load: ${errorMessage(error)}`
-    );
+    this.#bound?.notifications.notify({
+      tone: "error",
+      title: `The dialog failed to load: ${errorMessage(error)}`
+    });
   };
 
   readonly #onKindChange = (
@@ -490,20 +441,17 @@ export class AssetBrowser extends LitElement {
     this.#view?.filter(event.detail.value);
   };
 
-  readonly #newFolder = (): void => {
-    this.#view?.run("new-folder");
-  };
-
-  readonly #shareSelected = (): void => {
-    this.#view?.run("share");
-  };
-
-  readonly #exportSelected = (): void => {
-    this.#view?.run("export");
-  };
-
-  readonly #replaceSelected = (): void => {
-    this.#view?.run("replace");
+  readonly #onActionClick = (
+    event: MouseEvent
+  ): void => {
+    const view = this.#view;
+    const { currentTarget } = event;
+    const action = currentTarget instanceof HTMLElement ?
+      currentTarget.dataset.action :
+      undefined;
+    if (view !== null && action !== undefined && view.actions.offers(action)) {
+      view.run(action);
+    }
   };
 
   async #pickFile(
@@ -624,7 +572,7 @@ export class AssetBrowser extends LitElement {
   ): void => {
     if (event.key === "Delete") {
       event.preventDefault();
-      this.#deleteSelected();
+      this.#view?.run("delete");
     }
   };
 
@@ -636,7 +584,11 @@ export class AssetBrowser extends LitElement {
       id === null ? [] : this.#view?.selected ?? []
     );
     this.#menuTarget = target;
-    this._menu.items = assetMenu(target, this.#kinds, this.#view?.sharing ?? false);
+    this._menu.items = assetMenu(
+      target,
+      this.#kinds,
+      this.#view?.actions ?? kNoActions
+    );
     this._menu.openAt(x, y);
   };
 
@@ -656,24 +608,17 @@ export class AssetBrowser extends LitElement {
       return;
     }
 
+    const view = this.#view;
     const kind = parseNewAssetKind(action);
+    if (view === null) {
+      return;
+    }
     if (kind !== null) {
-      this.#view?.createAsset(
-        kind,
-        this.#selection(target.nodeIds).folder
-      );
+      view.createAsset(kind, this.#selection(target.nodeIds).folder);
     }
-    else if (isAssetAction(action)) {
-      this.#view?.run(action, target.nodeIds);
+    else if (view.actions.offers(action)) {
+      view.run(action, target.nodeIds);
     }
-  };
-
-  readonly #beginRename = (): void => {
-    this.#view?.run("rename");
-  };
-
-  readonly #deleteSelected = (): void => {
-    this.#view?.run("delete");
   };
 }
 

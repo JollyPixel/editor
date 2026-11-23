@@ -18,8 +18,8 @@
   `pnpm dev`: `vite/DevPlayer.ts` builds it from the sources on the first
   export and again once a module it imports changes.
 - The back-end serves `/play/`, not Vite, to write the scripts into the
-  player's import map: the `backend` plugin stays before `editorPages`, whose
-  middleware also answers `/play/`. A bare
+  player's import map: it claims the route from the pages `editorPages`
+  serves (`ServedPages.claim`). A bare
   specifier a script may import needs a module in `src/play/modules/` and an
   entry in `PLAYER_MODULES` (`vite/playerModules.ts`).
 - Offline Play goes through the play worker (`play/sw.js`), built on its own
