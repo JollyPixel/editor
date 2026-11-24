@@ -7,6 +7,7 @@ import type { RunMode } from "@jolly-pixel/e2e";
 import { PLAY_PAGE_DIR } from "@jolly-pixel/server";
 import {
   ServerBackend,
+  ShellPackages,
   type ServerBackendOptions,
   type Project,
   type ServerSettings
@@ -68,10 +69,10 @@ export function backend(
               project :
               openStudioProject({
                 settings,
-                root,
-                inMemory: mode.assetServer.inMemory
+                root
               })
           ),
+          shellPackages: ShellPackages.compiledFrom(project),
           ...backendOptions(mode, settings),
           ...await studioBackendFiles(player),
           editorPages: pages,
@@ -108,9 +109,12 @@ function backendOptions(
 > {
   const { inMemory } = mode.assetServer;
   if (mode.e2e) {
+    const { accountsPolicy, ...e2eOptions } = E2E_BACKEND_OPTIONS;
+
     return {
       inMemory,
-      ...E2E_BACKEND_OPTIONS
+      ...e2eOptions,
+      ...settings.hostsFolder ? {} : { accountsPolicy }
     };
   }
 

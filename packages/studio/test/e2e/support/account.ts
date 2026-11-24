@@ -20,11 +20,17 @@ export function uniqueUsername(): string {
   return `e2e-${randomUUID().slice(0, 8)}`;
 }
 
+export interface RegisterOptions {
+  project?: string;
+}
+
 export async function registerAccount(
   request: APIRequestContext,
-  username: string = uniqueUsername()
+  options: RegisterOptions = {}
 ): Promise<string> {
-  const response = await request.post(`${ACCOUNTS_URL_PATH}register`, {
+  const { project = "" } = options;
+  const username = uniqueUsername();
+  const response = await request.post(`${project}${ACCOUNTS_URL_PATH}register`, {
     data: {
       username,
       password: await prehashPassword(username, E2E_PASSWORD)
@@ -33,6 +39,19 @@ export async function registerAccount(
   expect(response.ok()).toBe(true);
 
   return username;
+}
+
+export async function signInAccount(
+  request: APIRequestContext,
+  username: string
+): Promise<void> {
+  const response = await request.post(`${ACCOUNTS_URL_PATH}login`, {
+    data: {
+      username,
+      password: await prehashPassword(username, E2E_PASSWORD)
+    }
+  });
+  expect(response.ok()).toBe(true);
 }
 
 export class SignInDialog {
@@ -131,5 +150,18 @@ export class Roster {
     name: string | RegExp
   ): Locator {
     return this.tree.getByRole("treeitem", { name });
+  }
+
+  async choose(
+    name: string | RegExp,
+    ...items: string[]
+  ): Promise<void> {
+    await this.row(name).click({ button: "right" });
+    for (const item of items) {
+      await this.tree.page().getByRole("menuitem", {
+        name: item,
+        exact: true
+      }).click();
+    }
   }
 }

@@ -8,10 +8,19 @@ import type { Duplex } from "node:stream";
 // Import Third-party Dependencies
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 
+// Import Internal Dependencies
+import { PROJECT_MANIFEST_FILE } from "#src/project/ProjectManifest.ts";
+
 // CONSTANTS
 export const SHELL_HTML = "<!DOCTYPE html><title>JollyPixel Studio</title>";
 export const COMPILED_EDITOR_HTML = "<!DOCTYPE html><title>Compiled Voxel Map</title>";
 export const PUBLIC_HOST = "studio.example.com";
+const kVoxelMapKinds = "@jolly-pixel/asset.voxel-map";
+
+export interface ShellPackageNames {
+  editors: string[];
+  kinds: string[];
+}
 
 export interface Upgrade {
   status: number | undefined;
@@ -28,8 +37,39 @@ export async function createShell(
     path.join(shell, "editors", "voxel-map", "index.html"),
     COMPILED_EDITOR_HTML
   );
+  await writeShellManifest(shell, {
+    editors: ["voxel-map"],
+    kinds: [kVoxelMapKinds]
+  });
 
   return shell;
+}
+
+export async function writeShellManifest(
+  shell: string,
+  packages: ShellPackageNames
+): Promise<void> {
+  await fs.writeFile(
+    path.join(shell, PROJECT_MANIFEST_FILE),
+    JSON.stringify({
+      editors: packages.editors.map((name) => {
+        return {
+          name,
+          package: `@jolly-pixel/editor.${name}`,
+          kinds: []
+        };
+      }),
+      kinds: [],
+      kindPackages: packages.kinds.map((name) => {
+        return {
+          name,
+          kinds: [],
+          configurable: false
+        };
+      }),
+      maxContentBytes: 1
+    })
+  );
 }
 
 export function requestUpgrade(

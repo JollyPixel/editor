@@ -19,7 +19,6 @@ class OpenEntry<TProject> {
   readonly opening: Promise<TProject>;
   leases = 0;
   idle: ReturnType<typeof setTimeout> | null = null;
-  closing: Promise<void> | null = null;
 
   constructor(
     opening: Promise<TProject>
@@ -33,6 +32,7 @@ implements AsyncDisposable {
   #open: (slug: string) => Promise<TProject>;
   #idleMs: number | null;
   #entries = new Map<string, OpenEntry<TProject>>();
+  #closing = new Map<string, Promise<void>>();
 
   constructor(
     options: OpenProjectsOptions<TProject>
@@ -46,12 +46,12 @@ implements AsyncDisposable {
   async acquire(
     slug: string
   ): Promise<ProjectLease<TProject>> {
-    let entry = this.#entries.get(slug);
-    while (entry?.closing) {
-      await entry.closing.catch(() => undefined);
-      entry = this.#entries.get(slug);
+    let closing = this.#closing.get(slug);
+    while (closing !== undefined) {
+      await closing;
+      closing = this.#closing.get(slug);
     }
-    entry ??= this.#start(slug);
+    const entry = this.#entries.get(slug) ?? this.#start(slug);
     entry.leases++;
     if (entry.idle !== null) {
       clearTimeout(entry.idle);
@@ -85,15 +85,39 @@ implements AsyncDisposable {
   close(
     slug: string
   ): Promise<void> {
-    const entry = this.#entries.get(slug);
+    return this.retire(slug, async() => undefined);
+  }
 
-    return entry === undefined ? Promise.resolve() : this.#close(slug, entry);
+  retire<TResult>(
+    slug: string,
+    action: () => Promise<TResult>
+  ): Promise<TResult> {
+    const entry = this.#entries.get(slug);
+    this.#entries.delete(slug);
+    if (entry !== undefined && entry.idle !== null) {
+      clearTimeout(entry.idle);
+    }
+    const previous = this.#closing.get(slug) ?? Promise.resolve();
+    const done = previous
+      .then(() => (entry === undefined ? undefined : disposeOpened(entry.opening)))
+      .then(action);
+    const closing = done.then(() => undefined, () => undefined);
+    this.#closing.set(slug, closing);
+    closing.finally(() => {
+      if (this.#closing.get(slug) === closing) {
+        this.#closing.delete(slug);
+      }
+    });
+
+    return done;
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
-    await Promise.all(
-      [...this.#entries.keys()].map((slug) => this.close(slug))
-    );
+    const slugs = new Set([
+      ...this.#entries.keys(),
+      ...this.#closing.keys()
+    ]);
+    await Promise.all([...slugs].map((slug) => this.close(slug)));
   }
 
   #start(
@@ -117,35 +141,17 @@ implements AsyncDisposable {
     entry.leases--;
     if (
       entry.leases > 0 ||
-      entry.closing !== null ||
       this.#idleMs === null ||
       this.#entries.get(slug) !== entry
     ) {
       return;
     }
     entry.idle = setTimeout(() => {
-      this.#close(slug, entry).catch((error: unknown) => {
+      this.close(slug).catch((error: unknown) => {
         console.error(error);
       });
     }, this.#idleMs);
     entry.idle.unref();
-  }
-
-  #close(
-    slug: string,
-    entry: OpenEntry<TProject>
-  ): Promise<void> {
-    if (entry.idle !== null) {
-      clearTimeout(entry.idle);
-      entry.idle = null;
-    }
-    entry.closing ??= disposeOpened(entry.opening).finally(() => {
-      if (this.#entries.get(slug) === entry) {
-        this.#entries.delete(slug);
-      }
-    });
-
-    return entry.closing;
   }
 }
 

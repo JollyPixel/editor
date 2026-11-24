@@ -111,6 +111,10 @@ export class ServerSettings {
     this.#projects = data.projects ?? null;
   }
 
+  get hostsFolder(): boolean {
+    return this.#projects !== null;
+  }
+
   projectRoot(
     base: string
   ): string {

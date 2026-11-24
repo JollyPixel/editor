@@ -15,6 +15,18 @@ export const PROJECTS_ROUTES = {
   create: {
     method: "POST",
     path: ""
+  },
+  rename: {
+    method: "POST",
+    path: ":slug/rename"
+  },
+  remove: {
+    method: "DELETE",
+    path: ":slug"
+  },
+  import: {
+    method: "POST",
+    path: ":slug/import"
   }
 } as const satisfies Record<string, ApiRoute>;
 export const PROJECT_PAGES_PREFIX = "/p/";
@@ -33,15 +45,15 @@ export const projectsReplySchema = z.object({
   projects: z.array(projectSummarySchema)
 });
 
-export const createProjectBodySchema = z.object({
+export const projectRefSchema = z.object({
   slug: z.string().regex(PROJECT_SLUG_PATTERN).max(64)
 });
 
-export const createdProjectReplySchema = z.object({
+export const projectSummaryReplySchema = z.object({
   project: projectSummarySchema
 });
 
 export type ProjectSummary = z.infer<typeof projectSummarySchema>;
 export type ProjectsReply = z.infer<typeof projectsReplySchema>;
-export type CreateProjectBody = z.infer<typeof createProjectBodySchema>;
-export type CreatedProjectReply = z.infer<typeof createdProjectReplySchema>;
+export type ProjectRef = z.infer<typeof projectRefSchema>;
+export type ProjectSummaryReply = z.infer<typeof projectSummaryReplySchema>;

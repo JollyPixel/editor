@@ -42,3 +42,6 @@
   reaches an existing local project only when added there by hand.
 - `test/api/` drives the server's routes through the studio's API clients; the
   server's own specs call its routes with `fetch`.
+- The `projects` Playwright project (`test/e2e/projects/`) runs against a
+  second dev server, `serve.ts`, hosting a fresh `JOLLY_PROJECTS` folder on
+  disk. Its tests run in order: the first one registers the server owner.

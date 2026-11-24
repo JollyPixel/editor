@@ -131,4 +131,34 @@ describe("OpenProjects", () => {
     assert.equal(opened[0].closed, true);
     assert.equal(reopened.project, opened[1]);
   });
+
+  test("retire closes the project and holds requests until its action finished", async() => {
+    const { projects, opened } = countingProjects();
+    const first = await projects.acquire("castle");
+    first[Symbol.dispose]();
+    const moving = Promise.withResolvers<void>();
+    const events: string[] = [];
+
+    const retired = projects.retire("castle", async() => {
+      await moving.promise;
+      events.push(`moved with castle closed: ${opened[0].closed}`);
+
+      return "moved";
+    });
+    const reopening = projects.acquire("castle").then((lease) => {
+      events.push("reopened");
+
+      return lease;
+    });
+    await settled();
+    moving.resolve();
+    using _reopened = await reopening;
+
+    assert.equal(await retired, "moved");
+    assert.deepEqual(events, [
+      "moved with castle closed: true",
+      "reopened"
+    ]);
+    assert.equal(opened.length, 2);
+  });
 });

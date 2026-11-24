@@ -2,7 +2,7 @@
 import path from "node:path";
 
 // Import Internal Dependencies
-import { ProjectCreationError } from "./errors/ProjectCreationError.ts";
+import { ProjectFolderError } from "./errors/ProjectFolderError.ts";
 import type {
   ProjectEntry,
   ProjectRegistry
@@ -36,8 +36,20 @@ export class SingleProject implements ProjectRegistry {
   }
 
   create(): Promise<string> {
-    return Promise.reject(
-      new ProjectCreationError("this server keeps no projects folder")
-    );
+    return refuseFolderChange();
   }
+
+  rename(): Promise<string> {
+    return refuseFolderChange();
+  }
+
+  remove(): Promise<void> {
+    return refuseFolderChange();
+  }
+}
+
+function refuseFolderChange(): Promise<never> {
+  return Promise.reject(
+    new ProjectFolderError("this server keeps no projects folder")
+  );
 }

@@ -6,6 +6,9 @@ import { apiFailureSchema, type ApiRoute } from "@jolly-pixel/server";
 import { ApiRequestError } from "./errors/ApiRequestError.ts";
 import { MissingRouteParamError } from "./errors/MissingRouteParamError.ts";
 
+// CONSTANTS
+const kBinaryType = "application/octet-stream";
+
 export interface ApiEndpointOptions {
   /**
    * Base URL of the handler, with a trailing slash.
@@ -27,7 +30,8 @@ export interface ApiRequest {
    */
   query?: Readonly<Record<string, string | number | undefined>>;
   /**
-   * Sent as JSON.
+   * Sent as JSON, or as is when a `Blob`, typed by its `type` or as binary
+   * data.
    */
   body?: unknown;
   keepalive?: boolean;
@@ -52,14 +56,7 @@ export class ApiEndpoint {
     const response = await this.#fetch(this.#urlTo(route, request), {
       method: route.method,
       keepalive: request.keepalive,
-      ...(request.body === undefined ?
-        {} :
-        {
-          headers: {
-            "content-type": "application/json"
-          },
-          body: JSON.stringify(request.body)
-        })
+      ...requestBody(request)
     });
     if (!response.ok) {
       const failure = apiFailureSchema.safeParse(
@@ -107,4 +104,28 @@ export class ApiEndpoint {
 
     return url;
   }
+}
+
+function requestBody(
+  request: ApiRequest
+): RequestInit {
+  const { body } = request;
+  if (body === undefined) {
+    return {};
+  }
+  if (body instanceof Blob) {
+    return {
+      headers: {
+        "content-type": body.type || kBinaryType
+      },
+      body
+    };
+  }
+
+  return {
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  };
 }

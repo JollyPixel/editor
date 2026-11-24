@@ -30,7 +30,8 @@ import {
   PUBLIC_HOST,
   SHELL_HTML,
   createShell,
-  requestUpgrade
+  requestUpgrade,
+  writeShellManifest
 } from "../../helpers/jollyServer.ts";
 import { requestStatus } from "../../helpers/rawRequest.ts";
 import { createShareLink } from "../../helpers/shares.ts";
@@ -173,10 +174,14 @@ describe("JollyServer", () => {
     );
   });
 
-  test("answers a project whose editor the shell lacks with the editor's name", async() => {
+  test("answers a project whose packages the shell lacks with their names", async() => {
     const staleShell = path.join(root, "stale-shell");
     await fs.mkdir(staleShell);
     await fs.writeFile(path.join(staleShell, "index.html"), SHELL_HTML);
+    await writeShellManifest(staleShell, {
+      editors: [],
+      kinds: []
+    });
     await using server = await JollyServer.open({
       hosting: ProjectHosting.single(root),
       openProject: async() => voxelMapProject(root, editorDist),
@@ -191,6 +196,9 @@ describe("JollyServer", () => {
     const page = await fetch(url);
 
     assert.equal(page.status, 503);
-    assert.match(await page.text(), /lacks the editors voxel-map/);
+    assert.match(
+      await page.text(),
+      /lacks the editors voxel-map and the kinds @jolly-pixel\/asset\.voxel-map$/
+    );
   });
 });

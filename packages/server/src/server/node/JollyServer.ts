@@ -7,6 +7,7 @@ import path from "node:path";
 import { EditorPageFolders } from "../../editors/node/EditorPageFolders.ts";
 import { BuiltPlayer } from "../../game/node/BuiltPlayer.ts";
 import type { Project } from "../../project/node/Project.ts";
+import { ShellPackages } from "../../project/node/ShellPackages.ts";
 import type { ProjectHosting } from "../../projects/node/ProjectHosting.ts";
 import { serveBuild } from "../../http/node/serveBuild.ts";
 import {
@@ -21,14 +22,17 @@ export interface JollyServerOptions {
    */
   openProject: (root: string) => Promise<Project>;
   /**
-   * Folder of the built studio shell, holding its `index.html` and the page
-   * of every project editor under `editors/<name>/`.
+   * Folder of the built studio shell, holding its `index.html`, the
+   * `project-manifest.json` of the packages it was compiled with, and the page
+   * of every editor under `editors/<name>/`. A project listing an editor or
+   * kind package the manifest lacks does not open.
    */
   shell: string;
   backend: Omit<
     ServerBackendOptions,
     | "hosting"
     | "openProject"
+    | "shellPackages"
     | "editorPages"
     | "compression"
     | "allowedHosts"
@@ -62,12 +66,8 @@ export class JollyServer implements AsyncDisposable {
       await ServerBackend.open({
         ...options.backend,
         hosting: options.hosting,
-        openProject: async(root) => {
-          const project = await options.openProject(root);
-          await requireEditorPages(project, editorPages);
-
-          return project;
-        },
+        openProject: options.openProject,
+        shellPackages: await ShellPackages.read(options.shell),
         editorPages,
         player,
         playPage: player,
@@ -124,30 +124,6 @@ export class JollyServer implements AsyncDisposable {
     this.#http.closeAllConnections();
     await this.#backend[Symbol.asyncDispose]();
     await closed;
-  }
-}
-
-async function requireEditorPages(
-  project: Project,
-  pages: EditorPageFolders
-): Promise<void> {
-  const built = await Promise.all(
-    Array.from(project.editors, async(editor) => {
-      try {
-        await fs.access(pages.index(editor));
-
-        return null;
-      }
-      catch {
-        return editor.name;
-      }
-    })
-  );
-  const missing = built.filter((name) => name !== null);
-  if (missing.length > 0) {
-    throw new Error(
-      `the studio build lacks the editors ${missing.join(", ")}`
-    );
   }
 }
 
