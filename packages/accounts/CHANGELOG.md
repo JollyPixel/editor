@@ -1,5 +1,34 @@
 # @jolly-pixel/accounts
 
+## 2.0.0
+
+### Major Changes
+
+- [#1247](https://github.com/JollyPixel/editor/pull/1247) [`042847c`](https://github.com/JollyPixel/editor/commit/042847c4f6607dcd7785e3f3fedd5fef5f373c52) Thanks [@fraxken](https://github.com/fraxken)! - Split server-wide identities (`Accounts`) from per-project membership (`accounts.realm(id, { roles, join })`, an `AccountsRealm`).
+  Roles, access requests, share links and agent tokens now belong to a realm; the first account owns the server and is admin everywhere.
+
+### Minor Changes
+
+- [#1231](https://github.com/JollyPixel/editor/pull/1231) [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0) Thanks [@fraxken](https://github.com/fraxken)! - Add agent tokens (`accounts.agentTokens`) to connect a local AI agent with its owner's current role, and `isAgentProfile(profile)` to recognize one.
+  Revoking the token or changing the owner's role revokes the agent's connections.
+
+- [#1247](https://github.com/JollyPixel/editor/pull/1247) [`6f83ad9`](https://github.com/JollyPixel/editor/commit/6f83ad96f79668f426e90a6f7e183d6f676778ea) Thanks [@fraxken](https://github.com/fraxken)! - Sign-in is server-wide: `AccountsRealm.admit` tells whether a signed-in account may enter a realm, `join` enters it, and `POST join` serves it.
+  Admins add members with `accounts:invite`, the owner deletes accounts with `accounts:delete`, `Accounts.memberships` lists an account's realms, and `credentialsBody` builds a login body.
+
+- [#1240](https://github.com/JollyPixel/editor/pull/1240) [`69ba6ea`](https://github.com/JollyPixel/editor/commit/69ba6ea57e3d74350f44c1b36e361c6c01ad2f8f) Thanks [@fraxken](https://github.com/fraxken)! - Add `server.disconnect(subject)` and the provider's optional `watchDisconnections(listener)`, which close a subject's connections as refused with the reason `"disconnected"`; `unauthorized` now passes the close reason.
+  `agentTokens.disconnect(ownerId, tokenId)` uses it to drop an agent and keep its token; `parseAgentProfile(metadata)` reads an agent's profile, which now carries its `ownerId`.
+
+### Patch Changes
+
+- [#1234](https://github.com/JollyPixel/editor/pull/1234) [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850) Thanks [@fraxken](https://github.com/fraxken)! - Add `DistributiveOmit`, `DeepReadonly`, `Simplify`, `parseJsonObject`, `wrap`, `roundTo`, `delay`, `yieldToEventLoop`, `withTimeout`, `InFlight` and `sha256Hex` to `@jolly-pixel/utils`.
+  The other packages drop their local copies of these helpers and import them from utils.
+
+- [#1192](https://github.com/JollyPixel/editor/pull/1192) [`d26da53`](https://github.com/JollyPixel/editor/commit/d26da53c969781c9c1c3062f6f0b6df2f5b8ecfa) Thanks [@fraxken](https://github.com/fraxken)! - Add `@jolly-pixel/utils` for shared helpers (`is` guards, `errorMessage`, `clamp`, `formatBytes`, base64, `TaskChain`, `Teardown`/`AsyncTeardown`, and `saveFile` from `@jolly-pixel/utils/dom`).
+  `saveFile` and `formatBytes` move out of `@jolly-pixel/ui`; asset-server inline content that is not valid base64 now throws instead of decoding to garbage bytes.
+- Updated dependencies [[`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`69ba6ea`](https://github.com/JollyPixel/editor/commit/69ba6ea57e3d74350f44c1b36e361c6c01ad2f8f), [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc), [`033a975`](https://github.com/JollyPixel/editor/commit/033a975db5003d093263c9f9820c0fde7b00ff39), [`d9cb732`](https://github.com/JollyPixel/editor/commit/d9cb7324a3b32509a5e3c9be31f0342bf947053c), [`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35), [`0d95f1f`](https://github.com/JollyPixel/editor/commit/0d95f1f55a3020accd4e947a833aa68960267526), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64), [`9a805e5`](https://github.com/JollyPixel/editor/commit/9a805e5fa847c30d41495bda22051e1aa6ed02f5), [`24991a6`](https://github.com/JollyPixel/editor/commit/24991a6edf1f7230b9268ffa647151ebe52d808e), [`6f83ad9`](https://github.com/JollyPixel/editor/commit/6f83ad96f79668f426e90a6f7e183d6f676778ea), [`8890073`](https://github.com/JollyPixel/editor/commit/8890073623d0035da1b8b662c1477d217e58a09b), [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`a89aeb7`](https://github.com/JollyPixel/editor/commit/a89aeb73fa118659494d3d9410dd9135fc39b551), [`5af0632`](https://github.com/JollyPixel/editor/commit/5af0632f9ae65a6005861f839adb4e97d22c209f), [`f5350de`](https://github.com/JollyPixel/editor/commit/f5350de576d82af8592928a4456f43702befff26), [`a2e6a27`](https://github.com/JollyPixel/editor/commit/a2e6a27dc11dedbd444ea7698158f320f1cb4402), [`f998437`](https://github.com/JollyPixel/editor/commit/f998437cc19077ec578beaf254cc826407e378f5), [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850), [`974ed36`](https://github.com/JollyPixel/editor/commit/974ed36053e2e6aab2a71cbc7e47e3e0fcb77f58), [`d26da53`](https://github.com/JollyPixel/editor/commit/d26da53c969781c9c1c3062f6f0b6df2f5b8ecfa)]:
+  - @jolly-pixel/network@7.0.0
+  - @jolly-pixel/utils@1.1.0
+
 ## 1.1.0
 
 ### Minor Changes

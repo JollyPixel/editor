@@ -1,5 +1,11 @@
 # @jolly-pixel/controls
 
+## 4.1.0
+
+### Minor Changes
+
+- [#1267](https://github.com/JollyPixel/editor/pull/1267) [`5ec2390`](https://github.com/JollyPixel/editor/commit/5ec2390787654fd01c32d016ab76ef9f083da4b3) Thanks [@fraxken](https://github.com/fraxken)! - Rename `NavigatorAdapter.getGamepads()` to `pollGamepads()`; custom navigator adapters passed to `Gamepad` must rename the method.
+
 ## 4.0.0
 
 ### Major Changes
