@@ -4,31 +4,21 @@
 
 ### Major Changes
 
-- [#1175](https://github.com/JollyPixel/editor/pull/1175) [`174d961`](https://github.com/JollyPixel/editor/commit/174d9612d9543c5c966a9e4e22783094f017bb83) Thanks [@fraxken](https://github.com/fraxken)! - Move `BakedRoomEnvironment` from `three` to the engine as `Systems.BakedRoomEnvironment`; the engine drops `picomatch`, `reflect-metadata` and `@jolly-pixel/three`, and a decorated `Behavior` subclass no longer adds its properties to its parent class.
-  Breaking: `getActors` and `Logger` patterns only support `*`, `?` and `**` (no braces, classes or extglobs, and `*` matches a leading dot).
-  Breaking: `three` no longer exports `BakedRoomEnvironment`, and `three` and `voxel.renderer` take `three` as a `^0.186.0` peer dependency.
+- [#1175](https://github.com/JollyPixel/editor/pull/1175) [`174d961`](https://github.com/JollyPixel/editor/commit/174d9612d9543c5c966a9e4e22783094f017bb83) Thanks [@fraxken](https://github.com/fraxken)! - `BakedRoomEnvironment` moves to the engine as `Systems.BakedRoomEnvironment`. Actor and logger patterns only support `*`, `?` and `**`, and `three` is a `^0.186.0` peer dependency.
 
-- [#1228](https://github.com/JollyPixel/editor/pull/1228) [`c6ef608`](https://github.com/JollyPixel/editor/commit/c6ef608ea90157cfb2d891c65c3d967ced8c138c) Thanks [@fraxken](https://github.com/fraxken)! - `CameraGizmo` and `LightGizmo` draw flat screen-sized icons, our own frustum (with an orthographic box and an up marker) and light shapes shown only while `selected`; the `"silhouette"` technique outlines groups through the new `HighlightGroupSilhouette`.
-  Breaking: `LightGizmo` takes `selectedColor` instead of `color`, `CameraGizmo`'s `color` is now the idle line color beside a new `selectedColor`, and silhouette `linewidth`/`innerThickness` are now world units on scaled targets.
+- [#1228](https://github.com/JollyPixel/editor/pull/1228) [`c6ef608`](https://github.com/JollyPixel/editor/commit/c6ef608ea90157cfb2d891c65c3d967ced8c138c) Thanks [@fraxken](https://github.com/fraxken)! - `CameraGizmo` and `LightGizmo` draw screen-sized icons and show their shapes only while selected. `LightGizmo` takes `selectedColor` instead of `color`.
 
-- [#1248](https://github.com/JollyPixel/editor/pull/1248) [`5b28d8b`](https://github.com/JollyPixel/editor/commit/5b28d8b4a0a06c1566afa19432017612a4fa7c76) Thanks [@fraxken](https://github.com/fraxken)! - Add shared environments: `EnvironmentFile` (sky, sun, ambient, reflections, fog, tone mapping, glow, voxel shading), `ENVIRONMENT_PRESETS` and the `environment` asset type, applied by `ThreeSceneEnvironment` (with a `fallbackSky` for files without a sky). `SceneFile.environment` is now an environment reference or `null`.
-  `DaySky` and `NightSky` move from `@jolly-pixel/three` to the engine. `VoxelRenderer` follows the environment's voxel shading, and `VoxelMapSettings` gains `ambientOcclusion`.
+- [#1248](https://github.com/JollyPixel/editor/pull/1248) [`5b28d8b`](https://github.com/JollyPixel/editor/commit/5b28d8b4a0a06c1566afa19432017612a4fa7c76) Thanks [@fraxken](https://github.com/fraxken)! - Add shared environments (sky, sun, fog, tone mapping, glow) as an `environment` asset; `SceneFile.environment` is now a reference. `DaySky` and `NightSky` move to the engine.
 
-- [#1269](https://github.com/JollyPixel/editor/pull/1269) [`6d2c67a`](https://github.com/JollyPixel/editor/commit/6d2c67aefd139d55e7783a1c66c0df3b1a4d7f4b) Thanks [@fraxken](https://github.com/fraxken)! - `CameraGizmo` and `PeerFrustum` draw 2 px outlined lines that stay crisp at any distance and on busy backgrounds, with hidden parts dimmed.
-  `PeerFrustum` now extends `THREE.Group`, so its `geometry` and `material` are gone; use `color` and `opacity`.
-  Raycasts hit these lines only on their drawn pixels and only from a raycaster with a `camera`.
+- [#1269](https://github.com/JollyPixel/editor/pull/1269) [`6d2c67a`](https://github.com/JollyPixel/editor/commit/6d2c67aefd139d55e7783a1c66c0df3b1a4d7f4b) Thanks [@fraxken](https://github.com/fraxken)! - `CameraGizmo` and `PeerFrustum` draw crisp 2 px lines at any distance. `PeerFrustum` extends `THREE.Group`; use `color` and `opacity` instead of `geometry` and `material`.
 
 ### Minor Changes
 
-- [#1203](https://github.com/JollyPixel/editor/pull/1203) [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc) Thanks [@fraxken](https://github.com/fraxken)! - Kind handlers can declare a `preview(state)` hook, served by the `catalog:preview` query (`CatalogClient.preview`) and flagged `preview: "server"` on loaded kind descriptors; the built-in texture kind previews browser images up to 2 MiB and is now listed by `ProjectKinds.descriptors()`.
-  Peer profiles accept `observer: true`, set by `toPeerProfileMetadata(identity, { observer })` and left out by `PeerRoster` and `RoomPresenceSource`.
-  Three adds `renderToTarget` and `ReadbackPixels`, which turns a render-target readback into straight-alpha, top-down RGBA.
+- [#1203](https://github.com/JollyPixel/editor/pull/1203) [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc) Thanks [@fraxken](https://github.com/fraxken)! - Asset kinds can serve previews through `CatalogClient.preview`, and peers can join as observers hidden from presence. Three adds `renderToTarget` and `ReadbackPixels`.
 
 - [#1140](https://github.com/JollyPixel/editor/pull/1140) [`319b303`](https://github.com/JollyPixel/editor/commit/319b303fb01533178b266ba6fd284e0a324a61f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `bindOrbitFocus` to the engine (Escape leaves an `OrbitFlyCamera` pivot), and `COMPACT_GIZMO_APPEARANCE` and `createListedColorAllocator` to three. All three move out of the private editor host.
 
-- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files (`SceneFile`, `FileScene`, `SceneInstance`, scene transform helpers, `ComponentDefinitions`), `LightComponent`, `MeshRenderer`, `OrbitFlyCamera.frame()`, `Transform.visibleInHierarchy`, `inferScenePropertyType` and the `render` camera and `properties` behavior options to `engine`; `Actor.name` now follows `object3D.name`. Frames only visit actors with updating components and no longer allocate per actor or component; `sceneManager.actors.updating` lets a host sleep once nothing updates, and a component can start asleep with the `needUpdate` option.
-  Breaking: `Camera.configure()` replaces the camera setters, `sceneManager.actors` (`ActorRegistry`) replaces its actor and component scheduling methods, and `renderStrategy`, `markRenderOrderDirty()` and the `Behavior` property mirror (`getProperty`, `setProperty`, `mergeProperties`, `BehaviorProperties`) are removed.
-  Add `CameraGizmo` and `LightGizmo` to `three`, refusal messages to `history` and `reconcilePeerMarks` to `ui/network`.
+- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files, `LightComponent`, `MeshRenderer` and gizmos, and frames skip actors with nothing to update. `Camera.configure()` replaces the camera setters, and the `Behavior` property mirror is removed.
 
 - [#1265](https://github.com/JollyPixel/editor/pull/1265) [`fca751a`](https://github.com/JollyPixel/editor/commit/fca751ae2f7057726738885e9138e545cee848eb) Thanks [@fraxken](https://github.com/fraxken)! - Adds `AudioGizmo`, a speaker marker for sound sources in editor viewports.
 
@@ -52,8 +42,7 @@
 - [#1232](https://github.com/JollyPixel/editor/pull/1232) [`70b0e15`](https://github.com/JollyPixel/editor/commit/70b0e15d612fa6f9720d81af22e743f51eeebff2) Thanks [@fraxken](https://github.com/fraxken)! - Update three.js to 0.187.0.
   `BakedRoomEnvironment` now bakes a 64 pixel PMREM cube with 4 mip levels, and `createRenderTarget` returns a `CubeRenderTarget` (generated on the WebGL 2 fallback).
 
-- [#1269](https://github.com/JollyPixel/editor/pull/1269) [`f894df4`](https://github.com/JollyPixel/editor/commit/f894df4a172519e77c1bb5a33e36c0bce9dee3d9) Thanks [@fraxken](https://github.com/fraxken)! - Cut per-frame GPU and CPU cost of highlights and gizmos: lighter `HighlightPass` and `HighlightPassJfa` passes, highlight masks that draw only their entries, cached silhouette contours and bounds, shared `GizmoIcon` glyph textures, culled `AreaBox` edges and a cheaper `Grid` shader.
-  A filled `HighlightBoundingBox` no longer grows a little on every update.
+- [#1269](https://github.com/JollyPixel/editor/pull/1269) [`f894df4`](https://github.com/JollyPixel/editor/commit/f894df4a172519e77c1bb5a33e36c0bce9dee3d9) Thanks [@fraxken](https://github.com/fraxken)! - Highlights and gizmos cost less per frame, and a filled `HighlightBoundingBox` no longer grows on every update.
 - Updated dependencies [[`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`69ba6ea`](https://github.com/JollyPixel/editor/commit/69ba6ea57e3d74350f44c1b36e361c6c01ad2f8f), [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc), [`033a975`](https://github.com/JollyPixel/editor/commit/033a975db5003d093263c9f9820c0fde7b00ff39), [`d9cb732`](https://github.com/JollyPixel/editor/commit/d9cb7324a3b32509a5e3c9be31f0342bf947053c), [`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35), [`0d95f1f`](https://github.com/JollyPixel/editor/commit/0d95f1f55a3020accd4e947a833aa68960267526), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64), [`9a805e5`](https://github.com/JollyPixel/editor/commit/9a805e5fa847c30d41495bda22051e1aa6ed02f5), [`24991a6`](https://github.com/JollyPixel/editor/commit/24991a6edf1f7230b9268ffa647151ebe52d808e), [`6f83ad9`](https://github.com/JollyPixel/editor/commit/6f83ad96f79668f426e90a6f7e183d6f676778ea), [`8890073`](https://github.com/JollyPixel/editor/commit/8890073623d0035da1b8b662c1477d217e58a09b), [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`a89aeb7`](https://github.com/JollyPixel/editor/commit/a89aeb73fa118659494d3d9410dd9135fc39b551), [`5af0632`](https://github.com/JollyPixel/editor/commit/5af0632f9ae65a6005861f839adb4e97d22c209f), [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850), [`d26da53`](https://github.com/JollyPixel/editor/commit/d26da53c969781c9c1c3062f6f0b6df2f5b8ecfa)]:
   - @jolly-pixel/network@7.0.0
 
@@ -64,32 +53,24 @@
 - [#1024](https://github.com/JollyPixel/editor/pull/1024) [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7) Thanks [@fraxken](https://github.com/fraxken)! - Rename methods named `xOf`, `xFor` or `getX`/`setX` after what they do (for example `inverseOf` → `invert`, `UVRegion.rectFor` → `slotRect`, `MessageParser.of` → `fromProtocol`).
   The package docs list the new names; behavior is unchanged.
 
-- [#1046](https://github.com/JollyPixel/editor/pull/1046) [`60f84a2`](https://github.com/JollyPixel/editor/commit/60f84a2fcd958453835f97638051c825284db028) Thanks [@fraxken](https://github.com/fraxken)! - `PeerHighlights` and `PeerHighlightSync` replace the peer selection/hover registries and syncs; `MeshHighlight` keeps its state private and re-syncs instead of rebuilding on `configure()`.
-  Removed `MeshHighlightState`, `HighlightResolver`, `PeerHighlightPass` and the peer overlay classes from the public API.
-  `BoxControls` gains `cancel()` and Escape, and its `end` event reports `changed` and `cancelled`.
+- [#1046](https://github.com/JollyPixel/editor/pull/1046) [`60f84a2`](https://github.com/JollyPixel/editor/commit/60f84a2fcd958453835f97638051c825284db028) Thanks [@fraxken](https://github.com/fraxken)! - `PeerHighlights` and `PeerHighlightSync` replace the peer selection and hover registries. `BoxControls` can be cancelled with `cancel()` or Escape.
 
 ### Minor Changes
 
-- [#990](https://github.com/JollyPixel/editor/pull/990) [`4e6f3f2`](https://github.com/JollyPixel/editor/commit/4e6f3f297144e5bee51734b83ec5fe6a22cc3ea7) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `HighlightMeshSilhouette` and the `"silhouette"` technique: box bars on a `BoxGeometry`, the camera-facing contour on any other mesh. Both silhouettes share the `HighlightSilhouette` base class.
-  UV regions with triangle or compound faces can now be resized, stacked ones included; `UVRegion.resizable` is removed.
+- [#990](https://github.com/JollyPixel/editor/pull/990) [`4e6f3f2`](https://github.com/JollyPixel/editor/commit/4e6f3f297144e5bee51734b83ec5fe6a22cc3ea7) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add the `"silhouette"` highlight technique for any mesh. UV regions with triangle or compound faces can be resized; `UVRegion.resizable` is removed.
 
-- [#913](https://github.com/JollyPixel/editor/pull/913) [`d9038e8`](https://github.com/JollyPixel/editor/commit/d9038e846d997950d592c319d631abbf5d397baf) Thanks [@fraxken](https://github.com/fraxken)! - `BoxControls` mirror chips now mirror through the box center; `pivot` only drives quarter turns.
-  Vertical moves now use Ctrl (⌘ on macOS) instead of Shift, which fly cameras use to descend.
-  New `snapBypass` option (default `true`) lets hosts stop Alt from suspending snapping.
+- [#913](https://github.com/JollyPixel/editor/pull/913) [`d9038e8`](https://github.com/JollyPixel/editor/commit/d9038e846d997950d592c319d631abbf5d397baf) Thanks [@fraxken](https://github.com/fraxken)! - `BoxControls` mirrors through the box centre, and vertical moves use Ctrl (⌘ on macOS) instead of Shift. Add `snapBypass`.
 
 - [#905](https://github.com/JollyPixel/editor/pull/905) [`26b8b55`](https://github.com/JollyPixel/editor/commit/26b8b551d00aa70ea11b7b7e0097f70c1da43dc3) Thanks [@fraxken](https://github.com/fraxken)! - Add `clientToNdc(canvas, clientX, clientY, target?)`, the inverse of `projectToClient`, for aiming a `Raycaster` from pointer coordinates.
 
 - [#1017](https://github.com/JollyPixel/editor/pull/1017) [`51891fd`](https://github.com/JollyPixel/editor/commit/51891fd155676510b2450f00eb7cd4c78691f522) Thanks [@fraxken](https://github.com/fraxken)! - Add `BakedRoomEnvironment`, a prefiltered `RoomEnvironment` reflection map loaded instead of generated at runtime.
   `TransformControls` builds the handles of a mode the first time that mode shows on a target.
 
-- [#967](https://github.com/JollyPixel/editor/pull/967) [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2) Thanks [@fraxken](https://github.com/fraxken)! - `RoomPresenceSource(room)` and `PeerRoster` key peers by connection and read the local peer from `room.profile`, now the claimed profile until `sync`; both drop `identity`, and claims travel under `fieldLock`.
-  `@jolly-pixel/network` adds `parsePeerProfile`, `PeerProfileMetadata`, `GUEST_USERNAME` and `PresenceChannel.published`; `ui` drops `readUsername`, `readPeerId`, `readAvatar`, `readBadge`, `NullPresenceSource` and `LocalPeerIdentity`, and renames `presencePeerOf` and `toPeerMetadata` to `toPresencePeer` and `toPeerProfileMetadata`.
-  `PeerFrustumSync` labels a peer without a `username` as `"Guest"` by default.
+- [#967](https://github.com/JollyPixel/editor/pull/967) [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2) Thanks [@fraxken](https://github.com/fraxken)! - Peers are keyed by connection and read from `room.profile`. `ui` drops the `read*` presence helpers and renames `presencePeerOf`/`toPeerMetadata` to `toPresencePeer`/`toPeerProfileMetadata`.
 
 ### Patch Changes
 
-- [#1018](https://github.com/JollyPixel/editor/pull/1018) [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf) Thanks [@fraxken](https://github.com/fraxken)! - The model asset loader and `Runtime` import the three.js model loaders, meshopt decoder and `KTX2Loader` on first use; `BakedRoomEnvironment.load()` starts its request one microtask after the call.
-  `AssetCatalog`, `AssetRecord` and `AssetReference` validate with `zod/mini`, so a malformed shape throws `$ZodError` instead of the classic `ZodError`.
+- [#1018](https://github.com/JollyPixel/editor/pull/1018) [`c9726dc`](https://github.com/JollyPixel/editor/commit/c9726dc516927b5d119e066e7dfa0a1bca536eaf) Thanks [@fraxken](https://github.com/fraxken)! - Model loaders and the KTX2 loader load on first use. Catalog types validate with `zod/mini`, so malformed shapes throw `$ZodError`.
 - Updated dependencies [[`334fb9b`](https://github.com/JollyPixel/editor/commit/334fb9b31baf67b797f0f9564ac4f6be2c689e11), [`e91817e`](https://github.com/JollyPixel/editor/commit/e91817e4dc21e0f659340de5ab426cdec4d45067), [`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f), [`5af5621`](https://github.com/JollyPixel/editor/commit/5af5621e4223fb97ab38b22530a64c0884d52051), [`176b005`](https://github.com/JollyPixel/editor/commit/176b005c86d6d2e62e6d03780d26cf6f770e2650), [`f174add`](https://github.com/JollyPixel/editor/commit/f174addea4b885bd601976b7fd730a91a0b047c4), [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7), [`ef2c7fe`](https://github.com/JollyPixel/editor/commit/ef2c7fe37e1d532b745e6462c26bb9f650ccc875), [`12dca6e`](https://github.com/JollyPixel/editor/commit/12dca6e98be8b71f9ef8517edcc17d8e8520fb72), [`c141b45`](https://github.com/JollyPixel/editor/commit/c141b453ebd7191ee44bd98b74825e8b9570264e), [`02172bd`](https://github.com/JollyPixel/editor/commit/02172bd0a88a1db4612b76a41d78e424517f5ba0), [`9bcc044`](https://github.com/JollyPixel/editor/commit/9bcc044e1feaaed69f3344d17bff5b7e7f3ea797), [`c86b214`](https://github.com/JollyPixel/editor/commit/c86b214c710a64428fa251465f3bcd7984471a36), [`85641f5`](https://github.com/JollyPixel/editor/commit/85641f5459de96c87aea28ae1ec5ef564991a760), [`40e16a4`](https://github.com/JollyPixel/editor/commit/40e16a4ae92fdb94931b59e9ba80af52330b1bc4), [`27cff63`](https://github.com/JollyPixel/editor/commit/27cff63c507ae72b62c0299999590c839f2ac492), [`28dae7b`](https://github.com/JollyPixel/editor/commit/28dae7b8ef17f600128ba02cfe33436afadf1c92), [`5fbedf2`](https://github.com/JollyPixel/editor/commit/5fbedf27124e3deb38992f3b70592b9536d9223c), [`8323f7d`](https://github.com/JollyPixel/editor/commit/8323f7d1ac6ccb05c46407561cccf13a85098285), [`13c7153`](https://github.com/JollyPixel/editor/commit/13c7153fcd2cfded9e0f9be6536e0aae8440ba19), [`3d53ea9`](https://github.com/JollyPixel/editor/commit/3d53ea9ae1d62eed99cde3dd80a1c8831deedffb), [`a75ee6d`](https://github.com/JollyPixel/editor/commit/a75ee6dc5ef94c274f0f3b69d8eeff73e018e495), [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681), [`a1c9713`](https://github.com/JollyPixel/editor/commit/a1c9713eafcdf644030bd565c4e119b84e3cfea8), [`f20007a`](https://github.com/JollyPixel/editor/commit/f20007a1717a9b9bbab779489156c36451be38a0), [`695ee81`](https://github.com/JollyPixel/editor/commit/695ee81072bd90cae25c03e5e850ce214153278b), [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc), [`e1e86cb`](https://github.com/JollyPixel/editor/commit/e1e86cb232b5e021d839a58b8b68013194308349), [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2), [`1a9db4f`](https://github.com/JollyPixel/editor/commit/1a9db4f0e48b42c9f23e302e117f24fcd1211e66)]:
   - @jolly-pixel/network@6.0.0
 
@@ -102,28 +83,17 @@
 - [#811](https://github.com/JollyPixel/editor/pull/811) [`9ad8868`](https://github.com/JollyPixel/editor/commit/9ad8868c41f9fc86c234d4dcff169b96a3a00441) Thanks [@fraxken](https://github.com/fraxken)! - `BoxControls` gains a corner arc (`rotateAxes`) that requests quarter turns around `pivot`, and mirror chips (`flipAxes`) with a mirror-plane preview.
   The host applies them from the new `rotate` and `flip` events.
 
-- [#769](https://github.com/JollyPixel/editor/pull/769) [`4eb05ad`](https://github.com/JollyPixel/editor/commit/4eb05ad0723a9cc386cb7232009aa9a8a2fb6ebc) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add the `boxSilhouette` highlight technique, exported as `HighlightBoxSilhouette`: a camera-facing outline for box meshes, built from watertight edge geometry instead of an outline pass.
-  `MeshHighlightAppearance` gains `occludedOpacityScale` to dim any indicator's portion hidden behind other geometry, and overlay factories can read `peer` to render a local indicator above a peer one on the same geometry.
+- [#769](https://github.com/JollyPixel/editor/pull/769) [`4eb05ad`](https://github.com/JollyPixel/editor/commit/4eb05ad0723a9cc386cb7232009aa9a8a2fb6ebc) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add the `boxSilhouette` highlight technique for box meshes, and `occludedOpacityScale` to dim the hidden part of an indicator.
 
-- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`, built on `GameLoop` `keepAlive`/`invalidate()` (sleeps after `trailingRenders`) and `FrameScheduler.skipGap()`, with `invalidate()`/`keepAlive()` on the engine `World` and `wasActive` on the controls `Input`.
-  `OrbitFlyCamera`, `VoxelRenderer` (new `VoxelView` `requestFrame`) and `PeerFrustumSync` (new `requestFrame`, trailing pose publish) now request the frames they need.
-  Joins receive a cached `encodeSnapshot()` form (PNG pixels: 2.7 MB to 165 KB for a 1024x512 tileset) that `CommandSync.applySnapshot` loads in order; a cold asset room restores its arbiter from the replay, and rooms share compiled validators through `MessageParser.of`.
+- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`: the loop sleeps when nothing changes, and cameras, voxel views and peer syncs request the frames they need. Room joins load a much smaller snapshot.
 
-- [#772](https://github.com/JollyPixel/editor/pull/772) [`4981bb9`](https://github.com/JollyPixel/editor/commit/4981bb99fb740a52641452686674df6f0f4a1b6f) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `TransformControls` gains a `slab` axis handle kind: a square tip, half as deep as it is wide by default, for resize-style handles that should read differently from the scale cube.
-  
-  `MeshHighlightAppearance` gains `renderOrder` and `xrayDepthWrite`. The box silhouette uses them to place its overlays in the render order, with peer indicators one step below, and to keep writing depth under xray so later transparent passes, such as a grid, stay hidden behind the outline. Its occluded pass never writes depth.
-  
-  Fix `HighlightBoxSilhouette` throwing on a color change after the camera sat inside the box, which kept a late-joining peer from seeing existing selections.
+- [#772](https://github.com/JollyPixel/editor/pull/772) [`4981bb9`](https://github.com/JollyPixel/editor/commit/4981bb99fb740a52641452686674df6f0f4a1b6f) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `TransformControls` gains a `slab` handle for resizing. Fix `HighlightBoxSilhouette` throwing on a colour change, which hid existing selections from late-joining peers.
 
-- [#821](https://github.com/JollyPixel/editor/pull/821) [`ad38d4e`](https://github.com/JollyPixel/editor/commit/ad38d4e8935e0a759c0d4f7add3771ab0543f9b0) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `jolly-context-menu` (a point or `AnchorRect` anchor) and `resolveReparentMoves()`; `jolly-tree` emits `jolly-context-request` on right-click or Shift+F10, samples rows with `TreeNode.swatch` (`jolly-activate-swatch`) and exposes a `grip` part.
-  Locked fields no longer reflow and peer chips skip their own user; pane `actions` buttons no longer start a drag, clicks in the rename field keep it open, and `jolly-dialog` accepts `--jolly-dialog-backdrop-filter`.
-  `MeshHighlight` gains `emphasize(ids)`, `emphasized` and `emphasisChange`; `ObjectOverlayRenderer` takes an optional `renderScene`, without which `render` only places the overlays.
+- [#821](https://github.com/JollyPixel/editor/pull/821) [`ad38d4e`](https://github.com/JollyPixel/editor/commit/ad38d4e8935e0a759c0d4f7add3771ab0543f9b0) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `jolly-context-menu`, and `jolly-tree` emits `jolly-context-request` on right-click or Shift+F10. `MeshHighlight` can emphasize entries with `emphasize(ids)`.
 
 ### Patch Changes
 
-- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
-  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
-  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Package subpaths follow one naming scheme (`/node`, `/client`, `/browser`), and every package declares `exports`; for example, import `event-store/node` instead of `event-store/sqlite`. Package roots are browser-safe.
 - Updated dependencies [[`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5), [`e206538`](https://github.com/JollyPixel/editor/commit/e2065388190abbe17facabbbe64fac562fa628de), [`8d33c94`](https://github.com/JollyPixel/editor/commit/8d33c9415c21955b94f3c294ceb347f733534787), [`1bbae1c`](https://github.com/JollyPixel/editor/commit/1bbae1ceddffa7431cbe9c711d41a3c401a5dc93), [`5d415e4`](https://github.com/JollyPixel/editor/commit/5d415e4f680fd90ba0ec3819b018baa5c59382fe), [`4a6ffd0`](https://github.com/JollyPixel/editor/commit/4a6ffd0841535389f5c61246cbf8d5b45d9f408e), [`71d300a`](https://github.com/JollyPixel/editor/commit/71d300a76e87200b52cb4a1e9394ce22793c2a8a), [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285)]:
   - @jolly-pixel/network@5.0.0
 
@@ -138,10 +108,7 @@
 - [#733](https://github.com/JollyPixel/editor/pull/733) [`18727dc`](https://github.com/JollyPixel/editor/commit/18727dc442a89059f5a54ad8d82310fbdd9575c2) Thanks [@fraxken](https://github.com/fraxken)! - Add `MarqueeBox`, an empty 3D selection box with animated two-color dashed
   edges. Remove the exported `Vector3Like`, use `THREE.Vector3Like` instead.
 
-- [#732](https://github.com/JollyPixel/editor/pull/732) [`0c8bfe0`](https://github.com/JollyPixel/editor/commit/0c8bfe0f1d4c1b5d08df50246c3393153f9f75e6) Thanks [@fraxken](https://github.com/fraxken)! - Rename the `selection` module to `mesh-highlight`: `SelectionSystem` becomes
-  `MeshHighlight`, `SelectionManager` becomes `MeshHighlightState`, and the
-  appearance, overlay, resolver and renderer types take a `Highlight` prefix.
-  Selection state and the `PeerSelection*`/`PeerHover*` layer are unchanged.
+- [#732](https://github.com/JollyPixel/editor/pull/732) [`0c8bfe0`](https://github.com/JollyPixel/editor/commit/0c8bfe0f1d4c1b5d08df50246c3393153f9f75e6) Thanks [@fraxken](https://github.com/fraxken)! - Rename the `selection` module to `mesh-highlight`: `SelectionSystem` becomes `MeshHighlight` and `SelectionManager` becomes `MeshHighlightState`.
 
 - [#735](https://github.com/JollyPixel/editor/pull/735) [`37cdf85`](https://github.com/JollyPixel/editor/commit/37cdf8581496b58a0d0e73964b5699937f2baac5) Thanks [@fraxken](https://github.com/fraxken)! - Replace `TranslationControls` with `TransformControls`: translate, rotate and
   scale modes, plane and center handles, configurable orientation and pivot,
@@ -169,14 +136,9 @@
 
 ### Major Changes
 
-- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through a server-configured
-  `AuthenticationProvider`, and split the trusted `PeerIdentity` from the client's
-  untrusted `profile` (renamed from `identity`).
-  Rooms now report a joining client's resolved rights, and a role absent from a
-  configured rights table is denied instead of granted.
+- [#639](https://github.com/JollyPixel/editor/pull/639) [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9) Thanks [@fraxken](https://github.com/fraxken)! - Authenticate connections at the WebSocket handshake through an `AuthenticationProvider`. The client's `identity` becomes the untrusted `profile`, and roles missing from a rights table are denied.
 
-- [#664](https://github.com/JollyPixel/editor/pull/664) [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788) Thanks [@fraxken](https://github.com/fraxken)! - Replace `SyncAdapter` with `CommandSync`, add `PresenceChannel`, and slim `ConflictTracker` to `admit`/`admitEach`; presence set before `join()` now travels with the join.
-  Asset rooms stamp the sender's `clientId` server-side, and three's peer syncs drop `resyncIntervalMs` and their message type parameters.
+- [#664](https://github.com/JollyPixel/editor/pull/664) [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788) Thanks [@fraxken](https://github.com/fraxken)! - Replace `SyncAdapter` with `CommandSync` and add `PresenceChannel`; presence set before `join()` travels with the join.
 
 ### Minor Changes
 
@@ -204,38 +166,13 @@
 - [#531](https://github.com/JollyPixel/editor/pull/531) [`7701ab0`](https://github.com/JollyPixel/editor/commit/7701ab0419a2aefca91c805f8fc52e3f494a526e) Thanks [@fraxken](https://github.com/fraxken)! - Expose `PeerFrustumSync` from a new `@jolly-pixel/three/network` entry point,
   with `@jolly-pixel/network` as an optional peer dependency.
 
-- [#627](https://github.com/JollyPixel/editor/pull/627) [`deee8d4`](https://github.com/JollyPixel/editor/commit/deee8d4ebd3f3cb34d5e16c448a81f7cab0c378d) Thanks [@fraxken](https://github.com/fraxken)! - Add `Grid.extent`, `Grid.toOptions()`, and `Grid.cloneWith()` to read a grid's live state back as `GridOptions` and rebuild it with per-field overrides.
-  Callers no longer need to copy every property by hand when changing a construction-only setting such as `plane`, `cell.style`, or `fade.from`.
+- [#627](https://github.com/JollyPixel/editor/pull/627) [`deee8d4`](https://github.com/JollyPixel/editor/commit/deee8d4ebd3f3cb34d5e16c448a81f7cab0c378d) Thanks [@fraxken](https://github.com/fraxken)! - Add `Grid.toOptions()` and `Grid.cloneWith()` to rebuild a grid with a few settings changed.
 
-- [#614](https://github.com/JollyPixel/editor/pull/614) [`0b785c2`](https://github.com/JollyPixel/editor/commit/0b785c2a1e7c12d40252475bfbb79d103fdb2c9d) Thanks [@fraxken](https://github.com/fraxken)! - Stop allocating peer colors in `PeerFrustumSync`. Without a `color` callback
-  every peer now uses `frustum.color` (which the `frustum` option finally
-  accepts), falling back to `PeerFrustum.Defaults.color`, and `@jolly-pixel/color`
-  is no longer a runtime dependency.
-  Export `createDefaultColorAllocator()`, previously duplicated inside
-  `PeerSelectionRegistry` and `PeerHoverRegistry`.
+- [#614](https://github.com/JollyPixel/editor/pull/614) [`0b785c2`](https://github.com/JollyPixel/editor/commit/0b785c2a1e7c12d40252475bfbb79d103fdb2c9d) Thanks [@fraxken](https://github.com/fraxken)! - `PeerFrustumSync` no longer allocates peer colours: without a `color` callback every peer uses `frustum.color`. `@jolly-pixel/color` is no longer a dependency.
 
-- [#568](https://github.com/JollyPixel/editor/pull/568) [`33cba8e`](https://github.com/JollyPixel/editor/commit/33cba8e750bdd4cac96f409c3cf310159f73ad20) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Added a selection subsystem for `THREE.Scene` objects: `SelectionManager` drives
-  per-object outlining (`SelectionOutline`, `SelectionBoundingBox` with optional
-  fill, `MergedSelectionOverlay` for bulk/instanced selections) and scene-level
-  postprocess techniques (`HighlightPass`, a JFA-based `HighlightPassJfa`), all
-  supporting `THREE.InstancedMesh` via `instanceId`. Techniques are open for
-  registration through `SelectionOverlayRegistry`.
-  
-  Added network presence for selection and hover: `PeerSelectionRegistry`,
-  `PeerHoverRegistry`, and their overlay/postprocess renderers
-  (`PeerSelectionOverlays`, `PeerHighlightPass`, `PeerHoverOverlays`) show what
-  every connected peer is selecting and hovering, with `PeerSelectionChips` for
-  overlapping selectors and `PeerSelectionVisibility` for frustum/distance
-  gating. `PeerSelectionSync`/`PeerHoverSync` (`@jolly-pixel/three/network`)
-  publish and apply this state over a `@jolly-pixel/network` room's presence.
-  
-  Fixed `@jolly-pixel/ui`'s `PropertyRow` `hidden` attribute doing nothing.
+- [#568](https://github.com/JollyPixel/editor/pull/568) [`33cba8e`](https://github.com/JollyPixel/editor/commit/33cba8e750bdd4cac96f409c3cf310159f73ad20) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add scene selection outlines and highlight passes, with peer selection and hover shown over a network room. Fix `PropertyRow`'s `hidden` attribute doing nothing.
 
-- [#568](https://github.com/JollyPixel/editor/pull/568) [`33cba8e`](https://github.com/JollyPixel/editor/commit/33cba8e750bdd4cac96f409c3cf310159f73ad20) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Trim the selection public surface to its user-facing components: the internal
-  overlay plumbing, factories and helpers are no longer exported. The global
-  `defaultSelectionOverlayRegistry` is replaced by a per-instance
-  `SelectionManager.overlayRegistry`, and `createSelectionOverlay` becomes
-  `SelectionOverlayRegistry.create`.
+- [#568](https://github.com/JollyPixel/editor/pull/568) [`33cba8e`](https://github.com/JollyPixel/editor/commit/33cba8e750bdd4cac96f409c3cf310159f73ad20) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Stop exporting the selection overlay internals; use the per-instance `SelectionManager.overlayRegistry` and `SelectionOverlayRegistry.create` instead of the global registry.
 
 - [#598](https://github.com/JollyPixel/editor/pull/598) [`a5c560b`](https://github.com/JollyPixel/editor/commit/a5c560bc21d123906a8c7faa6a3d7ed783e89b4f) Thanks [@fraxken](https://github.com/fraxken)! - Add customizable axis-only translation controls with outlined arrow or sphere
   handles, an optional visual center, world/local dragging, and relative snapping.
@@ -244,15 +181,9 @@
   `AreaBoxControls`, pointer controls that drag it on the ground plane and resize
   one face at a time with grid snapping, per-axis policies and bounds.
 
-- [#539](https://github.com/JollyPixel/editor/pull/539) [`3bde59b`](https://github.com/JollyPixel/editor/commit/3bde59b0a25d61653b3200849c64bf93c3d30c8d) Thanks [@fraxken](https://github.com/fraxken)! - Rebuild the layers tab around one tree holding objects as rows, with a single
-  add dialog, per-object color and lock, and editable properties. Adds
-  `AreaBox.color`, `VoxelObjectJSON.color`/`locked`, and stops `disposeObject3D`
-  freeing the resources a self-disposing node already released.
+- [#539](https://github.com/JollyPixel/editor/pull/539) [`3bde59b`](https://github.com/JollyPixel/editor/commit/3bde59b0a25d61653b3200849c64bf93c3d30c8d) Thanks [@fraxken](https://github.com/fraxken)! - Add `AreaBox.color` and per-object `color` and `locked` on voxel objects. `disposeObject3D` no longer frees resources twice.
 
-- [#595](https://github.com/JollyPixel/editor/pull/595) [`245bc85`](https://github.com/JollyPixel/editor/commit/245bc850a6f0798459b2e829ad99add3e0510c54) Thanks [@fraxken](https://github.com/fraxken)! - Clicking a collaborator in the voxel-map presence panel teleports the camera to
-  their position and orientation, through a `selectable` opt-in on
-  `jolly-presence` and `PeerFrustumSync.poseOf()`. Peer frustums now fade out up
-  close, and the color swatch loses its border.
+- [#595](https://github.com/JollyPixel/editor/pull/595) [`245bc85`](https://github.com/JollyPixel/editor/commit/245bc850a6f0798459b2e829ad99add3e0510c54) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-presence` rows can be `selectable`, and `PeerFrustumSync.poseOf()` gives a peer's camera pose. Peer frustums fade out up close.
 
 ### Patch Changes
 

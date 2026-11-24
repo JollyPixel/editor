@@ -10,31 +10,22 @@
 
 ### Major Changes
 
-- [#1047](https://github.com/JollyPixel/editor/pull/1047) [`5d9e5a4`](https://github.com/JollyPixel/editor/commit/5d9e5a484c5e7ce27d7d702bc2fe05df495bbc19) Thanks [@fraxken](https://github.com/fraxken)! - Breaking: devices share one edge bank, so a tap between two samples reports both edges; device state arrays, `Mouse.newPosition`/`newDelta`/`synchronizeWithTouch`, `Screen.requestFullscreenIfWanted`, `Keyboard.enabled`, condition `bind()` (use `bindInputCondition()`), `KeyBindingSettings.sync()` and `InputActionQuery` are removed.
-  Mouse follows the first touch and Screen its own gestures, so fullscreen now completes on touch; Touchpad allocates slots, the Gamepad `Home` button works, conditions take `InputDevices`, and `KeyboardLayoutStore` is exported.
-  `Keyboard.wasDownLastUpdate()` lets aliases report a tap then a hold in one frame, mouse scroll queries share one edge, and `Input` device fields are readonly.
+- [#1047](https://github.com/JollyPixel/editor/pull/1047) [`5d9e5a4`](https://github.com/JollyPixel/editor/commit/5d9e5a484c5e7ce27d7d702bc2fe05df495bbc19) Thanks [@fraxken](https://github.com/fraxken)! - Input devices share one edge bank, so a tap between two samples reports both edges, and fullscreen works on touch. Several deprecated members are removed; use `bindInputCondition()` instead of condition `bind()`.
 
-- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Breaking: `publishFrameState()` is replaced by `publish(reader)` on `Input` and every device, with `InputReader` `"step"` or `"frame"`; `sample()` reads input without publishing, and `update()` is `sample()` then `publish("step")`.
-  Each reader sees every edge once, so a fixed-step host samples once per frame and a frame without a step no longer drops edges.
+- [#849](https://github.com/JollyPixel/editor/pull/849) [`5f66fe9`](https://github.com/JollyPixel/editor/commit/5f66fe99d7d1b7cb1df7c1383f2fa60ba6acf6cd) Thanks [@fraxken](https://github.com/fraxken)! - Replace `publishFrameState()` with `publish(reader)`, so fixed-step and frame readers each see every input edge once.
 
 - [#1024](https://github.com/JollyPixel/editor/pull/1024) [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7) Thanks [@fraxken](https://github.com/fraxken)! - Rename methods named `xOf`, `xFor` or `getX`/`setX` after what they do (for example `inverseOf` → `invert`, `UVRegion.rectFor` → `slotRect`, `MessageParser.of` → `fromProtocol`).
   The package docs list the new names; behavior is unchanged.
 
 ### Minor Changes
 
-- [#1061](https://github.com/JollyPixel/editor/pull/1061) [`d225112`](https://github.com/JollyPixel/editor/commit/d2251127dac7d6b2ca8f4bf123331062156d645f) Thanks [@fraxken](https://github.com/fraxken)! - `OrbitFlyCamera` takes its fly and look keys from `OrbitFlyKeys` (`keys` option and setter).
-  A tour body span such as `` `{camera.forward}` `` shows the key bound to that action, served by `lantern.keys`.
-  `KeyChord.format()` names a bare modifier key, and controls exports `isKeyCode` and `MODIFIER_KEY_CODES`.
+- [#1061](https://github.com/JollyPixel/editor/pull/1061) [`d225112`](https://github.com/JollyPixel/editor/commit/d2251127dac7d6b2ca8f4bf123331062156d645f) Thanks [@fraxken](https://github.com/fraxken)! - `OrbitFlyCamera` takes its keys from `OrbitFlyKeys`, and tours can show the key bound to an action.
 
 - [#1075](https://github.com/JollyPixel/editor/pull/1075) [`6d8484f`](https://github.com/JollyPixel/editor/commit/6d8484fe99f34f8ed90b407fc6e657c0387c1acf) Thanks [@fraxken](https://github.com/fraxken)! - Add `ShortcutLabels`, which writes tooltip text such as `Undo (Ctrl+Z)` from the chords a `KeyBindingSettings` binds, on the current keyboard layout, and notifies on each rebind or layout change.
 
-- [#1038](https://github.com/JollyPixel/editor/pull/1038) [`ce42278`](https://github.com/JollyPixel/editor/commit/ce42278634922401f293644c76ee55b71ae041db) Thanks [@fraxken](https://github.com/fraxken)! - Add `KeyBindingSettings`, which keeps a `KeyBindingMap`, loads stored overrides, emits each new map and rebinds handlers on change.
-  `KeyBindingMap` gains `rebind()`, `restore()`, `toJSON()` and static `parse()` and `from()` that drop invalid stored entries.
-  `KeyBindingMap.bind()` accepts handlers for a subset of the actions.
+- [#1038](https://github.com/JollyPixel/editor/pull/1038) [`ce42278`](https://github.com/JollyPixel/editor/commit/ce42278634922401f293644c76ee55b71ae041db) Thanks [@fraxken](https://github.com/fraxken)! - Add `KeyBindingSettings` to load and persist rebound shortcuts.
 
-- [#984](https://github.com/JollyPixel/editor/pull/984) [`51c9b58`](https://github.com/JollyPixel/editor/commit/51c9b58a6d5d6f279413d82be26c9d92609905c9) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse.scrollSource` tells wheel notches, two-finger touchpad swipes and zooms (pinch or Ctrl+wheel) apart; `scrollDevice` overrides the detection.
-  `OrbitFlyCamera` looks around on a two-finger swipe and with I/J/K/L (`touchpadLookSensitivity`, `keyLookSpeed`); a pinch does what the wheel does.
-  `OrbitFlyCamera` eases in and out of movement (`accelerationTime`, `brakingTime`); `responsiveness` now only damps the pivot and trail.
+- [#984](https://github.com/JollyPixel/editor/pull/984) [`51c9b58`](https://github.com/JollyPixel/editor/commit/51c9b58a6d5d6f279413d82be26c9d92609905c9) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse.scrollSource` tells wheel, touchpad swipe and pinch apart, and `OrbitFlyCamera` looks around on a two-finger swipe and eases in and out of movement.
 
 ## 3.0.0
 
@@ -44,22 +35,15 @@
 
 ### Minor Changes
 
-- [#833](https://github.com/JollyPixel/editor/pull/833) [`f54d006`](https://github.com/JollyPixel/editor/commit/f54d006a7c16e9d2cca6cf6fec6076053ac86335) Thanks [@fraxken](https://github.com/fraxken)! - Add `KeyBindingMap` for rebindable shortcuts by action, `KeyChord.from()`/`toString()`, `KEY_CODES`, and the `preventControlKeys` keyboard option; `bind()` also takes `KeyChord` instances.
-  `isEditableTarget` now only treats text-entry inputs as editable, so sliders and checkboxes keep shortcuts working.
+- [#833](https://github.com/JollyPixel/editor/pull/833) [`f54d006`](https://github.com/JollyPixel/editor/commit/f54d006a7c16e9d2cca6cf6fec6076053ac86335) Thanks [@fraxken](https://github.com/fraxken)! - Add `KeyBindingMap` for rebindable shortcuts, and sliders and checkboxes no longer block shortcuts.
 
-- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`, built on `GameLoop` `keepAlive`/`invalidate()` (sleeps after `trailingRenders`) and `FrameScheduler.skipGap()`, with `invalidate()`/`keepAlive()` on the engine `World` and `wasActive` on the controls `Input`.
-  `OrbitFlyCamera`, `VoxelRenderer` (new `VoxelView` `requestFrame`) and `PeerFrustumSync` (new `requestFrame`, trailing pose publish) now request the frames they need.
-  Joins receive a cached `encodeSnapshot()` form (PNG pixels: 2.7 MB to 165 KB for a 1024x512 tileset) that `CommandSync.applySnapshot` loads in order; a cold asset room restores its arbiter from the replay, and rooms share compiled validators through `MessageParser.of`.
+- [#845](https://github.com/JollyPixel/editor/pull/845) [`399e1e4`](https://github.com/JollyPixel/editor/commit/399e1e448a7cab33990ccb000c381ec266060de5) Thanks [@fraxken](https://github.com/fraxken)! - Add `renderOnDemand` to `Runtime`: the loop sleeps when nothing changes, and cameras, voxel views and peer syncs request the frames they need. Room joins load a much smaller snapshot.
 
-- [#829](https://github.com/JollyPixel/editor/pull/829) [`56c4d56`](https://github.com/JollyPixel/editor/commit/56c4d566330c6851b52b6dd64b0bdd3f69946dfb) Thanks [@fraxken](https://github.com/fraxken)! - `Keyboard` gains `bind(chords, handler, options)` for prioritized key-chord bindings (also exported standalone as `KeyBindings`) and a ref-counted `suspend()`.
-  New `KeyChord` parses, matches and formats chords by position (`"Mod+KeyZ"`) or printed letter (`"Mod+z"`); `format({ layout })` names keys from `loadKeyboardLayout()`.
-  `isApplePlatform` is now exported.
+- [#829](https://github.com/JollyPixel/editor/pull/829) [`56c4d56`](https://github.com/JollyPixel/editor/commit/56c4d566330c6851b52b6dd64b0bdd3f69946dfb) Thanks [@fraxken](https://github.com/fraxken)! - `Keyboard.bind()` binds key chords with priorities, and `KeyChord` parses, matches and formats chords by key position or printed letter.
 
 ### Patch Changes
 
-- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
-  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
-  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Package subpaths follow one naming scheme (`/node`, `/client`, `/browser`), and every package declares `exports`; for example, import `event-store/node` instead of `event-store/sqlite`. Package roots are browser-safe.
 
 ## 2.1.0
 
@@ -91,13 +75,7 @@
   cursor leaves the canvas. `Runtime.load()`/`configureRuntimeDevice` accept
   `maxFps` to override the GPU-benchmarked render cap.
 
-- [#571](https://github.com/JollyPixel/editor/pull/571) [`c9fa209`](https://github.com/JollyPixel/editor/commit/c9fa2090fc08b3151f107290459dbd050a584186) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse` tracks whether the pointer sits over the canvas as `hovering`, with
-  `enter` and `leave` events, so a consumer can tell a live `position` from the
-  stale one left behind when the pointer moves onto surrounding UI.
-  `SyncAdapter.notifyLocal()` replays an event to the handler captured at
-  `attach()`, which `VoxelSyncClient` now uses so a peer's edit reaches local
-  observers, and hiding, showing or removing a layer marks every layer's chunks
-  dirty for cross-layer face culling.
+- [#571](https://github.com/JollyPixel/editor/pull/571) [`c9fa209`](https://github.com/JollyPixel/editor/commit/c9fa2090fc08b3151f107290459dbd050a584186) Thanks [@fraxken](https://github.com/fraxken)! - `Mouse.hovering` tells whether the pointer is over the canvas. Peer voxel edits reach local observers.
 
 - [#559](https://github.com/JollyPixel/editor/pull/559) [`981f340`](https://github.com/JollyPixel/editor/commit/981f340f5933b21508a8b5acca991c8e44b451d0) Thanks [@fraxken](https://github.com/fraxken)! - Add `AxisMap`, `Axis`, and normalized axis sources for named movement input.
   Export `AtomicInput` and its action types, including `ANY` and `NONE` keyboard
@@ -105,19 +83,6 @@
 
 ### Patch Changes
 
-- [#610](https://github.com/JollyPixel/editor/pull/610) [`6ec74fd`](https://github.com/JollyPixel/editor/commit/6ec74fdc2662bb3a2dc3744edcd1d2b9dc80ae24) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add an opt-in orbit-focus mode to `FreeFlyCamera` (`focusMode: "lock" | "elastic"`).
-  In "lock" mode, `enterOrbitFocus`/`exitOrbitFocus` engage a fixed, click-assigned
-  pivot (wired up in voxel-map via Alt+LeftClick, Escape to release); while locked,
-  WASD/arrows/Space/Shift smoothly nudge the pivot one cell at a time instead of
-  moving the camera freely. In "elastic" mode, WASD/look instead pilot a free-floating pivot
-  directly, and scroll smoothly trails the camera behind it, reaching the pivot
-  exactly (free-fly) at zero; scroll eases the same way in "lock" mode.
-  Alt+LeftClick-drag also rotates the view (in free-fly and
-  while orbiting) as a touchpad-friendlier alternative to middle-drag. The two
-  modes' state and math live in their own `OrbitFocus`/`ElasticFocus` classes.
-  
-  Add the missing "Escape" key code to `KeyCode`, and prevent the browser
-  default for Alt+key combos (e.g. Chrome's Alt+D address-bar shortcut) so
-  they no longer steal focus away from a running game or editor.
+- [#610](https://github.com/JollyPixel/editor/pull/610) [`6ec74fd`](https://github.com/JollyPixel/editor/commit/6ec74fdc2662bb3a2dc3744edcd1d2b9dc80ae24) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `FreeFlyCamera` gains an opt-in orbit focus mode (`focusMode: "lock" | "elastic"`). Alt+key combos no longer trigger browser shortcuts.
 
 - [#524](https://github.com/JollyPixel/editor/pull/524) [`82ce3e8`](https://github.com/JollyPixel/editor/commit/82ce3e8139f436f25676c1b7bcd8447e1b4db416) Thanks [@fraxken](https://github.com/fraxken)! - Preserve mouse transitions across fixed-step samples and rendered updates.

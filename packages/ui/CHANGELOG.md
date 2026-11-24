@@ -4,36 +4,27 @@
 
 ### Major Changes
 
-- [#1088](https://github.com/JollyPixel/editor/pull/1088) [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1) Thanks [@fraxken](https://github.com/fraxken)! - `ui` elements now register from `@jolly-pixel/ui/elements/<name>` (class and dialog helpers included) and the facade, with its types, moved to `@jolly-pixel/ui/facade`; `./feedback` and `./icon` are removed, and the root entry registers nothing and exports element classes as types only.
-  Add `LazyTemplate` to `ui`, and let `jolly-console` (`editScript`) and `jolly-lantern` (`TourRun.shown`) be created late, so pages load these elements only when first needed.
+- [#1088](https://github.com/JollyPixel/editor/pull/1088) [`ce24126`](https://github.com/JollyPixel/editor/commit/ce241266470accee7375a2f45745c0c71f0ce1e1) Thanks [@fraxken](https://github.com/fraxken)! - Register UI elements from `@jolly-pixel/ui/elements/<name>` and import the facade from `@jolly-pixel/ui/facade`; the root entry no longer registers anything.
 
-- [#1206](https://github.com/JollyPixel/editor/pull/1206) [`24991a6`](https://github.com/JollyPixel/editor/commit/24991a6edf1f7230b9268ffa647151ebe52d808e) Thanks [@fraxken](https://github.com/fraxken)! - `PeerMarks` and `PeerMarkSync` replace `PeerMarkMap`, `peerMarks`, `peerBadges` and `reconcilePeerMarks`; `PeerMarkTracker` takes `decode` and a `local` source in place of `readKey`, `localKey` and `publishLocal`.
-  `FieldLockSource`, `RoomFieldLocks` and `pane.fieldLocks` replace `PresenceSource`, `RoomPresenceSource` and `pane.presence`; a field's `peers` is renamed `editors`, and `lockedBy` is derived from it.
-  `CollaboratorPresence`, `toPresencePeers`, `LockState` and the index-based `peerColor` are removed.
+- [#1206](https://github.com/JollyPixel/editor/pull/1206) [`24991a6`](https://github.com/JollyPixel/editor/commit/24991a6edf1f7230b9268ffa647151ebe52d808e) Thanks [@fraxken](https://github.com/fraxken)! - `PeerMarks` and `PeerMarkSync` replace `PeerMarkMap` and its helpers, and `FieldLockSource`/`RoomFieldLocks`/`pane.fieldLocks` replace the presence sources; a field's `peers` becomes `editors`.
 
-- [#1192](https://github.com/JollyPixel/editor/pull/1192) [`d26da53`](https://github.com/JollyPixel/editor/commit/d26da53c969781c9c1c3062f6f0b6df2f5b8ecfa) Thanks [@fraxken](https://github.com/fraxken)! - Add `@jolly-pixel/utils` for shared helpers (`is` guards, `errorMessage`, `clamp`, `formatBytes`, base64, `TaskChain`, `Teardown`/`AsyncTeardown`, and `saveFile` from `@jolly-pixel/utils/dom`).
-  `saveFile` and `formatBytes` move out of `@jolly-pixel/ui`; asset-server inline content that is not valid base64 now throws instead of decoding to garbage bytes.
+- [#1192](https://github.com/JollyPixel/editor/pull/1192) [`d26da53`](https://github.com/JollyPixel/editor/commit/d26da53c969781c9c1c3062f6f0b6df2f5b8ecfa) Thanks [@fraxken](https://github.com/fraxken)! - Add `@jolly-pixel/utils` for shared helpers; `saveFile` and `formatBytes` move there from `@jolly-pixel/ui`.
 
 ### Minor Changes
 
-- [#1203](https://github.com/JollyPixel/editor/pull/1203) [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc) Thanks [@fraxken](https://github.com/fraxken)! - Kind handlers can declare a `preview(state)` hook, served by the `catalog:preview` query (`CatalogClient.preview`) and flagged `preview: "server"` on loaded kind descriptors; the built-in texture kind previews browser images up to 2 MiB and is now listed by `ProjectKinds.descriptors()`.
-  Peer profiles accept `observer: true`, set by `toPeerProfileMetadata(identity, { observer })` and left out by `PeerRoster` and `RoomPresenceSource`.
-  Three adds `renderToTarget` and `ReadbackPixels`, which turns a render-target readback into straight-alpha, top-down RGBA.
+- [#1203](https://github.com/JollyPixel/editor/pull/1203) [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc) Thanks [@fraxken](https://github.com/fraxken)! - Asset kinds can serve previews through `CatalogClient.preview`, and peers can join as observers hidden from presence. Three adds `renderToTarget` and `ReadbackPixels`.
 
 - [#1243](https://github.com/JollyPixel/editor/pull/1243) [`7e29f56`](https://github.com/JollyPixel/editor/commit/7e29f562bacca1d65487e7503078054dfb7f6d58) Thanks [@fraxken](https://github.com/fraxken)! - Add the `tiles` layout to `jolly-button-group`: each option's icon stacks over its label, with the new optional `JollyOption.caption` on a muted line below.
 
 - [#1243](https://github.com/JollyPixel/editor/pull/1243) [`cb05510`](https://github.com/JollyPixel/editor/commit/cb0551060632c2efc33c4af9018b4428fe8b1707) Thanks [@fraxken](https://github.com/fraxken)! - Add `openBelow`, `align` and `hover` to `jolly-context-menu` for menu buttons, a `success` variant to `jolly-button`, and the `AnchorAlign` type.
   `PopoverController` takes `align` as a callback and restores focus before `onClose`.
 
-- [#1212](https://github.com/JollyPixel/editor/pull/1212) [`0d95f1f`](https://github.com/JollyPixel/editor/commit/0d95f1f55a3020accd4e947a833aa68960267526) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-context-menu` items accept a `swatch` (`ContextMenuSwatch`): a colour square drawn in the icon column, for material or palette choices.
-  A submenu chevron stays at the end of its item and only mirrors when the submenu opens on the left, so other items no longer get an extra indent.
+- [#1212](https://github.com/JollyPixel/editor/pull/1212) [`0d95f1f`](https://github.com/JollyPixel/editor/commit/0d95f1f55a3020accd4e947a833aa68960267526) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-context-menu` items accept a colour `swatch`, and items no longer get an extra indent for a submenu chevron.
 
 - [#1274](https://github.com/JollyPixel/editor/pull/1274) [`c1f706c`](https://github.com/JollyPixel/editor/commit/c1f706ca4946937ef4a76648c8ab15cbdc93dadf) Thanks [@fraxken](https://github.com/fraxken)! - `AssetKindHandler.create(assetId, path?)` receives the path a new asset or seed entry is written to, after any conflict suffix.
   `jolly-tree` emits `jolly-rename-end` when a rename ends, with the committed name or `null` when cancelled.
 
-- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files (`SceneFile`, `FileScene`, `SceneInstance`, scene transform helpers, `ComponentDefinitions`), `LightComponent`, `MeshRenderer`, `OrbitFlyCamera.frame()`, `Transform.visibleInHierarchy`, `inferScenePropertyType` and the `render` camera and `properties` behavior options to `engine`; `Actor.name` now follows `object3D.name`. Frames only visit actors with updating components and no longer allocate per actor or component; `sceneManager.actors.updating` lets a host sleep once nothing updates, and a component can start asleep with the `needUpdate` option.
-  Breaking: `Camera.configure()` replaces the camera setters, `sceneManager.actors` (`ActorRegistry`) replaces its actor and component scheduling methods, and `renderStrategy`, `markRenderOrderDirty()` and the `Behavior` property mirror (`getProperty`, `setProperty`, `mergeProperties`, `BehaviorProperties`) are removed.
-  Add `CameraGizmo` and `LightGizmo` to `three`, refusal messages to `history` and `reconcilePeerMarks` to `ui/network`.
+- [#1095](https://github.com/JollyPixel/editor/pull/1095) [`40d00c4`](https://github.com/JollyPixel/editor/commit/40d00c45ca7946f8205cc8cdb01ff043af5d0c16) Thanks [@fraxken](https://github.com/fraxken)! - Add scene files, `LightComponent`, `MeshRenderer` and gizmos, and frames skip actors with nothing to update. `Camera.configure()` replaces the camera setters, and the `Behavior` property mirror is removed.
 
 - [#1212](https://github.com/JollyPixel/editor/pull/1212) [`74a48b4`](https://github.com/JollyPixel/editor/commit/74a48b4b1ff967b5025ede4b3a6d719cd36bdeb0) Thanks [@fraxken](https://github.com/fraxken)! - `--jolly-field-inset-end` now defaults to `0px`: a field's value ends flush with its container, and an unlabeled field no longer leaves a gap on either side. Set it back to `var(--jolly-space-1)` to restore the old trailing inset.
 
@@ -41,28 +32,21 @@
 
 - [#1243](https://github.com/JollyPixel/editor/pull/1243) [`63fd8b0`](https://github.com/JollyPixel/editor/commit/63fd8b0e8da8d86609df90d1c12dfd8a68522310) Thanks [@fraxken](https://github.com/fraxken)! - Add the `tone-wash` icon class: a faint tint of the `tone-ink` color for the closed shape under a glyph's outline.
 
-- [#1164](https://github.com/JollyPixel/editor/pull/1164) [`505d6e0`](https://github.com/JollyPixel/editor/commit/505d6e0444dc3bc5bcb365486f085c169eb2caa8) Thanks [@fraxken](https://github.com/fraxken)! - `color` adds `shadeRamp`, `sortColors`, `isRGBA8` and `PaletteFile` (GPL and Lospec hex). `pixel-draw.renderer` palettes hold 1 to 256 colors (`COLOR_PALETTE_MAX_SIZE` replaces `COLOR_PALETTE_SIZE`) and sync whole edits as `palette-replaced`; `visibleColors` lists a texture's colors.
-  Brushes get an `ink` (`blend` by default, `replace`, `lock-alpha`); `recordStroke` takes one color per pixel and `PixelDocument.paint(pixels, painter)` inks pixels. `jolly-color-picker` adds the `okhsl` space, an `eyedropper` button and hue wrap, paints the wheel at full value, and its wide layout gets a tool column and compact CSS hooks.
+- [#1164](https://github.com/JollyPixel/editor/pull/1164) [`505d6e0`](https://github.com/JollyPixel/editor/commit/505d6e0444dc3bc5bcb365486f085c169eb2caa8) Thanks [@fraxken](https://github.com/fraxken)! - Palettes hold 1 to 256 colours (`COLOR_PALETTE_MAX_SIZE` replaces `COLOR_PALETTE_SIZE`), brushes get an `ink` mode, and the colour picker adds OKHSL and an eyedropper.
 
 - [#1231](https://github.com/JollyPixel/editor/pull/1231) [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0) Thanks [@fraxken](https://github.com/fraxken)! - Peers can publish a short activity in their presence (e.g. "Placing trees · 40%"), shown by `jolly-presence-stack` on a second tooltip line.
 
-- [#1132](https://github.com/JollyPixel/editor/pull/1132) [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` gains `reveal(id)`, which scrolls a row into view and flashes it without moving focus.
-  Add `VoxelMapAnchorKey` to `@jolly-pixel/voxel.renderer/engine`, which builds and parses the `layer:<id>` and `object:<id>` keys `VoxelMapAnchors` lists.
+- [#1132](https://github.com/JollyPixel/editor/pull/1132) [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` gains `reveal(id)` to scroll a row into view and flash it. Add `VoxelMapAnchorKey` to `@jolly-pixel/voxel.renderer/engine`.
 
-- [#1237](https://github.com/JollyPixel/editor/pull/1237) [`5af0632`](https://github.com/JollyPixel/editor/commit/5af0632f9ae65a6005861f839adb4e97d22c209f) Thanks [@fraxken](https://github.com/fraxken)! - `CapabilityTable` takes a `CapabilityDeclaration` list checked by `defineCapabilities` (names typed by `CapabilityName`), and `AssetKindDescriptor` can declare one.
-  One backend `snapshot` policy covers every kind: `replaceSnapshotPolicy` changes it while the backend runs, `DEFAULT_SNAPSHOT_POLICY` holds its default, and project files drop the old per-kind `snapshot` option.
-  `ProjectFile.replace` writes a record of sections in one write; `jolly-text` gains `suggestions` and `select()`.
+- [#1237](https://github.com/JollyPixel/editor/pull/1237) [`5af0632`](https://github.com/JollyPixel/editor/commit/5af0632f9ae65a6005861f839adb4e97d22c209f) Thanks [@fraxken](https://github.com/fraxken)! - Asset kinds can declare capabilities, and one backend snapshot policy replaces the per-kind `snapshot` option. `jolly-text` gains `suggestions` and `select()`.
 
 - [#1144](https://github.com/JollyPixel/editor/pull/1144) [`2716e31`](https://github.com/JollyPixel/editor/commit/2716e316cc176144c6cb2f13551f89556750648c) Thanks [@fraxken](https://github.com/fraxken)! - Add `--jolly-tab-text-max-width` to `jolly-tabs`: a label wider than it ends with an ellipsis.
 
 - [#1183](https://github.com/JollyPixel/editor/pull/1183) [`0aa07e6`](https://github.com/JollyPixel/editor/commit/0aa07e6c2d954691e463ebc1c2ed2def6fbf9916) Thanks [@fraxken](https://github.com/fraxken)! - Add `tooltip-align` to `jolly-tool-button` to line its tooltip up with the button's start or end edge instead of centering it.
 
-- [#1183](https://github.com/JollyPixel/editor/pull/1183) [`3f99e1d`](https://github.com/JollyPixel/editor/commit/3f99e1d2343d203f0f0c366b784c16ae782e317a) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-transform` gains `rotation-format="euler"`: the rotation row then edits `{ x, y, z }` in degrees, as stored, instead of a quaternion.
-  A row's own `jolly-input`/`jolly-change` no longer leaks past the transform; the merged event's detail now names the edited row in `field`.
+- [#1183](https://github.com/JollyPixel/editor/pull/1183) [`3f99e1d`](https://github.com/JollyPixel/editor/commit/3f99e1d2343d203f0f0c366b784c16ae782e317a) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-transform` gains `rotation-format="euler"` to edit rotations in degrees, and its change event names the edited row in `field`.
 
-- [#1162](https://github.com/JollyPixel/editor/pull/1162) [`58361ea`](https://github.com/JollyPixel/editor/commit/58361ea65885b094c8876ceeb058d508f126fbc2) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` indents the children of a `collapsible: false` branch one extra step when it reserves the toggle width, so they stay nested under its icon and indent guides start below it.
-  `FlatTreeRow` gains `indent`, the indent steps drawn before the row.
-  Pane and dialog headers read `--jolly-header-texture-color` and `--jolly-header-texture-opacity`.
+- [#1162](https://github.com/JollyPixel/editor/pull/1162) [`58361ea`](https://github.com/JollyPixel/editor/commit/58361ea65885b094c8876ceeb058d508f126fbc2) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` keeps the children of a non-collapsible branch nested under its icon. Headers can be themed with `--jolly-header-texture-color` and `--jolly-header-texture-opacity`.
 
 - [#1243](https://github.com/JollyPixel/editor/pull/1243) [`bfc3fbb`](https://github.com/JollyPixel/editor/commit/bfc3fbb7102c6e8292b5a2ae1e9ab7549004b20d) Thanks [@fraxken](https://github.com/fraxken)! - Add `reserveToggle` (`reserve-toggle="tree"`) to `jolly-tree` and a matching `TreeSnapshot` argument: every leaf reserves the toggle width once the tree has a branch, so nested leaves indent past root ones.
 
@@ -88,19 +72,16 @@
 
 - [#1251](https://github.com/JollyPixel/editor/pull/1251) [`47f8ad5`](https://github.com/JollyPixel/editor/commit/47f8ad5fecaa97928e0ed7d446d8345fc8e96ae3) Thanks [@fraxken](https://github.com/fraxken)! - `PeerRoster` lists a person with several tabs once, and announces them only on their first join and last leave. Add `personKey` and `localPeer` to `./network`.
 
-- [#1209](https://github.com/JollyPixel/editor/pull/1209) [`6268c47`](https://github.com/JollyPixel/editor/commit/6268c4717783c25bda4ab5542b1c32959c18da39) Thanks [@fraxken](https://github.com/fraxken)! - `PopoverController` takes a `placeAgainst` rectangle that replaces the anchor's box for placement, so a menu can open flush with the toolbar around its trigger.
-  Color picker settings: a focused select keeps its size, and the "Discrete wheel" switch lines up with the values above it.
+- [#1209](https://github.com/JollyPixel/editor/pull/1209) [`6268c47`](https://github.com/JollyPixel/editor/commit/6268c4717783c25bda4ab5542b1c32959c18da39) Thanks [@fraxken](https://github.com/fraxken)! - `PopoverController` takes a `placeAgainst` rectangle to place a menu against something other than its anchor. Fix color picker settings alignment.
 
 - [#1108](https://github.com/JollyPixel/editor/pull/1108) [`3bfec4a`](https://github.com/JollyPixel/editor/commit/3bfec4aa2597e4923db19237593bcd928ff5f93a) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-reference`, a field that shows a referenced key by name with browse and clear buttons; it emits `jolly-browse` and `jolly-open` and leaves the picker to the consumer.
   Add the `folder` built-in icon.
 
 - [#1188](https://github.com/JollyPixel/editor/pull/1188) [`b13074b`](https://github.com/JollyPixel/editor/commit/b13074b8ae53a3a6b454cc0572d88aca747d17de) Thanks [@fraxken](https://github.com/fraxken)! - Add `saveFile(blob, fileName)` to the root entry: it downloads a blob under a file name. It moves out of the private editor host.
 
-- [#1235](https://github.com/JollyPixel/editor/pull/1235) [`a2e6a27`](https://github.com/JollyPixel/editor/commit/a2e6a27dc11dedbd444ea7698158f320f1cb4402) Thanks [@fraxken](https://github.com/fraxken)! - Add `DialogRequest`, `jolly-rail-group`, `jolly-message`, `jolly-fields`, `createExamplePane()` and ten shared built-in icons; floating rails now size their tool buttons, and built-ins no longer replace a glyph registered first.
-  Add `pickFiles()` to `@jolly-pixel/utils/dom`.
+- [#1235](https://github.com/JollyPixel/editor/pull/1235) [`a2e6a27`](https://github.com/JollyPixel/editor/commit/a2e6a27dc11dedbd444ea7698158f320f1cb4402) Thanks [@fraxken](https://github.com/fraxken)! - Add `DialogRequest`, `jolly-rail-group`, `jolly-message`, `jolly-fields`, `createExamplePane()` and ten built-in icons. Add `pickFiles()` to `@jolly-pixel/utils/dom`.
 
-- [#1106](https://github.com/JollyPixel/editor/pull/1106) [`a287fa7`](https://github.com/JollyPixel/editor/commit/a287fa7d5d01b07d93f672b5147b6c9aebba0901) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-show-more` (`@jolly-pixel/ui/elements/show-more`): it shows the first `limit` rows and folds the rest behind a centered "Show N more" button.
-  With `storage-key`, the expanded state persists. While a search is active, matching rows show whatever the limit.
+- [#1106](https://github.com/JollyPixel/editor/pull/1106) [`a287fa7`](https://github.com/JollyPixel/editor/commit/a287fa7d5d01b07d93f672b5147b6c9aebba0901) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-show-more`, which folds rows past a `limit` behind a "Show N more" button and can remember its state.
 
 - [#1111](https://github.com/JollyPixel/editor/pull/1111) [`fee3858`](https://github.com/JollyPixel/editor/commit/fee3858c166edfccffe9c218020c1ffc38b5ca53) Thanks [@fraxken](https://github.com/fraxken)! - Add the `trash` built-in icon, toned `coral`.
 
@@ -108,8 +89,7 @@
 
 ### Patch Changes
 
-- [#1166](https://github.com/JollyPixel/editor/pull/1166) [`1172e00`](https://github.com/JollyPixel/editor/commit/1172e00ffa43d52a158fdf48ec47550cb856da6b) Thanks [@fraxken](https://github.com/fraxken)! - Add the immutable `Color` object (with `parseDraft` for typed text), `Gradient`, `PaletteFormat`, the picker `HueSpace`, `equalRGBA8`, `ByteColorInput` and `ColorSpace.channels`. They replace `parseColor`, `assertColor*`, `format*`, the byte `8` variants, `toRGBA8`/`fromRGBA8`, `contrastingColor`, `mixColor`, `colorRamp`, `shadeRamp`, `hsvToHsl`/`hslToHsv`, `ColorSpace.mix()`, `PaletteFile.parse()`/`serialize()`, `isOklchInGamut` and the sRGB transfer functions.
-  Near-gray colors now convert to HSL, HSV and HWB as grays, `Color.oklch()` round-trips 8-bit colors, and `sortColors` returns the objects it was given.
+- [#1166](https://github.com/JollyPixel/editor/pull/1166) [`1172e00`](https://github.com/JollyPixel/editor/commit/1172e00ffa43d52a158fdf48ec47550cb856da6b) Thanks [@fraxken](https://github.com/fraxken)! - Add the immutable `Color` object and `Gradient`, which replace the `parseColor`, `format*`, mixing and ramp functions. Near-gray colours now convert as grays.
 
 - [#1270](https://github.com/JollyPixel/editor/pull/1270) [`9fd6a1c`](https://github.com/JollyPixel/editor/commit/9fd6a1c4bc8629aeafc8ebdd0e062d2e1527bf13) Thanks [@fraxken](https://github.com/fraxken)! - Modified fields no longer draw a left bar or reflect a `modified` attribute;
   their revert button marks them.
@@ -124,8 +104,7 @@
 
 - [#1273](https://github.com/JollyPixel/editor/pull/1273) [`b940847`](https://github.com/JollyPixel/editor/commit/b940847119a5b02966ffa9db8fc70e3f0d91b651) Thanks [@fraxken](https://github.com/fraxken)! - Disabled buttons, button-group segments and tool buttons show their icons without tone colour.
 
-- [#1234](https://github.com/JollyPixel/editor/pull/1234) [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850) Thanks [@fraxken](https://github.com/fraxken)! - Add `DistributiveOmit`, `DeepReadonly`, `Simplify`, `parseJsonObject`, `wrap`, `roundTo`, `delay`, `yieldToEventLoop`, `withTimeout`, `InFlight` and `sha256Hex` to `@jolly-pixel/utils`.
-  The other packages drop their local copies of these helpers and import them from utils.
+- [#1234](https://github.com/JollyPixel/editor/pull/1234) [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850) Thanks [@fraxken](https://github.com/fraxken)! - Move shared helpers such as `delay`, `withTimeout`, `DeepReadonly` and `sha256Hex` into `@jolly-pixel/utils`.
 - Updated dependencies [[`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`69ba6ea`](https://github.com/JollyPixel/editor/commit/69ba6ea57e3d74350f44c1b36e361c6c01ad2f8f), [`c41299e`](https://github.com/JollyPixel/editor/commit/c41299eab87538146550d8b4576f1516cd62badc), [`033a975`](https://github.com/JollyPixel/editor/commit/033a975db5003d093263c9f9820c0fde7b00ff39), [`d9cb732`](https://github.com/JollyPixel/editor/commit/d9cb7324a3b32509a5e3c9be31f0342bf947053c), [`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35), [`0d95f1f`](https://github.com/JollyPixel/editor/commit/0d95f1f55a3020accd4e947a833aa68960267526), [`1172e00`](https://github.com/JollyPixel/editor/commit/1172e00ffa43d52a158fdf48ec47550cb856da6b), [`c1a8763`](https://github.com/JollyPixel/editor/commit/c1a87634da5e6c17e86fc3a1f9fcec587d9a5f64), [`9a805e5`](https://github.com/JollyPixel/editor/commit/9a805e5fa847c30d41495bda22051e1aa6ed02f5), [`24991a6`](https://github.com/JollyPixel/editor/commit/24991a6edf1f7230b9268ffa647151ebe52d808e), [`6f83ad9`](https://github.com/JollyPixel/editor/commit/6f83ad96f79668f426e90a6f7e183d6f676778ea), [`8890073`](https://github.com/JollyPixel/editor/commit/8890073623d0035da1b8b662c1477d217e58a09b), [`505d6e0`](https://github.com/JollyPixel/editor/commit/505d6e0444dc3bc5bcb365486f085c169eb2caa8), [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`40b7a52`](https://github.com/JollyPixel/editor/commit/40b7a52eb6d394cfb4959aeb07abe807fb599bb0), [`a89aeb7`](https://github.com/JollyPixel/editor/commit/a89aeb73fa118659494d3d9410dd9135fc39b551), [`5af0632`](https://github.com/JollyPixel/editor/commit/5af0632f9ae65a6005861f839adb4e97d22c209f), [`f5350de`](https://github.com/JollyPixel/editor/commit/f5350de576d82af8592928a4456f43702befff26), [`a2e6a27`](https://github.com/JollyPixel/editor/commit/a2e6a27dc11dedbd444ea7698158f320f1cb4402), [`f998437`](https://github.com/JollyPixel/editor/commit/f998437cc19077ec578beaf254cc826407e378f5), [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850), [`974ed36`](https://github.com/JollyPixel/editor/commit/974ed36053e2e6aab2a71cbc7e47e3e0fcb77f58), [`d26da53`](https://github.com/JollyPixel/editor/commit/d26da53c969781c9c1c3062f6f0b6df2f5b8ecfa)]:
   - @jolly-pixel/network@7.0.0
   - @jolly-pixel/color@3.0.0
@@ -135,35 +114,26 @@
 
 ### Major Changes
 
-- [#895](https://github.com/JollyPixel/editor/pull/895) [`912d0f7`](https://github.com/JollyPixel/editor/commit/912d0f702ab8697c5a501df6289674e97c498059) Thanks [@fraxken](https://github.com/fraxken)! - A field's revert button now sits at the end of its label column, so modified rows keep their neighbours' value column; `--jolly-field-trailing-width` is removed.
-  Fields, `jolly-property-row` and `jolly-transform` gain `labelPosition: "auto"` with `stackBelow` (also `Pane` options for every row) and `descriptionDisplay: "tooltip"`; `PopoverController` takes `claimsInput`.
+- [#895](https://github.com/JollyPixel/editor/pull/895) [`912d0f7`](https://github.com/JollyPixel/editor/commit/912d0f702ab8697c5a501df6289674e97c498059) Thanks [@fraxken](https://github.com/fraxken)! - A field's revert button sits at the end of its label, so modified rows stay aligned; `--jolly-field-trailing-width` is removed. Fields gain `labelPosition: "auto"` and `descriptionDisplay: "tooltip"`.
 
 - [#1024](https://github.com/JollyPixel/editor/pull/1024) [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7) Thanks [@fraxken](https://github.com/fraxken)! - Rename methods named `xOf`, `xFor` or `getX`/`setX` after what they do (for example `inverseOf` → `invert`, `UVRegion.rectFor` → `slotRect`, `MessageParser.of` → `fromProtocol`).
   The package docs list the new names; behavior is unchanged.
 
 - [#930](https://github.com/JollyPixel/editor/pull/930) [`66697bd`](https://github.com/JollyPixel/editor/commit/66697bd469e84f261a4b1a018720b92d33befd04) Thanks [@fraxken](https://github.com/fraxken)! - `LogQueue` drops the `now` and `schedule` options and the `LogScheduler` type: expiry always runs on `setTimeout` and `Date.now()`, which tests drive with `mock.timers`.
 
-- [#1008](https://github.com/JollyPixel/editor/pull/1008) [`e89d8e0`](https://github.com/JollyPixel/editor/commit/e89d8e06fc1a22f7656cd8519d7f6c2730497780) Thanks [@fraxken](https://github.com/fraxken)! - `Dock.dragZones(pane, lifted?)` replaces `dropZone`, `previewZone`, `dropCandidates`, `dropStacks`, `insertionLine` and `acceptsSecondary`, and `PaneGroup.dragStack(slot, pane, lifted)` replaces `tabsRect`, `tabCandidates` and `tabLine`.
-  `resolveDepthDropTarget`, `resolveDropDepth` and `ancestorChain` are no longer exported; use `TreeSnapshot.ancestorChain`. A `jolly-tabs` whose tabs are all disabled now selects the first tab instead of none.
+- [#1008](https://github.com/JollyPixel/editor/pull/1008) [`e89d8e0`](https://github.com/JollyPixel/editor/commit/e89d8e06fc1a22f7656cd8519d7f6c2730497780) Thanks [@fraxken](https://github.com/fraxken)! - `Dock.dragZones()` and `PaneGroup.dragStack()` replace the separate drop-zone and tab-placement methods; use `TreeSnapshot.ancestorChain` instead of the exported helpers.
 
-- [#967](https://github.com/JollyPixel/editor/pull/967) [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2) Thanks [@fraxken](https://github.com/fraxken)! - `RoomPresenceSource(room)` and `PeerRoster` key peers by connection and read the local peer from `room.profile`, now the claimed profile until `sync`; both drop `identity`, and claims travel under `fieldLock`.
-  `@jolly-pixel/network` adds `parsePeerProfile`, `PeerProfileMetadata`, `GUEST_USERNAME` and `PresenceChannel.published`; `ui` drops `readUsername`, `readPeerId`, `readAvatar`, `readBadge`, `NullPresenceSource` and `LocalPeerIdentity`, and renames `presencePeerOf` and `toPeerMetadata` to `toPresencePeer` and `toPeerProfileMetadata`.
-  `PeerFrustumSync` labels a peer without a `username` as `"Guest"` by default.
+- [#967](https://github.com/JollyPixel/editor/pull/967) [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2) Thanks [@fraxken](https://github.com/fraxken)! - Peers are keyed by connection and read from `room.profile`. `ui` drops the `read*` presence helpers and renames `presencePeerOf`/`toPeerMetadata` to `toPresencePeer`/`toPeerProfileMetadata`.
 
 ### Minor Changes
 
-- [#945](https://github.com/JollyPixel/editor/pull/945) [`c0643f9`](https://github.com/JollyPixel/editor/commit/c0643f9978941d93eb2fee7ca4d524fc20e23339) Thanks [@fraxken](https://github.com/fraxken)! - Accounts have an owner: the first account, which no admin can demote or remove, and which hands ownership to another account with `AccountsRoster.transferOwnership`. `Account.owner` flags it, and the last-admin rule is gone.
-  `AccountsDatabase` replaces `AccountStore`: `new Accounts()` takes `{ database, roles }`, and `StoredAccount` is no longer exported.
-  `TreeBadge.icon` draws a badge as an icon in its colour instead of a dot.
+- [#945](https://github.com/JollyPixel/editor/pull/945) [`c0643f9`](https://github.com/JollyPixel/editor/commit/c0643f9978941d93eb2fee7ca4d524fc20e23339) Thanks [@fraxken](https://github.com/fraxken)! - The first account owns the server and can transfer ownership. `new Accounts()` takes `{ database, roles }`, with `AccountsDatabase` replacing `AccountStore`.
 
-- [#975](https://github.com/JollyPixel/editor/pull/975) [`6358611`](https://github.com/JollyPixel/editor/commit/6358611ff4dc5d3f789cb643c66d10db38fbd6bc) Thanks [@fraxken](https://github.com/fraxken)! - `AmbientThemeController` takes an `onChange` option that receives the resolved ambient theme when it changes, instead of writing the host's `theme` attribute.
-  Add `resolveAmbientTheme()` and `DocumentTheme`, which follows the page theme outside Lit elements.
+- [#975](https://github.com/JollyPixel/editor/pull/975) [`6358611`](https://github.com/JollyPixel/editor/commit/6358611ff4dc5d3f789cb643c66d10db38fbd6bc) Thanks [@fraxken](https://github.com/fraxken)! - `AmbientThemeController` reports theme changes through `onChange` instead of writing the host's `theme` attribute. Add `resolveAmbientTheme()` and `DocumentTheme`.
 
-- [#1083](https://github.com/JollyPixel/editor/pull/1083) [`d866130`](https://github.com/JollyPixel/editor/commit/d86613035c5f949c9449ce152bd5a8bcd570bac5) Thanks [@fraxken](https://github.com/fraxken)! - Add OKLCH/OKHSV/OKHSL behind one `ColorSpace` object per model (replaces the `rgbToX`/`xToRgb` pairs, keeps hue on grays), mixing, harmonies, byte-color helpers, `ColorSequence` (replaces `ColorPalette`/`colorFromKey`/`goldenAngleColor`) and WCAG `contrastingColor`, plus a configurable `jolly-color-picker` (spaces, wheel, channels, harmony, shared preferences).
+- [#1083](https://github.com/JollyPixel/editor/pull/1083) [`d866130`](https://github.com/JollyPixel/editor/commit/d86613035c5f949c9449ce152bd5a8bcd570bac5) Thanks [@fraxken](https://github.com/fraxken)! - Add OKLCH, OKHSV and OKHSL colour spaces, harmonies and `ColorSequence` (which replaces `ColorPalette`), plus a configurable `jolly-color-picker`.
 
-- [#874](https://github.com/JollyPixel/editor/pull/874) [`5d51844`](https://github.com/JollyPixel/editor/commit/5d51844c63797adadd53070d1080e1c151cf343e) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-context-menu` items accept `items` to open a nested submenu, placed on the right or the left of its item depending on room.
-  Submenus open on hover, click, Right Arrow, Enter or Space, and close with Left Arrow or Escape.
-  `PopoverControllerOptions` gains `onReposition`, called after each placement of the open popover.
+- [#874](https://github.com/JollyPixel/editor/pull/874) [`5d51844`](https://github.com/JollyPixel/editor/commit/5d51844c63797adadd53070d1080e1c151cf343e) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-context-menu` items can open nested submenus, by mouse or keyboard.
 
 - [#989](https://github.com/JollyPixel/editor/pull/989) [`2ea51da`](https://github.com/JollyPixel/editor/commit/2ea51dad091d4f8ac132948e1c6a5e4d54268b78) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-dialog` emits `jolly-exited` once its exit transition ends and exposes a read-only `closing` flag until then, so an owner can keep the body unchanged while the dialog fades out.
 
@@ -172,42 +142,31 @@
 
 - [#1002](https://github.com/JollyPixel/editor/pull/1002) [`61b6d3b`](https://github.com/JollyPixel/editor/commit/61b6d3bb65427a2f00e13db26975b369f3da87ca) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-dock` takes a `drop` attribute: `"tabs"` turns every drop into a merge with the nearest pane group instead of a new slot, and `"none"` stops the dock from taking dragged or keyboard-moved panes.
 
-- [#867](https://github.com/JollyPixel/editor/pull/867) [`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Open asset rooms broadcast a fresh snapshot when their content is replaced from outside (`AssetStateStore` emits `replaced`), and `peerPresence.uvSelections` outlines each peer's selected UV region below the local selection.
-  Truncated `@jolly-pixel/ui` labels show their full text on hover (`overflow-title="off"` disables it), `jolly-pane-group` tabs collapse to their icon when the strip is too narrow, and `jolly-tree` takes `swatch-position="start"`.
+- [#867](https://github.com/JollyPixel/editor/pull/867) [`f03cb7a`](https://github.com/JollyPixel/editor/commit/f03cb7a89b574ba6965f3b88d0ad5796de6cbdce) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Rooms broadcast a fresh snapshot when an asset changes on disk, and peers' UV selections are outlined. Truncated UI labels show their full text on hover, and narrow tab strips collapse to icons.
 
-- [#939](https://github.com/JollyPixel/editor/pull/939) [`a23ea74`](https://github.com/JollyPixel/editor/commit/a23ea74dca38f8684e890f0abed659277ccc230e) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `CommandHistory` loses its `scopes` option: a scope starts with its first step and `removeScope()` drops it; `EMPTY_HISTORY_STATE` is exported and `HistoryScopeState.refused` is now readonly.
-  `@jolly-pixel/ui/network` exports `presencePeerOf(peer)`, plus `markedPeers()` and `peerMarks()` to build a `PeerMarkMap` from presence values that carry more than a key.
+- [#939](https://github.com/JollyPixel/editor/pull/939) [`a23ea74`](https://github.com/JollyPixel/editor/commit/a23ea74dca38f8684e890f0abed659277ccc230e) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `CommandHistory` drops its `scopes` option: a scope starts with its first step and `removeScope()` drops it.
 
 - [#888](https://github.com/JollyPixel/editor/pull/888) [`9ed0ad8`](https://github.com/JollyPixel/editor/commit/9ed0ad82e1bc15518d64314cf1859dee71c1bb5d) Thanks [@fraxken](https://github.com/fraxken)! - Add opt-in hover opening and closing with configurable delays to PopoverController.
   Allow placement side callbacks for triggers that move between toolbars.
 
-- [#976](https://github.com/JollyPixel/editor/pull/976) [`b624786`](https://github.com/JollyPixel/editor/commit/b624786135da5a7205deb53f21042ccde88dc4e7) Thanks [@fraxken](https://github.com/fraxken)! - Dragging a `jolly-tabs` or `jolly-pane-group` tab slides the other tabs aside live and glides the tab into its slot on drop, in place of the drop zone and insertion line; `jolly-tabs` exposes a `tab-dragging` part.
-  Add `SlidingReorder`, `LiveReorder`, the `live` alternative to a drag stack's `line`, the `lifted` argument of `Dock.dropStacks()` and `PaneGroup.liftTab()`.
-  Add the `suppressClick` option of `startPointerDragSession()`, so releasing a dragged tab no longer selects it; reordering a pane-group tab keeps the shown pane.
+- [#976](https://github.com/JollyPixel/editor/pull/976) [`b624786`](https://github.com/JollyPixel/editor/commit/b624786135da5a7205deb53f21042ccde88dc4e7) Thanks [@fraxken](https://github.com/fraxken)! - Dragging a tab slides the other tabs aside live and glides it into place on drop, and releasing a dragged tab no longer selects it.
 
-- [#922](https://github.com/JollyPixel/editor/pull/922) [`12dca6e`](https://github.com/JollyPixel/editor/commit/12dca6e98be8b71f9ef8517edcc17d8e8520fb72) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `CommandHistory`: per-person undo and redo over `CommandDocument`s, synced by `DocumentSyncClient` and owned by `SyncedCommandDocument`, refusing a step a peer changed since.
-  Resyncs carry `refused` and `CommandSync` emits `"refused"` on rollback; `ChangeReceipts` carries the server's answers about local changes.
-  `jolly-tree` takes `validateRename` to refuse a rename, and `TreeNode.warning` flags a row with a warning icon.
+- [#922](https://github.com/JollyPixel/editor/pull/922) [`12dca6e`](https://github.com/JollyPixel/editor/commit/12dca6e98be8b71f9ef8517edcc17d8e8520fb72) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `CommandHistory` for per-person undo and redo on synced documents, refusing a step a peer changed since. `jolly-tree` gains `validateRename` and row warnings.
 
 - [#1017](https://github.com/JollyPixel/editor/pull/1017) [`02ab0a3`](https://github.com/JollyPixel/editor/commit/02ab0a3a9eeef46f26b5d45846c057249729b3c3) Thanks [@fraxken](https://github.com/fraxken)! - `GameLoop` takes an `idleDelay` before it sleeps. The runtime sets it to 2 s with `renderOnDemand` in place of rendering every frame while the pointer hovers the canvas.
   `StatsRecorder.skipGap()` keeps the time the loop slept out of the FPS graph.
 
-- [#1037](https://github.com/JollyPixel/editor/pull/1037) [`a11f91d`](https://github.com/JollyPixel/editor/commit/a11f91da7ecf7e2b9f3e778641788eb5707a8d90) Thanks [@fraxken](https://github.com/fraxken)! - Add `layout="grid"` and `columns` to `jolly-select`: a popover of icon tiles that emits `jolly-input` while browsing. `JollyOption` gains `group`, rendered as an `optgroup` or a labelled grid section.
-  `anchoredPosition` and `PopoverController` accept `align: "end"`.
+- [#1037](https://github.com/JollyPixel/editor/pull/1037) [`a11f91d`](https://github.com/JollyPixel/editor/commit/a11f91da7ecf7e2b9f3e778641788eb5707a8d90) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-select` gains a grid layout of icon tiles and option groups; popovers accept `align: "end"`.
 
-- [#963](https://github.com/JollyPixel/editor/pull/963) [`f20007a`](https://github.com/JollyPixel/editor/commit/f20007a1717a9b9bbab779489156c36451be38a0) Thanks [@fraxken](https://github.com/fraxken)! - Add view-only share links: `accounts.shareLinks` stores expiring link tokens that `authenticate` resolves to a `GUEST_ROLE` identity, and the `Server` option `admits` limits that identity to some rooms.
-  `CatalogViewExtension` serves a read-only catalog scoped to one asset's dependency closure (`CatalogClient.connect(client, { room })`), `launchElement` injects the launch, and `createAssetServerPlugin({ http: false })` drops the unauthenticated HTTP routes.
-  `PresencePeer.badge` shows "via link" for guests.
+- [#963](https://github.com/JollyPixel/editor/pull/963) [`f20007a`](https://github.com/JollyPixel/editor/commit/f20007a1717a9b9bbab779489156c36451be38a0) Thanks [@fraxken](https://github.com/fraxken)! - Add view-only share links: guests see a read-only catalog limited to one asset and what it depends on.
 
 - [#977](https://github.com/JollyPixel/editor/pull/977) [`b9d33d2`](https://github.com/JollyPixel/editor/commit/b9d33d2d2ec359f25f3656c35a42dbabda2b8511) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tab` takes a `status` of `"idle"`, `"busy"` or `"failed"`, shown as a spinner or a warning icon in place of the close glyph until the tab is hovered.
 
-- [#1027](https://github.com/JollyPixel/editor/pull/1027) [`77b25de`](https://github.com/JollyPixel/editor/commit/77b25de87c5e3c05f248336adc7722dc628cad2e) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tabs` gains `variant="line"`, a thin bar of segments that names each tab in a tip on hover, and a `jolly-tab-edit` event fired on double click or F2.
-  A disabled tab now uses `aria-disabled`, so it still receives the edit gesture without being selected.
+- [#1027](https://github.com/JollyPixel/editor/pull/1027) [`77b25de`](https://github.com/JollyPixel/editor/commit/77b25de87c5e3c05f248336adc7722dc628cad2e) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tabs` gains `variant="line"`, a thin bar of segments, and a `jolly-tab-edit` event on double click or F2.
 
 - [#1035](https://github.com/JollyPixel/editor/pull/1035) [`4421c8b`](https://github.com/JollyPixel/editor/commit/4421c8b06e9cfcb229a55b9dc2fd3455927ac1ed) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-tree` `dragOut`, a `TreeDragOut` hook that lets a row drag drop on a target outside the tree instead of reparenting.
 
-- [#1004](https://github.com/JollyPixel/editor/pull/1004) [`e9ac1e6`](https://github.com/JollyPixel/editor/commit/e9ac1e683040f050fc92d1d5a4276548fc9140c4) Thanks [@fraxken](https://github.com/fraxken)! - Export `anchoredPosition` with its `AnchoredPositionOptions`, `ViewportPosition` and `ViewportSize` types, and add `PaneElement.chromeElement`, the element that draws a pane with its heading.
-  The theme now declares `--jolly-scrim` and a scope-level `--jolly-dialog-backdrop`, so overlays outside `jolly-dialog` can dim the page with the same colour.
+- [#1004](https://github.com/JollyPixel/editor/pull/1004) [`e9ac1e6`](https://github.com/JollyPixel/editor/commit/e9ac1e683040f050fc92d1d5a4276548fc9140c4) Thanks [@fraxken](https://github.com/fraxken)! - Export `anchoredPosition`, add `PaneElement.chromeElement`, and add the `--jolly-scrim` and `--jolly-dialog-backdrop` theme colours for overlays.
 
 - [#1045](https://github.com/JollyPixel/editor/pull/1045) [`695ee81`](https://github.com/JollyPixel/editor/commit/695ee81072bd90cae25c03e5e850ce214153278b) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-property-row`, `jolly-separator` and field descriptions follow `--jolly-field-inset-start`, so they stay aligned with field labels at any inset.
 
@@ -216,25 +175,17 @@
 
 - [#1006](https://github.com/JollyPixel/editor/pull/1006) [`8b23ca1`](https://github.com/JollyPixel/editor/commit/8b23ca10136cc59275aa3ce407565af4fb3d9b31) Thanks [@fraxken](https://github.com/fraxken)! - Export `MenuSession`, `ContextMenuController` and `disableEntries`, which pair `jolly-context-menu` entries with the code that runs them.
 
-- [#929](https://github.com/JollyPixel/editor/pull/929) [`2f1c4ad`](https://github.com/JollyPixel/editor/commit/2f1c4ad18ecb8ce413d3951899c6096af666e9fb) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-avatar` with nine default glyphs picked from the peer id, drawn in `jolly-presence` rows and through `TreeNode.avatar`.
-  `peerIdentity` takes an optional `avatar` image path, and `PresencePeer` gains one, read from server-owned profiles with `readAvatar`.
+- [#929](https://github.com/JollyPixel/editor/pull/929) [`2f1c4ad`](https://github.com/JollyPixel/editor/commit/2f1c4ad18ecb8ce413d3951899c6096af666e9fb) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-avatar`, shown in presence rows and tree nodes; peers can set an `avatar` image.
 
-- [#905](https://github.com/JollyPixel/editor/pull/905) [`26b8b55`](https://github.com/JollyPixel/editor/commit/26b8b551d00aa70ea11b7b7e0097f70c1da43dc3) Thanks [@fraxken](https://github.com/fraxken)! - `formatCount` takes an optional `singular` and `plural` unit (`formatCount(3, "voxel")` gives `"3 voxels"`).
-  `@jolly-pixel/ui/network` exports `peerBadges(key, marks)`, which turns a `PeerMarkMap` bucket into up to three `jolly-tree` badges.
-  Exports `SubscriptionController<TSource>`, a Lit controller that keeps a host subscribed to one attached source while connected.
+- [#905](https://github.com/JollyPixel/editor/pull/905) [`26b8b55`](https://github.com/JollyPixel/editor/commit/26b8b551d00aa70ea11b7b7e0097f70c1da43dc3) Thanks [@fraxken](https://github.com/fraxken)! - `formatCount` takes a unit (`formatCount(3, "voxel")` gives `"3 voxels"`). Add `peerBadges()` and the `SubscriptionController` Lit controller.
 
 - [#928](https://github.com/JollyPixel/editor/pull/928) [`d4b3ad1`](https://github.com/JollyPixel/editor/commit/d4b3ad1a7cab4677c23f671e391ae95b2dffe860) Thanks [@fraxken](https://github.com/fraxken)! - Add `peerIdentity(username, peerId?)`, which builds a `PeerIdentity` with the color derived from its peer id.
 
-- [#854](https://github.com/JollyPixel/editor/pull/854) [`e780033`](https://github.com/JollyPixel/editor/commit/e7800335b131d45645d4a62459684993d8b87af8) Thanks [@fraxken](https://github.com/fraxken)! - Faster large trees, dock and floating drags, scrubbing, graphs, stats, facade refreshes and presence locks: fewer per-row lookups, allocations, DOM measurements and re-renders, with identical output.
-  `jolly-tree` re-renders only the rows whose displayed content or state changed, gains a `virtual` mode backed by `@lit-labs/virtualizer`, moves focus with arrow-key selection and sets `aria-level`/`aria-posinset`/`aria-setsize`.
-  `TreeSnapshot.placement(id)` returns a node's position among its siblings.
+- [#854](https://github.com/JollyPixel/editor/pull/854) [`e780033`](https://github.com/JollyPixel/editor/commit/e7800335b131d45645d4a62459684993d8b87af8) Thanks [@fraxken](https://github.com/fraxken)! - Faster large trees, drags, scrubbing and presence updates. `jolly-tree` gains a `virtual` mode, arrow-key focus and full ARIA tree attributes.
 
-- [#980](https://github.com/JollyPixel/editor/pull/980) [`ceee3f6`](https://github.com/JollyPixel/editor/commit/ceee3f60b3422e54a0728ada8521c01c87b9f852) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-presence-stack`, a compact row of overlapping avatars with name tooltips and the `jolly-peer-select` event of `jolly-presence`.
-  `jolly-avatar` is now round by default and draws its default avatars as flat portraits that fill the circle, exposed as the `portrait` part in place of `glyph`.
-  A toned pane group underlines its selected tab in a shade of its tone (light on dark themes, deep on light themes) instead of the text color.
+- [#980](https://github.com/JollyPixel/editor/pull/980) [`ceee3f6`](https://github.com/JollyPixel/editor/commit/ceee3f60b3422e54a0728ada8521c01c87b9f852) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-presence-stack`, a row of overlapping avatars. `jolly-avatar` is round by default with flat portrait avatars (`portrait` part replaces `glyph`).
 
-- [#1001](https://github.com/JollyPixel/editor/pull/1001) [`dd36165`](https://github.com/JollyPixel/editor/commit/dd36165a7cc2a6f90dfcaf03442850d57a743d4d) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-search`, a search box that can collapse to a magnifier button, and `searchable` on `jolly-pane`, which puts one in the header and filters the pane's tree rows, folders and fields by label.
-  `jolly-tree` gains `filter` and `applySearch()`, and `SearchQuery` and `Searchable` are exported for content that filters itself.
+- [#1001](https://github.com/JollyPixel/editor/pull/1001) [`dd36165`](https://github.com/JollyPixel/editor/commit/dd36165a7cc2a6f90dfcaf03442850d57a743d4d) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-search` and `searchable` panes that filter their tree rows, folders and fields by label.
 
 - [#937](https://github.com/JollyPixel/editor/pull/937) [`4647e7d`](https://github.com/JollyPixel/editor/commit/4647e7dc2eeb6a9c331677fdc06440c4e049f556) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-spin-slider` (`SpinSlider`), a bounded number field with a thin range bar under the value: drag to scrub, click to type, press the bar to jump.
   The facade builds it for a bounded number with `view: "spin"`.
@@ -246,19 +197,15 @@
 
 - [#859](https://github.com/JollyPixel/editor/pull/859) [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b) Thanks [@fraxken](https://github.com/fraxken)! - `TreeNode.collapsible: false` keeps a branch's children shown in `jolly-tree`, with no expand toggle.
 
-- [#969](https://github.com/JollyPixel/editor/pull/969) [`9bbb3dd`](https://github.com/JollyPixel/editor/commit/9bbb3ddede95f64780d8a3b2865ea39178abc40b) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` indent guides now connect each row to its parent and stop at the last child, with `indentGuidesScope: "selected"` to draw only the selected rows' path; `toggleStyle: "box"` draws a plus/minus toggle, and the highlight is exposed as the `content` part (`leaf`, `branch`, `selected`).
-  `PeerAvatar.presence` (`jolly-avatar` `presence`) draws an online or offline dot and announces it.
-  `TreeSnapshot.hasBranches` is replaced by `TreePlacement.levelHasBranches`, set per sibling level.
+- [#969](https://github.com/JollyPixel/editor/pull/969) [`9bbb3dd`](https://github.com/JollyPixel/editor/commit/9bbb3ddede95f64780d8a3b2865ea39178abc40b) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` indent guides connect rows to their parent, and a box toggle style is available. `jolly-avatar` can show an online dot. `TreePlacement.levelHasBranches` replaces `TreeSnapshot.hasBranches`.
 
 - [#928](https://github.com/JollyPixel/editor/pull/928) [`c86b214`](https://github.com/JollyPixel/editor/commit/c86b214c710a64428fa251465f3bcd7984471a36) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` exposes each row swatch as the `swatch` part, so a page can space it from the label.
 
-- [#895](https://github.com/JollyPixel/editor/pull/895) [`d3cc3ee`](https://github.com/JollyPixel/editor/commit/d3cc3ee8679f691f130274eadd074ca717e52346) Thanks [@fraxken](https://github.com/fraxken)! - Vector, quaternion and transform fields gain `axisStyle` (`"corner"`, `"chip"` or `"letter"`, also a `Defaults` entry and a binding option) to show the axis letter at the input's leading edge.
-  Peer chips move from over the value's corner to the end of the label cell, and stacked rows put chips and revert at the label line's right.
+- [#895](https://github.com/JollyPixel/editor/pull/895) [`d3cc3ee`](https://github.com/JollyPixel/editor/commit/d3cc3ee8679f691f130274eadd074ca717e52346) Thanks [@fraxken](https://github.com/fraxken)! - Vector, quaternion and transform fields gain `axisStyle` to show the axis letter, and peer chips move to the end of the label.
 
 ### Patch Changes
 
-- [#930](https://github.com/JollyPixel/editor/pull/930) [`86dbb95`](https://github.com/JollyPixel/editor/commit/86dbb95270aae8eb3cc89a76d518a51fe93faebf) Thanks [@fraxken](https://github.com/fraxken)! - A context menu submenu chevron now sits on the side its submenu opens on and points toward it; submenus turn left once the right side cannot hold a menu at its `max-width`.
-  A submenu opened while its parent menu is still scaling in now lines up with its item instead of sitting a few pixels off.
+- [#930](https://github.com/JollyPixel/editor/pull/930) [`86dbb95`](https://github.com/JollyPixel/editor/commit/86dbb95270aae8eb3cc89a76d518a51fe93faebf) Thanks [@fraxken](https://github.com/fraxken)! - Submenu chevrons point to the side their submenu opens on, and submenus line up with their item.
 
 - [#977](https://github.com/JollyPixel/editor/pull/977) [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc) Thanks [@fraxken](https://github.com/fraxken)! - Dialog body content stacks with a gap and slotted paragraphs and lists drop their block margins.
   `showPrompt` keeps the typed text in its field after blur.
@@ -268,13 +215,11 @@
 - [#1032](https://github.com/JollyPixel/editor/pull/1032) [`b762b50`](https://github.com/JollyPixel/editor/commit/b762b50ba6c24516b700c7c2673e19777a25c5f1) Thanks [@fraxken](https://github.com/fraxken)! - A `jolly-search` in a `jolly-folder` header matches the size and fill of the folder's button actions.
   `jolly-search` reads `--jolly-search-trigger-width`, `-height`, `-icon-size`, `-bg` and `-opacity` for its collapsed magnifier.
 
-- [#945](https://github.com/JollyPixel/editor/pull/945) [`ef2c7fe`](https://github.com/JollyPixel/editor/commit/ef2c7fe37e1d532b745e6462c26bb9f650ccc875) Thanks [@fraxken](https://github.com/fraxken)! - Profiles update live: `Server.updateProfile` (fed by `AuthenticationProvider.watchProfiles`) sends `peer-profile` to every room member, and `Room.profile` holds the profile the server admitted for this client.
-  `Accounts.watchProfiles` reports a new avatar, and `PeerRoster` follows both, so peers and the local row show it without reconnecting.
+- [#945](https://github.com/JollyPixel/editor/pull/945) [`ef2c7fe`](https://github.com/JollyPixel/editor/commit/ef2c7fe37e1d532b745e6462c26bb9f650ccc875) Thanks [@fraxken](https://github.com/fraxken)! - Profiles and avatars update live for every room member, without reconnecting.
 
 - [#980](https://github.com/JollyPixel/editor/pull/980) [`a314267`](https://github.com/JollyPixel/editor/commit/a31426763c1e8c41f5bb56d97a826c9ad5a2c41b) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-log` text shadow follows `color-scheme`, so the feed stays legible under the light theme.
 
-- [#1036](https://github.com/JollyPixel/editor/pull/1036) [`bc29b43`](https://github.com/JollyPixel/editor/commit/bc29b4307c5a3b485f6b2006c11f4a832b73284b) Thanks [@fraxken](https://github.com/fraxken)! - `OrbitFlyCamera` "lock" mode zooms the pivot distance by a ratio per wheel notch (new `pivotZoomStep`, default 0.1), throws a `RangeError` when `minPivotDistance` is not above 0, and `scrollSpeed` now only applies to "elastic" mode.
-  Clicking a `jolly-presence-stack` avatar no longer takes focus, so a following Space press reaches the viewport.
+- [#1036](https://github.com/JollyPixel/editor/pull/1036) [`bc29b43`](https://github.com/JollyPixel/editor/commit/bc29b4307c5a3b485f6b2006c11f4a832b73284b) Thanks [@fraxken](https://github.com/fraxken)! - `OrbitFlyCamera` "lock" mode zooms by a ratio per wheel notch (`pivotZoomStep`). Clicking a presence avatar no longer steals focus from the viewport.
 
 - [#1038](https://github.com/JollyPixel/editor/pull/1038) [`c48eb65`](https://github.com/JollyPixel/editor/commit/c48eb652bfa73fd56580f861023e2651cfafd78c) Thanks [@fraxken](https://github.com/fraxken)! - Dialogs and popovers no longer nudge their text by a pixel when the open transition ends at a fractional position.
 
@@ -288,8 +233,7 @@
 - [#886](https://github.com/JollyPixel/editor/pull/886) [`5e9f29d`](https://github.com/JollyPixel/editor/commit/5e9f29d41de26d6bc738f36e8cb5f80b03a55e90) Thanks [@fraxken](https://github.com/fraxken)! - Fix dock tab labels staying hidden after widening a pane group.
   Measure expanded tabs so stretched tabs restore labels when space is sufficient.
 
-- [#1082](https://github.com/JollyPixel/editor/pull/1082) [`84a0b61`](https://github.com/JollyPixel/editor/commit/84a0b61b324f2dacab6da416e4bcc8ac9e2b144f) Thanks [@fraxken](https://github.com/fraxken)! - Number and axis scrub handles shrink to a dot while dragging, and the drag guide is now a dotted arrow in the text colour that starts at the handle and stops at `min`/`max`.
-  `startPointerDragSession` accepts `elementAttribute`, set on the element while the drag runs.
+- [#1082](https://github.com/JollyPixel/editor/pull/1082) [`84a0b61`](https://github.com/JollyPixel/editor/commit/84a0b61b324f2dacab6da416e4bcc8ac9e2b144f) Thanks [@fraxken](https://github.com/fraxken)! - Scrub handles shrink while dragging and show a dotted guide that stops at `min`/`max`.
 - Updated dependencies [[`334fb9b`](https://github.com/JollyPixel/editor/commit/334fb9b31baf67b797f0f9564ac4f6be2c689e11), [`e91817e`](https://github.com/JollyPixel/editor/commit/e91817e4dc21e0f659340de5ab426cdec4d45067), [`35f9459`](https://github.com/JollyPixel/editor/commit/35f94598ed00f46dfd07152c752f8604d6ce436f), [`d866130`](https://github.com/JollyPixel/editor/commit/d86613035c5f949c9449ce152bd5a8bcd570bac5), [`09eabd6`](https://github.com/JollyPixel/editor/commit/09eabd676125ee69ac8e823815c62fd01b4feb5a), [`5af5621`](https://github.com/JollyPixel/editor/commit/5af5621e4223fb97ab38b22530a64c0884d52051), [`176b005`](https://github.com/JollyPixel/editor/commit/176b005c86d6d2e62e6d03780d26cf6f770e2650), [`f174add`](https://github.com/JollyPixel/editor/commit/f174addea4b885bd601976b7fd730a91a0b047c4), [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7), [`ef2c7fe`](https://github.com/JollyPixel/editor/commit/ef2c7fe37e1d532b745e6462c26bb9f650ccc875), [`12dca6e`](https://github.com/JollyPixel/editor/commit/12dca6e98be8b71f9ef8517edcc17d8e8520fb72), [`c141b45`](https://github.com/JollyPixel/editor/commit/c141b453ebd7191ee44bd98b74825e8b9570264e), [`02172bd`](https://github.com/JollyPixel/editor/commit/02172bd0a88a1db4612b76a41d78e424517f5ba0), [`9bcc044`](https://github.com/JollyPixel/editor/commit/9bcc044e1feaaed69f3344d17bff5b7e7f3ea797), [`c86b214`](https://github.com/JollyPixel/editor/commit/c86b214c710a64428fa251465f3bcd7984471a36), [`85641f5`](https://github.com/JollyPixel/editor/commit/85641f5459de96c87aea28ae1ec5ef564991a760), [`40e16a4`](https://github.com/JollyPixel/editor/commit/40e16a4ae92fdb94931b59e9ba80af52330b1bc4), [`27cff63`](https://github.com/JollyPixel/editor/commit/27cff63c507ae72b62c0299999590c839f2ac492), [`28dae7b`](https://github.com/JollyPixel/editor/commit/28dae7b8ef17f600128ba02cfe33436afadf1c92), [`5fbedf2`](https://github.com/JollyPixel/editor/commit/5fbedf27124e3deb38992f3b70592b9536d9223c), [`8323f7d`](https://github.com/JollyPixel/editor/commit/8323f7d1ac6ccb05c46407561cccf13a85098285), [`13c7153`](https://github.com/JollyPixel/editor/commit/13c7153fcd2cfded9e0f9be6536e0aae8440ba19), [`3d53ea9`](https://github.com/JollyPixel/editor/commit/3d53ea9ae1d62eed99cde3dd80a1c8831deedffb), [`a75ee6d`](https://github.com/JollyPixel/editor/commit/a75ee6dc5ef94c274f0f3b69d8eeff73e018e495), [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681), [`a1c9713`](https://github.com/JollyPixel/editor/commit/a1c9713eafcdf644030bd565c4e119b84e3cfea8), [`f20007a`](https://github.com/JollyPixel/editor/commit/f20007a1717a9b9bbab779489156c36451be38a0), [`695ee81`](https://github.com/JollyPixel/editor/commit/695ee81072bd90cae25c03e5e850ce214153278b), [`6b9daee`](https://github.com/JollyPixel/editor/commit/6b9daee5304c6bf06fd77086633e682d35640afc), [`e1e86cb`](https://github.com/JollyPixel/editor/commit/e1e86cb232b5e021d839a58b8b68013194308349), [`75902c5`](https://github.com/JollyPixel/editor/commit/75902c51ba6fb64d72d322e9bc73a80e8dcfbce2), [`1a9db4f`](https://github.com/JollyPixel/editor/commit/1a9db4f0e48b42c9f23e302e117f24fcd1211e66)]:
   - @jolly-pixel/network@6.0.0
   - @jolly-pixel/color@2.0.0
@@ -310,26 +254,19 @@
 
 - [#838](https://github.com/JollyPixel/editor/pull/838) [`e1c4a2d`](https://github.com/JollyPixel/editor/commit/e1c4a2d163156a30dd89a432fd801eb23c4687c4) Thanks [@fraxken](https://github.com/fraxken)! - Add `--jolly-tab-close-size` and `--jolly-tab-close-icon-size` to `jolly-tabs`, and centre a tab label's cap height on its icon.
 
-- [#774](https://github.com/JollyPixel/editor/pull/774) [`a54b8a8`](https://github.com/JollyPixel/editor/commit/a54b8a8bdf5597293fcb1a960ed35aeb0a57d603) Thanks [@fraxken](https://github.com/fraxken)! - Add `reorderable` to `jolly-tabs` (`jolly-tab-reorder` event) and `icon`, `icon-only` and `fixed` to `jolly-tab`.
-  A docked `jolly-dock` now keeps its resize handle inside its own edge, sized by `--jolly-dock-handle-size`, and a collapsed one stays visible as that handle.
+- [#774](https://github.com/JollyPixel/editor/pull/774) [`a54b8a8`](https://github.com/JollyPixel/editor/commit/a54b8a8bdf5597293fcb1a960ed35aeb0a57d603) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tabs` can be reorderable, and `jolly-tab` gains `icon`, `icon-only` and `fixed`. A collapsed `jolly-dock` stays visible as its resize handle.
 
 - [#773](https://github.com/JollyPixel/editor/pull/773) [`6339aea`](https://github.com/JollyPixel/editor/commit/6339aea20bf9777054eec1e6cb828d40fe96c3cc) Thanks [@fraxken](https://github.com/fraxken)! - Add `activateOnDoubleClick` and `beginRename(id)` to `jolly-tree`, so a renamable tree can still open rows on double-click and rename from F2 or an action.
 
-- [#821](https://github.com/JollyPixel/editor/pull/821) [`ad38d4e`](https://github.com/JollyPixel/editor/commit/ad38d4e8935e0a759c0d4f7add3771ab0543f9b0) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `jolly-context-menu` (a point or `AnchorRect` anchor) and `resolveReparentMoves()`; `jolly-tree` emits `jolly-context-request` on right-click or Shift+F10, samples rows with `TreeNode.swatch` (`jolly-activate-swatch`) and exposes a `grip` part.
-  Locked fields no longer reflow and peer chips skip their own user; pane `actions` buttons no longer start a drag, clicks in the rename field keep it open, and `jolly-dialog` accepts `--jolly-dialog-backdrop-filter`.
-  `MeshHighlight` gains `emphasize(ids)`, `emphasized` and `emphasisChange`; `ObjectOverlayRenderer` takes an optional `renderScene`, without which `render` only places the overlays.
+- [#821](https://github.com/JollyPixel/editor/pull/821) [`ad38d4e`](https://github.com/JollyPixel/editor/commit/ad38d4e8935e0a759c0d4f7add3771ab0543f9b0) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add `jolly-context-menu`, and `jolly-tree` emits `jolly-context-request` on right-click or Shift+F10. `MeshHighlight` can emphasize entries with `emphasize(ids)`.
 
 - [#785](https://github.com/JollyPixel/editor/pull/785) [`10f797b`](https://github.com/JollyPixel/editor/commit/10f797bb711798024f7ed82ed6c615e12de54e3d) Thanks [@fraxken](https://github.com/fraxken)! - Add `requireSelection` to `jolly-tree`: empty-area clicks and Ctrl+click on the last selected row no longer clear the selection.
 
-- [#815](https://github.com/JollyPixel/editor/pull/815) [`b691bbf`](https://github.com/JollyPixel/editor/commit/b691bbf91d44d5d5fa65d32165e6d0688d82e06a) Thanks [@fraxken](https://github.com/fraxken)! - `inputLayers.push()` accepts `{ dismiss }` and `inputLayers.dismissAll()` closes every open layer, returning `false` when one refuses.
-  `jolly-dialog` dismisses through its cancel path unless `dismissible` is `false`; `PopoverController` popovers dismiss by hiding.
-  New `adoptAmbientTheme(element, adopted)` sets an element's `theme` attribute to its ambient theme unless the author set one.
+- [#815](https://github.com/JollyPixel/editor/pull/815) [`b691bbf`](https://github.com/JollyPixel/editor/commit/b691bbf91d44d5d5fa65d32165e6d0688d82e06a) Thanks [@fraxken](https://github.com/fraxken)! - Input layers can be dismissed, individually or all at once with `inputLayers.dismissAll()`. Add `adoptAmbientTheme()`.
 
 - [#840](https://github.com/JollyPixel/editor/pull/840) [`1452db0`](https://github.com/JollyPixel/editor/commit/1452db0b72b073fbb4c5c46fd37dfe748da1e7f7) Thanks [@fraxken](https://github.com/fraxken)! - Export `THEME_MODES` and `DENSITIES`, the values of `ThemeMode` and `Density`.
 
-- [#803](https://github.com/JollyPixel/editor/pull/803) [`ab4ad1a`](https://github.com/JollyPixel/editor/commit/ab4ad1a00b61463b39aaaae73644ca329898b8de) Thanks [@fraxken](https://github.com/fraxken)! - Remove `VoxelEngine`: `VoxelRenderer` exposes `document` and `view`, the codec helpers become `parseVoxelWorld`/`encodeVoxelWorld`/`decodeVoxelWorld`, the `apply*Command()` helpers become `apply()` on `BlockRegistry`, `MaterialGroupList` and `TilesetList` (returning the applied command or `null`), object layers move to `world.objectLayers`, `view.tilesets` becomes `view.atlases`, and the `invalidated` event, `registerTileset()` and `PartialExcept` are gone.
-  Remove greedy meshing and `retainVertexData`: every chunk is vertex pulled at 8 bytes per face and can be meshed in Web Workers (`meshing.workers`, `runMeshWorker()`); view options are grouped into `rendering`, `lighting`, `range` and `meshing`, adding baked ambient occlusion, chunk shadows, `farDistance`, `alphaToCoverage` and box-filtered distant tiles.
-  GPU memory is measurable through the voxel `meshMemory` and runtime `geometryMemory`/`textureMemory` metrics with a `bytes` unit in `@jolly-pixel/ui`; fix hidden layers reappearing, stale meshes after `cloneLayer()` and `view.dispose()` clearing the document's tilesets.
+- [#803](https://github.com/JollyPixel/editor/pull/803) [`ab4ad1a`](https://github.com/JollyPixel/editor/commit/ab4ad1a00b61463b39aaaae73644ca329898b8de) Thanks [@fraxken](https://github.com/fraxken)! - Remove `VoxelEngine`: `VoxelRenderer` exposes `document` and `view`, and greedy meshing is replaced by vertex pulling with optional Web Worker meshing. GPU memory is now reported in the metrics.
 
 ### Patch Changes
 
@@ -360,18 +297,13 @@
   `FieldBinding` for Lit templates. Disposing a floating `Pane` now removes its
   `jolly-scope`.
 
-- [#739](https://github.com/JollyPixel/editor/pull/739) [`267f172`](https://github.com/JollyPixel/editor/commit/267f172136cd77d1b16b67e3734ff068b65d2fb0) Thanks [@fraxken](https://github.com/fraxken)! - Add icon tones: `registerIcon(name, glyph, { tone })` with `tone-fill` and
-  `tone-ink` glyph classes, seven `--jolly-tone-*` hues, and toned panes that
-  recolour their header, tabs, folders and accent controls. Add `disabled` to
-  `jolly-pane`, which also disables its `jolly-pane-group` tab.
+- [#739](https://github.com/JollyPixel/editor/pull/739) [`267f172`](https://github.com/JollyPixel/editor/commit/267f172136cd77d1b16b67e3734ff068b65d2fb0) Thanks [@fraxken](https://github.com/fraxken)! - Add icon tones and toned panes that recolour their header, tabs and accents. Add `disabled` to `jolly-pane`.
 
 - [#748](https://github.com/JollyPixel/editor/pull/748) [`54c361c`](https://github.com/JollyPixel/editor/commit/54c361c02b8f7ddf26cf71e0453f8f224566cffc) Thanks [@fraxken](https://github.com/fraxken)! - Own performance metrics in the runtime: a subsystem describes what it counts
   through the structural `MetricSource`, `runtime.metrics` registers it on one
   recorder, and `mountMetricsPanel()` builds a dockable readout from them.
 
-- [#737](https://github.com/JollyPixel/editor/pull/737) [`94c4da8`](https://github.com/JollyPixel/editor/commit/94c4da893f24adfbf59d1031d3c3731c9b4ff567) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tab` gains `badge`, `action` and `actionLabel`; the action button emits `jolly-tab-action` without selecting the tab.
-  `jolly-tabs` gains a `list-end` slot that follows the last tab outside the scrolling list, and a `variant="skew"` chained-parallelogram look.
-  New `--jolly-tab-badge-bg` and `--jolly-tab-badge-fg` tokens tint the badge amber per theme.
+- [#737](https://github.com/JollyPixel/editor/pull/737) [`94c4da8`](https://github.com/JollyPixel/editor/commit/94c4da893f24adfbf59d1031d3c3731c9b4ff567) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tab` gains a `badge` and an action button, and `jolly-tabs` gains a `list-end` slot and a `variant="skew"` look.
 
 - [#722](https://github.com/JollyPixel/editor/pull/722) [`d6e1b5a`](https://github.com/JollyPixel/editor/commit/d6e1b5a976b4571d78051502df570e85d5b50cce) Thanks [@fraxken](https://github.com/fraxken)! - Add `promptPeerIdentity` and `GUEST_USERNAME`, plus `toPeerMetadata`, `readUsername`, `readPeerId` and `peerProfileColor` under `./network`.
 
@@ -388,64 +320,45 @@
 
 ### Major Changes
 
-- [#665](https://github.com/JollyPixel/editor/pull/665) [`25fd361`](https://github.com/JollyPixel/editor/commit/25fd361714e6bb55f8fa61f0404d85a055e245f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-pane-group`: dock layouts store panes as tab groups, a dragged pane joins a group when dropped on a header or tab strip, and `jolly-pane-visibility` reports shown panes.
-  An empty dock is now a placeholder from its first render and previews its size while a drag arms it.
-  `jolly-pane` gains an `icon`, shown in its header and its group tab.
+- [#665](https://github.com/JollyPixel/editor/pull/665) [`25fd361`](https://github.com/JollyPixel/editor/commit/25fd361714e6bb55f8fa61f0404d85a055e245f7) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-pane-group`: docks store panes as tab groups, and a dragged pane joins a group when dropped on its header or tabs. `jolly-pane` gains an `icon`.
 
 ### Minor Changes
 
-- [#678](https://github.com/JollyPixel/editor/pull/678) [`60bef9d`](https://github.com/JollyPixel/editor/commit/60bef9d4d51f63a269e31f26d1817399708f8b6a) Thanks [@fraxken](https://github.com/fraxken)! - Add `closable` and `tooltip` to `jolly-tab`: a closable tab emits `jolly-tab-close` with `{ value }`, and `jolly-tabs` re-renders when tab properties change.
-  Add the `catalogMaxContentBytes` backend option to raise or lower the `catalog:create` size cap.
+- [#678](https://github.com/JollyPixel/editor/pull/678) [`60bef9d`](https://github.com/JollyPixel/editor/commit/60bef9d4d51f63a269e31f26d1817399708f8b6a) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tab` can be closable and show a tooltip. Add the `catalogMaxContentBytes` option to change the create size cap.
 
-- [#668](https://github.com/JollyPixel/editor/pull/668) [`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69) Thanks [@fraxken](https://github.com/fraxken)! - Add `layout="wide"` to `jolly-color-picker`: a height-filling row with vertical hue and alpha tracks and editable R/G/B, H/S/L, A and hex fields.
-  Add `hsvToHsl()` and `hslToHsv()` to `@jolly-pixel/color`, keeping hue on grays and saturation through black.
+- [#668](https://github.com/JollyPixel/editor/pull/668) [`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69) Thanks [@fraxken](https://github.com/fraxken)! - Add `layout="wide"` to `jolly-color-picker`, and `hsvToHsl()`/`hslToHsv()` to `@jolly-pixel/color`.
 
-- [#696](https://github.com/JollyPixel/editor/pull/696) [`2fbcaeb`](https://github.com/JollyPixel/editor/commit/2fbcaeb78ac80e4ce706ae66c2c6203513d439c4) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-dialog` gains `headingEditable`, which renders the heading as a
-  content-sized title input and emits `jolly-heading-change` on commit.
-  The header now carries a faint `--jolly-dialog-chrome-bg` tint, and both header
-  and footer take the density-scaled `--jolly-dialog-chrome-padding`.
-  Fields gain `--jolly-field-inset-start`, and a field's description no longer
-  inherits the text alignment that a reflected `align` attribute hints at.
+- [#696](https://github.com/JollyPixel/editor/pull/696) [`2fbcaeb`](https://github.com/JollyPixel/editor/commit/2fbcaeb78ac80e4ce706ae66c2c6203513d439c4) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-dialog` can make its heading editable (`headingEditable`), and its header and footer get a tinted, density-aware chrome.
 
-- [#682](https://github.com/JollyPixel/editor/pull/682) [`d8f9e21`](https://github.com/JollyPixel/editor/commit/d8f9e21ba3dfb92135c83f909e542b8cbe668fa7) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-dialog`, the `jolly-color` picker and control details now fade and scale in and out, tuned by `--jolly-duration-enter`, `--jolly-duration-exit`, `--jolly-easing-overlay` and `--jolly-overlay-scale`.
-  Dialog helpers stay in the DOM until the exit transition ends. Reduced motion disables the transitions.
+- [#682](https://github.com/JollyPixel/editor/pull/682) [`d8f9e21`](https://github.com/JollyPixel/editor/commit/d8f9e21ba3dfb92135c83f909e542b8cbe668fa7) Thanks [@fraxken](https://github.com/fraxken)! - Dialogs, the colour picker and control details fade and scale in and out, and reduced motion turns the transitions off.
 
-- [#683](https://github.com/JollyPixel/editor/pull/683) [`c9c7379`](https://github.com/JollyPixel/editor/commit/c9c7379f0e9e1255eb1fb8f88bc660fec32c249a) Thanks [@fraxken](https://github.com/fraxken)! - Add `floatWidth`/`floatHeight` to `jolly-pane` to size the window a pane opens when first dragged out of its dock; hidden tabs now fall back to their group size instead of 160x80.
-  Add `hidden`, `floatWidth` and `floatHeight` options to the `Pane` facade.
+- [#683](https://github.com/JollyPixel/editor/pull/683) [`c9c7379`](https://github.com/JollyPixel/editor/commit/c9c7379f0e9e1255eb1fb8f88bc660fec32c249a) Thanks [@fraxken](https://github.com/fraxken)! - Panes and the `Pane` facade accept `floatWidth` and `floatHeight` to size the window a pane opens in when dragged out of its dock.
 
 - [#678](https://github.com/JollyPixel/editor/pull/678) [`60bef9d`](https://github.com/JollyPixel/editor/commit/60bef9d4d51f63a269e31f26d1817399708f8b6a) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-spinner`, an indeterminate busy indicator for work with no known
   duration, sized from `--jolly-spinner-size` and exported from the `feedback`
   entry alongside `jolly-progress`.
 
-- [#684](https://github.com/JollyPixel/editor/pull/684) [`3b06ff8`](https://github.com/JollyPixel/editor/commit/3b06ff841b592848f538af79b60b75456d7d5842) Thanks [@fraxken](https://github.com/fraxken)! - Add `double` to `jolly-dock`: a left or right dock can open a second column, which doubles its width and splits it equally between the two columns.
-  `DockState` gains `secondary`, `PanePlacement` gains `column`, and `movePane`/`stackPane` accept a `DockAddress` (`{ dock, column }`).
+- [#684](https://github.com/JollyPixel/editor/pull/684) [`3b06ff8`](https://github.com/JollyPixel/editor/commit/3b06ff841b592848f538af79b60b75456d7d5842) Thanks [@fraxken](https://github.com/fraxken)! - Add `double` to `jolly-dock`, so a left or right dock can open a second column.
 
-- [#656](https://github.com/JollyPixel/editor/pull/656) [`be5e8bf`](https://github.com/JollyPixel/editor/commit/be5e8bfa64d4a0b17dfac90ab37ec6e9208330d1) Thanks [@fraxken](https://github.com/fraxken)! - Add `InputLayers` and the shared `inputLayers`: an open `jolly-dialog` or `PopoverController` popover claims keydown and keypress events.
-  Pass `inputLayers` to `Keyboard.addGuard()` so viewport controls ignore keys pressed inside dialogs and popovers.
+- [#656](https://github.com/JollyPixel/editor/pull/656) [`be5e8bf`](https://github.com/JollyPixel/editor/commit/be5e8bfa64d4a0b17dfac90ab37ec6e9208330d1) Thanks [@fraxken](https://github.com/fraxken)! - Add `inputLayers`: open dialogs and popovers claim key events, so viewport controls can ignore keys typed inside them through `Keyboard.addGuard()`.
 
-- [#646](https://github.com/JollyPixel/editor/pull/646) [`2371afa`](https://github.com/JollyPixel/editor/commit/2371afaaff5dd986b36c3ea20a101146ec12b795) Thanks [@fraxken](https://github.com/fraxken)! - `MetricDefinition.palette` colors any metric, and `jolly-dock-layout` now keeps one snapshot, with children reporting typed `LayoutChange` details.
-  Numeric inputs share one entry policy (slider readouts step with arrow keys, axis parse errors show on the field), and components share one default storage adapter.
+- [#646](https://github.com/JollyPixel/editor/pull/646) [`2371afa`](https://github.com/JollyPixel/editor/commit/2371afaaff5dd986b36c3ea20a101146ec12b795) Thanks [@fraxken](https://github.com/fraxken)! - `MetricDefinition.palette` colours any metric, and numeric inputs share one entry behaviour.
 
 - [#682](https://github.com/JollyPixel/editor/pull/682) [`15f358a`](https://github.com/JollyPixel/editor/commit/15f358a223cd8fc57d10b9a800a5b5b2edcb0268) Thanks [@fraxken](https://github.com/fraxken)! - Add `showChoice()`, a dialog helper that resolves the picked action value or `null`; `showConfirm()` now builds on it.
 
 - [#644](https://github.com/JollyPixel/editor/pull/644) [`c1d08b8`](https://github.com/JollyPixel/editor/commit/c1d08b8ee5c6d196172c623b0906b10d1061ab40) Thanks [@fraxken](https://github.com/fraxken)! - Add `jolly-tool-button`, a square rail button with an optional hover flyout, and a `vertical` orientation for `jolly-slider`.
 
-- [#686](https://github.com/JollyPixel/editor/pull/686) [`73b40f6`](https://github.com/JollyPixel/editor/commit/73b40f63553c35fbda9fcd6cc6ed472a63cabebb) Thanks [@fraxken](https://github.com/fraxken)! - Add `iconOnly` (`icon-only`) to `jolly-button-group` to show only segment icons, keeping labels as tooltips and accessible names.
-  Fix `jolly-tree` row layout: leaf rows highlight their full width, with inner padding set by `--jolly-tree-row-padding-inline`.
+- [#686](https://github.com/JollyPixel/editor/pull/686) [`73b40f6`](https://github.com/JollyPixel/editor/commit/73b40f63553c35fbda9fcd6cc6ed472a63cabebb) Thanks [@fraxken](https://github.com/fraxken)! - Add `icon-only` to `jolly-button-group`, and fix `jolly-tree` leaf rows so they highlight their full width.
 
-- [#693](https://github.com/JollyPixel/editor/pull/693) [`6895753`](https://github.com/JollyPixel/editor/commit/6895753c6e09c43758357ee5997b981ce5c401ac) Thanks [@fraxken](https://github.com/fraxken)! - Rename `VoxelDebugger` to `VoxelInspector` (`engine.inspector`, `inspector` option); mesh counters move to `inspector.mesh.stats`.
-  Add block statistics: `inspector.blocks` (per layer, per block, unused, orphans, tileset usage) and `countBlocks()`/`countBlock()`/`voxelCount` on `VoxelWorld` and `VoxelLayer`.
-  Add `TreeNode.detail` to `jolly-tree` for a muted trailing row text.
+- [#693](https://github.com/JollyPixel/editor/pull/693) [`6895753`](https://github.com/JollyPixel/editor/commit/6895753c6e09c43758357ee5997b981ce5c401ac) Thanks [@fraxken](https://github.com/fraxken)! - Rename `VoxelDebugger` to `VoxelInspector` (`engine.inspector`) and add block statistics such as `countBlocks()`. `jolly-tree` gains `TreeNode.detail` for muted trailing text.
 
 ### Patch Changes
 
 - [#682](https://github.com/JollyPixel/editor/pull/682) [`bd77308`](https://github.com/JollyPixel/editor/commit/bd773087b83d357491bd56e0e3d60808f2ee5434) Thanks [@fraxken](https://github.com/fraxken)! - Dialog helpers now resolve on `jolly-close` instead of `jolly-cancel`, so on Escape they resolve after focus has returned to the opener.
 
-- [#655](https://github.com/JollyPixel/editor/pull/655) [`bb3e894`](https://github.com/JollyPixel/editor/commit/bb3e89489f37e83b2435b3d41fa208e2e53aa3ad) Thanks [@fraxken](https://github.com/fraxken)! - Keep overlay docks click-through when page CSS sets `pointer-events` on `jolly-dock`, and disable the resize strip of an empty overlay dock.
-  Panes, floating windows, controls and solid docks now declare `pointer-events: auto`, so they work inside a `pointer-events: none` layer.
+- [#655](https://github.com/JollyPixel/editor/pull/655) [`bb3e894`](https://github.com/JollyPixel/editor/commit/bb3e89489f37e83b2435b3d41fa208e2e53aa3ad) Thanks [@fraxken](https://github.com/fraxken)! - Overlay docks stay click-through when page CSS sets `pointer-events`, and panes work inside a `pointer-events: none` layer.
 
-- [#664](https://github.com/JollyPixel/editor/pull/664) [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788) Thanks [@fraxken](https://github.com/fraxken)! - Replace `SyncAdapter` with `CommandSync`, add `PresenceChannel`, and slim `ConflictTracker` to `admit`/`admitEach`; presence set before `join()` now travels with the join.
-  Asset rooms stamp the sender's `clientId` server-side, and three's peer syncs drop `resyncIntervalMs` and their message type parameters.
+- [#664](https://github.com/JollyPixel/editor/pull/664) [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788) Thanks [@fraxken](https://github.com/fraxken)! - Replace `SyncAdapter` with `CommandSync` and add `PresenceChannel`; presence set before `join()` travels with the join.
 
 - [#677](https://github.com/JollyPixel/editor/pull/677) [`1e16c34`](https://github.com/JollyPixel/editor/commit/1e16c343d63da08745ad1fdeb12c3dd83364e573) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Fix `jolly-tree` selection and drag-and-drop: clicking empty space below the rows now deselects, dropping below the last row can land as its last child, and row hover/selection highlighting no longer bleeds into the toggle and grip buttons.
 - Updated dependencies [[`d61e341`](https://github.com/JollyPixel/editor/commit/d61e341ffbe1f555237cf0b586d628bf5c94c82f), [`ab65462`](https://github.com/JollyPixel/editor/commit/ab65462597390541cdb2bee98a7aa22dff562c69), [`55a1230`](https://github.com/JollyPixel/editor/commit/55a12309b7e3d4a3c7ba7efc47766655abaf10f9), [`ae6293b`](https://github.com/JollyPixel/editor/commit/ae6293bf83ef24d0e91569994594a87221577ea2), [`271fba9`](https://github.com/JollyPixel/editor/commit/271fba955fe79253b972a13daf0419a696138788)]:
@@ -467,12 +380,7 @@
 
 - [#516](https://github.com/JollyPixel/editor/pull/516) [`66ee3e0`](https://github.com/JollyPixel/editor/commit/66ee3e0740bcf6ec96a507ad47c9d565a9750a48) Thanks [@fraxken](https://github.com/fraxken)! - Implement a new loop engine/workspace
 
-- [#591](https://github.com/JollyPixel/editor/pull/591) [`014dbb0`](https://github.com/JollyPixel/editor/commit/014dbb0f4d5be9e3df8caefbbab47365f8a7fbf5) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-folder` reads its content inset from `--jolly-folder-indent`, drops it
-  under `flush`, stops collapsing when `collapsible` is false, and inverts a
-  slotted `danger` action from the new `--jolly-folder-action-danger-*` tokens.
-  Field rows read their trailing inset from `--jolly-field-inset-end`, so a
-  subtree can land its values on the edge a header bar paints to. The voxel-map
-  Layers tab uses both, with its folder actions moved into the header as icons.
+- [#591](https://github.com/JollyPixel/editor/pull/591) [`014dbb0`](https://github.com/JollyPixel/editor/commit/014dbb0f4d5be9e3df8caefbbab47365f8a7fbf5) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-folder` and field rows read their insets from CSS properties, and folders can stay expanded and show danger actions.
 
 - [#502](https://github.com/JollyPixel/editor/pull/502) [`db58ed4`](https://github.com/JollyPixel/editor/commit/db58ed4f87cd137eb7e3a0470e75febcbad5034b) Thanks [@fraxken](https://github.com/fraxken)! - Migrate pixel-art editors to use @jolly-pixel/ui
 
@@ -504,23 +412,11 @@
 
 - [#477](https://github.com/JollyPixel/editor/pull/477) [`cd04886`](https://github.com/JollyPixel/editor/commit/cd048869b91af6a09ff56c73b8701b47fc13d78e) Thanks [@fraxken](https://github.com/fraxken)! - Add `CornerResizeHandle` for resizing both axes at once from a single pointer drag.
 
-- [#595](https://github.com/JollyPixel/editor/pull/595) [`245bc85`](https://github.com/JollyPixel/editor/commit/245bc850a6f0798459b2e829ad99add3e0510c54) Thanks [@fraxken](https://github.com/fraxken)! - Clicking a collaborator in the voxel-map presence panel teleports the camera to
-  their position and orientation, through a `selectable` opt-in on
-  `jolly-presence` and `PeerFrustumSync.poseOf()`. Peer frustums now fade out up
-  close, and the color swatch loses its border.
+- [#595](https://github.com/JollyPixel/editor/pull/595) [`245bc85`](https://github.com/JollyPixel/editor/commit/245bc850a6f0798459b2e829ad99add3e0510c54) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-presence` rows can be `selectable`, and `PeerFrustumSync.poseOf()` gives a peer's camera pose. Peer frustums fade out up close.
 
-- [#591](https://github.com/JollyPixel/editor/pull/591) [`eec5e52`](https://github.com/JollyPixel/editor/commit/eec5e52f462e33212e05f474e9ed44aee5a33a82) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` takes an `acceptDrop` domain veto, consulted while dragging and on
-  commit. `VoxelWorld.moveLayerTo()` moves a layer to an absolute index and emits
-  a `layer-moved` command. The voxel-map layer tree is reordered by drag instead
-  of the arrow buttons, which are gone.
+- [#591](https://github.com/JollyPixel/editor/pull/591) [`eec5e52`](https://github.com/JollyPixel/editor/commit/eec5e52f462e33212e05f474e9ed44aee5a33a82) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` takes an `acceptDrop` veto. Add `VoxelWorld.moveLayerTo()` to move a layer to an index.
 
-- [#629](https://github.com/JollyPixel/editor/pull/629) [`444fba8`](https://github.com/JollyPixel/editor/commit/444fba8abd23c4407f84e3110c53fec1f3710496) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `jolly-tree` drops past the last (or before the first) row now read horizontal
-  position as depth, promoting the dragged node up its ancestor chain or
-  straight to root. Drop indicators start at the target row's own indent
-  instead of spanning the blank gutter to its left, and no longer linger after
-  a drop. The tree also adds an `indentGuides` option, stops showing the expand
-  arrow on a childless branch, and keeps its arrow and node icons flush and
-  equal in size.
+- [#629](https://github.com/JollyPixel/editor/pull/629) [`444fba8`](https://github.com/JollyPixel/editor/commit/444fba8abd23c4407f84e3110c53fec1f3710496) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - `jolly-tree` drops before the first or past the last row move the node up its ancestors by horizontal position, and the tree adds an `indentGuides` option.
 
 - [#614](https://github.com/JollyPixel/editor/pull/614) [`ac50655`](https://github.com/JollyPixel/editor/commit/ac50655063011ff4f1ec7bddd78a95ef77fd6f56) Thanks [@fraxken](https://github.com/fraxken)! - Add `TreeNode.badges`, a list of `{ color, title }` dots `jolly-tree` renders
   after a row label. The tree resolves neither field and emits nothing for a dot,
@@ -528,13 +424,7 @@
 
 - [#486](https://github.com/JollyPixel/editor/pull/486) [`d89455e`](https://github.com/JollyPixel/editor/commit/d89455e2093dd644ee67debadd0d7177857a6a59) Thanks [@fraxken](https://github.com/fraxken)! - Implement <jolly-progress> and <jolly-loading> inside UI and use them in runtime
 
-- [#585](https://github.com/JollyPixel/editor/pull/585) [`578fded`](https://github.com/JollyPixel/editor/commit/578fded23cd3e7a81b9a80d20f9571244398e633) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-folder` gains an `actions` slot that puts buttons in its header, next to
-  the grip, and a `plus` builtin glyph. The voxel-map block library moves its add
-  and edit buttons there, dropping the toolbar row that sat above the grid.
-  
-  Fields gain a `--jolly-label-max-width` property over the fixed 45% label cap,
-  and an unlabeled `jolly-button-group` falls back to its `aria-label`. The block
-  library uses both to fit rotation and Flip Y on one row.
+- [#585](https://github.com/JollyPixel/editor/pull/585) [`578fded`](https://github.com/JollyPixel/editor/commit/578fded23cd3e7a81b9a80d20f9571244398e633) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-folder` gains an `actions` slot for header buttons, and fields gain `--jolly-label-max-width`.
 
 ### Patch Changes
 
@@ -549,22 +439,7 @@
 - [#587](https://github.com/JollyPixel/editor/pull/587) [`4618512`](https://github.com/JollyPixel/editor/commit/46185125cdefbcc0dd821c82612afc13e2696aec) Thanks [@fraxken](https://github.com/fraxken)! - Add a `formatDecimal(value, decimals?)` monitor formatter, defaulting to one
   decimal. `formatMilliseconds` and `formatPercent` now build on it.
 
-- [#568](https://github.com/JollyPixel/editor/pull/568) [`33cba8e`](https://github.com/JollyPixel/editor/commit/33cba8e750bdd4cac96f409c3cf310159f73ad20) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Added a selection subsystem for `THREE.Scene` objects: `SelectionManager` drives
-  per-object outlining (`SelectionOutline`, `SelectionBoundingBox` with optional
-  fill, `MergedSelectionOverlay` for bulk/instanced selections) and scene-level
-  postprocess techniques (`HighlightPass`, a JFA-based `HighlightPassJfa`), all
-  supporting `THREE.InstancedMesh` via `instanceId`. Techniques are open for
-  registration through `SelectionOverlayRegistry`.
-  
-  Added network presence for selection and hover: `PeerSelectionRegistry`,
-  `PeerHoverRegistry`, and their overlay/postprocess renderers
-  (`PeerSelectionOverlays`, `PeerHighlightPass`, `PeerHoverOverlays`) show what
-  every connected peer is selecting and hovering, with `PeerSelectionChips` for
-  overlapping selectors and `PeerSelectionVisibility` for frustum/distance
-  gating. `PeerSelectionSync`/`PeerHoverSync` (`@jolly-pixel/three/network`)
-  publish and apply this state over a `@jolly-pixel/network` room's presence.
-  
-  Fixed `@jolly-pixel/ui`'s `PropertyRow` `hidden` attribute doing nothing.
+- [#568](https://github.com/JollyPixel/editor/pull/568) [`33cba8e`](https://github.com/JollyPixel/editor/commit/33cba8e750bdd4cac96f409c3cf310159f73ad20) Thanks [@AlexandreMalaj](https://github.com/AlexandreMalaj)! - Add scene selection outlines and highlight passes, with peer selection and hover shown over a network room. Fix `PropertyRow`'s `hidden` attribute doing nothing.
 
 - [#483](https://github.com/JollyPixel/editor/pull/483) [`b4a7046`](https://github.com/JollyPixel/editor/commit/b4a704691b17dfec6cafc637c757c937913632b4) Thanks [@fraxken](https://github.com/fraxken)! - Fix `jolly-floating` not actually collapsing when the pane it holds folds — the window now shrinks to the pane's header instead of leaving empty space, and its height handles disable while folded.
 
