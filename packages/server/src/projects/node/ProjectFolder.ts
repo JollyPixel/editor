@@ -25,7 +25,10 @@ export class ProjectFolder implements ProjectRegistry {
   async resolve(
     slug: string
   ): Promise<string | null> {
-    if (!PROJECT_SLUG_PATTERN.test(slug)) {
+    if (
+      !PROJECT_SLUG_PATTERN.test(slug) ||
+      !(await fs.readdir(this.#directory)).includes(slug)
+    ) {
       return null;
     }
     const root = this.#root(slug);

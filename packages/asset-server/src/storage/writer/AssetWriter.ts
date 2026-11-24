@@ -28,7 +28,7 @@ import {
   type AssetPartsWrite,
   type AssetWriteData
 } from "../../model/events/AssetEvents.ts";
-import { ASSET_PART_ID_PATTERN } from "../../model/events/AssetEvents.schema.ts";
+import { ASSET_PART_ID_PATTERN } from "../../model/events/AssetPartId.ts";
 import type { AssetProjector } from "../projection/AssetProjector.ts";
 import type { AssetProjection } from "../projection/applyProjection.ts";
 import {

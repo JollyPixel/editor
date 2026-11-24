@@ -34,10 +34,11 @@ export async function createShell(
 
 export function requestUpgrade(
   url: URL,
-  host: string
+  host: string,
+  pathname = DEFAULT_WEBSOCKET_PATH
 ): Promise<Upgrade> {
   const { promise, resolve, reject } = Promise.withResolvers<Upgrade>();
-  const request = http.request(new URL(`.${DEFAULT_WEBSOCKET_PATH}`, url), {
+  const request = http.request(new URL(`.${pathname}`, url), {
     headers: {
       host,
       connection: "Upgrade",

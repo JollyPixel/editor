@@ -1,14 +1,16 @@
 // Import Node.js Dependencies
-import type {
-  IncomingMessage,
-  Server as HttpServer,
-  ServerResponse
+import {
+  STATUS_CODES,
+  type IncomingMessage,
+  type Server as HttpServer,
+  type ServerResponse
 } from "node:http";
 import type { Http2SecureServer } from "node:http2";
 import type { Duplex } from "node:stream";
 
 // Import Third-party Dependencies
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
+import { HandshakePolicy } from "@jolly-pixel/network/node";
 
 // Import Internal Dependencies
 import {
@@ -75,6 +77,15 @@ export interface ServerBackendOptions extends Omit<
   idleMs?: number | null;
 }
 
+export interface AttachOptions {
+  /**
+   * Answers 404 to the upgrades of other paths, which nothing else on the
+   * HTTP server handles.
+   * @default false
+   */
+  ownsUpgrades?: boolean;
+}
+
 export class ServerBackend implements AsyncDisposable {
   static async open(
     options: ServerBackendOptions
@@ -134,7 +145,10 @@ export class ServerBackend implements AsyncDisposable {
       opening.move(),
       hosting.mount,
       projects,
-      api
+      api,
+      new HandshakePolicy({
+        allowedHosts: options.allowedHosts
+      })
     );
   }
 
@@ -149,12 +163,18 @@ export class ServerBackend implements AsyncDisposable {
     resources: AsyncDisposableStack,
     mount: ProjectMount,
     projects: OpenProjects<ProjectBackend>,
-    api: ServerApi
+    api: ServerApi,
+    hosts: HandshakePolicy
   ) {
     this.#resources = resources;
     this.#mount = mount;
     this.#projects = projects;
     this.middleware = (request, response, next) => {
+      if (!hosts.admitsHost(request.headers.host ?? "")) {
+        sendPlainText(response, 403);
+
+        return;
+      }
       const pathname = requestPathname(request);
       const location = mount.locate(pathname);
       if (location === null) {
@@ -181,7 +201,8 @@ export class ServerBackend implements AsyncDisposable {
   }
 
   attach(
-    httpServer: HttpServer | Http2SecureServer
+    httpServer: HttpServer | Http2SecureServer,
+    options: AttachOptions = {}
   ): void {
     const upgrade = (
       request: IncomingMessage,
@@ -191,6 +212,10 @@ export class ServerBackend implements AsyncDisposable {
       const location = this.#mount.locate(requestPathname(request));
       if (location?.pathname === DEFAULT_WEBSOCKET_PATH) {
         this.#upgrade(location.slug, request, socket, head);
+      }
+      else if (options.ownsUpgrades === true) {
+        socket.on("error", () => socket.destroy());
+        socket.end(kNotFoundUpgrade);
       }
     };
     httpServer.on("upgrade", upgrade);
@@ -276,16 +301,25 @@ function sendOpenFailure(
   error: unknown
 ): void {
   if (error instanceof UnknownProjectError) {
-    response.statusCode = 404;
+    sendPlainText(response, 404);
   }
   else if (error instanceof ProjectUnavailableError) {
-    response.statusCode = 503;
+    sendPlainText(response, 503, error.message);
   }
   else {
-    response.statusCode = 500;
     console.error(error);
+    sendPlainText(response, 500);
   }
+}
+
+function sendPlainText(
+  response: ServerResponse,
+  status: number,
+  text = STATUS_CODES[status]
+): void {
+  response.statusCode = status;
   response.setHeader("content-type", "text/plain; charset=utf-8");
   response.setHeader("cache-control", "no-store");
-  response.end(error instanceof Error ? error.message : "server error");
+  response.setHeader("x-content-type-options", "nosniff");
+  response.end(text);
 }

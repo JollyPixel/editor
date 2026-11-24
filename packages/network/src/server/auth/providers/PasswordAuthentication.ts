@@ -8,6 +8,7 @@ import {
   type PasswordHash
 } from "../password.ts";
 import { FailedAttempts } from "../throttling/FailedAttempts.ts";
+import { addressBlock } from "../throttling/addressBlock.ts";
 import type {
   AuthenticationProvider,
   AuthenticationRequest,
@@ -24,11 +25,18 @@ export interface PasswordAuthenticationOptions {
   role: string;
   mandatory?: boolean;
   /**
-   * Wrong passwords a remote address may offer within `failureWindowMs`.
-   * Past it, the address is refused without a password check.
+   * Wrong passwords a client may offer within `failureWindowMs`.
+   * Past it, the client is refused without a password check.
    * @default 10
    */
   maxFailures?: number;
+  /**
+   * Names the client whose failures are counted together. Behind a reverse
+   * proxy, return the forwarded client address.
+   * @default the remote address, its /64 block for IPv6, one shared key
+   * without an address
+   */
+  clientKey?: (request: AuthenticationRequest) => string;
   /**
    * @default 60_000
    */
@@ -46,6 +54,7 @@ export class PasswordAuthentication implements AuthenticationProvider {
   #role: string;
   #mandatory: boolean;
   #failures: FailedAttempts;
+  #clientKey: (request: AuthenticationRequest) => string;
   #checks: Mutex;
 
   constructor(
@@ -60,6 +69,8 @@ export class PasswordAuthentication implements AuthenticationProvider {
       limit: options.maxFailures ?? kDefaultMaxFailures,
       windowMs: options.failureWindowMs ?? kDefaultFailureWindowMs
     });
+    this.#clientKey = options.clientKey ??
+      ((request) => addressBlock(request.remoteAddress));
     this.#checks = new Mutex({
       concurrency: options.maxConcurrentChecks ?? kDefaultMaxConcurrentChecks
     });
@@ -80,10 +91,10 @@ export class PasswordAuthentication implements AuthenticationProvider {
       };
     }
 
-    const { remoteAddress } = request;
-    const isPasswordValid = remoteAddress === undefined ?
-      await this.#check(credential) :
-      await this.#checkFrom(remoteAddress, credential);
+    const isPasswordValid = await this.#checkFrom(
+      this.#clientKey(request),
+      credential
+    );
     if (!isPasswordValid) {
       return null;
     }
@@ -95,17 +106,17 @@ export class PasswordAuthentication implements AuthenticationProvider {
   }
 
   async #checkFrom(
-    address: string,
+    client: string,
     credential: string
   ): Promise<boolean> {
-    if (this.#failures.blocks(address)) {
+    if (this.#failures.blocks(client)) {
       return false;
     }
 
-    this.#failures.record(address);
+    this.#failures.record(client);
     const isPasswordValid = await this.#check(credential);
     if (isPasswordValid) {
-      this.#failures.forgive(address);
+      this.#failures.forgive(client);
     }
 
     return isPasswordValid;

@@ -1,6 +1,6 @@
 // Import Internal Dependencies
 import type { AssetKindRegistry } from "../model/kinds/AssetKindRegistry.ts";
-import { ASSET_PART_ID_PATTERN } from "../model/events/AssetEvents.schema.ts";
+import { ASSET_PART_ID_PATTERN } from "../model/events/AssetPartId.ts";
 
 // CONSTANTS
 const kPartsSuffix = ".parts";

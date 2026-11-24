@@ -5,7 +5,7 @@ import * as z from "zod/mini";
 
 // Import Internal Dependencies
 import {
-  ASSET_PART_ID_PATTERN,
+  assetPartIdSchema,
   assetReferenceSchema
 } from "../../model/events/AssetEvents.schema.ts";
 
@@ -17,7 +17,7 @@ export const assetArchiveEntrySchema = z.object({
   id: z.string(),
   kind: z.string(),
   path: z.string(),
-  parts: z.optional(z.array(z.string().check(z.regex(ASSET_PART_ID_PATTERN))))
+  parts: z.optional(z.array(assetPartIdSchema))
 });
 
 export const assetArchiveManifestSchema = z.object({

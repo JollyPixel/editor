@@ -141,6 +141,26 @@ describe("exportAssetArchive", () => {
     assert.strictEqual(exported.val.assetId, "ghost");
   });
 
+  test("refuses an archive past the entry or archive cap", async() => {
+    await using project = await archiveProject();
+    const texture = await project.link("texture.link");
+    await project.link("a.link", texture);
+    await project.link("b.link", texture);
+    const size = texture.length;
+
+    const caps = [
+      { maxEntryBytes: size - 1, maxBytes: Infinity },
+      { maxEntryBytes: Infinity, maxBytes: size }
+    ];
+    for (const limits of caps) {
+      const exported = await exportAssetArchive(project.backend, { limits });
+
+      assert.ok(!exported.ok);
+      assert.ok(exported.val instanceof AssetArchiveError);
+      assert.strictEqual(exported.val.rejection, "too-large");
+    }
+  });
+
   test("refuses a stored document that import would reject", async() => {
     await using project = await archiveProject();
     const map = await project.link("map.link");

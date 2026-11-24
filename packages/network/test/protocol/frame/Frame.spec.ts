@@ -170,6 +170,22 @@ describe("decodeFrame", () => {
     });
   }
 
+  test("rejects more attachments than the header has room to place, before reading them", () => {
+    const count = 1_000_000;
+    const prefixLength = 9 + (4 * count);
+    const frame = new Uint8Array(Math.ceil((prefixLength + 2) / 8) * 8);
+    const view = new DataView(frame.buffer);
+    view.setUint8(0, 1);
+    view.setUint32(1, 2, true);
+    view.setUint32(5, count, true);
+    frame.set(kUtf8.encode("{}"), prefixLength);
+
+    assert.deepEqual(decodeError(frame), {
+      reason: "invalid-frame",
+      message: "header is too short to place every attachment"
+    });
+  });
+
   test("reports a binary frame whose header is not JSON as invalid JSON", () => {
     assert.equal(decodeError(handBuiltFrame("{oops")).reason, "invalid-json");
   });

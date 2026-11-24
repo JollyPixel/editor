@@ -25,6 +25,12 @@ import {
 import { PeerPresence } from "./PeerPresence.ts";
 import { ResyncThrottle } from "./ResyncThrottle.ts";
 import { SerializedEnvelope } from "./SerializedEnvelope.ts";
+import {
+  lengthLimits,
+  type LengthLimited,
+  type LengthLimits,
+  type RoomLimits
+} from "./RoomLimits.ts";
 import { MessageParser } from "../../protocol/message/MessageParser.ts";
 import {
   JOIN_EVENT,
@@ -42,7 +48,6 @@ import type { ConnectedClient } from "../connection/ConnectedClient.ts";
 import type { SendOptions } from "../extension/ClientHandle.ts";
 
 // CONSTANTS
-const kDefaultPeerMetadataLength = 1_048_576;
 const kDefaultResyncIntervalMs = 1_000;
 
 interface AuthorizeRequest {
@@ -76,21 +81,6 @@ export interface RoomJoiner {
   resume?: unknown;
 }
 
-export interface RoomLimits {
-  /**
-   * Longest profile, and longest merged presence, a member may hold,
-   * in JSON characters. A join or presence update past it is refused.
-   * @default 1_048_576
-   */
-  peerMetadataLength?: number;
-  /**
-   * Shortest interval, in milliseconds, between two resyncs of a member.
-   * Requests inside it are coalesced into one resync at its end.
-   * @default 1_000
-   */
-  resyncIntervalMs?: number;
-}
-
 export interface ServerRoomOptions {
   logger?: Logger;
   limits?: RoomLimits;
@@ -122,7 +112,7 @@ export class ServerRoom {
   #roomBroadcast: RoomBroadcast;
   #inbound: MessageParser | null;
   #outboundEvent: OutboundEvent | null;
-  #peerMetadataLength: number;
+  #lengthLimits: LengthLimits;
   #resyncs: ResyncThrottle;
   #frozenDeliveries = new WeakMap<object, OutboundDelivery>();
 
@@ -141,12 +131,10 @@ export class ServerRoom {
       room: this.id
     });
 
-    const {
-      peerMetadataLength = kDefaultPeerMetadataLength,
-      resyncIntervalMs = kDefaultResyncIntervalMs
-    } = options.limits ?? {};
-    this.#peerMetadataLength = peerMetadataLength;
-    this.#resyncs = new ResyncThrottle(resyncIntervalMs);
+    this.#lengthLimits = lengthLimits(options.limits);
+    this.#resyncs = new ResyncThrottle(
+      options.limits?.resyncIntervalMs ?? kDefaultResyncIntervalMs
+    );
 
     const { inbound, outbound } = extension.protocols;
     this.#inbound = inbound === null
@@ -192,10 +180,11 @@ export class ServerRoom {
   #withinLimit(
     client: ConnectedClient,
     event: string,
-    subject: "profile" | "presence",
+    subject: LengthLimited,
     length: number
   ): boolean {
-    if (length <= this.#peerMetadataLength) {
+    const limit = this.#lengthLimits[subject];
+    if (length <= limit) {
       return true;
     }
 
@@ -203,7 +192,7 @@ export class ServerRoom {
       clientId: client.id,
       kind: "error",
       event,
-      reason: `${subject} exceeds ${this.#peerMetadataLength} JSON characters`,
+      reason: `${subject} exceeds ${limit} JSON characters`,
       label: subject
     });
 
@@ -274,6 +263,14 @@ export class ServerRoom {
       JOIN_EVENT,
       "profile",
       encodedLength(profile)
+    )) {
+      return false;
+    }
+    if (resume !== undefined && !this.#withinLimit(
+      client,
+      JOIN_EVENT,
+      "resume",
+      encodedLength(resume)
     )) {
       return false;
     }
@@ -427,6 +424,32 @@ export class ServerRoom {
     return true;
   }
 
+  deniedMembers(): IterableIterator<string> {
+    return this.#members.deniedWrite(JOIN_EVENT);
+  }
+
+  async expel(
+    clientId: string
+  ): Promise<boolean> {
+    const record = this.#members.get(clientId);
+    if (
+      record === undefined ||
+      this.#rights.canWrite(record.identity.role, JOIN_EVENT)
+    ) {
+      return false;
+    }
+
+    this.#refuse(record.handle, {
+      clientId,
+      kind: "denied",
+      event: JOIN_EVENT,
+      reason: refusalReason(record.identity.role, JOIN_EVENT),
+      label: "expel"
+    });
+
+    return this.leave(clientId);
+  }
+
   updateProfile(
     clientId: string,
     patch: PeerMetadata
@@ -440,12 +463,13 @@ export class ServerRoom {
       ...record.profile,
       ...patch
     };
-    if (encodedLength(profile) > this.#peerMetadataLength) {
+    const limit = this.#lengthLimits.profile;
+    if (encodedLength(profile) > limit) {
       this.#logger
         .withMetadata({
           clientId,
           outcome: "dropped",
-          reason: `profile exceeds ${this.#peerMetadataLength} JSON characters`
+          reason: `profile exceeds ${limit} JSON characters`
         })
         .error("profile update");
 

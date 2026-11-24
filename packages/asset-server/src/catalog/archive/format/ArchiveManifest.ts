@@ -138,5 +138,16 @@ function checkEntry(
     return Err(error);
   }
 
+  const parts = entry.parts ?? [];
+  if (new Set(parts).size !== parts.length) {
+    const error = new AssetArchiveError(
+      "duplicate",
+      `Asset "${entry.id}" lists a part twice.`,
+      { assetId: entry.id }
+    );
+
+    return Err(error);
+  }
+
   return Ok(undefined);
 }

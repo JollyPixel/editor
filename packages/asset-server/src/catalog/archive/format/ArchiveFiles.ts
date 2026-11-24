@@ -9,43 +9,30 @@ import { unzipSync } from "fflate";
 
 // Import Internal Dependencies
 import { AssetArchiveError } from "../errors/AssetArchiveError.ts";
+import type { ArchiveBudget } from "./ArchiveBudget.ts";
 
 // CONSTANTS
 const kResourceForkDirectory = "__MACOSX/";
 const kFinderMetadataName = ".DS_Store";
 
-export interface ArchiveFilesLimits {
-  maxEntryBytes: number;
-  maxBytes: number;
-}
-
 export class ArchiveFiles {
   #files = new Map<string, Uint8Array>();
+  #parts = new Map<string, string>();
 
   static unzip(
     bytes: Uint8Array,
-    limits: ArchiveFilesLimits
+    budget: ArchiveBudget
   ): Result<ArchiveFiles, AssetArchiveError> {
-    const { maxEntryBytes, maxBytes } = limits;
-
-    let total = 0;
     let oversized: AssetArchiveError | undefined;
     let unzipped: Record<string, Uint8Array>;
     try {
       unzipped = unzipSync(bytes, {
         filter: (file) => {
-          total += file.originalSize;
-          if (file.originalSize > maxEntryBytes) {
-            oversized ??= new AssetArchiveError(
-              "too-large",
-              `Archive entry "${file.name}" exceeds ${maxEntryBytes} bytes.`
-            );
-          }
-          else if (total > maxBytes) {
-            oversized ??= new AssetArchiveError(
-              "too-large",
-              `Archive exceeds ${maxBytes} decoded bytes.`
-            );
+          if (oversized === undefined) {
+            const admitted = budget.admit(file.name, file.originalSize);
+            if (!admitted.ok) {
+              oversized = admitted.val;
+            }
           }
 
           return oversized === undefined;
@@ -76,7 +63,7 @@ export class ArchiveFiles {
         return Err(error);
       }
       if (!isOperatingSystemEntry(name)) {
-        files.#files.set(name, data);
+        files.#add(name, data);
       }
     }
 
@@ -96,14 +83,9 @@ export class ArchiveFiles {
     assetPath: string,
     partId: string
   ): Uint8Array | undefined {
-    const prefix = `${assetPath}.parts/${partId}.`;
-    for (const path of this.#files.keys()) {
-      if (path.startsWith(prefix) && !path.includes("/", prefix.length)) {
-        return this.take(path);
-      }
-    }
+    const path = this.#parts.get(`${assetPath}.parts/${partId}`);
 
-    return undefined;
+    return path === undefined ? undefined : this.take(path);
   }
 
   firstUntaken(): string | undefined {
@@ -111,6 +93,27 @@ export class ArchiveFiles {
 
     return path;
   }
+
+  #add(
+    path: string,
+    data: Uint8Array
+  ): void {
+    this.#files.set(path, data);
+
+    const key = partKey(path);
+    if (key !== null && !this.#parts.has(key)) {
+      this.#parts.set(key, path);
+    }
+  }
+}
+
+function partKey(
+  path: string
+): string | null {
+  const leaf = path.lastIndexOf("/") + 1;
+  const dot = path.indexOf(".", leaf);
+
+  return leaf === 0 || dot === -1 ? null : path.slice(0, dot);
 }
 
 function isOperatingSystemEntry(

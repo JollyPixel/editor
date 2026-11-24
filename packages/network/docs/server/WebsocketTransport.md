@@ -51,6 +51,26 @@ httpServer.on("upgrade", (request, socket, head) => {
 });
 ```
 
+## HandshakePolicy
+
+The host and origin rules of the handshake, exported so an HTTP server in front
+of the transport can apply the same `allowedHosts` to its own requests.
+
+```ts
+import { HandshakePolicy } from "@jolly-pixel/network/node";
+
+const policy = new HandshakePolicy({ allowedHosts: ["studio.example"] });
+policy.admitsHost("studio.example:3000"); // true
+policy.admitsHost("attacker.example"); // false
+policy.checkHandshake(request.headers); // null, "host" or "origin"
+```
+
+`admitsHost(host)` takes a `Host` header value. It admits `localhost`, its
+`.localhost` subdomains, IP addresses, and each `allowedHosts` entry; an entry
+starting with `.` also admits its subdomains. `allowedHosts: true` admits every
+host. `checkHandshake(headers)` also refuses an `Origin` whose host differs from
+`Host`, unless `allowedOrigins` lists it.
+
 ## `[Symbol.dispose]()`
 
 Terminates its sockets and stops handling upgrades. The HTTP server's `close`

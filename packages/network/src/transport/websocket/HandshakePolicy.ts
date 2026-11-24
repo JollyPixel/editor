@@ -37,7 +37,7 @@ export class HandshakePolicy {
     headers: IncomingHttpHeaders
   ): HandshakeRefusal | null {
     const host = headers.host?.toLowerCase();
-    if (host === undefined || !this.#admitsHost(host)) {
+    if (host === undefined || !this.admitsHost(host)) {
       return "host";
     }
     if (!this.#admitsOrigin(headers.origin, host)) {
@@ -47,7 +47,7 @@ export class HandshakePolicy {
     return null;
   }
 
-  #admitsHost(
+  admitsHost(
     host: string
   ): boolean {
     if (this.#allowedHosts === true) {

@@ -68,6 +68,7 @@ import { toActor } from "../../model/events/AssetEvents.ts";
 import type { ArchiveBackend } from "../archive/ArchiveBackend.ts";
 import { exportAssetArchive } from "../archive/exportAssetArchive.ts";
 import type { ArchiveLimits } from "../archive/ArchiveLimits.ts";
+import { resolveArchiveLimits } from "../archive/format/ArchiveBudget.ts";
 import {
   importAssetArchive,
   planAssetImport
@@ -93,7 +94,8 @@ export interface CatalogPolicy {
    */
   maxContentBytes?: number;
   /**
-   * Decoded size caps of an archive received by plan and import.
+   * Decoded size caps of an archive received by plan and import, or built
+   * by export.
    */
   archiveLimits?: ArchiveLimits;
   /**
@@ -117,6 +119,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
   #backend: CatalogBackend;
   #content: CatalogContent;
+  #archiveLimits: Required<ArchiveLimits>;
   #deleteProtection: boolean;
   #broadcast: RoomBroadcast | null = null;
   #members = new Set<string>();
@@ -136,13 +139,12 @@ export class CatalogExtension extends Extension<CatalogCommand> {
 
     this.id = options.id ?? CATALOG_ROOM;
     this.#backend = options.backend;
+    this.#archiveLimits = resolveArchiveLimits(options.archiveLimits);
     this.#content = new CatalogContent({
       kinds: options.backend.kinds,
       maxContentBytes: options.maxContentBytes ??
         DEFAULT_CATALOG_MAX_CONTENT_BYTES,
-      archiveLimits: {
-        ...options.archiveLimits
-      }
+      archiveLimits: this.#archiveLimits
     });
     this.#deleteProtection = options.deleteProtection ?? true;
     this.#onChanged = (change) => {
@@ -467,7 +469,8 @@ export class CatalogExtension extends Extension<CatalogCommand> {
     command: CatalogExportCommand
   ): Promise<Result<CatalogApplied, Error>> {
     const archive = await exportAssetArchive(this.#backend, {
-      root: command.root
+      root: command.root,
+      limits: this.#archiveLimits
     });
 
     return archive

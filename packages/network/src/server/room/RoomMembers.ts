@@ -76,6 +76,16 @@ export class RoomMembers {
     this.#members.clear();
   }
 
+  * deniedWrite(
+    event: string
+  ): IterableIterator<string> {
+    for (const [clientId, record] of this.#members) {
+      if (!this.#rights.canWrite(record.identity.role, event)) {
+        yield clientId;
+      }
+    }
+  }
+
   visibleSnapshot(
     role: string
   ): RoomMemberSnapshot[] {

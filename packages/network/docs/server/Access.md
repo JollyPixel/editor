@@ -23,6 +23,9 @@ implements `authenticate(request)`, returning an identity or `null`,
 optionally through a promise. Identity lasts for one connection.
 
 Client profile cannot assign identity or role; server profile fields override it.
+Fields the identity's `profile` leaves out keep the client's claim, so a
+provider that sets no `profile` lets each client pick its own `username`,
+`peerId`, `via` and `observer`. Set the fields peers must trust.
 
 `request.credential` is the credential the client offered, decoded by its
 transport, or `undefined`. A malformed WebSocket credential is refused with
@@ -36,6 +39,14 @@ The default `BypassAuthentication` assigns `defaultRole`.
 
 `PasswordAuthentication` from `/node` grants its role for a correct credential.
 Missing credentials use the default role unless `mandatory` is true.
+
+After `maxFailures` wrong passwords (default `10`) within `failureWindowMs`
+(default `60_000`), a client is refused without a check until the window ends.
+A client is its remote address, the `/64` block of an IPv6 address, or one
+shared key for connections without an address, such as loopback and channel
+relays. Behind a reverse proxy, pass `clientKey(request)` to return the
+forwarded address. At most `maxConcurrentChecks` checks (default `2`) run at
+once; the others wait.
 
 The same entry exports the scrypt helpers it uses:
 
@@ -66,7 +77,10 @@ or disconnect. Use HTTPS/WSS for remote credentials.
 The server option `admits(identity, room)` limits an identity to some rooms.
 It runs before the room is resolved and before rights are checked. `false`,
 or a thrown error, refuses the join with a `denied` envelope for `$join`.
-Without the option every room admits every identity.
+Without the option every room admits every identity. Rights are checked only
+once the room is resolved, so a [room resolver](./Server.md#dynamic-rooms)
+runs for any name a connected client joins; `admits` keeps it from loading
+rooms an identity may not enter.
 
 ### Profile updates
 

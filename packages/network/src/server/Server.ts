@@ -16,8 +16,11 @@ import {
   type RightsMap
 } from "./rights/RightsTable.ts";
 import type { AnyExtension } from "./extension/Extension.ts";
-import { RoomRegistry } from "./room/RoomRegistry.ts";
-import type { RoomLimits } from "./room/ServerRoom.ts";
+import {
+  RoomRegistry,
+  type RoomMember
+} from "./room/RoomRegistry.ts";
+import type { RoomLimits } from "./room/RoomLimits.ts";
 import { BypassAuthentication } from "./auth/providers/BypassAuthentication.ts";
 import type {
   AuthenticationAttempt,
@@ -126,6 +129,29 @@ export class Server {
     defaultRole?: string
   ): void {
     this.#rights.replace(rights, defaultRole);
+    for (const member of [...this.#rooms.deniedMembers()]) {
+      void this.#sessions.enqueue(
+        member.clientId,
+        () => this.#expel(member),
+        member.room
+      );
+    }
+  }
+
+  async #expel(
+    member: RoomMember
+  ): Promise<void> {
+    try {
+      await this.#rooms.expel(member);
+    }
+    catch (error) {
+      this.logger
+        .withMetadata({
+          ...member,
+          reason: errorMessage(error)
+        })
+        .error("expel failed");
+    }
   }
 
   revoke(

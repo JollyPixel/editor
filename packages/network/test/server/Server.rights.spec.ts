@@ -14,6 +14,7 @@ import {
   UngatedExtensionError
 } from "#src/index.ts";
 import { actionProtocols } from "../helpers/protocol/protocols.ts";
+import { waitFor } from "../helpers/waitFor.ts";
 
 describe("Server — rights: denied join", () => {
   test(
@@ -100,6 +101,45 @@ describe("Server — rights: denied join", () => {
       }
     }
   );
+});
+
+describe("Server — rights: replacement", () => {
+  test("removes the members whose role can no longer join, and tells them", async() => {
+    const canJoin = {
+      editor: { "pixel-draw.$join": "write" },
+      viewer: { "pixel-draw.$join": "write" }
+    } as const;
+    const server = new Server({ rights: canJoin });
+    const extension = new RecordingExtension("pixel-draw", "pixel-draw", actionProtocols);
+    server.register(extension);
+    const editor = createClient("A");
+    const viewer = createClient("B");
+    await server.connect(editor.client, createIdentity(editor.client, "editor"))
+      .receive({ room: "pixel-draw", kind: "join" });
+    await server.connect(viewer.client, createIdentity(viewer.client, "viewer"))
+      .receive({ room: "pixel-draw", kind: "join" });
+    editor.sent.length = 0;
+    viewer.sent.length = 0;
+
+    server.replaceRights({
+      ...canJoin,
+      viewer: { "pixel-draw.$join": "void" }
+    });
+    await waitFor(() => extension.disconnected.length > 0);
+
+    assert.deepEqual(extension.disconnected, ["B"]);
+    assert.deepEqual(viewer.sent, [{
+      room: "pixel-draw",
+      kind: "denied",
+      event: "$join",
+      reason: "role \"viewer\" is not permitted to join this room"
+    }]);
+    assert.deepEqual(editor.sent, [{
+      room: "pixel-draw",
+      kind: "peer-left",
+      clientId: "B"
+    }]);
+  });
 });
 
 describe("Server — rights: extension gating contract", () => {

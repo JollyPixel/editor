@@ -2,7 +2,10 @@
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
-import { DEFAULT_ROLE } from "../protocol/constants.ts";
+import {
+  DEFAULT_ROLE,
+  JOIN_EVENT
+} from "../protocol/constants.ts";
 import {
   unknownEnvelopeKind,
   type ClientEnvelope,
@@ -252,6 +255,11 @@ export class ClientRoom<
         break;
       case "denied":
       case "error":
+        if (envelope.kind === "denied" && envelope.event === JOIN_EVENT) {
+          this.suspend();
+          this.#self = null;
+          this.#rights = kNoRights;
+        }
         this.emit(envelope.kind, {
           event: envelope.event,
           reason: envelope.reason

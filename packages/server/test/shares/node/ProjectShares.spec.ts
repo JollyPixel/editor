@@ -10,6 +10,9 @@ import { AssetRoom } from "@jolly-pixel/asset";
 import type { PeerIdentity } from "@jolly-pixel/network";
 
 // Import Internal Dependencies
+import { UnknownAssetError } from "#src/project/errors/UnknownAssetError.ts";
+import { ProjectAccess } from "#src/project/node/ProjectAccess.ts";
+import { ShareLifetime } from "#src/shares/ShareLifetime.ts";
 import type { ProjectShares } from "#src/shares/node/ProjectShares.ts";
 import {
   guestUpgrade,
@@ -64,6 +67,41 @@ function admitted(
 
   return rooms.filter((room) => shares.admits(identity, room));
 }
+
+describe("ProjectShares.create", () => {
+  test("refuses an asset the creator's role cannot open", async() => {
+    using setup = await shareAccounts(
+      {
+        "map-1": ["map-1"],
+        "map-2": ["map-2"]
+      },
+      ProjectAccess.from({
+        defaultRole: "member",
+        roles: {
+          member: {
+            "voxelmap:map-2.*": "void",
+            "*": "write"
+          }
+        },
+        join: "request"
+      }, "project.json")
+    );
+    const member = {
+      ...setup.owner,
+      role: "member"
+    };
+    const lifetime = new ShareLifetime("1d");
+
+    assert.equal(
+      setup.shares.create(member, "map-1", lifetime).assetId,
+      "map-1"
+    );
+    assert.throws(
+      () => setup.shares.create(member, "map-2", lifetime),
+      UnknownAssetError
+    );
+  });
+});
 
 describe("ProjectShares.admits", () => {
   test("admits a guest to the catalog view and the rooms of its closure only", async() => {

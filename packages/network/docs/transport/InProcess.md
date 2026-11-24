@@ -25,6 +25,10 @@ on delivery as a socket would. Normal authentication applies, with
 `ChannelTransport({ port, host }).connect()` reaches a `ChannelTransportHost`
 over BroadcastChannel, MessagePort, or Worker. Share `host.id` before connecting.
 
+The host relays at most `maxRelays` sockets at once (default `64`) and closes
+the ones past it with code `1013`. It ignores a `connect` for a socket it
+already relays.
+
 Optional `socketPort` isolates socket traffic. Close host and transport separately;
 shared ports remain caller-owned. Transport messages carry
 `tag: CHANNEL_TRANSPORT_TAG`, so other traffic can share the port.
