@@ -1,5 +1,11 @@
 # @jolly-pixel/utils
 
+## 1.1.1
+
+### Patch Changes
+
+- [#1286](https://github.com/JollyPixel/editor/pull/1286) [`f711a5f`](https://github.com/JollyPixel/editor/commit/f711a5ff57a7d3513f7d2edb9a469b1f08884b25) Thanks [@fraxken](https://github.com/fraxken)! - Republish with npm provenance.
+
 ## 1.1.0
 
 ### Minor Changes

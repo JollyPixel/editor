@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/accounts",
   "description": "User accounts and session tokens for JollyPixel servers",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "type": "module",
   "sideEffects": false,
   "imports": {
