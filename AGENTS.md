@@ -12,7 +12,23 @@
 - Update Markdown API documentation when changing a public API.
 - Before writing or editing source comments or Markdown documentation, load the
   `documentation-maintenance` skill.
-- Keep release changeset summaries to two or three lines and never add changesets for workspace with private:true enabled in package.json.
+
+## Changesets
+
+- Write one changeset per piece of work, listing every affected package. Never
+  add one for a workspace with `"private": true`.
+- Write for someone upgrading the package, not for the reviewer: what they can
+  now do, what behaves differently, or what they must change. Keep it under
+  about 250 characters, in one or two sentences.
+- Leave out how the change was made: internal classes, files, algorithms,
+  refactors, performance numbers, and tests. Name only the public symbols a
+  consumer calls or must rename.
+- For a breaking change, add one sentence saying what to change; the PR and API
+  docs carry the details.
+- Too long: "Add a `"uv"` mode … `UVMap` value object: `create`, `delete`,
+  `move`, `select`, with a typed event emitter (`region-created`/…)".
+  Right size: "Add a `"uv"` mode to `PixelArtCanvas` for placing, moving and
+  deleting UV regions, with undo/redo."
 
 ## Validation
 

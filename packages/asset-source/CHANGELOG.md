@@ -11,15 +11,11 @@
 
 ### Major Changes
 
-- [#859](https://github.com/JollyPixel/editor/pull/859) [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b) Thanks [@fraxken](https://github.com/fraxken)! - `AssetSource` gains `folders()`, `createFolder` and `deleteFolder`, so empty folders persist, plus `FolderSet`; `watch` callbacks also receive whether a file or a folder changed.
-  The catalog room lists folders through `CatalogFolders` (`backend.folders`), with `catalog:create-folder`, `catalog:move-folder`, `catalog:delete-folder` and `catalog:folders`; `CatalogClient` adds `folders()`, `createFolder`, `moveFolder` and `removeFolder`.
+- [#859](https://github.com/JollyPixel/editor/pull/859) [`425cef9`](https://github.com/JollyPixel/editor/commit/425cef984d0c6e5bf06f99fa29e0282acb47350b) Thanks [@fraxken](https://github.com/fraxken)! - Empty folders now persist: `AssetSource` and `CatalogClient` can list, create, move and delete folders. `watch` callbacks also say whether a file or a folder changed.
 
-- [#1076](https://github.com/JollyPixel/editor/pull/1076) [`8539d87`](https://github.com/JollyPixel/editor/commit/8539d8702d62c6b27ade0f1e0bb13134b20e90fe) Thanks [@fraxken](https://github.com/fraxken)! - `read` rejects with `AssetPathNotFoundError` on every source, the filesystem `exists` reports `false` for a directory, and `readJsonFile` rethrows failures other than a missing file or invalid JSON.
-  `AssetSource.isIgnored` is required (memory and IndexedDB ignore `.jollypixel/`); `FilesystemAssetSource.resolve` and the `toRelativePosix` export are removed.
-  Filesystem paths that reach an ignored folder through a link or a Windows short name are rejected, the watcher no longer follows symlinks, and the HTTP handler sends a sandboxing `Content-Security-Policy`.
+- [#1076](https://github.com/JollyPixel/editor/pull/1076) [`8539d87`](https://github.com/JollyPixel/editor/commit/8539d8702d62c6b27ade0f1e0bb13134b20e90fe) Thanks [@fraxken](https://github.com/fraxken)! - Every source rejects a missing path with `AssetPathNotFoundError`, and `AssetSource.isIgnored` is required. Paths reaching an ignored folder through links are rejected.
 
-- [#1080](https://github.com/JollyPixel/editor/pull/1080) [`59fc78a`](https://github.com/JollyPixel/editor/commit/59fc78a35178c8a5eee14462eb8b27ace71d1e22) Thanks [@fraxken](https://github.com/fraxken)! - IndexedDB storage now runs on `idb` and always uses `globalThis.indexedDB`: the `factory` option is removed.
-  `IndexedDbAssetSource` no longer upgrades databases made before the `folders` store, and `destroy` closes the sources still open on the database instead of waiting for them.
+- [#1080](https://github.com/JollyPixel/editor/pull/1080) [`59fc78a`](https://github.com/JollyPixel/editor/commit/59fc78a35178c8a5eee14462eb8b27ace71d1e22) Thanks [@fraxken](https://github.com/fraxken)! - IndexedDB storage always uses `globalThis.indexedDB` (the `factory` option is removed), and databases older than the `folders` store are no longer upgraded.
 
 - [#1024](https://github.com/JollyPixel/editor/pull/1024) [`9123c45`](https://github.com/JollyPixel/editor/commit/9123c4578d791cb8f9d3749e56d2c8268ee87ec7) Thanks [@fraxken](https://github.com/fraxken)! - Rename methods named `xOf`, `xFor` or `getX`/`setX` after what they do (for example `inverseOf` → `invert`, `UVRegion.rectFor` → `slotRect`, `MessageParser.of` → `fromProtocol`).
   The package docs list the new names; behavior is unchanged.
@@ -28,12 +24,9 @@
 
 - [#1078](https://github.com/JollyPixel/editor/pull/1078) [`89073fc`](https://github.com/JollyPixel/editor/commit/89073fcf9c2ca0fa9ff2f1b5c00746c95544e47e) Thanks [@fraxken](https://github.com/fraxken)! - Add `writableAssetPath(source, input)`, which normalizes a path and rejects it as `reserved` when it is a state path or one the source ignores.
 
-- [#951](https://github.com/JollyPixel/editor/pull/951) [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb) Thanks [@fraxken](https://github.com/fraxken)! - KTX2 textures: `TextureAssetLoader` and `createDefaultAssetLoaders` take a `ktx2` loader for `.ktx2` sources, and `Runtime` builds one from `assets.ktx2.transcoderPath`.
-  The `texture` asset kind claims `.ktx2`, served as `image/ktx2`; `loadBlocksets` accepts a `KTX2Loader`, and `AtlasTexture` includes `THREE.CompressedTexture`.
+- [#951](https://github.com/JollyPixel/editor/pull/951) [`86af3d5`](https://github.com/JollyPixel/editor/commit/86af3d5b5e2fcc0ca9db56460add568776bde5eb) Thanks [@fraxken](https://github.com/fraxken)! - Support KTX2 compressed textures: the `texture` kind claims `.ktx2`, and `Runtime` builds a loader from `assets.ktx2.transcoderPath`.
 
-- [#869](https://github.com/JollyPixel/editor/pull/869) [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681) Thanks [@fraxken](https://github.com/fraxken)! - event-store adds `expectedVersion` appends (`EventVersionConflictError`) and per-asset `compact` (`assetId`); SQLite files open in WAL mode with incremental vacuum.
-  asset-server snapshots no longer reload live state or drop commands appended while serializing, compacts before snapshots (`compactOnSnapshot`), caches room snapshots per version and reconciles only changed paths; `watch` reports readiness through `onReady` and skips initial and temporary entries.
-  network room loggers no longer overwrite the shared logger context, and disabled debug logs skip building metadata.
+- [#869](https://github.com/JollyPixel/editor/pull/869) [`e646731`](https://github.com/JollyPixel/editor/commit/e646731d6968af9a58604f5b503950e73dfa9681) Thanks [@fraxken](https://github.com/fraxken)! - The event store adds `expectedVersion` appends and per-asset compaction, SQLite runs in WAL mode, and asset snapshots and reconciliation are faster and no longer drop commands.
 
 ### Patch Changes
 
@@ -44,12 +37,9 @@
 
 ### Major Changes
 
-- [#781](https://github.com/JollyPixel/editor/pull/781) [`20c529d`](https://github.com/JollyPixel/editor/commit/20c529d199eb0e5a7430c99003872398a065604e) Thanks [@fraxken](https://github.com/fraxken)! - The asset static handler and the catalog handler are built on `@openally/servo`: content ETags with `304`, `Cache-Control: no-cache`, `nosniff`, and byte ranges for assets.
-  `safeAssetPath` now rejects a Windows reserved segment (`:`, trailing dot or space, device name) as `reserved`, so writes, archive imports and every source refuse it, and asset URLs answer `403`.
+- [#781](https://github.com/JollyPixel/editor/pull/781) [`20c529d`](https://github.com/JollyPixel/editor/commit/20c529d199eb0e5a7430c99003872398a065604e) Thanks [@fraxken](https://github.com/fraxken)! - Asset and catalog handlers support ETags, `304` and byte ranges, and Windows-reserved path segments are refused everywhere.
 
-- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Subpaths follow one naming scheme: `network/node` (now with the Vite plugin), `asset-server/{client,node}`, `asset-source/node`, `event-store/node` (was `./sqlite`), `image/browser` and `voxel.renderer/engine` (the Rapier plugin joins the root). `.ts` keys, wildcards, `network/parser` and `network/transport/*` are removed; transports ship from the network root, `./client` and `./node`.
-  The `asset-server` and `asset-source` roots are now browser-safe and absorb `./backend`, `./kinds`, `./core` and `./indexeddb`; Node-only code moves to `./node`.
-  Every published package declares `exports` instead of `main`/`types`, and the packages with no import-time side effects declare `"sideEffects": false`.
+- [#789](https://github.com/JollyPixel/editor/pull/789) [`b520e7e`](https://github.com/JollyPixel/editor/commit/b520e7e37c000763a492f68635af528ca461a285) Thanks [@fraxken](https://github.com/fraxken)! - Package subpaths follow one naming scheme (`/node`, `/client`, `/browser`), and every package declares `exports`; for example, import `event-store/node` instead of `event-store/sqlite`. Package roots are browser-safe.
 
 ### Patch Changes
 
@@ -60,14 +50,11 @@
 
 ### Minor Changes
 
-- [#727](https://github.com/JollyPixel/editor/pull/727) [`3f115d7`](https://github.com/JollyPixel/editor/commit/3f115d726114f00b281f74d42182fd37b3502d44) Thanks [@fraxken](https://github.com/fraxken)! - `AssetKindHandler` replaces `match` + `contentTypes` with required `extensions` (extension to content type, multi-dot allowed); `match` now only narrows the claim.
-  `textureAssetHandler`/`binaryAssetHandler` are renamed `textureAssetKind`/`binaryAssetKind`, and `resolveContentType` picks the longest matching extension.
+- [#727](https://github.com/JollyPixel/editor/pull/727) [`3f115d7`](https://github.com/JollyPixel/editor/commit/3f115d726114f00b281f74d42182fd37b3502d44) Thanks [@fraxken](https://github.com/fraxken)! - Asset kinds declare `extensions` instead of `match` + `contentTypes`; `textureAssetHandler` and `binaryAssetHandler` become `textureAssetKind` and `binaryAssetKind`.
 
 - [#744](https://github.com/JollyPixel/editor/pull/744) [`711429b`](https://github.com/JollyPixel/editor/commit/711429bbf691c24a26f2b53d843e0eb63a098e41) Thanks [@fraxken](https://github.com/fraxken)! - Add `IndexedDbAssetSource`, a browser-persisted `AssetSource`, under the new `@jolly-pixel/asset-source/indexeddb` entry.
 
-- [#743](https://github.com/JollyPixel/editor/pull/743) [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242) Thanks [@fraxken](https://github.com/fraxken)! - The asset back-end can run inside a browser page: `LoopbackTransport` and `ClientOptions.socket` connect a `Client` to an in-process `Server`.
-  New Node-free entries `@jolly-pixel/asset-source/core` and `@jolly-pixel/asset-server/backend`.
-  Content hashes use WebCrypto: `writeData()` is async and `AssetWriter` applies writes one at a time, in call order.
+- [#743](https://github.com/JollyPixel/editor/pull/743) [`6321913`](https://github.com/JollyPixel/editor/commit/632191387a3708bbefaebfc8f59bf0c105c4f242) Thanks [@fraxken](https://github.com/fraxken)! - The asset backend can run inside a browser page through `LoopbackTransport`. Content hashing uses WebCrypto, so `writeData()` is async.
 
 ### Patch Changes
 
@@ -85,9 +72,7 @@
 
 ### Minor Changes
 
-- [#690](https://github.com/JollyPixel/editor/pull/690) [`619e2a7`](https://github.com/JollyPixel/editor/commit/619e2a7c5599efb41e77d039c8a112ef02eabcc2) Thanks [@fraxken](https://github.com/fraxken)! - Move `createAssetStaticHandler` and the content-type helpers to `@jolly-pixel/asset-source`.
-  The handler drops its `kinds` option; pass `registry.contentTypes()` as `contentTypes` instead.
-  `contentTypesFromKinds`, `DEFAULT_ASSET_PREFIX` and `AssetStaticPluginOptions` are removed (use `AssetKindRegistry.contentTypes()`, `ASSET_URL_PREFIX` and `AssetStaticHandlerOptions`).
+- [#690](https://github.com/JollyPixel/editor/pull/690) [`619e2a7`](https://github.com/JollyPixel/editor/commit/619e2a7c5599efb41e77d039c8a112ef02eabcc2) Thanks [@fraxken](https://github.com/fraxken)! - Move `createAssetStaticHandler` and the content-type helpers to `@jolly-pixel/asset-source`; pass `registry.contentTypes()` as `contentTypes` instead of `kinds`.
 
 ### Patch Changes
 

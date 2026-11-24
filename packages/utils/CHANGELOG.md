@@ -7,11 +7,9 @@
 - [#1208](https://github.com/JollyPixel/editor/pull/1208) [`f5350de`](https://github.com/JollyPixel/editor/commit/f5350de576d82af8592928a4456f43702befff26) Thanks [@fraxken](https://github.com/fraxken)! - Asset-server exports `TEXTURE_EXTENSIONS`, the extension to MIME type table of the built-in texture kind.
   Utils adds `fileExtension(path)`, the lowercased extension of the last path segment.
 
-- [#1235](https://github.com/JollyPixel/editor/pull/1235) [`a2e6a27`](https://github.com/JollyPixel/editor/commit/a2e6a27dc11dedbd444ea7698158f320f1cb4402) Thanks [@fraxken](https://github.com/fraxken)! - Add `DialogRequest`, `jolly-rail-group`, `jolly-message`, `jolly-fields`, `createExamplePane()` and ten shared built-in icons; floating rails now size their tool buttons, and built-ins no longer replace a glyph registered first.
-  Add `pickFiles()` to `@jolly-pixel/utils/dom`.
+- [#1235](https://github.com/JollyPixel/editor/pull/1235) [`a2e6a27`](https://github.com/JollyPixel/editor/commit/a2e6a27dc11dedbd444ea7698158f320f1cb4402) Thanks [@fraxken](https://github.com/fraxken)! - Add `DialogRequest`, `jolly-rail-group`, `jolly-message`, `jolly-fields`, `createExamplePane()` and ten built-in icons. Add `pickFiles()` to `@jolly-pixel/utils/dom`.
 
-- [#1234](https://github.com/JollyPixel/editor/pull/1234) [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850) Thanks [@fraxken](https://github.com/fraxken)! - Add `DistributiveOmit`, `DeepReadonly`, `Simplify`, `parseJsonObject`, `wrap`, `roundTo`, `delay`, `yieldToEventLoop`, `withTimeout`, `InFlight` and `sha256Hex` to `@jolly-pixel/utils`.
-  The other packages drop their local copies of these helpers and import them from utils.
+- [#1234](https://github.com/JollyPixel/editor/pull/1234) [`90c9692`](https://github.com/JollyPixel/editor/commit/90c9692fc0508e2b784c097ed119090bfe07e850) Thanks [@fraxken](https://github.com/fraxken)! - Move shared helpers such as `delay`, `withTimeout`, `DeepReadonly` and `sha256Hex` into `@jolly-pixel/utils`.
 
 ### Patch Changes
 
