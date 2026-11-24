@@ -27,6 +27,7 @@ export * from "../catalog/tags/TagName.ts";
 export * from "../catalog/tags/errors/InvalidTagNameError.ts";
 export {
   ASSET_ROOM_MAX_PARTS_PER_MESSAGE,
+  ASSET_ROOM_MAX_SUBSCRIBED_PARTS,
   ASSET_ROOM_PARTS,
   ASSET_ROOM_SUBSCRIBE_PARTS,
   ASSET_ROOM_UNSUBSCRIBE_PARTS,
@@ -34,6 +35,9 @@ export {
   type AssetPartsRequest,
   type AssetRoomPartsMessage
 } from "../live/room/messages.ts";
+export {
+  ASSET_PART_ID_MAX_LENGTH
+} from "../model/events/AssetPartId.ts";
 export * from "./resolveBinarySnapshot.ts";
 export * from "./errors/ContentUnavailableError.ts";
 export {

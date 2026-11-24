@@ -120,11 +120,22 @@ describe("readAssetArchive", () => {
     );
   });
 
-  test("rejects an asset listed twice and a root outside the archive", () => {
+  test("rejects an asset or a part listed twice and a root outside the archive", () => {
     assert.strictEqual(
       rejection(zipArchive(
         { version: 1, assets: [entry, entry] },
         { "a.link": linkContent() }
+      )),
+      "duplicate"
+    );
+    assert.strictEqual(
+      rejection(zipArchive(
+        { version: 1, assets: [{ ...entry, parts: ["p", "p"] }] },
+        {
+          "a.link": linkContent(),
+          "a.link.parts/p.bin": bytes("1"),
+          "a.link.parts/p.dat": bytes("2")
+        }
       )),
       "duplicate"
     );

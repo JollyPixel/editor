@@ -5,6 +5,9 @@ import {
 } from "@jolly-pixel/network";
 import * as z from "zod/mini";
 
+// Import Internal Dependencies
+import { ASSET_PART_ID_PATTERN } from "./AssetPartId.ts";
+
 export const assetInlineContentSchema = z.object({
   type: z.literal("inline"),
   data: bytesSchema
@@ -26,7 +29,9 @@ export const assetReferenceSchema = z.object({
   kind: z.string()
 });
 
-export const ASSET_PART_ID_PATTERN = /^(?!__proto__$)[A-Za-z0-9_-]+$/;
+export const assetPartIdSchema = z.string().check(
+  z.regex(ASSET_PART_ID_PATTERN)
+);
 
 export const assetPartSchema = z.union([
   z.strictObject({
@@ -48,7 +53,7 @@ export const assetWriteDataSchema = z.object({
   size: z.number(),
   content: assetContentSchema,
   parts: z.optional(z.record(
-    z.string().check(z.regex(ASSET_PART_ID_PATTERN)),
+    assetPartIdSchema,
     assetPartSchema
   )),
   dependencies: z.optional(z.array(assetReferenceSchema)),

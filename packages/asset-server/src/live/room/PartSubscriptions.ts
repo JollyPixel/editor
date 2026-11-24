@@ -8,10 +8,13 @@ import type {
   AssetLiveParts
 } from "../../model/kinds/AssetLiveProtocol.ts";
 import {
+  ASSET_ROOM_MAX_SUBSCRIBED_PARTS,
   ASSET_ROOM_PARTS,
+  ASSET_ROOM_REJECTED,
   ASSET_ROOM_SUBSCRIBE_PARTS,
   type AssetPartsRequest,
-  type AssetRoomPartsMessage
+  type AssetRoomPartsMessage,
+  type AssetRoomRejectedMessage
 } from "./messages.ts";
 
 export type Send = network.ClientHandle["send"];
@@ -85,7 +88,19 @@ export class PartSubscriptions<
       return;
     }
 
-    for (const partId of request.parts) {
+    const added = new Set(
+      request.parts.filter((partId) => !subscribed.has(partId))
+    );
+    if (subscribed.size + added.size > ASSET_ROOM_MAX_SUBSCRIBED_PARTS) {
+      send({
+        type: ASSET_ROOM_REJECTED,
+        reason: `a member subscribes to at most ${ASSET_ROOM_MAX_SUBSCRIBED_PARTS} parts`
+      } satisfies AssetRoomRejectedMessage);
+
+      return;
+    }
+
+    for (const partId of added) {
       subscribed.add(partId);
     }
     this.#subscribed.set(clientId, subscribed);

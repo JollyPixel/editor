@@ -74,10 +74,9 @@ describe("OfflineServer", () => {
     const catalog = new CatalogClient(client.room(CATALOG_ROOM));
     try {
       await catalog.ready;
-      const archive = await catalog.exportArchive(kAssetId);
 
       await assert.rejects(
-        catalog.planImport(archive),
+        catalog.exportArchive(kAssetId),
         /exceeds 4 bytes/
       );
     }

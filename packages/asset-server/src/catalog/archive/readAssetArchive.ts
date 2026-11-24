@@ -11,11 +11,11 @@ import {
   type AssetArchive,
   type AssetArchiveAsset
 } from "./AssetArchive.ts";
+import type { ArchiveLimits } from "./ArchiveLimits.ts";
 import {
-  DEFAULT_ARCHIVE_MAX_BYTES,
-  DEFAULT_ARCHIVE_MAX_ENTRY_BYTES,
-  type ArchiveLimits
-} from "./ArchiveLimits.ts";
+  ArchiveBudget,
+  resolveArchiveLimits
+} from "./format/ArchiveBudget.ts";
 import { ArchiveFiles } from "./format/ArchiveFiles.ts";
 import { parseArchiveManifest } from "./format/ArchiveManifest.ts";
 import { AssetArchiveError } from "./errors/AssetArchiveError.ts";
@@ -24,10 +24,10 @@ export function readAssetArchive(
   bytes: Uint8Array,
   limits: ArchiveLimits = {}
 ): Result<AssetArchive, AssetArchiveError> {
-  const unzipped = ArchiveFiles.unzip(bytes, {
-    maxEntryBytes: limits.maxEntryBytes ?? DEFAULT_ARCHIVE_MAX_ENTRY_BYTES,
-    maxBytes: limits.maxBytes ?? DEFAULT_ARCHIVE_MAX_BYTES
-  });
+  const unzipped = ArchiveFiles.unzip(
+    bytes,
+    new ArchiveBudget(resolveArchiveLimits(limits))
+  );
   if (!unzipped.ok) {
     return unzipped;
   }

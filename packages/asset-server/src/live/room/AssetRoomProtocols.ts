@@ -16,7 +16,7 @@ import type {
   AssetCommandHeader,
   AssetRelaySchemas
 } from "../../model/kinds/AssetLiveProtocol.ts";
-import { ASSET_PART_ID_PATTERN } from "../../model/events/AssetEvents.schema.ts";
+import { assetPartIdSchema } from "../../model/events/AssetEvents.schema.ts";
 import {
   ASSET_ROOM_DELETED,
   ASSET_ROOM_INLINE_SNAPSHOT,
@@ -72,9 +72,8 @@ const kAssetRoomRejectedSchema = z.object({
   reason: z.string()
 });
 
-const kPartIdsSchema = z.array(
-  z.string().check(z.regex(ASSET_PART_ID_PATTERN))
-).check(z.maxLength(ASSET_ROOM_MAX_PARTS_PER_MESSAGE));
+const kPartIdsSchema = z.array(assetPartIdSchema)
+  .check(z.maxLength(ASSET_ROOM_MAX_PARTS_PER_MESSAGE));
 
 const kSyncOptionalProperties: Record<
   SyncMessageType,

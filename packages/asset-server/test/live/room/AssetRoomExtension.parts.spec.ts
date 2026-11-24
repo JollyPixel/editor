@@ -7,6 +7,11 @@ import type * as EventStore from "@jolly-pixel/event-store";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
+import {
+  ASSET_PART_ID_MAX_LENGTH,
+  ASSET_ROOM_MAX_SUBSCRIBED_PARTS,
+  partRequests
+} from "#src/index.ts";
 import { liveTileHandler } from "../../helpers/kinds.ts";
 import { bytes } from "../../helpers/bytes.ts";
 import {
@@ -116,17 +121,45 @@ describe("AssetRoomExtension — parts", () => {
     });
   });
 
-  test("a subscription naming __proto__ is refused", async() => {
+  test("a subscription naming __proto__ or an overlong part ID is refused", async() => {
     await using harness = await tilesRoom();
     await joined(harness, "A");
     const count = payloads(harness, "A").length;
 
-    await harness.send("A", {
-      action: "subscribe-parts",
-      parts: ["a", "__proto__"]
-    });
+    for (const refused of ["__proto__", "a".repeat(ASSET_PART_ID_MAX_LENGTH + 1)]) {
+      await harness.send("A", {
+        action: "subscribe-parts",
+        parts: ["a", refused]
+      });
+    }
 
     assert.deepEqual(since(harness, "A", count), []);
+  });
+
+  test("a subscription past the member's part cap is rejected and keeps the earlier ones", async() => {
+    await using harness = await tilesRoom();
+    await joined(harness, "A", "B");
+    const partIds = Array.from(
+      { length: ASSET_ROOM_MAX_SUBSCRIBED_PARTS + 1 },
+      (_, index) => `p${index}`
+    );
+
+    for (const request of partRequests("subscribe-parts", partIds)) {
+      await harness.send("A", request);
+    }
+    const rejected = payloads(harness, "A").at(-1) as { type: string; };
+    const seen = payloads(harness, "A").length;
+    await harness.send("A", { action: "subscribe-parts", parts: ["p0"] });
+    await harness.send("B", { action: "paint", tile: "p0", value: "sand" });
+
+    const [resent, painted] = since(harness, "A", seen);
+    assert.strictEqual(rejected.type, "rejected");
+    assert.deepEqual(resent, {
+      type: "parts",
+      version: 1,
+      parts: { p0: null }
+    });
+    assert.deepEqual(actions([painted]), ["paint"]);
   });
 
   test("a command reaches its author and its subscribers, others get its outside form", async() => {

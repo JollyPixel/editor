@@ -20,19 +20,39 @@ import {
   type AssetArchiveEntry
 } from "./AssetArchive.ts";
 import type { ArchiveBackend } from "./ArchiveBackend.ts";
+import type { ArchiveLimits } from "./ArchiveLimits.ts";
 import type { AssetImportError } from "./import/AssetImport.ts";
+import { ArchiveBudget } from "./format/ArchiveBudget.ts";
 import {
   toArchiveEntry,
   encodeArchiveManifest
 } from "./format/ArchiveManifest.ts";
+import type { AssetArchiveError } from "./errors/AssetArchiveError.ts";
 import { readableAsset } from "./readableAsset.ts";
 import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError.ts";
 import { AssetPartFiles } from "../../storage/AssetPartFiles.ts";
+
+// CONSTANTS
+const kUnlimited: Required<ArchiveLimits> = {
+  maxEntryBytes: Infinity,
+  maxBytes: Infinity
+};
 
 export type AssetExportError = AssetImportError | UnknownAssetError;
 
 export interface ExportAssetArchiveOptions {
   root?: string;
+  /**
+   * Decoded size caps. Export stops with a `too-large` error as soon as the
+   * files read so far pass a cap, before the archive is compressed.
+   * @default no cap
+   */
+  limits?: Required<ArchiveLimits>;
+}
+
+interface PartFile {
+  readonly path: string;
+  readonly data: Uint8Array;
 }
 
 export async function exportAssetArchive(
@@ -49,10 +69,23 @@ export async function exportAssetArchive(
     Array.from(catalog.catalog, toReference) :
     [root.val];
 
+  const budget = new ArchiveBudget(options.limits ?? kUnlimited);
+  const files: Zippable = {};
+  function add(
+    path: string,
+    data: Uint8Array
+  ): Result<void, AssetArchiveError> {
+    const admitted = budget.admit(path, data.byteLength);
+    if (admitted.ok) {
+      files[path] = data;
+    }
+
+    return admitted;
+  }
+
   const partFiles = new AssetPartFiles(backend.kinds);
   const assets: AssetArchiveEntry[] = [];
   const missing: AssetReferenceData[] = [];
-  const files: Zippable = {};
   for (const reference of catalog.dependencies.dependenciesFirst(starts)) {
     const record = catalog.record(reference.id);
     if (record === undefined) {
@@ -79,20 +112,27 @@ export async function exportAssetArchive(
     }
 
     assets.push(entry);
-    files[entry.path] = data;
-    for (const part of parts?.values() ?? []) {
-      files[part.path] = part.data;
+    const added = [
+      { path: entry.path, data },
+      ...parts?.values() ?? []
+    ];
+    for (const file of added) {
+      const admitted = add(file.path, file.data);
+      if (!admitted.ok) {
+        return admitted;
+      }
     }
   }
 
-  files[ASSET_ARCHIVE_MANIFEST_PATH] = encodeArchiveManifest({
+  const manifest = encodeArchiveManifest({
     version: ASSET_ARCHIVE_VERSION,
     root: root.val,
     assets,
     missing
   });
 
-  return Ok(zipSync(files));
+  return add(ASSET_ARCHIVE_MANIFEST_PATH, manifest)
+    .map(() => zipSync(files));
 }
 
 async function readPartFiles(
@@ -100,7 +140,7 @@ async function readPartFiles(
   partFiles: AssetPartFiles,
   entry: AssetArchiveEntry,
   data: Uint8Array
-): Promise<Map<string, { path: string; data: Uint8Array; }> | undefined> {
+): Promise<Map<string, PartFile> | undefined> {
   const extension = partFiles.extension(entry.kind);
   const kindParts = backend.kinds.has(entry.kind) ?
     backend.kinds.get(entry.kind).parts :
@@ -117,7 +157,7 @@ async function readPartFiles(
     return undefined;
   }
 
-  const parts = new Map<string, { path: string; data: Uint8Array; }>();
+  const parts = new Map<string, PartFile>();
   for (const partId of listed) {
     const path = partFiles.path(entry.path, extension, partId);
     parts.set(partId, {

@@ -5,6 +5,7 @@ export const ASSET_ROOM_PARTS = "parts";
 export const ASSET_ROOM_SUBSCRIBE_PARTS = "subscribe-parts";
 export const ASSET_ROOM_UNSUBSCRIBE_PARTS = "unsubscribe-parts";
 export const ASSET_ROOM_MAX_PARTS_PER_MESSAGE = 1_024;
+export const ASSET_ROOM_MAX_SUBSCRIBED_PARTS = 65_536;
 export const ASSET_ROOM_INLINE_SNAPSHOT = "inline-snapshot";
 
 export interface AssetRoomDeletedMessage {
