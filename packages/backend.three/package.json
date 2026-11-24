@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/backend.three",
   "description": "three.js backend for the JollyPixel ECS: rendering, audio, assets, UI and the browser Runtime.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "sideEffects": false,
   "exports": {

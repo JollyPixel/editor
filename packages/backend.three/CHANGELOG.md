@@ -1,5 +1,14 @@
 # @jolly-pixel/backend.three
 
+## 1.0.2
+
+### Patch Changes
+
+- Updated dependencies []:
+  - @jolly-pixel/runtime@7.0.1
+  - @jolly-pixel/ui@5.0.1
+  - @jolly-pixel/loop@2.0.0
+
 ## 1.0.1
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @jolly-pixel/network
 
+## 7.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`f711a5f`](https://github.com/JollyPixel/editor/commit/f711a5ff57a7d3513f7d2edb9a469b1f08884b25)]:
+  - @jolly-pixel/utils@1.1.1
+
 ## 7.0.0
 
 ### Major Changes
