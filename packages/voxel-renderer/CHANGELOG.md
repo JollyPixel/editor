@@ -1,5 +1,55 @@
 # @jolly-pixel/voxel.renderer
 
+## 9.0.0
+
+### Major Changes
+
+- [#1278](https://github.com/JollyPixel/editor/pull/1278) [`1741696`](https://github.com/JollyPixel/editor/commit/1741696a2c80e5330d54140e9b4a5c34f5e490c8) Thanks [@fraxken](https://github.com/fraxken)! - Replace `@jolly-pixel/engine` with `@jolly-pixel/ecs`, a renderer-agnostic actor and scene core, and `@jolly-pixel/backend.three`, which holds every three.js piece and the browser `Runtime`.
+  Breaking: `@jolly-pixel/runtime` now only exports `RuntimeCore`, its backend contract, the overlay and the metrics, from its root entry. `voxel.renderer/engine` takes `@jolly-pixel/ecs` and `@jolly-pixel/backend.three` as optional peers.
+
+- [#1175](https://github.com/JollyPixel/editor/pull/1175) [`174d961`](https://github.com/JollyPixel/editor/commit/174d9612d9543c5c966a9e4e22783094f017bb83) Thanks [@fraxken](https://github.com/fraxken)! - Move `BakedRoomEnvironment` from `three` to the engine as `Systems.BakedRoomEnvironment`; the engine drops `picomatch`, `reflect-metadata` and `@jolly-pixel/three`, and a decorated `Behavior` subclass no longer adds its properties to its parent class.
+  Breaking: `getActors` and `Logger` patterns only support `*`, `?` and `**` (no braces, classes or extglobs, and `*` matches a leading dot).
+  Breaking: `three` no longer exports `BakedRoomEnvironment`, and `three` and `voxel.renderer` take `three` as a `^0.186.0` peer dependency.
+
+- [#1207](https://github.com/JollyPixel/editor/pull/1207) [`c9f075a`](https://github.com/JollyPixel/editor/commit/c9f075a25e55927134b0b2f649a3c1178f06d61b) Thanks [@fraxken](https://github.com/fraxken)! - Drop `get`/`set` method prefixes. `Transform` exposes read-only `local` and `global` spaces that own `move`, `rotate` and `place` (`transform.global.position = v`); actors use `findComponent`, `findActor` and `reparent`; renderers expose `source` and `lockAspectRatio`; sprite, model animation and logger setters become properties.
+  `VoxelWorld`, `VoxelLayer` and `VoxelChunk` read with `voxelAt`, `packedAt`, `partnerAt`, `findLayer`, `chunkAt`, `chunks()` and write with `placeVoxel`, `writeVoxelAt` and `writePackedAt`; block registries drop `values()` for iteration.
+
+- [#1181](https://github.com/JollyPixel/editor/pull/1181) [`fb5cc80`](https://github.com/JollyPixel/editor/commit/fb5cc80858789b6c6e9d4fb345bc8266e6f77dc2) Thanks [@fraxken](https://github.com/fraxken)! - Add `@jolly-pixel/physics`, an engine-neutral physics contract with `PhysicsSystem` and `RigidBody` components (`./ecs`, with `scaleCollider`) and backend contract cases, and `@jolly-pixel/physics.rapier`, its Rapier backend.
+  `RapierVoxelCollider` is replaced by `PhysicsVoxelCollider`, which takes any `@jolly-pixel/physics` world (now an optional peer dependency).
+  `ComponentDefinition.apply` may return `false` to ask for a rebuild; `RigidBodyDefinition` builds the edit view it is given, such as `ColliderOutline` from `@jolly-pixel/backend.three/physics`, in edit mode.
+
+### Minor Changes
+
+- [#1132](https://github.com/JollyPixel/editor/pull/1132) [`5237776`](https://github.com/JollyPixel/editor/commit/52377760dd35b9d5cf280119a7a2ea9f26852ab5) Thanks [@fraxken](https://github.com/fraxken)! - `jolly-tree` gains `reveal(id)`, which scrolls a row into view and flashes it without moving focus.
+  Add `VoxelMapAnchorKey` to `@jolly-pixel/voxel.renderer/engine`, which builds and parses the `layer:<id>` and `object:<id>` keys `VoxelMapAnchors` lists.
+
+- [#1248](https://github.com/JollyPixel/editor/pull/1248) [`5b28d8b`](https://github.com/JollyPixel/editor/commit/5b28d8b4a0a06c1566afa19432017612a4fa7c76) Thanks [@fraxken](https://github.com/fraxken)! - Add shared environments: `EnvironmentFile` (sky, sun, ambient, reflections, fog, tone mapping, glow, voxel shading), `ENVIRONMENT_PRESETS` and the `environment` asset type, applied by `ThreeSceneEnvironment` (with a `fallbackSky` for files without a sky). `SceneFile.environment` is now an environment reference or `null`.
+  `DaySky` and `NightSky` move from `@jolly-pixel/three` to the engine. `VoxelRenderer` follows the environment's voxel shading, and `VoxelMapSettings` gains `ambientOcclusion`.
+
+- [#1125](https://github.com/JollyPixel/editor/pull/1125) [`a61b2a3`](https://github.com/JollyPixel/editor/commit/a61b2a318638f4f644b0ad2870f2c69071e50bfc) Thanks [@fraxken](https://github.com/fraxken)! - Add an `anchor` flag to layers and voxel objects, saved with the world. `VoxelMapDefinition.anchors()` publishes the flagged ones as scene anchors through `VoxelMapAnchors`.
+
+- [#1096](https://github.com/JollyPixel/editor/pull/1096) [`0ac751d`](https://github.com/JollyPixel/editor/commit/0ac751d6b077948c497ba62b9851eb222a516b7e) Thanks [@fraxken](https://github.com/fraxken)! - Add `VoxelMapDefinition`, the `VoxelMap` scene-file component type, with its `VOXEL_MAP_ASSET` slot type and `VoxelMapSource` interface.
+  A map with `collision` on gets the colliders of the definition's `collider` option in play mode.
+
+### Patch Changes
+
+- [#1125](https://github.com/JollyPixel/editor/pull/1125) [`8e19cb6`](https://github.com/JollyPixel/editor/commit/8e19cb64ff52d4fc1ea5ef969bb65ef74b918e06) Thanks [@fraxken](https://github.com/fraxken)! - `PulledChunkGeometry.computeBoundingBox()` and `computeBoundingSphere()` keep the chunk's cell bounds instead of measuring the template quad, so bounding-box highlights and raycasts stay correct after a recompute.
+
+- [#1232](https://github.com/JollyPixel/editor/pull/1232) [`70b0e15`](https://github.com/JollyPixel/editor/commit/70b0e15d612fa6f9720d81af22e743f51eeebff2) Thanks [@fraxken](https://github.com/fraxken)! - Update three.js to 0.187.0.
+  `BakedRoomEnvironment` now bakes a 64 pixel PMREM cube with 4 mip levels, and `createRenderTarget` returns a `CubeRenderTarget` (generated on the WebGL 2 fallback).
+
+- [#1239](https://github.com/JollyPixel/editor/pull/1239) [`9e5a641`](https://github.com/JollyPixel/editor/commit/9e5a641a1b55e6248cb0ed5c39eab2b188a48bd2) Thanks [@fraxken](https://github.com/fraxken)! - `PhysicsVoxelCollider` takes a `placement` matrix so chunk bodies follow a moved, rotated or scaled map actor.
+  `blocksFromTileGrid` now generates collidable blocks by default.
+
+- [#1280](https://github.com/JollyPixel/editor/pull/1280) [`e88d8ce`](https://github.com/JollyPixel/editor/commit/e88d8ce39fac486a6b6441d508c1736684430223) Thanks [@fraxken](https://github.com/fraxken)! - `VoxelDocument` and `VoxelView` log under the `voxel.document` and `voxel.view` namespaces.
+
+- [#1252](https://github.com/JollyPixel/editor/pull/1252) [`0e36645`](https://github.com/JollyPixel/editor/commit/0e3664584b60d712bed3e7bdf0cf4ad5df746732) Thanks [@fraxken](https://github.com/fraxken)! - Vertex-pulled faces sample their AO, light and blend inputs at the centroid and clamp them, so faces seen edge-on no longer draw a bright 1px line under MSAA. Chunk texture nodes stop logging "Abstract function." every frame.
+- Updated dependencies [[`ec79d3f`](https://github.com/JollyPixel/editor/commit/ec79d3f32c41f9c43ea81271e805fe48416e1d6a), [`5b2019f`](https://github.com/JollyPixel/editor/commit/5b2019f7ae2624255c6c2ac3ea510fe817005ac0), [`b7d2f82`](https://github.com/JollyPixel/editor/commit/b7d2f8249cb29ac71e78cb7e92730a2d818d567f), [`5494a67`](https://github.com/JollyPixel/editor/commit/5494a67d7495071378b5eae430d51ef034cb5c35), [`dc99a29`](https://github.com/JollyPixel/editor/commit/dc99a2924185d97da740f597eb3b79de323a566b), [`f7572a4`](https://github.com/JollyPixel/editor/commit/f7572a4db2e9219c4fda9dc67277c16162e68b52), [`c9f075a`](https://github.com/JollyPixel/editor/commit/c9f075a25e55927134b0b2f649a3c1178f06d61b), [`cd88847`](https://github.com/JollyPixel/editor/commit/cd88847e7a7c8005a36c785768eeae6132e46e60), [`b8d702d`](https://github.com/JollyPixel/editor/commit/b8d702d7da9e919b194ad25bdbca76aa86c95311), [`7d7aa9c`](https://github.com/JollyPixel/editor/commit/7d7aa9cedaf294a4fddfc03b166e575e8f3c9140), [`70b0e15`](https://github.com/JollyPixel/editor/commit/70b0e15d612fa6f9720d81af22e743f51eeebff2)]:
+  - @jolly-pixel/asset@5.0.0
+  - @jolly-pixel/physics@2.0.0
+  - @jolly-pixel/backend.three@1.0.1
+  - @jolly-pixel/ecs@1.0.1
+
 ## 8.0.0
 
 ### Major Changes
