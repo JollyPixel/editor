@@ -37,3 +37,40 @@ registerIcon("model-animate", svg`
     stroke-linejoin="round"
   />
 `, { tone: "lime" });
+
+registerIcon("model-drive", svg`
+  <path
+    class="tone-fill"
+    d="M4 17 3 7l5 4 4-6 4 6 5-4-1 10z"
+  />
+  <path
+    d="M4 17 3 7l5 4 4-6 4 6 5-4-1 10zM5 20.5h14"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+`, { tone: "amber" });
+
+registerIcon("model-watch", svg`
+  <path
+    class="tone-fill"
+    d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+  />
+  <path
+    d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linejoin="round"
+  />
+  <circle
+    cx="12"
+    cy="12"
+    r="3"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  />
+`, { tone: "violet" });

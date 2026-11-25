@@ -26,7 +26,7 @@
     "build": "vite build",
     "build:watch": "vite build --watch",
     "preview": "vite preview",
-    "test-only": "node --test --test-isolation=none \"test/**/*.spec.ts\"",
+    "test-only": "node --import ./test/setup.ts --test --test-isolation=none \"test/**/*.spec.ts\"",
     "test": "pnpm run typecheck && c8 -r html pnpm run test-only",
     "typecheck": "tsc --noEmit -p test/tsconfig.json",
     "lint": "oxlint src test vite.config.ts && pnpm run lint:css",
@@ -56,12 +56,14 @@
     "@jolly-pixel/backend.three": "workspace:*",
     "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/three": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0",
     "lit": "3.3.3",
-    "three": "0.187.0"
+    "three": "0.187.0",
+    "zod": "4.6.7"
   }
 }

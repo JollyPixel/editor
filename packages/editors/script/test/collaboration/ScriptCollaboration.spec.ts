@@ -7,11 +7,11 @@ import {
   ScriptDocument,
   TextEdit
 } from "@jolly-pixel/asset.script/client";
+import { FakeNetwork } from "@jolly-pixel/network/testing";
 
 // Import Internal Dependencies
 import { ScriptCaret } from "#src/text/ScriptCaret.ts";
 import { ScriptCollaboration } from "#src/collaboration/ScriptCollaboration.ts";
-import { FakeNetwork } from "../helpers/FakeNetwork.ts";
 
 function setup() {
   const network = new FakeNetwork();

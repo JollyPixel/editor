@@ -60,6 +60,16 @@ export class PeerFrustums extends ActorComponent {
     });
   }
 
+  get worldScale(): number {
+    return this.#sync.worldScale;
+  }
+
+  set worldScale(
+    value: number
+  ) {
+    this.#sync.worldScale = value;
+  }
+
   peerPose(
     clientId: string
   ): PeerFrustumPose | undefined {

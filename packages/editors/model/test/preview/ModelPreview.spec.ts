@@ -11,7 +11,6 @@ import { ModelFile } from "#src/file/ModelFile.ts";
 import { ModelPreview } from "#src/preview/ModelPreview.ts";
 import { cubeModelGlb } from "#src/seed/cubeModel.ts";
 import { FakeModelCatalog } from "../helpers/file/FakeModelCatalog.ts";
-import { stubDocument } from "../helpers/document.ts";
 import { stubProgressEvents } from "../helpers/progressEvents.ts";
 
 // CONSTANTS
@@ -129,7 +128,6 @@ function settled(
 
 describe("ModelPreview", () => {
   stubProgressEvents();
-  stubDocument();
 
   test("reads the seeded cube with its two clips", async() => {
     const { preview } = modelPreview("models/cube.glb", cubeModelGlb());

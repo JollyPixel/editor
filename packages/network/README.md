@@ -63,7 +63,7 @@ room.send({ hello: "world" });
 
 Import from `@jolly-pixel/network/client`.
 
-- [Client](./docs/client/Client.md): `Client`, `Room`, `PresenceChannel`, `RoomGrants`
+- [Client](./docs/client/Client.md): `Client`, `Room`, `PresenceChannel`, `RoomClaim`, `RoomGrants`
 - [CommandSync](./docs/client/CommandSync.md): document synchronization and adapters
 - [connectWebSocket](./docs/client/connectWebSocket.md): browser socket factory
 
@@ -89,6 +89,11 @@ Shared by both sides.
 
 - [LoopbackTransport and channels](./docs/transport/InProcess.md): tests,
   workers, and WebRTC data channels
+
+### Testing
+
+- [FakeNetwork](./docs/testing/FakeNetwork.md): in-memory rooms for unit
+  tests, from `@jolly-pixel/network/testing`
 
 ## 📈 Benchmarks
 

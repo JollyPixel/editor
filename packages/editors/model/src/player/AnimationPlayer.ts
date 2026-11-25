@@ -4,19 +4,20 @@ import * as THREE from "three/webgpu";
 
 // CONSTANTS
 export const PLAYBACK_SPEEDS = [0.25, 0.5, 1, 2] as const;
+export const PLAYBACK_STATES = ["stopped", "playing", "paused"] as const;
 
 export type PlaybackSpeed = typeof PLAYBACK_SPEEDS[number];
+export type PlaybackState = typeof PLAYBACK_STATES[number];
 
 export interface AnimationClipEntry {
   readonly name: string;
   readonly duration: number;
 }
 
-type AnimationPlayerEvents = {
+export type AnimationPlayerEvents = {
   change: () => void;
+  loaded: () => void;
 };
-
-type PlaybackState = "stopped" | "playing" | "paused";
 
 interface LoadedClips {
   root: THREE.Object3D;
@@ -46,6 +47,10 @@ export class AnimationPlayer {
 
   get selected(): string | null {
     return this.#action?.getClip().name ?? null;
+  }
+
+  get state(): PlaybackState {
+    return this.#state;
   }
 
   get playing(): boolean {
@@ -133,6 +138,7 @@ export class AnimationPlayer {
       this.#aim(mixer, first);
     }
     this.#changed();
+    this.#events.emit("loaded");
   }
 
   unload(): void {

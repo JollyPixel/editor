@@ -6,9 +6,11 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { FakeNetwork } from "@jolly-pixel/network/testing";
+
 // Import Internal Dependencies
 import "#src/panes/spatial/SpatialPad.ts";
-import { FakeNetwork } from "../../helpers/FakeNetwork.ts";
 import { connect } from "../../helpers/listeners.ts";
 
 describe("SpatialPad", () => {

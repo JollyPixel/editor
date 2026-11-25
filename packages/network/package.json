@@ -25,6 +25,10 @@
     "./node": {
       "types": "./dist/node.d.ts",
       "default": "./dist/node.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/FakeNetwork.d.ts",
+      "default": "./dist/testing/FakeNetwork.js"
     }
   },
   "scripts": {

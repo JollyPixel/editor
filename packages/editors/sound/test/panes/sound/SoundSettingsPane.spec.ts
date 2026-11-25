@@ -12,12 +12,12 @@ import type { SoundDocument } from "@jolly-pixel/asset.sound/client";
 import { Systems } from "@jolly-pixel/ecs";
 import type { Button } from "@jolly-pixel/ui/elements/button";
 import type { NumberField } from "@jolly-pixel/ui/elements/number";
+import { FakeNetwork } from "@jolly-pixel/network/testing";
 
 // Import Internal Dependencies
 import "#src/panes/sound/SoundSettingsPane.ts";
 import type { SoundPlayer } from "#src/player/SoundPlayer.ts";
 import { Chime } from "#src/seed/Chime.ts";
-import { FakeNetwork } from "../../helpers/FakeNetwork.ts";
 import { connect } from "../../helpers/listeners.ts";
 
 async function mountPane(): Promise<{

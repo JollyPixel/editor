@@ -8,10 +8,10 @@ import {
   ScriptDocument,
   TextEdit
 } from "@jolly-pixel/asset.script/client";
+import { FakeNetwork } from "@jolly-pixel/network/testing";
 
 // Import Internal Dependencies
 import { CodeAssist } from "#src/language/CodeAssist.ts";
-import { FakeNetwork } from "../helpers/FakeNetwork.ts";
 
 function setup() {
   const document = new ScriptDocument();

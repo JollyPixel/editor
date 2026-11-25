@@ -11,9 +11,11 @@ import {
 } from "@jolly-pixel/editor.host";
 import "@jolly-pixel/editor.host/ui";
 import { type Runtime, BakedRoomEnvironment } from "@jolly-pixel/backend.three";
+import { bindPresenceStack } from "@jolly-pixel/ui";
 import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
+import { ModelCollaboration } from "./collaboration/ModelCollaboration.ts";
 import { ModelFile } from "./file/ModelFile.ts";
 import { AnimationPlayer } from "./player/AnimationPlayer.ts";
 import { ModelPreview } from "./preview/ModelPreview.ts";
@@ -92,21 +94,35 @@ export class ModelEditor {
 
       const { runtime } = editorRuntime;
       const player = new AnimationPlayer(() => runtime.world.invalidate());
+      const collaboration = new ModelCollaboration({
+        room: target.room,
+        player
+      });
+      teardown.defer(() => collaboration.dispose());
       const file = new ModelFile(session, target.document);
       const preview = new ModelPreview(file, session.catalog);
       fileFolder.attach(file, context.notifications);
-      animate.attach(player);
+      animate.attach(player, collaboration);
       details.attach(preview);
       status.attach(preview);
 
       const scene = new ModelViewerScene({
         preview,
         player,
-        preferences: context.preferences
+        preferences: context.preferences,
+        room: target.room
       });
       const { sceneManager } = runtime.world;
       teardown.defer(() => sceneManager.unloadScene(scene));
       await editorRuntime.load(scene);
+      const presenceStack = document.querySelector("jolly-presence-stack");
+      if (presenceStack !== null) {
+        teardown.defer(bindPresenceStack(
+          presenceStack,
+          collaboration,
+          (clientId) => scene.teleportToPeer(clientId)
+        ));
+      }
       teardown.defer(editorRuntime.mountPerformancePane({
         target: layout,
         storageKey: kPerformanceStorageKey,

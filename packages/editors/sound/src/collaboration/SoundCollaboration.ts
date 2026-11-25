@@ -5,13 +5,12 @@ import {
   type Room
 } from "@jolly-pixel/network/client";
 import type { PresencePeer } from "@jolly-pixel/ui";
-import { PeerRoster } from "@jolly-pixel/ui/network";
+import { DriveSession } from "@jolly-pixel/ui/network";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
 import type { PlaybackMode } from "../player/PlaybackMode.ts";
 import type { SoundPlayer } from "../player/SoundPlayer.ts";
-import { DriveClaim } from "./DriveClaim.ts";
 import { PlaybackBeacon } from "./PlaybackBeacon.ts";
 import { PlaybackMark } from "./PlaybackMark.ts";
 import {
@@ -22,23 +21,6 @@ import {
 
 // CONSTANTS
 const kPlaybackKey = "playback";
-const kDrivingBadge = "driving";
-
-export type SoundStance =
-  | {
-    readonly kind: "alone";
-  }
-  | {
-    readonly kind: "open";
-  }
-  | {
-    readonly kind: "driving";
-  }
-  | {
-    readonly kind: "following";
-    readonly driver: PresencePeer;
-    readonly listening: boolean;
-  };
 
 export type SoundCollaborationEvents = {
   change: () => void;
@@ -51,32 +33,18 @@ export interface SoundCollaborationOptions {
 }
 
 export class SoundCollaboration {
-  static #withDrivingBadge(
-    peer: PresencePeer
-  ): PresencePeer {
-    return {
-      ...peer,
-      badge: peer.badge === undefined ?
-        kDrivingBadge :
-        `${peer.badge}, ${kDrivingBadge}`
-    };
-  }
+  readonly session: DriveSession;
 
   #player: SoundPlayer;
   #events = new Emitter<SoundCollaborationEvents>();
-  #roster: PeerRoster;
   #playback: PresenceChannel<PlaybackMark | null>;
   #beacon: PlaybackBeacon;
-  #claim: DriveClaim;
-  #rosterPeers: readonly PresencePeer[] = [];
-  #peers: readonly PresencePeer[] = [];
-  #following: string | null = null;
   #unsubscribe: Array<() => void>;
 
   #onPlayback = (
     change: PresenceChange<PlaybackMark | null>
   ): void => {
-    if (change.clientId === this.#following && change.value !== undefined) {
+    if (change.clientId === this.session.joinedId && change.value !== undefined) {
       this.#mirror(change.value);
     }
     this.#events.emit("change");
@@ -91,29 +59,33 @@ export class SoundCollaboration {
       key: kPlaybackKey,
       decode: (value) => PlaybackMark.parse(value)
     });
+    this.session = new DriveSession({
+      room,
+      publish: (peers) => {
+        this.#events.emit("peersChange", peers);
+        this.#events.emit("change");
+      },
+      onJoinChange: (driverId) => {
+        if (driverId === null) {
+          this.#beacon.announce();
+        }
+        else {
+          this.#mirror(this.#sharedMark(driverId));
+        }
+        this.#events.emit("change");
+      }
+    });
     this.#beacon = new PlaybackBeacon({
       channel: this.#playback,
       player,
-      listening: () => this.#following !== null
-    });
-    this.#claim = new DriveClaim(room);
-    this.#roster = new PeerRoster({
-      room,
-      publish: (peers) => {
-        this.#rosterPeers = peers;
-        this.#refreshPeers();
-      }
+      listening: () => this.session.joinedId !== null
     });
 
     this.#playback.on("change", this.#onPlayback);
     this.#unsubscribe = [
-      this.#claim.subscribe(() => {
-        this.#stopFollowing();
-        this.#refreshPeers();
-      }),
       player.subscribe("sound", () => this.#rejoin()),
       player.subscribe("resumed", () => {
-        if (this.#following === null) {
+        if (this.session.joinedId === null) {
           this.#beacon.announce();
         }
         else {
@@ -124,34 +96,7 @@ export class SoundCollaboration {
   }
 
   get peers(): readonly PresencePeer[] {
-    return this.#peers;
-  }
-
-  get stance(): SoundStance {
-    if (this.#peers.every((peer) => peer.self === true)) {
-      return {
-        kind: "alone"
-      };
-    }
-    if (this.#claim.driving) {
-      return {
-        kind: "driving"
-      };
-    }
-
-    const driver = this.#peers.find(
-      (peer) => this.#claim.heldBy(peer.clientId)
-    );
-
-    return driver === undefined ?
-      {
-        kind: "open"
-      } :
-      {
-        kind: "following",
-        driver,
-        listening: this.#following !== null
-      };
+    return this.session.peers;
   }
 
   subscribe<TEvent extends keyof SoundCollaborationEvents>(
@@ -162,75 +107,49 @@ export class SoundCollaboration {
   }
 
   play(): void {
-    this.leave();
+    this.session.leave();
     this.#player.play();
   }
 
   seek(
     position: number
   ): void {
-    this.leave();
+    this.session.leave();
     this.#player.seek(position);
   }
 
   pause(): void {
-    this.leave();
+    this.session.leave();
     this.#player.pause();
   }
 
   retune(
     mode: PlaybackMode
   ): void {
-    this.leave();
+    this.session.leave();
     this.#player.retune(mode);
-  }
-
-  drive(): void {
-    this.#claim.claim();
-  }
-
-  release(): void {
-    this.#claim.release();
-  }
-
-  listen(): void {
-    const { stance } = this;
-    if (stance.kind !== "following") {
-      return;
-    }
-
-    this.#following = stance.driver.clientId;
-    this.#mirror(this.#sharedMark(this.#following));
-    this.#events.emit("change");
   }
 
   listenTo(
     clientId: string
   ): void {
-    if (this.#claim.heldBy(clientId)) {
-      this.listen();
+    if (this.session.driverId === clientId) {
+      this.session.join();
 
       return;
     }
 
     const mark = this.#sharedMark(clientId);
     if (mark !== null) {
-      this.leave();
+      this.session.leave();
       this.#mirror(mark);
     }
   }
 
-  leave(): void {
-    if (this.#following !== null) {
-      this.#stopFollowing();
-      this.#events.emit("change");
-    }
-  }
-
   playheads(): PeerPlayhead[] {
-    const playheads = new Playheads(this.#placed(), this.#claim.driverId);
+    const playheads = new Playheads(this.#placed(), this.session.driverId);
 
-    return this.stance.kind === "alone" ?
+    return this.session.stance.kind === "alone" ?
       playheads.anonymous() :
       playheads.named();
   }
@@ -242,19 +161,14 @@ export class SoundCollaboration {
     this.#beacon.dispose();
     this.#playback.off("change", this.#onPlayback);
     this.#playback.destroy();
-    this.#claim.dispose();
-    this.#roster.dispose();
+    this.session.dispose();
     this.#events.removeAllListeners();
   }
 
-  #stopFollowing(): void {
-    this.#following = null;
-    this.#beacon.announce();
-  }
-
   #rejoin(): void {
-    if (this.#following !== null) {
-      this.#mirror(this.#sharedMark(this.#following));
+    const { joinedId } = this.session;
+    if (joinedId !== null) {
+      this.#mirror(this.#sharedMark(joinedId));
     }
   }
 
@@ -275,7 +189,9 @@ export class SoundCollaboration {
       return [];
     }
 
-    return this.#peers.flatMap((peer) => this.#place(peer, duration) ?? []);
+    return this.session.peers.flatMap(
+      (peer) => this.#place(peer, duration) ?? []
+    );
   }
 
   #place(
@@ -288,7 +204,7 @@ export class SoundCollaboration {
       return elapsed === null ? null : {
         peer,
         position: elapsed / duration,
-        listening: this.#following !== null
+        listening: this.session.joinedId !== null
       };
     }
 
@@ -306,17 +222,5 @@ export class SoundCollaboration {
     clientId: string
   ): PlaybackMark | null {
     return this.#playback.values.get(clientId) ?? null;
-  }
-
-  #refreshPeers(): void {
-    this.#peers = this.#rosterPeers.map(
-      (peer) => (
-        this.#claim.heldBy(peer.clientId) ?
-          SoundCollaboration.#withDrivingBadge(peer) :
-          peer
-      )
-    );
-    this.#events.emit("peersChange", this.#peers);
-    this.#events.emit("change");
   }
 }

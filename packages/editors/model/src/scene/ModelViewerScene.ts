@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import { followCameraPreferences } from "@jolly-pixel/editor.host/viewport";
+import {
+  followCameraPreferences,
+  PeerFrustums
+} from "@jolly-pixel/editor.host/viewport";
 import {
   Systems
 } from "@jolly-pixel/ecs";
@@ -7,6 +10,7 @@ import {
   bindOrbitFocus,
   OrbitFlyCamera
 } from "@jolly-pixel/backend.three";
+import type { Room } from "@jolly-pixel/network/client";
 import { Teardown } from "@jolly-pixel/utils";
 import type { Preferences } from "@jolly-pixel/preferences";
 
@@ -34,17 +38,34 @@ export interface ModelViewerSceneOptions {
   preview: ModelPreview;
   player: AnimationPlayer;
   preferences: Preferences;
+  room: Room;
+}
+
+interface ModelViewerParts {
+  camera: OrbitFlyCamera;
+  frustums: PeerFrustums;
 }
 
 export class ModelViewerScene extends Systems.Scene {
   #options: ModelViewerSceneOptions;
   #teardown = new Teardown();
+  #parts: ModelViewerParts | null = null;
 
   constructor(
     options: ModelViewerSceneOptions
   ) {
     super("model-viewer");
     this.#options = options;
+  }
+
+  teleportToPeer(
+    clientId: string
+  ): void {
+    const { camera, frustums } = this.#awakened();
+    const pose = frustums.peerPose(clientId);
+    if (pose !== undefined) {
+      camera.teleport(pose);
+    }
   }
 
   override awake(): void {
@@ -56,13 +77,24 @@ export class ModelViewerScene extends Systems.Scene {
     const camera = world
       .createActor("viewer-camera")
       .addComponentAndGet(OrbitFlyCamera, kCameraPreset);
+    const frustums = world
+      .createActor("peer-frustums")
+      .addComponentAndGet(PeerFrustums, {
+        room: this.#options.room,
+        camera: camera.camera
+      });
     world
       .createActor("model")
       .addComponent(ModelStage, {
         preview: this.#options.preview,
         player: this.#options.player,
-        camera
+        camera,
+        frustums
       });
+    this.#parts = {
+      camera,
+      frustums
+    };
 
     const teardown = this.#teardown;
     teardown.defer(() => environment.dispose());
@@ -71,7 +103,16 @@ export class ModelViewerScene extends Systems.Scene {
   }
 
   override destroy(): void {
+    this.#parts = null;
     this.#teardown.run();
     super.destroy();
+  }
+
+  #awakened(): ModelViewerParts {
+    if (this.#parts === null) {
+      throw new Error("The model viewer scene is not awake.");
+    }
+
+    return this.#parts;
   }
 }

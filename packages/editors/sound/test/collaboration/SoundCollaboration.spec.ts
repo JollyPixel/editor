@@ -5,8 +5,10 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { FakeNetwork } from "@jolly-pixel/network/testing";
+
 // Import Internal Dependencies
-import { FakeNetwork } from "../helpers/FakeNetwork.ts";
 import {
   clock,
   connect,
@@ -19,60 +21,27 @@ const kOtherOggBytes = new Uint8Array([0x4F, 0x67, 0x67, 0x53, 0x00]);
 function followed(
   listener: Listener
 ): { driverId: string; listening: boolean; } | null {
-  const { stance } = listener.collaboration;
+  const { stance } = listener.collaboration.session;
 
   return stance.kind === "following" ?
     {
       driverId: stance.driver.clientId,
-      listening: stance.listening
+      listening: stance.joined
     } :
     null;
 }
 
 describe("SoundCollaboration", () => {
-  test("agrees on one driver when two peers claim the wheel at the same time", async(t) => {
-    const network = new FakeNetwork();
-    const alice = await connect(network, "alice");
-    const bob = await connect(network, "bob");
-    clock(t, [alice, bob]);
-
-    network.hold();
-    bob.collaboration.drive();
-    alice.collaboration.drive();
-    network.flush();
-
-    assert.equal(alice.collaboration.stance.kind, "driving");
-    assert.equal(followed(bob)?.driverId, "alice");
-    assert.equal(bob.room.presence.drive, null);
-  });
-
-  test("keeps the wheel with the driver when another peer asks for it", async(t) => {
-    const network = new FakeNetwork();
-    const alice = await connect(network, "alice");
-    const bob = await connect(network, "bob");
-    const advance = clock(t, [alice, bob]);
-
-    alice.collaboration.drive();
-    advance(100);
-    bob.collaboration.drive();
-
-    assert.equal(followed(bob)?.driverId, "alice");
-    assert.equal(
-      bob.collaboration.peers.find((peer) => peer.clientId === "alice")?.badge,
-      "driving"
-    );
-  });
-
   test("plays along with the driver from their position once listening", async(t) => {
     const network = new FakeNetwork();
     const alice = await connect(network, "alice");
     const bob = await connect(network, "bob");
     const advance = clock(t, [alice, bob]);
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.play();
     advance(500);
-    bob.collaboration.listen();
+    bob.collaboration.session.join();
 
     assert.equal(bob.player.elapsed, 0.5);
 
@@ -112,11 +81,11 @@ describe("SoundCollaboration", () => {
       settings.preview({ pitchVariation: 0.4 });
     }
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.retune(alice.player.mode.withApplySettings(true));
     alice.player.play();
     random.mock.mockImplementation(() => 0);
-    bob.collaboration.listen();
+    bob.collaboration.session.join();
 
     assert.equal(bob.context.sources[0].playbackRate.value, 1.4);
   });
@@ -126,11 +95,11 @@ describe("SoundCollaboration", () => {
     const alice = await connect(network, "alice");
     const advance = clock(t, [alice]);
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.play();
     advance(500);
     const bob = await connect(network, "bob");
-    bob.collaboration.listen();
+    bob.collaboration.session.join();
 
     assert.deepEqual(followed(bob), {
       driverId: "alice",
@@ -146,9 +115,9 @@ describe("SoundCollaboration", () => {
     const advance = clock(t, [alice, bob]);
     bob.context.state = "suspended";
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.play();
-    bob.collaboration.listen();
+    bob.collaboration.session.join();
     advance(300);
     bob.context.start();
 
@@ -161,10 +130,10 @@ describe("SoundCollaboration", () => {
     const bob = await connect(network, "bob");
     const advance = clock(t, [alice, bob]);
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.retune(alice.player.mode.withLoop(true));
     alice.player.play();
-    bob.collaboration.listen();
+    bob.collaboration.session.join();
     advance(1_500);
     bob.context.currentTime -= 0.1;
     advance(500);
@@ -178,9 +147,9 @@ describe("SoundCollaboration", () => {
     const bob = await connect(network, "bob");
     const advance = clock(t, [alice, bob]);
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.play();
-    bob.collaboration.listen();
+    bob.collaboration.session.join();
     advance(500);
     const reloaded = new Promise<void>((resolve) => {
       const unsubscribe = bob.player.subscribe("sound", () => {
@@ -228,9 +197,9 @@ describe("SoundCollaboration", () => {
       const bob = await connect(network, "bob");
       clock(t, [alice, bob]);
 
-      alice.collaboration.drive();
+      alice.collaboration.session.drive();
       alice.player.play();
-      bob.collaboration.listen();
+      bob.collaboration.session.join();
       use(bob);
       alice.player.pause();
 
@@ -243,7 +212,7 @@ describe("SoundCollaboration", () => {
   for (const { reason, end } of [
     {
       reason: "lets go of the wheel",
-      end: (driver: Listener) => driver.collaboration.release()
+      end: (driver: Listener) => driver.collaboration.session.release()
     },
     {
       reason: "leaves the room",
@@ -256,9 +225,9 @@ describe("SoundCollaboration", () => {
       const bob = await connect(network, "bob");
       clock(t, [alice, bob]);
 
-      alice.collaboration.drive();
+      alice.collaboration.session.drive();
       alice.player.play();
-      bob.collaboration.listen();
+      bob.collaboration.session.join();
       end(alice);
 
       assert.equal(followed(bob), null);
@@ -287,7 +256,7 @@ describe("SoundCollaboration", () => {
     const bob = await connect(network, "bob");
     clock(t, [alice, bob]);
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.play();
     alice.collaboration.dispose();
 

@@ -148,6 +148,39 @@ Emits `{ clientId, value }`; `undefined` means removal.
 
 Detaches the channel without leaving the room.
 
+## RoomClaim API
+
+```ts
+const claim = new RoomClaim(room, { key: "drive" });
+claim.on("change", () => render(claim.holderId));
+claim.claim();
+```
+
+`RoomClaim` lets at most one peer of a room hold a role, such as driving a
+shared playback. It publishes the time of its claim on the `key` presence
+field. The earliest claim wins, and the lower client id wins a tie. A claim
+that loses withdraws itself, so every peer agrees on the holder once presence
+settles.
+
+### `holderId` / `heldBySelf` / `heldBy(clientId)`
+
+`holderId` is the client id of the holder, or `null` when nobody holds the
+claim. It is read from the room's presence at construction, so a peer joining
+later sees the current holder. The holder leaving the room frees the claim.
+
+### `claim(): void` / `release(): void`
+
+`claim` does nothing while a peer holds the claim or before the room has a
+`clientId`. `release` withdraws this client's claim.
+
+### change
+
+Emitted when `holderId` changes.
+
+### `destroy(): void`
+
+Withdraws this client's claim and detaches from the room.
+
 ## RoomGrants API
 
 ### defineCapabilities

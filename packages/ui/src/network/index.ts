@@ -1,3 +1,4 @@
+export * from "./DriveSession.ts";
 export * from "./RoomFieldLocks.ts";
 export * from "./PeerMarkTracker.ts";
 export * from "./PeerRoster.ts";

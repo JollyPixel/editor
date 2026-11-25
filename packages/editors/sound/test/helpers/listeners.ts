@@ -3,16 +3,16 @@ import type { TestContext } from "node:test";
 
 // Import Third-party Dependencies
 import type { SoundDocument } from "@jolly-pixel/asset.sound/client";
+import type {
+  FakeNetwork,
+  FakeRoom
+} from "@jolly-pixel/network/testing";
 
 // Import Internal Dependencies
 import { SoundCollaboration } from "#src/collaboration/SoundCollaboration.ts";
 import type { SoundPlayer } from "#src/player/SoundPlayer.ts";
 import type { LiveSettings } from "#src/settings/LiveSettings.ts";
 import type { FakeAudioContext } from "./FakeAudioContext.ts";
-import type {
-  FakeNetwork,
-  FakeRoom
-} from "./FakeNetwork.ts";
 import { followingPlayer } from "./followingPlayer.ts";
 
 // CONSTANTS
