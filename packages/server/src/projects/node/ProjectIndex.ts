@@ -4,60 +4,41 @@ import {
   type Account
 } from "@jolly-pixel/accounts";
 import type { AccountMembership } from "@jolly-pixel/accounts/node";
-import { ProjectFile } from "@jolly-pixel/asset-server/node";
+import { readAssetArchive } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
-import { ProjectRightRefusedError } from "../../project/errors/ProjectRightRefusedError.ts";
-import { Project } from "../../project/node/Project.ts";
 import type { ProjectSummary } from "../api.ts";
 import type {
-  ProjectEntry,
-  ProjectRegistry
-} from "./ProjectRegistry.ts";
+  HostedBackend,
+  HostedProjects
+} from "./HostedProjects.ts";
+import { requireServerOwner } from "./requireServerOwner.ts";
 
 export interface ProjectIndexOptions {
-  registry: ProjectRegistry;
+  projects: HostedProjects<HostedBackend>;
   memberships(accountId: string): AccountMembership[];
-  /**
-   * Opens the project at a new root, writing its project file.
-   */
-  open: (root: string) => Promise<Project>;
-}
-
-interface ReadEntry {
-  slug: string;
-  id: string | null;
-  unavailable: string | null;
 }
 
 export class ProjectIndex {
-  #registry: ProjectRegistry;
+  #projects: HostedProjects<HostedBackend>;
   #memberships: (accountId: string) => AccountMembership[];
-  #open: (root: string) => Promise<Project>;
 
   constructor(
     options: ProjectIndexOptions
   ) {
-    this.#registry = options.registry;
+    this.#projects = options.projects;
     this.#memberships = options.memberships;
-    this.#open = options.open;
   }
 
   async list(
     account: Account
   ): Promise<ProjectSummary[]> {
-    const entries = await Promise.all(
-      (await this.#registry.list()).map(readEntry)
-    );
+    const statuses = await this.#projects.statuses();
     if (account.owner) {
-      return entries.map((entry) => {
-        return {
-          slug: entry.slug,
-          role: ADMIN_ROLE,
-          pending: false,
-          unavailable: entry.unavailable
-        };
-      });
+      return statuses.map((status) => ownedSummary(
+        status.slug,
+        status.unavailable
+      ));
     }
     const memberships = new Map(
       this.#memberships(account.id).map(
@@ -65,18 +46,18 @@ export class ProjectIndex {
       )
     );
 
-    return entries.flatMap((entry) => {
-      const membership = entry.id === null ?
+    return statuses.flatMap((status) => {
+      const membership = status.id === null ?
         undefined :
-        memberships.get(entry.id);
+        memberships.get(status.id);
 
       return membership === undefined ?
         [] :
         [{
-          slug: entry.slug,
+          slug: status.slug,
           role: membership.pending ? null : membership.role,
           pending: membership.pending,
-          unavailable: null
+          unavailable: status.unavailable
         }];
     });
   }
@@ -85,35 +66,55 @@ export class ProjectIndex {
     account: Account,
     slug: string
   ): Promise<ProjectSummary> {
-    if (!account.owner) {
-      throw new ProjectRightRefusedError("only the server owner creates projects");
-    }
-    await this.#open(await this.#registry.create(slug));
+    requireServerOwner(account, "creates");
+    await this.#projects.create(slug);
 
-    return {
-      slug,
-      role: ADMIN_ROLE,
-      pending: false,
-      unavailable: null
-    };
+    return ownedSummary(slug);
+  }
+
+  async import(
+    account: Account,
+    slug: string,
+    bytes: Uint8Array
+  ): Promise<ProjectSummary> {
+    requireServerOwner(account, "imports");
+    const archive = readAssetArchive(bytes);
+    if (!archive.ok) {
+      throw archive.val;
+    }
+    await this.#projects.import(slug, account, archive.val);
+
+    return ownedSummary(slug);
+  }
+
+  async rename(
+    account: Account,
+    slug: string,
+    to: string
+  ): Promise<ProjectSummary> {
+    requireServerOwner(account, "renames");
+    await this.#projects.rename(slug, to);
+
+    return ownedSummary(to);
+  }
+
+  async remove(
+    account: Account,
+    slug: string
+  ): Promise<void> {
+    requireServerOwner(account, "deletes");
+    await this.#projects.remove(slug);
   }
 }
 
-async function readEntry(
-  entry: ProjectEntry
-): Promise<ReadEntry> {
-  try {
-    return {
-      slug: entry.slug,
-      id: Project.findId(await ProjectFile.read(entry.root)),
-      unavailable: null
-    };
-  }
-  catch (error) {
-    return {
-      slug: entry.slug,
-      id: null,
-      unavailable: error instanceof Error ? error.message : String(error)
-    };
-  }
+function ownedSummary(
+  slug: string,
+  unavailable: string | null = null
+): ProjectSummary {
+  return {
+    slug,
+    role: ADMIN_ROLE,
+    pending: false,
+    unavailable
+  };
 }

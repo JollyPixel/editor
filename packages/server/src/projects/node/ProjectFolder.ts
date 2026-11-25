@@ -4,14 +4,19 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import { PROJECT_FILE_PATH } from "@jolly-pixel/asset-server";
+import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import { PROJECT_SLUG_PATTERN } from "../api.ts";
-import { ProjectCreationError } from "./errors/ProjectCreationError.ts";
+import { ProjectFolderError } from "./errors/ProjectFolderError.ts";
+import { UnknownProjectError } from "./errors/UnknownProjectError.ts";
 import type {
   ProjectEntry,
   ProjectRegistry
 } from "./ProjectRegistry.ts";
+
+// CONSTANTS
+const kTrashFolder = "trash";
 
 export class ProjectFolder implements ProjectRegistry {
   #directory: string;
@@ -61,21 +66,60 @@ export class ProjectFolder implements ProjectRegistry {
   async create(
     slug: string
   ): Promise<string> {
-    if (!PROJECT_SLUG_PATTERN.test(slug)) {
-      throw new ProjectCreationError(`"${slug}" cannot name a project`);
-    }
-    const root = this.#root(slug);
+    const root = this.#namedRoot(slug);
     try {
       await fs.mkdir(root);
     }
     catch (error) {
-      throw new ProjectCreationError(
-        `a folder is already named "${slug}"`,
-        error
-      );
+      throw folderTaken(slug, error);
     }
 
     return root;
+  }
+
+  async rename(
+    slug: string,
+    to: string
+  ): Promise<string> {
+    const root = await this.#existing(slug);
+    const target = this.#namedRoot(to);
+    if (await pathExists(target)) {
+      throw folderTaken(to);
+    }
+    await fs.rename(root, target);
+
+    return target;
+  }
+
+  async remove(
+    slug: string
+  ): Promise<void> {
+    const root = await this.#existing(slug);
+    const trash = path.join(this.#directory, STATE_DIRECTORY, kTrashFolder);
+    await fs.mkdir(trash, { recursive: true });
+    const stamp = new Date().toISOString().replaceAll(/[:.]/g, "-");
+    await fs.rename(root, path.join(trash, `${slug}-${stamp}`));
+  }
+
+  async #existing(
+    slug: string
+  ): Promise<string> {
+    const root = await this.resolve(slug);
+    if (root === null) {
+      throw new UnknownProjectError(slug);
+    }
+
+    return root;
+  }
+
+  #namedRoot(
+    slug: string
+  ): string {
+    if (!PROJECT_SLUG_PATTERN.test(slug)) {
+      throw new ProjectFolderError(`"${slug}" cannot name a project`);
+    }
+
+    return this.#root(slug);
   }
 
   #root(
@@ -85,6 +129,13 @@ export class ProjectFolder implements ProjectRegistry {
   }
 }
 
+function folderTaken(
+  slug: string,
+  cause?: unknown
+): ProjectFolderError {
+  return new ProjectFolderError(`a folder is already named "${slug}"`, cause);
+}
+
 async function holdsProject(
   root: string
 ): Promise<boolean> {
@@ -92,6 +143,19 @@ async function holdsProject(
     const stats = await fs.stat(path.join(root, PROJECT_FILE_PATH));
 
     return stats.isFile();
+  }
+  catch {
+    return false;
+  }
+}
+
+async function pathExists(
+  target: string
+): Promise<boolean> {
+  try {
+    await fs.lstat(target);
+
+    return true;
   }
   catch {
     return false;

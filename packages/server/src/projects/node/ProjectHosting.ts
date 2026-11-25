@@ -5,6 +5,7 @@ import path from "node:path";
 import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
+import { folderGlob } from "../../project/node/PrivateFiles.ts";
 import {
   PrefixMount,
   RootMount,
@@ -21,6 +22,12 @@ export interface ProjectHostingParts {
    * Folder of the server's own state, such as its accounts.
    */
   state: string;
+  /**
+   * Globs of the hosted files a dev server must not serve, besides each
+   * project's own private files.
+   * @default []
+   */
+  privateFiles?: Iterable<string>;
 }
 
 export class ProjectHosting {
@@ -44,13 +51,15 @@ export class ProjectHosting {
     return new ProjectHosting({
       registry: new ProjectFolder(resolved),
       mount: new PrefixMount(),
-      state: path.join(resolved, STATE_DIRECTORY)
+      state: path.join(resolved, STATE_DIRECTORY),
+      privateFiles: [`${folderGlob(resolved)}/**`]
     });
   }
 
   readonly registry: ProjectRegistry;
   readonly mount: ProjectMount;
   readonly state: string;
+  readonly privateFiles: readonly string[];
 
   constructor(
     parts: ProjectHostingParts
@@ -58,5 +67,6 @@ export class ProjectHosting {
     this.registry = parts.registry;
     this.mount = parts.mount;
     this.state = parts.state;
+    this.privateFiles = [...parts.privateFiles ?? []];
   }
 }

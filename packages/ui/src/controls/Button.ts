@@ -27,6 +27,10 @@ export type ButtonVariant =
   | "success"
   | "danger";
 
+export type ButtonType =
+  | "button"
+  | "submit";
+
 @customElement("jolly-button")
 export class Button extends LitElement {
   static readonly Defaults: ButtonDefaults = {
@@ -65,6 +69,9 @@ export class Button extends LitElement {
   @property({ attribute: false })
   declare pressed?: boolean;
 
+  @property({ type: String })
+  declare type: ButtonType;
+
   constructor() {
     super();
 
@@ -72,6 +79,12 @@ export class Button extends LitElement {
     this.disabled = false;
     this.label = "";
     this.iconOnly = false;
+    this.type = "button";
+    this.addEventListener("click", () => {
+      if (this.type === "submit" && !this.disabled) {
+        this.closest("form")?.requestSubmit();
+      }
+    });
   }
 
   override render(): TemplateResult {

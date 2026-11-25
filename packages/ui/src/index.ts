@@ -77,6 +77,7 @@ export type * from "./icon/Icon.ts";
 
 export type {
   Button,
+  ButtonType,
   ButtonVariant
 } from "./controls/Button.ts";
 export type {

@@ -14,9 +14,7 @@ export class PrivateFiles implements Iterable<string> {
     root: string,
     extensions: Iterable<string>
   ) {
-    const base = literalGlob(
-      path.resolve(root).split(path.sep).join("/")
-    );
+    const base = folderGlob(root);
 
     this.#globs = [
       `**/${STATE_DIRECTORY}/**`,
@@ -30,6 +28,12 @@ export class PrivateFiles implements Iterable<string> {
   [Symbol.iterator](): IterableIterator<string> {
     return this.#globs.values();
   }
+}
+
+export function folderGlob(
+  folder: string
+): string {
+  return literalGlob(path.resolve(folder).split(path.sep).join("/"));
 }
 
 function literalGlob(

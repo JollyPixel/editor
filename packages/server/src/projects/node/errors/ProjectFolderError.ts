@@ -1,9 +1,9 @@
-export class ProjectCreationError extends Error {
+export class ProjectFolderError extends Error {
   constructor(
     message: string,
     cause?: unknown
   ) {
     super(message, { cause });
-    this.name = "ProjectCreationError";
+    this.name = "ProjectFolderError";
   }
 }

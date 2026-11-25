@@ -1,17 +1,24 @@
 // Import Third-party Dependencies
 import type { FastifyInstance } from "fastify";
 import type { Accounts } from "@jolly-pixel/accounts/node";
+import { DEFAULT_ARCHIVE_MAX_BYTES } from "@jolly-pixel/asset-server";
+import * as z from "zod";
 
 // Import Internal Dependencies
 import { sessionAccount } from "../../http/node/authentication.ts";
 import {
   PROJECTS_ROUTES,
-  createProjectBodySchema,
-  type CreateProjectBody,
-  type CreatedProjectReply,
+  projectRefSchema,
+  type ProjectRef,
+  type ProjectSummaryReply,
   type ProjectsReply
 } from "../api.ts";
 import type { ProjectIndex } from "./ProjectIndex.ts";
+import { requireServerOwner } from "./requireServerOwner.ts";
+
+// CONSTANTS
+const kArchiveBodySchema = z.instanceof(Uint8Array);
+const kNoContent = 204;
 
 export interface ProjectsRoutesOptions {
   accounts: Accounts;
@@ -19,7 +26,21 @@ export interface ProjectsRoutesOptions {
 }
 
 interface CreateProjectRoute {
-  Body: CreateProjectBody;
+  Body: ProjectRef;
+}
+
+interface RenameProjectRoute {
+  Params: ProjectRef;
+  Body: ProjectRef;
+}
+
+interface RemoveProjectRoute {
+  Params: ProjectRef;
+}
+
+interface ImportProjectRoute {
+  Params: ProjectRef;
+  Body: Uint8Array;
 }
 
 export async function projectsRoutes(
@@ -27,7 +48,13 @@ export async function projectsRoutes(
   options: ProjectsRoutesOptions
 ): Promise<void> {
   const { accounts, index } = options;
-  const { list, create } = PROJECTS_ROUTES;
+  const {
+    list,
+    create,
+    rename,
+    remove,
+    import: importRoute
+  } = PROJECTS_ROUTES;
 
   app.route({
     method: list.method,
@@ -45,13 +72,75 @@ export async function projectsRoutes(
     method: create.method,
     url: create.path,
     schema: {
-      body: createProjectBodySchema
+      body: projectRefSchema
     },
     handler: async(request, reply) => reply.code(201).send({
       project: await index.create(
         sessionAccount(accounts, request),
         request.body.slug
       )
-    } satisfies CreatedProjectReply)
+    } satisfies ProjectSummaryReply)
+  });
+  app.route<RenameProjectRoute>({
+    method: rename.method,
+    url: rename.path,
+    schema: {
+      params: projectRefSchema,
+      body: projectRefSchema
+    },
+    handler: async(request): Promise<ProjectSummaryReply> => {
+      return {
+        project: await index.rename(
+          sessionAccount(accounts, request),
+          request.params.slug,
+          request.body.slug
+        )
+      };
+    }
+  });
+  app.route<RemoveProjectRoute>({
+    method: remove.method,
+    url: remove.path,
+    schema: {
+      params: projectRefSchema
+    },
+    handler: async(request, reply) => {
+      await index.remove(
+        sessionAccount(accounts, request),
+        request.params.slug
+      );
+
+      return reply.code(kNoContent).send();
+    }
+  });
+  await app.register(async(archiveUpload) => {
+    archiveUpload.addContentTypeParser(
+      "*",
+      {
+        parseAs: "buffer"
+      },
+      (_request, body, done) => done(null, body)
+    );
+    archiveUpload.route<ImportProjectRoute>({
+      method: importRoute.method,
+      url: importRoute.path,
+      bodyLimit: DEFAULT_ARCHIVE_MAX_BYTES,
+      schema: {
+        params: projectRefSchema,
+        body: kArchiveBodySchema
+      },
+      preParsing: async(request, _reply, payload) => {
+        requireServerOwner(sessionAccount(accounts, request), "imports");
+
+        return payload;
+      },
+      handler: async(request, reply) => reply.code(201).send({
+        project: await index.import(
+          sessionAccount(accounts, request),
+          request.params.slug,
+          request.body
+        )
+      } satisfies ProjectSummaryReply)
+    });
   });
 }

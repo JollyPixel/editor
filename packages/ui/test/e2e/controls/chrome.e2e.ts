@@ -42,6 +42,32 @@ test.describe("controls: chrome", () => {
     await expect(description).toHaveCSS("margin-block-end", "2px");
   });
 
+  test("a submit button submits its form, a plain button does not", async({ page }) => {
+    await openExample(page, "controls/chrome");
+    await page.evaluate(() => {
+      const form = document.createElement("form");
+      form.ariaLabel = "Rename";
+      form.dataset.submits = "0";
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        form.dataset.submits = String(Number(form.dataset.submits) + 1);
+      });
+      const save = document.createElement("jolly-button");
+      save.type = "submit";
+      save.textContent = "Save";
+      const cancel = document.createElement("jolly-button");
+      cancel.textContent = "Cancel";
+      form.append(save, cancel);
+      document.body.append(form);
+    });
+    const form = page.getByRole("form", { name: "Rename" });
+
+    await form.getByRole("button", { name: "Save" }).click();
+    await form.getByRole("button", { name: "Cancel" }).click();
+
+    await expect(form).toHaveAttribute("data-submits", "1");
+  });
+
   test("separator actions trail the rule on the same row", async({ page }) => {
     await openExample(page, "controls/chrome");
 

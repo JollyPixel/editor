@@ -21,11 +21,11 @@ import type { Middleware } from "../../http/node/Middleware.ts";
 import { requestPathname } from "../../http/node/requestPathname.ts";
 import { PROJECT_PAGES_PREFIX } from "../../projects/api.ts";
 import type { Project } from "../../project/node/Project.ts";
+import type { ShellPackages } from "../../project/node/ShellPackages.ts";
 import { UnknownProjectError } from "../../projects/node/errors/UnknownProjectError.ts";
 import { ProjectUnavailableError } from "../../projects/node/errors/ProjectUnavailableError.ts";
-import { OpenProjects } from "../../projects/node/OpenProjects.ts";
+import { HostedProjects } from "../../projects/node/HostedProjects.ts";
 import type { ProjectHosting } from "../../projects/node/ProjectHosting.ts";
-import { ProjectIds } from "../../projects/node/ProjectIds.ts";
 import { ProjectIndex } from "../../projects/node/ProjectIndex.ts";
 import type {
   ProjectLocation,
@@ -58,6 +58,12 @@ export interface ServerBackendOptions extends Omit<
    * Opens the project found at a root of the hosting's registry.
    */
   openProject: (root: string) => Promise<Project>;
+  /**
+   * Packages the served shell was compiled with. A project listing another
+   * does not open.
+   * @default every package
+   */
+  shellPackages?: ShellPackages;
   accounts?: Omit<ServerAccountsOptions, "inMemory">;
   /**
    * @default 300
@@ -93,6 +99,8 @@ export class ServerBackend implements AsyncDisposable {
     const {
       hosting,
       openProject,
+      shellPackages,
+      seed,
       accounts: accountsOptions,
       requestsPerMinute,
       trustProxy,
@@ -104,27 +112,17 @@ export class ServerBackend implements AsyncDisposable {
       ...accountsOptions,
       inMemory: options.inMemory
     }));
-    const ids = new ProjectIds(hosting.registry);
-    const projects = opening.use(new OpenProjects<ProjectBackend>({
+    const projects = opening.use(new HostedProjects({
+      registry: hosting.registry,
+      openProject,
+      shellPackages,
+      seed,
       idleMs: options.inMemory === true ? null : idleMs,
-      open: async(slug) => {
-        const root = await hosting.registry.resolve(slug);
-        if (root === null) {
-          throw new UnknownProjectError(slug);
-        }
-        try {
-          const project = await openProject(root);
-          await ids.claim(project.id, slug);
-
-          return await ProjectBackend.open(project, {
-            ...projectOptions,
-            accounts
-          });
-        }
-        catch (error) {
-          throw new ProjectUnavailableError(slug, error);
-        }
-      }
+      start: (project, projectSeed) => ProjectBackend.open(project, {
+        ...projectOptions,
+        seed: projectSeed,
+        accounts
+      })
     }));
     const api = opening.use(await ServerApi.open({
       accounts,
@@ -133,9 +131,8 @@ export class ServerBackend implements AsyncDisposable {
       index: hosting.mount.home === null ?
         undefined :
         new ProjectIndex({
-          registry: hosting.registry,
-          memberships: (accountId) => accounts.memberships(accountId),
-          open: openProject
+          projects,
+          memberships: (accountId) => accounts.memberships(accountId)
         }),
       requestsPerMinute,
       trustProxy
@@ -156,13 +153,13 @@ export class ServerBackend implements AsyncDisposable {
 
   #resources: AsyncDisposableStack;
   #mount: ProjectMount;
-  #projects: OpenProjects<ProjectBackend>;
+  #projects: HostedProjects<ProjectBackend>;
   #listeners = new DisposableStack();
 
   private constructor(
     resources: AsyncDisposableStack,
     mount: ProjectMount,
-    projects: OpenProjects<ProjectBackend>,
+    projects: HostedProjects<ProjectBackend>,
     api: ServerApi,
     hosts: HandshakePolicy
   ) {

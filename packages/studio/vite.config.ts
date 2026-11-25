@@ -28,7 +28,10 @@ import {
 import { ServerSettings } from "@jolly-pixel/server/node";
 
 // Import Internal Dependencies
-import { openStudioProject } from "./node/studioFiles.ts";
+import {
+  openStudioProject,
+  STUDIO_ROOT
+} from "./node/studioFiles.ts";
 import { backend } from "./vite/backend.ts";
 import { bootPreloads } from "./vite/bootPreloads.ts";
 import { EditorPageFiles } from "./vite/pages/EditorPageFiles.ts";
@@ -55,8 +58,9 @@ export default defineConfig(async(env): Promise<UserConfig> => {
     { port: PORTS.studio }
   );
   const settings = ServerSettings.parse(process.env);
+  const hosting = settings.hosting(STUDIO_ROOT);
   const project = await openStudioProject({
-    inMemory: mode.assetServer.inMemory,
+    inMemory: mode.assetServer.inMemory || settings.hostsFolder,
     settings
   });
   const pages = editorPages(
@@ -87,7 +91,8 @@ export default defineConfig(async(env): Promise<UserConfig> => {
         ],
         deny: [
           ...kViteDefaultDeny,
-          ...project.privateFiles
+          ...project.privateFiles,
+          ...hosting.privateFiles
         ]
       }
     },

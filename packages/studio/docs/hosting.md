@@ -44,6 +44,11 @@ Back up through `GET /api/project/archive` (`/p/<slug>/api/project/archive` in a
 
 With `JOLLY_PROJECTS=<dir>`, each subfolder of `<dir>` that holds `.jollypixel/project.json` is a project, named by its folder: `<dir>/castle/` answers at `/p/castle/`. A folder added while the server runs answers without a restart. The server keeps its own state, the accounts among it, in `<dir>/.jollypixel/`; each project keeps its assets, events and audit in its own `.jollypixel/`.
 
-A project opens on its first request or socket and closes after 10 minutes with neither. A project that fails to open, for instance because it lists an editor the studio build lacks, answers its pages with the reason and leaves the others running. Two folders with the same `id` in `project.json`, as a copied folder has, refuse to open the second until one of them gets a new `id`.
+A project opens on its first request or socket and closes after 10 minutes with neither. A project that fails to open, for instance because it lists an editor or kind package the studio build lacks, answers its pages with the reason and leaves the others running. The build compiles the packages of the studio's project file, which every new project starts from. Two folders with the same `id` in `project.json`, as a copied folder has, refuse to open the second until one of them gets a new `id`.
 
-`/` sends the browser to the projects page, which lists the projects of the signed-in account and the ones awaiting an admin's approval. The server owner sees every project there, the unreadable ones marked, and creates new ones: a new project starts from the studio's project file and seed assets. Deleting or renaming a project, or importing an archive as a new one, happens on disk while the server is stopped.
+`/` sends the browser to the projects page, which lists the projects of the signed-in account and the ones awaiting an admin's approval. A project that cannot open shows the reason there instead of a link. The server owner sees every project and manages them from that page:
+
+- A new project starts from the studio's project file and seed assets.
+- An imported project starts from the studio's project file and holds the assets of the archive, without the seed. The archive is the one `/api/project/archive` exports; it carries no settings.
+- Renaming a project changes its folder and its URL. Its members stay, and links to the old URL stop working.
+- Deleting a project moves its folder to `<dir>/.jollypixel/trash/`. Its members stay recorded, so moving the folder back restores it with them.

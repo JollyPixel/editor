@@ -1,8 +1,14 @@
 // Import Third-party Dependencies
-import type { Member } from "@jolly-pixel/accounts";
+import type {
+  Account,
+  Member
+} from "@jolly-pixel/accounts";
 import {
   exportAssetArchive,
-  type ArchiveBackend
+  importAssetArchive,
+  type ArchiveBackend,
+  type AssetArchive,
+  type ImportReport
 } from "@jolly-pixel/asset-server";
 
 // Import Internal Dependencies
@@ -41,5 +47,23 @@ export class ProjectArchive {
     }
 
     return archive.val;
+  }
+
+  async restore(
+    account: Account,
+    archive: AssetArchive
+  ): Promise<ImportReport> {
+    const report = await importAssetArchive(this.#backend, archive, {
+      onConflict: "replace",
+      actor: {
+        type: "user",
+        id: account.id
+      }
+    });
+    if (!report.ok) {
+      throw report.val;
+    }
+
+    return report.val;
   }
 }

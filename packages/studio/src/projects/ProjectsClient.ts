@@ -7,7 +7,7 @@ import {
 import {
   PROJECTS_ROUTES,
   PROJECTS_URL_PATH,
-  createdProjectReplySchema,
+  projectSummaryReplySchema,
   projectsReplySchema,
   type ProjectSummary,
   type ProjectsReply
@@ -66,7 +66,7 @@ export class ProjectsClient {
   ): Promise<ProjectSummary> {
     const { project } = await this.#projects.json(
       PROJECTS_ROUTES.create,
-      createdProjectReplySchema,
+      projectSummaryReplySchema,
       {
         body: {
           slug
@@ -75,6 +75,54 @@ export class ProjectsClient {
     );
 
     return project;
+  }
+
+  async import(
+    slug: string,
+    archive: Blob
+  ): Promise<ProjectSummary> {
+    const { project } = await this.#projects.json(
+      PROJECTS_ROUTES.import,
+      projectSummaryReplySchema,
+      {
+        params: {
+          slug
+        },
+        body: archive
+      }
+    );
+
+    return project;
+  }
+
+  async rename(
+    slug: string,
+    to: string
+  ): Promise<ProjectSummary> {
+    const { project } = await this.#projects.json(
+      PROJECTS_ROUTES.rename,
+      projectSummaryReplySchema,
+      {
+        params: {
+          slug
+        },
+        body: {
+          slug: to
+        }
+      }
+    );
+
+    return project;
+  }
+
+  async remove(
+    slug: string
+  ): Promise<void> {
+    await this.#projects.send(PROJECTS_ROUTES.remove, {
+      params: {
+        slug
+      }
+    });
   }
 
   async signIn(

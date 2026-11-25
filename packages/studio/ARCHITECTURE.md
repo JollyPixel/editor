@@ -98,7 +98,7 @@ flowchart TB
     Build --> Chunks["one ui, lit and three across pages"]
 ```
 
-- Both paths resolve the scene's `virtual:jolly-pixel/contributions/scene` against the studio's project.
+- Both paths resolve the scene's `virtual:jolly-pixel/contributions/scene` against the studio's project, read from the project template in builds and with `JOLLY_PROJECTS`. One Vite module graph holds one set of contributions, so a hosted project listing a package outside it does not open (`ShellPackages`).
 - A page without source HTML is served from its built folder; in dev, a rebuild of that folder reloads the editor's tabs.
 - The studio's other pages live in `pages/`: `pages/<route>.html` is served and built at `<route>/index.html`, like a compiled editor page. The preview frame page, `pages/preview.html` (`src/preview/`), reads the same scene contributions to render 3D asset previews.
 - `test/vite/studio.bundle.spec.ts` guards the shared chunks.

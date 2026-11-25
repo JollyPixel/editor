@@ -13,7 +13,8 @@ export const PORTS = {
   script: 3011,
   model: 3012,
   texture: 3013,
-  environment: 3014
+  environment: 3014,
+  studioProjects: 3015
 } as const;
 
 export function baseUrl(

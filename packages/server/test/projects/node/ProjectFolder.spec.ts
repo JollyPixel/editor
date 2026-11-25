@@ -10,9 +10,12 @@ import path from "node:path";
 
 // Import Third-party Dependencies
 import { PROJECT_FILE_PATH } from "@jolly-pixel/asset-server";
+import { STATE_DIRECTORY } from "@jolly-pixel/asset-source";
 
 // Import Internal Dependencies
 import { ProjectFolder } from "#src/projects/node/ProjectFolder.ts";
+import { ProjectFolderError } from "#src/projects/node/errors/ProjectFolderError.ts";
+import { UnknownProjectError } from "#src/projects/node/errors/UnknownProjectError.ts";
 import {
   createTempDir,
   removeTempDir
@@ -74,5 +77,37 @@ describe("ProjectFolder", () => {
       (await projects.list()).map((entry) => entry.slug),
       ["castle"]
     );
+  });
+
+  test("renames a project folder, refusing a taken name or one that cannot name a project", async() => {
+    const folder = await projectsFolder("castle", "forest");
+    const projects = new ProjectFolder(folder);
+
+    const renamed = await projects.rename("castle", "fortress");
+
+    assert.equal(renamed, path.join(folder, "fortress"));
+    assert.deepEqual(
+      (await projects.list()).map((entry) => entry.slug),
+      ["forest", "fortress"]
+    );
+    await assert.rejects(projects.rename("forest", "fortress"), ProjectFolderError);
+    await assert.rejects(projects.rename("forest", "../moon"), ProjectFolderError);
+    await assert.rejects(projects.rename("castle", "moon"), UnknownProjectError);
+  });
+
+  test("moves a removed project to the trash of its state folder", async() => {
+    const folder = await projectsFolder("castle", "forest");
+    const projects = new ProjectFolder(folder);
+
+    await projects.remove("castle");
+
+    const trash = await fs.readdir(path.join(folder, STATE_DIRECTORY, "trash"));
+    assert.equal(trash.length, 1);
+    assert.match(trash[0], /^castle-/);
+    assert.deepEqual(
+      (await projects.list()).map((entry) => entry.slug),
+      ["forest"]
+    );
+    await assert.rejects(projects.remove("castle"), UnknownProjectError);
   });
 });
