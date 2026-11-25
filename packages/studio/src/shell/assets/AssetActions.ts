@@ -1,4 +1,13 @@
 // Import Third-party Dependencies
+import {
+  CATALOG_CREATE,
+  CATALOG_CREATE_FOLDER,
+  CATALOG_DELETE,
+  CATALOG_EXPORT,
+  CATALOG_RENAME,
+  CATALOG_REPLACE,
+  type CatalogCommandType
+} from "@jolly-pixel/asset-server/client";
 import type {
   ContextMenuItem,
   IconName
@@ -12,47 +21,54 @@ const kActions = {
   open: {
     label: "Open",
     icon: "file",
-    target: "asset"
+    target: "asset",
+    commands: []
   },
   "new-folder": {
     label: "New folder",
     icon: "new-folder",
     title: "New folder",
-    target: "anything"
+    target: "anything",
+    commands: [CATALOG_CREATE_FOLDER]
   },
   rename: {
     label: "Rename",
     icon: "pencil",
     title: "Rename (F2)",
-    target: "one-row"
+    target: "one-row",
+    commands: [CATALOG_RENAME]
   },
   delete: {
     label: "Delete",
     icon: "trash",
     title: "Delete (Del)",
     intent: "danger",
-    target: "rows"
+    target: "rows",
+    commands: [CATALOG_DELETE]
   },
   replace: {
     label: "Replace",
     menuLabel: "Replace…",
     icon: "replace",
     title: "Replace the content with a file",
-    target: "asset"
+    target: "asset",
+    commands: [CATALOG_REPLACE]
   },
   export: {
     label: "Export",
     menuLabel: "Export as ZIP",
     icon: "export",
     title: "Export as a ZIP archive",
-    target: "asset"
+    target: "asset",
+    commands: [CATALOG_EXPORT]
   },
   share: {
     label: "Share",
     menuLabel: "Share link…",
     icon: "share",
     title: "Share a view-only link",
-    target: "asset"
+    target: "asset",
+    commands: []
   }
 } satisfies Record<string, AssetActionDefinition>;
 
@@ -65,6 +81,7 @@ interface AssetActionDefinition {
   title?: string;
   intent?: "danger";
   target: AssetActionTarget;
+  commands: readonly CatalogCommandType[];
 }
 
 export type AssetAction = keyof typeof kActions;
@@ -89,10 +106,12 @@ export interface AssetActionButton {
 
 export interface AssetActionsOptions {
   sharing: boolean;
+  can(command: CatalogCommandType): boolean;
 }
 
 export class AssetActions {
   #offered: ReadonlySet<string>;
+  #can: (command: CatalogCommandType) => boolean;
 
   constructor(
     options: AssetActionsOptions
@@ -100,6 +119,7 @@ export class AssetActions {
     this.#offered = new Set(
       actionIds().filter((action) => action !== "share" || options.sharing)
     );
+    this.#can = (command): boolean => options.can(command);
   }
 
   offers(
@@ -108,11 +128,20 @@ export class AssetActions {
     return this.#offered.has(id);
   }
 
+  get canCreate(): boolean {
+    return this.#can(CATALOG_CREATE);
+  }
+
+  get canMove(): boolean {
+    return this.#can(CATALOG_RENAME);
+  }
+
   allows(
     action: AssetAction,
     selection: AssetSelection
   ): boolean {
     return this.#offered.has(action) &&
+      this.#permits(action) &&
       targets(kActions[action].target, selection);
   }
 
@@ -121,7 +150,7 @@ export class AssetActions {
   ): AssetMenuItem[] {
     return actions
       .filter((action) => this.#offered.has(action))
-      .map((action) => menuItem(action));
+      .map((action) => menuItem(action, this.#permits(action)));
   }
 
   buttons(): AssetActionButton[] {
@@ -141,6 +170,14 @@ export class AssetActions {
 
     return buttons;
   }
+
+  #permits(
+    action: AssetAction
+  ): boolean {
+    const definition: AssetActionDefinition = kActions[action];
+
+    return definition.commands.every(this.#can);
+  }
 }
 
 function actionIds(): AssetAction[] {
@@ -150,7 +187,8 @@ function actionIds(): AssetAction[] {
 }
 
 function menuItem(
-  action: AssetAction
+  action: AssetAction,
+  permitted: boolean
 ): AssetMenuItem {
   const definition: AssetActionDefinition = kActions[action];
 
@@ -158,7 +196,8 @@ function menuItem(
     id: action,
     label: definition.menuLabel ?? definition.label,
     icon: definition.icon,
-    ...(definition.intent === undefined ? {} : { intent: definition.intent })
+    ...(definition.intent === undefined ? {} : { intent: definition.intent }),
+    ...(permitted ? {} : { disabled: true })
   };
 }
 

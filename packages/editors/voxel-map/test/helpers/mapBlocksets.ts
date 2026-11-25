@@ -19,9 +19,10 @@ import type {
   PixelDocument
 } from "@jolly-pixel/pixel-draw.renderer";
 import type { BlocksetRoom } from "@jolly-pixel/asset.voxel-map/client";
-import type {
-  Right,
-  RoomEventMap
+import {
+  RoomGrants,
+  type Right,
+  type RoomEventMap
 } from "@jolly-pixel/network/client";
 import { Emitter } from "@openally/emitt";
 import type { AssetRecordData } from "@jolly-pixel/asset";
@@ -158,6 +159,7 @@ export class FakeBlocksetRoom extends Emitter<RoomEventMap> {
   ): void {
     this.clientId = "local";
     this.#rights = rights;
+    this.emit("rights");
     this.emit("sync", {
       self: "local",
       clientIds: []
@@ -205,8 +207,28 @@ export class FakeSources {
   }
 }
 
-export class FakeCatalog extends Emitter<{ change: () => void; }> implements BlocksetCatalog {
+export class FakeCatalog extends Emitter<{
+  change: () => void;
+  rights: () => void;
+}> implements BlocksetCatalog {
   list: AssetRecordData[] = [];
+  readonly calls: string[] = [];
+  readonly #refused = new Set<string>();
+
+  can(
+    command: string
+  ): boolean {
+    return !this.#refused.has(command);
+  }
+
+  refuse(
+    ...commands: string[]
+  ): void {
+    for (const command of commands) {
+      this.#refused.add(command);
+    }
+    this.emit("rights");
+  }
 
   records(): Iterable<AssetRecordData> {
     return this.list;
@@ -218,11 +240,20 @@ export class FakeCatalog extends Emitter<{ change: () => void; }> implements Blo
     return this.list.find((record) => record.id === assetId);
   }
 
-  create(): Promise<string> {
+  create(
+    path: string
+  ): Promise<string> {
+    this.calls.push(`create ${path}`);
+
     return Promise.resolve("asset-created");
   }
 
-  rename(): Promise<void> {
+  rename(
+    assetId: string,
+    to: string
+  ): Promise<void> {
+    this.calls.push(`rename ${assetId} ${to}`);
+
     return Promise.resolve();
   }
 }
@@ -262,6 +293,9 @@ export function setupMapBlocksets(
     view,
     catalog,
     editorMap: editorMap as unknown as EditorMap,
+    access: {
+      follow: (room, table) => new RoomGrants(room, table)
+    },
     open: (assetId) => sources.open(assetId),
     generateId: () => `generated-${nextId++}`
   });

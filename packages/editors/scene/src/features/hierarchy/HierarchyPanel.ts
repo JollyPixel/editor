@@ -82,13 +82,18 @@ export class HierarchyPanel extends LitElement {
   };
 
   override render(): TemplateResult {
-    const { hasSelection } = this.#tree;
+    const {
+      hasSelection,
+      canAdd,
+      reorderable
+    } = this.#tree;
 
     return html`
       <div class="actions">
         <jolly-button
           icon="plus"
           aria-haspopup="menu"
+          ?disabled=${!canAdd}
           @click=${this.#openAddMenu}
         >Add</jolly-button>
         <jolly-button
@@ -119,8 +124,8 @@ export class HierarchyPanel extends LitElement {
       </div>
       <jolly-tree
         multiple
-        reorderable
-        row-drag
+        ?reorderable=${reorderable}
+        ?row-drag=${reorderable}
         indent-guides
         renamable
         .nodes=${this.#tree.nodes}

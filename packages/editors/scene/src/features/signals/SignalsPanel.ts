@@ -58,6 +58,7 @@ export class SignalsPanel extends LitElement {
     return [
       editing.document.subscribe("change", repaint),
       editing.document.subscribe("reset", repaint),
+      editing.access.subscribe(repaint),
       editing.selection.subscribe("change", repaint),
       editing.live.subscribe("actorsChange", repaint),
       editing.assetSlots.subscribe(repaint)
@@ -242,7 +243,9 @@ export class SignalsPanel extends LitElement {
     targets: SignalTargets
   ): TemplateResult {
     const draft = this.#draft;
-    const drafting = draft !== null &&
+    const editable = editing.access.can("signals");
+    const drafting = editable &&
+      draft !== null &&
       draft.componentId === component.id &&
       draft.signal === signal.key;
 
@@ -254,6 +257,7 @@ export class SignalsPanel extends LitElement {
           icon-only
           label="Connect"
           title="Connect to a method"
+          ?disabled=${!editable}
           @click=${() => this.#editDraft({
             componentId: component.id,
             signal: signal.key,
@@ -297,7 +301,8 @@ export class SignalsPanel extends LitElement {
           icon-only
           label="Disconnect"
           title="Disconnect"
-          @click=${() => editing.document.disconnect(componentId, connection.id)}
+          ?disabled=${!editing.access.can("signals")}
+          @click=${() => editing.actions.disconnect(componentId, connection.id)}
         ></jolly-button>
       </div>
     `;
@@ -369,7 +374,7 @@ export class SignalsPanel extends LitElement {
     draft: SignalDraft
   ): void {
     const { componentId, ...connection } = draft;
-    if (editing.document.connect(componentId, connection) !== null) {
+    if (editing.actions.connect(componentId, connection) !== null) {
       this.#editDraft(null);
     }
   }

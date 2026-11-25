@@ -14,11 +14,14 @@ import type {
 } from "../../../state/index.ts";
 import { combineReleases } from "../../../shared/combineReleases.ts";
 import type { ModelAccessSource } from "../../../access/ModelAccess.ts";
+import type { AnimationSetGrantsSource } from "../../../access/AnimationSetAccess.ts";
 
 // CONSTANTS
 const kUnnamed = "Animation set";
 const kOwnClips = "this model";
 const kViewOnly = "You can only view this model";
+const kNoCreate = "Your role cannot create assets";
+const kNoRename = "Your role cannot rename assets";
 
 export type ClipTarget = string | null;
 
@@ -28,14 +31,9 @@ export function toClipTarget(
   return set.own ? null : set.id;
 }
 
-export interface AnimationSetRoom {
-  on(type: "denied", listener: () => void): void;
-  off(type: "denied", listener: () => void): void;
-}
-
 export interface AnimationSetLease {
   readonly document: AnimationDocument;
-  readonly room: AnimationSetRoom;
+  readonly grants: AnimationSetGrantsSource;
   release(): void;
 }
 
@@ -53,6 +51,8 @@ export interface AnimationSetSource {
   create(name: string): Promise<AssetReferenceData>;
   createOwn(): Promise<AssetReferenceData>;
   rename(id: string, name: string): Promise<void>;
+  canCreate(): boolean;
+  canRename(): boolean;
   records(): AnimationSetRecord[];
   countUsers(id: string): number;
   subscribe(listener: () => void): () => void;
@@ -66,6 +66,7 @@ export interface LinkedAnimationSet {
    * Holds this model's own clips rather than shared ones.
    */
   own: boolean;
+  editable: boolean;
   document: AnimationDocument;
 }
 
@@ -81,7 +82,6 @@ export type AnimationLibraryEvents = {
   setOpened: (set: OpenedAnimationSet) => void;
   setClosed: (setId: string) => void;
   setChange: (setId: string, change: AnimationChange) => void;
-  setDenied: (setId: string) => void;
 };
 
 export interface AnimationLibraryOptions {
@@ -122,6 +122,21 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     return this.#access.current.has("animations");
   }
 
+  get creatable(): boolean {
+    return this.editable && this.#source.canCreate();
+  }
+
+  get renamable(): boolean {
+    return this.#source.canRename();
+  }
+
+  editableSet(
+    setId: string
+  ): boolean {
+    return this.editable &&
+      this.#open.get(setId)?.lease.grants.current.has("clips") === true;
+  }
+
   sets(): LinkedAnimationSet[] {
     return [...this.#document.tree.animationSets.values()].flatMap(({ id }) => {
       const set = this.set(id);
@@ -143,6 +158,7 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
       name: this.#recordName(id),
       users: this.#source.countUsers(id),
       own: this.#document.tree.animationSets.owned?.id === id,
+      editable: this.editableSet(id),
       document: open.lease.document
     };
   }
@@ -224,6 +240,9 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
       return null;
     }
     const setId = await this.#resolve(target);
+    if (!this.editableSet(setId)) {
+      return null;
+    }
     const clipId = this.set(setId)?.document.addClip({ name }) ?? null;
 
     return clipId === null ? null : { setId, clipId };
@@ -240,6 +259,9 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     }
 
     const setId = await this.#resolve(target);
+    if (!this.editableSet(setId)) {
+      return null;
+    }
     const clipId = this.set(setId)?.document.addClip({
       ...clip.timeline.toJSON(),
       tracks: clip.toJSON().tracks,
@@ -254,17 +276,19 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     name: string
   ): Promise<string> {
     this.#assertEditable();
+    this.#assertRenamable();
     await this.#source.rename(id, name);
     this.#document.shareAnimationSet(id);
 
     return id;
   }
 
-  renameSet(
+  async renameSet(
     id: string,
     name: string
   ): Promise<void> {
-    return this.#source.rename(id, name);
+    this.#assertRenamable();
+    await this.#source.rename(id, name);
   }
 
   linkable(): AnimationSetRecord[] {
@@ -276,6 +300,9 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     name: string
   ): Promise<string> {
     this.#assertEditable();
+    if (!this.creatable) {
+      throw new Error(kNoCreate);
+    }
     const reference = await this.#source.create(name);
     this.#document.linkAnimationSet(reference);
 
@@ -336,15 +363,11 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
     id: string
   ): void {
     const lease = this.#source.open(id);
-    const { document, room } = lease;
-    const onDenied = (): void => {
-      this.emit("setDenied", id);
-    };
-    room.on("denied", onDenied);
+    const { document, grants } = lease;
     this.#open.set(id, {
       lease,
       unsubscribe: combineReleases([
-        () => room.off("denied", onDenied),
+        grants.subscribe("change", this.#notify),
         document.subscribe("change", (change) => {
           this.emit("setChange", id, change);
           this.#notify();
@@ -370,6 +393,12 @@ export class AnimationLibrary extends Emitter<AnimationLibraryEvents> {
   #assertEditable(): void {
     if (!this.editable) {
       throw new Error(kViewOnly);
+    }
+  }
+
+  #assertRenamable(): void {
+    if (!this.renamable) {
+      throw new Error(kNoRename);
     }
   }
 

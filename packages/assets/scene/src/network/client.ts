@@ -8,3 +8,4 @@ export {
   SCENE_KIND,
   SCENE_SELECTION_PRESENCE_KEY
 } from "../asset/scene.ts";
+export * from "../asset/capabilities.ts";

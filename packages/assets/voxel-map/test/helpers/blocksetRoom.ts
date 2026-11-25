@@ -38,7 +38,6 @@ export function createMockBlocksetRoom(
     profile: {},
     role: "default",
     rights: {},
-    access: "write" as const,
     can: () => "write" as const,
     sentCommands,
     resyncs: 0,

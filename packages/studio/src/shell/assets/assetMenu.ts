@@ -41,6 +41,7 @@ export function assetMenu(
       id: "new-asset",
       label: "New asset",
       icon: "plus",
+      disabled: !actions.canCreate,
       items: newAssetMenu(kinds)
     }
   ];

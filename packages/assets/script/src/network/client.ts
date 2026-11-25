@@ -23,3 +23,4 @@ export * from "./scriptCaret.ts";
 export * from "./ScriptLintFeed.ts";
 export * from "./ScriptOutlineFeed.ts";
 export * from "./types.ts";
+export * from "../asset/capabilities.ts";

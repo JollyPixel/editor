@@ -28,6 +28,8 @@ export interface RoomSyncEvent {
 export interface RoomRejectionEvent {
   event: string;
   reason: string;
+  seq?: number;
+  requestId?: string;
 }
 
 export interface RoomMalformedEvent {
@@ -46,6 +48,7 @@ export type RoomEventMap<TServerMessage = unknown> = {
   sync: (
     event: RoomSyncEvent
   ) => void;
+  rights: () => void;
   "peer-joined": (
     event: RoomPeerEvent
   ) => void;
@@ -80,7 +83,6 @@ export interface Room<
   readonly profile: PeerMetadata;
   readonly role: string;
   readonly rights: RoomRights;
-  readonly access: Right;
 
   can(
     event: string

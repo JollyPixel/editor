@@ -35,7 +35,6 @@ export class MockRoom
   readonly profile = {};
   readonly role = "default";
   readonly rights = {};
-  readonly access = "write";
   readonly sent: PixelWireCommand[] = [];
   readonly presenceUpdates: network.PeerMetadata[] = [];
 

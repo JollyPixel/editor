@@ -55,7 +55,6 @@ export class BenchRoom extends Emitter<RoomEventMap> implements Room {
   readonly profile = {};
   readonly role = "editor";
   readonly rights: RoomRights = {};
-  readonly access: Right = "write";
 
   constructor(
     id: string
@@ -65,7 +64,7 @@ export class BenchRoom extends Emitter<RoomEventMap> implements Room {
   }
 
   can(): Right {
-    return this.access;
+    return "write";
   }
 
   send(

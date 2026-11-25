@@ -15,6 +15,7 @@ import {
 } from "@jolly-pixel/three";
 
 // Import Internal Dependencies
+import type { SceneAccess } from "../../access/SceneAccess.ts";
 import type { SceneComponents } from "../../components/SceneComponents.ts";
 import { SCENE_PREFERENCES } from "../../preferences.ts";
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
@@ -50,6 +51,7 @@ export interface SceneGizmoOptions {
   settings: GizmoSettings;
   preferences: Pick<Preferences, "values" | "watch">;
   components: Pick<SceneComponents, "actorOrigin">;
+  access: Pick<SceneAccess, "can" | "subscribe">;
 }
 
 export class SceneGizmo {
@@ -57,6 +59,7 @@ export class SceneGizmo {
   #controls: TransformControls;
   #gesture: DraftGesture;
   #stopPreferences: () => void;
+  #stopAccess: () => void;
   #resize: ResizeObserver;
 
   #applySnap = (): void => {
@@ -80,9 +83,16 @@ export class SceneGizmo {
   };
 
   #sync = (): void => {
-    const { binding, selection, settings } = this.#options;
+    const {
+      binding,
+      selection,
+      settings,
+      access
+    } = this.#options;
     const id = selection.primary;
-    const actor = id === null ? null : binding.actor(id);
+    const actor = id === null || !access.can("transforms", id) ?
+      null :
+      binding.actor(id);
 
     this.#applySnap();
     this.#controls.mode = settings.mode;
@@ -157,6 +167,7 @@ export class SceneGizmo {
     options.settings.on("change", this.#sync);
     options.document.on("change", this.#sync);
     options.document.on("reset", this.#sync);
+    this.#stopAccess = options.access.subscribe(this.#sync);
     this.#applySize();
     this.#sync();
   }
@@ -175,6 +186,7 @@ export class SceneGizmo {
     settings.off("change", this.#sync);
     document.off("change", this.#sync);
     document.off("reset", this.#sync);
+    this.#stopAccess();
     this.#gesture.dispose();
     this.#stopPreferences();
     this.#resize.disconnect();

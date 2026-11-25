@@ -14,7 +14,10 @@ import {
   DocumentTheme,
   type FieldLockSource
 } from "@jolly-pixel/ui";
-import type { EditorArchives } from "@jolly-pixel/editor.host";
+import type {
+  EditorAccess,
+  EditorArchives
+} from "@jolly-pixel/editor.host";
 import {
   PreviewEnvironment,
   type PreviewEnvironmentOptions
@@ -23,7 +26,6 @@ import type {
   ModelDocument,
   VoxelModelRoom
 } from "@jolly-pixel/asset.voxel-model/client";
-import { RoomGrants } from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import { ModelHierarchy } from "../model/index.ts";
@@ -79,7 +81,6 @@ import {
 import type { ModelAction } from "../keybindings/modelActions.ts";
 
 // CONSTANTS
-const kMaxAccessListeners = 32;
 
 export interface ModelEditorSceneOptions {
   room: VoxelModelRoom;
@@ -87,6 +88,7 @@ export interface ModelEditorSceneOptions {
   presence: PresenceStore;
   pixels: PixelDocument;
   animationSets: AnimationSetSource;
+  access: Pick<EditorAccess, "target">;
   archives: EditorArchives;
   view: ViewSettingsStore;
   environments: PreviewEnvironmentOptions;
@@ -175,8 +177,7 @@ export class ModelEditorScene extends Systems.Scene {
       this.#options.preferences
     ));
 
-    const access = new RoomGrants(room, MODEL_CAPABILITY_TABLE)
-      .setMaxListeners(kMaxAccessListeners);
+    const access = this.#options.access.target(MODEL_CAPABILITY_TABLE);
     const history = createEditorHistory({ document });
     const unregisterPixels = registerPixelHistory(history, pixels, { scope: "texture" });
     const tab = new TabStore();
@@ -345,8 +346,7 @@ export class ModelEditorScene extends Systems.Scene {
       () => blocks.dispose(),
       () => activeHistory.dispose(),
       () => unregisterPixels(),
-      () => history.dispose(),
-      () => access.dispose()
+      () => history.dispose()
     );
 
     this.#editing.resolve({

@@ -4,6 +4,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import {
+  CATALOG_CREATE,
+  CATALOG_RENAME
+} from "@jolly-pixel/asset-server/client";
+import {
   composeBlockId,
   MaterialGroup
 } from "@jolly-pixel/voxel.renderer";
@@ -48,21 +52,25 @@ describe("MapBlocksets access", () => {
     assert.equal(blocksets.resizeTiles("rock", 32), true);
   });
 
-  it("reports refused block-level commands, leaving pixel refusals to the texture", () => {
-    const { sources, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET, ROCK_BLOCKSET]);
-    const denied: string[] = [];
-    blocksets.on("denied", (blocksetId) => denied.push(blocksetId));
-    const room = sources.rooms.get("rock")!;
+  it("refuses to create or rename a blockset asset without the catalog right", async() => {
+    const { catalog, blocksets } = setupMapBlocksets([TERRAIN_BLOCKSET]);
+    let changes = 0;
+    blocksets.on("change", () => changes++);
 
-    room.emit("denied", {
-      event: "stroke",
-      reason: "read-only"
+    catalog.refuse(CATALOG_CREATE, CATALOG_RENAME);
+    const announced = changes;
+    const created = await blocksets.create({
+      name: "moss",
+      tileSize: 16,
+      cols: 4,
+      rows: 4
     });
-    room.emit("denied", {
-      event: "material-group-defined",
-      reason: "read-only"
-    });
+    await blocksets.rename("terrain", "grass");
 
-    assert.deepEqual(denied, ["rock"]);
+    assert.equal(announced, 1);
+    assert.equal(created, null);
+    assert.equal(blocksets.creatable, false);
+    assert.equal(blocksets.renamable("terrain"), false);
+    assert.deepEqual(catalog.calls, []);
   });
 });

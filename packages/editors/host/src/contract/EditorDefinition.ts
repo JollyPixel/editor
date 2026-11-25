@@ -21,11 +21,16 @@ import type {
 } from "../session/EditorArchives.ts";
 import type { EditorIdentityOptions } from "../connection/server.ts";
 import type { EditorToolbarSources } from "../session/EditorToolbarSources.ts";
+import type { EditorAccess } from "../access/EditorAccess.ts";
 
 export interface EditorContext {
   launch: EditorLaunch;
   session: EditorSession;
   toolbar: EditorToolbarSources;
+  /**
+   * Builds the grants of the rooms the editor writes to.
+   */
+  access: EditorAccess;
   shell: ShellChannel | null;
   logger: HostLogger;
   commands: CommandConsole;

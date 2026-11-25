@@ -63,13 +63,16 @@ export class RoomHarness<
   }
 
   deny(
-    event: string
+    event: string,
+    seq?: number,
+    kind: "denied" | "error" = "denied"
   ): void {
     this.room.receive({
       room: this.room.id,
-      kind: "denied",
+      kind,
       event,
-      reason: "read-only"
+      reason: "read-only",
+      ...(seq === undefined ? {} : { seq })
     });
   }
 

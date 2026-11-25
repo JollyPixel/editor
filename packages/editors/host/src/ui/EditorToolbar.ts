@@ -164,6 +164,14 @@ export class EditorToolbar extends LitElement {
       white-space: nowrap;
     }
 
+    .status {
+      display: flex;
+      flex: none;
+      gap: inherit;
+      margin-inline-start: auto;
+    }
+
+    .view-only,
     .offline {
       --jolly-icon-size: 12px;
 
@@ -171,10 +179,16 @@ export class EditorToolbar extends LitElement {
       flex: none;
       align-items: center;
       gap: var(--jolly-space-1, 4px);
-      margin-inline-start: auto;
-      color: var(--jolly-warning, #e0a43a);
       font-weight: 600;
       white-space: nowrap;
+    }
+
+    .view-only {
+      color: var(--jolly-text-muted, #9aa3b2);
+    }
+
+    .offline {
+      color: var(--jolly-warning, #e0a43a);
     }
 
     .tours {
@@ -219,6 +233,7 @@ export class EditorToolbar extends LitElement {
       }
 
       .read-only .label,
+      .view-only .label,
       .offline .label {
         display: none;
       }
@@ -245,6 +260,7 @@ export class EditorToolbar extends LitElement {
     () => MenuSession.EMPTY
   );
   #offline: ConnectionStatus | null = null;
+  #viewOnly = false;
 
   #sources = new SubscriptionController<EditorToolbarSources | null>(
     this,
@@ -260,6 +276,7 @@ export class EditorToolbar extends LitElement {
         }),
         ...this.#repaintOn(sources?.tags ?? null),
         ...this.#repaintOn(sources?.connectionStatus ?? null),
+        ...this.#repaintOn(sources?.access ?? null),
         ...this.#repaintOn(sources?.lantern ?? null)
       ];
     }
@@ -286,8 +303,10 @@ export class EditorToolbar extends LitElement {
     const {
       tags = null,
       connectionStatus = null,
+      access = null,
       lantern = null
     } = this.sources ?? {};
+    this.#viewOnly = access?.viewOnly ?? false;
     if (this.#assetsStale) {
       this.#assetsStale = false;
       this.#assets = this.sources === null ? null : assetGroup(this.sources);
@@ -301,6 +320,7 @@ export class EditorToolbar extends LitElement {
       this.#assets === null &&
       tags === null &&
       this.#tours === null &&
+      !this.#viewOnly &&
       this.#offline === null
     );
   }
@@ -313,7 +333,7 @@ export class EditorToolbar extends LitElement {
         ${this.#tours === null ? nothing : this.#renderTours(this.#tours)}
         ${this.#assets === null ? nothing : this.#renderTargets(this.#assets)}
         ${tags === null ? nothing : this.#renderVersions(tags)}
-        ${this.#offline === null ? nothing : this.#renderOffline(this.#offline)}
+        ${this.#renderStatus()}
         ${this.error === null ?
           nothing :
           html`<span class="error" role="alert" title=${this.error}>${this.error}</span>`}
@@ -423,7 +443,7 @@ export class EditorToolbar extends LitElement {
               class="save-version"
               icon="version-save"
               variant="accent"
-              ?disabled=${this.busy}
+              ?disabled=${this.busy || !tags.canTag}
               @click=${this.#onCreate}
             >Save version</jolly-button>
             <jolly-button
@@ -434,7 +454,7 @@ export class EditorToolbar extends LitElement {
               variant="accent"
               label="Save version"
               title="Save version"
-              ?disabled=${this.busy}
+              ?disabled=${this.busy || !tags.canTag}
               @click=${this.#onCreate}
             ></jolly-button>
           ` :
@@ -450,7 +470,7 @@ export class EditorToolbar extends LitElement {
               variant="accent"
               label="Restore this version"
               title="Restore this version"
-              ?disabled=${this.busy}
+              ?disabled=${this.busy || !tags.canRestore}
               @click=${() => void this.#run(() => this.#restore(tags, viewing))}
             ></jolly-button>
             <jolly-button
@@ -460,11 +480,34 @@ export class EditorToolbar extends LitElement {
               variant="danger"
               label="Delete this version"
               title="Delete this version"
-              ?disabled=${this.busy}
+              ?disabled=${this.busy || !tags.canUntag}
               @click=${() => void this.#run(() => tags.delete(viewing))}
             ></jolly-button>
           `}
       </div>
+    `;
+  }
+
+  #renderStatus(): TemplateResult | typeof nothing {
+    if (!this.#viewOnly && this.#offline === null) {
+      return nothing;
+    }
+
+    return html`
+      <span class="status">
+        ${this.#viewOnly ? this.#renderViewOnly() : nothing}
+        ${this.#offline === null ? nothing : this.#renderOffline(this.#offline)}
+      </span>
+    `;
+  }
+
+  #renderViewOnly(): TemplateResult {
+    return html`
+      <span
+        class="view-only"
+        role="status"
+        title="Your role can only view this asset"
+      ><jolly-icon name="view-only"></jolly-icon><span class="label">View only</span></span>
     `;
   }
 

@@ -8,16 +8,25 @@ import {
   type CatalogMessage,
   type CatalogRoom
 } from "@jolly-pixel/asset-server/client";
+import type {
+  RoomRejectionEvent,
+  RoomRights
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import type { EditorSessionClient } from "../../lease/AssetLeases.ts";
 import {
+  CATALOG_DENIED_MESSAGE_TYPE,
+  CATALOG_RIGHTS_MESSAGE_TYPE,
   isCatalogOpenMessage,
   isCatalogPortMessage,
+  type CatalogDeniedMessage,
+  type CatalogRightsMessage,
   type RelayedCommand
 } from "./protocol.ts";
 
 interface RelayRoom extends CatalogRoom {
+  readonly rights: RoomRights;
   send(command: RelayedCommand): void;
 }
 
@@ -61,17 +70,26 @@ export class CatalogShare {
       message.type === CATALOG_APPLIED ||
       message.type === CATALOG_REJECTED
     ) {
-      const port = this.#requests.get(message.requestId);
-      this.#requests.delete(message.requestId);
-      port?.postMessage(message);
+      this.#reply(message.requestId, message);
 
       return;
     }
 
-    for (const [port, shared] of this.#ports) {
-      if (shared.live) {
-        port.postMessage(message);
-      }
+    this.#broadcast(message);
+  };
+
+  readonly #shareRights = (): void => {
+    this.#broadcast(this.#rightsMessage());
+  };
+
+  readonly #relayDenial = (
+    denial: RoomRejectionEvent
+  ): void => {
+    if (denial.requestId !== undefined) {
+      this.#reply(denial.requestId, {
+        type: CATALOG_DENIED_MESSAGE_TYPE,
+        denial
+      } satisfies CatalogDeniedMessage);
     }
   };
 
@@ -82,6 +100,8 @@ export class CatalogShare {
     this.catalog = catalog;
     this.#room = room;
     this.#room.on("message", this.#relay);
+    this.#room.on("rights", this.#shareRights);
+    this.#room.on("denied", this.#relayDenial);
   }
 
   serve(
@@ -109,6 +129,8 @@ export class CatalogShare {
 
   dispose(): void {
     this.#room.off("message", this.#relay);
+    this.#room.off("rights", this.#shareRights);
+    this.#room.off("denied", this.#relayDenial);
     for (const port of [...this.#ports.keys()]) {
       this.#detach(port);
     }
@@ -130,6 +152,7 @@ export class CatalogShare {
 
     void this.catalog.ready.then(() => {
       if (this.#ports.get(port) === shared) {
+        port.postMessage(this.#rightsMessage());
         port.postMessage(this.catalog.toSnapshot());
         shared.live = true;
       }
@@ -151,6 +174,34 @@ export class CatalogShare {
       this.#requests.set(data.command.requestId, port);
       this.#room.send(data.command);
     }
+  }
+
+  #reply(
+    requestId: string,
+    message: CatalogMessage | CatalogDeniedMessage
+  ): void {
+    const port = this.#requests.get(requestId);
+    this.#requests.delete(requestId);
+    port?.postMessage(message);
+  }
+
+  #broadcast(
+    message: CatalogMessage | CatalogRightsMessage
+  ): void {
+    for (const [port, shared] of this.#ports) {
+      if (shared.live) {
+        port.postMessage(message);
+      }
+    }
+  }
+
+  #rightsMessage(): CatalogRightsMessage {
+    return {
+      type: CATALOG_RIGHTS_MESSAGE_TYPE,
+      rights: {
+        ...this.#room.rights
+      }
+    };
   }
 
   #detach(

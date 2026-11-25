@@ -16,6 +16,7 @@ import {
   fakeBuffer
 } from "../helpers/FakeAudioContext.ts";
 import { followingPlayer } from "../helpers/followingPlayer.ts";
+import { TestSoundAccess } from "../helpers/soundAccess.ts";
 
 // CONSTANTS
 const kOggBytes = new Uint8Array([0x4F, 0x67, 0x67, 0x53]);
@@ -97,7 +98,7 @@ describe("SoundPlayer", () => {
       if (content !== null) {
         document.load(content);
       }
-      await player.follow(new LiveSettings(document));
+      await player.follow(new LiveSettings(document, new TestSoundAccess()));
       player.play();
 
       assert.equal(player.playing, false);
@@ -167,7 +168,7 @@ describe("SoundPlayer", () => {
     const document = new SoundDocument();
     document.load(kOggBytes);
 
-    const followed = player.follow(new LiveSettings(document));
+    const followed = player.follow(new LiveSettings(document, new TestSoundAccess()));
     const newest = nextSound(player);
     document.load(kOtherOggBytes);
     decodes[1](fakeBuffer([new Float32Array(4), new Float32Array(4)]));

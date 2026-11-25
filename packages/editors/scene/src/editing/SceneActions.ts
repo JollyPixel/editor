@@ -3,14 +3,17 @@ import type { AssetReferenceData } from "@jolly-pixel/asset";
 import {
   ownedCopy,
   type AddActorOptions,
+  type ConnectOptions,
   type SceneActorPlacement,
   type SceneAnchorJSON,
   type SceneComponentJSON,
-  type SceneDocument
+  type SceneDocument,
+  type SceneEnvironmentJSON
 } from "@jolly-pixel/asset.scene/client";
 import type { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
+import type { SceneAccess } from "../access/SceneAccess.ts";
 import type { SceneComponents } from "../components/SceneComponents.ts";
 import {
   SCENE_HISTORY_SCOPE,
@@ -35,16 +38,18 @@ export interface ActorMove extends SceneActorPlacement {
 
 export interface SceneActionsOptions {
   document: SceneDocument;
-  history: Pick<SceneHistory, "record">;
+  history: Pick<SceneHistory, "record" | "undo" | "redo">;
   selection: SelectionStore;
   components: Pick<SceneComponents, "requiredAssetSlots" | "find">;
   assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
   anchors: Pick<Systems.SceneAnchorsReader, "findAnchor">;
+  access: Pick<SceneAccess, "can" | "readOnly">;
 }
 
 export class SceneActions {
   #document: SceneDocument;
-  #history: Pick<SceneHistory, "record">;
+  #access: Pick<SceneAccess, "can" | "readOnly">;
+  #history: Pick<SceneHistory, "record" | "undo" | "redo">;
   #selection: SelectionStore;
   #components: Pick<SceneComponents, "requiredAssetSlots" | "find">;
   #assetSlots: Pick<SceneAssetSlots, "name" | "pick" | "pickScene">;
@@ -59,6 +64,15 @@ export class SceneActions {
     this.#components = options.components;
     this.#assetSlots = options.assetSlots;
     this.#anchors = options.anchors;
+    this.#access = options.access;
+  }
+
+  undo(): boolean {
+    return !this.#access.readOnly && this.#history.undo(SCENE_HISTORY_SCOPE);
+  }
+
+  redo(): boolean {
+    return !this.#access.readOnly && this.#history.redo(SCENE_HISTORY_SCOPE);
   }
 
   addActor(
@@ -76,6 +90,10 @@ export class SceneActions {
     parentId: string | null,
     anchor?: SceneAnchorJSON
   ): Promise<string | null> {
+    if (!this.#access.can("hierarchy")) {
+      return null;
+    }
+
     const prefab = await this.#assetSlots.pickScene();
     if (prefab === null) {
       return null;
@@ -93,8 +111,16 @@ export class SceneActions {
     actorId: string,
     type: string
   ): Promise<string | null> {
+    if (!this.#access.can("components")) {
+      return null;
+    }
+
     const assets = await this.#pickAssets(type);
-    if (assets === null || !this.#document.tree.has(actorId)) {
+    if (
+      assets === null ||
+      !this.#access.can("components") ||
+      !this.#document.tree.has(actorId)
+    ) {
       return null;
     }
 
@@ -116,13 +142,17 @@ export class SceneActions {
   canEditSelection(): boolean {
     const { primary, focused } = this.#selection;
 
-    return primary !== null && (
+    return primary !== null && this.#canEditFocus() && (
       focused === null ||
       this.#document.tree.component(focused.componentId) !== undefined
     );
   }
 
   duplicateSelection(): string[] {
+    if (!this.#canEditFocus()) {
+      return [];
+    }
+
     const { focused } = this.#selection;
     if (focused !== null) {
       return this.#duplicateComponent(focused);
@@ -151,6 +181,10 @@ export class SceneActions {
   }
 
   removeSelection(): void {
+    if (!this.#canEditFocus()) {
+      return;
+    }
+
     const { focused } = this.#selection;
     if (focused !== null) {
       this.#document.removeComponent(focused.componentId);
@@ -173,6 +207,10 @@ export class SceneActions {
   move(
     moves: readonly ActorMove[]
   ): void {
+    if (!this.#access.can("hierarchy")) {
+      return;
+    }
+
     this.#history.record(SCENE_HISTORY_SCOPE, "Move actor", () => {
       for (const { id, beforeId, ...placement } of moves) {
         this.#document.move(id, placement, {
@@ -183,9 +221,53 @@ export class SceneActions {
     });
   }
 
+  removeComponent(
+    id: string
+  ): boolean {
+    return this.#access.can("components") && this.#document.removeComponent(id);
+  }
+
+  moveComponent(
+    id: string,
+    beforeId?: string
+  ): boolean {
+    return this.#access.can("components") && this.#document.moveComponent(id, beforeId);
+  }
+
+  connect(
+    componentId: string,
+    connection: ConnectOptions
+  ): string | null {
+    return this.#access.can("signals") ?
+      this.#document.connect(componentId, connection) :
+      null;
+  }
+
+  disconnect(
+    componentId: string,
+    id: string
+  ): boolean {
+    return this.#access.can("signals") && this.#document.disconnect(componentId, id);
+  }
+
+  changeEnvironment(
+    environment: SceneEnvironmentJSON
+  ): boolean {
+    return this.#access.can("environment") &&
+      this.#document.changeEnvironment(environment);
+  }
+
+  #canEditFocus(): boolean {
+    return this.#access.can(this.#selection.focused === null ? "hierarchy" : "components");
+  }
+
   #add(
     options: AddActorOptions & { parentId: string | null; }
   ): string | null {
+    if (!this.#access.can("hierarchy")) {
+      return null;
+    }
+
     const { parentId, anchor, ...rest } = options;
     const placed = parentId !== null && this.#document.tree.has(parentId);
     const id = this.#document.addActor({

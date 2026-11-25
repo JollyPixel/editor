@@ -51,7 +51,6 @@ export function createRoomHarness(
     profile: claimedProfile,
     role: "default",
     rights: {},
-    access: "write" as const,
     can: () => "write" as const,
     join: () => void 0,
     leave: () => void 0,

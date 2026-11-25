@@ -79,7 +79,8 @@ describe("CatalogExtension — server", () => {
       room: CATALOG_ROOM,
       kind: "denied",
       event: CATALOG_DELETE,
-      reason: `role "author" cannot write "${CATALOG_DELETE}"`
+      reason: `role "author" cannot write "${CATALOG_DELETE}"`,
+      requestId: "r106"
     });
     assert.notStrictEqual(sync.assetIndex.byId(created.assetId), undefined);
     assert.notStrictEqual(sync.assetIndex.byPath("b.png"), undefined);

@@ -5,6 +5,13 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import {
+  CATALOG_CREATE,
+  CATALOG_DELETE,
+  CATALOG_RENAME
+} from "@jolly-pixel/asset-server/client";
+
 // Import Internal Dependencies
 import { AssetPath } from "../../../src/catalog/AssetPath.ts";
 import { AssetSelection } from "../../../src/catalog/AssetSelection.ts";
@@ -32,7 +39,10 @@ const kEvery: readonly AssetAction[] = [
   "export",
   "share"
 ];
-const kSharing = new AssetActions({ sharing: true });
+const kSharing = new AssetActions({
+  sharing: true,
+  can: () => true
+});
 
 function allowed(
   nodeIds: readonly string[],
@@ -61,7 +71,10 @@ describe("AssetActions", () => {
   });
 
   test("share is neither offered nor allowed when the studio cannot share", () => {
-    const actions = new AssetActions({ sharing: false });
+    const actions = new AssetActions({
+      sharing: false,
+      can: () => true
+    });
 
     assert.equal(actions.offers("share"), false);
     assert.equal(actions.offers("export"), true);
@@ -73,5 +86,20 @@ describe("AssetActions", () => {
       actions.buttons().map((button) => button.id),
       ["new-folder", "rename", "delete", "replace", "export"]
     );
+  });
+
+  test("an action the role may not send is greyed out in the menu and refused", () => {
+    const refused = new Set<string>([CATALOG_CREATE, CATALOG_RENAME, CATALOG_DELETE]);
+    const actions = new AssetActions({
+      sharing: true,
+      can: (command) => !refused.has(command)
+    });
+
+    assert.deepEqual(allowed([kHero], actions), ["open", "new-folder", "replace", "export", "share"]);
+    assert.deepEqual(
+      actions.menuItems(["open", "rename", "delete"]).map(({ id, disabled }) => [id, disabled === true]),
+      [["open", false], ["rename", true], ["delete", true]]
+    );
+    assert.deepEqual([actions.canCreate, actions.canMove], [false, false]);
   });
 });

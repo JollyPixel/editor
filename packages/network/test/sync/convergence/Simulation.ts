@@ -21,6 +21,7 @@ export interface SimulationOptions {
   edits?: number;
   opaque?: readonly ToyBody["action"][];
   versioned?: boolean;
+  readOnly?: readonly ToyBody["action"][];
 }
 
 export interface SimulationResult {
@@ -39,7 +40,8 @@ export function simulate(
     clients: clientCount = 3,
     edits = 8,
     opaque = [],
-    versioned = true
+    versioned = true,
+    readOnly = []
   } = options;
   const server = new ToyServer(versioned);
   const clients = Array.from({ length: clientCount }, (_, index) => {
@@ -48,7 +50,11 @@ export function simulate(
       choices.int(kMaxSkew * 2 + 1) - kMaxSkew,
       opaque
     );
-    server.connect(client.id, (message) => client.inbox.push(message));
+    server.connect(
+      client.id,
+      (message) => client.inbox.push(message),
+      index === 0 ? readOnly : []
+    );
 
     return client;
   });

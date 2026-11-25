@@ -16,6 +16,7 @@ import type {
 import {
   SubscriptionController,
   type JollyChangeDetail,
+  type Transform,
   type TransformChangeDetail
 } from "@jolly-pixel/ui";
 import "@jolly-pixel/ui/elements/button";
@@ -31,12 +32,20 @@ import "@jolly-pixel/ui/elements/message";
 import "../../app/sceneIcons.ts";
 import type { ActorRole } from "../../editing/InstanceOverrides.ts";
 import type { SceneEditing } from "../../editing/SceneEditing.ts";
-import type { SceneDraft } from "../../state/SceneDraft.ts";
 import { renderComponentBody } from "./componentBody.ts";
 import { transformPatch } from "./transformPatch.ts";
 
 type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 type TransformEvent = CustomEvent<TransformChangeDetail>;
+type TransformState = Transform["state"];
+
+// CONSTANTS
+const kEditableTransform: TransformState = {};
+const kReadOnlyTransform: TransformState = {
+  position: { readonly: true },
+  rotation: { readonly: true },
+  scale: { readonly: true }
+};
 
 export class InspectorPanel extends LitElement {
   #editing = new SubscriptionController<SceneEditing>(this, (editing) => {
@@ -45,6 +54,8 @@ export class InspectorPanel extends LitElement {
     return [
       editing.document.subscribe("change", repaint),
       editing.document.subscribe("reset", repaint),
+      editing.access.subscribe(repaint),
+      editing.overrides.subscribe(repaint),
       editing.selection.subscribe("change", repaint),
       editing.draft.subscribe("change", repaint),
       editing.live.subscribe("actorsChange", repaint),
@@ -104,7 +115,7 @@ export class InspectorPanel extends LitElement {
 
     return html`
       ${this.#renderActor(editing, actor, role)}
-      ${this.#renderTransform(editing.draft, actor)}
+      ${this.#renderTransform(editing, actor)}
     `;
   }
 
@@ -126,6 +137,7 @@ export class InspectorPanel extends LitElement {
           icon-only
           label="Apply overrides to prefab"
           title="Apply overrides to prefab"
+          ?disabled=${!overrides.canApplyToPrefab(id)}
           @click=${() => overrides.applyToPrefab(id)}
         ></jolly-button>
       ` : nothing}
@@ -135,6 +147,7 @@ export class InspectorPanel extends LitElement {
         icon-only
         label="Revert overrides"
         title="Revert overrides"
+        ?disabled=${!editing.access.can("instances")}
         @click=${() => overrides.revertActor(id)}
       ></jolly-button>
     `;
@@ -145,7 +158,8 @@ export class InspectorPanel extends LitElement {
     actor: SceneActorView,
     role: ActorRole
   ): TemplateResult {
-    const { writes } = editing;
+    const { access, writes } = editing;
+    const readOnly = !access.can("hierarchy", actor.id);
 
     return html`
       <jolly-folder
@@ -158,6 +172,7 @@ export class InspectorPanel extends LitElement {
         <jolly-text
           label="Name"
           .value=${actor.name}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<string>) => writes.rename(
             actor.id,
             event.detail.value
@@ -166,6 +181,7 @@ export class InspectorPanel extends LitElement {
         <jolly-checkbox
           label="Visible"
           .value=${actor.visible}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<boolean>) => writes.changeVisibility(
             actor.id,
             event.detail.value
@@ -194,10 +210,13 @@ export class InspectorPanel extends LitElement {
   }
 
   #renderTransform(
-    draft: SceneDraft,
+    { draft, access }: Pick<SceneEditing, "draft" | "access">,
     actor: SceneActorView
   ): TemplateResult {
     const transform = draft.transform(actor);
+    const state = access.can("transforms", actor.id) ?
+      kEditableTransform :
+      kReadOnlyTransform;
 
     return html`
       <jolly-folder
@@ -210,6 +229,7 @@ export class InspectorPanel extends LitElement {
           rotation-format="euler"
           label-position="top"
           .value=${transform}
+          .state=${state}
           @jolly-input=${(event: TransformEvent) => draft.editTransform(
             actor.id,
             transformPatch(event.detail, transform)
@@ -246,7 +266,7 @@ export class InspectorPanel extends LitElement {
     editing: SceneEditing,
     id: string
   ): TemplateResult | typeof nothing {
-    const { document, overrides } = editing;
+    const { actions, overrides } = editing;
     if (overrides.role(id) !== "inner") {
       return html`
         <jolly-button
@@ -255,7 +275,8 @@ export class InspectorPanel extends LitElement {
           icon-only
           label="Remove component"
           title="Remove component"
-          @click=${() => document.removeComponent(id)}
+          ?disabled=${!editing.access.can("components")}
+          @click=${() => actions.removeComponent(id)}
         ></jolly-button>
       `;
     }
@@ -267,6 +288,7 @@ export class InspectorPanel extends LitElement {
         icon-only
         label="Revert overrides"
         title="Revert overrides"
+        ?disabled=${!editing.access.can("instances")}
         @click=${() => overrides.revertComponent(id)}
       ></jolly-button>
     ` : nothing;

@@ -44,6 +44,18 @@ registerIcon("offline", svg`
   />
 `);
 
+registerIcon("view-only", svg`
+  <path
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"
+  />
+  <circle cx="12" cy="12" r="3" fill="currentColor" />
+`);
+
 registerIcon("asset-actions", svg`
   <path
     class="tone-ink"

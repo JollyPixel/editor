@@ -529,7 +529,10 @@ export class MaterialPalettePanel extends LitElement {
   #onDragOver = (
     event: DragEvent
   ): void => {
-    if (event.dataTransfer?.types.includes("Files")) {
+    if (
+      event.dataTransfer?.types.includes("Files") &&
+      this.context?.palette.importable === true
+    ) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "copy";
       this.dropping = true;

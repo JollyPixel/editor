@@ -76,13 +76,6 @@ export class HistoryButtons extends LitElement {
     .reason {
       color: var(--jolly-text-muted, inherit);
     }
-
-    .access-badge {
-      padding: 0 var(--jolly-space-1, 4px);
-      color: var(--jolly-text-muted, inherit);
-      font-size: var(--jolly-font-size, 11px);
-      white-space: nowrap;
-    }
   `;
 
   static override properties = {
@@ -161,7 +154,6 @@ export class HistoryButtons extends LitElement {
     const writable = !this._readOnly;
 
     return html`
-      ${this._readOnly ? html`<span class="access-badge" role="status">View only</span>` : nothing}
       ${this.#renderAction("undo", "Undo", writable && canUndo, undoLabel, undoCount)}
       ${this.#renderAction("redo", "Redo", writable && canRedo, redoLabel, redoCount)}
       ${refused.length === 0 ? nothing : this.#renderRefused(refused)}

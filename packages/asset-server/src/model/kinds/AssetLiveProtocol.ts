@@ -31,6 +31,12 @@ export interface AssetRelaySchemas<
    * Messages the relay sends to clients, tagged by a literal `type`.
    */
   readonly outbound: readonly Schema[];
+  /**
+   * Inbound tags a member with only `read` may still send, such as a request
+   * for diagnostics. Every tag must belong to an `inbound` message.
+   * @default []
+   */
+  readonly queries?: readonly string[];
 }
 
 export interface AssetRelay<

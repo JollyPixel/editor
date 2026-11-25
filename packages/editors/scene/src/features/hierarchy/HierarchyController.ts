@@ -55,7 +55,7 @@ const kOverrideActions: Readonly<Record<ActorRole, readonly OverrideAction[]>> =
   instance: ["revert-overrides", "apply-to-prefab"],
   inner: ["revert-overrides"]
 };
-const kAddEntries: readonly MenuEntry<AddAction>[] = [
+const kAddEntries: readonly MenuItem<AddAction>[] = [
   {
     id: "add-actor",
     label: "Actor",
@@ -97,14 +97,35 @@ type AnchorAction = AddAction | "show-in-asset";
 type TreeAction = "expand-all" | "collapse-all";
 
 export class HierarchyController {
+  static #addEntries(
+    editing: SceneEditing
+  ): MenuItem<AddAction>[] {
+    const disabled = !editing.access.can("hierarchy");
+
+    return kAddEntries.map((entry) => {
+      return {
+        ...entry,
+        disabled
+      };
+    });
+  }
+
   static #overrideEntries(
-    role: ActorRole,
-    overridden: boolean
+    editing: SceneEditing,
+    id: string,
+    role: ActorRole
   ): MenuEntry<OverrideAction>[] {
+    const { overrides } = editing;
+    const overridden = overrides.actorOverridden(id);
+
     return kOverrideActions[role].map((action) => {
+      const allowed = action === "apply-to-prefab" ?
+        overrides.canApplyToPrefab(id) :
+        editing.access.can("instances");
+
       return {
         ...kOverrideItems[action],
-        disabled: !overridden
+        disabled: !overridden || !allowed
       };
     });
   }
@@ -114,34 +135,34 @@ export class HierarchyController {
     id: string,
     role: ActorRole
   ): MenuEntry<RowAction>[] {
+    const { access } = editing;
     const rename: MenuItem<RowAction> = {
       id: "rename",
       label: "Rename",
-      icon: "action-rename"
+      icon: "action-rename",
+      disabled: !access.can("hierarchy", id)
     };
-    const overrides = HierarchyController.#overrideEntries(
-      role,
-      editing.overrides.actorOverridden(id)
-    );
+    const overrides = HierarchyController.#overrideEntries(editing, id, role);
     if (role === "inner") {
       return [rename, "separator", ...overrides];
     }
 
     const { tree } = editing.document;
+    const hierarchy = access.can("hierarchy");
 
     return [
       {
         id: "group:add-child",
         label: "Add child",
         icon: "plus",
-        disabled: !tree.canContain(id),
-        items: [...kAddEntries]
+        disabled: !hierarchy || !tree.canContain(id),
+        items: HierarchyController.#addEntries(editing)
       },
       {
         id: "group:add-component",
         label: "Add component",
         icon: "plus",
-        disabled: !tree.canHoldComponents(id),
+        disabled: !access.can("components") || !tree.canHoldComponents(id),
         items: addComponentEntries(editing.components)
       },
       "separator",
@@ -149,7 +170,8 @@ export class HierarchyController {
       {
         id: "duplicate",
         label: "Duplicate",
-        icon: "duplicate"
+        icon: "duplicate",
+        disabled: !hierarchy
       },
       ...overrides.length === 0 ? [] : ["separator" as const, ...overrides],
       "separator",
@@ -157,7 +179,8 @@ export class HierarchyController {
         id: "delete",
         label: "Delete",
         icon: "trash",
-        intent: "danger"
+        intent: "danger",
+        disabled: !hierarchy
       }
     ];
   }
@@ -166,26 +189,30 @@ export class HierarchyController {
     editing: SceneEditing,
     componentId: string
   ): MenuEntry<ComponentAction>[] {
-    const { overrides } = editing;
+    const { access, overrides } = editing;
     if (overrides.role(componentId) === "inner") {
       return [{
         ...kOverrideItems["revert-overrides"],
-        disabled: !overrides.componentOverridden(componentId)
+        disabled: !access.can("instances") || !overrides.componentOverridden(componentId)
       }];
     }
+
+    const disabled = !access.can("components");
 
     return [
       {
         id: "duplicate",
         label: "Duplicate",
-        icon: "duplicate"
+        icon: "duplicate",
+        disabled
       },
       "separator",
       {
         id: "delete",
         label: "Remove",
         icon: "trash",
-        intent: "danger"
+        intent: "danger",
+        disabled
       }
     ];
   }
@@ -219,7 +246,8 @@ export class HierarchyController {
         components: editing.components,
         naming: editing.assetSlots,
         loadable: editing.assetSlots,
-        live: editing.live
+        live: editing.live,
+        access: editing.access
       });
     }
     this.#host.requestUpdate();
@@ -260,6 +288,7 @@ export class HierarchyController {
     this.#connection = new SubscriptionController(host, (editing) => {
       const {
         document,
+        access,
         selection,
         anchorPicks,
         presence,
@@ -271,6 +300,8 @@ export class HierarchyController {
       return [
         document.subscribe("change", this.#onChange),
         document.subscribe("reset", this.#rebuild),
+        access.subscribe(this.#rebuild),
+        editing.overrides.subscribe(this.#rebuild),
         selection.subscribe("change", this.#onSelection),
         anchorPicks.subscribe("pick", this.#onAnchorPick),
         presence.subscribe("selectionsChange", this.#rebuild),
@@ -304,6 +335,17 @@ export class HierarchyController {
 
   get hasSelection(): boolean {
     return this.#connection.current?.actions.canEditSelection() ?? false;
+  }
+
+  get canAdd(): boolean {
+    return this.#connection.current?.access.can("hierarchy") ?? false;
+  }
+
+  get reorderable(): boolean {
+    const access = this.#connection.current?.access;
+
+    return access !== undefined &&
+      (access.can("hierarchy") || access.can("components"));
   }
 
   attach(
@@ -366,7 +408,16 @@ export class HierarchyController {
 
   readonly acceptDrop = (
     detail: JollyReparentDetail
-  ): boolean => this.#rows.accepts(detail);
+  ): boolean => {
+    const access = this.#connection.current?.access;
+    const dragsComponent = detail.movedIds.some(
+      (id) => this.#rows.componentRow(id) !== null
+    );
+
+    return access !== undefined &&
+      access.can(dragsComponent ? "components" : "hierarchy") &&
+      this.#rows.accepts(detail);
+  };
 
   readonly handleReparent = (
     event: CustomEvent<JollyReparentDetail>
@@ -378,7 +429,7 @@ export class HierarchyController {
     }
 
     if (drop.kind === "component") {
-      editing.document.moveComponent(drop.move.id, drop.move.beforeId);
+      editing.actions.moveComponent(drop.move.id, drop.move.beforeId);
     }
     else {
       editing.actions.move(drop.moves);
@@ -400,7 +451,7 @@ export class HierarchyController {
     }
 
     return MenuSession.from(
-      kAddEntries,
+      HierarchyController.#addEntries(editing),
       (action) => this.#add(action, null)
     );
   }
@@ -513,7 +564,7 @@ export class HierarchyController {
     function exists(): boolean {
       return editing.overrides.exists(row.ownerId);
     }
-    const add = inner ? [] : kAddEntries;
+    const add = inner ? [] : HierarchyController.#addEntries(editing);
     const addTo = (
       action: AddAction
     ): Promise<void> => this.#add(action, row.ownerId, row.anchor);

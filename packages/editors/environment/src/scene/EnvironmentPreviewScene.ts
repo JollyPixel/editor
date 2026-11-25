@@ -92,10 +92,14 @@ export class EnvironmentPreviewScene extends Systems.Scene {
     teardown.defer(followCameraPreferences(camera, preferences));
     teardown.defer(keyBindings.bind(world.input.keyboard, {
       "edit.undo": () => {
-        history.undo(ENVIRONMENT_HISTORY_SCOPE);
+        if (edits.editable) {
+          history.undo(ENVIRONMENT_HISTORY_SCOPE);
+        }
       },
       "edit.redo": () => {
-        history.redo(ENVIRONMENT_HISTORY_SCOPE);
+        if (edits.editable) {
+          history.redo(ENVIRONMENT_HISTORY_SCOPE);
+        }
       }
     }));
   }

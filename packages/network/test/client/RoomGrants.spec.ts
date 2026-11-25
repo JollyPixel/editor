@@ -123,6 +123,19 @@ describe("RoomGrants", () => {
     assert.deepEqual(changes, [["palette"]]);
   });
 
+  test("withholds every capability once the room refuses the join", () => {
+    const { grants, harness } = setup();
+    harness.admit("A", {}, {
+      stroke: "write",
+      fill: "write",
+      "palette-changed": "write"
+    });
+
+    harness.deny("$join");
+
+    assert.equal(grants.current.readOnly, true);
+  });
+
   test("forwards refusals of the events its table governs", () => {
     const { harness, denied } = setup();
 

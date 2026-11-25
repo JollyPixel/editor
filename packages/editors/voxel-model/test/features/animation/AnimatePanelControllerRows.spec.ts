@@ -114,6 +114,27 @@ describe("AnimatePanelController clip rows", () => {
     assert.equal(accepts(reparent(spin.id, props.children![0].id, "above").detail), false);
   });
 
+  test("a clip of a read-only set can be copied, but not renamed, moved or deleted", () => {
+    const source = createSharedSetSource();
+    const shared = new AnimationDocument();
+    shared.addClip({ id: "walk", name: "Walk" });
+    shared.addClip({ id: "run", name: "Run" });
+    source.documents.set("shared", shared);
+    const { controller, animations } = createPanelHarness(source);
+    animations.link("shared");
+
+    source.rooms.get("shared")!.restrict();
+
+    const [walk, run] = controller.state.sharedSets[0].children!;
+    const items = controller.rowMenu(walk.id).items.filter((entry) => entry !== "separator");
+    assert.deepEqual(
+      items.map(({ label, disabled = false }) => [label, disabled]),
+      [["Rename", true], ["Duplicate", true], ["Copy to…", false], ["Delete", true]]
+    );
+    assert.equal(walk.renamable, false);
+    assert.equal(controller.acceptDrop("shared")(reparent(run.id, walk.id, "above").detail), false);
+  });
+
   test("Copy is the only way out of a set, and disabled with nowhere to put the clip", async() => {
     const { controller } = createPanelHarness();
     await controller.actions!.newClip(null);

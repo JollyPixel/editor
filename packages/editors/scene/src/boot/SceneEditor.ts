@@ -20,6 +20,10 @@ import { type Runtime, BakedRoomEnvironment } from "@jolly-pixel/backend.three";
 import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
+import {
+  SCENE_CAPABILITY_TABLE,
+  SceneAccess
+} from "../access/SceneAccess.ts";
 import type { SceneEditing } from "../editing/SceneEditing.ts";
 import { SessionAssetSlots } from "../editing/SessionAssetSlots.ts";
 import { SCENE_KEYBINDINGS } from "../preferences.ts";
@@ -27,6 +31,7 @@ import { SceneEditorScene } from "../scene/SceneEditorScene.ts";
 import { PresenceStore } from "../state/PresenceStore.ts";
 import { EditorShell } from "./EditorShell.ts";
 import { PROJECT_COMPONENTS } from "./projectComponents.ts";
+import { sessionScenes } from "./sessionScenes.ts";
 
 // CONSTANTS
 const kCanvas = "#scene-viewport canvas";
@@ -104,7 +109,8 @@ export class SceneEditor {
         sceneId,
         document: target.document,
         room: target.room,
-        openScene: (assetId) => session.assets.open(kSceneKind, assetId),
+        access: new SceneAccess(context.access.target(SCENE_CAPABILITY_TABLE)),
+        openScene: sessionScenes(session, kSceneKind, context.access),
         openEnvironment: environmentOpener(session),
         session,
         components: PROJECT_COMPONENTS,

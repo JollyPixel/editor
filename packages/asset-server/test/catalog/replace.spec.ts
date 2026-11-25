@@ -14,9 +14,11 @@ import type { ServerOptions } from "@jolly-pixel/network";
 import {
   CATALOG_REPLACE,
   CATALOG_ROOM,
+  CATALOG_TAG,
   createAssetBackend,
   type AssetKindHandler
 } from "#src/index.ts";
+import { CatalogRejectedError } from "#src/client/index.ts";
 import {
   bytes,
   text
@@ -156,7 +158,7 @@ describe("catalog:replace over loopback", () => {
     );
   });
 
-  test("a role without the replace right leaves the content alone", async() => {
+  test("a role without the replace right is refused and keeps the content", async() => {
     await using project = await replaceProject({
       rights: {
         default: {
@@ -167,10 +169,13 @@ describe("catalog:replace over loopback", () => {
     });
     const { catalog } = project.connection;
 
-    void catalog.replace(project.assetId, bytes("9")).catch(() => void 0);
-    const tags = await catalog.tags(project.assetId);
-
-    assert.deepEqual(tags, []);
+    assert.equal(catalog.can(CATALOG_REPLACE), false);
+    assert.equal(catalog.can(CATALOG_TAG), true);
+    await assert.rejects(
+      catalog.replace(project.assetId, bytes("9")),
+      CatalogRejectedError
+    );
+    assert.deepEqual(await catalog.tags(project.assetId), []);
     assert.strictEqual(await project.read(), "1");
   });
 });

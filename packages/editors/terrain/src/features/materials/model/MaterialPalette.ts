@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { TEXTURE_KIND } from "@jolly-pixel/asset-server";
-import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import {
+  CATALOG_CREATE,
+  type CatalogClient
+} from "@jolly-pixel/asset-server/client";
 import type {
   TerrainDocument,
   TerrainMaterialChanges,
@@ -43,7 +46,10 @@ export interface MaterialPaletteOptions {
   >;
   selection: Pick<MaterialSelection, "select">;
   history: Pick<TerrainHistory, "record">;
-  catalog: Pick<CatalogClient, "records" | "record" | "create" | "replace">;
+  catalog: Pick<
+    CatalogClient,
+    "records" | "record" | "create" | "replace" | "can"
+  >;
   importFolder: string;
   pickTexture(title: string): Promise<TerrainMaterialMap | null>;
   askConflict(paths: readonly string[]): Promise<TextureConflict | null>;
@@ -56,6 +62,10 @@ export class MaterialPalette {
     options: MaterialPaletteOptions
   ) {
     this.#options = options;
+  }
+
+  get importable(): boolean {
+    return this.#options.catalog.can(CATALOG_CREATE);
   }
 
   async addFromPicker(): Promise<string | null> {
@@ -73,7 +83,7 @@ export class MaterialPalette {
   async addFromFiles(
     files: readonly TextureFile[]
   ): Promise<string[]> {
-    const conflict = await this.#conflict(files);
+    const conflict = this.importable ? await this.#conflict(files) : null;
     if (conflict === null) {
       return [];
     }
@@ -107,7 +117,7 @@ export class MaterialPalette {
     map: MaterialMap,
     file: TextureFile
   ): Promise<boolean> {
-    const conflict = await this.#conflict([file]);
+    const conflict = this.importable ? await this.#conflict([file]) : null;
     if (conflict === null) {
       return false;
     }

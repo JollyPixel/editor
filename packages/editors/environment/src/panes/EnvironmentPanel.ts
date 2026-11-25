@@ -31,9 +31,12 @@ type ChangeEvent<TValue> = CustomEvent<JollyChangeDetail<TValue>>;
 type Section = keyof EnvironmentChange;
 
 interface FieldEdits<TValue> {
+  readOnly: boolean;
   preview(value: TValue): void;
   commit(value: TValue): void;
 }
+
+type ChoiceEdits<TValue> = Pick<FieldEdits<TValue>, "readOnly" | "commit">;
 
 interface NumberRange {
   min: number;
@@ -104,17 +107,26 @@ export class EnvironmentPanel extends LitElement {
     edits: EnvironmentEdits
   ): TemplateResult {
     const { file } = edits;
+    const readOnly = !edits.editable;
     function section<TSection extends Section>(
       key: TSection
     ): FieldEdits<NonNullable<EnvironmentChange[TSection]>> {
       return sectionEdits(edits, key);
     }
+    function choice<TValue>(
+      commit: (value: TValue) => void
+    ): ChoiceEdits<TValue> {
+      return {
+        readOnly,
+        commit
+      };
+    }
 
     return html`
       ${folder("sky", "Sky", html`
-        ${select("Sky", kSkyKinds, file.sky.kind, (kind) => edits.commit({
+        ${select("Sky", kSkyKinds, file.sky.kind, choice((kind) => edits.commit({
           sky: EnvironmentSwitch.sky(file.sky, kind)
-        }))}
+        })))}
         ${file.sky.kind === "color" ?
           colorField("Color", file.sky.color, editField(section("sky"), file.sky, "color")) :
           nothing}
@@ -123,6 +135,7 @@ export class EnvironmentPanel extends LitElement {
         <jolly-checkbox
           label="Sun"
           .value=${file.sun !== null}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<boolean>) => edits.commit({
             sun: EnvironmentSwitch.sun(file.sun, event.detail.value)
           })}
@@ -144,9 +157,9 @@ export class EnvironmentPanel extends LitElement {
         )}
       `)}
       ${folder("reflections", "Reflections", html`
-        ${select("Map", kReflectionKinds, file.reflections.kind, (kind) => edits.commit({
+        ${select("Map", kReflectionKinds, file.reflections.kind, choice((kind) => edits.commit({
           reflections: { ...file.reflections, kind }
-        }))}
+        })))}
         ${numberField(
           "Intensity",
           file.reflections.intensity,
@@ -155,15 +168,15 @@ export class EnvironmentPanel extends LitElement {
         )}
       `)}
       ${folder("fog", "Fog", html`
-        ${select("Fog", kFogKinds, file.fog.kind, (kind) => edits.commit({
+        ${select("Fog", kFogKinds, file.fog.kind, choice((kind) => edits.commit({
           fog: EnvironmentSwitch.fog(file.fog, kind)
-        }))}
+        })))}
         ${renderFog(file.fog, section("fog"))}
       `)}
       ${folder("tone-mapping", "Tone mapping", html`
-        ${select("Curve", kToneMappings, file.toneMapping.kind, (kind) => edits.commit({
+        ${select("Curve", kToneMappings, file.toneMapping.kind, choice((kind) => edits.commit({
           toneMapping: { ...file.toneMapping, kind }
-        }))}
+        })))}
         ${numberField(
           "Exposure",
           file.toneMapping.exposure,
@@ -175,6 +188,7 @@ export class EnvironmentPanel extends LitElement {
         <jolly-checkbox
           label="Bloom"
           .value=${file.glow !== null}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<boolean>) => edits.commit({
             glow: EnvironmentSwitch.glow(file.glow, event.detail.value)
           })}
@@ -195,9 +209,14 @@ export class EnvironmentPanel extends LitElement {
         `}
       `)}
       ${folder("voxel", "Voxel lighting", html`
-        ${select("Block light", kFalloffs, file.voxel.blockLightFalloff, (blockLightFalloff) => edits.commit({
-          voxel: { ...file.voxel, blockLightFalloff }
-        }))}
+        ${select(
+          "Block light",
+          kFalloffs,
+          file.voxel.blockLightFalloff,
+          choice((blockLightFalloff) => edits.commit({
+            voxel: { ...file.voxel, blockLightFalloff }
+          }))
+        )}
         ${numberField(
           "Shadow fill",
           file.voxel.shadowFill,
@@ -214,6 +233,7 @@ function sectionEdits<TSection extends Section>(
   key: TSection
 ): FieldEdits<NonNullable<EnvironmentChange[TSection]>> {
   return {
+    readOnly: !edits.editable,
     preview: (value) => edits.preview({ [key]: value }),
     commit: (value) => edits.commit({ [key]: value })
   };
@@ -295,14 +315,15 @@ function select<TValue extends string>(
   label: string,
   options: JollyOption<TValue>[],
   value: TValue,
-  commit: (value: TValue) => void
+  edits: ChoiceEdits<TValue>
 ): TemplateResult {
   return html`
     <jolly-select
       label=${label}
       .options=${options}
       .value=${value}
-      @jolly-change=${(event: ChangeEvent<TValue>) => commit(event.detail.value)}
+      ?readonly=${edits.readOnly}
+      @jolly-change=${(event: ChangeEvent<TValue>) => edits.commit(event.detail.value)}
     ></jolly-select>
   `;
 }
@@ -320,6 +341,7 @@ function numberField(
       .max=${range.max ?? Number.POSITIVE_INFINITY}
       .step=${range.step}
       .value=${value}
+      ?readonly=${edits.readOnly}
       @jolly-input=${(event: ChangeEvent<number>) => edits.preview(event.detail.value)}
       @jolly-change=${(event: ChangeEvent<number>) => edits.commit(event.detail.value)}
     ></jolly-number>
@@ -335,6 +357,7 @@ function colorField(
     <jolly-color
       label=${label}
       .value=${value}
+      ?readonly=${edits.readOnly}
       @jolly-input=${(event: ChangeEvent<string>) => edits.preview(event.detail.value)}
       @jolly-change=${(event: ChangeEvent<string>) => edits.commit(event.detail.value)}
     ></jolly-color>
@@ -347,6 +370,7 @@ function editField<TObject extends object, TKey extends keyof TObject>(
   key: TKey
 ): FieldEdits<TObject[TKey]> {
   return {
+    readOnly: edits.readOnly,
     preview: (value) => edits.preview({ ...object, [key]: value }),
     commit: (value) => edits.commit({ ...object, [key]: value })
   };

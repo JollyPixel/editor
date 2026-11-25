@@ -13,9 +13,12 @@ import {
   type PeerIdentity
 } from "@jolly-pixel/ui";
 import { PeerRoster } from "@jolly-pixel/ui/network";
-import { RoomGrants } from "@jolly-pixel/network/client";
 import { describeSkippedStep } from "@jolly-pixel/history";
-import type { AssetLeases, EditorArchives } from "@jolly-pixel/editor.host";
+import type {
+  AssetLeases,
+  EditorAccess,
+  EditorArchives
+} from "@jolly-pixel/editor.host";
 import {
   environmentOpener,
   PreviewEnvironment,
@@ -88,9 +91,6 @@ import { MAP_CAPABILITY_TABLE } from "../access/MapAccess.ts";
 
 // CONSTANTS
 const kDefaultLayerName = "Ground";
-const kMaxAccessListeners = 32;
-const kMapRefusedMessage = "You can only view this map, so the change was not saved";
-const kBlocksetRefusedMessage = "You can only view this blockset, so the change was not saved";
 const kBlocksetLinkRefusedMessage = "Could not add the blockset: it was refused by the map.";
 const kPaintBlockedMessages: Readonly<Record<MissingPaintSource, string>> = {
   layer: "No voxel layer to paint on: add one in the Layers panel",
@@ -124,6 +124,7 @@ export interface EditorSceneSession {
   catalog: BlocksetCatalog & EnvironmentCatalog;
   assets: AssetLeases;
   archives: EditorArchives;
+  access: Pick<EditorAccess, "target" | "follow">;
 }
 
 export interface EditorSceneOptions {
@@ -240,8 +241,7 @@ export class EditorScene extends Systems.Scene {
       renderer: world.renderer,
       environmentMap: () => environment.environmentMap
     });
-    const access = new RoomGrants(session.room, MAP_CAPABILITY_TABLE)
-      .setMaxListeners(kMaxAccessListeners);
+    const access = session.access.target(MAP_CAPABILITY_TABLE);
     const editorMap = new EditorMap({
       map: session.map,
       defaultLayerName: kDefaultLayerName,
@@ -307,6 +307,7 @@ export class EditorScene extends Systems.Scene {
       view,
       catalog: session.catalog,
       editorMap,
+      access: session.access,
       open: (assetId) => openBlockset(session.assets, assetId)
     });
     const materials = new MapMaterials({
@@ -441,12 +442,6 @@ export class EditorScene extends Systems.Scene {
       placement.subscribe("change", suspendBrush),
       state.tool.subscribe("change", suspendBrush),
       access.subscribe("change", suspendBrush),
-      access.subscribe("denied", () => {
-        state.log.push(kMapRefusedMessage);
-      }),
-      blocksets.subscribe("denied", () => {
-        state.log.push(kBlocksetRefusedMessage);
-      }),
       blocksets.subscribe("linkRefused", () => {
         state.log.push(kBlocksetLinkRefusedMessage);
       }),
@@ -534,8 +529,7 @@ export class EditorScene extends Systems.Scene {
       () => layers.dispose(),
       () => templates.dispose(),
       () => localVisibility.dispose(),
-      () => editorMap.dispose(),
-      () => access.dispose()
+      () => editorMap.dispose()
     );
 
     if (editorMap.ready) {

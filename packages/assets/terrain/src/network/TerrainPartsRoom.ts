@@ -135,10 +135,6 @@ export class TerrainPartsRoom implements Room<
     return this.#room.rights;
   }
 
-  get access(): Right {
-    return this.#room.access;
-  }
-
   can(
     event: string
   ): Right {

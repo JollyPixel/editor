@@ -6,7 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Internal Dependencies
-import { MessageParser } from "#src/index.ts";
+import {
+  MessageParser,
+  type RoomRejectionEvent
+} from "#src/index.ts";
 import { createOpenClient } from "../helpers/client/FakeSocket.ts";
 import { actionCommandProtocol } from "../helpers/protocol/protocols.ts";
 
@@ -45,7 +48,7 @@ describe("Room — leave", () => {
     assert.equal(room.peers.size, 0);
     assert.strictEqual(room.clientId, null);
     assert.equal(room.role, "default");
-    assert.equal(room.access, "void");
+    assert.deepEqual(room.rights, {});
   });
 
   test("sends nothing when the room was never joined", () => {
@@ -109,6 +112,29 @@ describe("Room — denied", () => {
     }]);
   });
 
+  test("repeats the seq and requestId of the refused message", () => {
+    const { client, socket } = createOpenClient();
+    const room = client.room("pixel-draw");
+    const denials: RoomRejectionEvent[] = [];
+    room.on("denied", (event) => denials.push(event));
+
+    socket.receive({
+      room: "pixel-draw",
+      kind: "denied",
+      event: "voxel-set",
+      reason: "read-only",
+      seq: 3,
+      requestId: "r-1"
+    });
+
+    assert.deepEqual(denials, [{
+      event: "voxel-set",
+      reason: "read-only",
+      seq: 3,
+      requestId: "r-1"
+    }]);
+  });
+
   test("a join denied after admission drops the peers and rights of the room", () => {
     const { client, socket } = createOpenClient();
     const room = client.room("pixel-draw");
@@ -125,6 +151,8 @@ describe("Room — denied", () => {
     });
     const left: string[] = [];
     room.on("peer-left", (event) => left.push(event.clientId));
+    let rightsChanges = 0;
+    room.on("rights", () => rightsChanges++);
 
     socket.receive({
       room: "pixel-draw",
@@ -133,11 +161,12 @@ describe("Room — denied", () => {
       reason: "role \"editor\" is not permitted to join this room"
     });
 
+    assert.equal(rightsChanges, 1);
     assert.deepEqual(left, ["B"]);
     assert.equal(room.peers.size, 0);
     assert.strictEqual(room.clientId, null);
     assert.equal(room.role, "default");
-    assert.equal(room.access, "void");
+    assert.deepEqual(room.rights, {});
   });
 });
 

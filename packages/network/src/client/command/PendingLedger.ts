@@ -107,6 +107,17 @@ export class PendingLedger<TCommand extends NetworkCommandHeader> {
     return acknowledged;
   }
 
+  sentAs(
+    clientId: string | null,
+    seq: number
+  ): LedgerEntry<TCommand> | undefined {
+    return this.#entries.find(
+      (entry) => entry.sent &&
+        entry.command.clientId === clientId &&
+        entry.command.seq === seq
+    );
+  }
+
   discard(
     entry: LedgerEntry<TCommand>
   ): void {

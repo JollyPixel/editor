@@ -85,7 +85,7 @@ export class AssetRoomExtension<
   readonly id: string;
   readonly name: string;
   readonly protocols: network.MessageProtocols;
-  override readonly queries = [ASSET_ROOM_INLINE_SNAPSHOT];
+  override readonly queries: readonly string[];
 
   #assetId: string;
   #version: () => number | undefined;
@@ -131,6 +131,7 @@ export class AssetRoomExtension<
     this.id = binding.roomId;
     this.name = binding.kind;
     this.#roomProtocols = AssetRoomProtocols.compile(commands);
+    this.queries = this.#roomProtocols.queries;
     this.protocols = this.#roomProtocols.withSnapshot(
       protocol.snapshotSchema,
       protocol.parts?.schema

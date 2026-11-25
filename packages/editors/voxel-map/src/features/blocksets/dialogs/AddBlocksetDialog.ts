@@ -65,6 +65,7 @@ export type AddBlocksetResult =
 export interface AddBlocksetContext {
   defaultTileSize: number;
   linkable: readonly AssetRecordData[];
+  creatable: boolean;
   importable: boolean;
 }
 
@@ -98,6 +99,9 @@ export class AddBlocksetDialog extends LitElement {
   private declare _linkable: readonly AssetRecordData[];
 
   @state()
+  private declare _creatable: boolean;
+
+  @state()
   private declare _importable: boolean;
 
   @query("jolly-dialog")
@@ -116,15 +120,17 @@ export class AddBlocksetDialog extends LitElement {
     this._cols = kDefaultGridSize;
     this._rows = kDefaultGridSize;
     this._linkable = [];
+    this._creatable = true;
     this._importable = false;
   }
 
   open(
     context: AddBlocksetContext
   ): Promise<AddBlocksetResult | null> {
-    this._source = "create";
+    this._source = context.creatable ? "create" : "link";
     this._name = kDefaultName;
     this._linkable = context.linkable;
+    this._creatable = context.creatable;
     this._importable = context.importable;
     this._assetId = context.linkable[0]?.id ?? "";
     this._tileSize = context.defaultTileSize;
@@ -240,7 +246,8 @@ export class AddBlocksetDialog extends LitElement {
     return [
       {
         label: "New",
-        value: "create"
+        value: "create",
+        disabled: !this._creatable
       },
       {
         label: "Existing",

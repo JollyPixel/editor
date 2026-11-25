@@ -1,8 +1,14 @@
 // Import Third-party Dependencies
 import * as z from "zod/mini";
+import type {
+  RoomRejectionEvent,
+  RoomRights
+} from "@jolly-pixel/network/client";
 
 // CONSTANTS
 export const CATALOG_OPEN_MESSAGE_TYPE = "jolly-catalog-open";
+export const CATALOG_RIGHTS_MESSAGE_TYPE = "jolly-catalog-rights";
+export const CATALOG_DENIED_MESSAGE_TYPE = "jolly-catalog-denied";
 
 const kOpenMessageSchema = z.object({
   type: z.literal(CATALOG_OPEN_MESSAGE_TYPE)
@@ -32,6 +38,16 @@ export interface RelayedCommand {
 export type CatalogPortMessage =
   | { type: "command"; command: RelayedCommand; }
   | { type: "leave"; };
+
+export interface CatalogRightsMessage {
+  type: typeof CATALOG_RIGHTS_MESSAGE_TYPE;
+  rights: RoomRights;
+}
+
+export interface CatalogDeniedMessage {
+  type: typeof CATALOG_DENIED_MESSAGE_TYPE;
+  denial: RoomRejectionEvent;
+}
 
 export function isCatalogOpenMessage(
   data: unknown

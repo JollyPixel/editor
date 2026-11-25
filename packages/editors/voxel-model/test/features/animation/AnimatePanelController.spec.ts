@@ -2,6 +2,9 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import type { MenuSession } from "@jolly-pixel/ui";
+
 // Import Internal Dependencies
 import { animationKey } from "#src/state/index.ts";
 import { ANIMATION_LIBRARY } from "#src/features/history/index.ts";
@@ -9,7 +12,8 @@ import {
   MENU_POINT,
   clipLabels,
   createPanelHarness,
-  createSetSource
+  createSetSource,
+  createSharedSetSource
 } from "./panelHarness.ts";
 
 describe("AnimatePanelController", () => {
@@ -209,6 +213,30 @@ describe("AnimatePanelController", () => {
     assert.equal(history.state(ANIMATION_LIBRARY).undoCount, setSteps);
     assert.equal(history.undo(clipScope), true);
     assert.equal(controller.state.clip?.clip.loop, clip.loop);
+  });
+
+  test("greys out New set, set Rename and Share once the role loses the catalog rights", async() => {
+    const source = createSharedSetSource();
+    const { controller, pick } = createPanelHarness(source);
+    controller.actions!.linkSet(MENU_POINT);
+    await pick("Humanoid");
+    await controller.actions!.newClip(null);
+
+    source.rights = { create: false, rename: false };
+    source.notify();
+    const setRow = controller.state.sharedSets[0];
+    function disabled(
+      session: MenuSession,
+      label: string
+    ): boolean {
+      return session.items.some(
+        (entry) => entry !== "separator" && entry.label === label && entry.disabled === true
+      );
+    }
+
+    assert.equal(disabled(controller.sectionMenu("shared"), "New set…"), true);
+    assert.equal(disabled(controller.rowMenu(setRow.id), "Rename…"), true);
+    assert.equal(controller.state.canShare, false);
   });
 
   test("creates a set from the name the user gives", async() => {

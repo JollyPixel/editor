@@ -45,15 +45,17 @@ import type { ScriptPropertiesChangeDetail } from "./ScriptPropertiesEditor.ts";
 
 export type ComponentBodyContext = Pick<
   SceneEditing,
-  "writes" | "components" | "assetSlots" | "draft" | "assets"
+  "access" | "writes" | "components" | "assetSlots" | "draft" | "assets"
 >;
 
 interface RowEdit {
+  readOnly: boolean;
   preview: (next: JSONValue) => void;
   commit: (next: JSONValue) => void;
 }
 
 interface ListEdit {
+  readOnly: boolean;
   add: () => void;
   remove: (index: number) => void;
   item: (index: number, field: InspectedField) => RowEdit;
@@ -78,6 +80,7 @@ export function renderComponentBody(
   }
 
   const inspection = new ComponentInspection(entry, kind, context.assets);
+  const readOnly = !context.access.can("components", entry.id);
   function preview(change: ComponentChange): void {
     draft.editComponent(entry.id, change);
   }
@@ -96,10 +99,12 @@ export function renderComponentBody(
 
       if (inspected.kind === "list") {
         return renderList(inspected, {
+          readOnly,
           add: () => commit(inspection.addItem(inspected)),
           remove: (index) => commit(inspection.removeItem(inspected, index)),
           item: (index, field) => {
             return {
+              readOnly,
               preview: (next) => preview(inspection.editItem(inspected, index, field, next)),
               commit: (next) => commit(inspection.editItem(inspected, index, field, next))
             };
@@ -108,6 +113,7 @@ export function renderComponentBody(
       }
 
       return renderRow(inspected, {
+        readOnly,
         preview: (next) => preview(inspection.edit(inspected, next)),
         commit: (next) => commit(inspection.edit(inspected, next))
       });
@@ -129,6 +135,7 @@ function renderList(
         icon-only
         label=${`Add ${row.itemLabel.toLowerCase()}`}
         title=${`Add ${row.itemLabel.toLowerCase()}`}
+        ?disabled=${edit.readOnly}
         @click=${edit.add}
       ></jolly-button>
     </jolly-separator>
@@ -144,6 +151,7 @@ function renderList(
           icon-only
           label=${`Remove ${row.itemLabel.toLowerCase()} ${index + 1}`}
           title=${`Remove ${row.itemLabel.toLowerCase()}`}
+          ?disabled=${edit.readOnly}
           @click=${() => edit.remove(index)}
         ></jolly-button>
         ${fields.map((field) => renderRow(field, edit.item(index, field)))}
@@ -157,7 +165,7 @@ function renderRow(
   edit: RowEdit
 ): TemplateResult {
   const { row, value, fallback } = inspected;
-  const { preview, commit } = edit;
+  const { readOnly, preview, commit } = edit;
 
   switch (row.control) {
     case "number":
@@ -169,6 +177,7 @@ function renderRow(
           .min=${row.min ?? -Infinity}
           .max=${row.max ?? Infinity}
           .step=${row.step ?? 1}
+          ?readonly=${readOnly}
           @jolly-input=${(event: ChangeEvent<number>) => preview(event.detail.value)}
           @jolly-change=${(event: ChangeEvent<number>) => commit(event.detail.value)}
         ></jolly-number>
@@ -178,6 +187,7 @@ function renderRow(
         <jolly-checkbox
           label=${row.label}
           .value=${value === true}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<boolean>) => commit(event.detail.value)}
         ></jolly-checkbox>
       `;
@@ -187,6 +197,7 @@ function renderRow(
           label=${row.label}
           .value=${String(value)}
           .default=${fallback}
+          ?readonly=${readOnly}
           @jolly-input=${(event: ChangeEvent<string>) => preview(event.detail.value)}
           @jolly-change=${(event: ChangeEvent<string>) => commit(event.detail.value)}
         ></jolly-color>
@@ -197,6 +208,7 @@ function renderRow(
           label=${row.label}
           .options=${row.options}
           .value=${String(value)}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<string>) => commit(event.detail.value)}
         ></jolly-select>
       `;
@@ -207,6 +219,7 @@ function renderRow(
         <jolly-text
           label=${row.label}
           .value=${String(value)}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<string>) => commit(event.detail.value.trim())}
         ></jolly-text>
       `;
@@ -215,7 +228,7 @@ function renderRow(
         row.label,
         Systems.isJSONObject(value) ? value : {},
         row.declared ?? [],
-        commit
+        edit
       );
   }
 }
@@ -241,7 +254,12 @@ function renderAssetSlot(
   type: AssetType<unknown>,
   context: ComponentBodyContext
 ): TemplateResult {
-  const { assetSlots, writes, components } = context;
+  const {
+    access,
+    assetSlots,
+    writes,
+    components
+  } = context;
   const reference = entry.assets[slot] ?? null;
   function change(next: AssetReferenceData | null): void {
     writes.changeComponentAssets(
@@ -271,6 +289,7 @@ function renderAssetSlot(
       label=${label}
       .value=${reference?.id ?? null}
       .text=${reference === null ? "" : assetSlots.name(reference)}
+      ?readonly=${!access.can("components", entry.id)}
       @jolly-browse=${pick}
       @jolly-change=${clear}
       @jolly-open=${open}
@@ -288,6 +307,7 @@ function renderVector(
   const min = row.min ?? -Infinity;
   const max = row.max ?? Infinity;
   const step = row.step ?? 0.1;
+  const { readOnly } = edit;
   function input(event: ChangeEvent<JSONObject>): void {
     edit.preview(event.detail.value);
   }
@@ -305,6 +325,7 @@ function renderVector(
           .min=${min}
           .max=${max}
           .step=${step}
+          ?readonly=${readOnly}
           @jolly-input=${input}
           @jolly-change=${change}
         ></jolly-vector2>
@@ -318,6 +339,7 @@ function renderVector(
           .min=${min}
           .max=${max}
           .step=${step}
+          ?readonly=${readOnly}
           @jolly-input=${input}
           @jolly-change=${change}
         ></jolly-vector4>
@@ -331,6 +353,7 @@ function renderVector(
           .min=${min}
           .max=${max}
           .step=${step}
+          ?readonly=${readOnly}
           @jolly-input=${input}
           @jolly-change=${change}
         ></jolly-vector3>
@@ -342,10 +365,10 @@ function renderProperties(
   label: string,
   properties: Readonly<JSONObject>,
   declared: readonly DeclaredProperty[],
-  write: (next: JSONObject) => void
+  edit: RowEdit
 ): TemplateResult {
   function change(event: CustomEvent<ScriptPropertiesChangeDetail>): void {
-    write(event.detail.properties);
+    edit.commit(event.detail.properties);
   }
 
   return html`
@@ -353,6 +376,7 @@ function renderProperties(
     <jolly-scene-script-properties
       .properties=${properties}
       .declared=${declared}
+      .readOnly=${edit.readOnly}
       @script-properties-change=${change}
     ></jolly-scene-script-properties>
   `;

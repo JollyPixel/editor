@@ -208,7 +208,7 @@ describe("ServerRoom — rights: message write gate", () => {
     assert.deepEqual(extension.messages, [{ clientId: "A", payload: { action: "voxel-set" } }]);
   });
 
-  test("a role with \"read\" on the event is denied and never reaches the extension", async() => {
+  test("denies a \"read\" role with the message's seq and requestId, unseen by the extension", async() => {
     const extension = createExtension(actionProtocols);
     const a = createClient("A");
     const room = createRoom(extension, new RightsTable({
@@ -220,14 +220,16 @@ describe("ServerRoom — rights: message write gate", () => {
     await room.join({ handle: a.client, identity: createIdentity("A", "viewer") });
     a.sent.length = 0;
 
-    await room.message("A", { action: "voxel-set" });
+    await room.message("A", { action: "voxel-set", seq: 4, requestId: "r-1" });
 
     assert.deepEqual(extension.messages, []);
     assert.deepEqual(a.sent, [{
       room: "pixel-draw",
       kind: "denied",
       event: "voxel-set",
-      reason: "role \"viewer\" cannot write \"voxel-set\""
+      reason: "role \"viewer\" cannot write \"voxel-set\"",
+      seq: 4,
+      requestId: "r-1"
     }]);
   });
 

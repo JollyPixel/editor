@@ -1,6 +1,10 @@
 // Import Third-party Dependencies
 import type * as EventStore from "@jolly-pixel/event-store";
-import { Server, type ServerConnection } from "@jolly-pixel/network";
+import {
+  Server,
+  type RightsMap,
+  type ServerConnection
+} from "@jolly-pixel/network";
 import { AssetRoom } from "@jolly-pixel/asset";
 
 // Import Internal Dependencies
@@ -55,6 +59,10 @@ export interface RoomHarnessOptions {
   extraHandlers?: AnyAssetKindHandler[];
   contentRefs?: ContentRefs;
   /**
+   * Rights of the `default` role every harness client joins with.
+   */
+  rights?: RightsMap;
+  /**
    * The asset the rooms open, a counter at `a.counter` by default.
    */
   asset?: {
@@ -96,7 +104,8 @@ export async function roomHarness(
   catalog.start();
 
   const server = new Server({
-    roomGraceMs: graceMs
+    roomGraceMs: graceMs,
+    rights: options.rights
   });
   const { logger, records } = recordingLogger();
   async function flush(

@@ -6,6 +6,7 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { CATALOG_CREATE } from "@jolly-pixel/asset-server/client";
 import type { ContextMenuEntry } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -79,7 +80,10 @@ function buildMenu(
   return assetMenu(
     new AssetSelection(kModel, nodeIds),
     kKinds,
-    new AssetActions({ sharing })
+    new AssetActions({
+      sharing,
+      can: () => true
+    })
   );
 }
 
@@ -150,5 +154,19 @@ describe("assetMenu", () => {
       icon: "trash",
       intent: "danger"
     });
+  });
+
+  test("a role that cannot create assets gets New asset greyed out", () => {
+    const [, newAsset] = assetMenu(
+      new AssetSelection(kModel, []),
+      kKinds,
+      new AssetActions({
+        sharing: false,
+        can: (command) => command !== CATALOG_CREATE
+      })
+    );
+
+    assert.ok(newAsset !== "separator");
+    assert.deepEqual([newAsset.id, newAsset.disabled], ["new-asset", true]);
   });
 });

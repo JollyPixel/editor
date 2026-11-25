@@ -33,6 +33,7 @@ import { PreferenceStorage } from "../preferences/adapters/PreferenceStorage.ts"
 import { followColorPickerPreferences } from "../preferences/adapters/followColorPickerPreferences.ts";
 import { LastOpenedLaunchSource } from "../launch/sources/LastOpenedLaunchSource.ts";
 import type { AssetRoomLease } from "../lease/AssetLease.ts";
+import { EditorAccess } from "../access/EditorAccess.ts";
 import type { AssetLeases } from "../lease/AssetLeases.ts";
 import type { ConnectionStatus } from "../connection/ConnectionStatus.ts";
 import {
@@ -64,7 +65,7 @@ export interface PlacedSession {
   readonly offline: OfflineMode | null;
   readonly assets: Pick<AssetLeases, "unsaved">;
   readonly connectionStatus: ConnectionStatus | null;
-  readonly target: Pick<AssetRoomLease, "record">;
+  readonly target: Pick<AssetRoomLease, "record" | "room">;
 }
 
 export interface PlacedRequest extends Omit<MountRequest, "session"> {
@@ -74,6 +75,7 @@ export interface PlacedRequest extends Omit<MountRequest, "session"> {
 export type PlacedContext = Pick<
   EditorContext,
   | "toolbar"
+  | "access"
   | "shell"
   | "commands"
   | "lantern"
@@ -156,13 +158,19 @@ export class Placement {
     request: PlacedRequest,
     archives: EditorToolbarArchives
   ): PlacedContext {
-    const toolbar = this.#toolbar(request, archives);
+    const access = new EditorAccess({
+      target: request.session.target.room,
+      notifications: this.#notifications
+    });
+    request.own(() => access.dispose());
+    const toolbar = this.#toolbar(request, archives, access);
     request.own(() => toolbar.dispose());
     const preferences = this.#preferences.view();
     request.own(() => preferences.dispose());
 
     return {
       toolbar,
+      access,
       shell: this.#shell,
       commands: this.#console.commands,
       lantern: this.#lantern,
@@ -204,7 +212,8 @@ export class Placement {
 
   #toolbar(
     request: PlacedRequest,
-    archives: EditorToolbarArchives
+    archives: EditorToolbarArchives,
+    access: EditorAccess
   ): EditorToolbarSources {
     const { launch, session, navigator } = request;
     const { catalog, assets } = session;
@@ -230,6 +239,7 @@ export class Placement {
           navigator
         }),
       connectionStatus: session.connectionStatus,
+      access,
       lantern: this.#lantern
     });
   }

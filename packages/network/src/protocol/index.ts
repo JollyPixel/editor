@@ -1,5 +1,6 @@
 export * from "./types.ts";
 export * from "./constants.ts";
+export * from "./rights.ts";
 export * from "./profile/PeerActivity.ts";
 export * from "./profile/PeerFieldLock.ts";
 export * from "./profile/PeerProfile.ts";

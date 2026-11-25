@@ -8,6 +8,10 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import {
+  CATALOG_DELETE,
+  CATALOG_RENAME
+} from "@jolly-pixel/asset-server/client";
 import type {
   ContextMenu,
   ContextMenuItem,
@@ -174,6 +178,30 @@ describe("EditorToolbar assets", () => {
     assert.deepEqual(menuIds(menu), ["rename", "export", "separator", "delete"]);
     assert.equal(menuItem(menu, "delete").disabled, true);
     assert.equal(query(element, ".error"), null);
+  });
+
+  test("the asset menu greys out rename and delete for a role without those rights", async() => {
+    const catalog = new FakeSessionCatalog([
+      record("forest", "voxelmap"),
+      record("cave", "voxelmap")
+    ]);
+    catalog.refuse(CATALOG_RENAME, CATALOG_DELETE);
+    const element = await mount(
+      new EditorTargets({
+        catalog,
+        accepts: "voxelmap",
+        current: "forest",
+        navigator: new FakeNavigator()
+      }),
+      null
+    );
+    const menu = query<ContextMenu>(element, "#asset-menu")!;
+
+    query(element, "#asset-actions")!.click();
+
+    assert.equal(menuItem(menu, "rename").disabled, true);
+    assert.equal(menuItem(menu, "delete").disabled, true);
+    assert.ok(!menuItem(menu, "export").disabled);
   });
 
   test("the asset menu exports a dependency picked in its submenu", async() => {

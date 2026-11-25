@@ -117,8 +117,10 @@ const launch: LaunchMessage = {
 frame.contentWindow.postMessage(launch, origin, [channel.port2]);
 ```
 
-Each port gets a snapshot, then every catalog message. `stop()` closes one
-port; `share.dispose()` closes them all.
+Each port gets the shell member's catalog rights and a snapshot, then every
+catalog message and each change of rights, so `CatalogClient.can` answers in
+the frame. A command the catalog room refuses rejects in the frame that sent
+it. `stop()` closes one port; `share.dispose()` closes them all.
 
 ## Console port
 

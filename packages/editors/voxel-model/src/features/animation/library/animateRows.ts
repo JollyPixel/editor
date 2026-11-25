@@ -60,7 +60,7 @@ export function clipNodes(
     return {
       id,
       label: clip.name,
-      renamable: true,
+      renamable: set.editable,
       detail: `${(clip.timeline.length / TICKS_PER_SECOND).toFixed(1)}s`,
       badges: focuses.badges(id),
       data: { setId: set.id, target, clipId: clip.id }

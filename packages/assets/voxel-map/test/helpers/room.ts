@@ -37,8 +37,6 @@ export function createMockRoom(clientId = "client-A"): MockRoom {
 
     rights: {},
 
-    access: "write" as const,
-
     can: () => "write" as const,
     sentCommands,
     left: false,

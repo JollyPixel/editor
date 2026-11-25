@@ -35,7 +35,10 @@ function skyPreview(): {
       path: "textures/sky.ktx2"
     },
     catalog: {
-      replace: () => Promise.reject(new Error("not used"))
+      replace: () => Promise.reject(new Error("not used")),
+      can: () => true,
+      on: () => void 0,
+      off: () => void 0
     }
   }, document);
 

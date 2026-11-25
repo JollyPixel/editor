@@ -50,6 +50,7 @@
     "@jolly-pixel/ecs": "workspace:*",
     "@jolly-pixel/editor.host": "workspace:*",
     "@jolly-pixel/history": "workspace:*",
+    "@jolly-pixel/network": "workspace:*",
     "@jolly-pixel/preferences": "workspace:*",
     "@jolly-pixel/ui": "workspace:*",
     "@jolly-pixel/utils": "workspace:*",

@@ -4,7 +4,11 @@ import {
   AssetPath,
   type AssetRecordData
 } from "@jolly-pixel/asset";
-import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import {
+  CATALOG_DELETE,
+  CATALOG_RENAME,
+  type CatalogClient
+} from "@jolly-pixel/asset-server/client";
 import type {
   ConfirmOptions,
   PromptOptions
@@ -32,10 +36,10 @@ export type EditorTargetsEvents = {
 
 export interface EditorTargetsCatalog extends Pick<
   CatalogClient,
-  "records" | "record" | "listDependents" | "rename" | "remove"
+  "records" | "record" | "listDependents" | "rename" | "remove" | "can"
 > {
   subscribe(
-    type: "change",
+    type: "change" | "rights",
     listener: () => void
   ): () => void;
 }
@@ -67,7 +71,7 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
   readonly #catalog: EditorTargetsCatalog;
   readonly #navigator: LaunchNavigator;
   readonly #browser: EditorTargetsBrowser;
-  readonly #unsubscribe: () => void;
+  readonly #unsubscribe: Array<() => void>;
   #accepted: AssetRecordData[] = [];
   #sorted: AssetRecordData[] = [];
 
@@ -82,11 +86,14 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
     this.#navigator = options.navigator;
     this.#browser = options.browser ?? kDomTargetsBrowser;
     this.#refresh();
-    this.#unsubscribe = this.#catalog.subscribe("change", () => {
-      if (this.#refresh()) {
-        this.emit("change");
-      }
-    });
+    this.#unsubscribe = [
+      this.#catalog.subscribe("change", () => {
+        if (this.#refresh()) {
+          this.emit("change");
+        }
+      }),
+      this.#catalog.subscribe("rights", () => this.emit("change"))
+    ];
   }
 
   [Symbol.iterator](): IterableIterator<AssetRecordData> {
@@ -95,10 +102,14 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
     return this.#sorted.values();
   }
 
+  get canRenameCurrent(): boolean {
+    return this.#catalog.can(CATALOG_RENAME);
+  }
+
   get canRemoveCurrent(): boolean {
     this.#refresh();
 
-    return this.#sorted.length > 1;
+    return this.#sorted.length > 1 && this.#catalog.can(CATALOG_DELETE);
   }
 
   async open(
@@ -111,7 +122,7 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
 
   async renameCurrent(): Promise<void> {
     const record = this.#catalog.record(this.current);
-    if (record === undefined) {
+    if (record === undefined || !this.canRenameCurrent) {
       return;
     }
 
@@ -131,7 +142,7 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
   async removeCurrent(): Promise<void> {
     const records = [...this];
     const index = records.findIndex((record) => record.id === this.current);
-    if (index === -1) {
+    if (index === -1 || !this.#catalog.can(CATALOG_DELETE)) {
       return;
     }
     if (records.length === 1) {
@@ -158,7 +169,9 @@ export class EditorTargets extends Emitter<EditorTargetsEvents> {
   }
 
   dispose(): void {
-    this.#unsubscribe();
+    for (const unsubscribe of this.#unsubscribe) {
+      unsubscribe();
+    }
   }
 
   #refresh(): boolean {

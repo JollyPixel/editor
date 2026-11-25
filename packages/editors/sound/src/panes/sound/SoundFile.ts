@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import {
+  CATALOG_REPLACE,
+  type CatalogClient
+} from "@jolly-pixel/asset-server/client";
 import {
   SOUND_CONTENT_TYPE,
   SOUND_EXTENSION,
@@ -9,7 +12,11 @@ import {
 // Import Internal Dependencies
 import { SoundUpload } from "./SoundUpload.ts";
 
-export type SoundFileCatalog = Pick<CatalogClient, "record" | "replace">;
+export interface SoundFileCatalog
+  extends Pick<CatalogClient, "record" | "replace" | "can"> {
+  on(type: "rights", listener: () => void): unknown;
+  off(type: "rights", listener: () => void): unknown;
+}
 
 export interface SoundFileOptions {
   catalog: SoundFileCatalog;
@@ -39,10 +46,24 @@ export class SoundFile {
     return this.#document.bytes === null;
   }
 
+  get replaceable(): boolean {
+    return this.#catalog.can(CATALOG_REPLACE);
+  }
+
   subscribe(
     listener: () => void
   ): () => void {
     return this.#document.subscribe("reset", () => listener());
+  }
+
+  subscribeRights(
+    listener: () => void
+  ): () => void {
+    this.#catalog.on("rights", listener);
+
+    return () => {
+      this.#catalog.off("rights", listener);
+    };
   }
 
   async replace(

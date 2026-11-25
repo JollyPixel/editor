@@ -41,6 +41,7 @@ export * from "./session/EditorArchives.ts";
 export * from "./session/EditorTargets.ts";
 export * from "./session/EditorTags.ts";
 export * from "./session/EditorToolbarSources.ts";
+export * from "./access/EditorAccess.ts";
 export type { NewTag } from "./session/dialogs/askNewTag.ts";
 export type { AssetPickOptions } from "./session/picker/pickAsset.ts";
 export * from "./session/dialogs/askImportConflictPolicy.ts";

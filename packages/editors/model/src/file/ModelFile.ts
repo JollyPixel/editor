@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { CatalogClient } from "@jolly-pixel/asset-server/client";
+import {
+  CATALOG_REPLACE,
+  type CatalogClient
+} from "@jolly-pixel/asset-server/client";
 import {
   MODEL_EXTENSIONS,
   type ModelFileDocument
@@ -9,12 +12,17 @@ import { fileExtension } from "@jolly-pixel/utils";
 // Import Internal Dependencies
 import { ModelUpload } from "./ModelUpload.ts";
 
+export interface ModelFileCatalog extends Pick<CatalogClient, "replace" | "can"> {
+  on(type: "rights", listener: () => void): unknown;
+  off(type: "rights", listener: () => void): unknown;
+}
+
 export interface ModelFileSession {
   readonly targetRecord: {
     readonly id: string;
     readonly path: string;
   };
-  readonly catalog: Pick<CatalogClient, "replace">;
+  readonly catalog: ModelFileCatalog;
 }
 
 export interface ModelDownload {
@@ -54,10 +62,25 @@ export class ModelFile {
     return fileExtension(this.name);
   }
 
+  get replaceable(): boolean {
+    return this.#session.catalog.can(CATALOG_REPLACE);
+  }
+
   subscribe(
     listener: () => void
   ): () => void {
     return this.#document.subscribe("reset", () => listener());
+  }
+
+  subscribeRights(
+    listener: () => void
+  ): () => void {
+    const { catalog } = this.#session;
+    catalog.on("rights", listener);
+
+    return () => {
+      catalog.off("rights", listener);
+    };
   }
 
   async replace(

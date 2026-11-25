@@ -5,11 +5,12 @@ import {
   type AssetRecordData,
   type AssetReferenceData
 } from "@jolly-pixel/asset";
-import type {
-  CatalogClient,
-  ImportConflictPolicy,
-  ImportPlan,
-  ImportReport
+import {
+  CATALOG_IMPORT,
+  type CatalogClient,
+  type ImportConflictPolicy,
+  type ImportPlan,
+  type ImportReport
 } from "@jolly-pixel/asset-server/client";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import {
@@ -107,6 +108,7 @@ export type EditorArchiveCatalog = Pick<
   | "record"
   | "create"
   | "dependencies"
+  | "can"
 >;
 
 export interface EditorArchiveSession {
@@ -155,7 +157,9 @@ export class EditorArchives {
   }
 
   get canImport(): boolean {
-    return this.#session.archive.canImport;
+    const { archive, catalog } = this.#session;
+
+    return archive.canImport && catalog.can(CATALOG_IMPORT);
   }
 
   get canReset(): boolean {

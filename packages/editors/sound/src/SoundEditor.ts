@@ -12,6 +12,7 @@ import { bindPresenceStack } from "@jolly-pixel/ui";
 import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
+import { SOUND_CAPABILITY_TABLE } from "./access/SoundAccess.ts";
 import { SoundCollaboration } from "./collaboration/SoundCollaboration.ts";
 import { SoundFile } from "./panes/sound/SoundFile.ts";
 import { SoundPlayer } from "./player/SoundPlayer.ts";
@@ -69,7 +70,10 @@ export class SoundEditor {
         throw new Error("SoundEditor: the page is missing a sound pane.");
       }
 
-      const liveSettings = new LiveSettings(target.document);
+      const liveSettings = new LiveSettings(
+        target.document,
+        context.access.target(SOUND_CAPABILITY_TABLE)
+      );
       teardown.defer(() => liveSettings.dispose());
       const player = new SoundPlayer(
         new AudioContext()

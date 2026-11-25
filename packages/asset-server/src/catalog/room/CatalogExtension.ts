@@ -33,6 +33,7 @@ import {
   CATALOG_PLAN,
   CATALOG_PREVIEW,
   CATALOG_PROGRESS,
+  CATALOG_QUERIES,
   CATALOG_READ,
   CATALOG_RENAME,
   CATALOG_REJECTED,
@@ -115,7 +116,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   readonly id: string;
   readonly name = CATALOG_ROOM;
   readonly protocols: MessageProtocols = catalogProtocols;
-  override readonly queries = [CATALOG_READ, CATALOG_PREVIEW];
+  override readonly queries = CATALOG_QUERIES;
 
   #backend: CatalogBackend;
   #content: CatalogContent;

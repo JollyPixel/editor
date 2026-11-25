@@ -167,7 +167,7 @@ export class BlocksetEditDialog extends EditingElement {
     const tileSize = editing.blocksets.blocksetTileSize(definition.id);
     const resizable = editing.blocksets.access(definition.id).has("tileSize");
     const usage = editing.usage.inspectBlocksetUsage(definition.id);
-    const renamable = entry.assetId !== null;
+    const renamable = editing.blocksets.renamable(definition.id);
     const pendingTileSize = this._pendingTileSize;
 
     return html`

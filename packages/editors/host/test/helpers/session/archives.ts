@@ -62,12 +62,19 @@ export interface CreatedAsset {
 export class FakeArchiveCatalog implements EditorArchiveCatalog {
   readonly dependencies = new DependencyIndex();
   readonly created: CreatedAsset[] = [];
+  readonly refused = new Set<string>();
   readonly #records: AssetRecordData[];
 
   constructor(
     records: AssetRecordData[] = []
   ) {
     this.#records = records;
+  }
+
+  can(
+    command: string
+  ): boolean {
+    return !this.refused.has(command);
   }
 
   record(

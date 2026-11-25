@@ -107,7 +107,8 @@ export class AssetTreeView {
     this.#browserState = options.browserState;
     this.#prompts = options.prompts;
     this.#actions = new AssetActions({
-      sharing: options.prompts.share !== null
+      sharing: options.prompts.share !== null,
+      can: (command) => options.catalog.can(command)
     });
     this.#onChange = options.onChange;
     this.#onCreated = options.onCreated;
@@ -122,6 +123,7 @@ export class AssetTreeView {
     this.#expandedIds = [...this.#expanded];
     this.#catalog.on("change", this.#onCatalogChange);
     this.#catalog.on("dependencies", this.#onDependenciesChange);
+    this.#catalog.on("rights", this.#onChange);
     this.#kindFilter?.addEventListener(
       KIND_FILTER_CHANGE,
       this.#onKindFilterChange
@@ -219,7 +221,7 @@ export class AssetTreeView {
   acceptsDrop(
     detail: JollyReparentDetail
   ): boolean {
-    return this.#model.acceptsDrop(detail);
+    return this.#actions.canMove && this.#model.acceptsDrop(detail);
   }
 
   async rename(
@@ -227,7 +229,7 @@ export class AssetTreeView {
     name: string
   ): Promise<void> {
     const relocation = this.#plan(() => this.#model.planRename(nodeId, name));
-    if (relocation !== null) {
+    if (relocation !== null && this.#actions.canMove) {
       await this.#relocate([relocation], "rename");
     }
   }
@@ -236,7 +238,7 @@ export class AssetTreeView {
     detail: JollyReparentDetail
   ): Promise<void> {
     const relocations = this.#plan(() => this.#model.planMoves(detail)) ?? [];
-    if (relocations.length > 0) {
+    if (relocations.length > 0 && this.#actions.canMove) {
       await this.#relocate(relocations, "move");
     }
   }
@@ -266,7 +268,7 @@ export class AssetTreeView {
     folder: AssetPath
   ): void {
     const entry = this.#kinds.findEntry(kind);
-    if (entry === undefined) {
+    if (entry === undefined || !this.#actions.canCreate) {
       return;
     }
 
@@ -455,6 +457,12 @@ export class AssetTreeView {
     files: Iterable<File>,
     questions: AssetDropQuestions
   ): Promise<void> {
+    if (!this.#actions.canCreate) {
+      this.#fail("Your role cannot add assets to this project");
+
+      return;
+    }
+
     const drop = new AssetDrop(
       Array.from(files, (file) => new DroppedFile(file)),
       this.#kinds
@@ -497,6 +505,7 @@ export class AssetTreeView {
   dispose(): void {
     this.#catalog.off("change", this.#onCatalogChange);
     this.#catalog.off("dependencies", this.#onDependenciesChange);
+    this.#catalog.off("rights", this.#onChange);
     this.#kindFilter?.removeEventListener(
       KIND_FILTER_CHANGE,
       this.#onKindFilterChange

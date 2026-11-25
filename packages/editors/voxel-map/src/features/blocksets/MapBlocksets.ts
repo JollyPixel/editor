@@ -3,7 +3,11 @@ import {
   AssetPath,
   type AssetRecordData
 } from "@jolly-pixel/asset";
-import type { CatalogCreateOptions } from "@jolly-pixel/asset-server/client";
+import {
+  CATALOG_CREATE,
+  CATALOG_RENAME,
+  type CatalogCreateOptions
+} from "@jolly-pixel/asset-server/client";
 import {
   createBlocksetAsset,
   createBlocksetFile,
@@ -11,7 +15,10 @@ import {
   BLOCKSET_EXTENSION,
   BLOCKSET_KIND
 } from "@jolly-pixel/asset.voxel-map/client";
-import type { EditorDependencyFormat } from "@jolly-pixel/editor.host";
+import type {
+  EditorAccess,
+  EditorDependencyFormat
+} from "@jolly-pixel/editor.host";
 import type {
   BlockDefinition,
   MaterialGroup,
@@ -64,6 +71,9 @@ export interface BlocksetCatalog extends BlocksetRecords {
     options?: CatalogCreateOptions
   ): Promise<string>;
   rename(assetId: string, to: string): Promise<void>;
+  can(command: string): boolean;
+  on(event: "change" | "rights", listener: () => void): unknown;
+  off(event: "change" | "rights", listener: () => void): unknown;
 }
 
 export interface CreateBlocksetOptions {
@@ -77,6 +87,7 @@ export interface MapBlocksetsOptions {
   view: VoxelView;
   catalog: BlocksetCatalog;
   editorMap: EditorMap;
+  access: Pick<EditorAccess, "follow">;
   open: (assetId: string) => OpenedBlockset;
   generateId?: () => string;
 }
@@ -84,7 +95,6 @@ export interface MapBlocksetsOptions {
 export type MapBlocksetsEvents = {
   change: () => void;
   activeChange: (blocksetId: string | null) => void;
-  denied: (blocksetId: string) => void;
   linkRefused: (assetId: string) => void;
 };
 
@@ -99,6 +109,7 @@ export class MapBlocksets
   readonly #view: VoxelView;
   readonly #catalog: BlocksetCatalog;
   readonly #editorMap: EditorMap;
+  readonly #access: Pick<EditorAccess, "follow">;
   readonly #generateId: () => string;
   readonly #linked: LinkedBlocksets;
   readonly #bindings = new Map<string, BlocksetBinding>();
@@ -113,6 +124,7 @@ export class MapBlocksets
     this.#view = options.view;
     this.#catalog = options.catalog;
     this.#editorMap = options.editorMap;
+    this.#access = options.access;
     this.#generateId = options.generateId ?? (() => crypto.randomUUID());
     this.#alphaModes = new BlockAlphaModes({
       view: this.#view,
@@ -126,6 +138,7 @@ export class MapBlocksets
       onLink: this.#bind
     });
     this.#linked.on("change", this.#onLinkedChange);
+    this.#catalog.on("rights", this.#onRights);
     this.#detach = this.#linked.attach(this.#view);
     this.#assignActive(this.entries[0]?.id ?? null);
   }
@@ -332,9 +345,24 @@ export class MapBlocksets
       .sort((left, right) => left.path.localeCompare(right.path));
   }
 
+  get creatable(): boolean {
+    return this.#catalog.can(CATALOG_CREATE);
+  }
+
+  renamable(
+    blocksetId: string
+  ): boolean {
+    return (this.entry(blocksetId)?.assetId ?? null) !== null &&
+      this.#catalog.can(CATALOG_RENAME);
+  }
+
   async create(
     options: CreateBlocksetOptions
   ): Promise<string | null> {
+    if (!this.creatable) {
+      return null;
+    }
+
     const assetId = await createBlocksetAsset(
       this.#catalog,
       `${kBlocksetDirectory}${options.name.trim()}${BLOCKSET_EXTENSION}`,
@@ -382,7 +410,11 @@ export class MapBlocksets
     const assetId = this.entry(blocksetId)?.assetId ?? null;
     const record = assetId === null ? undefined : this.#catalog.record(assetId);
     const trimmed = name.trim();
-    if (record === undefined || trimmed.length === 0) {
+    if (
+      record === undefined ||
+      trimmed.length === 0 ||
+      !this.renamable(blocksetId)
+    ) {
       return;
     }
 
@@ -395,6 +427,7 @@ export class MapBlocksets
   }
 
   dispose(): void {
+    this.#catalog.off("rights", this.#onRights);
     this.#detach();
     this.#linked.dispose();
   }
@@ -416,6 +449,10 @@ export class MapBlocksets
     this.emit("change");
   };
 
+  readonly #onRights = (): void => {
+    this.emit("change");
+  };
+
   readonly #bind = (
     linked: LinkedBlockset
   ): () => void => {
@@ -424,10 +461,10 @@ export class MapBlocksets
       linked,
       shapes: this.#view.shapes,
       editorMap: this.#editorMap,
-      blocks: this
+      blocks: this,
+      access: this.#access
     });
     binding.access.on("change", () => this.emit("change"));
-    binding.access.on("denied", () => this.emit("denied", blocksetId));
     this.#bindings.set(blocksetId, binding);
 
     return () => {

@@ -85,10 +85,12 @@ export type ScriptRelayRequest = ScriptOutlineRequest | ScriptLintRequest;
 
 export const SCRIPT_RELAY_SCHEMAS: AssetRelaySchemas<ScriptRelayRequest> = {
   inbound: [outlineRequestedSchema, lintRequestedSchema],
-  outbound: [outlineMessageSchema, lintMessageSchema]
+  outbound: [outlineMessageSchema, lintMessageSchema],
+  queries: [SCRIPT_OUTLINE_REQUESTED, SCRIPT_LINT_REQUESTED]
 };
 
 export const SHADER_RELAY_SCHEMAS: AssetRelaySchemas<ScriptLintRequest> = {
   inbound: [lintRequestedSchema],
-  outbound: [lintMessageSchema]
+  outbound: [lintMessageSchema],
+  queries: [SCRIPT_LINT_REQUESTED]
 };

@@ -939,6 +939,9 @@ importers:
       '@jolly-pixel/history':
         specifier: workspace:*
         version: link:../../history
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences

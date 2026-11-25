@@ -24,7 +24,8 @@ import { SoundUpload } from "./SoundUpload.ts";
 
 export class SoundFileFolder extends LitElement {
   #file = new SubscriptionController<SoundFile>(this, (file) => [
-    file.subscribe(() => this.requestUpdate())
+    file.subscribe(() => this.requestUpdate()),
+    file.subscribeRights(() => this.requestUpdate())
   ]);
   #replacing = false;
   #notifications: Notifier | null = null;
@@ -65,7 +66,7 @@ export class SoundFileFolder extends LitElement {
             data-tool="replace"
             icon="import"
             title="Replace with an audio file"
-            ?disabled=${file === null || this.#replacing}
+            ?disabled=${file === null || !file.replaceable || this.#replacing}
             @click=${() => void this.#pick()}
           >Replace…</jolly-button>
           <jolly-button

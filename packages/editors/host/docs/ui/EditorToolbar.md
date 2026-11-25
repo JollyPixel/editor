@@ -32,6 +32,9 @@ shows:
   itself, and on a share link.
 - A Version select with Save, Restore and Delete version. Hidden on a share
   link and in offline mode. A `?tag=` page shows the tag read-only.
+- A View only badge while the member's role cannot write the target, once the
+  editor called
+  [`context.access.target`](../contract/EditorDefinition.md#access).
 - An Offline badge while the server is unreachable.
 - A Tours button while at least one tour is registered.
 

@@ -197,7 +197,7 @@ export class AnimatePanel extends LitElement {
             slot="actions"
             label="New set"
             title="New shared set"
-            ?disabled=${!state.editable}
+            ?disabled=${!state.canCreateSet}
             @click=${() => void this.#controller.actions?.newSet()}
           >New</jolly-button>
           <jolly-button
@@ -223,7 +223,7 @@ export class AnimatePanel extends LitElement {
             this.#renderTree("shared", state.sharedSets, state)}
         </jolly-folder>
       </div>
-      ${state.clip === null ? nothing : this.#renderClip(state.clip, state.editable)}
+      ${state.clip === null ? nothing : this.#renderClip(state.clip)}
       <jolly-model-editor-track-bindings></jolly-model-editor-track-bindings>
       <jolly-model-editor-key-inspector></jolly-model-editor-key-inspector>
       <jolly-context-menu
@@ -271,10 +271,9 @@ export class AnimatePanel extends LitElement {
   }
 
   #renderClip(
-    focused: FocusedClip,
-    editable: boolean
+    focused: FocusedClip
   ): TemplateResult {
-    const { clip, frames } = focused;
+    const { clip, frames, editable } = focused;
 
     return html`
       <jolly-folder

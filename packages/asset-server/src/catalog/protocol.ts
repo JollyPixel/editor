@@ -45,6 +45,11 @@ export const CATALOG_RESTORE = "catalog:restore";
 export const CATALOG_REPLACE = "catalog:replace";
 export const CATALOG_READ = "catalog:read";
 export const CATALOG_PREVIEW = "catalog:preview";
+export const CATALOG_QUERIES: readonly CatalogCommandType[] = [
+  CATALOG_READ,
+  CATALOG_PREVIEW,
+  CATALOG_TAGS
+];
 
 export const CATALOG_STAGES = ["converting", "writing"] as const;
 

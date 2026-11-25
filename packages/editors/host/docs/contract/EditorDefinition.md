@@ -66,6 +66,7 @@ interface RuntimeEditorDefinition<THandle extends EditorHandle>
 interface EditorContext {
   session: EditorSession;
   toolbar: EditorToolbarSources;
+  access: EditorAccess;
   shell: ShellChannel | null;
   logger: HostLogger;
   commands: CommandConsole;
@@ -83,6 +84,7 @@ interface RuntimeEditorContext extends EditorContext {
 
 - `session` is the [session](../session/EditorSession.md) on the target.
 - `toolbar` goes to the [editor toolbar](../ui/EditorToolbar.md).
+- `access` follows what the member may write. See [Access](#access).
 - `shell` is `null` unless a [shell](../shell/Shell.md) framed the page.
   Hide what only a shell can do when it is `null`.
 - `logger` is the `editor` namespace of the
@@ -99,6 +101,30 @@ interface RuntimeEditorContext extends EditorContext {
   shell's stack (see [Shell](../shell/Shell.md#notifications)); otherwise in a
   `jolly-notifications` stack in the bottom-end corner of the page, mounted in
   its first `jolly-scope`.
+
+## Access
+
+`context.access` builds the `RoomGrants` an editor reads to enable or refuse
+its edits.
+
+```ts
+const grants = context.access.target(MAP_CAPABILITY_TABLE);
+const blockset = context.access.follow(lease.room, BLOCKSET_CAPABILITY_TABLE);
+
+grants.current.has("voxels");
+```
+
+- `target(table)` follows the target's room and is released on unmount. Call
+  it once: a second call throws. The toolbar shows a View only badge while
+  these grants are empty.
+- `follow(room, table)` follows any other room the editor writes to, such as a
+  dependency. The caller owns these grants: call `dispose()` when it stops
+  using that room.
+- When the server refuses a write in any followed room, one error notification
+  says the change was not saved. Further refusals in the next four seconds
+  raise none.
+- `viewOnly` is `true` while the target's grants are empty; `change` fires when
+  it may have changed.
 
 ## Handle
 

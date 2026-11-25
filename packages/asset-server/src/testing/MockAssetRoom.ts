@@ -49,7 +49,6 @@ export function mockAssetRoom<TCommand, TSnapshot>(
     profile: {},
     role: "default",
     rights: {},
-    access: "write",
     sent: [],
     joins: 0,
     leaves: 0,

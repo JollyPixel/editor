@@ -6,7 +6,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import { InvalidTagNameError } from "@jolly-pixel/asset-server/client";
+import {
+  CATALOG_RESTORE,
+  CATALOG_TAG,
+  CATALOG_UNTAG,
+  InvalidTagNameError
+} from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import {
@@ -111,6 +116,26 @@ describe("EditorTags", () => {
         tag: null
       }
     ]);
+  });
+
+  test("a role without the tag rights asks nothing and changes no tag", async() => {
+    const { catalog, browser, tags } = fakeTags({
+      newTag: {
+        name: "v1",
+        message: ""
+      }
+    });
+    let changes = 0;
+    tags.on("change", () => changes++);
+
+    catalog.refuse(CATALOG_TAG, CATALOG_UNTAG, CATALOG_RESTORE);
+
+    assert.equal(await tags.create(), null);
+    assert.equal(await tags.restore("v1"), null);
+    assert.equal(await tags.delete("v1"), false);
+    assert.equal(changes, 1);
+    assert.deepEqual(browser.confirmed, []);
+    assert.deepEqual(catalog.calls, []);
   });
 
   test("viewing a tag navigates to its read-only version", async() => {

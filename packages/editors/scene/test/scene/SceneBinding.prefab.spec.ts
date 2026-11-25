@@ -17,6 +17,7 @@ import {
   createProbeBinding,
   type Probe
 } from "../helpers/probeComponents.ts";
+import { sceneAccess } from "../helpers/sceneAccess.ts";
 
 function houseLevel() {
   const room = new SceneDocument();
@@ -95,7 +96,7 @@ describe("SceneBinding prefab instances", () => {
 
   test("shows overrides on the live inner actors without rebuilding them, and drops them on undo", () => {
     const { level, doorId, roomId, lampId, instanceId, binding } = houseLevel();
-    const writes = new ActorWrites(level);
+    const writes = new ActorWrites(level, sceneAccess());
     const history = createSceneHistory(level);
     const doorPath = `${instanceId}/${doorId}`;
     const door = binding.actor(doorPath)!;
@@ -126,7 +127,7 @@ describe("SceneBinding prefab instances", () => {
 
   test("routes writes on a document actor to the actor and on an inner actor to its instance", () => {
     const { level, doorId, instanceId } = houseLevel();
-    const writes = new ActorWrites(level);
+    const writes = new ActorWrites(level, sceneAccess());
     const commands: unknown[] = [];
     level.on("change", ({ command }) => commands.push(command));
 

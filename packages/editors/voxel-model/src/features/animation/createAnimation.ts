@@ -92,14 +92,14 @@ export function createAnimation(
     animationFocus,
     clipRemoval,
     animationSession,
-    keyEditor: new KeyEditor({ session: animationSession, history, access }),
+    keyEditor: new KeyEditor({ session: animationSession, history, animations }),
     keyer: new AnimationKeyer({
       document,
       history,
       blocks,
       session: animationSession,
       poser,
-      access
+      animations
     }),
     liveView: animationLiveView(animationSession, poser),
     hierarchyEdits: followingHierarchyEdits(history, follow),

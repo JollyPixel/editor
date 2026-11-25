@@ -13,6 +13,7 @@ import {
 } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
+import type { SceneAccess } from "../../access/SceneAccess.ts";
 import {
   EMPTY_ACTOR_ICON,
   type AssetNaming,
@@ -46,6 +47,7 @@ export interface RowSources {
   naming: AssetNaming;
   loadable: Systems.LoadableAssets;
   live: LiveActors;
+  access: Pick<SceneAccess, "can">;
 }
 
 export interface ComponentMove {
@@ -273,7 +275,7 @@ export class HierarchyRows {
     closed: boolean,
     sources: RowSources
   ): void {
-    const node = actorNode(actor, sources.marks);
+    const node = actorNode(actor, sources);
     const components = actor.components.map(
       (component) => this.#componentNode(actor.id, component, sources)
     );
@@ -431,7 +433,7 @@ function anchorNode(
 
 function actorNode(
   actor: SceneActorView,
-  marks: PeerMarks<string>
+  { marks, access }: Pick<RowSources, "marks" | "access">
 ): TreeNode {
   const badges = marks.badges(actor.id);
 
@@ -440,7 +442,7 @@ function actorNode(
     label: actor.name,
     icon: actor.prefab === undefined ? EMPTY_ACTOR_ICON : PREFAB_ICON,
     visible: actor.visible,
-    renamable: true,
+    renamable: access.can("hierarchy", actor.id),
     ...badges.length > 0 ? { badges } : {}
   };
 }

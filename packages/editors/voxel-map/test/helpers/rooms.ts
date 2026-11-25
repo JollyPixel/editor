@@ -21,11 +21,10 @@ export class FakeRoom
   readonly profile = {};
   readonly role = "editor";
   readonly rights: RoomRights = {};
-  readonly access: Right = "write";
   readonly presence: PeerMetadata[] = [];
 
   can(): Right {
-    return this.access;
+    return "write";
   }
 
   join(): void {

@@ -15,6 +15,7 @@ import { type Runtime, BakedRoomEnvironment } from "@jolly-pixel/backend.three";
 import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
+import { ENVIRONMENT_CAPABILITY_TABLE } from "./access/EnvironmentAccess.ts";
 import { EnvironmentEdits } from "./editing/EnvironmentEdits.ts";
 import {
   createEnvironmentHistory,
@@ -85,7 +86,10 @@ export class EnvironmentEditor {
         throw new Error("EnvironmentEditor: the page is missing its panel.");
       }
 
-      const edits = new EnvironmentEdits(target.document);
+      const edits = new EnvironmentEdits(
+        target.document,
+        context.access.target(ENVIRONMENT_CAPABILITY_TABLE)
+      );
       teardown.defer(() => edits.dispose());
       const history = createEnvironmentHistory(target.document);
       teardown.defer(() => history.dispose());

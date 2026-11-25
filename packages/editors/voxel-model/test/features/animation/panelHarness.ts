@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { AnimationDocument } from "@jolly-pixel/asset.voxel-animation/client";
+import { RoomGrants } from "@jolly-pixel/network/client";
 import { ModelDocument } from "@jolly-pixel/asset.voxel-model/client";
 import { MenuSession } from "@jolly-pixel/ui";
 
@@ -21,45 +22,47 @@ import { AnimationHistories } from "#src/features/animation/undo/AnimationHistor
 import { ClipRemovalFocus } from "#src/features/animation/library/ClipRemovalFocus.ts";
 import { createEditorHistory } from "#src/features/history/index.ts";
 import type { NameDialogContext } from "#src/shared/dialogs/NameDialog.ts";
-import { createHost } from "./fixtures.ts";
+import {
+  FakeSetRoom,
+  createHost
+} from "./fixtures.ts";
 import { modelAccess } from "../../fixtures/modelAccess.ts";
+import { ANIMATION_SET_CAPABILITY_TABLE } from "#src/access/AnimationSetAccess.ts";
 
 // CONSTANTS
 export const MENU_POINT = { x: 0, y: 0 };
 
 export interface FakeSetSource extends AnimationSetSource {
   opened: string[];
+  rights: { create: boolean; rename: boolean; };
   released: string[];
   documents: Map<string, AnimationDocument>;
+  rooms: Map<string, FakeSetRoom>;
   notify(): void;
-  deny(id: string): void;
 }
 
 export function createSetSource(
   records: AnimationSetRecord[] = []
 ): FakeSetSource {
   const listeners = new Set<() => void>();
-  const denials = new Map<string, () => void>();
   const source: FakeSetSource = {
     opened: [],
+    rights: { create: true, rename: true },
     released: [],
     documents: new Map(),
+    rooms: new Map(),
     open(id) {
       source.opened.push(id);
       const document = source.documents.get(id) ?? new AnimationDocument();
       source.documents.set(id, document);
+      const room = source.rooms.get(id) ?? new FakeSetRoom();
+      source.rooms.set(id, room);
 
       return {
         document,
-        room: {
-          on: (_type, listener) => denials.set(id, listener),
-          off: () => denials.delete(id)
-        },
+        grants: new RoomGrants(room, ANIMATION_SET_CAPABILITY_TABLE),
         release: () => source.released.push(id)
       };
-    },
-    deny(id) {
-      denials.get(id)?.();
     },
     create(name) {
       const record = { id: `set-${records.length + 1}`, kind: "voxelanimation", name };
@@ -76,6 +79,8 @@ export function createSetSource(
 
       return Promise.resolve();
     },
+    canCreate: () => source.rights.create,
+    canRename: () => source.rights.rename,
     records: () => [...records],
     countUsers: (id) => (id === "shared" ? 3 : 1),
     subscribe(listener) {

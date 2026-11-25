@@ -19,11 +19,13 @@ import "#src/panes/sound/SoundSettingsPane.ts";
 import type { SoundPlayer } from "#src/player/SoundPlayer.ts";
 import { Chime } from "#src/seed/Chime.ts";
 import { connect } from "../../helpers/listeners.ts";
+import type { TestSoundAccess } from "../../helpers/soundAccess.ts";
 
 async function mountPane(): Promise<{
   pane: HTMLElementTagNameMap["jolly-sound-settings"];
   sound: SoundDocument;
   player: SoundPlayer;
+  access: TestSoundAccess;
 }> {
   const listener = await connect(new FakeNetwork(), "alice");
   listener.document.load(await oggContentFromAudio(new Chime().waveFile()));
@@ -35,7 +37,8 @@ async function mountPane(): Promise<{
   return {
     pane,
     sound: listener.document,
-    player: listener.player
+    player: listener.player,
+    access: listener.access
   };
 }
 
@@ -111,6 +114,22 @@ describe("SoundSettingsPane", () => {
 
     assert.equal(volume.value, 0.3);
     assert.equal(sound.settings.volume, 0.3);
+  });
+
+  test("makes every setting read-only once the member loses \"settings\"", async() => {
+    const { pane, access } = await mountPane();
+
+    access.viewOnly();
+    await pane.updateComplete;
+
+    const fields = [
+      ...pane.shadowRoot!.querySelectorAll("jolly-number, jolly-select, jolly-checkbox")
+    ];
+    assert.ok(fields.length > 0);
+    assert.deepEqual(
+      fields.filter((field) => !field.hasAttribute("readonly")),
+      []
+    );
   });
 
   test("reverting a spatial field restores the engine default", async() => {

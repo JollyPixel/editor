@@ -10,13 +10,36 @@ import {
 } from "@jolly-pixel/asset.scene/client";
 import { Systems } from "@jolly-pixel/ecs";
 
+// Import Internal Dependencies
+import type { SceneAccess } from "../access/SceneAccess.ts";
+
 export class ActorWrites {
   #document: SceneDocument;
+  #access: Pick<SceneAccess, "can">;
 
   constructor(
-    document: SceneDocument
+    document: SceneDocument,
+    access: Pick<SceneAccess, "can">
   ) {
     this.#document = document;
+    this.#access = access;
+  }
+
+  canWriteActor(
+    id: string,
+    { name, visible, transform = {} }: SceneActorOverrideJSON
+  ): boolean {
+    const touchesHierarchy = name !== undefined || visible !== undefined;
+    const touchesTransform = Object.keys(transform).length > 0;
+
+    return (!touchesHierarchy || this.#access.can("hierarchy", id)) &&
+      (!touchesTransform || this.#access.can("transforms", id));
+  }
+
+  canWriteComponent(
+    id: string
+  ): boolean {
+    return this.#access.can("components", id);
   }
 
   rename(
@@ -44,6 +67,10 @@ export class ActorWrites {
     id: string,
     change: ComponentChange
   ): boolean {
+    if (!this.canWriteComponent(id)) {
+      return false;
+    }
+
     const target = Systems.InstancePath.parse(id);
     if (target === null) {
       return this.#document.changeComponent(id, change);
@@ -68,6 +95,10 @@ export class ActorWrites {
     id: string,
     entry: SceneActorOverrideJSON
   ): boolean {
+    if (!this.canWriteActor(id, entry)) {
+      return false;
+    }
+
     const target = Systems.InstancePath.parse(id);
     if (target !== null) {
       return this.#document.override(OverrideChange.actor({
@@ -90,6 +121,10 @@ export class ActorWrites {
     id: string,
     entry: SceneComponentOverrideJSON
   ): boolean {
+    if (!this.canWriteComponent(id)) {
+      return false;
+    }
+
     const target = Systems.InstancePath.parse(id);
     if (target !== null) {
       return this.#document.override(OverrideChange.component({

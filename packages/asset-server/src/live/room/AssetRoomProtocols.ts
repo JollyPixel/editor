@@ -38,6 +38,7 @@ interface CompiledProtocols {
   readonly command: MessageProtocol;
   readonly relayOutbound: readonly Schema[];
   readonly relayTags: ReadonlySet<string>;
+  readonly queries: readonly string[];
   readonly bySnapshot: Map<
     Schema,
     Map<Schema | null, AssetRoomMessageProtocols>
@@ -121,6 +122,7 @@ export class AssetRoomProtocols<
   }
 
   readonly inbound: MessageProtocol;
+  readonly queries: readonly string[];
 
   #compiled: CompiledProtocols;
 
@@ -128,6 +130,7 @@ export class AssetRoomProtocols<
     compiled: CompiledProtocols
   ) {
     this.inbound = compiled.inbound;
+    this.queries = compiled.queries;
     this.#compiled = compiled;
   }
 
@@ -260,12 +263,21 @@ function compileProtocols(
   for (const tag of kRoomRequestTags) {
     relayTags.delete(tag);
   }
+  const relayQueries = relay?.queries ?? [];
+  for (const tag of relayQueries) {
+    if (!relayTags.has(tag)) {
+      throw new TypeError(
+        `relay query "${tag}" names no inbound relay message`
+      );
+    }
+  }
 
   return {
     inbound,
     command,
     relayOutbound: relay?.outbound ?? [],
     relayTags,
+    queries: [...kRoomRequestTags, ...relayQueries],
     bySnapshot: new Map()
   };
 }

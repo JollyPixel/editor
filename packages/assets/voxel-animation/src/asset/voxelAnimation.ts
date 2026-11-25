@@ -4,6 +4,7 @@ import type { AssetKindDescriptor } from "@jolly-pixel/asset-server";
 // Import Internal Dependencies
 import type { AnimationSetSnapshot } from "../network/types.ts";
 import { VOXEL_ANIMATION_ICON } from "./icons.ts";
+import { VOXEL_ANIMATION_CAPABILITIES } from "./capabilities.ts";
 
 // CONSTANTS
 export const VOXEL_ANIMATION_KIND = "voxelanimation";
@@ -15,7 +16,8 @@ export const VOXEL_ANIMATION_ASSET: AssetKindDescriptor = {
   kind: VOXEL_ANIMATION_KIND,
   label: "Animation set",
   extension: VOXEL_ANIMATION_EXTENSION,
-  icon: VOXEL_ANIMATION_ICON
+  icon: VOXEL_ANIMATION_ICON,
+  capabilities: VOXEL_ANIMATION_CAPABILITIES
 };
 
 export type VoxelAnimationFile = AnimationSetSnapshot & {

@@ -17,6 +17,7 @@ import {
 } from "../../src/features/history/sceneHistory.ts";
 import { createPrefabScenes } from "../helpers/prefabScenes.ts";
 import { createProbeBinding } from "../helpers/probeComponents.ts";
+import { sceneAccess } from "../helpers/sceneAccess.ts";
 
 function overriddenHouse() {
   const room = new SceneDocument();
@@ -29,22 +30,37 @@ function overriddenHouse() {
   const roomId = house.addActor({ name: "Room", prefab: { id: "room", kind: "scene" } })!;
   const level = new SceneDocument();
   const instanceId = level.addActor({ name: "House", prefab: { id: "house", kind: "scene" } })!;
-  const { scenes } = createPrefabScenes({ house, room });
+  const houseAccess = sceneAccess();
+  const { scenes } = createPrefabScenes({ house, room }, { house: houseAccess });
   const { binding } = createProbeBinding(level, scenes);
   const history = createSceneHistory(level);
+  const access = sceneAccess();
   const overrides = new InstanceOverrides({
     document: level,
     history,
     live: binding,
-    prefabs: scenes
+    prefabs: scenes,
+    access
   });
 
-  const writes = new ActorWrites(level);
+  const writes = new ActorWrites(level, sceneAccess());
   writes.rename(`${instanceId}/${doorId}`, "Front door");
   writes.changeComponent(`${instanceId}/knob`, new ComponentChange({ data: { label: "steel" } }));
   writes.rename(`${instanceId}/${roomId}/${lampId}`, "Hall lamp");
 
-  return { level, house, room, doorId, roomId, lampId, instanceId, history, overrides };
+  return {
+    level,
+    house,
+    room,
+    doorId,
+    roomId,
+    lampId,
+    instanceId,
+    history,
+    overrides,
+    access,
+    houseAccess
+  };
 }
 
 describe("InstanceOverrides", () => {
@@ -95,5 +111,32 @@ describe("InstanceOverrides", () => {
     history.undo(SCENE_HISTORY_SCOPE);
     assert.strictEqual(overrides.actorOverridden(instanceId), true);
     assert.strictEqual(house.tree.actor(doorId)?.name, "Front door");
+  });
+
+  test("neither reverts nor applies overrides without \"instances\"", () => {
+    const { level, house, doorId, instanceId, access, overrides } = overriddenHouse();
+    const before = structuredClone(level.tree.actor(instanceId)?.overrides);
+    access.withhold("instances");
+
+    overrides.revertActor(instanceId);
+    overrides.applyToPrefab(instanceId);
+
+    assert.deepEqual(level.tree.actor(instanceId)?.overrides, before);
+    assert.strictEqual(house.tree.actor(doorId)?.name, "Door");
+  });
+
+  test("applies nothing while the prefab refuses an override, and tells when that changes", () => {
+    const { level, house, doorId, instanceId, houseAccess, overrides } = overriddenHouse();
+    const before = structuredClone(level.tree.actor(instanceId)?.overrides);
+    let changes = 0;
+    overrides.subscribe(() => changes++);
+    houseAccess.withhold("components");
+
+    assert.strictEqual(changes, 1);
+    assert.strictEqual(overrides.canApplyToPrefab(instanceId), false);
+    overrides.applyToPrefab(instanceId);
+
+    assert.strictEqual(house.tree.actor(doorId)?.name, "Door");
+    assert.deepEqual(level.tree.actor(instanceId)?.overrides, before);
   });
 });

@@ -182,6 +182,7 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
   #held: Promise<void> = Promise.resolve();
   #staged: Array<() => void> = [];
   #listeners = new Map<AssetTreeCatalogEvent, Set<() => void>>();
+  #refused = new Set<string>();
 
   constructor(
     records: Iterable<AssetRecordData>,
@@ -221,6 +222,23 @@ export class FakeTreeCatalog implements AssetTreeCatalog {
     listener: () => void
   ): void {
     this.#listeners.get(event)?.delete(listener);
+  }
+
+  can(
+    command: string
+  ): boolean {
+    return !this.#refused.has(command);
+  }
+
+  refuse(
+    ...commands: string[]
+  ): void {
+    for (const command of commands) {
+      this.#refused.add(command);
+    }
+    for (const listener of this.#listeners.get("rights") ?? []) {
+      listener();
+    }
   }
 
   change(): void {

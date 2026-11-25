@@ -30,8 +30,8 @@ export class FakeRoom extends Emitter<RoomEventMap> implements Room {
   readonly peers = new Map<string, Peer>();
   readonly profile = {};
   readonly role = "editor";
-  readonly rights: RoomRights = {};
-  readonly access: Right = "write";
+  rights: RoomRights = {};
+  right: Right = "write";
   readonly sent: unknown[] = [];
   joins = 0;
   leaves = 0;
@@ -43,8 +43,10 @@ export class FakeRoom extends Emitter<RoomEventMap> implements Room {
     this.id = id;
   }
 
-  can(): Right {
-    return this.access;
+  can(
+    event: string
+  ): Right {
+    return this.rights[event] ?? this.right;
   }
 
   send(

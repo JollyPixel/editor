@@ -13,6 +13,7 @@ import type { Systems } from "@jolly-pixel/ecs";
 import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
+import type { SceneAccess } from "../access/SceneAccess.ts";
 import type {
   AssetNaming,
   SceneComponents
@@ -63,6 +64,7 @@ export interface SceneLiveView extends Systems.SceneAnchorsReader {
 
 export interface SceneEditing {
   document: SceneDocument;
+  access: SceneAccess;
   live: SceneLiveView;
   writes: ActorWrites;
   overrides: InstanceOverrides;

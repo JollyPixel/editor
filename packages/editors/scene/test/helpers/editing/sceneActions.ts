@@ -13,6 +13,7 @@ import type { PrefabScenes } from "../../../src/scene/PrefabScenes.ts";
 import { SelectionStore } from "../../../src/state/SelectionStore.ts";
 import { NO_EXPANDED_ACTORS } from "../expandedActors.ts";
 import { createProbeBinding } from "../probeComponents.ts";
+import { sceneAccess } from "../sceneAccess.ts";
 import { createSceneComponents } from "../sceneComponents.ts";
 
 // CONSTANTS
@@ -53,6 +54,7 @@ export function createActions(
     NO_EXPANDED_ACTORS :
     createProbeBinding(document, prefabs).binding;
   const selection = new SelectionStore(document, live);
+  const access = sceneAccess();
   const picks: string[] = [];
   const actions = new SceneActions({
     document,
@@ -72,10 +74,11 @@ export function createActions(
         return Promise.resolve(picked);
       }
     },
-    anchors
+    anchors,
+    access
   });
 
-  return { document, history, selection, actions, picks, live };
+  return { document, history, selection, access, actions, picks, live };
 }
 
 export function componentTypes(
