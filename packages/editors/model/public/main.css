@@ -67,3 +67,10 @@ jolly-dock {
   z-index: 5;
   pointer-events: none;
 }
+
+#model-viewport jolly-presence-stack {
+  position: absolute;
+  inset-block-end: 16px;
+  inset-inline-start: 16px;
+  z-index: 5;
+}

@@ -13,6 +13,7 @@ import {
   type JollyOption,
   type PresencePeer
 } from "@jolly-pixel/ui";
+import type { DriveSession } from "@jolly-pixel/ui/network";
 import { styleMap } from "lit/directives/style-map.js";
 import "@jolly-pixel/ui/elements/avatar";
 import "@jolly-pixel/ui/elements/button";
@@ -206,21 +207,22 @@ export class SoundTrack extends LitElement {
   #renderDrive(
     collaboration: SoundCollaboration
   ): TemplateResult | typeof nothing {
-    const { stance } = collaboration;
+    const { session } = collaboration;
+    const { stance } = session;
     switch (stance.kind) {
       case "alone":
         return nothing;
       case "open":
       case "driving":
         return this.#renderDriveButton(
-          collaboration,
+          session,
           stance.kind === "driving"
         );
       case "following":
         return this.#renderDriver(
-          collaboration,
+          session,
           stance.driver,
-          stance.listening
+          stance.joined
         );
       default: {
         const unhandled: never = stance;
@@ -230,7 +232,7 @@ export class SoundTrack extends LitElement {
   }
 
   #renderDriveButton(
-    collaboration: SoundCollaboration,
+    session: DriveSession,
     driving: boolean
   ): TemplateResult {
     const label = driving ? "Stop driving" : "Drive playback";
@@ -245,13 +247,13 @@ export class SoundTrack extends LitElement {
         icon-only
         variant=${driving ? "accent" : "default"}
         .pressed=${driving}
-        @click=${() => (driving ? collaboration.release() : collaboration.drive())}
+        @click=${() => (driving ? session.release() : session.drive())}
       ></jolly-button>
     `;
   }
 
   #renderDriver(
-    collaboration: SoundCollaboration,
+    session: DriveSession,
     driver: PresencePeer,
     listening: boolean
   ): TemplateResult {
@@ -271,7 +273,7 @@ export class SoundTrack extends LitElement {
           icon="sound-listen"
           variant=${listening ? "accent" : "default"}
           .pressed=${listening}
-          @click=${() => (listening ? collaboration.leave() : collaboration.listen())}
+          @click=${() => (listening ? session.leave() : session.join())}
         >${listening ? "Stop listening" : "Listen along"}</jolly-button>
       </div>
     `;

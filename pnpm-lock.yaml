@@ -1052,6 +1052,9 @@ importers:
       '@jolly-pixel/editor.host':
         specifier: workspace:*
         version: link:../host
+      '@jolly-pixel/network':
+        specifier: workspace:*
+        version: link:../../network
       '@jolly-pixel/preferences':
         specifier: workspace:*
         version: link:../../preferences
@@ -1073,6 +1076,9 @@ importers:
       three:
         specifier: 0.187.0
         version: 0.187.0(patch_hash=a5b26bca6d5b834acc4a28cac3daf725e0d955aea26a1024bb96fe45c273e10b)
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
     devDependencies:
       '@jolly-pixel/e2e':
         specifier: workspace:*

@@ -7,6 +7,7 @@ import {
   type Model,
   type OrbitFlyCamera
 } from "@jolly-pixel/backend.three";
+import type { PeerFrustums } from "@jolly-pixel/editor.host/viewport";
 import type { Grid } from "@jolly-pixel/three";
 import * as THREE from "three/webgpu";
 
@@ -24,11 +25,13 @@ const kLens = {
   near: 0.01,
   far: 400
 } as const;
+const kFrustumScale = 1 / 3;
 
 export interface ModelStageOptions {
   preview: ModelPreview;
   player: AnimationPlayer;
   camera: OrbitFlyCamera;
+  frustums: PeerFrustums;
 }
 
 export class ModelStage extends ActorComponent {
@@ -101,7 +104,7 @@ export class ModelStage extends ActorComponent {
     }
     const bounds = this.#bounds();
     this.#placeGrid(bounds);
-    this.#scaleCamera(bounds);
+    this.#scaleView(bounds);
     this.#frame(bounds);
     this.actor.world.invalidate();
   }
@@ -114,13 +117,14 @@ export class ModelStage extends ActorComponent {
       bounds.setFromObject(this.#shown.object);
   }
 
-  #scaleCamera(
+  #scaleView(
     bounds: THREE.Box3
   ): void {
-    const { camera } = this.#options;
+    const { camera, frustums } = this.#options;
     const scale = modelScale(bounds);
 
     camera.worldScale = scale;
+    frustums.worldScale = scale * kFrustumScale;
     camera.configure({
       near: kLens.near * scale,
       far: kLens.far * scale

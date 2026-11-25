@@ -45,6 +45,54 @@ const roster = new PeerRoster({
   observers, and the local person's other tabs are not announced.
 - `dispose()` unsubscribes and publishes an empty list.
 
+## `DriveSession`
+
+Lets one peer drive a shared activity, such as playback, while the others
+follow and choose whether to join in. It pairs the `RoomClaim` of
+`@jolly-pixel/network/client` with a `PeerRoster`.
+
+```ts
+interface DriveSessionOptions {
+  room: Room;
+  key?: string;
+  publish: (peers: readonly PresencePeer[]) => void;
+  onJoinChange: (driverId: string | null) => void;
+  onDriverChange?: () => void;
+}
+
+const session = new DriveSession({
+  room,
+  publish: (peers) => {
+    presenceElement.peers = peers;
+  },
+  onJoinChange: (driverId) => {
+    if (driverId !== null) {
+      mirror(driverId);
+    }
+  }
+});
+```
+
+- `key` is the presence field of the claim (default `"drive"`).
+- `publish` receives the `PeerRoster` list, with the driver's `badge` extended
+  with `"driving"`. It runs again whenever the driver changes.
+- `stance` is one of:
+  - `{ kind: "alone" }` while no remote peer is listed;
+  - `{ kind: "open" }` when nobody drives;
+  - `{ kind: "driving" }` for the driver;
+  - `{ kind: "following", driver, joined }` for the others.
+- `drive()` claims the role and does nothing while a peer holds it.
+  `release()` gives it up.
+- `join()` joins the driver from a `following` stance and calls
+  `onJoinChange(driverId)`, even when already joined, so the caller can sync
+  again. `leave()` calls `onJoinChange(null)` when joined.
+- When the driver changes, a joined peer leaves first, then `onDriverChange`
+  runs, then `publish`.
+- `driverId`, `driving` and `joinedId` read the current holder, whether this
+  client holds it, and the driver this client joined.
+- `dispose()` releases the claim, detaches from the room and publishes an empty
+  list.
+
 ## `PeerMarkTracker`
 
 Publishes one local key under `presenceKey` and folds every remote peer's key

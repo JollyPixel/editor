@@ -105,6 +105,18 @@ opacity.
 The fade drives `PeerFrustum.opacity`, which spans the wireframe and its label,
 clamps to `0..1`, and turns the line materials transparent below `1`.
 
+## World scale
+
+```ts
+sync.worldScale = modelRadius;
+```
+
+`worldScale` (default `1`) scales every remote frustum and its label, and
+multiplies `hideWithin` and `fadeWithin`. Set it when the scene's size is not
+in the units the frustum options were chosen for, such as a viewer framing
+models of any size. A value that is not a finite number above `0` throws a
+`RangeError`.
+
 `peerPose(clientId)` returns a copy of the last pose applied to a peer, or
 `undefined` for an unknown peer, one whose pose is missing or malformed, and
 one that has left. Use it to move a local camera onto a peer's viewpoint.

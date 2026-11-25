@@ -58,6 +58,7 @@ export class PeerFrustumSync {
   #throttleMs: number;
   #hideWithin: number;
   #fadeWithin: number;
+  #worldScale = 1;
   #label: NonNullable<PeerFrustumSyncOptions["label"]>;
   #color: PeerFrustumSyncOptions["color"];
   #frustumOptions: Omit<PeerFrustumOptions, "displayName">;
@@ -115,6 +116,27 @@ export class PeerFrustumSync {
     this.#channel.on("change", this.#onPeerChange);
   }
 
+  get worldScale(): number {
+    return this.#worldScale;
+  }
+
+  set worldScale(
+    value: number
+  ) {
+    if (!Number.isFinite(value) || value <= 0) {
+      throw new RangeError(
+        `"worldScale" (${value}) must be a finite number above 0`
+      );
+    }
+
+    this.#worldScale = value;
+    for (const frustum of this.#peers.values()) {
+      frustum.scale.setScalar(value);
+    }
+    this.#fadeAll();
+    this.#requestFrame();
+  }
+
   attach(
     source: THREE.Object3D
   ): void {
@@ -156,12 +178,7 @@ export class PeerFrustumSync {
       position: { x, y, z },
       quaternion: { x: qx, y: qy, z: qz, w: qw }
     });
-
-    for (const [clientId, frustum] of this.#peers) {
-      if (this.#channel.values.has(clientId)) {
-        this.#fade(frustum, x, y, z);
-      }
-    }
+    this.#fadeAll();
   }
 
   peerPose(
@@ -246,6 +263,19 @@ export class PeerFrustumSync {
     }
   }
 
+  #fadeAll(): void {
+    if (!this.#source) {
+      return;
+    }
+
+    const { x, y, z } = this.#source.position;
+    for (const [clientId, frustum] of this.#peers) {
+      if (this.#channel.values.has(clientId)) {
+        this.#fade(frustum, x, y, z);
+      }
+    }
+  }
+
   #fade(
     frustum: PeerFrustum,
     x: number,
@@ -266,15 +296,16 @@ export class PeerFrustumSync {
   #opacityAt(
     distance: number
   ): number {
-    if (distance <= this.#hideWithin) {
+    const hideWithin = this.#hideWithin * this.#worldScale;
+    const fadeWithin = this.#fadeWithin * this.#worldScale;
+    if (distance <= hideWithin) {
       return 0;
     }
-    if (distance >= this.#fadeWithin) {
+    if (distance >= fadeWithin) {
       return 1;
     }
 
-    return (distance - this.#hideWithin) /
-      (this.#fadeWithin - this.#hideWithin);
+    return (distance - hideWithin) / (fadeWithin - hideWithin);
   }
 
   #peerProfile(
@@ -294,6 +325,7 @@ export class PeerFrustumSync {
       },
       displayName: this.#label(clientId, profile)
     });
+    frustum.scale.setScalar(this.#worldScale);
     this.#parent.add(frustum);
     this.#peers.set(clientId, frustum);
 

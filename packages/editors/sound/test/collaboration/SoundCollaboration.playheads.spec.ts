@@ -6,12 +6,12 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import { FakeNetwork } from "@jolly-pixel/network/testing";
 import { toPresencePeer } from "@jolly-pixel/ui/network";
 
 // Import Internal Dependencies
 import type { PlayheadTag } from "#src/collaboration/Playheads.ts";
 import type { SoundPlayer } from "#src/player/SoundPlayer.ts";
-import { FakeNetwork } from "../helpers/FakeNetwork.ts";
 import {
   clock,
   connect,
@@ -74,11 +74,11 @@ describe("SoundCollaboration playheads", () => {
     const carol = await connect(network, "carol");
     const advance = clock(t, [alice, bob, carol]);
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.play();
     advance(500);
-    bob.collaboration.listen();
-    carol.collaboration.listen();
+    bob.collaboration.session.join();
+    carol.collaboration.session.join();
     advance(250);
 
     assert.deepEqual(bars(bob), [
@@ -88,7 +88,7 @@ describe("SoundCollaboration playheads", () => {
       }
     ]);
 
-    carol.collaboration.leave();
+    carol.collaboration.session.leave();
 
     assert.deepEqual(bars(alice), [
       {

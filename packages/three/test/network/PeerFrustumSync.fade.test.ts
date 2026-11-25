@@ -117,6 +117,28 @@ describe("proximity fade", () => {
     assert.equal(frustum.visible, false);
   });
 
+  test("scales the frustums and the fade distances by worldScale", () => {
+    const { room, parent, sync } = setup(kFadeDistances);
+    joinPeer(room, "alice", { frustum: pose(4) });
+    sync.attach(new THREE.Object3D());
+
+    sync.worldScale = 2;
+    joinPeer(room, "bob", { frustum: pose(20) });
+
+    const [alice, bob] = findFrustums(parent);
+    assert.equal(alice.opacity, 0.5);
+    assert.deepEqual(alice.scale.toArray(), [2, 2, 2]);
+    assert.deepEqual(bob.scale.toArray(), [2, 2, 2]);
+  });
+
+  test("rejects a worldScale that is not above 0", () => {
+    const { sync } = setup(kFadeDistances);
+
+    assert.throws(() => {
+      sync.worldScale = 0;
+    }, RangeError);
+  });
+
   test("never fades without the distances", () => {
     const { room, parent, sync } = setup();
     joinPeer(room, "alice", { frustum: pose(0.1) });

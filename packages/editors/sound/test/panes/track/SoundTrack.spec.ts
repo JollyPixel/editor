@@ -8,11 +8,11 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import { oggContentFromAudio } from "@jolly-pixel/asset.sound";
+import { FakeNetwork } from "@jolly-pixel/network/testing";
 
 // Import Internal Dependencies
 import "#src/panes/track/SoundTrack.ts";
 import { Chime } from "#src/seed/Chime.ts";
-import { FakeNetwork } from "../../helpers/FakeNetwork.ts";
 import { connect } from "../../helpers/listeners.ts";
 
 describe("SoundTrack volume", () => {

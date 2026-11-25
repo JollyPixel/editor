@@ -7,35 +7,15 @@ import * as THREE from "three/webgpu";
 
 // Import Internal Dependencies
 import { AnimationPlayer } from "#src/player/AnimationPlayer.ts";
-
-function spinClip(): THREE.AnimationClip {
-  return new THREE.AnimationClip("spin", 1, [
-    new THREE.NumberKeyframeTrack(".rotation[y]", [0, 1], [0, 1])
-  ]);
-}
-
-function createPlayer() {
-  const root = new THREE.Object3D();
-  const player = new AnimationPlayer(() => undefined);
-  player.load(root, [
-    spinClip(),
-    new THREE.AnimationClip("lift", 2, [
-      new THREE.NumberKeyframeTrack(".position[y]", [0, 2], [0, 2])
-    ])
-  ]);
-
-  return { root, player };
-}
-
-function rounded(
-  value: number
-): number {
-  return Number(value.toFixed(6));
-}
+import {
+  loadedPlayer,
+  rounded,
+  spinClip
+} from "../helpers/player.ts";
 
 describe("AnimationPlayer", () => {
   test("lists the clips and selects the first one", () => {
-    const { player } = createPlayer();
+    const { player } = loadedPlayer();
 
     assert.deepEqual(player.clips, [
       { name: "spin", duration: 1 },
@@ -45,7 +25,7 @@ describe("AnimationPlayer", () => {
   });
 
   test("poses the model at the scrubbed time without playing", () => {
-    const { root, player } = createPlayer();
+    const { root, player } = loadedPlayer();
 
     player.seek(0.25);
 
@@ -55,7 +35,7 @@ describe("AnimationPlayer", () => {
   });
 
   test("plays the newly selected clip from its start while playing", () => {
-    const { root, player } = createPlayer();
+    const { root, player } = loadedPlayer();
     player.play();
     player.update(0.3);
 
@@ -69,7 +49,7 @@ describe("AnimationPlayer", () => {
   });
 
   test("returns the model to its rest pose on stop", () => {
-    const { root, player } = createPlayer();
+    const { root, player } = loadedPlayer();
     player.play();
     player.update(0.5);
 
@@ -93,7 +73,7 @@ describe("AnimationPlayer", () => {
   });
 
   test("reports the end of a clip that does not loop", () => {
-    const { player } = createPlayer();
+    const { player } = loadedPlayer();
     player.loop = false;
     player.play();
     player.update(0.1);

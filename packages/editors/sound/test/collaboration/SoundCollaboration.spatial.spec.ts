@@ -5,8 +5,10 @@ import {
 } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { FakeNetwork } from "@jolly-pixel/network/testing";
+
 // Import Internal Dependencies
-import { FakeNetwork } from "../helpers/FakeNetwork.ts";
 import {
   clock,
   connect
@@ -19,7 +21,7 @@ describe("SoundCollaboration spatial preview", () => {
     const bob = await connect(network, "bob");
     clock(t, [alice, bob]);
 
-    alice.collaboration.drive();
+    alice.collaboration.session.drive();
     alice.player.retune(alice.player.mode
       .withPlacement(alice.player.mode.placement.movedTo({
         x: 5,
@@ -27,7 +29,7 @@ describe("SoundCollaboration spatial preview", () => {
       }))
       .withSpatial(true));
     alice.player.play();
-    bob.collaboration.listen();
+    bob.collaboration.session.join();
 
     const { panner } = bob.context;
     assert.deepEqual(bob.context.spatialInput.outputs, [panner]);

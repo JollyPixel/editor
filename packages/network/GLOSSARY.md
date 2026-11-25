@@ -42,6 +42,12 @@ Information describing what a participant is doing in a particular room, such
 as their cursor position or selection. It changes as they work and disappears
 when they leave. A participant can have different presence in different rooms.
 
+### Claim
+
+A participant's hold on a role only one of them can have at a time in a room,
+such as driving a shared playback. The earliest claim wins, and it ends when
+its holder releases it or leaves.
+
 ### Role
 
 A named category of access, such as viewer or editor. It determines which

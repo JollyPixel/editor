@@ -30,6 +30,16 @@ on `awake()`, so create the actor before the scene awakes.
 A frustum closer than 1.5 units to the local camera is hidden, and fades in up
 to 5 units.
 
+## Properties
+
+```ts
+worldScale: number;
+```
+
+Scales the frustums and both fade distances, `1` by default. An editor whose
+scene size varies, such as a model viewer, sets it from the size of what it
+shows. It throws a `RangeError` unless the value is a finite number above `0`.
+
 ## Methods
 
 ```ts

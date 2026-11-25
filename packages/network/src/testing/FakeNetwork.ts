@@ -1,22 +1,27 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
+
+// Import Internal Dependencies
+import type {
+  Room,
+  RoomEventMap
+} from "../client/Room.ts";
 import type {
   Peer,
   PeerMetadata,
   Right,
-  Room,
-  RoomEventMap,
   RoomRights
-} from "@jolly-pixel/network/client";
+} from "../protocol/types.ts";
 
 export class FakeRoom extends Emitter<RoomEventMap> implements Room {
-  readonly id = "sound:test";
+  readonly id = "fake";
   readonly clientId: string;
   readonly peers = new Map<string, Peer>();
   readonly profile: PeerMetadata;
   readonly role = "editor";
   readonly rights: RoomRights = {};
   readonly access: Right = "write";
+  readonly sent: unknown[] = [];
   presence: PeerMetadata = {};
 
   #network: FakeNetwork;
@@ -42,8 +47,10 @@ export class FakeRoom extends Emitter<RoomEventMap> implements Room {
     return void 0;
   }
 
-  send(): void {
-    return void 0;
+  send(
+    payload: unknown
+  ): void {
+    this.sent.push(payload);
   }
 
   updatePresence(
@@ -81,7 +88,6 @@ export class FakeRoom extends Emitter<RoomEventMap> implements Room {
 
 export class FakeNetwork {
   #rooms: FakeRoom[] = [];
-  #held: Array<() => void> | null = null;
 
   connect(
     clientId: string
@@ -107,38 +113,18 @@ export class FakeNetwork {
     }
   }
 
-  hold(): void {
-    this.#held = [];
-  }
-
-  flush(): void {
-    const held = this.#held ?? [];
-    this.#held = null;
-    for (const delivery of held) {
-      delivery();
-    }
-  }
-
   deliver(
     sender: FakeRoom,
     patch: PeerMetadata
   ): void {
-    const delivery = (): void => {
-      for (const other of this.#rooms) {
-        if (other !== sender && other.peers.has(sender.clientId)) {
-          other.peers.set(sender.clientId, sender.asPeer());
-          other.emit("peer-presence", {
-            clientId: sender.clientId,
-            patch
-          });
-        }
+    for (const other of this.#rooms) {
+      if (other !== sender && other.peers.has(sender.clientId)) {
+        other.peers.set(sender.clientId, sender.asPeer());
+        other.emit("peer-presence", {
+          clientId: sender.clientId,
+          patch
+        });
       }
-    };
-    if (this.#held === null) {
-      delivery();
-    }
-    else {
-      this.#held.push(delivery);
     }
   }
 }

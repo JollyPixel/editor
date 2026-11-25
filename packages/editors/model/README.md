@@ -4,7 +4,8 @@ Private editor workspace for `@jolly-pixel/asset.model` models, booted through `
 
 - The viewport orbits the model, framed when it loads, above a finite grid sized to the model's footprint.
 - The Model pane holds the file actions, the model's counts (meshes, vertices, triangles, materials, bones) and the external files the model points to that no asset beside it holds. The preview reads those files from the catalog, and reloads when one is added or replaced. An `.obj` file that names no material takes the image of the same name beside it as its texture.
-- The Animate pane lists the clips and plays, pauses, stops, loops and scrubs the selected one, at 0.25× to 2×.
+- The Animate pane picks a clip from a list and plays, pauses, stops, loops and scrubs it, at 0.25× to 2×.
+- People viewing the same model appear at the bottom left of the viewport, and their cameras are drawn in the scene; a click on someone moves your camera to theirs. One person can drive playback: the others see who drives and can watch along, playing the same clip at the same time until they touch a control.
 - Replace… takes a file of the same format, so the asset path keeps matching its content. Export downloads the stored file.
 
 The package also exports the `Model` scene component (`@jolly-pixel/editor.model/scene`), built on the engine's `ModelDefinition`. The scene editor shows the model in its rest pose and redraws it when the file is replaced; the chosen animation clip plays only in play mode.

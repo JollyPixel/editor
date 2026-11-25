@@ -7,6 +7,7 @@ export * from "./command/SyncedDocument.ts";
 export * from "./grants/Grants.ts";
 export * from "./grants/RoomGrants.ts";
 export * from "./PresenceChannel.ts";
+export * from "./RoomClaim.ts";
 export * from "./Room.ts";
 export {
   consoleLogger,

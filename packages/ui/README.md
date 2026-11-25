@@ -299,8 +299,8 @@ import {
   `jolly-presence-stack` kept in step with a `PeerListSource`.
 - [Peer identity](./docs/api/peer/identity.md): `promptPeerIdentity`, `peerIdentity` and the
   profile helpers.
-- [Room adapters](./docs/api/network.md): `PeerRoster`, `PeerMarkTracker` and
-  `RoomFieldLocks` over a `@jolly-pixel/network` room.
+- [Room adapters](./docs/api/network.md): `PeerRoster`, `DriveSession`,
+  `PeerMarkTracker` and `RoomFieldLocks` over a `@jolly-pixel/network` room.
 
 #### Lit helpers
 
