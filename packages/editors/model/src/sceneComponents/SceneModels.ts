@@ -117,29 +117,6 @@ export class SceneModels implements SceneAssetResolver<Model> {
       unfollow();
     });
 
-    return settled(preview);
+    return preview.settled();
   }
-}
-
-function settled(
-  preview: ModelPreview
-): Promise<void> {
-  const { promise, resolve, reject } = Promise.withResolvers<void>();
-  function settle(): void {
-    const { view } = preview;
-    if (view.status === "loading") {
-      return;
-    }
-    stop();
-    if (view.status === "failed") {
-      reject(new Error(view.error));
-    }
-    else {
-      resolve();
-    }
-  }
-  const stop = preview.subscribe("change", settle);
-  settle();
-
-  return promise;
 }

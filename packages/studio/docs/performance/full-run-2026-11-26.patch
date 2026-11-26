@@ -1,0 +1,27 @@
+diff --git a/packages/runtime/src/startup/configureRuntimeDevice.ts b/packages/runtime/src/startup/configureRuntimeDevice.ts
+index 3d6f29248..b4b449681 100644
+--- a/packages/runtime/src/startup/configureRuntimeDevice.ts
++++ b/packages/runtime/src/startup/configureRuntimeDevice.ts
+@@ -24,7 +24,8 @@ export async function configureRuntimeDevice(
+   logger: Pick<RuntimeLogger, "warn">,
+   options: ConfigureRuntimeDeviceOptions = {}
+ ): Promise<void> {
+-  loop.scheduler.maxFps = options.maxFps ?? await benchmarkFps(logger);
++  const skipBenchmark = globalThis.localStorage?.getItem("bench:no-gpu-tier") === "1";
++  loop.scheduler.maxFps = options.maxFps ?? (skipBenchmark ? Infinity : await benchmarkFps(logger));
+   backend.adaptPixelRatio(
+     cappedPixelRatio(isMobileDevice())
+   );
+diff --git a/packages/studio/src/shell/assets/AssetBrowser.ts b/packages/studio/src/shell/assets/AssetBrowser.ts
+index 4ba63cd44..e614f6ea5 100644
+--- a/packages/studio/src/shell/assets/AssetBrowser.ts
++++ b/packages/studio/src/shell/assets/AssetBrowser.ts
+@@ -319,7 +319,7 @@ export class AssetBrowser extends LitElement {
+             undefined :
+             previewRevision(this.#bound.catalog, assetId))
+         )}
+-        .previews=${this.#previews}
++        .previews=${localStorage.getItem("bench:no-preview") === "1" ? null : this.#previews}
+         .occupants=${this.#selectedOccupants(selection)}
+       ></asset-details>
+       <jolly-context-menu

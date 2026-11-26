@@ -40,7 +40,7 @@ class QueryString {
 Every editor page reads these, so an editor's own set leaves them out.
 `HOST_PARAMS.read()` returns all of them but `debug`.
 
-- `max-fps`: frame-rate cap, over the editor's own
+- `max-fps`: frame-rate cap; editors render uncapped without it
   ([`EditorRuntime.load`](../runtime/EditorRuntime.md#methods)).
 - `samples`: a non-negative integer, read by
   [`EditorRuntime.samples`](../runtime/EditorRuntime.md#properties).

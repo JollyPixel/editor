@@ -126,27 +126,27 @@ describe("EditorRuntime", () => {
     );
   });
 
-  test("the max-fps param overrides the editor fallback", async() => {
+  test("caps the frame rate at the max-fps param", async() => {
     const loads: Array<RuntimeLoadOptions> = [];
     const editorRuntime = new EditorRuntime(
       recordingRuntime(loads),
       HOST_PARAMS.read("?max-fps=10&samples=0")
     );
 
-    await editorRuntime.load(scene, { maxFps: Infinity });
+    await editorRuntime.load(scene);
 
     assert.equal(loads[0].maxFps, 10);
     assert.equal(editorRuntime.samples, 0);
   });
 
-  test("falls back to the editor maxFps without the param", async() => {
+  test("renders uncapped without the max-fps param", async() => {
     const loads: Array<RuntimeLoadOptions> = [];
     const editorRuntime = new EditorRuntime(
       recordingRuntime(loads),
       HOST_PARAMS.read("")
     );
 
-    await editorRuntime.load(scene, { maxFps: Infinity });
+    await editorRuntime.load(scene);
 
     assert.equal(loads[0].maxFps, Infinity);
     assert.equal(editorRuntime.samples, undefined);

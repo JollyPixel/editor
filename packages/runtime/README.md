@@ -16,7 +16,7 @@ Games use the three.js `Runtime` of `@jolly-pixel/backend.three`, built on
 - Scheduled game loop with rendering on demand and suspension while hidden
 - Loading screen with startup assets and the initial scene
 - Themeable performance statistics, with a metric registry any subsystem contributes to
-- GPU and FPS detection with [detect-gpu](https://github.com/pmndrs/detect-gpu)
+- Renders at the display rate, and halves it while frames keep missing
 - HTML overlay anchored to the canvas
 
 ## 💃 Getting Started

@@ -33,6 +33,7 @@ const { values: args } = parseArgs({
     cpu: { type: "string", default: "1" },
     profile: { type: "string" },
     memory: { type: "string" },
+    trace: { type: "string" },
     control: { type: "string" },
     out: { type: "string", default: "perf-results/edit.json" }
   }
@@ -57,7 +58,8 @@ const run = new EditRun(plan, await BenchEditors.read(), {
   keys: Number(args.keys),
   cpuThrottle: Number(args.cpu),
   profileDir: args.profile ?? null,
-  memoryDir: args.memory ?? null
+  memoryDir: args.memory ?? null,
+  traceDir: args.trace ?? null
 });
 const results = new ResultsFile<EditMeasurement>(args.out, "edit", args);
 for await (const measurement of run.measure(Number(args.rounds))) {

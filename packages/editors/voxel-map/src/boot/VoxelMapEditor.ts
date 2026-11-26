@@ -134,9 +134,7 @@ export class VoxelMapEditor {
       runtime: editorRuntime,
       toolbar: context.toolbar
     });
-    await editorRuntime.load(scene, {
-      maxFps: Infinity
-    });
+    await editorRuntime.load(scene);
 
     const editing = await logger.step(
       "scene",

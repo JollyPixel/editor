@@ -123,6 +123,7 @@ export class EditorTabs {
   #pages = new Map<string, PageEntry>();
   #active = HOME_TAB_ID;
   #listening = new AbortController();
+  #idleWaiters: Array<() => void> = [];
 
   constructor(
     options: EditorTabsOptions
@@ -180,6 +181,17 @@ export class EditorTabs {
 
   ids(): string[] {
     return this.list().map((tab) => tab.id);
+  }
+
+  untilIdle(): Promise<void> {
+    if (!this.#busy) {
+      return Promise.resolve();
+    }
+
+    const { promise, resolve } = Promise.withResolvers<void>();
+    this.#idleWaiters.push(resolve);
+
+    return promise;
   }
 
   openPages(): string[] {
@@ -283,6 +295,7 @@ export class EditorTabs {
     item.remove();
     if (this.#open.delete(id)) {
       this.#frames.remove(id);
+      this.#releaseIdleWaiters();
     }
     if (this.#active === id) {
       this.focus(
@@ -306,9 +319,11 @@ export class EditorTabs {
 
     this.#frames.remove(id);
     this.markUnsaved(id, false);
-    entry.item.status = "idle";
     if (this.#active === id) {
       this.#show(id);
+    }
+    else {
+      this.#setStatus(entry, "idle");
     }
 
     return true;
@@ -337,7 +352,7 @@ export class EditorTabs {
       return false;
     }
 
-    entry.item.status = kTabStatus[state];
+    this.#setStatus(entry, kTabStatus[state]);
 
     return true;
   }
@@ -398,6 +413,33 @@ export class EditorTabs {
       page.item.remove();
     }
     this.#active = HOME_TAB_ID;
+    this.#releaseIdleWaiters();
+  }
+
+  #setStatus(
+    entry: OpenTab,
+    status: TabStatus
+  ): void {
+    entry.item.status = status;
+    this.#releaseIdleWaiters();
+  }
+
+  get #busy(): boolean {
+    return [...this.#open.values()].some(
+      (entry) => entry.item.status === "busy"
+    );
+  }
+
+  #releaseIdleWaiters(): void {
+    if (this.#busy) {
+      return;
+    }
+
+    const waiters = this.#idleWaiters;
+    this.#idleWaiters = [];
+    for (const resolve of waiters) {
+      resolve();
+    }
   }
 
   async #closeAsked(

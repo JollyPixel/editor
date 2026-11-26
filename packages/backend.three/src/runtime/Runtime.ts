@@ -101,7 +101,7 @@ export class Runtime<
   }
 
   async compiledFrame(): Promise<void> {
-    await this.nextFrame();
+    await this.frames(2);
     while (this.renderer.pendingCompiles > 0) {
       await this.renderer.compiled();
       await this.nextFrame();

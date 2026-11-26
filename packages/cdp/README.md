@@ -79,6 +79,10 @@ throughput (bytes per second), usually one of `NETWORK_PRESETS` (`fast-4g`,
   profile file, the bytes it allocated, and the main-thread GC pauses. Throws
   before recording anything when the recorder has no `tracer`.
 
+When `plan.trace` names a file, the recorder also writes a Chrome trace of
+the `TIMELINE_CATEGORIES` there. It needs the `tracer` too, so a plan cannot
+ask for both a trace and a heap profile.
+
 Profiles stop and are written as JSON, creating missing folders, even when
 `action` throws; the error is then rethrown.
 
@@ -111,6 +115,8 @@ occluded pages.
   holds every raw event. `garbageCollections()` sums renderer main-thread GC
   pauses as minor and major counts and milliseconds, counting nested GC spans
   once. `GC_CATEGORIES` are the trace categories it needs.
+  `TIMELINE_CATEGORIES` add the DevTools timeline, V8 compile, ANGLE, Dawn and
+  WebGPU events.
 - `trace.threads()` yields each `TraceThread` that has complete spans, and
   `threadRunning(event)` returns the thread an event ran on. A thread has an
   `id` (`pid:tid`), a `name` (`?` without metadata) and its `spans` sorted by

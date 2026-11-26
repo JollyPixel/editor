@@ -22,6 +22,9 @@ import type {
   RuntimeLogMeta
 } from "../src/contract/RuntimeLogger.ts";
 
+// CONSTANTS
+const kFrame = 1000 / 60;
+
 describe("RuntimeCore", () => {
   test("load starts the runtime once the scene has loaded", async() => {
     const requested = Promise.withResolvers<void>();
@@ -94,7 +97,47 @@ describe("RuntimeCore", () => {
 
     assert.equal(Reflect.has(globalThis, "game"), false);
   });
+
+  test("load without maxFps halves the render rate while frames keep missing", async() => {
+    const { runtime, source, dispose } = createRuntime();
+    await runtime.load({ skipLoadingScreen: true });
+    assert.equal(runtime.loop.scheduler.maxFps, Infinity);
+
+    source.run(frames(2300, 3));
+
+    assert.equal(Math.round(runtime.loop.scheduler.maxFps), 30);
+    dispose();
+  });
+
+  test("load with maxFps keeps that cap while frames keep missing", async() => {
+    const { runtime, source, dispose } = createRuntime();
+    await runtime.load({
+      skipLoadingScreen: true,
+      maxFps: 60
+    });
+
+    source.run(frames(2300, 3));
+
+    assert.equal(runtime.loop.scheduler.maxFps, 60);
+    dispose();
+  });
 });
+
+function frames(
+  durationMs: number,
+  missEvery: number
+): number[] {
+  const deltas: number[] = [];
+  let elapsed = 0;
+  while (elapsed < durationMs) {
+    const missed = (deltas.length + 1) % missEvery === 0;
+    const delta = (missed ? 2 : 1) * kFrame;
+    deltas.push(delta);
+    elapsed += delta;
+  }
+
+  return deltas;
+}
 
 interface CreateRuntimeOptions {
   loadScene?: () => Promise<void>;

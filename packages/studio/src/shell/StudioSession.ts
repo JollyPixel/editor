@@ -190,7 +190,8 @@ export class StudioSession {
       share: options.share,
       identity: () => user.identity,
       launchOrigin: options.launchOrigin,
-      onRefused: () => void user.renewal?.renew()
+      onRefused: () => void user.renewal?.renew(),
+      editorsIdle: () => this.tabs.untilIdle()
     });
     this.#stopRenewal = user.renewal?.onRenewed(() => {
       this.#frames.notifySessionRenewed();

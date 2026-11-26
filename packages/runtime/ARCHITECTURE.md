@@ -26,19 +26,22 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    Load["runtime.load(options)"] --> Skip{"skipLoadingScreen?"}
+    Load["runtime.load(options)"] --> Rate["Set the FPS cap"]
+    Rate --> Skip{"skipLoadingScreen?"}
     Skip -->|"no"| Screen["Mount the loading screen"]
     Skip -->|"yes"| Show["Show the canvas"]
-    Screen --> Prepare["In parallel: screen entrance,<br/>GPU detection, minimum delay"]
-    Show --> Device["GPU detection"]
-    Prepare --> Batch["Load the startup assets"]
-    Device --> Batch
+    Screen --> Device["Cap the pixel ratio"]
+    Show --> Device
+    Device --> Entrance["Screen entrance and minimum delay,<br/>when a screen is mounted"]
+    Entrance --> Batch["Load the startup assets"]
     Batch --> Scene["backend.loadScene(scene)"]
     Scene --> Complete["Complete the loading screen"]
     Complete --> Start["runtime.start()"]
 ```
 
-- GPU detection sets the FPS cap and asks the backend to adapt its pixel ratio.
+- The FPS cap is `maxFps`, or none. `RuntimeCore.load()` sets it, and without
+  `maxFps` also creates a `FrameRateGovernor` that every frame of `start()`
+  feeds before the world ticks.
 - Any failure rejects `load()`, leaves the runtime stopped, and is shown on
   the screen when one is mounted.
 

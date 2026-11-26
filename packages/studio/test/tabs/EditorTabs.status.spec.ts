@@ -40,4 +40,24 @@ describe("EditorTabs status", () => {
     tabs.reload("map-1");
     assert.equal(tabStatus("map-1"), "busy");
   });
+
+  test("untilIdle waits until no tab is busy", async() => {
+    const { tabs } = harness();
+    await tabs.untilIdle();
+
+    await tabs.open(MAP_TAB);
+    await tabs.open(MODEL_TAB);
+    let idle = false;
+    void tabs.untilIdle().then(() => {
+      idle = true;
+    });
+
+    tabs.markState("map-1", "ready");
+    await Promise.resolve();
+    assert.equal(idle, false);
+
+    tabs.close("model-1");
+    await Promise.resolve();
+    assert.equal(idle, true);
+  });
 });

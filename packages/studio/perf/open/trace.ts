@@ -3,6 +3,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 
+// Import Third-party Dependencies
+import { TIMELINE_CATEGORIES } from "@jolly-pixel/cdp";
+
 // Import Internal Dependencies
 import { BenchBrowser } from "../studio/BenchBrowser.ts";
 import { BenchEditors } from "../studio/BenchEditors.ts";
@@ -12,26 +15,6 @@ import {
   STORAGE_FLAG
 } from "../common/flags.ts";
 import { STUDIO_URL } from "../studio/StudioPage.ts";
-
-// CONSTANTS
-const kCategories = [
-  "devtools.timeline",
-  "disabled-by-default-devtools.timeline",
-  "toplevel",
-  "blink",
-  "loading",
-  "v8",
-  "v8.execute",
-  "disabled-by-default-v8.compile",
-  "gpu",
-  "gpu.angle",
-  "gpu.dawn",
-  "disabled-by-default-gpu.dawn",
-  "disabled-by-default-gpu.service",
-  "disabled-by-default-gpu.decoder",
-  "webgpu",
-  "disabled-by-default-webgpu"
-];
 
 const { values: args } = parseArgs({
   options: {
@@ -62,7 +45,7 @@ if (args.warm) {
 }
 await studio.waitUntilOpenable(editor);
 
-await bench.browser.startTracing(undefined, { categories: kCategories });
+await bench.browser.startTracing(undefined, { categories: TIMELINE_CATEGORIES });
 await studio.openEditor(editor);
 await studio.page.waitForTimeout(settleMs);
 const trace = await bench.browser.stopTracing();

@@ -40,8 +40,9 @@ and how a component asks for frames.
 
 ## Control startup device settings
 
-`runtime.load()` uses GPU detection to choose a render cap and pixel ratio. Pass
-`maxFps` when the application has its own cap:
+By default `runtime.load()` renders at the display rate and halves that rate
+while frames keep missing their refresh, trying the full rate again a few
+seconds later. Pass `maxFps` when the application has its own cap:
 
 ```ts
 await runtime.load({
@@ -50,11 +51,11 @@ await runtime.load({
 });
 ```
 
-Use `Infinity` to remove the detected render cap. This option overrides
-`runtime.loop.scheduler.maxFps` during startup and skips GPU benchmarking,
-which otherwise fetches benchmark data from a CDN and probes a WebGL context.
+`maxFps` overrides `runtime.loop.scheduler.maxFps` during startup and keeps
+the rate fixed. `Infinity` renders uncapped and never halves.
 
-The detected pixel ratio is skipped when `Runtime.create()` received
+`runtime.load()` also caps the pixel ratio at 2, or 1.5 on mobile. That cap
+is skipped when `Runtime.create()` received
 `renderer.output.pixelRatio` or `renderer.output.maxPixelRatio`.
 
 ## Show performance statistics

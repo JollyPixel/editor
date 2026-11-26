@@ -10,7 +10,7 @@ static createRuntime(logger: HostLogger): Promise<EditorRuntime> {
 }
 
 // in mount()
-await context.runtime.load(scene, { maxFps: Infinity });
+await context.runtime.load(scene);
 ```
 
 ## Properties
@@ -40,15 +40,15 @@ Takes the arguments of `Runtime.create`.
 - Open dialogs and popovers keep their keys: the runtime keyboard ignores them
   until the layer closes.
 
-### load(scene, options?): Promise<void>
+### load(scene): Promise<void>
 
-Loads the scene without a loading screen. `?max-fps=` wins over
-`options.maxFps`; without either, the runtime picks a cap from the GPU tier.
+Loads the scene without a loading screen, capped at `?max-fps=`. Without it,
+the editor renders uncapped and the runtime never halves its rate.
 
 - `load` resolves before the scene awakes, so a scene with async setup needs
   its own readiness promise.
-- After a switch the runtime is already running: `load` replaces the scene,
-  and `options` are ignored.
+- After a switch the runtime is already running: `load` replaces the scene
+  and keeps the frame-rate cap.
 
 ### suspendKeyboardOnHover(target, event): () => void
 

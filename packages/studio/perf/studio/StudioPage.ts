@@ -63,7 +63,7 @@ export class StudioPage {
     if (editor.seed !== undefined && await row.count() === 0) {
       await this.#seed(editor.seed, editor.row);
     }
-    await row.waitFor({ timeout: kShellTimeoutMs });
+    await row.first().waitFor({ timeout: kShellTimeoutMs });
     await this.page.waitForTimeout(kIdleBeforeOpenMs);
   }
 

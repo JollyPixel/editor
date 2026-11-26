@@ -86,8 +86,9 @@ interface Runtime<TContext> {
 
 ### compiledFrame(): Promise\<void\>
 
-Awaits `nextFrame()`, then, while the renderer has
-[pipelines compiling](../systems/renderer.md#pipeline-compiles), waits for
+Awaits two frames, so that a scene `load()` just activated has awoken and
+drawn. Then, while the renderer has
+[pipelines compiling](../systems/renderer.md#pipeline-compiles), it waits for
 them and awaits another frame. Resolves once a frame has drawn every object.
 Never resolves while stopped.
 
