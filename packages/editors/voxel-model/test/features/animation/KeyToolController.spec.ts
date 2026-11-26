@@ -40,7 +40,7 @@ function createKeyTool() {
       session: model.animationSession,
       blocks: { get: (id) => (id === arm.uuid ? arm : undefined) },
       poser: { reset: () => undefined },
-      access: model.access
+      animations: model.animations
     }),
     shortcuts: new ShortcutLabels(new KeyboardLayoutStore(), keyBindings)
   });

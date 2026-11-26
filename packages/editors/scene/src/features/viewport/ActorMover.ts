@@ -4,6 +4,7 @@ import type { OrbitFlyCamera } from "@jolly-pixel/backend.three";
 import type { SceneTransformPatch } from "@jolly-pixel/asset.scene/client";
 
 // Import Internal Dependencies
+import type { SceneAccess } from "../../access/SceneAccess.ts";
 import type { SceneBinding } from "../../scene/SceneBinding.ts";
 import { roundedVector } from "../../scene/sceneTransform.ts";
 import type { SelectionStore } from "../../state/SelectionStore.ts";
@@ -43,6 +44,7 @@ export interface ActorMoverOptions
     "actor" | "actorEntry" | "findActorId" | "worldBounds"
   >;
   selection: Pick<SelectionStore, "primary">;
+  access: Pick<SceneAccess, "can">;
 }
 
 interface MoveSession {
@@ -85,7 +87,7 @@ export class ActorMover {
   ): boolean {
     const { selection, scene, binding, camera } = this.#options;
     const id = selection.primary;
-    if (id === null || this.#session !== null) {
+    if (id === null || this.#session !== null || !this.#movable(id)) {
       return false;
     }
 
@@ -149,7 +151,12 @@ export class ActorMover {
     const { selection, binding, scene, draft } = this.#options;
     const id = selection.primary;
     const actor = id === null ? null : binding.actor(id);
-    if (id === null || actor === null || this.#session !== null) {
+    if (
+      id === null ||
+      actor === null ||
+      this.#session !== null ||
+      !this.#movable(id)
+    ) {
       return false;
     }
 
@@ -173,6 +180,12 @@ export class ActorMover {
   dispose(): void {
     this.cancel();
     this.#gesture.dispose();
+  }
+
+  #movable(
+    id: string
+  ): boolean {
+    return this.#options.access.can("transforms", id);
   }
 }
 

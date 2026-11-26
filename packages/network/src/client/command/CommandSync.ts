@@ -4,7 +4,10 @@ import type { ChangeReceipts } from "@jolly-pixel/history";
 import type { DistributiveOmit } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
-import type { Room } from "../Room.ts";
+import type {
+  Room,
+  RoomRejectionEvent
+} from "../Room.ts";
 import type { CommandReconciler } from "./CommandReconciler.ts";
 import { CommandIntegrator } from "./CommandIntegrator.ts";
 import {
@@ -163,6 +166,21 @@ export class CommandSync<
     }
   }
 
+  #onRejected = (
+    rejection: RoomRejectionEvent
+  ): void => {
+    if (rejection.seq === undefined) {
+      return;
+    }
+    const entry = this.#ledger.sentAs(this.room.clientId, rejection.seq);
+    if (entry === undefined) {
+      return;
+    }
+
+    this.#ledger.discard(entry);
+    this.#refuseOnResync([entry]);
+  };
+
   #onSync = (): void => {
     const previous = this.#clientId;
     this.#clientId = this.room.clientId;
@@ -195,6 +213,8 @@ export class CommandSync<
     this.#whenReady.promise.catch(() => undefined);
     this.room.on("message", this.#onMessage);
     this.room.on("sync", this.#onSync);
+    this.room.on("denied", this.#onRejected);
+    this.room.on("error", this.#onRejected);
     this.room.resumeWith(
       () => this.#resume()
     );
@@ -259,6 +279,8 @@ export class CommandSync<
     this.#deferred = null;
     this.room.off("message", this.#onMessage);
     this.room.off("sync", this.#onSync);
+    this.room.off("denied", this.#onRejected);
+    this.room.off("error", this.#onRejected);
     this.room.resumeWith(null);
     this.#ledger.clear();
   }
@@ -404,6 +426,14 @@ export class CommandSync<
     entry.receipt?.receipts.refuse(entry.receipt.change);
   }
 
+  #refuseOnResync(
+    entries: readonly LedgerEntry<TCommand>[]
+  ): void {
+    this.#noteSettled(entries);
+    this.#refusedOnSnapshot.push(...entries);
+    this.resync();
+  }
+
   #noteSettled(
     entries: readonly LedgerEntry<TCommand>[]
   ): void {
@@ -477,13 +507,11 @@ export class CommandSync<
     }
     this.#noteVersion(message.version);
     const dropped = this.#acknowledgeFrom(message.acks);
-    this.#noteSettled(dropped);
     if (this.#resumingFrom !== null) {
       this.#finishResume();
     }
     if (dropped.length > 0) {
-      this.#refusedOnSnapshot.push(...dropped);
-      this.resync();
+      this.#refuseOnResync(dropped);
     }
   }
 

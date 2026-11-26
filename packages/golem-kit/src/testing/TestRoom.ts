@@ -37,7 +37,7 @@ export class TestRoom implements Room {
   readonly profile: PeerMetadata = {};
   readonly role = "member";
   readonly rights: RoomRights = {};
-  access: Right = "write";
+  right: Right = "write";
   readonly sent: unknown[] = [];
   readonly presence: PeerMetadata = {};
 
@@ -56,7 +56,7 @@ export class TestRoom implements Room {
   }
 
   can(): Right {
-    return this.access;
+    return this.right;
   }
 
   join(): void {

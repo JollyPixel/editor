@@ -55,6 +55,18 @@ export class FakeModelCatalog implements ModelCatalog {
     throw new Error("FakeModelCatalog never replaces a file.");
   }
 
+  can(): boolean {
+    return true;
+  }
+
+  on(): void {
+    return void 0;
+  }
+
+  off(): void {
+    return void 0;
+  }
+
   subscribe(
     event: "change",
     listener: () => void

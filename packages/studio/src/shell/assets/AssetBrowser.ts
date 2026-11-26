@@ -63,7 +63,10 @@ import "./AssetDetails.ts";
 // CONSTANTS
 const kNoKindOptions: readonly JollyOption<string>[] = [];
 const kNoExpanded: readonly string[] = [];
-const kNoActions = new AssetActions({ sharing: false });
+const kNoActions = new AssetActions({
+  sharing: false,
+  can: () => false
+});
 const kFilesType = "Files";
 const kDropQuestions: AssetDropQuestions = {
   conversion: askConversion,
@@ -262,7 +265,7 @@ export class AssetBrowser extends LitElement {
             icon-only
             label="New asset"
             title="New asset"
-            ?disabled=${this.#kinds.entries.length === 0}
+            ?disabled=${this.#kinds.entries.length === 0 || !(view?.actions.canCreate ?? false)}
             @click=${this.#openNewAssetMenu}
           ></jolly-button>
           ${(view?.actions ?? kNoActions).buttons().map((button) => html`
@@ -485,7 +488,11 @@ export class AssetBrowser extends LitElement {
     event: DragEvent
   ): void => {
     const transfer = event.dataTransfer;
-    if (this.#view === null || !transfer?.types.includes(kFilesType)) {
+    if (
+      this.#view === null ||
+      !transfer?.types.includes(kFilesType) ||
+      !this.#view.actions.canCreate
+    ) {
       return;
     }
 

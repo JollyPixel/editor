@@ -10,55 +10,9 @@ import {
   CATALOG_RENAME,
   CATALOG_SNAPSHOT,
   CatalogClient,
-  CatalogRejectedError,
-  type CatalogCommand,
-  type CatalogMessage,
-  type CatalogRoom
+  CatalogRejectedError
 } from "#src/client/index.ts";
-
-class FakeCatalogRoom implements CatalogRoom {
-  readonly sent: CatalogCommand[] = [];
-  joined = false;
-  left = false;
-  #listener: ((message: CatalogMessage) => void) | null = null;
-
-  on(
-    _type: string,
-    listener: (message: CatalogMessage) => void
-  ): void {
-    this.#listener = listener;
-  }
-
-  off(): void {
-    this.#listener = null;
-  }
-
-  join(): void {
-    this.joined = true;
-  }
-
-  leave(): void {
-    this.left = true;
-  }
-
-  send(
-    command: CatalogCommand
-  ): void {
-    this.sent.push(command);
-  }
-
-  receive(
-    message: CatalogMessage
-  ): void {
-    this.#listener?.(message);
-  }
-
-  requestId(
-    index: number
-  ): string {
-    return this.sent[index].requestId;
-  }
-}
+import { FakeCatalogRoom } from "../helpers/catalogRoom.ts";
 
 function snapshot(
   room: FakeCatalogRoom

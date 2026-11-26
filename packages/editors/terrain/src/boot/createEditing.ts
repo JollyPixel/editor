@@ -10,7 +10,6 @@ import {
   describeSkippedStep,
   type HistoryStepInfo
 } from "@jolly-pixel/history";
-import { RoomGrants } from "@jolly-pixel/network/client";
 import {
   LocalStorageAdapter,
   LogQueue
@@ -35,7 +34,6 @@ import { SculptSettings } from "../state/SculptSettings.ts";
 
 // CONSTANTS
 const kTextureKind = textureDocumentKind();
-const kViewOnlyRefused = "You can only view this terrain, so the change was not saved";
 
 export function createEditing(
   context: RuntimeEditorContext,
@@ -56,11 +54,7 @@ export function createEditing(
   history.on("skipped", onSkipped);
   disposables.push(() => history.off("skipped", onSkipped));
 
-  const access = new RoomGrants(room, TERRAIN_CAPABILITY_TABLE);
-  disposables.push(
-    () => access.dispose(),
-    access.subscribe("denied", () => log.push(kViewOnlyRefused))
-  );
+  const access = context.access.target(TERRAIN_CAPABILITY_TABLE);
 
   const selection = new MaterialSelection(document);
   disposables.push(() => selection.dispose());

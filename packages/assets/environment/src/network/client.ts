@@ -12,3 +12,4 @@ export type * from "./types.ts";
 export * from "../model/EnvironmentSwitch.ts";
 export * from "../model/EnvironmentLink.ts";
 export * from "../model/PreviewEnvironment.ts";
+export * from "../asset/capabilities.ts";

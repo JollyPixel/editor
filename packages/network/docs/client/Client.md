@@ -84,7 +84,9 @@ Request fresh state or supply reconnect data.
 
 ### `peers` / `can(event): Right`
 
-`peers` contains remote members only. `can(event)` resolves access for UI controls.
+`peers` contains remote members only. `can(event)` returns the right this client
+holds on one event; [`RoomGrants`](#roomgrants-api) groups events into
+capabilities for UI controls.
 
 ### `profile`
 
@@ -99,6 +101,12 @@ profile. Read it with
 
 Feature payloads / admission confirmation.
 
+#### rights
+
+`rights` and `can(event)` hold new values: each `sync` sets them, and a
+`denied` for `$join` drops them. It fires on every `sync`, even when the
+rights did not change.
+
 #### peer-joined / peer-left / peer-presence
 
 Peer changes; the peer map is already updated.
@@ -110,7 +118,10 @@ Peer changes; the peer map is already updated.
 
 #### denied / error / malformed
 
-Permission refusal, operation failure, or parser rejection. A `denied` for
+Permission refusal, operation failure, or parser rejection. `denied` and
+`error` emit `{ event, reason, seq?, requestId? }`; `seq` and `requestId` are
+set when the refused message carried a numeric `seq` or a string `requestId`,
+so a client can settle the request the server refused. A `denied` for
 `$join` also drops the room's peers and rights, with a `peer-left` for each
 peer: the server sends it when a join is refused, and when
 [replaced rights](../server/Server.md#replacerightsrights-defaultrole-void)
@@ -217,12 +228,13 @@ when nothing is. `equals(other)` compares two grants. Instances are frozen.
 ### Constructor
 
 `new RoomGrants(room, table)` follows one room. `current` is `table.full` until
-the room admits this client, then follows each `sync`.
+the room admits this client, then follows each [`rights`](#rights) event, so a
+refused `$join` withholds every capability.
 
 ### change / denied
 
-`change` emits the new grants when a `sync` changes them. `denied` emits the
-event name of a refusal the table governs.
+`change` emits the new grants when a `rights` event changes them. `denied`
+emits the event name of a refusal the table governs.
 
 ### `dispose(): void`
 

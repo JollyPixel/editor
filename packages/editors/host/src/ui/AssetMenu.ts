@@ -75,7 +75,8 @@ export class AssetMenu {
 
     return disableEntries(
       entries,
-      (action) => action === "delete" && !this.#targets.canRemoveCurrent
+      (action) => (action === "delete" && !this.#targets.canRemoveCurrent) ||
+        (action === "rename" && !this.#targets.canRenameCurrent)
     );
   }
 

@@ -1,6 +1,9 @@
 // Import Third-party Dependencies
 import { Emitter } from "@openally/emitt";
 import {
+  CATALOG_RESTORE,
+  CATALOG_TAG,
+  CATALOG_UNTAG,
   TagName,
   type AssetTag,
   type CatalogClient,
@@ -31,11 +34,15 @@ type TagsChangedListener = CatalogClientEvents["tags-changed"];
 
 export interface EditorTagsCatalog extends Pick<
   CatalogClient,
-  "tags" | "tag" | "untag" | "restore"
+  "tags" | "tag" | "untag" | "restore" | "can"
 > {
   subscribe(
     type: "tags-changed",
     listener: TagsChangedListener
+  ): () => void;
+  subscribe(
+    type: "rights",
+    listener: () => void
   ): () => void;
 }
 
@@ -69,7 +76,7 @@ export class EditorTags extends Emitter<EditorTagsEvents> {
   readonly #unsaved: () => boolean;
   readonly #navigator: LaunchNavigator;
   readonly #browser: EditorTagsBrowser;
-  readonly #unsubscribe: () => void;
+  readonly #unsubscribe: Array<() => void>;
   #tags: readonly AssetTag[] = [];
   #loading: Promise<void> | null = null;
 
@@ -84,14 +91,29 @@ export class EditorTags extends Emitter<EditorTagsEvents> {
     this.#unsaved = options.unsaved;
     this.#navigator = options.navigator;
     this.#browser = options.browser ?? kDomTagsBrowser;
-    this.#unsubscribe = this.#catalog.subscribe(
-      "tags-changed",
-      (assetId, tags) => {
-        if (assetId === this.assetId) {
-          this.#replace(tags);
+    this.#unsubscribe = [
+      this.#catalog.subscribe(
+        "tags-changed",
+        (assetId, tags) => {
+          if (assetId === this.assetId) {
+            this.#replace(tags);
+          }
         }
-      }
-    );
+      ),
+      this.#catalog.subscribe("rights", () => this.emit("change"))
+    ];
+  }
+
+  get canTag(): boolean {
+    return this.#catalog.can(CATALOG_TAG);
+  }
+
+  get canUntag(): boolean {
+    return this.#catalog.can(CATALOG_UNTAG);
+  }
+
+  get canRestore(): boolean {
+    return this.#catalog.can(CATALOG_RESTORE);
   }
 
   * [Symbol.iterator](): IterableIterator<AssetTag> {
@@ -120,6 +142,10 @@ export class EditorTags extends Emitter<EditorTagsEvents> {
   }
 
   async create(): Promise<AssetTag | null> {
+    if (!this.canTag) {
+      return null;
+    }
+
     const requested = await this.#browser.askNewTag();
     if (requested === null) {
       return null;
@@ -140,6 +166,10 @@ export class EditorTags extends Emitter<EditorTagsEvents> {
   async restore(
     name: string
   ): Promise<RestoreReport | null> {
+    if (!this.canRestore) {
+      return null;
+    }
+
     const unsaved = this.#unsaved() ?
       " Changes not saved yet are lost." :
       "";
@@ -165,6 +195,10 @@ export class EditorTags extends Emitter<EditorTagsEvents> {
   async delete(
     name: string
   ): Promise<boolean> {
+    if (!this.canUntag) {
+      return false;
+    }
+
     const confirmed = await this.#browser.confirm({
       title: "Delete tag",
       message: `Delete tag "${name}"? The asset content does not change.`,
@@ -192,7 +226,9 @@ export class EditorTags extends Emitter<EditorTagsEvents> {
   }
 
   dispose(): void {
-    this.#unsubscribe();
+    for (const unsubscribe of this.#unsubscribe) {
+      unsubscribe();
+    }
   }
 
   #replace(

@@ -61,7 +61,7 @@ hosted.state; // the studio's state of the asset
 - `new TestStudio({ kinds, kindPackages? })` opens the contributions in `kinds`; `kindPackages` is what `studio.kindPackages` answers.
 - `host(path, handler)` adds an asset served by its kind's `AssetKindHandler` and returns `{ id, state, room }`. Change `state` before `open` to start from a given document. `record(record)` adds a catalog entry nothing serves, for references, and `dependencies` is the catalog's `DependencyIndex`.
 - `open(assetId, kind)` opens the asset once and waits for `ready`, as `golem.open` does. Assets opened through `studio.open` come from the same test studio.
-- `TestRoom` answers each command the golem sends right away. `holdAnswers()` keeps them until `answer()`. `sent` lists every command sent and `presence` the golem's own presence. Set `access` to `"read"` to play a role that may only read.
+- `TestRoom` answers each command the golem sends right away. `holdAnswers()` keeps them until `answer()`. `sent` lists every command sent and `presence` the golem's own presence. Set `right` to `"read"` to play a role that may only read.
 - `room.receive(command)` applies a person's command in the studio. The golem sees it with the answer to its next command, so a test can make a golem command conflict with it. `deny(event, reason)` plays a denial, and `addPeer(peer)` adds a peer whose presence holds a lock.
 
 ## 🚀 Building

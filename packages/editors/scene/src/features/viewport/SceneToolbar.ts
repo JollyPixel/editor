@@ -52,6 +52,7 @@ export class SceneToolbar extends LitElement {
     return [
       editing.gizmo.subscribe("change", repaint),
       editing.history.subscribe("change", repaint),
+      editing.access.subscribe(repaint),
       editing.selection.subscribe("change", repaint),
       editing.shortcuts.subscribe(repaint)
     ];
@@ -88,8 +89,13 @@ export class SceneToolbar extends LitElement {
   #renderHistory(
     editing: SceneEditing
   ): TemplateResult {
-    const { history, shortcuts } = editing;
+    const {
+      history,
+      actions,
+      shortcuts
+    } = editing;
     const { undoCount, redoCount } = history.state(SCENE_HISTORY_SCOPE);
+    const { readOnly } = editing.access;
 
     return html`
       <jolly-rail-group role="group" aria-label="History">
@@ -99,8 +105,8 @@ export class SceneToolbar extends LitElement {
           flyout-side="above"
           label=${shortcuts.label("Undo", "edit.undo")}
           .count=${undoCount}
-          ?disabled=${undoCount === 0}
-          @click=${() => history.undo(SCENE_HISTORY_SCOPE)}
+          ?disabled=${readOnly || undoCount === 0}
+          @click=${() => actions.undo()}
         ></jolly-tool-button>
         <jolly-tool-button
           data-tool="redo"
@@ -108,8 +114,8 @@ export class SceneToolbar extends LitElement {
           flyout-side="above"
           label=${shortcuts.label("Redo", "edit.redo")}
           .count=${redoCount}
-          ?disabled=${redoCount === 0}
-          @click=${() => history.redo(SCENE_HISTORY_SCOPE)}
+          ?disabled=${readOnly || redoCount === 0}
+          @click=${() => actions.redo()}
         ></jolly-tool-button>
       </jolly-rail-group>
     `;

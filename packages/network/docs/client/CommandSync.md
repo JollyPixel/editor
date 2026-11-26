@@ -198,6 +198,10 @@ Own echoes acknowledge edits; peer commands pass through reconciliation.
 `unsettled` fires when `pending` leaves zero, and `settled` when it returns to
 zero, including after a discard.
 
+A command the room refuses with `denied` or `error`, such as an edit from a
+member with only `read`, leaves `pending` at once. The sync asks for a snapshot,
+and emits `refused` once the snapshot has replaced its local effect.
+
 ### Resume
 
 Reconnects request catch-up or a snapshot using the previous id and version.

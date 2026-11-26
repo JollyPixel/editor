@@ -67,4 +67,15 @@ describe("CommandSync convergence", () => {
   test("mixed commands converge when conflicts compare timestamps", () => {
     assertConverges({ scenario: "mixed", versioned: false });
   });
+
+  test("mixed commands converge when the server denies a client some actions", () => {
+    assertConverges({ scenario: "mixed", readOnly: ["set", "add"] });
+  });
+
+  test("mixed commands converge when the server denies a client every action", () => {
+    assertConverges({
+      scenario: "mixed",
+      readOnly: ["set", "move", "add", "remove", "reparent"]
+    });
+  });
 });

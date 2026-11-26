@@ -51,11 +51,8 @@ class FakeRoom {
   ): void {
     this.clientId = "self";
     this.fallback = right;
-    for (const listener of this.#listeners.get("sync") ?? []) {
-      (listener as RoomEventMap["sync"])({
-        self: "self",
-        clientIds: []
-      });
+    for (const listener of this.#listeners.get("rights") ?? []) {
+      (listener as RoomEventMap["rights"])();
     }
   }
 

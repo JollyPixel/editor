@@ -120,15 +120,6 @@ export class ClientRoom<
     return this.#rights;
   }
 
-  get access(): Right {
-    const values = Object.values(this.#rights);
-    if (values.includes("write")) {
-      return "write";
-    }
-
-    return values.includes("read") ? "read" : "void";
-  }
-
   can(
     event: string
   ): Right {
@@ -258,11 +249,15 @@ export class ClientRoom<
         if (envelope.kind === "denied" && envelope.event === JOIN_EVENT) {
           this.suspend();
           this.#self = null;
-          this.#rights = kNoRights;
+          this.#replaceRights(kNoRights);
         }
         this.emit(envelope.kind, {
           event: envelope.event,
-          reason: envelope.reason
+          reason: envelope.reason,
+          ...(envelope.seq === undefined ? {} : { seq: envelope.seq }),
+          ...(envelope.requestId === undefined ?
+            {} :
+            { requestId: envelope.requestId })
         });
         break;
       default:
@@ -303,7 +298,6 @@ export class ClientRoom<
     envelope: ServerEnvelopeOf<"sync">
   ): void {
     this.#clientId = envelope.self;
-    this.#rights = envelope.rights;
     this.#self = null;
     this.#peers.clear();
 
@@ -318,10 +312,18 @@ export class ClientRoom<
       }
     }
 
+    this.#replaceRights(envelope.rights);
     this.emit("sync", {
       self: envelope.self,
       clientIds
     });
+  }
+
+  #replaceRights(
+    rights: RoomRights
+  ): void {
+    this.#rights = rights;
+    this.emit("rights");
   }
 
   #addPeer(

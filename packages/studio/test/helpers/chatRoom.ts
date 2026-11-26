@@ -60,7 +60,6 @@ export function chatRoomHarness(
     profile,
     role: "member",
     rights: {},
-    access: "write",
     can: (event: string): Right => (event === AGENT_CHAT_SAY ? sayRight : "void"),
     join: () => undefined,
     leave: () => undefined,

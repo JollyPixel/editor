@@ -33,5 +33,6 @@ export type TerrainLiveMessage = InterestChangedMessage | LivePatchedMessage;
 
 export const TERRAIN_RELAY_SCHEMAS: AssetRelaySchemas<TerrainLiveMessage> = {
   inbound: [interestChangedSchema, livePatchedSchema],
-  outbound: [peerLivePatchedSchema]
+  outbound: [peerLivePatchedSchema],
+  queries: [TERRAIN_INTEREST_CHANGED]
 };

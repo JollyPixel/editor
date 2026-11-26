@@ -15,6 +15,7 @@ import type { ServerOptions } from "@jolly-pixel/network";
 import {
   CATALOG_RESTORE,
   CATALOG_ROOM,
+  CATALOG_TAG,
   createAssetBackend,
   type AssetBackend
 } from "#src/index.ts";
@@ -192,5 +193,23 @@ describe("catalog tag commands over loopback", () => {
 
     assert.deepEqual(tags.map((entry) => entry.name), ["draft"]);
     assert.strictEqual(await project.read(), "second");
+  });
+
+  test("a reader lists the tags", async() => {
+    await using project = await tagProject({
+      rights: {
+        default: {
+          [`${CATALOG_ROOM}.$join`]: "write",
+          [`${CATALOG_ROOM}.${CATALOG_TAG}`]: "write",
+          "*": "read"
+        }
+      }
+    });
+    const { catalog } = project.connection;
+    await catalog.tag(project.assetId, "draft");
+
+    const tags = await catalog.tags(project.assetId);
+
+    assert.deepEqual(tags.map((entry) => entry.name), ["draft"]);
   });
 });

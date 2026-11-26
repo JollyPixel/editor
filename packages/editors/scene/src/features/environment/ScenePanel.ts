@@ -29,6 +29,7 @@ export class ScenePanel extends LitElement {
     return [
       editing.document.subscribe("change", repaint),
       editing.document.subscribe("reset", repaint),
+      editing.access.subscribe(repaint),
       editing.assetSlots.subscribe(repaint)
     ];
   });
@@ -57,12 +58,12 @@ export class ScenePanel extends LitElement {
       return nothing;
     }
 
-    const { document, assetSlots } = editing;
+    const { document, actions, assetSlots } = editing;
     const reference = document.tree.environment;
     async function pick(): Promise<void> {
       const picked = await assetSlots.pick(Systems.ENVIRONMENT_ASSET, reference);
       if (picked !== null) {
-        document.changeEnvironment({
+        actions.changeEnvironment({
           id: picked.id,
           kind: SCENE_ENVIRONMENT_KIND
         });
@@ -70,7 +71,7 @@ export class ScenePanel extends LitElement {
     }
     function clear(event: ChangeEvent<string | null>): void {
       if (event.detail.value === null) {
-        document.changeEnvironment(null);
+        actions.changeEnvironment(null);
       }
     }
     function open(): void {
@@ -85,6 +86,7 @@ export class ScenePanel extends LitElement {
         placeholder=${kBuiltInEnvironment}
         .value=${reference?.id ?? null}
         .text=${reference === null ? "" : assetSlots.name(reference)}
+        ?readonly=${!editing.access.can("environment")}
         @jolly-browse=${pick}
         @jolly-change=${clear}
         @jolly-open=${open}

@@ -15,6 +15,7 @@ import { bindPresenceStack } from "@jolly-pixel/ui";
 import { Teardown } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
+import { SCRIPT_CAPABILITY_TABLE } from "./access/ScriptAccess.ts";
 import { ScriptCollaboration } from "./collaboration/ScriptCollaboration.ts";
 import { CodeAssist } from "./language/CodeAssist.ts";
 import { LanguageClient } from "./language/LanguageClient.ts";
@@ -102,13 +103,14 @@ export class ScriptEditor {
         ));
       }
 
+      const access = context.access.target(SCRIPT_CAPABILITY_TABLE);
+
       const ready = target.ready.then(() => {
-        const readOnly = target.room.access !== "write";
         teardown.defer(code.attach({
           document: target.document,
           collaboration,
           language,
-          readOnly
+          access
         }));
         if (languageClient !== null) {
           const assist = new CodeAssist({
@@ -123,7 +125,7 @@ export class ScriptEditor {
           keepPreview(markdownPreview.then(({ bindMarkdownPreview }) => bindMarkdownPreview({
             document: target.document,
             code,
-            readOnly
+            access
           })));
         }
         if (shaderPreview !== null) {

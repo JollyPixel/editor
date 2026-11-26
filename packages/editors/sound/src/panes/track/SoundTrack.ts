@@ -35,7 +35,8 @@ import { Volume } from "../../player/volume/Volume.ts";
 import type { LiveSettings } from "../../settings/LiveSettings.ts";
 import { soundTrackStyles } from "./SoundTrack.styles.ts";
 
-interface VolumeEvents {
+interface VolumeEdits {
+  readOnly: boolean;
   input(percent: number): void;
   change(percent: number): void;
 }
@@ -289,6 +290,7 @@ function renderVolume(
       kSettingsVolumeHint,
       new Volume(settings.current.volume).toPercent(),
       {
+        readOnly: !settings.editable,
         input: (percent) => settings.preview({
           volume: Volume.percent(percent).level
         }),
@@ -304,6 +306,7 @@ function renderVolume(
   }
 
   return volumeSlider("Volume", player.volume.toPercent(), {
+    readOnly: false,
     input: monitor,
     change: monitor
   });
@@ -312,7 +315,7 @@ function renderVolume(
 function volumeSlider(
   title: string,
   percent: number,
-  events: VolumeEvents
+  edits: VolumeEdits
 ): TemplateResult {
   return html`
     <div class="volume" title=${title}>
@@ -322,8 +325,9 @@ function volumeSlider(
         min="0"
         max="100"
         .value=${percent}
-        @jolly-input=${onPercent(events.input)}
-        @jolly-change=${onPercent(events.change)}
+        ?readonly=${edits.readOnly}
+        @jolly-input=${onPercent(edits.input)}
+        @jolly-change=${onPercent(edits.change)}
       ></jolly-slider>
     </div>
   `;

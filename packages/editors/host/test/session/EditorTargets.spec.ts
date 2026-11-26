@@ -6,6 +6,10 @@ import {
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
+import {
+  CATALOG_DELETE,
+  CATALOG_RENAME
+} from "@jolly-pixel/asset-server/client";
 import type { PromptOptions } from "@jolly-pixel/ui";
 
 // Import Internal Dependencies
@@ -171,6 +175,22 @@ describe("EditorTargets", () => {
       name: "TargetInUseError",
       dependents: ["props/hut"]
     });
+    assert.deepEqual(catalog.calls, []);
+  });
+
+  test("a role without the rename and delete rights leaves the target alone", async() => {
+    const { prompts, catalog, targets } = setup({ name: "woods" });
+    let changes = 0;
+    targets.on("change", () => changes++);
+
+    catalog.refuse(CATALOG_RENAME, CATALOG_DELETE);
+    await targets.renameCurrent();
+    await targets.removeCurrent();
+
+    assert.equal(changes, 1);
+    assert.equal(targets.canRenameCurrent, false);
+    assert.equal(targets.canRemoveCurrent, false);
+    assert.deepEqual(prompts, []);
     assert.deepEqual(catalog.calls, []);
   });
 

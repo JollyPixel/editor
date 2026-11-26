@@ -15,6 +15,7 @@ import {
   createProbeBinding,
   type Probe
 } from "../helpers/probeComponents.ts";
+import { sceneAccess } from "../helpers/sceneAccess.ts";
 
 function createDraft(
   document: SceneDocument
@@ -23,7 +24,7 @@ function createDraft(
   const draft = new SceneDraft({
     document,
     view: binding,
-    writes: new ActorWrites(document)
+    writes: new ActorWrites(document, sceneAccess())
   });
 
   return {

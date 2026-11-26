@@ -53,22 +53,27 @@ export function clipMenu(
   ];
 }
 
-export const SET_MENU: readonly MenuEntry<SetAction>[] = [
-  kNewClip,
-  {
-    ...RENAME_ITEM,
-    label: "Rename…"
-  },
-  {
-    id: "export",
-    label: "Export…"
-  },
-  "separator",
-  {
-    id: "unlink",
-    label: "Unlink from this model"
-  }
-];
+export function setMenu(
+  renamable: boolean
+): readonly MenuEntry<SetAction>[] {
+  return [
+    kNewClip,
+    {
+      ...RENAME_ITEM,
+      label: "Rename…",
+      disabled: !renamable
+    },
+    {
+      id: "export",
+      label: "Export…"
+    },
+    "separator",
+    {
+      id: "unlink",
+      label: "Unlink from this model"
+    }
+  ];
+}
 
 export function ownMenu(
   canShare: boolean
@@ -84,13 +89,15 @@ export function ownMenu(
 }
 
 export function sharedMenu(
-  canImport: boolean
+  canImport: boolean,
+  canCreate: boolean
 ): readonly MenuEntry<SharedAction>[] {
   return [
     {
       id: "new-set",
       label: "New set…",
-      icon: "plus"
+      icon: "plus",
+      disabled: !canCreate
     },
     {
       id: "link-set",

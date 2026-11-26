@@ -16,6 +16,10 @@ import {
 } from "@jolly-pixel/asset.script/client";
 
 // Import Internal Dependencies
+import {
+  canEditText,
+  type ScriptAccessSource
+} from "../../access/ScriptAccess.ts";
 import type {
   PeerCaret,
   ScriptCollaboration
@@ -62,7 +66,7 @@ export interface ScriptCodeOptions {
   document: ScriptDocument;
   collaboration: ScriptCollaboration;
   language: ScriptLanguage;
-  readOnly: boolean;
+  access: ScriptAccessSource;
 }
 
 type ScriptCodeAssist = Pick<CodeAssist, "questions" | "diagnostics">;
@@ -239,10 +243,10 @@ export class ScriptCode extends LitElement {
     options: ScriptCodeOptions
   ): () => void {
     this.#detach();
-    const { document, collaboration, language, readOnly } = options;
+    const { document, collaboration, language, access } = options;
     this.#document = document;
     this.#collaboration = collaboration;
-    this.#readOnly = readOnly;
+    this.#readOnly = !canEditText(access.current);
     this.#lines = new TextLines(document.text, document.format);
     this.#tokens.reset(this.#lines, language);
     this.#carets = collaboration.carets;
@@ -253,6 +257,10 @@ export class ScriptCode extends LitElement {
       document.subscribe("formatChange", (format) => this.#reformat(format)),
       collaboration.subscribe("caretsChange", (carets) => {
         this.#carets = carets;
+        this.requestUpdate();
+      }),
+      access.subscribe("change", (grants) => {
+        this.#readOnly = !canEditText(grants);
         this.requestUpdate();
       }),
       () => page.removeEventListener("selectionchange", this.#onSelectionChange)
@@ -474,6 +482,13 @@ export class ScriptCode extends LitElement {
     const textarea = this.#textarea;
     const document = this.#document;
     if (textarea === null || document === null) {
+      return;
+    }
+    if (this.#readOnly) {
+      this.#syncTextarea(ScriptCaret.collapsed(
+        Math.min(textarea.selectionStart, document.text.length)
+      ));
+
       return;
     }
 

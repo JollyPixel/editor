@@ -1,19 +1,38 @@
 // Import Third-party Dependencies
+import { Emitter } from "@openally/emitt";
 import type {
   CatalogCommand,
   CatalogMessage,
   CatalogRoom,
   CatalogRoomSource
 } from "@jolly-pixel/asset-server/client";
+import type {
+  Right,
+  RoomRejectionEvent,
+  RoomRights
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import {
+  CATALOG_DENIED_MESSAGE_TYPE,
   CATALOG_OPEN_MESSAGE_TYPE,
+  CATALOG_RIGHTS_MESSAGE_TYPE,
+  type CatalogDeniedMessage,
   type CatalogOpenMessage,
-  type CatalogPortMessage
+  type CatalogPortMessage,
+  type CatalogRightsMessage
 } from "./protocol.ts";
 
-type CatalogListener = (message: CatalogMessage) => void;
+type ShellCatalogRoomEvents = {
+  message: (message: CatalogMessage) => void;
+  rights: () => void;
+  denied: (denial: RoomRejectionEvent) => void;
+};
+
+type ShellMessage =
+  | CatalogMessage
+  | CatalogRightsMessage
+  | CatalogDeniedMessage;
 
 export class ShellCatalog implements CatalogRoomSource {
   readonly #connector: MessagePort;
@@ -31,29 +50,23 @@ export class ShellCatalog implements CatalogRoomSource {
   }
 }
 
-class ShellCatalogRoom implements CatalogRoom {
+class ShellCatalogRoom extends Emitter<ShellCatalogRoomEvents>
+  implements CatalogRoom {
   readonly #connector: MessagePort;
-  readonly #listeners = new Set<CatalogListener>();
   #port: MessagePort | null = null;
+  #rights: RoomRights = {};
 
   constructor(
     connector: MessagePort
   ) {
+    super();
     this.#connector = connector;
   }
 
-  on(
-    _type: "message",
-    listener: CatalogListener
-  ): void {
-    this.#listeners.add(listener);
-  }
-
-  off(
-    _type: "message",
-    listener: CatalogListener
-  ): void {
-    this.#listeners.delete(listener);
+  can(
+    event: string
+  ): Right {
+    return this.#rights[event] ?? "void";
   }
 
   join(): void {
@@ -65,11 +78,7 @@ class ShellCatalogRoom implements CatalogRoom {
     this.#port = channel.port1;
     this.#port.addEventListener(
       "message",
-      (event: MessageEvent<CatalogMessage>) => {
-        for (const listener of this.#listeners) {
-          listener(event.data);
-        }
-      }
+      (event: MessageEvent<ShellMessage>) => this.#receive(event.data)
     );
     this.#port.start();
     this.#connector.postMessage(
@@ -99,5 +108,20 @@ class ShellCatalogRoom implements CatalogRoom {
     message: CatalogPortMessage
   ): void {
     this.#port?.postMessage(message);
+  }
+
+  #receive(
+    message: ShellMessage
+  ): void {
+    if (message.type === CATALOG_RIGHTS_MESSAGE_TYPE) {
+      this.#rights = message.rights;
+      this.emit("rights");
+    }
+    else if (message.type === CATALOG_DENIED_MESSAGE_TYPE) {
+      this.emit("denied", message.denial);
+    }
+    else {
+      this.emit("message", message);
+    }
   }
 }

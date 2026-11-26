@@ -57,6 +57,7 @@ interface NumberRange {
 interface NumberInput extends NumberRange {
   value: number;
   default: number;
+  readOnly: boolean;
 }
 
 interface NumberEvents {
@@ -68,6 +69,7 @@ interface SelectInput<TValue> {
   options: JollyOption<TValue>[];
   value: TValue;
   default: TValue;
+  readOnly: boolean;
 }
 
 interface PreviewToggle {
@@ -235,6 +237,7 @@ export class SoundSettingsPane extends LitElement {
     }
     const settings = live.current;
     const { spatial } = settings;
+    const readOnly = !live.editable;
     function edit(
       toChange: (value: number) => Systems.SoundSettingsInput
     ): NumberEvents {
@@ -250,7 +253,8 @@ export class SoundSettingsPane extends LitElement {
       return numberField(kCopy[key], {
         ...range,
         value: settings[key],
-        default: kDefaults[key]
+        default: kDefaults[key],
+        readOnly
       }, edit((value) => {
         return { [key]: value };
       }));
@@ -262,7 +266,8 @@ export class SoundSettingsPane extends LitElement {
       return numberField(kCopy[key], {
         ...range,
         value: spatial[key],
-        default: kDefaults.spatial[key]
+        default: kDefaults.spatial[key],
+        readOnly
       }, edit((value) => {
         return { spatial: { [key]: value } };
       }));
@@ -280,7 +285,8 @@ export class SoundSettingsPane extends LitElement {
         ${select(kCopy.category, {
           options: categoryOptions(settings.category),
           value: settings.category,
-          default: kDefaults.category
+          default: kDefaults.category,
+          readOnly
         }, (category) => live.commit({ category }))}
         ${field("volume", { min: 0, max: 1, step: 0.05 })}
         ${field("pitch", {
@@ -299,6 +305,7 @@ export class SoundSettingsPane extends LitElement {
           description-display="tooltip"
           .value=${settings.loop}
           .default=${kDefaults.loop}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<boolean>) => live.commit({ loop: event.detail.value })}
         ></jolly-checkbox>
         ${settings.loop ? html`
@@ -325,7 +332,8 @@ export class SoundSettingsPane extends LitElement {
         ${select(kCopy.distanceModel, {
           options: kDistanceModels,
           value: spatial.distanceModel,
-          default: kDefaults.spatial.distanceModel
+          default: kDefaults.spatial.distanceModel,
+          readOnly
         }, (distanceModel) => live.commit({ spatial: { distanceModel } }))}
         ${spatialField("refDistance", { min: 0, step: 0.5 })}
         ${spatial.distanceModel === "linear" ?
@@ -409,6 +417,7 @@ function select<TValue extends string>(
       .options=${input.options}
       .value=${input.value}
       .default=${input.default}
+      ?readonly=${input.readOnly}
       @jolly-change=${(event: ChangeEvent<TValue>) => commit(event.detail.value)}
     ></jolly-select>
   `;
@@ -429,6 +438,7 @@ function numberField(
       .step=${input.step}
       .value=${input.value}
       .default=${input.default}
+      ?readonly=${input.readOnly}
       @jolly-input=${(event: ChangeEvent<number>) => events.preview(event.detail.value)}
       @jolly-change=${(event: ChangeEvent<number>) => events.commit(event.detail.value)}
     ></jolly-number>

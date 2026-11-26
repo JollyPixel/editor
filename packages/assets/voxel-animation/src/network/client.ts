@@ -9,3 +9,4 @@ export {
   VOXEL_ANIMATION_EXTENSION,
   VOXEL_ANIMATION_KIND
 } from "../asset/voxelAnimation.ts";
+export * from "../asset/capabilities.ts";

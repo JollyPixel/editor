@@ -94,6 +94,14 @@ own lease.
 *In code:* [`AssetLeases`](./docs/lease/AssetLeases.md) as `session.assets`.
 An `AssetDocumentKind` creates the `SyncedDocument` its holders share.
 
+### View only
+
+A member whose role cannot write the target. The editor greys out its edits,
+the toolbar says View only, and an edit the server refuses anyway raises a
+notification and is rolled back.
+
+*In code:* [`context.access`](./docs/contract/EditorDefinition.md#access).
+
 ## Where the page runs
 
 ### Placement

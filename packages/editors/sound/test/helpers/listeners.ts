@@ -14,6 +14,7 @@ import type { SoundPlayer } from "#src/player/SoundPlayer.ts";
 import type { LiveSettings } from "#src/settings/LiveSettings.ts";
 import type { FakeAudioContext } from "./FakeAudioContext.ts";
 import { followingPlayer } from "./followingPlayer.ts";
+import type { TestSoundAccess } from "./soundAccess.ts";
 
 // CONSTANTS
 const kStepMs = 10;
@@ -22,6 +23,7 @@ export interface Listener {
   room: FakeRoom;
   context: FakeAudioContext;
   document: SoundDocument;
+  access: TestSoundAccess;
   settings: LiveSettings;
   player: SoundPlayer;
   collaboration: SoundCollaboration;
@@ -32,7 +34,13 @@ export async function connect(
   clientId: string
 ): Promise<Listener> {
   const room = network.connect(clientId);
-  const { context, document, settings, player } = await followingPlayer();
+  const {
+    context,
+    document,
+    access,
+    settings,
+    player
+  } = await followingPlayer();
   const collaboration = new SoundCollaboration({
     room,
     player
@@ -42,6 +50,7 @@ export async function connect(
     room,
     context,
     document,
+    access,
     settings,
     player,
     collaboration

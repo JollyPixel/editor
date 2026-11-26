@@ -40,7 +40,7 @@ function createKeying(
     session: model.animationSession,
     blocks: { get: (id) => (id === arm.uuid ? arm : undefined) },
     poser: { reset: (id) => resets.push(id) },
-    access: model.access
+    animations: model.animations
   });
   function keys(
     channel: AnimationChannel

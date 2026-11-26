@@ -7,15 +7,23 @@ import type { AssetLease } from "@jolly-pixel/editor.host";
 import type { Systems } from "@jolly-pixel/ecs";
 import { Emitter } from "@openally/emitt";
 
-export type SceneLease = Pick<
+// Import Internal Dependencies
+import type { SceneAccess } from "../access/SceneAccess.ts";
+
+export interface SceneLease extends Pick<
   AssetLease<SceneDocument>,
   "document" | "ready" | "release"
->;
+> {
+  readonly access: Pick<SceneAccess, "can" | "subscribe">;
+}
+
+export type PrefabLease = Pick<SceneLease, "document" | "access">;
 
 export type SceneLeaser = (sceneId: string) => SceneLease;
 
 export type PrefabScenesEvents = {
   change: (sceneId: string) => void;
+  accessChange: () => void;
 };
 
 interface LeasedScene {
@@ -48,10 +56,10 @@ export class PrefabScenes
       { actors: ownedCopy([...scene.lease.document.tree.actors()]) };
   }
 
-  document(
+  prefab(
     sceneId: string
-  ): SceneDocument | null {
-    return this.#scenes.get(sceneId)?.lease.document ?? null;
+  ): PrefabLease | null {
+    return this.#scenes.get(sceneId)?.lease ?? null;
   }
 
   retain(
@@ -101,7 +109,12 @@ export class PrefabScenes
     };
     const unsubscribers = [
       lease.document.subscribe("change", changed),
-      lease.document.subscribe("reset", changed)
+      lease.document.subscribe("reset", changed),
+      lease.access.subscribe(() => {
+        if (this.#scenes.get(sceneId)?.lease === lease) {
+          this.emit("accessChange");
+        }
+      })
     ];
     lease.ready.then(changed, () => undefined);
 

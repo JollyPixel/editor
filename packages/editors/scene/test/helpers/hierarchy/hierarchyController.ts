@@ -12,6 +12,7 @@ import type {
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import { ActorWrites } from "../../../src/editing/ActorWrites.ts";
 import { InstanceOverrides } from "../../../src/editing/InstanceOverrides.ts";
 import { SceneActions } from "../../../src/editing/SceneActions.ts";
 import type {
@@ -28,6 +29,7 @@ import {
   ANCHORED_COMPONENTS,
   createProbeBinding
 } from "../probeComponents.ts";
+import { sceneAccess } from "../sceneAccess.ts";
 import { createSceneComponents } from "../sceneComponents.ts";
 
 // CONSTANTS
@@ -37,6 +39,8 @@ const kOverworldScene: AssetReferenceData = { id: "overworld", kind: "scene" };
 type HierarchyEditing = Pick<
   SceneEditing,
   | "document"
+  | "access"
+  | "writes"
   | "live"
   | "selection"
   | "anchorPicks"
@@ -60,6 +64,7 @@ export function createHierarchy(
   const anchorPicks = new Emitter<AnchorPicksEvents>();
   const history = createSceneHistory(document);
   const selection = new SelectionStore(document, binding);
+  const access = sceneAccess();
   let assetName = "Overworld";
   const catalog = new Set<() => void>();
   const assetSlots: SceneAssetSlots = {
@@ -89,11 +94,14 @@ export function createHierarchy(
     anchorPicks,
     presence: new PresenceStore(),
     components,
+    access,
+    writes: new ActorWrites(document, access),
     overrides: new InstanceOverrides({
       document,
       history,
       live: binding,
-      prefabs: createPrefabScenes().scenes
+      prefabs: createPrefabScenes().scenes,
+      access
     }),
     actions: new SceneActions({
       document,
@@ -101,7 +109,8 @@ export function createHierarchy(
       selection,
       components,
       assetSlots,
-      anchors: binding
+      anchors: binding,
+      access
     }),
     assetSlots
   };
@@ -125,6 +134,7 @@ export function createHierarchy(
 
   return {
     document,
+    access,
     mapId,
     selection,
     anchorPicks,

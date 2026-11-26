@@ -48,14 +48,12 @@ describe("AnimationLibrary", () => {
     assert.deepEqual(library.sets(), []);
   });
 
-  test("without animation rights changes no link or clip, and relays a set's refusals", async() => {
+  test("without animation rights changes no link or clip", async() => {
     const document = new ModelDocument();
     const source = createSharedSetSource();
     const access = modelAccess();
     const library = createLibrary(document, source, access);
     library.link("shared");
-    const denied: string[] = [];
-    library.on("setDenied", (setId) => denied.push(setId));
     access.grant("hierarchy");
 
     assert.equal(library.unlink("shared"), false);
@@ -64,13 +62,23 @@ describe("AnimationLibrary", () => {
     await assert.rejects(library.ensureOwnSet(), /only view/);
     const linked = [...document.tree.animationSets.values()].map(({ id }) => id);
     assert.deepEqual([linked, source.documents.get("shared")!.set.size], [["shared"], 0]);
+  });
 
-    source.deny("shared");
-    assert.deepEqual(denied, ["shared"]);
+  test("a linked set the member may only read takes no clip, though the model allows animations", async() => {
+    const document = new ModelDocument();
+    const source = createSharedSetSource();
+    const library = createLibrary(document, source);
+    library.link("shared");
+    let changes = 0;
+    library.on("change", () => changes++);
 
-    library.dispose();
-    source.deny("shared");
-    assert.deepEqual(denied, ["shared"]);
+    source.rooms.get("shared")!.restrict();
+
+    assert.equal(changes, 1);
+    assert.equal(library.editable, true);
+    assert.equal(library.editableSet("shared"), false);
+    assert.equal(await library.addClip("shared", "Wave"), null);
+    assert.equal(source.documents.get("shared")!.set.size, 0);
   });
 
   test("creates a set asset and links it", async() => {
@@ -131,6 +139,23 @@ describe("AnimationLibrary", () => {
 
     assert.equal(library.ownSet(), undefined);
     assert.deepEqual(library.sets().map(({ name, own }) => [name, own]), [["Humanoid", false]]);
+  });
+
+  test("without the catalog rights creates, renames and shares no set", async() => {
+    const document = new ModelDocument();
+    const source = createSetSource();
+    const library = createLibrary(document, source);
+    const own = await library.ensureOwnSet();
+    source.rights = { create: false, rename: false };
+
+    await assert.rejects(library.create("Walk"), /cannot create/);
+    await assert.rejects(library.renameSet(own, "Humanoid"), /cannot rename/);
+    await assert.rejects(library.share(own, "Humanoid"), /cannot rename/);
+
+    assert.equal(library.creatable, false);
+    assert.equal(library.renamable, false);
+    assert.deepEqual(source.records().map(({ name }) => name), ["Robot"]);
+    assert.equal(library.ownSet()?.id, own);
   });
 
   test("tells listeners when a set or the catalog changes, and stops on dispose", () => {

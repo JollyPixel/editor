@@ -36,7 +36,7 @@ import {
 import {
   clipMenu,
   ownMenu,
-  SET_MENU,
+  setMenu,
   sharedMenu,
   type ClipAction,
   type SetAction,
@@ -63,6 +63,8 @@ const kEmptyState: AnimatePanelState = {
   clip: null,
   canShare: false,
   canImport: false,
+  canCreateSet: false,
+  canRenameSet: false,
   editable: false,
   error: null,
   notice: null
@@ -86,6 +88,7 @@ export interface FocusedClip {
   setId: string;
   clip: AnimationClipJSON;
   frames: number;
+  editable: boolean;
 }
 
 export interface AnimatePanelState {
@@ -100,6 +103,8 @@ export interface AnimatePanelState {
    */
   canShare: boolean;
   canImport: boolean;
+  canCreateSet: boolean;
+  canRenameSet: boolean;
   editable: boolean;
   /**
    * Why the last action failed, until the next one succeeds.
@@ -215,9 +220,12 @@ export class AnimatePanelController {
       const nodes = this.#sectionNodes(section);
       const target = asClipRow(findRow(nodes, targetId));
 
-      return target !== null && where !== "inside" && movedIds.every(
-        (id) => findRow(nodes, id)?.setId === target.setId && asClipRow(findRow(nodes, id)) !== null
-      );
+      return target !== null &&
+        where !== "inside" &&
+        this.#editableSet(target.setId) &&
+        movedIds.every(
+          (id) => findRow(nodes, id)?.setId === target.setId && asClipRow(findRow(nodes, id)) !== null
+        );
     };
   }
 
@@ -246,14 +254,19 @@ export class AnimatePanelController {
     const clipRow = asClipRow(row);
     if (clipRow === null) {
       return MenuSession.forRow(
-        this.#writableEntries(SET_MENU),
+        this.#writableEntries(setMenu(this.#state.canRenameSet)),
         exists,
         (action) => this.#runSetAction(actions, action, row.setId)
       );
     }
 
+    const setReadOnly = !this.#editableSet(clipRow.setId);
+
     return MenuSession.forRow(
-      this.#writableEntries(clipMenu(actions.copyTargets(clipRow).length > 0)),
+      this.#writableEntries(disableEntries(
+        clipMenu(actions.copyTargets(clipRow).length > 0),
+        (action) => setReadOnly && action !== "copy"
+      )),
       exists,
       (action, point) => this.#clipAction(actions, action, clipRow, rowId, point)
     );
@@ -272,7 +285,7 @@ export class AnimatePanelController {
         actions.shareOwnSet() :
         actions.newClip(null))) :
       MenuSession.from(
-        this.#writableEntries(sharedMenu(this.#state.canImport)),
+        this.#writableEntries(sharedMenu(this.#state.canImport, this.#state.canCreateSet)),
         (action, point) => this.#runSharedAction(actions, action, point)
       );
   }
@@ -297,7 +310,7 @@ export class AnimatePanelController {
     patch: AnimationClipPatchJSON
   ): void {
     const focused = this.#state.clip;
-    if (focused !== null && this.#state.editable) {
+    if (focused !== null && focused.editable) {
       this.#connection.current?.animations.set(focused.setId)?.document.changeClip(focused.clip.id, patch);
     }
   }
@@ -381,6 +394,12 @@ export class AnimatePanelController {
       disableEntries(entries, () => true);
   }
 
+  #editableSet(
+    setId: string
+  ): boolean {
+    return this.#connection.current?.animations.editableSet(setId) === true;
+  }
+
   #sectionNodes(
     section: AnimateSection
   ): TreeNode<RowTarget>[] {
@@ -429,10 +448,14 @@ export class AnimatePanelController {
         {
           setId: set.id,
           clip,
-          frames: new FrameRate(clip.fps).frameAt(clip.length)
+          frames: new FrameRate(clip.fps).frameAt(clip.length),
+          editable: set.editable
         },
-      canShare: own !== undefined && own.document.set.size > 0,
+      canShare: own !== undefined && own.document.set.size > 0 &&
+        editing.animations.renamable,
       canImport: editing.archives.canImport,
+      canCreateSet: editing.animations.creatable,
+      canRenameSet: editing.animations.renamable,
       editable: editing.animations.editable,
       error: this.#error,
       notice: editing.clipRemoval.notice

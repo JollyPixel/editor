@@ -14,7 +14,10 @@ import {
   type ToyInverse,
   type ToySnapshot
 } from "./ToyDocument.ts";
-import type { ToyMessage } from "./ToyServer.ts";
+import type {
+  ToyInbound,
+  ToyMessage
+} from "./ToyServer.ts";
 
 export type ToyScenario = "registers" | "list" | "tree" | "mixed";
 
@@ -49,7 +52,7 @@ export class ToyClient {
   readonly view = new ToyDocument();
   readonly harness = new RoomHarness<ToyCommand, ToyMessage>();
   readonly sync: CommandSync<ToyCommand, ToySnapshot>;
-  readonly inbox: ToyMessage[] = [];
+  readonly inbox: ToyInbound[] = [];
 
   #outboxIndex = 0;
   #nodes = 0;
@@ -95,7 +98,13 @@ export class ToyClient {
   }
 
   deliverInbound(): void {
-    this.harness.serverMessage(this.inbox.shift()!);
+    const inbound = this.inbox.shift()!;
+    if (inbound.type === "denied") {
+      this.harness.deny(inbound.event, inbound.seq);
+    }
+    else {
+      this.harness.serverMessage(inbound);
+    }
   }
 
   nextNodeId(): string {

@@ -8,3 +8,4 @@ export {
 export * from "./SoundDocument.ts";
 export * from "./SoundCommand.schema.ts";
 export type * from "./types.ts";
+export * from "../asset/capabilities.ts";

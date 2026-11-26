@@ -117,5 +117,12 @@ with the same `*` matching as the table.
 
 ### Client access
 
-`room.can(event)` supports UI decisions. The server checks each action and emits
-`denied` when refused.
+`room.can(event)` supports UI decisions. `permits(right, event, queries)`
+applies the server's rule to a right: `write` allows any event, and `read`
+allows the events in `queries`. A client that knows its extension's `queries`
+can tell whether a send will pass before making it.
+
+The server checks each action and emits `denied` when refused. When the refused
+message has a numeric `seq` or a string `requestId`, the envelope repeats them,
+so `CommandSync` can roll the command back and a request/reply client can
+reject the request.

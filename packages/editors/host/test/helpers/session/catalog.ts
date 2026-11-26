@@ -24,12 +24,33 @@ export class FakeSessionCatalog extends Emitter<CatalogClientEvents> {
   stored: AssetTag[] = [];
   readonly dependents = new Map<string, AssetRecordData[]>();
   readonly calls: string[] = [];
+  readonly #refused = new Set<string>();
 
   constructor(
     assets: AssetRecordData[] = []
   ) {
     super();
     this.assets = assets;
+  }
+
+  can(
+    command: string
+  ): boolean {
+    return !this.#refused.has(command);
+  }
+
+  refuse(
+    ...commands: string[]
+  ): void {
+    for (const command of commands) {
+      this.#refused.add(command);
+    }
+    this.emit("rights");
+  }
+
+  allow(): void {
+    this.#refused.clear();
+    this.emit("rights");
   }
 
   records(): IterableIterator<AssetRecordData> {

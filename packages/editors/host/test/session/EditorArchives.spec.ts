@@ -2,11 +2,15 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
+// Import Third-party Dependencies
+import { CATALOG_IMPORT } from "@jolly-pixel/asset-server/client";
+
 // Import Internal Dependencies
 import { ArchiveRootError } from "#src/session/errors/ArchiveRootError.ts";
 import { ArchiveImportDisabledError } from "#src/session/errors/ArchiveImportDisabledError.ts";
 import {
   ARCHIVE_ROOT,
+  FakeArchiveCatalog,
   LIVE_ENTRY,
   RESET_WARNING,
   archiveFile,
@@ -168,6 +172,23 @@ describe("EditorArchives", () => {
         browser
       });
 
+      await assert.rejects(
+        archives.pickAndImport(),
+        ArchiveImportDisabledError
+      );
+      assert.deepEqual(browser.picks, []);
+    });
+
+    test("refuses before opening the picker when the role may not import", async() => {
+      const browser = createBrowser();
+      const catalog = new FakeArchiveCatalog();
+      catalog.refused.add(CATALOG_IMPORT);
+      const archives = createArchives({
+        browser,
+        catalog
+      });
+
+      assert.equal(archives.canImport, false);
       await assert.rejects(
         archives.pickAndImport(),
         ArchiveImportDisabledError

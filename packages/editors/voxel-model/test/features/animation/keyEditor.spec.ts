@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 // Import Internal Dependencies
 import { TimelineController } from "#src/features/animation/timeline/TimelineController.ts";
+import { KeyInspectorController } from "#src/features/animation/keys/KeyInspectorController.ts";
 import { animationKey } from "#src/state/index.ts";
 import {
   createAnimatedModel,
@@ -46,6 +47,18 @@ describe("KeyEditor through the timeline", () => {
       )),
       ["Copy"]
     );
+  });
+
+  test("the key inspector turns read-only as soon as the role loses the set", () => {
+    const { model, keys } = createTimeline();
+    const inspector = new KeyInspectorController(createHost());
+    inspector.attach(model);
+    keys.select({ path: "Body/Arm", tick: 0 }, false);
+    const before = inspector.state?.editable;
+
+    model.setRoom.restrict();
+
+    assert.deepEqual([before, inspector.state?.editable], [true, false]);
   });
 
   test("moves the playhead without rendering the rows again", () => {

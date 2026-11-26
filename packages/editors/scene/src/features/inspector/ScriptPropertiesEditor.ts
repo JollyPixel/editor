@@ -56,11 +56,13 @@ interface KeyError {
 }
 
 interface KeyEdit {
+  readOnly: boolean;
   rename: (key: string) => void;
   retype: (type: ScenePropertyType) => void;
 }
 
 interface ValueEdit {
+  readOnly: boolean;
   preview: (value: JSONValue) => void;
   commit: (value: JSONValue) => void;
 }
@@ -100,6 +102,7 @@ export class ScriptPropertiesEditor extends LitElement {
   #preview: Readonly<JSONObject> | null = null;
   #draft = emptyDraft();
   #keyError: KeyError | null = null;
+  #readOnly = false;
 
   static override styles = css`
     :host {
@@ -157,6 +160,13 @@ export class ScriptPropertiesEditor extends LitElement {
     this.requestUpdate();
   }
 
+  set readOnly(
+    value: boolean
+  ) {
+    this.#readOnly = value;
+    this.requestUpdate();
+  }
+
   override render(): TemplateResult {
     return html`
       ${repeat(
@@ -164,7 +174,7 @@ export class ScriptPropertiesEditor extends LitElement {
         (property) => property.key,
         (property) => this.#renderListed(property)
       )}
-      ${this.#renderDraft()}
+      ${this.#readOnly ? nothing : this.#renderDraft()}
     `;
   }
 
@@ -172,7 +182,9 @@ export class ScriptPropertiesEditor extends LitElement {
     property: ListedProperty
   ): TemplateResult {
     const { key } = property;
+    const readOnly = this.#readOnly;
     const edit: ValueEdit = {
+      readOnly,
       preview: (value) => {
         this.#preview = {
           ...this.#properties,
@@ -196,7 +208,7 @@ export class ScriptPropertiesEditor extends LitElement {
           <span class="name" title=${declared.description || nothing}>${declared.label}</span>
           <span class="type">${property.type}</span>
         `,
-        action: Object.hasOwn(this.#properties, key) ?
+        action: !readOnly && Object.hasOwn(this.#properties, key) ?
           renderAction("revert", "Reset to the script default", remove) :
           nothing
       });
@@ -205,10 +217,11 @@ export class ScriptPropertiesEditor extends LitElement {
     return renderRow(property, edit, {
       kind: "stored",
       head: this.#renderKey(property, key, {
+        readOnly,
         rename: (next) => this.#rename(key, next),
         retype: (type) => edit.commit(convertProperty(property.value, type))
       }),
-      action: renderAction("trash", "Remove property", remove)
+      action: readOnly ? nothing : renderAction("trash", "Remove property", remove)
     });
   }
 
@@ -219,9 +232,10 @@ export class ScriptPropertiesEditor extends LitElement {
       value
     });
 
-    return renderRow(draft, { preview: commit, commit }, {
+    return renderRow(draft, { readOnly: false, preview: commit, commit }, {
       kind: "draft",
       head: this.#renderKey(draft, null, {
+        readOnly: false,
         rename: (key) => this.#add(key),
         retype: (type) => this.#editDraft({
           ...draft,
@@ -246,12 +260,14 @@ export class ScriptPropertiesEditor extends LitElement {
         placeholder=${row === null ? "New property" : nothing}
         .value=${live(entry.key)}
         .error=${error}
+        ?readonly=${edit.readOnly}
         @jolly-change=${(event: ChangeEvent<string>) => edit.rename(event.detail.value)}
       ></jolly-text>
       <jolly-select
         label=""
         .options=${kTypeOptions}
         .value=${entry.type}
+        ?readonly=${edit.readOnly}
         @jolly-change=${(event: ChangeEvent<ScenePropertyType>) => edit.retype(event.detail.value)}
       ></jolly-select>
     `;
@@ -382,7 +398,7 @@ function renderValue(
   edit: ValueEdit
 ): TemplateResult {
   const { type, value } = property;
-  const { preview, commit } = edit;
+  const { readOnly, preview, commit } = edit;
   switch (type) {
     case "number":
       return html`
@@ -390,6 +406,7 @@ function renderValue(
           label=""
           .value=${Number(value)}
           step="0.1"
+          ?readonly=${readOnly}
           @jolly-input=${(event: ChangeEvent<number>) => preview(event.detail.value)}
           @jolly-change=${(event: ChangeEvent<number>) => commit(event.detail.value)}
         ></jolly-number>
@@ -399,6 +416,7 @@ function renderValue(
         <jolly-checkbox
           label=""
           .value=${value === true}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<boolean>) => commit(event.detail.value)}
         ></jolly-checkbox>
       `;
@@ -407,6 +425,7 @@ function renderValue(
         <jolly-color
           label=""
           .value=${String(value)}
+          ?readonly=${readOnly}
           @jolly-input=${(event: ChangeEvent<string>) => preview(event.detail.value)}
           @jolly-change=${(event: ChangeEvent<string>) => commit(event.detail.value)}
         ></jolly-color>
@@ -417,6 +436,7 @@ function renderValue(
           label=""
           placeholder="value"
           .value=${String(value)}
+          ?readonly=${readOnly}
           @jolly-change=${(event: ChangeEvent<string>) => commit(event.detail.value)}
         ></jolly-text>
       `;
@@ -427,20 +447,21 @@ function renderValue(
     case "number[]":
     case "string[]":
     case "boolean[]":
-      return renderList(type, value, commit);
+      return renderList(type, value, edit);
   }
 }
 
 function renderList(
   type: ScriptListType,
   value: JSONValue,
-  commit: (value: JSONValue) => void
+  { readOnly, commit }: ValueEdit
 ): TemplateResult {
   return html`
     <jolly-text
       label=""
       placeholder="a, b, c"
       .value=${listText(value)}
+      ?readonly=${readOnly}
       @jolly-change=${(event: ChangeEvent<string>) => commit(parseList(event.detail.value, type))}
     ></jolly-text>
   `;
@@ -463,18 +484,35 @@ function renderVector(
     edit.commit(axisValues(event.detail.value, axes, numbers));
   }
 
+  const { readOnly } = edit;
+
   switch (type) {
     case "Vector2":
       return html`
-        <jolly-vector2 .value=${vector} @jolly-input=${preview} @jolly-change=${commit}></jolly-vector2>
+        <jolly-vector2
+          .value=${vector}
+          ?readonly=${readOnly}
+          @jolly-input=${preview}
+          @jolly-change=${commit}
+        ></jolly-vector2>
       `;
     case "Vector3":
       return html`
-        <jolly-vector3 .value=${vector} @jolly-input=${preview} @jolly-change=${commit}></jolly-vector3>
+        <jolly-vector3
+          .value=${vector}
+          ?readonly=${readOnly}
+          @jolly-input=${preview}
+          @jolly-change=${commit}
+        ></jolly-vector3>
       `;
     case "Vector4":
       return html`
-        <jolly-vector4 .value=${vector} @jolly-input=${preview} @jolly-change=${commit}></jolly-vector4>
+        <jolly-vector4
+          .value=${vector}
+          ?readonly=${readOnly}
+          @jolly-input=${preview}
+          @jolly-change=${commit}
+        ></jolly-vector4>
       `;
   }
 }

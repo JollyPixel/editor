@@ -26,6 +26,11 @@ import { PeerPresence } from "./PeerPresence.ts";
 import { ResyncThrottle } from "./ResyncThrottle.ts";
 import { SerializedEnvelope } from "./SerializedEnvelope.ts";
 import {
+  messageReference,
+  refusalReason,
+  type MessageReference
+} from "./refusal.ts";
+import {
   lengthLimits,
   type LengthLimited,
   type LengthLimits,
@@ -37,6 +42,7 @@ import {
   MESSAGE_EVENT,
   PRESENCE_EVENT
 } from "../../protocol/constants.ts";
+import { permits } from "../../protocol/rights.ts";
 import { describeErrors } from "../../protocol/schema.ts";
 import { encodedLength } from "../../protocol/frame/Frame.ts";
 import type { PeerIdentity } from "../auth/AuthenticationProvider.ts";
@@ -54,6 +60,7 @@ interface AuthorizeRequest {
   role: string;
   event: string;
   label: string;
+  reference?: MessageReference;
 }
 
 interface OutboundDelivery {
@@ -71,6 +78,7 @@ interface Refusal {
   event: string;
   reason: string;
   label: string;
+  reference?: MessageReference;
 }
 
 export interface RoomJoiner {
@@ -161,17 +169,15 @@ export class ServerRoom {
     request: AuthorizeRequest
   ): boolean {
     const { role, event } = request;
-    const right = this.#rights.check(role, event);
-    if (right === "write" || (right === "read" && this.#queries.has(event))) {
+    if (permits(this.#rights.check(role, event), event, this.#queries)) {
       return true;
     }
 
     this.#refuse(target, {
+      ...request,
       clientId: target.id,
       kind: "denied",
-      event,
-      reason: refusalReason(role, event),
-      label: request.label
+      reason: refusalReason(role, event)
     });
 
     return false;
@@ -208,13 +214,15 @@ export class ServerRoom {
       kind,
       event,
       reason,
-      label
+      label,
+      reference
     } = refusal;
     target.send({
       room: this.id,
       kind,
       event,
-      reason
+      reason,
+      ...reference
     });
     this.#logger
       .withMetadata({
@@ -579,6 +587,7 @@ export class ServerRoom {
       );
     }
 
+    const reference = messageReference(payload);
     const parsed = this.#inbound.parse(payload);
     if (!parsed.ok) {
       this.#refuse(record.handle, {
@@ -586,7 +595,8 @@ export class ServerRoom {
         kind: "error",
         event: MESSAGE_EVENT,
         reason: describeErrors(parsed.val),
-        label: "message"
+        label: "message",
+        reference
       });
 
       return;
@@ -598,7 +608,8 @@ export class ServerRoom {
       !this.#authorize(record.handle, {
         role,
         event,
-        label: "message"
+        label: "message",
+        reference
       })
     ) {
       return;
@@ -761,20 +772,6 @@ function outboundEvent(
 
     return parsed.ok ? Ok(parsed.val.event) : Err(describeErrors(parsed.val));
   };
-}
-
-function refusalReason(
-  role: string,
-  event: string
-): string {
-  if (event === JOIN_EVENT) {
-    return `role "${role}" is not permitted to join this room`;
-  }
-  if (event === PRESENCE_EVENT) {
-    return `role "${role}" cannot update presence`;
-  }
-
-  return `role "${role}" cannot write "${event}"`;
 }
 
 function isMember(): boolean {

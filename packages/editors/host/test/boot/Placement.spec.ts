@@ -20,7 +20,11 @@ import { parseFrameMessage } from "#src/shell/protocol.ts";
 import { PageState } from "#src/mount/PageState.ts";
 import type { OfflineMode } from "#src/connection/OfflineMode.ts";
 import { LAST_OPENED_STORAGE_PREFIX } from "#src/launch/sources/LastOpenedLaunchSource.ts";
-import { fakeDocumentKind, record } from "../helpers/rooms.ts";
+import {
+  FakeRoom,
+  fakeDocumentKind,
+  record
+} from "../helpers/rooms.ts";
 import { createToolbarArchives } from "../helpers/session/archives.ts";
 import {
   FakeNavigator,
@@ -67,7 +71,10 @@ function placedSession(
     offline,
     assets: { unsaved: false },
     connectionStatus: null,
-    target: { record: record("map", "voxelmap") }
+    target: {
+      record: record("map", "voxelmap"),
+      room: new FakeRoom("map")
+    }
   };
 }
 

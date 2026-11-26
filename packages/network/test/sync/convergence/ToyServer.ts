@@ -11,7 +11,15 @@ import {
 
 export type ToyMessage = NetworkServerMessage<ToyCommand, ToySnapshot>;
 
-type Deliver = (message: ToyMessage) => void;
+export interface ToyDenial {
+  type: "denied";
+  event: string;
+  seq: number;
+}
+
+export type ToyInbound = ToyMessage | ToyDenial;
+
+type Deliver = (message: ToyInbound) => void;
 
 export class ToyServer {
   readonly state = new ToyDocument();
@@ -42,6 +50,7 @@ export class ToyServer {
       null)
   });
   #members = new Map<string, Deliver>();
+  #readOnly = new Map<string, ReadonlySet<string>>();
   #processed = new Map<string, number>();
 
   constructor(
@@ -52,9 +61,11 @@ export class ToyServer {
 
   connect(
     clientId: string,
-    deliver: Deliver
+    deliver: Deliver,
+    readOnly: Iterable<ToyCommand["action"]> = []
   ): void {
     this.#members.set(clientId, deliver);
+    this.#readOnly.set(clientId, new Set(readOnly));
     deliver({
       type: "snapshot",
       data: this.state.toJSON()
@@ -65,6 +76,16 @@ export class ToyServer {
     clientId: string,
     payload: ToyCommand
   ): void {
+    if (this.#readOnly.get(clientId)?.has(payload.action)) {
+      this.#members.get(clientId)!({
+        type: "denied",
+        event: payload.action,
+        seq: payload.seq
+      });
+
+      return;
+    }
+
     const command: ToyCommand = {
       ...payload,
       clientId,

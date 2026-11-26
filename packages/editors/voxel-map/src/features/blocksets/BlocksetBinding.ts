@@ -8,7 +8,7 @@ import type {
   BlocksetSlot
 } from "@jolly-pixel/voxel.renderer";
 import { BlocksetIslands } from "@jolly-pixel/asset.voxel-map/client";
-import { RoomGrants } from "@jolly-pixel/network/client";
+import type { EditorAccess } from "@jolly-pixel/editor.host";
 
 // Import Internal Dependencies
 import type { EditorMap } from "../../map/EditorMap.ts";
@@ -29,6 +29,7 @@ export interface BlocksetBindingOptions {
   shapes: BlockShapeRegistry;
   editorMap: Pick<EditorMap, "ready" | "subscribe">;
   blocks: Pick<BlockWriter, "syncAlphaModes">;
+  access: Pick<EditorAccess, "follow">;
 }
 
 export class BlocksetBinding {
@@ -60,7 +61,10 @@ export class BlocksetBinding {
     this.#blocks = options.blocks;
     this.opened = opened;
     this.link = linked.link;
-    this.access = new RoomGrants(opened.room, BLOCKSET_CAPABILITY_TABLE);
+    this.access = options.access.follow(
+      opened.room,
+      BLOCKSET_CAPABILITY_TABLE
+    );
     this.#subscriptions = [
       new BlocksetIslands({
         blockset: opened.blockset,

@@ -28,7 +28,8 @@ interface CatalogEntry {
 
 function paletteSetup(
   existing: string[] = [],
-  conflict: TextureConflict | null = "keep"
+  conflict: TextureConflict | null = "keep",
+  creatable = true
 ) {
   const document = new TerrainDocument();
   document.load({ chunks: [{ x: 0, z: 0 }] });
@@ -60,7 +61,8 @@ function paletteSetup(
         replaced.push(id);
 
         return Promise.resolve({ replaced: true });
-      }
+      },
+      can: () => creatable
     },
     pickTexture: () => Promise.resolve<TerrainMaterialMap | null>(
       picked === null ? null : { id: picked, kind: "texture" }
@@ -93,6 +95,18 @@ function file(
 }
 
 describe("MaterialPalette", () => {
+  test("a role that cannot create assets imports no dropped texture", async() => {
+    const { document, palette, imported, asked } = paletteSetup([], "keep", false);
+    const before = document.materials.size;
+
+    const added = await palette.addFromFiles([file("rock.png")]);
+    const dropped = await palette.dropMap(GROUND_MATERIAL.id, "albedo", file("sand.png"));
+
+    assert.deepEqual([added, dropped], [[], false]);
+    assert.deepEqual([imported, asked], [[], []]);
+    assert.equal(document.materials.size, before);
+  });
+
   test("a picked texture brings its siblings from its folder, and the new material is selected", async() => {
     const { document, palette, selection, pick } = paletteSetup([
       "rocks/rock_albedo.png",

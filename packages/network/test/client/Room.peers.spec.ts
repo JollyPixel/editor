@@ -43,7 +43,6 @@ describe("Room — peers mirror", () => {
     assert.strictEqual(room.clientId, "A");
     assert.strictEqual(room.can("voxel-set"), "read");
     assert.strictEqual(room.can("unknown"), "void");
-    assert.strictEqual(room.access, "read");
   });
 
   test("keeps the local client out of peers while adopting its own role", () => {
@@ -66,7 +65,7 @@ describe("Room — peers mirror", () => {
     assert.deepEqual([...room.peers.keys()], ["B"]);
     assert.deepEqual(synced, [["B"]]);
     assert.strictEqual(room.role, "editor");
-    assert.strictEqual(room.access, "write");
+    assert.strictEqual(room.can("voxel-set"), "write");
   });
 
   test("peer-joined adds to peers and fires \"peer-joined\"", () => {

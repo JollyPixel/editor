@@ -15,17 +15,28 @@ import {
 } from "@jolly-pixel/lantern";
 import {
   MemoryStorageAdapter,
+  type Button,
   type ContextMenu,
   type Select
 } from "@jolly-pixel/ui";
+import {
+  CapabilityTable,
+  defineCapabilities
+} from "@jolly-pixel/network/client";
+import {
+  CATALOG_RESTORE,
+  CATALOG_UNTAG
+} from "@jolly-pixel/asset-server/client";
 
 // Import Internal Dependencies
 import { REPLAY_TOUR_STEP } from "#src/ui/lantern/replayTourStep.ts";
 import { EditorToolbarSources } from "#src/session/EditorToolbarSources.ts";
 import { ConnectionStatus } from "#src/connection/ConnectionStatus.ts";
 import { AssetLeases } from "#src/lease/AssetLeases.ts";
+import { EditorAccess } from "#src/access/EditorAccess.ts";
 import {
   FakeClient,
+  FakeRoom,
   fakeDocumentKind,
   record
 } from "../helpers/rooms.ts";
@@ -40,6 +51,15 @@ import {
   pick,
   query
 } from "../helpers/ui/toolbar.ts";
+
+// CONSTANTS
+const kTextTable = new CapabilityTable(defineCapabilities<"edited">()([
+  {
+    name: "text",
+    label: "Text",
+    events: ["edited"]
+  }
+]));
 
 function tour(
   id: string
@@ -107,6 +127,38 @@ describe("EditorToolbar", () => {
     await element.updateComplete;
     assert.equal(query(element, ".offline"), null);
     assert.ok(element.hasAttribute("empty"));
+  });
+
+  test("shows View only while the role cannot write the target, and hides it once it can", async() => {
+    const room = new FakeRoom("target");
+    room.right = "read";
+    const access = new EditorAccess({
+      target: room,
+      notifications: { notify: () => assert.fail("no refusal expected") }
+    });
+    const element = document.createElement("jolly-editor-toolbar");
+    element.sources = new EditorToolbarSources({
+      targets: null,
+      tags: null,
+      archives: createToolbarArchives(),
+      access,
+      lantern: new Lantern({ storage: new MemoryStorageAdapter() })
+    });
+    document.body.append(element);
+    await element.updateComplete;
+    assert.ok(element.hasAttribute("empty"));
+
+    access.target(kTextTable);
+    await element.updateComplete;
+    assert.ok(!element.hasAttribute("empty"));
+    assert.equal(query(element, ".view-only")?.textContent, "View only");
+
+    room.right = "write";
+    room.emit("rights");
+    await element.updateComplete;
+    assert.equal(query(element, ".view-only"), null);
+    assert.ok(element.hasAttribute("empty"));
+    access.dispose();
   });
 
   test("shows the bar for tours alone, and starts the only tour from the replay target", async() => {
@@ -193,5 +245,27 @@ describe("EditorToolbar", () => {
         tag: null
       }
     ]);
+  });
+
+  test("version buttons follow the role's tag rights", async() => {
+    const { catalog, tags } = fakeTags({ viewing: "v1" });
+    const element = await mount(null, tags);
+    function disabled(
+      selector: string
+    ): boolean {
+      return query<Button>(element, selector)!.disabled;
+    }
+
+    catalog.refuse(CATALOG_RESTORE, CATALOG_UNTAG);
+    await element.updateComplete;
+    const refused = [disabled("#restore-version"), disabled("#delete-version")];
+    catalog.allow();
+    await element.updateComplete;
+
+    assert.deepEqual(refused, [true, true]);
+    assert.deepEqual(
+      [disabled("#restore-version"), disabled("#delete-version")],
+      [false, false]
+    );
   });
 });

@@ -29,7 +29,8 @@ calls it.
 
 ## `FakeRoom`
 
-Implements `Room` with `write` access and the `editor` role. Its profile is
+Implements `Room` with the `editor` role, and `can(event)` returns `write` for
+every event. Its profile is
 `{ username: clientId, peerId: clientId }`.
 
 - `updatePresence(patch)` merges a JSON copy of `patch` into `presence`, then

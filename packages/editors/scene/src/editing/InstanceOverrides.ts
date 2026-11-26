@@ -9,6 +9,7 @@ import {
 import { Systems } from "@jolly-pixel/ecs";
 
 // Import Internal Dependencies
+import type { SceneAccess } from "../access/SceneAccess.ts";
 import { ActorWrites } from "./ActorWrites.ts";
 import {
   SCENE_HISTORY_SCOPE,
@@ -23,14 +24,18 @@ export interface InstanceOverridesOptions {
   document: SceneDocument;
   history: Pick<SceneHistory, "record">;
   live: Pick<SceneLiveView, "expandedActor">;
-  prefabs: Pick<PrefabScenes, "document">;
+  prefabs: Pick<PrefabScenes, "prefab" | "subscribe">;
+  access: Pick<SceneAccess, "can">;
 }
+
+type PrefabApply = () => (OverrideChange | null)[];
 
 export class InstanceOverrides {
   #document: SceneDocument;
   #history: Pick<SceneHistory, "record">;
   #live: Pick<SceneLiveView, "expandedActor">;
-  #prefabs: Pick<PrefabScenes, "document">;
+  #prefabs: Pick<PrefabScenes, "prefab" | "subscribe">;
+  #access: Pick<SceneAccess, "can">;
 
   constructor(
     options: InstanceOverridesOptions
@@ -39,6 +44,19 @@ export class InstanceOverrides {
     this.#history = options.history;
     this.#live = options.live;
     this.#prefabs = options.prefabs;
+    this.#access = options.access;
+  }
+
+  canApplyToPrefab(
+    instanceId: string
+  ): boolean {
+    return this.#prefabApply(instanceId) !== null;
+  }
+
+  subscribe(
+    listener: () => void
+  ): () => void {
+    return this.#prefabs.subscribe("accessChange", listener);
   }
 
   role(
@@ -84,28 +102,51 @@ export class InstanceOverrides {
   applyToPrefab(
     instanceId: string
   ): void {
+    const apply = this.#prefabApply(instanceId);
+    if (apply !== null) {
+      this.#commit("Apply to prefab", apply());
+    }
+  }
+
+  #prefabApply(
+    instanceId: string
+  ): PrefabApply | null {
     const instance = this.#document.tree.actor(instanceId);
     const prefab = instance?.prefab === undefined ?
       null :
-      this.#prefabs.document(instance.prefab.id);
-    if (instance === undefined || prefab === null) {
-      return;
+      this.#prefabs.prefab(instance.prefab.id);
+    if (
+      !this.#access.can("instances") ||
+      instance === undefined ||
+      prefab === null
+    ) {
+      return null;
     }
 
+    const { document } = prefab;
+    const writes = new ActorWrites(document, prefab.access);
     const { actors = {}, components = {} } = ownedCopy<SceneOverridesJSON>(instance.overrides ?? {});
-    const writes = new ActorWrites(prefab);
-    const applied: (OverrideChange | null)[] = [];
-    for (const [path, entry] of Object.entries(actors)) {
-      if (!reaches(prefab, "actors", path) || writes.writeActor(path, entry)) {
-        applied.push(OverrideChange.clear(instance, "actors", path));
-      }
+    const writable = Object.entries(actors).every(([path, entry]) => (
+      !reaches(document, "actors", path) || writes.canWriteActor(path, entry)
+    )) && Object.keys(components).every((path) => (
+      !reaches(document, "components", path) || writes.canWriteComponent(path)
+    ));
+    if (!writable) {
+      return null;
     }
-    for (const [path, entry] of Object.entries(components)) {
-      if (!reaches(prefab, "components", path) || writes.writeComponent(path, entry)) {
-        applied.push(OverrideChange.clear(instance, "components", path));
-      }
-    }
-    this.#commit("Apply to prefab", applied);
+
+    return () => [
+      ...Object.entries(actors).map(([path, entry]) => (
+        !reaches(document, "actors", path) || writes.writeActor(path, entry) ?
+          OverrideChange.clear(instance, "actors", path) :
+          null
+      )),
+      ...Object.entries(components).map(([path, entry]) => (
+        !reaches(document, "components", path) || writes.writeComponent(path, entry) ?
+          OverrideChange.clear(instance, "components", path) :
+          null
+      ))
+    ];
   }
 
   #actorClears(
@@ -151,7 +192,7 @@ export class InstanceOverrides {
     changes: readonly (OverrideChange | null)[]
   ): void {
     const committed = changes.filter((change) => change !== null);
-    if (committed.length === 0) {
+    if (!this.#access.can("instances") || committed.length === 0) {
       return;
     }
 

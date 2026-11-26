@@ -127,6 +127,7 @@ export class SpatialPad extends LitElement {
 
     pad.setPointerCapture(event.pointerId);
     if (
+      this.#settings.current?.editable === true &&
       event.target instanceof Element &&
       event.target.classList.contains("ring-grab")
     ) {

@@ -109,6 +109,9 @@ function createStage(
       }),
       components: {
         actorOrigin: () => "center"
+      },
+      access: {
+        can: () => true
       }
     }),
     aimAt(

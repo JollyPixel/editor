@@ -23,7 +23,8 @@ import type { ModelFile } from "../file/ModelFile.ts";
 
 export class ModelFileFolder extends LitElement {
   #file = new SubscriptionController<ModelFile>(this, (file) => [
-    file.subscribe(() => this.requestUpdate())
+    file.subscribe(() => this.requestUpdate()),
+    file.subscribeRights(() => this.requestUpdate())
   ]);
   #replacing = false;
   #notifications: Notifier | null = null;
@@ -64,7 +65,7 @@ export class ModelFileFolder extends LitElement {
             data-tool="replace"
             icon="import"
             title="Replace with another file of the same format"
-            ?disabled=${file === null || this.#replacing}
+            ?disabled=${file === null || !file.replaceable || this.#replacing}
             @click=${() => void this.#pick()}
           >Replace…</jolly-button>
           <jolly-button

@@ -123,7 +123,8 @@ export class VoxelMapEditor {
         identity: session.identity,
         catalog: session.catalog,
         assets: session.assets,
-        archives: context.archives
+        archives: context.archives,
+        access: context.access
       },
       samples: editorRuntime.samples,
       roomEnvironment

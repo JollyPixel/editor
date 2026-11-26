@@ -11,6 +11,7 @@ import type {
   SceneTransformJSON
 } from "../network/types.ts";
 import { SCENE_ICON } from "./icons.ts";
+import { SCENE_CAPABILITIES } from "./capabilities.ts";
 
 // CONSTANTS
 export const SCENE_KIND = "scene";
@@ -26,7 +27,8 @@ export const SCENE_ASSET: AssetKindDescriptor = {
   kind: SCENE_KIND,
   label: "Scene",
   extension: SCENE_EXTENSION,
-  icon: SCENE_ICON
+  icon: SCENE_ICON,
+  capabilities: SCENE_CAPABILITIES
 };
 
 export type SceneFile = SceneSnapshot & {

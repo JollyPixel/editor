@@ -108,7 +108,7 @@ describe("SceneAsset", () => {
     const sunId = await fillUnanswered(scene, hosted);
 
     const held = scene.apply(renames(sunId, 1));
-    hosted.room.access = "read";
+    hosted.room.right = "read";
     await hosted.room.answer();
 
     await assert.rejects(held, CommandDeniedError);

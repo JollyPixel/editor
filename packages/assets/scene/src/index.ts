@@ -1,4 +1,5 @@
 export * from "./asset/scene.ts";
 export * from "./asset/sceneAssetKind.ts";
+export * from "./asset/capabilities.ts";
 export * from "./model/index.ts";
 export * from "./network/types.ts";

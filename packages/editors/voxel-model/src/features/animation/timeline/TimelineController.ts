@@ -14,6 +14,7 @@ import type {
   FocusedAnimation
 } from "../session/AnimationSession.ts";
 import type { KeyEditor } from "../keys/KeyEditor.ts";
+import type { AnimationLibrary } from "../library/AnimationLibrary.ts";
 import {
   timelineRows,
   unboundTimelineRows,
@@ -37,6 +38,7 @@ export interface TimelineEditing {
   animationSession: AnimationSession;
   selection: BlockSelectionStore;
   keyEditor: KeyEditor;
+  animations: Pick<AnimationLibrary, "editable">;
   presence: Pick<PresenceStore, "animateCursors" | "subscribe">;
 }
 
@@ -144,7 +146,7 @@ export class TimelineController {
     const editing = this.#connection.current;
     const setId = editing?.animationSession.focused?.set.id;
 
-    return editing === null || setId === undefined || !editing.keyEditor.editable ?
+    return editing === null || setId === undefined || !editing.animations.editable ?
       MenuSession.EMPTY :
       rebindMenu(editing.document, setId, path);
   }

@@ -4,20 +4,19 @@ import type { Preferences } from "@jolly-pixel/preferences";
 
 // Import Internal Dependencies
 import type { SceneActions } from "../editing/SceneActions.ts";
-import {
-  SCENE_HISTORY_SCOPE,
-  type SceneHistory
-} from "../features/history/sceneHistory.ts";
 import type { ActorMover } from "../features/viewport/ActorMover.ts";
 import type { GizmoSettings } from "../features/viewport/GizmoSettings.ts";
 import { SCENE_PREFERENCES } from "../preferences.ts";
 import type { SceneAction } from "./sceneActions.ts";
 
 export interface SceneShortcutsOptions {
-  history: Pick<SceneHistory, "undo" | "redo">;
   actions: Pick<
     SceneActions,
-    "canEditSelection" | "duplicateSelection" | "removeSelection"
+    | "undo"
+    | "redo"
+    | "canEditSelection"
+    | "duplicateSelection"
+    | "removeSelection"
   >;
   gizmo: GizmoSettings;
   preferences: Pick<Preferences, "values" | "update">;
@@ -29,7 +28,6 @@ export function sceneShortcuts(
   options: SceneShortcutsOptions
 ): KeyBindingHandlers<SceneAction> {
   const {
-    history,
     actions,
     gizmo,
     preferences
@@ -37,10 +35,10 @@ export function sceneShortcuts(
 
   return {
     "edit.undo": () => {
-      history.undo(SCENE_HISTORY_SCOPE);
+      actions.undo();
     },
     "edit.redo": () => {
-      history.redo(SCENE_HISTORY_SCOPE);
+      actions.redo();
     },
     "edit.duplicate": () => {
       if (!actions.canEditSelection()) {

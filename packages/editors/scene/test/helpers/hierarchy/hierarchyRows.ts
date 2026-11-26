@@ -7,6 +7,7 @@ import {
   HierarchyRows,
   type RowSources
 } from "../../../src/features/hierarchy/HierarchyRows.ts";
+import { sceneAccess } from "../sceneAccess.ts";
 import { createSceneComponents } from "../sceneComponents.ts";
 
 export function readRows(
@@ -20,6 +21,7 @@ export function readRows(
     naming: { name: () => "Overworld" },
     loadable: { canLoad: () => true },
     live,
+    access: sceneAccess(),
     ...sources
   });
 }

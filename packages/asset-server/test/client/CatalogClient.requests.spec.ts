@@ -13,56 +13,10 @@ import {
   CATALOG_SNAPSHOT,
   CatalogClient,
   CatalogContentTooLargeError,
-  CatalogRejectedError,
-  type CatalogCommand,
-  type CatalogMessage,
-  type CatalogRoom
+  CatalogRejectedError
 } from "#src/client/index.ts";
+import { FakeCatalogRoom } from "../helpers/catalogRoom.ts";
 import { MAX_KIND_CONTENT_BYTES } from "#src/index.ts";
-
-class FakeCatalogRoom implements CatalogRoom {
-  readonly sent: CatalogCommand[] = [];
-  joined = false;
-  left = false;
-  #listener: ((message: CatalogMessage) => void) | null = null;
-
-  on(
-    _type: string,
-    listener: (message: CatalogMessage) => void
-  ): void {
-    this.#listener = listener;
-  }
-
-  off(): void {
-    this.#listener = null;
-  }
-
-  join(): void {
-    this.joined = true;
-  }
-
-  leave(): void {
-    this.left = true;
-  }
-
-  send(
-    command: CatalogCommand
-  ): void {
-    this.sent.push(command);
-  }
-
-  receive(
-    message: CatalogMessage
-  ): void {
-    this.#listener?.(message);
-  }
-
-  requestId(
-    index: number
-  ): string {
-    return this.sent[index].requestId;
-  }
-}
 
 function snapshot(
   room: FakeCatalogRoom

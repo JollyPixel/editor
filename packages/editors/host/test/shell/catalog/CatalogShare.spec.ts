@@ -10,8 +10,10 @@ import { setTimeout } from "node:timers/promises";
 import { once } from "@openally/emitt";
 import {
   CATALOG_APPLIED,
+  CATALOG_DELETE,
   CATALOG_REJECTED,
   CATALOG_RENAME,
+  CATALOG_REPLACE,
   CATALOG_ROOM,
   CatalogClient,
   CatalogRejectedError,
@@ -33,6 +35,11 @@ async function sharedCatalog() {
   const client = new FakeClient();
   const opening = CatalogShare.open(client);
   const room = client.fakeRoom(CATALOG_ROOM);
+  room.rights = {
+    [CATALOG_RENAME]: "write",
+    [CATALOG_DELETE]: "write",
+    [CATALOG_REPLACE]: "write"
+  };
   room.receive(snapshotMessage(
     [record("map", "voxelmap")],
     { map: [{ id: "grass", kind: "pixelart" }] }
@@ -127,6 +134,49 @@ describe("CatalogShare + ShellCatalog", () => {
       reason: "denied"
     });
     await assert.rejects(removing, CatalogRejectedError);
+    frame.dispose();
+  });
+
+  test("a frame catalog follows the catalog rights of the shell member", async() => {
+    using shared = await sharedCatalog();
+    shared.room.rights = {
+      [CATALOG_REPLACE]: "read",
+      [CATALOG_RENAME]: "write"
+    };
+    const frame = await shared.open();
+
+    assert.strictEqual(frame.can(CATALOG_REPLACE), false);
+    assert.strictEqual(frame.can(CATALOG_RENAME), true);
+
+    const changed = once(frame, "rights");
+    shared.room.rights = {
+      [CATALOG_REPLACE]: "write"
+    };
+    shared.room.emit("rights");
+    await changed;
+
+    assert.strictEqual(frame.can(CATALOG_REPLACE), true);
+    frame.dispose();
+  });
+
+  test("a frame request the shell room refuses is rejected", async() => {
+    using shared = await sharedCatalog();
+    const frame = await shared.open();
+
+    const replacing = frame.replace("map", new Uint8Array([1]));
+    const command = await sentCommand(shared.room.sent);
+    shared.room.emit("denied", {
+      event: command.type,
+      reason: "role \"viewer\" may not write",
+      requestId: command.requestId
+    });
+
+    await assert.rejects(replacing, (error) => {
+      assert.ok(error instanceof CatalogRejectedError);
+      assert.strictEqual(error.command, CATALOG_REPLACE);
+
+      return true;
+    });
     frame.dispose();
   });
 

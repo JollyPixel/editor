@@ -364,6 +364,7 @@ export class TextureEditor extends EditingElement {
       defaultTileSize: (active === null ? undefined : blocksets.blocksetTileSize(active)) ??
         DEFAULT_TILE_SIZE,
       linkable: blocksets.linkableAssets(),
+      creatable: blocksets.creatable,
       importable: editing.archives.canImport
     });
     if (result === null) {

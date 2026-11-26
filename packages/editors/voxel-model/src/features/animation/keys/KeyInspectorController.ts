@@ -11,11 +11,13 @@ import {
 import type { AnimationSession } from "../session/AnimationSession.ts";
 import type { KeyEditor } from "./KeyEditor.ts";
 import type { ModelAccessSignals } from "../../../access/ModelAccess.ts";
+import type { AnimationLibrary } from "../library/AnimationLibrary.ts";
 
 export interface KeyInspectorEditing {
   access: Pick<ModelAccessSignals, "subscribe">;
   animationSession: AnimationSession;
   keyEditor: KeyEditor;
+  animations: Pick<AnimationLibrary, "subscribe">;
 }
 
 export interface KeyInspectorState {
@@ -33,10 +35,11 @@ export class KeyInspectorController {
     host: ReactiveControllerHost
   ) {
     this.#host = host;
-    this.#connection = new SubscriptionController(host, ({ access, animationSession, keyEditor }) => [
-      access.subscribe("change", this.#refresh),
-      animationSession.subscribe("clip", this.#refresh),
-      keyEditor.subscribe("change", this.#refresh)
+    this.#connection = new SubscriptionController(host, (editing) => [
+      editing.access.subscribe("change", this.#refresh),
+      editing.animations.subscribe("change", this.#refresh),
+      editing.animationSession.subscribe("clip", this.#refresh),
+      editing.keyEditor.subscribe("change", this.#refresh)
     ]);
   }
 

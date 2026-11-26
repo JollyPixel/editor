@@ -2,6 +2,7 @@
 import type { Lantern } from "@jolly-pixel/lantern";
 
 // Import Internal Dependencies
+import type { EditorAccess } from "../access/EditorAccess.ts";
 import type { ConnectionStatus } from "../connection/ConnectionStatus.ts";
 import type { EditorArchives } from "./EditorArchives.ts";
 import type { EditorTags } from "./EditorTags.ts";
@@ -26,6 +27,10 @@ export interface EditorToolbarSourcesOptions {
    * @default null
    */
   connectionStatus?: ConnectionStatus | null;
+  /**
+   * @default null
+   */
+  access?: EditorAccess | null;
   lantern: Lantern;
 }
 
@@ -34,6 +39,7 @@ export class EditorToolbarSources {
   readonly tags: EditorTags | null;
   readonly archives: EditorToolbarArchives;
   readonly connectionStatus: ConnectionStatus | null;
+  readonly access: EditorAccess | null;
   readonly lantern: Lantern;
 
   constructor(
@@ -43,6 +49,7 @@ export class EditorToolbarSources {
     this.tags = options.tags;
     this.archives = options.archives;
     this.connectionStatus = options.connectionStatus ?? null;
+    this.access = options.access ?? null;
     this.lantern = options.lantern;
   }
 

@@ -2,6 +2,11 @@
 import { Emitter } from "@openally/emitt";
 import type { AssetRecordData } from "@jolly-pixel/asset";
 import {
+  permits,
+  type Right,
+  type RoomRejectionEvent
+} from "@jolly-pixel/network/client";
+import {
   match,
   P
 } from "ts-pattern";
@@ -21,6 +26,7 @@ import {
   CATALOG_PLAN,
   CATALOG_PREVIEW,
   CATALOG_PROGRESS,
+  CATALOG_QUERIES,
   CATALOG_READ,
   CATALOG_REJECTED,
   CATALOG_RENAME,
@@ -62,15 +68,35 @@ import {
   type ReadonlyDependencyIndex
 } from "../catalog/DependencyIndex.ts";
 
+// CONSTANTS
+const kQueries: ReadonlySet<string> = new Set(CATALOG_QUERIES);
+
 export interface CatalogRoom {
   on(
     type: "message",
     listener: (message: CatalogMessage) => void
   ): void;
+  on(
+    type: "rights",
+    listener: () => void
+  ): void;
+  on(
+    type: "denied",
+    listener: (denial: RoomRejectionEvent) => void
+  ): void;
   off(
     type: "message",
     listener: (message: CatalogMessage) => void
   ): void;
+  off(
+    type: "rights",
+    listener: () => void
+  ): void;
+  off(
+    type: "denied",
+    listener: (denial: RoomRejectionEvent) => void
+  ): void;
+  can(event: string): Right;
   send(command: CatalogCommand): void;
   join(): void;
   leave(): void;
@@ -141,6 +167,7 @@ export interface CatalogImportOptions {
 
 export type CatalogClientEvents = {
   change: () => void;
+  rights: () => void;
   dependencies: (assetId: string) => void;
   "tags-changed": (
     assetId: string,
@@ -164,6 +191,7 @@ type SettledMessage = Extract<
 type Settle = (message: SettledMessage | null) => void;
 
 interface PendingRequest {
+  readonly command: CatalogCommandType;
   readonly settle: Settle;
   readonly onProgress?: CatalogProgress;
 }
@@ -202,6 +230,8 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
 
     this.#room = room;
     this.#room.on("message", this.#onMessage);
+    this.#room.on("rights", this.#onRights);
+    this.#room.on("denied", this.#onDenied);
     this.#room.join();
   }
 
@@ -225,6 +255,12 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
 
   folders(): IterableIterator<string> {
     return this.#folders.values();
+  }
+
+  can(
+    command: CatalogCommandType
+  ): boolean {
+    return permits(this.#room.can(command), command, kQueries);
   }
 
   listDependents(
@@ -484,6 +520,8 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
 
   dispose(): void {
     this.#room.off("message", this.#onMessage);
+    this.#room.off("rights", this.#onRights);
+    this.#room.off("denied", this.#onDenied);
     this.#room.leave();
     for (const { settle } of this.#pending.values()) {
       settle(null);
@@ -500,12 +538,19 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
     onProgress?: CatalogProgress
   ): Promise<CatalogApplied> {
     await this.ready;
+    if (!this.can(request.type)) {
+      throw new CatalogRejectedError(
+        `your role may not send "${request.type}"`,
+        request.type
+      );
+    }
 
     const requestId = crypto.randomUUID();
     const { promise, resolve, reject } = Promise.withResolvers<
       CatalogApplied
     >();
     this.#pending.set(requestId, {
+      command: request.type,
       settle: (message) => {
         if (message === null) {
           reject(new CatalogRejectedError(
@@ -558,6 +603,29 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
         this.#pending.get(requestId)?.onProgress?.(stage);
       })
       .exhaustive();
+  };
+
+  readonly #onRights = (): void => {
+    this.emit("rights");
+  };
+
+  readonly #onDenied = (
+    denial: RoomRejectionEvent
+  ): void => {
+    const { requestId } = denial;
+    if (requestId === undefined) {
+      return;
+    }
+
+    const pending = this.#pending.get(requestId);
+    if (pending !== undefined) {
+      this.#settle({
+        type: CATALOG_REJECTED,
+        requestId,
+        command: pending.command,
+        reason: denial.reason
+      });
+    }
   };
 
   #applySnapshot(

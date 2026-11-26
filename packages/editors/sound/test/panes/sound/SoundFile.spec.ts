@@ -34,6 +34,17 @@ class FakeCatalog implements SoundFileCatalog {
   report: ReplaceReport = {
     replaced: true
   };
+  can(): boolean {
+    return true;
+  }
+
+  on(): void {
+    return void 0;
+  }
+
+  off(): void {
+    return void 0;
+  }
 
   record(
     assetId: string

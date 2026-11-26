@@ -124,7 +124,8 @@ export class VoxelModelEditor {
       document: target.document,
       presence: new PresenceStore(),
       pixels: texture.document,
-      animationSets: sessionAnimationSets(session, kAnimationKind),
+      animationSets: sessionAnimationSets(session, kAnimationKind, context.access),
+      access: context.access,
       view: new ViewSettingsStore(context.preferences),
       environments: {
         catalog: session.catalog,

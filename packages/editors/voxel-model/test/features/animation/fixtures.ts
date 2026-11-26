@@ -1,15 +1,20 @@
 // Import Third-party Dependencies
 import type { ReactiveControllerHost } from "lit";
+import { Emitter } from "@openally/emitt";
 import { AnimationDocument } from "@jolly-pixel/asset.voxel-animation/client";
 import {
   BlockTransform,
   ModelDocument
 } from "@jolly-pixel/asset.voxel-model/client";
+import {
+  RoomGrants,
+  type Right,
+  type RoomEventMap
+} from "@jolly-pixel/network/client";
 
 // Import Internal Dependencies
 import {
   AnimationLibrary,
-  type AnimationSetLease,
   type AnimationSetSource
 } from "#src/features/animation/library/AnimationLibrary.ts";
 import { AnimationSession } from "#src/features/animation/session/AnimationSession.ts";
@@ -29,12 +34,22 @@ import {
   TabStore
 } from "#src/state/index.ts";
 import { modelAccess } from "../../fixtures/modelAccess.ts";
+import { ANIMATION_SET_CAPABILITY_TABLE } from "#src/access/AnimationSetAccess.ts";
 
-// CONSTANTS
-export const IDLE_ROOM: AnimationSetLease["room"] = {
-  on: () => undefined,
-  off: () => undefined
-};
+export class FakeSetRoom extends Emitter<RoomEventMap> {
+  readonly clientId = "local";
+
+  #right: Right = "write";
+
+  can(): Right {
+    return this.#right;
+  }
+
+  restrict(): void {
+    this.#right = "read";
+    this.emit("rights");
+  }
+}
 
 export function createHost(): ReactiveControllerHost & { updates: number; } {
   const host = {
@@ -51,15 +66,22 @@ export function createHost(): ReactiveControllerHost & { updates: number; } {
 }
 
 function createSource(
-  set: AnimationDocument
+  set: AnimationDocument,
+  room: FakeSetRoom
 ): AnimationSetSource {
   return {
     open: () => {
-      return { document: set, room: IDLE_ROOM, release: () => undefined };
+      return {
+        document: set,
+        grants: new RoomGrants(room, ANIMATION_SET_CAPABILITY_TABLE),
+        release: () => undefined
+      };
     },
     create: () => Promise.reject(new Error("unused")),
     createOwn: () => Promise.reject(new Error("unused")),
     rename: () => Promise.reject(new Error("unused")),
+    canCreate: () => true,
+    canRename: () => true,
     records: () => [{ id: "walk", kind: "voxelanimation", name: "Walk" }],
     countUsers: () => 1,
     subscribe: () => () => undefined
@@ -83,7 +105,8 @@ export function createAnimatedModel(
     set.writeKey(clipId, "Body/Arm", "position", { tick, value: { x, y: 0, z: 0 }, interpolation: "linear" });
   }
   const history = createEditorHistory({ document });
-  const source = createSource(set);
+  const setRoom = new FakeSetRoom();
+  const source = createSource(set, setRoom);
   const access = modelAccess();
   const animations = new AnimationLibrary({ document, source, access });
   const animationFocus = new AnimationFocusStore();
@@ -117,6 +140,7 @@ export function createAnimatedModel(
     access,
     document,
     history,
+    setRoom,
     historyFocus: animateHistoryFocus({ document, animations, animationFocus }),
     clipRef: { setId: "walk", clipId },
     clipScope: animationScope({ setId: "walk", clipId }, sets),
@@ -129,7 +153,7 @@ export function createAnimatedModel(
     animationFocus,
     animationPlayback,
     animationSession,
-    keyEditor: new KeyEditor({ session: animationSession, history, access }),
+    keyEditor: new KeyEditor({ session: animationSession, history, animations }),
     presence,
     selection
   };

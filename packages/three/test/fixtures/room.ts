@@ -16,7 +16,6 @@ export class FakeRoom implements Room {
   readonly patches: PeerMetadata[] = [];
   readonly role = "default";
   readonly rights: RoomRights = {};
-  readonly access: Right = "write";
 
   #listeners = new Map<string, Set<(...args: any[]) => void>>();
 
@@ -25,7 +24,7 @@ export class FakeRoom implements Room {
   }
 
   can(): Right {
-    return this.access;
+    return "write";
   }
 
   join(): void {

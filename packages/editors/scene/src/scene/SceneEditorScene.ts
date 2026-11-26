@@ -28,6 +28,7 @@ import type { LogQueue } from "@jolly-pixel/ui";
 import { Emitter } from "@openally/emitt";
 
 // Import Internal Dependencies
+import type { SceneAccess } from "../access/SceneAccess.ts";
 import {
   SceneBinding,
   type SceneEnvironmentTarget
@@ -84,6 +85,7 @@ export interface SceneEditorSceneOptions {
   sceneId: string;
   document: SceneDocument;
   room: SceneRoom;
+  access: SceneAccess;
   openScene: SceneLeaser;
   openEnvironment: EnvironmentOpener;
   session: SceneAssetContext;
@@ -116,6 +118,7 @@ export class SceneEditorScene extends Systems.Scene {
     const {
       document,
       room,
+      access,
       presence,
       components,
       assetSlots
@@ -168,7 +171,7 @@ export class SceneEditorScene extends Systems.Scene {
     teardown.defer(camera.subscribe("orbit", (orbiting) => {
       this.#options.log.push(orbiting ? kPivotMessage : kFreeFlyMessage);
     }));
-    const writes = new ActorWrites(document);
+    const writes = new ActorWrites(document, access);
     const draft = new SceneDraft({
       document,
       view: binding,
@@ -183,7 +186,8 @@ export class SceneEditorScene extends Systems.Scene {
       selection,
       components,
       assetSlots,
-      anchors: binding
+      anchors: binding,
+      access
     });
     const gizmo = new GizmoSettings();
     world
@@ -213,7 +217,8 @@ export class SceneEditorScene extends Systems.Scene {
       selection,
       settings: gizmo,
       preferences: this.#options.preferences,
-      components
+      components,
+      access
     });
     teardown.defer(() => sceneGizmo.dispose());
     const mover = new ActorMover({
@@ -224,7 +229,8 @@ export class SceneEditorScene extends Systems.Scene {
       draft,
       selection,
       preferences: this.#options.preferences,
-      components
+      components,
+      access
     });
     teardown.defer(() => mover.dispose());
     const anchorMarkers = world
@@ -273,7 +279,6 @@ export class SceneEditorScene extends Systems.Scene {
     teardown.defer(this.#options.keyBindings.bind(
       world.input.keyboard,
       sceneShortcuts({
-        history,
         actions,
         gizmo,
         preferences: this.#options.preferences,
@@ -284,13 +289,15 @@ export class SceneEditorScene extends Systems.Scene {
 
     this.#editing.resolve({
       document,
+      access,
       live: binding,
       writes,
       overrides: new InstanceOverrides({
         document,
         history,
         live: binding,
-        prefabs
+        prefabs,
+        access
       }),
       components,
       history,

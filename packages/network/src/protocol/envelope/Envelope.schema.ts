@@ -7,7 +7,9 @@ const kMaxRoomNameLength = 256;
 const kRoom = z.string().check(z.maxLength(kMaxRoomNameLength));
 const kOutcome = {
   event: z.string(),
-  reason: z.string()
+  reason: z.string(),
+  seq: z.optional(z.int().check(z.minimum(0))),
+  requestId: z.optional(z.string())
 };
 
 export const rightSchema = z.enum([

@@ -39,7 +39,7 @@ export class RoomGrants<
     this.#current = room.clientId === null ?
       table.full :
       table.resolveGrants(room);
-    room.on("sync", this.#refresh);
+    room.on("rights", this.#refresh);
     room.on("denied", this.#onDenied);
   }
 
@@ -48,7 +48,7 @@ export class RoomGrants<
   }
 
   dispose(): void {
-    this.#room.off("sync", this.#refresh);
+    this.#room.off("rights", this.#refresh);
     this.#room.off("denied", this.#onDenied);
   }
 

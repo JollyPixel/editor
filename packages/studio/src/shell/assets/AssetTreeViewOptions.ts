@@ -1,5 +1,6 @@
 // Import Third-party Dependencies
 import type { AssetRecordData } from "@jolly-pixel/asset";
+import type { CatalogClient } from "@jolly-pixel/asset-server/client";
 import type { Notifier } from "@jolly-pixel/ui";
 import type { KindFilter } from "@jolly-pixel/server";
 
@@ -22,9 +23,10 @@ import type {
   ConflictQuestion
 } from "./AssetCommands.ts";
 
-export type AssetTreeCatalogEvent = "change" | "dependencies";
+export type AssetTreeCatalogEvent = "change" | "dependencies" | "rights";
 
-export interface AssetTreeCatalog extends AssetCommandCatalog {
+export interface AssetTreeCatalog
+  extends AssetCommandCatalog, Pick<CatalogClient, "can"> {
   readonly dependencies: AssetDependencies;
   records(): Iterable<AssetRecordData>;
   folders(): Iterable<string>;
