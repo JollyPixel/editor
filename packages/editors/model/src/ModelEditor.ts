@@ -129,10 +129,12 @@ export class ModelEditor {
         logger: context.logger
       }));
 
-      const ready = target.ready.then(() => {
-        if (!teardown.signal.aborted) {
-          teardown.defer(preview.follow());
+      const ready = target.ready.then(async() => {
+        if (teardown.signal.aborted) {
+          return;
         }
+        teardown.defer(preview.follow());
+        await preview.settled().catch(() => undefined);
       });
 
       return new ModelEditor({

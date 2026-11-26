@@ -60,7 +60,19 @@ const kBenchTargets: BenchTarget[] = [
     name: "model",
     page: "model",
     row: "ToyCar.glb",
-    seed: dropped(path.join("runtime", "examples", "public", "models", "ToyCar.glb"))
+    seed: dropped(path.join("backend.three", "examples", "public", "models", "ToyCar.glb"))
+  }),
+  seeded({
+    name: "environment",
+    page: "environment",
+    row: "New environment.environment.json",
+    seed: created("Environment")
+  }),
+  seeded({
+    name: "texture",
+    page: "texture",
+    row: "shapes.jpg",
+    seed: dropped(path.join("voxel-renderer", "docs", "images", "shapes.jpg"))
   }),
   seeded({
     name: "script",

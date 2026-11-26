@@ -52,7 +52,6 @@ export * from "./session/rememberQueryUsername.ts";
 export {
   EditorRuntime,
   type EditorRuntimeCreateOptions,
-  type EditorRuntimeLoadOptions,
   type PerformancePaneOptions
 } from "./runtime/EditorRuntime.ts";
 export * from "./runtime/RuntimeWidgets.ts";

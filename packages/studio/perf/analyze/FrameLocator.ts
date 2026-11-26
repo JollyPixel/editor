@@ -8,6 +8,7 @@ import {
 } from "@jolly-pixel/cdp";
 
 // Import Internal Dependencies
+import { STUDIO_SHELL_DIR } from "../../node/studioFiles.ts";
 import { sourcePackage } from "./sourcePackage.ts";
 
 export interface ServedEditors {
@@ -81,17 +82,26 @@ export class FrameLocator {
     url: string
   ): SourceMapFile | null {
     if (!this.#maps.has(url)) {
-      const dist = this.#editors.distServing(url);
-      const asset = /\/editors\/[\w-]+\/(assets\/[^?]+)/.exec(url)?.[1];
-      this.#maps.set(
-        url,
-        dist === null || asset === undefined ?
-          null :
-          SourceMapFile.load(path.join(dist, asset))
-      );
+      this.#maps.set(url, this.#findSourceMap(url));
     }
 
     return this.#maps.get(url) ?? null;
+  }
+
+  #findSourceMap(
+    url: string
+  ): SourceMapFile | null {
+    const dist = this.#editors.distServing(url);
+    const editorAsset = /\/editors\/[\w-]+\/(assets\/[^?]+)/.exec(url)?.[1];
+    if (dist !== null && editorAsset !== undefined) {
+      return SourceMapFile.load(path.join(dist, editorAsset));
+    }
+
+    const shellAsset = /^https?:\/\/[^/]+\/(assets\/[^?]+)/.exec(url)?.[1];
+
+    return shellAsset === undefined ?
+      null :
+      SourceMapFile.load(path.join(STUDIO_SHELL_DIR, shellAsset));
   }
 }
 

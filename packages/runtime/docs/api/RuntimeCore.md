@@ -125,7 +125,7 @@ interface RuntimeCoreLoadOptions<TScene> {
   scene?: TScene;
   /** Extra asset references, loaded before the scene. */
   assets?: Iterable<AssetReference<unknown>>;
-  /** Render cap. Skips GPU benchmarking; `Infinity` removes the cap. @default GPU estimate */
+  /** Fixed render cap; `Infinity` renders uncapped. @default none, see below */
   maxFps?: number;
   /** Shows the canvas at once and ignores the two options below. @default false */
   skipLoadingScreen?: boolean;
@@ -138,6 +138,12 @@ interface RuntimeCoreLoadOptions<TScene> {
 
 A failing step rejects with its `Error`, which the loading screen also
 displays. The runtime stays stopped.
+
+Without `maxFps`, the runtime renders at the display rate and hands every
+frame to a `FrameRateGovernor` from `@jolly-pixel/loop`. While a quarter of
+the frames rendered in 2 s miss their refresh, it halves
+`loop.scheduler.maxFps`, then tries the full rate again after 5 s. With
+`maxFps`, including `Infinity`, the rate stays where you set it.
 
 ## Rendering on demand
 
@@ -160,13 +166,11 @@ shows up as an FPS drop.
 
 ## Startup tracing
 
-`logger.step()` records the `device` and `assets` steps of `load()`, and
-`scene` when a scene is given. Once started, `load()` opens a `first frame`
-step with `visibility` (`document.visibilityState`) that ends on the first
-rendered frame. A `first frame` that never ends next to
-`visibility: "hidden"` explains a scene that never woke.
-
-The GPU benchmark reports an undetermined GPU tier through `logger.warn()`.
+`logger.step()` records the `assets` step of `load()`, and `scene` when a
+scene is given. Once started, `load()` opens a `first frame` step with
+`visibility` (`document.visibilityState`) that ends on the first rendered
+frame. A `first frame` that never ends next to `visibility: "hidden"` explains
+a scene that never woke.
 
 ## RuntimeBackend
 

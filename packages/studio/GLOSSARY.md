@@ -153,7 +153,9 @@ Each one runs `editor.host` with its own client, session and runtime.
 
 The hidden `preview/` frame (`pages/preview.html`) that renders the 3D kinds listed in
 `jollypixel.preview` into PNG previews, one asset at a time, from the scene
-contributions. It joins asset rooms as an observer and never writes.
+contributions. It joins asset rooms as an observer and never writes. It
+starts a render 400 ms after the request, once no editor tab is booting, so
+a double-click opens the editor without a second runtime starting beside it.
 
 ### Tab
 

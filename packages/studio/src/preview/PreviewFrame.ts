@@ -5,6 +5,10 @@ import {
   type CatalogShare,
   type LaunchIdentity
 } from "@jolly-pixel/editor.host";
+import {
+  delay,
+  withTimeout
+} from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
 import { EditorFrame } from "../tabs/EditorFrame.ts";
@@ -18,6 +22,8 @@ import {
 
 // CONSTANTS
 const kPreviewSize = 256;
+const kRequestHoldMs = 400;
+const kEditorBootWaitMs = 5_000;
 const kNoScopes: ReadonlySet<string> = new Set();
 const kHiddenStyle = [
   "position: fixed",
@@ -35,6 +41,7 @@ export interface PreviewFrameOptions {
   share: Pick<CatalogShare, "serve">;
   identity: () => LaunchIdentity | null;
   onRefused: () => void;
+  editorsIdle: () => Promise<void>;
   /**
    * @default document.body
    */
@@ -64,9 +71,10 @@ export class PreviewFrame implements PreviewSource {
     this.#unsentRequests = requests.port2;
   }
 
-  preview(
+  async preview(
     assetId: string
   ): Promise<AssetPreview> {
+    await this.#holdForEditors();
     if (this.#frame === null && !this.#disposed) {
       this.#frame = this.#createFrame();
     }
@@ -88,6 +96,15 @@ export class PreviewFrame implements PreviewSource {
     this.#unsentRequests = null;
     this.#frame?.dispose();
     this.#frame = null;
+  }
+
+  async #holdForEditors(): Promise<void> {
+    await delay(kRequestHoldMs);
+    await withTimeout(
+      this.#options.editorsIdle(),
+      kEditorBootWaitMs,
+      "An editor tab is still booting."
+    ).catch(() => undefined);
   }
 
   #createFrame(): EditorFrame {

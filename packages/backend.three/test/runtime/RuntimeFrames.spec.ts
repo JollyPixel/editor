@@ -111,10 +111,13 @@ describe("Runtime frame stepping", () => {
     await steppedRuntime(world).frames(0);
   });
 
-  test("compiledFrame waits for the pipelines a frame started, then draws once more", async() => {
+  test("compiledFrame waits for the pipelines of the frame after awake, then draws once more", async() => {
     const world = new SteppedWorld();
     const renderer = new CompilingRenderer();
     const frame = track(steppedRuntime(world, renderer).compiledFrame());
+
+    await world.step();
+    assert.equal(frame.settled, false);
 
     renderer.start();
     await world.step();

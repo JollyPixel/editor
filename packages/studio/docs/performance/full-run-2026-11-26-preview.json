@@ -1,0 +1,9 @@
+{
+  "editors": ["voxel-map", "voxel-model", "texture"],
+  "modes": ["online"],
+  "phases": ["reload", "cold"],
+  "variants": [
+    { "label": "control" },
+    { "label": "no-preview", "storage": { "bench:no-preview": "1" } }
+  ]
+}

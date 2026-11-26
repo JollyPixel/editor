@@ -1,38 +1,15 @@
 // Import Node.js Dependencies
-import { describe, mock, test } from "node:test";
+import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-
-// Import Third-party Dependencies
-import type { GameLoop } from "@jolly-pixel/loop";
 
 // Import Internal Dependencies
 import {
-  configureRuntimeDevice,
-  isMobileDevice
-} from "../../src/startup/configureRuntimeDevice.ts";
-import { SilentLogger } from "../../src/contract/RuntimeLogger.ts";
+  isMobileDevice,
+  runtimePixelRatio
+} from "../../src/startup/runtimePixelRatio.ts";
 import { stubProperty } from "../helpers/stubProperty.ts";
 
-describe("configureRuntimeDevice", () => {
-  test("applies an explicit render cap without fetching GPU benchmarks", async(t) => {
-    const fetch = t.mock.method(globalThis, "fetch");
-    const loop = {
-      scheduler: { maxFps: 0 }
-    } as Pick<GameLoop, "scheduler">;
-    const adaptPixelRatio = mock.fn((_ratio: number) => void 0);
-
-    await configureRuntimeDevice(
-      loop,
-      { adaptPixelRatio },
-      new SilentLogger(),
-      { maxFps: 144 }
-    );
-
-    assert.strictEqual(loop.scheduler.maxFps, 144);
-    assert.strictEqual(adaptPixelRatio.mock.callCount(), 1);
-    assert.strictEqual(fetch.mock.callCount(), 0);
-  });
-
+describe("runtimePixelRatio", () => {
   for (const [display, expected] of [
     [1.25, 1.25],
     [2, 2],
@@ -41,20 +18,8 @@ describe("configureRuntimeDevice", () => {
     describe(`on a ${display}x desktop display`, () => {
       stubProperty(window, "devicePixelRatio", display);
 
-      test(`renders at ${expected}x`, async() => {
-        const adaptPixelRatio = mock.fn((_ratio: number) => void 0);
-
-        await configureRuntimeDevice(
-          { scheduler: { maxFps: 0 } } as Pick<GameLoop, "scheduler">,
-          { adaptPixelRatio },
-          new SilentLogger(),
-          { maxFps: 60 }
-        );
-
-        assert.deepStrictEqual(
-          adaptPixelRatio.mock.calls[0].arguments,
-          [expected]
-        );
+      test(`renders at ${expected}x`, () => {
+        assert.strictEqual(runtimePixelRatio(), expected);
       });
     });
   }

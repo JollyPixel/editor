@@ -107,6 +107,27 @@ export class ModelPreview {
     };
   }
 
+  settled(): Promise<void> {
+    const { promise, resolve, reject } = Promise.withResolvers<void>();
+    const settle = (): void => {
+      const view = this.#view;
+      if (view.status === "loading") {
+        return;
+      }
+      stop();
+      if (view.status === "failed") {
+        reject(new Error(view.error));
+      }
+      else {
+        resolve();
+      }
+    };
+    const stop = this.subscribe("change", settle);
+    settle();
+
+    return promise;
+  }
+
   async reload(): Promise<void> {
     const load = ++this.#loads;
     const { bytes } = this.file;

@@ -28,10 +28,6 @@ export interface EditorRuntimeCreateOptions extends RuntimeOptions {
   framed?: boolean;
 }
 
-export interface EditorRuntimeLoadOptions {
-  maxFps?: number;
-}
-
 export interface PerformancePaneOptions {
   /**
    * The `jolly-dock-layout` the pane floats in and can dock into.
@@ -88,8 +84,7 @@ export class EditorRuntime {
   }
 
   async load(
-    scene: Systems.Scene,
-    options: EditorRuntimeLoadOptions = {}
+    scene: Systems.Scene
   ): Promise<void> {
     if (this.runtime.running) {
       await this.runtime.world.sceneManager.loadScene(scene).done;
@@ -101,7 +96,7 @@ export class EditorRuntime {
     await this.runtime.load({
       scene,
       skipLoadingScreen: true,
-      maxFps: this.params.maxFps ?? options.maxFps
+      maxFps: this.params.maxFps ?? Infinity
     });
   }
 

@@ -38,6 +38,24 @@ export const GC_CATEGORIES = [
   "v8",
   "disabled-by-default-v8.gc"
 ];
+export const TIMELINE_CATEGORIES = [
+  "devtools.timeline",
+  "disabled-by-default-devtools.timeline",
+  "toplevel",
+  "blink",
+  "loading",
+  "v8",
+  "v8.execute",
+  "disabled-by-default-v8.compile",
+  "gpu",
+  "gpu.angle",
+  "gpu.dawn",
+  "disabled-by-default-gpu.dawn",
+  "disabled-by-default-gpu.service",
+  "disabled-by-default-gpu.decoder",
+  "webgpu",
+  "disabled-by-default-webgpu"
+];
 const kRendererMain = "CrRendererMain";
 const kMinorGc = /MinorGC|SCAVENGER|MINOR_M/;
 const kUnnamedThread = "?";

@@ -1,6 +1,6 @@
 # Benchmarking editor opens
 
-How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, on top of the CDP recorder, page scripts and profile readers of `@jolly-pixel/cdp`, starting with [`perf/open/measure.ts`](../../perf/open/measure.ts); the latest results are in [Scene and sound editors, 3 November 2026](./editor-open-2026-11-03.md) and [Script editor, 11 November 2026](./script-editor-2026-11-11.md).
+How to measure what it costs to open an editor from the studio, what an open editor costs while it sits there, and how to A/B a change against either. The tools live in `packages/studio/perf/`, on top of the CDP recorder, page scripts and profile readers of `@jolly-pixel/cdp`, starting with [`perf/open/measure.ts`](../../perf/open/measure.ts); the latest results are in [Every editor, 26 November 2026](./full-run-2026-11-26.md).
 
 ## What is measured
 
@@ -32,7 +32,7 @@ Each phase changes which caches are warm:
 
 Server rooms stay open for `roomGraceMs` (5 min) after the last peer leaves, so only the first open after a server start replays a room. Restart the server to measure a cold room.
 
-The seed project has no scene, sound, model or script. Before the first scene or script open, the harness creates `New scene.scene.json` or `New script.ts` from the New asset menu; before the first model open, it drops `packages/runtime/examples/public/models/ToyCar.glb` (5.4 MB) on the Asset Browser; before the first sound open, it drops `packages/editors/sound/assets/sounds/chime.ogg` on the Asset Browser. That path is gitignored: the sound dev server seeds a generated chime of about 1.6 s there, and a longer file put at the same path measures a longer decode. Online, the asset stays on the server for the next accounts; offline, every new context creates it again.
+The seed project has no scene, sound, model, script, environment or image. Before the first scene, script or environment open, the harness creates `New scene.scene.json`, `New script.ts` or `New environment.environment.json` from the New asset menu; before the first model open, it drops `packages/backend.three/examples/public/models/ToyCar.glb` (5.4 MB) on the Asset Browser; before the first texture open, it drops `packages/voxel-renderer/docs/images/shapes.jpg` (63 KB), as a dropped PNG becomes a pixel-art asset instead; before the first sound open, it drops `packages/editors/sound/assets/sounds/chime.ogg` on the Asset Browser. That path is gitignored: the sound dev server seeds a generated chime of about 1.6 s there, and a longer file put at the same path measures a longer decode. Online, the asset stays on the server for the next accounts; offline, every new context creates it again.
 
 The script editor opens several kinds of file, so it has more targets than one per editor. `script` is the `New script.ts` template and `shader` the `New shader.tsl.ts` template, both from the New asset menu. The others are dropped files that [`perf/studio/fixtures.ts`](../../perf/studio/fixtures.ts) builds from the repository at run time, so they only change when the sources they copy change: `script-ts-l` (`typed.ts`, 100 KB of `editors/script`, `assets/script` and `scripting` sources), `script-js-l` (`plain.js`, the same sources with their types stripped), `text-md` (`notes.md`, 20 KB of package READMEs and docs), `text-md-l` (`guide.md`, 100 KB of the same) and `text-json-l` (`data.json`, 100 KB of workspace `package.json` files).
 
@@ -60,7 +60,7 @@ $ pnpm run perf:summary perf-results/baseline.json --steps --phase reload
 
 `perf:open` options:
 
-- `--editors voxel-map,voxel-model,pixel-art,scene,sound,model,script` and `--modes online,offline`: what to open. The script editor's other targets (`shader`, `script-ts-l`, `script-js-l`, `text-md`, `text-md-l`, `text-json-l`) are listed by name too. Online registers a new account per context; offline opens `/?offline`.
+- `--editors voxel-map,voxel-model,pixel-art,scene,sound,model,script,environment,texture` and `--modes online,offline`: what to open. The script editor's other targets (`shader`, `script-ts-l`, `script-js-l`, `text-md`, `text-md-l`, `text-json-l`) are listed by name too. Online registers a new account per context; offline opens `/?offline`.
 - `--phases reopen,reload,cold,restart`: the phases measured after `first`, which always runs.
 - `--runs 6`: repetitions. Each run shuffles modes and editors and launches a new browser per editor. A measurement's `run` is its repetition, and profile files end with it.
 - `--label`: tags every measurement, for summaries that mix files.
@@ -82,7 +82,7 @@ Results files carry a `kind`: `open` for `perf:open` and `perf:ab`, `steady` for
 Laptop speed drifts with power and thermal state, so never compare two runs taken at different times. Compare variants inside one interleaved run:
 
 ```bash
-$ pnpm run perf:ab --plan docs/performance/editor-open-2026-11-03.json --rounds 4 --out perf-results/ab.json
+$ pnpm run perf:ab --plan docs/performance/full-run-2026-11-26-preview.json --rounds 4 --out perf-results/ab.json
 $ pnpm run perf:summary perf-results/ab.json --control control
 ```
 
@@ -102,7 +102,7 @@ A plan file lists the `editors`, `modes` and follow-up `phases` as arrays, plus 
 Put the change behind a `localStorage` flag that defaults to off, so control and variant run the same bundle. Apply the patch to the main checkout, rebuild the changed workspaces and the studio shell, serve it, run `perf:ab`, then `git apply -R` the patch:
 
 ```bash
-$ git apply packages/studio/docs/performance/editor-open-2026-11-03.patch
+$ git apply packages/studio/docs/performance/full-run-2026-11-26.patch
 $ pnpm run build
 $ cd packages/studio
 $ pnpm exec vite build --sourcemap
@@ -117,7 +117,7 @@ $ node perf/serve/build.ts --port 3014 --compression
 
 To compare two commits, build the other commit's shell in a worktree and serve it with `--shell`. On Windows keep the worktree path short, as deep scratch paths exceed `MAX_PATH` during the build.
 
-[`editor-open-2026-11-03.patch`](./editor-open-2026-11-03.patch) holds the experiments of the [3 November report](./editor-open-2026-11-03.md). It is measurement scaffolding, not a fix to merge, and applies to `f025a676`.
+[`full-run-2026-11-26.patch`](./full-run-2026-11-26.patch) holds the experiments of the [26 November report](./full-run-2026-11-26.md). It is measurement scaffolding, not a fix to merge, and applies to `ef13b5bf3`.
 
 Do not build or run tests while a measurement runs.
 
@@ -166,7 +166,7 @@ Each editor of a round gets a new browser. The caret goes to the end of the line
 
 A scenario's latency is the time from each input event's `timeStamp` to a task queued after the next animation frame, so it covers the handlers, the render and the paint that the key caused (`startInputLatency` of `@jolly-pixel/cdp`, installed in the editor frame). The summary gives the p50, p95 and max of those latencies, how many went over 50 ms, main-thread, script, layout and style time per input from the CDP metrics, long animation frames, and WebSocket bytes sent. Every User Timing measure the page records during a scenario is totalled in a second table, so an experiment patch can wrap the costs it wants to see in `performance.measure`. Online, the harness puts the original text back at the end, so later rounds start from the same document.
 
-Options: `--editors` (default every script editor target), `--modes` (default `offline`), `--scenarios`, `--keys 60`, `--rounds 3`, `--cpu`, `--profile <dir>` (a V8 CPU profile per scenario, read with `analyze/profile.ts`), `--memory <dir>` (heap profile and GC per scenario, adds MB and GC columns), `--label`, `--storage` and `--base` for a one-variant run, or `--plan` for an A/B. An edit plan lists `editors`, `modes`, `scenarios` and `variants`; a variant has a `label`, `storage` and `base`. Rounds alternate the variant order, as `perf:ab` does.
+Options: `--editors` (default every script editor target), `--modes` (default `offline`), `--scenarios`, `--keys 60`, `--rounds 3`, `--cpu`, `--profile <dir>` (a V8 CPU profile per scenario, read with `analyze/profile.ts`), `--memory <dir>` (heap profile and GC per scenario, adds MB and GC columns), `--trace <dir>` (a Chrome trace per scenario, with the categories of [Chrome traces](#chrome-traces); `Layout` events carry `dirtyObjects` and `totalObjects`; not with `--memory`, which traces GC through the same browser), `--label`, `--storage` and `--base` for a one-variant run, or `--plan` for an A/B. An edit plan lists `editors`, `modes`, `scenarios` and `variants`; a variant has a `label`, `storage` and `base`. Rounds alternate the variant order, as `perf:ab` does.
 
 `packages/editors/script/bench/keystroke.bench.ts` times the same per-keystroke work in Node for 12 and 100 KB of TypeScript, Markdown and JSON: highlighting, line splitting, `TextEdit.between` and `marked`. Run it with `node bench/keystroke.bench.ts` from the script editor's folder.
 
@@ -174,14 +174,11 @@ Options: `--editors` (default every script editor target), `--modes` (default `o
 
 ### CPU profiles
 
-The studio build of [Running the matrix](#running-the-matrix) has source maps, so profiles resolve to source files and packages. [`analyze/bundle.ts`](#bundles) reads each editor's own build instead:
+The studio build of [Running the matrix](#running-the-matrix) has source maps, so profiles resolve to source files and packages. The studio serves the editor pages it builds from `/assets/`, and the profile reader resolves those through the studio's own maps. [`analyze/bundle.ts`](#bundles) reads each editor's own build instead:
 
 ```bash
-$ cd packages/editors/voxel-map && pnpm exec vite build --sourcemap
-$ cd ../voxel-model && pnpm exec vite build --sourcemap
-$ cd ../pixel-art && pnpm exec vite build --sourcemap
-$ cd ../scene && pnpm exec vite build --sourcemap
-$ cd ../sound && pnpm exec vite build --sourcemap
+$ cd packages/editors
+$ for editor in voxel-map voxel-model pixel-art scene sound model script environment texture; do (cd $editor && pnpm exec vite build --sourcemap); done
 ```
 
 Record and read a profile:
@@ -233,21 +230,23 @@ Small pages that isolate one browser cost:
 ```bash
 $ node perf/probes/firstUse.ts
 $ node perf/probes/pipelineCompile.ts --pipelines 24 --rounds 6
+$ node perf/probes/pipelineCensus.ts --editors voxel-map,scene --out perf-results/pipelines.json
 ```
 
 - `firstUse`: WebGPU adapter and device, `AudioContext`, WebGL and 2D canvas creation, in a fresh browser, in a new iframe, and in a new studio shell document.
 - `pipelineCompile`: N WebGPU render pipelines created with `createRenderPipeline` against `createRenderPipelineAsync`.
+- `pipelineCensus`: opens each editor (after a first open and a shell reload, unless `--cold`) with `GPUDevice` and `setPipeline` wrapped in every frame of the page. For each document that built a pipeline, it prints the pipelines and shader modules, the editor's `boot:compile` step, and the pipelines drawn by the end of that step, created by then but not drawn, and created after, grouped by the material in three.js's pipeline label. `--out` keeps every pipeline's creation, ready and first-use times next to the page's User Timing measures. `--mode`, `--settle`, `--storage` and `--base` work as for `perf:open`.
 
 ### Bundles
 
 ```bash
-$ node perf/analyze/bundle.ts
+$ node perf/analyze/bundle.ts --editors voxel-map,voxel-model,pixel-art,scene,sound,model,script,environment,texture
 ```
 
-Needs the source-map build. Prints, per editor, the eager chunks (the entry plus its `modulepreload` links) raw, gzip and brotli, and their bytes by package, then the lazy chunks. Bytes the minifier emits without a mapping show as `(unmapped)`.
+Needs the source-map build. Without `--editors`, it reads voxel-map, voxel-model and pixel-art. Prints, per editor, the eager chunks (the entry plus its `modulepreload` links) raw, gzip and brotli, and their bytes by package, then the lazy chunks. Bytes the minifier emits without a mapping show as `(unmapped)`.
 
-## Environment of the 3 November 2026 run
+## Environment of the 26 November 2026 run
 
 - Windows 11 Pro 26200, Intel Core Ultra 9 285HX laptop with 32 GB, integrated Intel Graphics (Xe-LPG) only.
-- Playwright 1.64.1 with Chromium 156.0.8078.4, headed. WebGL runs through ANGLE on Direct3D 11, WebGPU through Dawn on Direct3D 12.
-- Node.js 24.18, studio built from `f025a676` and served by `perf/serve/build.ts`.
+- Playwright 1.65.0 with Chromium 158.0.8127.18, headed. WebGL runs through ANGLE on Direct3D 11, WebGPU through Dawn on Direct3D 12.
+- Node.js 24.18, studio built from `ef13b5bf3` and served by `perf/serve/build.ts`.

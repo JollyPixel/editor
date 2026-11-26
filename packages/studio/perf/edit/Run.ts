@@ -41,6 +41,7 @@ export interface EditRunSettings {
   cpuThrottle: number;
   profileDir: string | null;
   memoryDir: string | null;
+  traceDir: string | null;
 }
 
 interface EditCell {
@@ -140,7 +141,7 @@ export class EditRun {
     scenario: EditScenario
   ): Promise<EditMeasurement> {
     const { page } = session.studio;
-    const { keys, profileDir, memoryDir } = this.#settings;
+    const { keys, profileDir, memoryDir, traceDir } = this.#settings;
     const plan = SCENARIO_PLANS[scenario];
     const fileStem = `${variant.label}-${mode}-${editor.name}-${scenario}-${round}`;
     const { textLength } = await pane.placeCaretAtLineEnd(kCaretFraction);
@@ -149,7 +150,8 @@ export class EditRun {
     const { result, recording } = await session.record(
       {
         cpuProfile: fileIn(profileDir, `${fileStem}.cpuprofile`),
-        heapProfile: fileIn(memoryDir, `${fileStem}.heapprofile`)
+        heapProfile: fileIn(memoryDir, `${fileStem}.heapprofile`),
+        trace: fileIn(traceDir, `${fileStem}.json`)
       },
       async() => {
         await frame.evaluate(startFramePacing, FRAME_PACING_THRESHOLDS);

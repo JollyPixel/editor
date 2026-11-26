@@ -23,7 +23,6 @@ import {
 function createFakeRuntime() {
   const runtime = {
     canvas: document.createElement("canvas"),
-    loop: { scheduler: { maxFps: Infinity } },
     world: {
       assetCoordinator: new AssetCoordinator({
         catalog: new AssetCatalog([]),
@@ -133,7 +132,7 @@ describe("prepareRuntime (pixel ratio)", () => {
 });
 
 describe("prepareRuntime (tracing)", () => {
-  test("traces the device, assets and scene steps", async() => {
+  test("traces the assets and scene steps", async() => {
     const { runtime, backend } = createFakeRuntime();
     const { logger, steps } = createRecordingLogger();
 
@@ -147,6 +146,6 @@ describe("prepareRuntime (tracing)", () => {
       }
     );
 
-    assert.deepStrictEqual(steps, ["device", "assets", "scene"]);
+    assert.deepStrictEqual(steps, ["assets", "scene"]);
   });
 });

@@ -1,0 +1,9 @@
+{
+  "editors": ["scene", "environment", "voxel-model"],
+  "modes": ["online"],
+  "phases": ["reload", "cold", "restart"],
+  "variants": [
+    { "label": "control" },
+    { "label": "no-gpu-tier", "storage": { "bench:no-gpu-tier": "1" } }
+  ]
+}

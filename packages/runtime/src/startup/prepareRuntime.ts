@@ -3,7 +3,6 @@ import type {
   AssetCoordinator,
   AssetReference
 } from "@jolly-pixel/asset";
-import type { GameLoop } from "@jolly-pixel/loop";
 import { asError } from "@jolly-pixel/utils";
 
 // Import Internal Dependencies
@@ -16,11 +15,10 @@ import {
   RuntimeLoadingScreen,
   type LoadingScreen
 } from "./RuntimeLoadingScreen.ts";
-import { configureRuntimeDevice } from "./configureRuntimeDevice.ts";
+import { runtimePixelRatio } from "./runtimePixelRatio.ts";
 
 export interface RuntimeStartupHost {
   readonly canvas: HTMLCanvasElement;
-  readonly loop: Pick<GameLoop, "scheduler">;
   readonly world: Pick<RuntimeWorld, "assetCoordinator">;
 }
 
@@ -56,8 +54,8 @@ export interface RuntimeCoreLoadOptions<
    */
   skipLoadingScreen?: boolean;
   /**
-   * Render cap in frames per second, overriding the GPU-benchmarked estimate.
-   * @see ConfigureRuntimeDeviceOptions
+   * Fixed render cap in frames per second. Without it the runtime renders at
+   * the display rate and halves that rate while frames keep missing.
    */
   maxFps?: number;
 }
@@ -73,8 +71,7 @@ export async function prepareRuntime<TScene>(
     loadingContainer = document.body,
     assets = [],
     scene,
-    skipLoadingScreen = false,
-    maxFps
+    skipLoadingScreen = false
   } = options;
 
   const screen = skipLoadingScreen ?
@@ -86,18 +83,8 @@ export async function prepareRuntime<TScene>(
     );
 
   try {
-    await Promise.all([
-      screen.start(),
-      logger.step(
-        "device",
-        () => configureRuntimeDevice(
-          runtime.loop,
-          backend,
-          logger,
-          { maxFps }
-        )
-      )
-    ]);
+    backend.adaptPixelRatio(runtimePixelRatio());
+    await screen.start();
 
     await logger.step(
       "assets",

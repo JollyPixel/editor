@@ -1841,9 +1841,6 @@ importers:
       '@jolly-pixel/utils':
         specifier: workspace:*
         version: link:../utils
-      '@pmndrs/detect-gpu':
-        specifier: 6.0.30
-        version: 6.0.30
     devDependencies:
       electron:
         specifier: 45.3.1
@@ -3295,9 +3292,6 @@ packages:
     resolution: {integrity: sha512-iGURLGuKDLakSEl7Pgfv8h7f+XLT+V861Wfhz0zlEl5nyFuKUopdkFBPKqTllTUp06aOwPuH8iuUEb3yp3MpbQ==}
     engines: {node: '>=20'}
     hasBin: true
-
-  '@pmndrs/detect-gpu@6.0.30':
-    resolution: {integrity: sha512-wcbzWPFL7w1CEzQB1DtQ7G5X4JkKvGG088GBbrp2lrgOmjkUhID+/XJcrLge6+9e/FO7bzK0+jMyesINd0yB7g==}
 
   '@pnpm/deps.graph-sequencer@1100.0.1':
     resolution: {integrity: sha512-pOr5+q1fLYKwFN3LAJuGZEnfXDcQ73zqgDHMtGy+K+uIoUqyY+6MeDCWFwfu+4EFuq76I5EPFofoNAI+Bmmq4A==}
@@ -6833,8 +6827,6 @@ snapshots:
   '@playwright/test@1.65.0':
     dependencies:
       playwright: 1.65.0
-
-  '@pmndrs/detect-gpu@6.0.30': {}
 
   '@pnpm/deps.graph-sequencer@1100.0.1': {}
 

@@ -16,6 +16,7 @@ import type {
 import { ProfileTree } from "../analysis/ProfileTree.ts";
 import {
   GC_CATEGORIES,
+  TIMELINE_CATEGORIES,
   Trace,
   type GcSummary
 } from "../analysis/Trace.ts";
@@ -41,6 +42,7 @@ export interface PageRecorderOptions {
 export interface RecordingPlan {
   cpuProfile?: string;
   heapProfile?: string;
+  trace?: string;
 }
 
 export interface MemoryRecording {
@@ -107,12 +109,18 @@ export class PageRecorder {
     plan: RecordingPlan,
     action: () => Promise<T>
   ): Promise<Recorded<T>> {
+    if (plan.heapProfile !== undefined && plan.trace !== undefined) {
+      throw new Error("A heap profile and a trace cannot share one tracer; record them apart");
+    }
     const metricsBefore = await this.#metrics();
     const receivedBefore = this.#traffic.received;
     const sentBefore = this.#traffic.sent;
     const stopMemory = plan.heapProfile === undefined ?
       null :
       await this.#startMemory(plan.heapProfile);
+    const stopTrace = plan.trace === undefined ?
+      null :
+      await this.#startTrace(plan.trace);
     const stopProfile = plan.cpuProfile === undefined ?
       null :
       await this.#startProfile(plan.cpuProfile);
@@ -125,6 +133,7 @@ export class PageRecorder {
     }
     finally {
       cpuProfileFile = await stopProfile?.();
+      await stopTrace?.();
       memory = await stopMemory?.();
     }
 
@@ -158,19 +167,29 @@ export class PageRecorder {
     return async() => {
       const { profile } = await this.#cdp.send("Profiler.stop");
       await this.#cdp.send("Profiler.disable");
-      writeJson(file, profile);
+      writeOut(file, JSON.stringify(profile));
 
       return file;
+    };
+  }
+
+  async #startTrace(
+    file: string
+  ): Promise<() => Promise<void>> {
+    const tracer = this.#requireTracer("a trace");
+    await tracer.startTracing(undefined, {
+      categories: TIMELINE_CATEGORIES
+    });
+
+    return async() => {
+      writeOut(file, await tracer.stopTracing());
     };
   }
 
   async #startMemory(
     file: string
   ): Promise<() => Promise<MemoryRecording>> {
-    const tracer = this.#tracer;
-    if (tracer === null) {
-      throw new Error("Recording memory needs a tracer; a persistent context has none");
-    }
+    const tracer = this.#requireTracer("memory");
     await tracer.startTracing(undefined, {
       categories: GC_CATEGORIES
     });
@@ -181,7 +200,7 @@ export class PageRecorder {
       const { profile } = await this.#cdp.send("HeapProfiler.stopSampling");
       await this.#cdp.send("HeapProfiler.disable");
       const trace = Trace.parse((await tracer.stopTracing()).toString("utf8"));
-      writeJson(file, profile);
+      writeOut(file, JSON.stringify(profile));
 
       return {
         heapProfileFile: file,
@@ -190,12 +209,22 @@ export class PageRecorder {
       };
     };
   }
+
+  #requireTracer(
+    recording: string
+  ): Tracer {
+    if (this.#tracer === null) {
+      throw new Error(`Recording ${recording} needs a tracer; a persistent context has none`);
+    }
+
+    return this.#tracer;
+  }
 }
 
-function writeJson(
+function writeOut(
   file: string,
-  value: unknown
+  data: string | Buffer
 ): void {
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, JSON.stringify(value));
+  writeFileSync(file, data);
 }

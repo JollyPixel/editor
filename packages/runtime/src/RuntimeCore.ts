@@ -4,6 +4,7 @@ import {
   type MetricSource
 } from "@jolly-pixel/ui/stats";
 import {
+  FrameRateGovernor,
   GameLoop,
   type FrameSchedulerOptions,
   type GameLoopOptions
@@ -65,6 +66,7 @@ export class RuntimeCore<
   #sessionSettings: RuntimeSessionSettings;
   #logger: RuntimeLogger;
   #session: AbortController | null = null;
+  #governor: FrameRateGovernor | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -110,6 +112,12 @@ export class RuntimeCore<
   async load(
     options: RuntimeCoreLoadOptions<TScene> = {}
   ): Promise<void> {
+    const { maxFps } = options;
+    this.loop.scheduler.maxFps = maxFps ?? Infinity;
+    this.#governor = maxFps === undefined ?
+      new FrameRateGovernor(this.loop.scheduler) :
+      null;
+
     await prepareRuntime(
       this,
       this.#backend,
@@ -158,6 +166,7 @@ export class RuntimeCore<
     this.#backend.start();
     this.loop.start({
       frame: (schedule) => {
+        this.#governor?.observe(schedule);
         this.stats.begin();
         const exit = this.world.tick(schedule);
         this.stats.end();

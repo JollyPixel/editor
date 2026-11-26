@@ -155,9 +155,7 @@ export class VoxelModelEditor {
       toolbar: context.toolbar,
       logger: context.logger
     });
-    await editorRuntime.load(scene, {
-      maxFps: Infinity
-    });
+    await editorRuntime.load(scene);
 
     const editing = await context.logger.step(
       "scene",
