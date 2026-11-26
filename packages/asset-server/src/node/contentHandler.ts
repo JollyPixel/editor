@@ -9,8 +9,10 @@ import zlib from "node:zlib";
 // Import Third-party Dependencies
 import {
   allowMethods,
+  bytesEntry,
+  negotiateEncoding,
   send,
-  type ServoEntry
+  splitTarget
 } from "@openally/servo";
 
 // Import Internal Dependencies
@@ -25,7 +27,8 @@ import {
 
 // CONSTANTS
 const kPrefix = `${ASSET_CONTENT_URL_PATH}/`;
-const kCacheControl = "private, max-age=31536000, immutable";
+const kOneYear = 365 * 24 * 60 * 60;
+const kEncodings = ["br", "gzip"] as const;
 const kBrotli = promisify(zlib.brotliCompress);
 const kGzip = promisify(zlib.gzip);
 const kEncoders: Readonly<Record<ContentEncoding, Encoder>> = {
@@ -40,7 +43,7 @@ const kEncoders: Readonly<Record<ContentEncoding, Encoder>> = {
   })
 };
 
-type ContentEncoding = "br" | "gzip";
+type ContentEncoding = typeof kEncodings[number];
 type Encoder = (bytes: Uint8Array) => Promise<Uint8Array>;
 
 export type ContentHandler = (
@@ -94,22 +97,23 @@ export function createContentHandler(
   ): Promise<void> {
     const compressible = compression && content.compress;
     const encoding = compressible ?
-      acceptedEncoding(request.headers["accept-encoding"]) :
+      negotiateEncoding(request.headers["accept-encoding"], kEncodings) :
       null;
     const body = encoding === null ?
       content.bytes :
       await encode(content.bytes, encoding);
 
-    response.setHeader("Cache-Control", kCacheControl);
     await send(request, response, {
-      entry: bytesEntry(
-        encoding === null ? `"${hash}"` : `"${hash}-${encoding}"`,
-        body
-      ),
+      entry: bytesEntry(body, {
+        etag: encoding === null ? `"${hash}"` : `"${hash}-${encoding}"`
+      }),
       contentType: "application/octet-stream",
       encoding: encoding ?? undefined,
       vary: compressible,
-      lastModified: false
+      lastModified: false,
+      maxAge: kOneYear,
+      immutable: true,
+      private: true
     });
   }
 
@@ -118,10 +122,7 @@ export function createContentHandler(
     response: ServerResponse,
     next: () => void
   ) {
-    const pathname = URL.parse(
-      request.url ?? "",
-      "http://localhost"
-    )?.pathname ?? "";
+    const pathname = splitTarget(request.url ?? "/").path;
     if (!pathname.startsWith(kPrefix)) {
       next();
 
@@ -147,38 +148,5 @@ export function createContentHandler(
 
     respond(request, response, hash, content)
       .catch(() => response.destroy());
-  };
-}
-
-function acceptedEncoding(
-  header: string | undefined
-): ContentEncoding | null {
-  const accepted = new Set<string>();
-  for (const entry of (header ?? "").split(",")) {
-    const [name, ...params] = entry.trim().toLowerCase().split(";");
-    const refused = params.some((param) => /^\s*q\s*=\s*0(?:\.0*)?\s*$/.test(param));
-    if (!refused) {
-      accepted.add(name.trim());
-    }
-  }
-
-  if (accepted.has("br")) {
-    return "br";
-  }
-
-  return accepted.has("gzip") ? "gzip" : null;
-}
-
-function bytesEntry(
-  etag: string,
-  bytes: Uint8Array
-): ServoEntry {
-  return {
-    size: bytes.byteLength,
-    etag,
-    body: (range) => (range === undefined ?
-      bytes :
-      bytes.subarray(range.start, range.end + 1)),
-    [Symbol.asyncDispose]: () => Promise.resolve()
   };
 }

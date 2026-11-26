@@ -53,7 +53,9 @@ describe("safeAssetPath", () => {
       ["sprite ", "reserved"],
       ["CON", "reserved"],
       ["textures/nul.png", "reserved"],
-      ["aux/sprite.png", "reserved"]
+      ["aux/sprite.png", "reserved"],
+      ["JOLLYP~1/state.json", "reserved"],
+      ["textures/sprite~1.png", "reserved"]
     ]) {
       const result = safeAssetPath(input);
 

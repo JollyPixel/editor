@@ -1,9 +1,6 @@
 // Import Third-party Dependencies
 import { DEFAULT_CATALOG_MAX_CONTENT_BYTES } from "@jolly-pixel/asset-server";
-import {
-  bytesSource,
-  servo
-} from "@openally/servo";
+import { sendPayload } from "@openally/servo";
 
 // Import Internal Dependencies
 import type { Middleware } from "../../http/node/Middleware.ts";
@@ -17,7 +14,10 @@ import {
   assertOneOwnerPerComponent,
   readKindSceneComponents
 } from "./kindSceneComponents.ts";
-import { requestPathname } from "../../http/node/requestPathname.ts";
+import { readPathname } from "../../http/node/requestPathname.ts";
+
+// CONSTANTS
+const kJsonContentType = "application/json; charset=utf-8";
 
 export class ManifestRoute {
   readonly source: string;
@@ -48,16 +48,14 @@ export class ManifestRoute {
       maxContentBytes: DEFAULT_CATALOG_MAX_CONTENT_BYTES
     }));
     const bytes = new TextEncoder().encode(this.source);
-    const serve = servo(
-      bytesSource(
-        async(file) => (file === PROJECT_MANIFEST_FILE ? bytes : null),
-        { etag: "content" }
-      ),
-      { dev: true }
-    );
     this.middleware = (request, response, next) => {
-      if (requestPathname(request) === `/${PROJECT_MANIFEST_FILE}`) {
-        serve(request, response, next);
+      if (readPathname(request) === `/${PROJECT_MANIFEST_FILE}`) {
+        sendPayload(request, response, {
+          body: bytes,
+          contentType: kJsonContentType,
+          dev: true,
+          etag: true
+        }).catch(() => response.destroy());
       }
       else {
         next();

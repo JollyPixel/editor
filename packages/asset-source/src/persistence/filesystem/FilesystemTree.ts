@@ -4,7 +4,7 @@ import type { Dir } from "node:fs";
 import path from "node:path";
 
 // Import Third-party Dependencies
-import { containedPath } from "@openally/servo";
+import { ContainedRoot } from "@openally/servo";
 
 // Import Internal Dependencies
 import type { AssetEntryType } from "../../AssetSource.ts";
@@ -26,8 +26,7 @@ interface TreeEntry {
 }
 
 export class FilesystemTree {
-  readonly root: string;
-
+  #contained: ContainedRoot;
   #isIgnored: AssetPathMatcher;
   #isTemporary: (name: string) => boolean;
 
@@ -40,9 +39,13 @@ export class FilesystemTree {
       isTemporary
     } = options;
 
-    this.root = path.resolve(root);
+    this.#contained = new ContainedRoot(root);
     this.#isIgnored = createIgnoredPathMatcher(ignore);
     this.#isTemporary = isTemporary;
+  }
+
+  get root(): string {
+    return this.#contained.root;
   }
 
   isIgnored(
@@ -56,8 +59,8 @@ export class FilesystemTree {
   ): Promise<string> {
     const relative = normalizeAssetPath(assetPath);
     const [realRoot, real] = await Promise.all([
-      containedPath(this.root, "."),
-      containedPath(this.root, relative)
+      this.#contained.resolve("."),
+      this.#contained.resolve(relative)
     ]);
     if (realRoot === null || real === null) {
       throw new AssetPathEscapeError(assetPath);

@@ -16,10 +16,7 @@ import type { AssetSource } from "../AssetSource.ts";
 import { AssetPathNotFoundError } from "../errors/AssetPathNotFoundError.ts";
 import { AssetPathEscapeError } from "../errors/AssetPathEscapeError.ts";
 import { isReservedPath } from "../paths/writableAssetPath.ts";
-import {
-  DEFAULT_CONTENT_TYPES,
-  resolveContentType
-} from "./contentTypes.ts";
+import { DEFAULT_CONTENT_TYPES } from "./contentTypes.ts";
 
 // CONSTANTS
 const kAssetContentSecurityPolicy =
@@ -72,12 +69,10 @@ export function createAssetStaticHandler(
       extensions: [],
       redirect: false,
       dotfiles: "allow",
+      contentTypes: table,
+      defaultContentTypes: false,
       ignore: (assetPath) => isReservedPath(source, assetPath),
-      setHeaders: (response, assetPath) => {
-        response.setHeader(
-          "Content-Type",
-          resolveContentType(assetPath, table)
-        );
+      setHeaders: (response) => {
         response.setHeader(
           "Content-Security-Policy",
           kAssetContentSecurityPolicy
