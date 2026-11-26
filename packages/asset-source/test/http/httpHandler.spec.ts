@@ -79,6 +79,19 @@ describe("createAssetStaticHandler", () => {
     );
   });
 
+  test("prefers the longest matching extension", async() => {
+    const handler = createAssetStaticHandler({
+      source: workspace(),
+      contentTypes: { ".voxelmap.json": "application/x-voxelmap" }
+    });
+
+    const map = await send(handler, {
+      url: "/assets/maps/overworld.voxelmap.json"
+    });
+
+    assert.strictEqual(map.headers["content-type"], "application/x-voxelmap");
+  });
+
   test("ignores the query string", async() => {
     const handler = createAssetStaticHandler({ source: workspace() });
 

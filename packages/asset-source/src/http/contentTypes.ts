@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import { contentType } from "@openally/servo";
-
 export { DEFAULT_CONTENT_TYPE } from "@openally/servo";
 
 export const DEFAULT_CONTENT_TYPES: Readonly<Record<string, string>> = {
@@ -15,10 +12,3 @@ export const DEFAULT_CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".ktx2": "image/ktx2",
   ".svg": "image/svg+xml"
 };
-
-export function resolveContentType(
-  assetPath: string,
-  table: Readonly<Record<string, string>> = DEFAULT_CONTENT_TYPES
-): string {
-  return contentType(assetPath, table);
-}

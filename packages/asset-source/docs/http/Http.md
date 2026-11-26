@@ -51,19 +51,12 @@ case-insensitive filesystem answers `.JOLLYPIXEL/state.json` from
 
 ## Content types
 
-```ts
-resolveContentType(
-  assetPath: string,
-  table?: Readonly<Record<string, string>>
-): string
-```
-
-Picks the longest `table` key (`DEFAULT_CONTENT_TYPES` by default) that ends
-the file name of `assetPath`, ignoring case, so `.voxelmap.json` wins over
-`.json`. Keys include the leading dot. A file named after the extension alone,
-or matching no key, gets `DEFAULT_CONTENT_TYPE` (`application/octet-stream`).
-A textual type without parameters gets `; charset=utf-8`. The lookup is
-servo's `contentType`, run on this table instead of servo's defaults.
+The handler picks the longest table key that ends the file name, ignoring
+case, so `.voxelmap.json` wins over `.json`. Keys include the leading dot. A
+file named after the extension alone, or matching no key, gets
+`DEFAULT_CONTENT_TYPE` (`application/octet-stream`). A textual type without
+parameters gets `; charset=utf-8`. To resolve a type outside the handler, call
+`contentType(assetPath, DEFAULT_CONTENT_TYPES)` from `@openally/servo`.
 
 `DEFAULT_CONTENT_TYPES` covers `.json`, `.txt`, `.png`, `.jpg`, `.jpeg`,
 `.webp`, `.gif`, `.bmp`, `.ktx2` and `.svg`. It leaves out `.html`, `.js` and `.css`,

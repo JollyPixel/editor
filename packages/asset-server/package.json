@@ -63,7 +63,7 @@
     "@jolly-pixel/utils": "workspace:*",
     "@openally/emitt": "1.1.0",
     "@openally/result": "3.1.0",
-    "@openally/servo": "1.1.0",
+    "@openally/servo": "1.2.0",
     "fflate": "0.8.3",
     "loglayer": "9.4.0",
     "lru-cache": "11.5.3",

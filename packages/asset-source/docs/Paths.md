@@ -24,7 +24,7 @@ Use it for input that should be rejected without throwing.
 | `absolute` | `/etc/passwd`, `C:/Windows/win.ini`, `\\server\share` |
 | `traversal` | `../secret`, `textures/../../secret` |
 | `directory` | `.`, `textures/` |
-| `reserved` | a segment with `:`, a trailing dot or space, or a Windows device name (`CON`, `nul.png`) |
+| `reserved` | a segment with `:`, a trailing dot or space, a Windows device name (`CON`, `nul.png`), or an 8.3 short name (`JOLLYP~1`, `sprite~1.png`) |
 
 The rules come from `safePath` in `@openally/servo/paths` and apply on every
 platform. `writableAssetPath` also returns `reserved` for a valid path inside

@@ -66,6 +66,13 @@ describe("createContentHandler", () => {
       encoding: "gzip"
     },
     {
+      title: "gzip when the request prefers it over brotli",
+      compression: true,
+      compress: true,
+      accept: "br;q=0.5, gzip",
+      encoding: "gzip"
+    },
+    {
       title: "raw bytes when the request accepts no encoding",
       compression: true,
       compress: true,

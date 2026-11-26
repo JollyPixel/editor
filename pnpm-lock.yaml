@@ -302,8 +302,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@openally/servo':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.2.0
+        version: 1.2.0
       fflate:
         specifier: 0.8.3
         version: 0.8.3
@@ -342,8 +342,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@openally/servo':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.2.0
+        version: 1.2.0
       chokidar:
         specifier: ^6.0.0
         version: 6.0.0
@@ -1921,8 +1921,8 @@ importers:
         specifier: workspace:*
         version: link:../scripting
       '@openally/servo':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.2.0
+        version: 1.2.0
       cookie:
         specifier: 2.0.2
         version: 2.0.2
@@ -2037,8 +2037,8 @@ importers:
         specifier: workspace:*
         version: link:../scripting
       '@openally/servo':
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.2.0
+        version: 1.2.0
 
   packages/terrain-renderer:
     dependencies:
@@ -3159,8 +3159,8 @@ packages:
     resolution: {integrity: sha512-jKCj1nmPlpZLyKvBqW+G0wdPGsapapqMSnJkAnhWGuiTJpBucwmX8764VWgfBTwa17RPkpk7ofIxLxOQwXh5RQ==}
     engines: {node: '>=24.x'}
 
-  '@openally/servo@1.1.0':
-    resolution: {integrity: sha512-sqCX7O6tjPd2w2TFGmzjI+WlTnFLVQdXV6KgKfgQjylnYgIawLIsfTmbGD/6BUdtQlXL82Gmx7fs7gvX3m5Bvw==}
+  '@openally/servo@1.2.0':
+    resolution: {integrity: sha512-ZQ4ZxeTDgxvN0MX25ZnZ1GWpDb6PyvvjAA96tJrhrFg8hiLE4AyE6QstZYqSr6Ub/P8azfEkSjxkM869qZTCyA==}
     engines: {node: '>=24.x'}
 
   '@oxc-project/types@0.156.0':
@@ -6767,7 +6767,7 @@ snapshots:
 
   '@openally/result@3.1.0': {}
 
-  '@openally/servo@1.1.0': {}
+  '@openally/servo@1.2.0': {}
 
   '@oxc-project/types@0.156.0': {}
 

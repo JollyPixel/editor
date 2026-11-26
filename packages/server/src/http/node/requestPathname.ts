@@ -1,13 +1,13 @@
 // Import Node.js Dependencies
 import type { IncomingMessage } from "node:http";
 
+// Import Third-party Dependencies
+import { splitTarget } from "@openally/servo";
+
 export function requestPathname(
   request: IncomingMessage
 ): string {
-  return URL.parse(
-    request.url ?? "/",
-    "http://localhost"
-  )?.pathname ?? "/";
+  return splitTarget(request.url ?? "/").path;
 }
 
 export function readPathname(

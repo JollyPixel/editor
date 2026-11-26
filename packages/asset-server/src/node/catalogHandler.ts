@@ -1,5 +1,4 @@
 // Import Node.js Dependencies
-import { createHash } from "node:crypto";
 import type {
   IncomingMessage,
   ServerResponse
@@ -9,8 +8,8 @@ import type {
 import { CATALOG_URL_PATH } from "@jolly-pixel/asset";
 import {
   allowMethods,
-  send,
-  type ServoEntry
+  sendPayload,
+  splitTarget
 } from "@openally/servo";
 
 // Import Internal Dependencies
@@ -35,8 +34,7 @@ export interface CatalogHandlerOptions {
 
 interface CatalogBody {
   readonly revision: number;
-  readonly bytes: Buffer;
-  readonly etag: string;
+  readonly bytes: Uint8Array;
 }
 
 export function createCatalogHandler(
@@ -50,11 +48,9 @@ export function createCatalogHandler(
 
   function currentBody(): CatalogBody {
     if (body?.revision !== projection.revision) {
-      const bytes = Buffer.from(JSON.stringify(projection.snapshot()));
       body = {
         revision: projection.revision,
-        bytes,
-        etag: `"${createHash("sha1").update(bytes).digest("base64url")}"`
+        bytes: Buffer.from(JSON.stringify(projection.snapshot()))
       };
     }
 
@@ -66,11 +62,7 @@ export function createCatalogHandler(
     response: ServerResponse,
     next: () => void
   ) {
-    const requestUrl = URL.parse(
-      request.url ?? "",
-      "http://localhost"
-    );
-    if (requestUrl?.pathname !== path) {
+    if (splitTarget(request.url ?? "/").path !== path) {
       next();
 
       return;
@@ -80,23 +72,11 @@ export function createCatalogHandler(
       return;
     }
 
-    response.setHeader("Cache-Control", "no-cache");
-    send(request, response, {
-      entry: bytesEntry(currentBody()),
-      contentType: kJsonContentType
+    sendPayload(request, response, {
+      body: currentBody().bytes,
+      contentType: kJsonContentType,
+      cacheControl: "no-cache",
+      etag: true
     }).catch(() => response.destroy());
-  };
-}
-
-function bytesEntry(
-  { bytes, etag }: CatalogBody
-): ServoEntry {
-  return {
-    size: bytes.byteLength,
-    etag,
-    body: (range) => (range === undefined ?
-      bytes :
-      bytes.subarray(range.start, range.end + 1)),
-    [Symbol.asyncDispose]: () => Promise.resolve()
   };
 }

@@ -11,6 +11,7 @@ import type { Duplex } from "node:stream";
 // Import Third-party Dependencies
 import { DEFAULT_WEBSOCKET_PATH } from "@jolly-pixel/network";
 import { HandshakePolicy } from "@jolly-pixel/network/node";
+import { splitTarget } from "@openally/servo";
 
 // Import Internal Dependencies
 import {
@@ -233,7 +234,8 @@ export class ServerBackend implements AsyncDisposable {
     this.#projects.acquire(location.slug).then(
       (lease) => {
         response.once("close", () => lease[Symbol.dispose]());
-        request.url = location.pathname + requestSearch(request);
+        request.url = location.pathname +
+          splitTarget(request.url ?? "/").search;
         lease.project.middleware(request, response, next);
       },
       (error: unknown) => sendOpenFailure(response, error)
@@ -262,15 +264,6 @@ export class ServerBackend implements AsyncDisposable {
   }
 }
 
-function requestSearch(
-  request: IncomingMessage
-): string {
-  const url = request.url ?? "";
-  const index = url.indexOf("?");
-
-  return index === -1 ? "" : url.slice(index);
-}
-
 function redirectToFolder(
   request: IncomingMessage,
   response: ServerResponse,
@@ -279,7 +272,7 @@ function redirectToFolder(
   response.statusCode = 308;
   response.setHeader(
     "location",
-    `${PROJECT_PAGES_PREFIX}${slug}/${requestSearch(request)}`
+    `${PROJECT_PAGES_PREFIX}${slug}/${splitTarget(request.url ?? "/").search}`
   );
   response.end();
 }

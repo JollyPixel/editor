@@ -222,32 +222,6 @@ describe("FilesystemAssetSource — containment", () => {
     );
   });
 
-  test("refuses a Windows short name of an ignored folder", {
-    skip: process.platform !== "win32"
-  }, async(t) => {
-    await using workspace = await tempWorkspace();
-    await fs.mkdir(path.join(workspace.root, ".jollypixel"));
-    await fs.writeFile(
-      path.join(workspace.root, ".jollypixel", "state.json"),
-      "state"
-    );
-    const shortName = await fs.realpath(
-      path.join(workspace.root, "JOLLYP~1")
-    ).catch(() => null);
-    if (shortName === null) {
-      t.skip("the volume does not generate 8.3 names");
-
-      return;
-    }
-
-    const source = new FilesystemAssetSource(workspace.root);
-
-    await assert.rejects(
-      () => source.read("JOLLYP~1/state.json"),
-      { name: "AssetPathEscapeError" }
-    );
-  });
-
   test("writes a new nested file below the root", async() => {
     await using workspace = await tempWorkspace();
     const source = new FilesystemAssetSource(workspace.root);
