@@ -13,7 +13,6 @@ import {
   Ok,
   type Result
 } from "@openally/result";
-import { match } from "ts-pattern";
 import {
   asError,
   TaskChain
@@ -279,63 +278,80 @@ export class CatalogExtension extends Extension<CatalogCommand> {
   ): Promise<Result<CatalogApplied, Error>> {
     const { writer, folders, tags } = this.#backend;
 
-    return match(command)
-      .with({ type: CATALOG_CREATE }, (create) => this.#create(
-        create,
-        actor,
-        progress
-      ))
-      .with({ type: CATALOG_RENAME }, ({ type, renames }) => this.#applyEach(
-        type,
-        renames,
-        (rename) => writer.rename({
-          assetId: rename.assetId,
-          to: rename.to,
-          actor
-        })
-      ))
-      .with({ type: CATALOG_DELETE }, ({ type, assetIds, force }) => this.#applyEach(
-        type,
-        assetIds,
-        (assetId) => this.#remove(assetId, force, actor)
-      ))
-      .with({ type: CATALOG_CREATE_FOLDER }, async({ type, path }) => Ok({
-        command: type,
-        path: await folders.create(path)
-      }))
-      .with({ type: CATALOG_MOVE_FOLDER }, async({ type, from, to }) => Ok({
-        command: type,
-        from,
-        path: await folders.move(from, to)
-      }))
-      .with({ type: CATALOG_DELETE_FOLDER }, async({ type, path }) => Ok({
-        command: type,
-        path: await folders.delete(path)
-      }))
-      .with({ type: CATALOG_EXPORT }, (exported) => this.#export(exported))
-      .with({ type: CATALOG_PLAN }, (plan) => this.#plan(plan))
-      .with({ type: CATALOG_IMPORT }, (imported) => this.#import(imported, actor))
-      .with({ type: CATALOG_TAGS }, async({ type, assetId }) => Ok({
-        command: type,
-        assetId,
-        tags: await tags.list(assetId)
-      }))
-      .with({ type: CATALOG_TAG }, (tag) => this.#tag(tag, actor))
-      .with({ type: CATALOG_UNTAG }, async({ type, assetId, name }) => (
-        await tags.delete(assetId, name)
-      )
-        .map(() => {
+    switch (command.type) {
+      case CATALOG_CREATE:
+        return this.#create(command, actor, progress);
+      case CATALOG_RENAME:
+        return this.#applyEach(
+          command.type,
+          command.renames,
+          (rename) => writer.rename({
+            assetId: rename.assetId,
+            to: rename.to,
+            actor
+          })
+        );
+      case CATALOG_DELETE: {
+        const { type, assetIds, force } = command;
+
+        return this.#applyEach(
+          type,
+          assetIds,
+          (assetId) => this.#remove(assetId, force, actor)
+        );
+      }
+      case CATALOG_CREATE_FOLDER:
+        return Ok({
+          command: command.type,
+          path: await folders.create(command.path)
+        });
+      case CATALOG_MOVE_FOLDER:
+        return Ok({
+          command: command.type,
+          from: command.from,
+          path: await folders.move(command.from, command.to)
+        });
+      case CATALOG_DELETE_FOLDER:
+        return Ok({
+          command: command.type,
+          path: await folders.delete(command.path)
+        });
+      case CATALOG_EXPORT:
+        return this.#export(command);
+      case CATALOG_PLAN:
+        return this.#plan(command);
+      case CATALOG_IMPORT:
+        return this.#import(command, actor);
+      case CATALOG_TAGS:
+        return Ok({
+          command: command.type,
+          assetId: command.assetId,
+          tags: await tags.list(command.assetId)
+        });
+      case CATALOG_TAG:
+        return this.#tag(command, actor);
+      case CATALOG_UNTAG: {
+        const { type, assetId, name } = command;
+
+        return (await tags.delete(assetId, name)).map(() => {
           return {
             command: type,
             assetId,
             name
           };
-        }))
-      .with({ type: CATALOG_RESTORE }, (restore) => this.#restore(restore, actor))
-      .with({ type: CATALOG_REPLACE }, (replace) => this.#replace(replace, actor))
-      .with({ type: CATALOG_READ }, (read) => this.#read(read))
-      .with({ type: CATALOG_PREVIEW }, (preview) => this.#preview(preview))
-      .exhaustive();
+        });
+      }
+      case CATALOG_RESTORE:
+        return this.#restore(command, actor);
+      case CATALOG_REPLACE:
+        return this.#replace(command, actor);
+      case CATALOG_READ:
+        return this.#read(command);
+      case CATALOG_PREVIEW:
+        return this.#preview(command);
+      default:
+        return command satisfies never;
+    }
   }
 
   async #preview(

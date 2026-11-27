@@ -1,6 +1,3 @@
-// Import Third-party Dependencies
-import { match } from "ts-pattern";
-
 // Import Internal Dependencies
 import {
   Extension,
@@ -233,12 +230,12 @@ export class WorkerExtensionProxy extends Extension {
   #handleWorkerMessage(
     message: WorkerToMainMessage
   ): void {
-    match(message)
-      .with({ type: "ready" }, (message) => {
+    switch (message.type) {
+      case "ready":
         this.#implemented = new Set(message.methods);
         this.#resolveReady?.();
-      })
-      .with({ type: "dispatch-result" }, (message) => {
+        break;
+      case "dispatch-result":
         if (message.ok) {
           this.#dispatchCalls.resolve(message.id, undefined);
         }
@@ -248,26 +245,32 @@ export class WorkerExtensionProxy extends Extension {
             new Error(message.error ?? "worker dispatch failed")
           );
         }
-      })
-      .with({ type: "context-call" }, (message) => {
+        break;
+      case "context-call":
         this.#handleContextCall(message);
-      })
-      .exhaustive();
+        break;
+      default:
+        message satisfies never;
+    }
   }
 
   #handleContextCall(
     call: WorkerContextCall
   ): void {
-    match(call)
-      .with({ method: "room.broadcast" }, (call) => {
+    switch (call.method) {
+      case "room.broadcast": {
         const [payload, options] = call.args;
         this.#roomBroadcast?.broadcast(payload, options);
-      })
-      .with({ method: "client.send" }, (call) => {
+        break;
+      }
+      case "client.send": {
         const [clientId, data, options] = call.args;
         this.#roomBroadcast?.sendTo(clientId, data, options);
-      })
-      .exhaustive();
+        break;
+      }
+      default:
+        call satisfies never;
+    }
   }
 
   #handleFailure(

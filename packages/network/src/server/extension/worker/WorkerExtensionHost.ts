@@ -4,9 +4,6 @@ import {
   workerData
 } from "node:worker_threads";
 
-// Import Third-party Dependencies
-import { match } from "ts-pattern";
-
 // Import Internal Dependencies
 import type {
   Extension,
@@ -81,8 +78,8 @@ async function dispatch(
   extension: Extension,
   message: WorkerDispatch
 ): Promise<void> {
-  await match(message)
-    .with({ method: "onClientConnect" }, (message) => {
+  switch (message.method) {
+    case "onClientConnect": {
       const [clientId, peer] = message.args;
 
       return extension.onClientConnect?.(
@@ -90,24 +87,24 @@ async function dispatch(
         peer,
         createContext(message.identity)
       );
-    })
-    .with({ method: "onClientDisconnect" }, (message) => {
+    }
+    case "onClientDisconnect": {
       const [clientId] = message.args;
 
       return extension.onClientDisconnect?.(
         clientId,
         createContext(message.identity)
       );
-    })
-    .with({ method: "onResync" }, (message) => {
+    }
+    case "onResync": {
       const [clientId] = message.args;
 
       return extension.onResync?.(
         clientId,
         createContext(message.identity)
       );
-    })
-    .with({ method: "onMessage" }, (message) => {
+    }
+    case "onMessage": {
       const [clientId, payload] = message.args;
 
       return extension.onMessage?.(
@@ -115,8 +112,10 @@ async function dispatch(
         payload,
         createContext(message.identity)
       );
-    })
-    .exhaustive();
+    }
+    default:
+      return message satisfies never;
+  }
 }
 
 const mod = await import(modulePath);
