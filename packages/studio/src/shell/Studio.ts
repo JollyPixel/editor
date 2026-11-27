@@ -39,6 +39,7 @@ import {
 import {
   SETTINGS_TAB_ID,
   StudioSession,
+  type AssetOpenOptions,
   type StudioSessionOptions
 } from "./StudioSession.ts";
 import { SettingsSections } from "./settings/SettingsSections.ts";
@@ -422,10 +423,12 @@ export class Studio extends LitElement implements GolemConsoleHost {
   }
 
   openAsset(
-    assetId: string
+    assetId: string,
+    options: Pick<AssetOpenOptions, "tag"> = {}
   ): Promise<boolean> {
     return this.#session?.openAsset(
-      assetId
+      assetId,
+      options
     ) ?? Promise.resolve(false);
   }
 
@@ -516,6 +519,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
                 .kinds=${this._assets?.kinds ?? AssetKindSet.EMPTY}
                 .browserState=${this.#browserState}
                 @avatar-change=${this.#replaceAvatar}
+                @asset-open=${this.#onAssetOpen}
               ></studio-settings>
             `)}</div>
           </div>
@@ -597,7 +601,8 @@ export class Studio extends LitElement implements GolemConsoleHost {
   readonly #onAssetOpen = (
     event: HTMLElementEventMap["asset-open"]
   ): void => {
-    void this.openAsset(event.detail.assetId);
+    const { assetId, tag } = event.detail;
+    void this.openAsset(assetId, tag === undefined ? {} : { tag });
   };
 
   readonly #logError = (

@@ -9,7 +9,6 @@ import assert from "node:assert/strict";
 import type { AccountRoles } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
-import { SETTINGS_CHANGED } from "#src/audit/node/AuditLog.ts";
 import {
   DEFAULT_PHYSICS,
   DEFAULT_PROJECT_SECTIONS
@@ -46,10 +45,9 @@ describe("ProjectSettings", () => {
 
     assert.equal(harness.voxelMapChunkSize(), 8);
     assert.deepEqual(harness.project.file.kinds.get(kVoxelMapKinds), after[kVoxelMapKinds]);
-    const [event] = await harness.audit.store.reader.listAll();
-    assert.equal(event.eventType, SETTINGS_CHANGED);
+    const [event] = harness.auditedSettings();
     assert.deepEqual(event.actor, { type: "user", id: admin.id });
-    assert.deepEqual(event.eventData, {
+    assert.deepEqual(event.change, {
       section: "kinds",
       before: kinds,
       after
@@ -69,8 +67,8 @@ describe("ProjectSettings", () => {
     };
     assert.deepEqual(reply.kindFilter, after);
     assert.deepEqual(harness.project.file.data.kindFilter, after);
-    const [event] = await harness.audit.store.reader.listAll();
-    assert.deepEqual(event.eventData, {
+    const [event] = harness.auditedSettings();
+    assert.deepEqual(event.change, {
       section: "kindFilter",
       before: {
         hidden: []
@@ -94,8 +92,8 @@ describe("ProjectSettings", () => {
     await harness.update(admin, "physics", after);
 
     assert.deepEqual(harness.project.file.data.physics, after);
-    const [event] = await harness.audit.store.reader.listAll();
-    assert.deepEqual(event.eventData, {
+    const [event] = harness.auditedSettings();
+    assert.deepEqual(event.change, {
       section: "physics",
       before: DEFAULT_PHYSICS,
       after
@@ -114,12 +112,31 @@ describe("ProjectSettings", () => {
 
     assert.deepEqual(harness.snapshotPolicies, [after]);
     assert.deepEqual(harness.project.file.data.snapshot, after);
-    const [event] = await harness.audit.store.reader.listAll();
-    assert.deepEqual(event.eventData, {
+    const [event] = harness.auditedSettings();
+    assert.deepEqual(event.change, {
       section: "snapshot",
       before: DEFAULT_PROJECT_SECTIONS.snapshot,
       after
     });
+  });
+
+  test("a new audit retention reaches the recorder, the project file and the audit log", async() => {
+    await using harness = await settingsHarness();
+    const admin = await harness.register("Alice");
+    const after = {
+      keepRowsDays: 365,
+      keepVersionsDays: null
+    };
+
+    await harness.update(admin, "audit", after);
+
+    assert.deepEqual(harness.retentionPolicies, [after]);
+    assert.deepEqual(harness.project.file.data.audit, after);
+    assert.deepEqual(harness.auditedSettings().map(({ change }) => change), [{
+      section: "audit",
+      before: DEFAULT_PROJECT_SECTIONS.audit,
+      after
+    }]);
   });
 
   test("new access rules apply at once and reconnect only the holders of a changed role", async() => {

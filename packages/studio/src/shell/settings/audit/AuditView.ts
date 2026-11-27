@@ -18,7 +18,8 @@ import "@jolly-pixel/ui/elements/message";
 import {
   ACCOUNTS_CATEGORY,
   type AuditCategory,
-  type AuditRow
+  type AuditRow,
+  type AuditVersions
 } from "@jolly-pixel/server";
 
 // Import Internal Dependencies
@@ -26,6 +27,7 @@ import type { StudioSignedIn } from "../../../accounts/StudioSignedIn.ts";
 import type { AuditPages } from "../../../audit/AuditPages.ts";
 import { RemoteStateController } from "../../RemoteStateController.ts";
 import { AuditRowText } from "../../../audit/AuditRowText.ts";
+import { assetOpenEvent } from "../../assets/assetOpen.ts";
 
 // CONSTANTS
 const kAny = "";
@@ -127,6 +129,12 @@ export class AuditView extends LitElement {
       font-size: 0.9em;
     }
 
+    .versions {
+      display: flex;
+      gap: var(--jolly-space-1);
+      margin-top: var(--jolly-space-1);
+    }
+
     pre {
       margin: var(--jolly-space-1) 0 0;
       padding: var(--jolly-space-2);
@@ -157,7 +165,7 @@ export class AuditView extends LitElement {
     if (changed.has("user") && this.user !== null) {
       const pages = this.user.auditPages();
       this.#pages.attach(pages);
-      void pages.reload();
+      void pages.refresh();
     }
   }
 
@@ -190,10 +198,10 @@ export class AuditView extends LitElement {
   ): TemplateResult {
     const { data } = pages.filters;
     const canManageAccess = user.rights.allows("manageAccess");
-    const actors = [...user.roster].map((entry) => {
+    const actors = pages.actors.map((actor) => {
       return {
-        value: entry.id,
-        label: entry.username
+        value: actor.key,
+        label: actor.name
       };
     });
     const assets = this.catalog === null ? [] : [...this.catalog.records()]
@@ -267,8 +275,13 @@ export class AuditView extends LitElement {
         <jolly-button
           data-action="refresh"
           ?disabled=${pages.loading}
-          @click=${() => pages.reload()}
+          @click=${() => pages.refresh()}
         >Refresh</jolly-button>
+        <jolly-button
+          data-action="export"
+          ?disabled=${pages.loading}
+          @click=${() => pages.export()}
+        >Export CSV</jolly-button>
       </div>
     `;
   }
@@ -290,6 +303,9 @@ export class AuditView extends LitElement {
         ${text.detail === null ? nothing : html`
           <span class="detail">${text.detail}</span>
         `}
+        ${row.type === "edits" && row.versions !== null ?
+          this.#versions(row.asset.id, row.versions) :
+          nothing}
         ${row.type === "settings" ? html`
           <details>
             <summary>Before and after</summary>
@@ -298,6 +314,24 @@ export class AuditView extends LitElement {
           </details>
         ` : nothing}
       </li>
+    `;
+  }
+
+  #versions(
+    assetId: string,
+    versions: AuditVersions
+  ): TemplateResult {
+    return html`
+      <div class="versions">
+        <jolly-button
+          data-action="open-before"
+          @click=${() => this.dispatchEvent(assetOpenEvent(assetId, versions.from))}
+        >Open before</jolly-button>
+        <jolly-button
+          data-action="open-after"
+          @click=${() => this.dispatchEvent(assetOpenEvent(assetId, versions.to))}
+        >Open after</jolly-button>
+      </div>
     `;
   }
 }

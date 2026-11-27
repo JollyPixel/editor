@@ -21,11 +21,12 @@ import {
 } from "../helpers/session/catalog.ts";
 
 describe("EditorTags", () => {
-  test("lists named tags and restore points apart, newest first", async() => {
+  test("lists named tags and restore points apart, newest first, without history points", async() => {
     const { catalog, tags } = fakeTags();
     catalog.stored = [
       assetTag("v1", 2),
       assetTag("restore/5", 5),
+      assetTag("history/6", 6),
       assetTag("v2", 7)
     ];
 

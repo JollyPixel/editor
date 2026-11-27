@@ -65,6 +65,13 @@ export function counterHandler(): AssetKindHandler<CounterState, CounterCommand>
       state: CounterState
     ): Promise<Uint8Array> {
       return Promise.resolve(bytes(String(state.value)));
+    },
+
+    summarizeChange(
+      before: CounterState,
+      after: CounterState
+    ): string {
+      return `${before.value} to ${after.value}`;
     }
   };
 }

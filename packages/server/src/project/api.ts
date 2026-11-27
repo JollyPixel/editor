@@ -9,6 +9,7 @@ import {
 } from "./KindOptions.ts";
 import {
   accessSectionSchema,
+  auditSectionSchema,
   gameSectionSchema,
   kindFilterSchema,
   physicsSectionSchema,
@@ -73,7 +74,8 @@ export const SETTINGS_SECTIONS = {
   kindFilter: kindFilterSchema,
   game: gameSectionSchema,
   physics: physicsSectionSchema,
-  snapshot: snapshotSectionSchema
+  snapshot: snapshotSectionSchema,
+  audit: auditSectionSchema
 } as const;
 
 export const settingsSectionSchema = z.keyof(z.object(SETTINGS_SECTIONS));

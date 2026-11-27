@@ -60,6 +60,7 @@ import {
   type CatalogStage,
   type CatalogTagCommand
 } from "../protocol.ts";
+import type { CatalogActivity } from "../CatalogActivity.ts";
 import type { CatalogFolders } from "../CatalogFolders.ts";
 import type { AssetPreviews } from "../derived/AssetPreviews.ts";
 import { CatalogOutbox } from "./CatalogOutbox.ts";
@@ -81,6 +82,7 @@ import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError
 export const DEFAULT_CATALOG_MAX_CONTENT_BYTES = 16 * 1024 * 1024;
 
 export interface CatalogBackend extends ArchiveBackend {
+  readonly activity: CatalogActivity;
   readonly folders: CatalogFolders;
   readonly tags: AssetTags;
   readonly previews: AssetPreviews;
@@ -211,14 +213,21 @@ export class CatalogExtension extends Extension<CatalogCommand> {
         stage
       } satisfies CatalogMessage);
     }
+    const actor = toActor(context.identity);
     const result = await this.#execute(
       command,
-      toActor(context.identity),
+      actor,
       progress
     )
       .catch((error: unknown) => Err(asError(error)));
 
     this.#outbox.flush();
+    if (result.ok) {
+      this.#backend.activity.emit("applied", {
+        applied: result.val,
+        actor
+      });
+    }
     context.room.sendTo(clientId, result.ok ?
       {
         type: CATALOG_APPLIED,
@@ -296,6 +305,7 @@ export class CatalogExtension extends Extension<CatalogCommand> {
       }))
       .with({ type: CATALOG_MOVE_FOLDER }, async({ type, from, to }) => Ok({
         command: type,
+        from,
         path: await folders.move(from, to)
       }))
       .with({ type: CATALOG_DELETE_FOLDER }, async({ type, path }) => Ok({

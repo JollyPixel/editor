@@ -33,6 +33,7 @@ import type { EditorRuntime } from "../runtime/EditorRuntime.ts";
 import { EditorArchives } from "../session/EditorArchives.ts";
 import { rememberQueryUsername } from "../session/rememberQueryUsername.ts";
 import { PageState } from "../mount/PageState.ts";
+import type { ShellChannel } from "../shell/ShellChannel.ts";
 
 // CONSTANTS
 export const DEBUG_HANDLE = "jollyEditor";
@@ -161,6 +162,7 @@ export class StandaloneEditor<
       this.#placement = placed;
       this.#mount = editorMount;
       this.#followPage();
+      this.#followShell(launch.shell, editorMount);
 
       return this;
     }
@@ -247,6 +249,16 @@ export class StandaloneEditor<
     });
   }
 
+  #followShell(
+    shell: ShellChannel | null,
+    mount: EditorMount<THandle>
+  ): void {
+    shell?.onView((tag) => {
+      void mount.navigate(mount.current.launch.target.value, tag)
+        .catch(() => undefined);
+    }, this.#leaving.signal);
+  }
+
   async #readLaunch(
     options: StandaloneMountOptions,
     boot: BootTrace,
@@ -267,7 +279,7 @@ export class StandaloneEditor<
     );
 
     return queried?.target.equals(launch.target) ?
-      launch.viewing(queried.tag) :
+      launch.viewing(queried.tag ?? launch.tag) :
       launch;
   }
 }

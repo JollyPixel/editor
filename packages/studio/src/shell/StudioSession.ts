@@ -48,6 +48,10 @@ export interface AssetOpenOptions extends EditorTabOpenOptions {
    * Handed to the asset's editor, which shows what it names.
    */
   reveal?: string;
+  /**
+   * Opens the asset on this tagged version, read-only.
+   */
+  tag?: string;
 }
 
 export interface StudioSessionRenewal {
@@ -220,7 +224,7 @@ export class StudioSession {
     assetId: string,
     options: AssetOpenOptions = {}
   ): Promise<boolean> {
-    const { reveal, ...tabOptions } = options;
+    const { reveal, tag, ...tabOptions } = options;
     const record = this.#catalog.record(assetId);
     if (record === undefined) {
       return false;
@@ -243,6 +247,9 @@ export class StudioSession {
     );
     if (opened && reveal !== undefined) {
       this.#frames.reveal(assetId, reveal);
+    }
+    if (opened && tag !== undefined) {
+      this.#frames.view(assetId, tag);
     }
 
     return opened;

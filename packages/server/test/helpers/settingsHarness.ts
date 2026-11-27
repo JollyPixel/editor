@@ -15,6 +15,7 @@ import {
 } from "@jolly-pixel/asset.voxel-map";
 
 // Import Internal Dependencies
+import type { SettingsEntry } from "#src/audit/node/AuditEntry.ts";
 import { AuditLog } from "#src/audit/node/AuditLog.ts";
 import { ProjectSettings } from "#src/project/node/ProjectSettings.ts";
 import type { Project } from "#src/project/node/Project.ts";
@@ -24,6 +25,7 @@ import type {
   SettingsSectionName,
   SettingsUpdateSections
 } from "#src/project/api.ts";
+import type { AuditSection } from "#src/project/ProjectSections.ts";
 import { openTestProject } from "./testProject.ts";
 
 // CONSTANTS
@@ -37,6 +39,8 @@ export interface SettingsHarness extends AsyncDisposable {
   voxelMapChunkSize(): number;
   revoked: string[];
   snapshotPolicies: SnapshotPolicy[];
+  retentionPolicies: AuditSection[];
+  auditedSettings(): Pick<SettingsEntry, "actor" | "change">[];
   register(username: string): Promise<Member>;
   update<TName extends SettingsSectionName>(
     account: Member,
@@ -67,6 +71,7 @@ export async function settingsHarness(): Promise<SettingsHarness> {
   const audit = await AuditLog.open(null);
   const revoked: string[] = [];
   const snapshotPolicies: SnapshotPolicy[] = [];
+  const retentionPolicies: AuditSection[] = [];
   const settings = new ProjectSettings({
     project,
     realm,
@@ -87,7 +92,12 @@ export async function settingsHarness(): Promise<SettingsHarness> {
         assetServer.backend.replaceSnapshotPolicy(policy);
       }
     },
-    audit
+    audit,
+    retention: {
+      replaceRetention: (policy) => {
+        retentionPolicies.push(policy);
+      }
+    }
   });
   function updateAll(
     account: Member,
@@ -105,6 +115,15 @@ export async function settingsHarness(): Promise<SettingsHarness> {
     audit,
     revoked,
     snapshotPolicies,
+    retentionPolicies,
+    auditedSettings: () => audit.page({
+      category: "settings",
+      withoutAccounts: false
+    }, 100)
+      .toReversed()
+      .flatMap(({ entry }) => (entry.type === "settings" ?
+        [{ actor: entry.actor, change: entry.change }] :
+        [])),
     settings,
     update: (account, section, body) => updateAll(account, {
       [section]: body
@@ -131,7 +150,7 @@ export async function settingsHarness(): Promise<SettingsHarness> {
     },
     async [Symbol.asyncDispose]() {
       await assetServer.close();
-      await audit[Symbol.asyncDispose]();
+      audit.close();
       accounts[Symbol.dispose]();
     }
   };

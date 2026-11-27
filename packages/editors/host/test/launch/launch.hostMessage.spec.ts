@@ -134,6 +134,23 @@ describe("HostMessageLaunchSource", () => {
     assert.deepEqual(received, ["object:spawn"]);
   });
 
+  test("views the tag the launch names", async(context) => {
+    const parent = fakeParent();
+    context.after(frameIn(parent));
+
+    const pending = new HostMessageLaunchSource({
+      origins: [SHELL_ORIGIN]
+    }).read();
+    postFromParent(parent, {
+      type: "jolly-launch",
+      target: "from-host",
+      tag: "history/12"
+    });
+    const launch = await pending;
+
+    assert.equal(launch?.tag, "history/12");
+  });
+
   test("gives the shell channel the ports the launch carries", async(context) => {
     const parent = fakeParent();
     context.after(frameIn(parent));

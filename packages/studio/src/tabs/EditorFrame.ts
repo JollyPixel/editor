@@ -11,6 +11,8 @@ export interface EditorFrameOptions {
   origin: string;
 }
 
+type LaunchHints = Pick<LaunchMessage, "reveal" | "tag">;
+
 export class EditorFrame {
   readonly id: string;
   readonly element: HTMLIFrameElement;
@@ -18,7 +20,7 @@ export class EditorFrame {
 
   #origin: string;
   #stops: Array<() => void> | null = null;
-  #unsentReveal: string | null = null;
+  #unsent: LaunchHints = {};
 
   constructor(
     options: EditorFrameOptions
@@ -38,16 +40,16 @@ export class EditorFrame {
   }
 
   launch(
-    message: Omit<LaunchMessage, "reveal">,
+    message: Omit<LaunchMessage, keyof LaunchHints>,
     stops: Array<() => void>
   ): void {
     this.#stops = stops;
-    const reveal = this.#unsentReveal;
-    this.#unsentReveal = null;
+    const hints = this.#unsent;
+    this.#unsent = {};
     this.#send(
       {
         ...message,
-        ...reveal === null ? {} : { reveal }
+        ...hints
       },
       Object.values(message.ports).filter((port) => port !== undefined)
     );
@@ -56,15 +58,19 @@ export class EditorFrame {
   reveal(
     key: string
   ): void {
-    if (this.#stops === null) {
-      this.#unsentReveal = key;
-    }
-    else {
-      this.post({
-        type: "jolly-reveal",
-        key
-      });
-    }
+    this.#direct({ reveal: key }, {
+      type: "jolly-reveal",
+      key
+    });
+  }
+
+  view(
+    tag: string
+  ): void {
+    this.#direct({ tag }, {
+      type: "jolly-view",
+      tag
+    });
   }
 
   post(
@@ -83,6 +89,21 @@ export class EditorFrame {
   dispose(): void {
     this.closePorts();
     this.element.remove();
+  }
+
+  #direct(
+    hint: LaunchHints,
+    message: ShellMessage
+  ): void {
+    if (this.#stops === null) {
+      this.#unsent = {
+        ...this.#unsent,
+        ...hint
+      };
+    }
+    else {
+      this.post(message);
+    }
   }
 
   #send(

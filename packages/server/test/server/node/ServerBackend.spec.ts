@@ -105,6 +105,7 @@ describe("ServerBackend", () => {
         )).json()
       );
       assert.deepEqual(audit.rows[0].actor, {
+        key: `user:agent:${token.id}`,
         id: `agent:${token.id}`,
         name: "Builder (Bob)",
         kind: "agent"

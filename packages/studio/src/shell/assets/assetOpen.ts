@@ -1,14 +1,16 @@
 export interface AssetOpenDetail {
   assetId: string;
+  tag?: string;
 }
 
 export function assetOpenEvent(
-  assetId: string
+  assetId: string,
+  tag?: string
 ): CustomEvent<AssetOpenDetail> {
   return new CustomEvent<AssetOpenDetail>("asset-open", {
     bubbles: true,
     composed: true,
-    detail: { assetId }
+    detail: tag === undefined ? { assetId } : { assetId, tag }
   });
 }
 

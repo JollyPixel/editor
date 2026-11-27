@@ -1,6 +1,7 @@
 // Import Third-party Dependencies
 import {
   KindFilter,
+  type AuditSection,
   type GameSection,
   type PhysicsSection,
   type ProjectSettingsReply,
@@ -21,6 +22,7 @@ interface DraftValues {
   game: GameSection;
   physics: PhysicsSection;
   snapshot: SnapshotSection;
+  audit: AuditSection;
 }
 
 export type DraftValue<
@@ -67,6 +69,10 @@ export class ProjectDrafts {
       snapshot: new SectionDraft({
         saved: (reply) => reply.snapshot,
         body: (snapshot) => snapshot
+      }, changed),
+      audit: new SectionDraft({
+        saved: (reply) => reply.audit,
+        body: (audit) => audit
       }, changed)
     };
   }
@@ -111,7 +117,8 @@ export class ProjectDrafts {
       kindFilter: drafts.kindFilter.body(),
       game: drafts.game.body(),
       physics: drafts.physics.body(),
-      snapshot: drafts.snapshot.body()
+      snapshot: drafts.snapshot.body(),
+      audit: drafts.audit.body()
     };
   }
 

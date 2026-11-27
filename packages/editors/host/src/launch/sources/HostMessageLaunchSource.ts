@@ -94,7 +94,7 @@ export class HostMessageLaunchSource implements LaunchSource {
           origin: event.origin,
           launch: message
         })
-      );
+      )?.viewing(message.tag ?? null);
       if (launch !== undefined) {
         if (message.appearance !== undefined) {
           new PageAppearance().apply(message.appearance);

@@ -11,6 +11,7 @@ import {
   AssetPreviews,
   AssetTags,
   AssetWriter,
+  CatalogActivity,
   CatalogFolders,
   type ArchiveBackend,
   type AnyAssetKindHandler,
@@ -233,6 +234,7 @@ export function catalogBackend(
 
   return {
     ...backend,
+    activity: new CatalogActivity(),
     folders: new CatalogFolders({
       source: sync.source,
       catalog,

@@ -133,6 +133,13 @@ export class EditorFrames {
     this.#frames.get(id)?.reveal(key);
   }
 
+  view(
+    id: string,
+    tag: string
+  ): void {
+    this.#frames.get(id)?.view(tag);
+  }
+
   notifySessionRenewed(): void {
     for (const frame of this.#frames.values()) {
       frame.post({

@@ -217,6 +217,11 @@ export interface AssetKindHandler<
   preview?(
     state: TState
   ): Promise<AssetPreview | null>;
+
+  summarizeChange?(
+    before: TState,
+    after: TState
+  ): string | null;
 }
 
 export type AnyAssetKindHandler = AssetKindHandler<

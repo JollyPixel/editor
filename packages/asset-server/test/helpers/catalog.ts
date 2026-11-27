@@ -16,6 +16,7 @@ import {
   CatalogProjection,
   silentLogger,
   type AssetBackend,
+  type CatalogActivity,
   type CatalogCommand
 } from "#src/index.ts";
 import { CatalogClient } from "#src/client/index.ts";
@@ -36,6 +37,7 @@ import {
 export interface CatalogCommands extends AsyncDisposable {
   readonly sync: SyncHarness;
   readonly room: RecordingRoom;
+  readonly activity: CatalogActivity;
   send(command: CatalogCommand): Promise<void>;
   lastDirect(): DirectMessage | undefined;
 }
@@ -50,8 +52,9 @@ export async function catalogCommands(
   projection.load();
   projection.start();
 
+  const backend = catalogBackend(sync, projection);
   const extension = new CatalogExtension({
-    backend: catalogBackend(sync, projection),
+    backend,
     maxContentBytes
   });
   const room = recordingRoom();
@@ -60,6 +63,7 @@ export async function catalogCommands(
   return {
     sync,
     room,
+    activity: backend.activity,
     send: (command) => extension.onMessage("A", command, room.context),
     lastDirect: () => room.direct.at(-1),
     async [Symbol.asyncDispose]() {

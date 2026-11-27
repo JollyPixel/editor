@@ -49,11 +49,22 @@ export const snapshotSectionSchema = z.object({
   maxDelay: z.int().nonnegative()
 });
 
+export const auditSectionSchema = z.object({
+  keepRowsDays: z.int().positive().nullable(),
+  keepVersionsDays: z.int().positive().nullable()
+});
+
+export const DEFAULT_AUDIT_SECTION: Readonly<AuditSection> = Object.freeze({
+  keepRowsDays: null,
+  keepVersionsDays: 30
+});
+
 export const projectSectionsSchema = z.object({
   kindFilter: kindFilterSchema,
   game: gameSectionSchema,
   physics: physicsSectionSchema,
-  snapshot: snapshotSectionSchema
+  snapshot: snapshotSectionSchema,
+  audit: auditSectionSchema
 });
 
 export const DEFAULT_PROJECT_SECTIONS: Readonly<ProjectSections> = Object.freeze({
@@ -64,7 +75,8 @@ export const DEFAULT_PROJECT_SECTIONS: Readonly<ProjectSections> = Object.freeze
     start: null
   }),
   physics: DEFAULT_PHYSICS,
-  snapshot: DEFAULT_SNAPSHOT_POLICY
+  snapshot: DEFAULT_SNAPSHOT_POLICY,
+  audit: DEFAULT_AUDIT_SECTION
 });
 
 export type AccessSection = z.infer<typeof accessSectionSchema>;
@@ -73,4 +85,5 @@ export type GameSection = z.infer<typeof gameSectionSchema>;
 export type PhysicsEngine = typeof PHYSICS_ENGINES[number];
 export type PhysicsSection = z.infer<typeof physicsSectionSchema>;
 export type SnapshotSection = z.infer<typeof snapshotSectionSchema>;
+export type AuditSection = z.infer<typeof auditSectionSchema>;
 export type ProjectSections = z.infer<typeof projectSectionsSchema>;

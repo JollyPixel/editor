@@ -19,6 +19,10 @@ interface QueryRoute<TQuery> {
 
 interface DownloadRoute<TQuery> {
   route: ApiRoute;
+  /**
+   * @default ARCHIVE_MIME_TYPE
+   */
+  type?: string;
   fileName(
     request: FastifyRequest<QueryRoute<TQuery>>
   ): string;
@@ -37,7 +41,7 @@ export function downloadRoute<TQuery = unknown>(
     url: download.route.path,
     schema: download.schema,
     handler: async(request, reply) => reply
-      .type(ARCHIVE_MIME_TYPE)
+      .type(download.type ?? ARCHIVE_MIME_TYPE)
       .header(
         "content-disposition",
         new AttachmentDisposition(download.fileName(request)).toString()

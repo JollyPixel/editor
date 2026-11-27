@@ -23,7 +23,10 @@ import type { AssetProjector } from "../../storage/projection/AssetProjector.ts"
 import type { AssetWriter } from "../../storage/writer/AssetWriter.ts";
 import type { AssetBackups } from "../../storage/AssetBackups.ts";
 import { AssetPartFiles } from "../../storage/AssetPartFiles.ts";
-import type { AssetKindRegistry } from "../../model/kinds/AssetKindRegistry.ts";
+import type {
+  AssetKindRegistry,
+  DecodedAsset
+} from "../../model/kinds/AssetKindRegistry.ts";
 import { UnknownAssetError } from "../../storage/writer/errors/UnknownAssetError.ts";
 import {
   silentLogger,
@@ -116,6 +119,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
   #writer: Pick<AssetWriter, "update">;
   #flush: (assetId: string) => Promise<void>;
   #backups: Pick<AssetBackups, "add">;
+  #kinds: AssetKindRegistry;
   #partFiles: AssetPartFiles;
   #logger: Logger;
   #contents = new Map<string, TaggedContent | null>();
@@ -129,6 +133,7 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     this.#writer = options.writer;
     this.#flush = options.flush;
     this.#backups = options.backups;
+    this.#kinds = options.kinds;
     this.#partFiles = new AssetPartFiles(options.kinds);
     this.#logger = options.logger ?? silentLogger();
   }
@@ -202,6 +207,36 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
         {} :
         { parts: await this.#parts(tagged.val) })
     });
+  }
+
+  async summarize(
+    assetId: string,
+    from: string,
+    to: string
+  ): Promise<Result<string | null, Error>> {
+    const before = await this.#decodeTag(assetId, from);
+    if (!before.ok) {
+      return before;
+    }
+    const after = await this.#decodeTag(assetId, to);
+    if (!after.ok) {
+      return after;
+    }
+
+    const { handler } = after.val;
+    if (
+      handler.summarizeChange === undefined ||
+      before.val.handler !== handler
+    ) {
+      return Ok(null);
+    }
+
+    try {
+      return Ok(handler.summarizeChange(before.val.state, after.val.state));
+    }
+    catch (error) {
+      return Err(asError(error));
+    }
   }
 
   async restore(
@@ -320,6 +355,27 @@ export class AssetTags extends Emitter<AssetTagsEventMap> {
     this.emit("changed", assetId);
 
     return Ok(undefined);
+  }
+
+  async #decodeTag(
+    assetId: string,
+    name: string
+  ): Promise<Result<DecodedAsset, Error>> {
+    const tagged = await this.#taggedEvent(assetId, name);
+    if (!tagged.ok) {
+      return tagged;
+    }
+
+    const event = tagged.val;
+
+    return this.#kinds.decode(
+      event.assetType,
+      assetId,
+      event.eventData.content.data,
+      event.eventData.parts === undefined ?
+        new Map() :
+        await this.#parts(event)
+    );
   }
 
   async #taggedEvent(

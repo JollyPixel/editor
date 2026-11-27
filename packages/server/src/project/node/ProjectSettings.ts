@@ -14,8 +14,12 @@ import {
   AccountsAccess,
   type AccountsPolicy
 } from "../../accounts/node/AccountsAccess.ts";
-import type { SettingsChange } from "../../audit/node/AuditEntry.ts";
+import {
+  settingsEntry,
+  type SettingsChange
+} from "../../audit/node/AuditEntry.ts";
 import type { AuditLog } from "../../audit/node/AuditLog.ts";
+import type { AuditRecorder } from "../../audit/node/AuditRecorder.ts";
 import { kindOptionSections } from "./kindOptionSections.ts";
 import { ProjectAccess } from "./ProjectAccess.ts";
 import type {
@@ -64,6 +68,8 @@ type SectionHandlers = {
 
 type SettingsBackend = Pick<AssetBackend, "kinds" | "replaceSnapshotPolicy">;
 
+type SettingsRetention = Pick<AuditRecorder, "replaceRetention">;
+
 export interface ProjectSettingsOptions {
   project: Project;
   realm: AccountsRealm;
@@ -75,6 +81,7 @@ export interface ProjectSettingsOptions {
   server: Pick<Server, "replaceRights" | "revoke">;
   backend: SettingsBackend;
   audit: AuditLog;
+  retention: SettingsRetention;
 }
 
 export class ProjectSettings {
@@ -84,6 +91,7 @@ export class ProjectSettings {
   #server: Pick<Server, "replaceRights" | "revoke">;
   #backend: SettingsBackend;
   #audit: AuditLog;
+  #retention: SettingsRetention;
   #writes: Promise<unknown> = Promise.resolve();
   #sections: SectionHandlers = {
     kinds: {
@@ -103,6 +111,10 @@ export class ProjectSettings {
     snapshot: this.#valueSection(
       "snapshot",
       (snapshot) => this.#backend.replaceSnapshotPolicy(snapshot)
+    ),
+    audit: this.#valueSection(
+      "audit",
+      (audit) => this.#retention.replaceRetention(audit)
     )
   };
 
@@ -115,6 +127,7 @@ export class ProjectSettings {
     this.#server = options.server;
     this.#backend = options.backend;
     this.#audit = options.audit;
+    this.#retention = options.retention;
   }
 
   get revision(): string {
@@ -157,7 +170,8 @@ export class ProjectSettings {
       kindFilter: this.#project.kindFilter.toJSON(),
       game: this.#project.game,
       physics: this.#project.physics,
-      snapshot: this.#project.snapshot
+      snapshot: this.#project.snapshot,
+      audit: this.#project.audit
     };
   }
 
@@ -190,9 +204,12 @@ export class ProjectSettings {
       for (const plan of plans) {
         plan.apply?.();
       }
-      await Promise.all(plans.map(
-        ({ change }) => this.#audit.recordSettings(account.id, change)
-      ));
+      for (const { change } of plans) {
+        this.#audit.record(settingsEntry({
+          type: "user",
+          id: account.id
+        }, change));
+      }
     });
   }
 

@@ -28,6 +28,7 @@ import {
 } from "./storage/reconcile/SourceSync.ts";
 import { traceAppends } from "./storage/traceAppends.ts";
 import { CatalogProjection } from "./catalog/CatalogProjection.ts";
+import { CatalogActivity } from "./catalog/CatalogActivity.ts";
 import { CatalogFolders } from "./catalog/CatalogFolders.ts";
 import { AssetBuilds } from "./catalog/derived/AssetBuilds.ts";
 import { AssetPreviews } from "./catalog/derived/AssetPreviews.ts";
@@ -265,6 +266,7 @@ async function assembleAssetBackend(
     kinds,
     writer,
     catalog,
+    activity: new CatalogActivity(),
     folders,
     tags,
     previews: new AssetPreviews({

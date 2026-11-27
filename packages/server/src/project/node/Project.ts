@@ -23,6 +23,7 @@ import {
 import {
   DEFAULT_PROJECT_SECTIONS,
   projectSectionsSchema,
+  type AuditSection,
   type GameSection,
   type PhysicsSection,
   type ProjectSections,
@@ -56,7 +57,7 @@ export interface ProjectOpenOptions extends ProjectFileOpenOptions {
   template?: ProjectFileData;
 }
 
-export type ProjectValueSection = "game" | "physics" | "snapshot";
+export type ProjectValueSection = "game" | "physics" | "snapshot" | "audit";
 
 interface ParsedSections extends Pick<ProjectSections, ProjectValueSection> {
   access: ProjectAccess;
@@ -168,6 +169,10 @@ export class Project {
     return structuredClone(this.#parsed().snapshot);
   }
 
+  get audit(): AuditSection {
+    return structuredClone(this.#parsed().audit);
+  }
+
   #parsed(): ParsedSections {
     const data = this.file.data;
     if (this.#sections === null || this.#parsedFrom !== data) {
@@ -191,7 +196,8 @@ export class Project {
       ),
       game: sections.game,
       physics: sections.physics,
-      snapshot: sections.snapshot
+      snapshot: sections.snapshot,
+      audit: sections.audit
     };
   }
 }

@@ -46,6 +46,7 @@ import {
   blocksetAssetKind,
   type BlocksetAssetKindOptions
 } from "./blocksetAssetKind.ts";
+import { summarizeVoxelChange } from "./summarizeVoxelChange.ts";
 import { tileSizeSchema } from "../network/schema.ts";
 import {
   voxelCommandProtocol,
@@ -209,6 +210,13 @@ export function voxelMapAssetKind(
       state: VoxelMapState
     ) {
       return state.dependencies();
+    },
+
+    summarizeChange(
+      before: VoxelMapState,
+      after: VoxelMapState
+    ): string | null {
+      return summarizeVoxelChange(before.world, after.world);
     },
 
     rebind(

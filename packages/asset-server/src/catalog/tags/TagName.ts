@@ -15,6 +15,7 @@ export const TAG_NAME_PATTERN = "^[A-Za-z0-9][A-Za-z0-9._-]*$";
 
 const kTagNamePattern = new RegExp(TAG_NAME_PATTERN);
 const kRestorePointPrefix = "restore/";
+const kHistoryPointPrefix = "history/";
 
 export class TagName {
   readonly value: string;
@@ -44,6 +45,24 @@ export class TagName {
     name: string
   ): boolean {
     return name.startsWith(kRestorePointPrefix);
+  }
+
+  static historyPoint(
+    eventVersion: number
+  ): TagName {
+    return new TagName(`${kHistoryPointPrefix}${eventVersion}`);
+  }
+
+  static isHistoryPoint(
+    name: string
+  ): boolean {
+    return name.startsWith(kHistoryPointPrefix);
+  }
+
+  static isReserved(
+    name: string
+  ): boolean {
+    return TagName.isRestorePoint(name) || TagName.isHistoryPoint(name);
   }
 
   private constructor(

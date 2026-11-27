@@ -30,6 +30,7 @@ import {
   PIXEL_ART_KIND,
   pixelArtContentFromPng
 } from "./pixelArt.ts";
+import { summarizePixelChange } from "./summarizePixelChange.ts";
 import { applyPixelCommand } from "../network/arbiter/PixelCommandApplier.ts";
 import {
   encodePixelSnapshot,
@@ -172,6 +173,13 @@ export function pixelArtAssetKind(
         type: "image/png",
         bytes: await state.toPng()
       };
+    },
+
+    summarizeChange(
+      before: PixelArtState,
+      after: PixelArtState
+    ): string | null {
+      return summarizePixelChange(before.document.buffer, after.document.buffer);
     },
 
     commands: {

@@ -62,4 +62,25 @@ describe("ShellChannel reveals", () => {
     shell.onReveal((key) => received.push(key), new AbortController().signal);
     assert.deepEqual(received, ["object:early", "object:later", "object:unread"]);
   });
+
+  test("hands the versions the shell asks to view to its listener", () => {
+    const parent = Object.assign(new MessageChannel().port1, {
+      postMessage: () => undefined
+    });
+    const shell = shellChannel({
+      port: parent
+    });
+    const viewed: (string | null)[] = [];
+    shell.onView((tag) => viewed.push(tag), new AbortController().signal);
+
+    for (const tag of ["history/4", null]) {
+      window.dispatchEvent(new MessageEvent("message", {
+        source: parent,
+        origin: SHELL_ORIGIN,
+        data: { type: "jolly-view", tag } satisfies ShellMessage
+      }));
+    }
+
+    assert.deepEqual(viewed, ["history/4", null]);
+  });
 });

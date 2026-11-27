@@ -13,7 +13,8 @@ const kSectionLabels: Readonly<Record<SettingsSectionName, string>> = {
   kindFilter: "the kind filter",
   game: "the default scene",
   physics: "the physics settings",
-  snapshot: "the snapshot settings"
+  snapshot: "the snapshot settings",
+  audit: "the audit retention"
 };
 
 export class AuditRowText {
@@ -43,7 +44,13 @@ function action(
         `renamed ${row.previousPath} to ${assetLabel(row.asset)}` :
         `${row.action} ${assetLabel(row.asset)}`;
     case "tag":
-      return `tagged ${assetLabel(row.asset)} "${row.name}"`;
+      return row.action === "created" ?
+        `tagged ${assetLabel(row.asset)} "${row.name}"` :
+        `removed the tag "${row.name}" from ${assetLabel(row.asset)}`;
+    case "folder":
+      return row.action === "moved" && row.previousPath !== undefined ?
+        `moved the folder ${row.previousPath} to ${row.path}` :
+        `${row.action} the folder ${row.path}`;
     case "settings":
       return `changed ${kSectionLabels[row.section]}`;
     case "account":
@@ -57,8 +64,14 @@ function detail(
   row: AuditRow
 ): string | null {
   switch (row.type) {
-    case "edits":
-      return `${row.count} ${row.count === 1 ? "change" : "changes"} over ${duration(row.to - row.from)}`;
+    case "edits": {
+      const count = `${row.count} ${row.count === 1 ? "change" : "changes"}`;
+      const changes = `${count} over ${duration(row.to - row.from)}`;
+
+      return row.summary === null ? changes : `${changes}: ${row.summary}`;
+    }
+    case "asset":
+      return row.tag === undefined ? null : `from the tag "${row.tag}"`;
     case "tag":
       return row.message ?? null;
     default:
