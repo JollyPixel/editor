@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.voxel-map",
-  "description": "Voxel-map assets",
+  "description": ".voxelmap.json worlds and the .blockset.json blocksets they link",
   "version": "1.0.0",
   "type": "module",
   "sideEffects": false,

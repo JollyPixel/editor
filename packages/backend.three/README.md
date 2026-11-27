@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Three.js backend for the ECS
+
 ## 📌 About
 
 The three.js backend of `@jolly-pixel/ecs`. It draws the world with a `THREE.WebGPURenderer` and adds the renderers, cameras, lights, audio, in-game UI, asset loaders and the browser `Runtime` that boots a game on a canvas.

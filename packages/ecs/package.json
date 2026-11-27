@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/ecs",
-  "description": "Minimal and opinionated renderer-agnostic actor/component framework: actors, behaviors, scenes and the world loop.",
+  "description": "Renderer-agnostic actor, component and scene framework",
   "version": "1.0.1",
   "type": "module",
   "sideEffects": false,

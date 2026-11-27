@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset-source",
-  "description": "Physical asset storage",
+  "description": "Asset storage on the filesystem, in memory or in IndexedDB",
   "version": "4.0.1",
   "type": "module",
   "sideEffects": false,

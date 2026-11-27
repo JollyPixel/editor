@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/physics.rapier",
-  "description": "Rapier backend for @jolly-pixel/physics",
+  "description": "Rapier backend for physics",
   "version": "1.0.1",
   "type": "module",
   "sideEffects": false,

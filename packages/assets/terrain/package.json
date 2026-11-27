@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.terrain",
-  "description": "Heightfield terrain assets",
+  "description": ".terrain.json heightfield terrains",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

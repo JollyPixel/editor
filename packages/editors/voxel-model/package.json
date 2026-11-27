@@ -1,5 +1,6 @@
 {
   "name": "@jolly-pixel/editor.voxel-model",
+  "description": "Voxel model and animation editor",
   "version": "1.0.3",
   "type": "module",
   "private": true,

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/bench",
-  "description": "Shared benchmarking harness and CLI for JollyPixel workspaces",
+  "description": "Benchmarking harness and CLI",
   "version": "1.0.0",
   "type": "module",
   "private": true,

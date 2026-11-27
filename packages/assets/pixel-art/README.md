@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+`.pixelart` textures
+
 ## 📌 About
 
 Private asset workspace for `.pixelart` textures (kind `pixelart`). Textures are edited in `@jolly-pixel/editor.pixel-art` and referenced by voxel maps, voxel models and scenes.

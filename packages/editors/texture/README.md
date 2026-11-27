@@ -1,3 +1,5 @@
+Image viewer
+
 ## 📌 About
 
 Private editor workspace for the `texture` asset kind that `@jolly-pixel/asset-server` registers for every project, booted through `@jolly-pixel/editor.host`. It shows a `.png`, `.jpg`, `.jpeg`, `.webp`, `.gif` or `.bmp` image; it never edits pixels.

@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Command documents and per-person undo history that survives collaboration
+
 ## 💃 Getting Started
 
 This package is available in the Node Package Repository and can be easily installed with [npm][npm] or [yarn][yarn].

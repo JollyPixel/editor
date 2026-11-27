@@ -1,3 +1,5 @@
+HTTP and WebSocket server for projects and accounts
+
 ## 📌 About
 
 The back-end of JollyPixel projects. It hosts one project at `/`, or a folder

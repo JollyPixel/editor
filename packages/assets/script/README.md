@@ -1,3 +1,5 @@
+`.ts` and `.js` scripts, `.tsl.ts` shaders and text files
+
 ## 📌 About
 
 Private asset workspace for three text kinds:

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset",
-  "description": "Platform-agnostic asset references and loading orchestration for browser and Node.js runtimes",
+  "description": "Asset references, catalogs and loading for browser and Node.js",
   "version": "5.0.0",
   "type": "module",
   "exports": {

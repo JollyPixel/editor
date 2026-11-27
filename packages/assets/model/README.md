@@ -1,3 +1,5 @@
+`.glb`, `.gltf`, `.fbx` and `.obj` models
+
 ## 📌 About
 
 Private asset workspace for 3D models (kind `model`). A model asset is a `.glb`, `.gltf`, `.fbx` or `.obj` file stored as is; the model editor previews it and plays its animations.

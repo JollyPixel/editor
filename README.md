@@ -20,7 +20,7 @@ Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provi
 ### 🤝 Collaboration
 
 - [network](./packages/network) - Rooms, peers and state sync for the collaborative editors
-- [accounts](./packages/accounts) - User accounts and session tokens for JollyPixel servers
+- [accounts](./packages/accounts) - User accounts and session tokens
 - [history](./packages/history) - Command documents and per-person undo history that survives collaboration
 
 ### 🎨 Authoring
@@ -28,37 +28,53 @@ Workspaces are grouped by sub-domain. Each arrow shows what one sub-domain provi
 #### Shell
 
 - [studio](./packages/studio) - One project, its assets and one editor per tab
-- [server](./packages/server) - A project's assets, accounts and HTTP API, served to the studio
+- [server](./packages/server) - HTTP and WebSocket server for projects and accounts
 - [editor.host](./packages/editors/host) - Shared launch, session and runtime boot for the editors
 - [preferences](./packages/preferences) - Preference scopes, validation and overrides for the studio and the editors
 
-#### Editors and formats
+#### Editors
 
-Each editor is an `editor.<name>` workspace, and the formats it owns (the asset kinds it reads and writes, and that `asset-server` stores) live in `asset.<name>` workspaces linked from each extension. Editors also read the formats their documents link, such as the `.pixelart` textures used by voxel maps and models.
+- [editor.voxel-map](./packages/editors/voxel-map) - Voxel map and blockset editor
+- [editor.voxel-model](./packages/editors/voxel-model) - Voxel model and animation editor
+- [editor.pixel-art](./packages/editors/pixel-art) - Pixel-art texture editor
+- [editor.terrain](./packages/editors/terrain) - Heightfield terrain editor
+- [editor.scene](./packages/editors/scene) - Scene editor for actors and their components
+- [editor.environment](./packages/editors/environment) - Environment editor
+- [editor.script](./packages/editors/script) - Code editor for scripts, shaders and text files
+- [editor.sound](./packages/editors/sound) - Sound player
+- [editor.model](./packages/editors/model) - 3D model viewer
+- [editor.texture](./packages/editors/texture) - Image viewer
 
-- [Voxel map](./packages/editors/voxel-map) - Voxel-terrain editor for [`.voxelmap.json` worlds and `.blockset.json` blocksets](./packages/assets/voxel-map)
-- [Voxel model](./packages/editors/voxel-model) - Low-polygon 3D model editor for [`.voxelmodel.json` models](./packages/assets/voxel-model) and [`.voxelanim.json` animation sets](./packages/assets/voxel-animation)
-- [Pixel art](./packages/editors/pixel-art) - Pixel-art texture editor for [`.pixelart` textures](./packages/assets/pixel-art), built on `pixel-draw.renderer`
-- [Terrain](./packages/editors/terrain) 🚧 - Heightfield terrain editor for [`.terrain.json` terrains](./packages/assets/terrain)
-- [Scene](./packages/editors/scene) 🚧 - Actors, components and environment, saved as [`.scene.json` scenes](./packages/assets/scene)
-- [Sound](./packages/editors/sound) 🚧 - Plays and loops [`.ogg` sounds](./packages/assets/sound) converted from dropped audio files
-- [Model](./packages/editors/model) 🚧 - Read-only viewer that previews [`.glb`, `.gltf`, `.fbx` and `.obj` models](./packages/assets/model) and plays their animations
-- [Texture](./packages/editors/texture) 🚧 - Read-only viewer for `.png`, `.jpg`, `.webp`, `.gif` and `.bmp` images; shows the header of `.ktx2` textures
-- [Script](./packages/editors/script) 🚧 - Collaborative code editor for [`.ts` and `.js` scripts](./packages/assets/script), whose behaviors and scene properties feed the scene's Script component
+#### Formats
+
+Each `asset.<name>` workspace owns the asset kinds that its editor reads and writes and that `asset-server` stores.
+
+- [asset.voxel-map](./packages/assets/voxel-map) - `.voxelmap.json` worlds and the `.blockset.json` blocksets they link
+- [asset.voxel-model](./packages/assets/voxel-model) - `.voxelmodel.json` models
+- [asset.voxel-animation](./packages/assets/voxel-animation) - `.voxelanim.json` animation sets
+- [asset.pixel-art](./packages/assets/pixel-art) - `.pixelart` textures
+- [asset.terrain](./packages/assets/terrain) - `.terrain.json` heightfield terrains
+- [asset.scene](./packages/assets/scene) - `.scene.json` scenes
+- [asset.environment](./packages/assets/environment) - `.environment.json` environments
+- [asset.script](./packages/assets/script) - `.ts` and `.js` scripts, `.tsl.ts` shaders and text files
+- [asset.sound](./packages/assets/sound) - `.ogg` sounds
+- [asset.model](./packages/assets/model) - `.glb`, `.gltf`, `.fbx` and `.obj` models
+- [asset.font](./packages/assets/font) - `.typeface.json` fonts
+- [asset.common](./packages/assets/common) - Code shared by the asset workspaces
 
 #### UI
 
-- [ui](./packages/ui) - Design system (declarative UI components and a facade API)
+- [ui](./packages/ui) - Lit design system for the editors
 - [resize-handle](./packages/resize-handle) - Resize handles and splitters
 - [console](./packages/console) - Command palette and developer console for the editors
 - [lantern](./packages/lantern) - Guided tours for the editors
 
 ### 🗄️ Asset Management
 
-- [asset](./packages/asset) - Asset references, catalogs and loading orchestration for browser and Node.js
+- [asset](./packages/asset) - Asset references, catalogs and loading for browser and Node.js
 - [asset-server](./packages/asset-server) - Event-sourced asset projection, reconciliation and catalog delivery
-- [asset-source](./packages/asset-source) - Physical asset storage (filesystem, memory, IndexedDB)
-- [event-store](./packages/event-store) - Append-only event log (event sourcing)
+- [asset-source](./packages/asset-source) - Asset storage on the filesystem, in memory or in IndexedDB
+- [event-store](./packages/event-store) - Append-only event log
 
 ### 🏗️ Build
 
@@ -68,29 +84,29 @@ Planned. It will turn a project's assets into the catalog manifest the runtime l
 
 #### Core
 
-- [runtime](./packages/runtime) - Renderer-agnostic game runtime for web browsers and Electron (boot, overlay, session, metrics)
-- [ecs](./packages/ecs) - Minimal, renderer-agnostic ECS framework (actors, behaviors, scenes, world)
-- [backend.three](./packages/backend.three) - Three.js backend for the ECS: rendering, audio, assets, UI and the browser `Runtime`
-- [loop](./packages/loop) - Frame scheduling and time primitives (FrameScheduler, GameLoop)
-- [controls](./packages/controls) - Input controls (screen, mouse, touchpad, keyboard, gamepad)
-- [scripting](./packages/scripting) - Compiles, outlines and loads the game's TypeScript scripts and TSL shaders
+- [runtime](./packages/runtime) - Renderer-agnostic game runtime for browsers and Electron
+- [ecs](./packages/ecs) - Renderer-agnostic actor, component and scene framework
+- [backend.three](./packages/backend.three) - Three.js backend for the ECS
+- [loop](./packages/loop) - Game loop and frame scheduling
+- [controls](./packages/controls) - Keyboard, mouse, touchpad, gamepad and screen input
+- [scripting](./packages/scripting) - Compiles and loads game scripts and TSL shaders
 
 #### Physics
 
-- [physics](./packages/physics) - Engine-neutral physics contract and engine components (PhysicsSystem, RigidBody)
+- [physics](./packages/physics) - Engine-neutral physics contract and ECS components
 - [physics.rapier](./packages/physics-rapier) - Rapier backend for physics
 
 #### Renderers
 
 - [voxel.renderer](./packages/voxel-renderer) - Voxel engine and renderer
-- [terrain.renderer](./packages/terrain-renderer) - Heightfield terrain engine and renderer 🚧
-- [pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel-art canvas drawing and rendering
+- [terrain.renderer](./packages/terrain-renderer) - Heightfield terrain engine and renderer
+- [pixel-draw.renderer](./packages/pixel-draw-renderer) - Pixel-art drawing canvas and renderer
 
 ## 🧩 Shared libraries
 
 Generic packages used by more than one sub-domain.
 
-- [three](./packages/three) - Three.js components and utilities (grid, transform controls, selection highlight...)
+- [three](./packages/three) - Three.js components shared by the editors
 - [color](./packages/color) - Color parsing, palettes, color spaces and conversions
 - [image](./packages/image) - PNG codecs and browser raster decoding
 - [math](./packages/math) - Vector, quaternion and matrix math on plain number tuples
@@ -99,17 +115,17 @@ Generic packages used by more than one sub-domain.
 ## 🛠️ Tooling
 
 - [bench](./packages/bench) - Benchmarking harness and CLI
-- [cdp](./packages/cdp) - Chrome DevTools Protocol recording, page probes and profile readers for perf harnesses
+- [cdp](./packages/cdp) - Chrome DevTools Protocol recording and profile readers
 - [e2e](./packages/e2e) - Playwright config, locators and editor fixtures for e2e suites
 
 ## 🤖 AI
 
-- [golem](./packages/golem) - Connects a local AI agent to a running JollyPixel studio as a peer
-- [golem-kit](./packages/golem-kit) - The contract an asset package implements to give golems intent methods for its kind
+- [golem](./packages/golem) - Connects a local AI agent to a running studio as a peer
+- [golem.kit](./packages/golem-kit) - Golem intent contract for asset kinds
 
 ## 💃 Getting started
 
-Public packages are published on npm and can be installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com). The studio, editors, formats, tooling and 🚧 renderers are private workspaces.
+Public packages are published on npm and can be installed with [npm](https://docs.npmjs.com/getting-started/what-is-npm) or [yarn](https://yarnpkg.com).
 
 ```bash
 $ npm i @jolly-pixel/ecs @jolly-pixel/backend.three

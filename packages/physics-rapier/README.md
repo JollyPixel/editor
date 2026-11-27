@@ -1,5 +1,7 @@
 # @jolly-pixel/physics.rapier
 
+Rapier backend for physics
+
 A `@jolly-pixel/physics` backend running [Rapier][rapier]
 (`@dimforge/rapier3d-compat`). The WebAssembly module is inlined, so it loads
 in browsers and Node.js with no bundler setup.

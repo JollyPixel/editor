@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+One project, its assets and one editor per tab
+
 ## 📌 About
 
 Private app that opens each asset of one project in its editor page. Its back-end, `@jolly-pixel/server`, runs one asset back-end ([`@jolly-pixel/asset-server`][asset-server]) for every editor, with the accounts and the HTTP API. Design notes live in [ARCHITECTURE.md](./ARCHITECTURE.md) and the [ADRs](./docs/adr/README.md).

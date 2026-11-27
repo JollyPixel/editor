@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Playwright config, locators and editor fixtures for e2e suites
+
 ## 💃 Getting Started
 
 This workspace-private package is never published or built. It exports

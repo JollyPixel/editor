@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Event-sourced asset projection, reconciliation and catalog delivery
+
 ## 💃 Getting Started
 
 Install the package with pnpm:

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/terrain.renderer",
-  "description": "Jolly Pixel heightfield terrain engine and renderer",
+  "description": "Heightfield terrain engine and renderer",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

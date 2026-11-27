@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.voxel-model",
-  "description": "Voxel-model assets",
+  "description": ".voxelmodel.json models",
   "version": "1.0.0",
   "type": "module",
   "sideEffects": false,

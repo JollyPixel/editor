@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/ui",
-  "description": "Common and System's UI for JollyPixel's editors",
+  "description": "Lit design system for the editors",
   "version": "5.0.1",
   "type": "module",
   "exports": {

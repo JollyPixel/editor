@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/loop",
-  "description": "Frame scheduling and time primitives (FrameScheduler, GameLoop)",
+  "description": "Game loop and frame scheduling",
   "version": "2.0.0",
   "type": "module",
   "exports": {

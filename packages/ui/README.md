@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Lit design system for the editors
+
 ## 💡 About
 
 Lit components for building editor interfaces: fields, panels, docks, dialogs, trees and more.

@@ -1,6 +1,6 @@
 # @jolly-pixel/math
 
-Allocation-free vector, quaternion and matrix math on plain number tuples
+Vector, quaternion and matrix math on plain number tuples
 
 ## 💃 Getting Started
 

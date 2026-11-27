@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Shared launch, session and runtime boot for the editors
+
 ## 💃 Getting Started
 
 This workspace-private package is never published. Add it as a dependency of

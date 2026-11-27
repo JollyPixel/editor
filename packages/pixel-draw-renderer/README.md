@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Pixel-art drawing canvas and renderer
+
 <p align="center">
 <img src="./docs/ui-preview.png">
 </p>

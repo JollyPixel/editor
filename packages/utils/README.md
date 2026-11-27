@@ -1,6 +1,6 @@
 # @jolly-pixel/utils
 
-Small standalone helpers shared by the JollyPixel workspaces
+Small standalone helpers
 
 ## 💃 Getting Started
 

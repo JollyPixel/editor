@@ -1,3 +1,5 @@
+Scene editor for actors and their components
+
 ## 📌 About
 
 Private editor workspace for `@jolly-pixel/asset.scene` scenes, booted through `@jolly-pixel/editor.host`.

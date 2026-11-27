@@ -1,3 +1,5 @@
+Code editor for scripts, shaders and text files
+
 ## 📌 About
 
 Private editor for `@jolly-pixel/asset.script` scripts, shaders and text files, booted through `@jolly-pixel/editor.host`.

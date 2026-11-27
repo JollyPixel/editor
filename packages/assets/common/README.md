@@ -1,3 +1,5 @@
+Code shared by the asset workspaces
+
 ## 📌 About
 
 Private workspace for code that several asset workspaces share: the ordered tree behind scene actors and voxel-model nodes and materials, `InvalidEntryError`, sibling-slot helpers, `NameSet` and `randomId`.

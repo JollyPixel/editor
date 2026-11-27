@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.terrain",
-  "description": "Collaborative heightfield terrain editor for JollyPixel",
+  "description": "Heightfield terrain editor",
   "version": "0.1.0",
   "type": "module",
   "private": true,

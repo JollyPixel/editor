@@ -1,3 +1,5 @@
+`.environment.json` environments
+
 ## 📌 About
 
 Private asset workspace for environments (kind `environment`, `.environment.json`). An environment is the sky, sun, ambient light, reflections, fog, tone mapping, glow and voxel shading a scene renders in. The file is the engine's `EnvironmentFile`: the engine applies it in the game, and the editors apply the same file in their viewports.

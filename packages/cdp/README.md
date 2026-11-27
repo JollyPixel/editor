@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Chrome DevTools Protocol recording and profile readers
+
 ## 💃 Getting Started
 
 This workspace-private package is never published or built. It exports

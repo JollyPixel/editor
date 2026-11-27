@@ -1,3 +1,5 @@
+Compiles and loads game scripts and TSL shaders
+
 ## 💃 Getting Started
 
 This workspace-private package is never published. Add it as a dependency of

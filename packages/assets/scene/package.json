@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.scene",
-  "description": "Scene assets",
+  "description": ".scene.json scenes",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.script",
-  "description": "Collaborative editor for JollyPixel script assets",
+  "description": "Code editor for scripts, shaders and text files",
   "version": "0.1.0",
   "type": "module",
   "private": true,

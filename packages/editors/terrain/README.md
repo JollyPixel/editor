@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Heightfield terrain editor
+
 ## 📌 About
 
 Private editor workspace for [`@jolly-pixel/asset.terrain`][asset-terrain] heightfield terrains, drawn by `@jolly-pixel/terrain.renderer` and booted through [`@jolly-pixel/editor.host`][editor-host].

@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Voxel engine and renderer
+
 <p align="center">
   <img src="./docs/images/noise-world.png">
 </p>

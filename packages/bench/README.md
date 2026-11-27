@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Benchmarking harness and CLI
+
 ## 💃 Getting Started
 
 This workspace-private package is never published. Add it as a development

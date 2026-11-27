@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/network",
-  "description": "The shared wire for JollyPixel's multiplayer editors",
+  "description": "Rooms, peers and state sync for the collaborative editors",
   "version": "7.0.1",
   "type": "module",
   "sideEffects": [

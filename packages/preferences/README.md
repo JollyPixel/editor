@@ -1,3 +1,5 @@
+Preference scopes, validation and overrides for the studio and the editors
+
 ## 💃 Getting Started
 
 This workspace-private package is never published. Add it as a dependency of
