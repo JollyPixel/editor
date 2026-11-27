@@ -6,10 +6,6 @@ import {
   type Right,
   type RoomRejectionEvent
 } from "@jolly-pixel/network/client";
-import {
-  match,
-  P
-} from "ts-pattern";
 
 // Import Internal Dependencies
 import {
@@ -589,20 +585,29 @@ export class CatalogClient extends Emitter<CatalogClientEvents> {
   readonly #onMessage = (
     message: CatalogMessage
   ): void => {
-    match(message)
-      .with({ type: CATALOG_SNAPSHOT }, (snapshot) => this.#applySnapshot(snapshot))
-      .with({ type: CATALOG_CHANGED }, ({ changes }) => this.#applyChanges(changes))
-      .with({ type: CATALOG_FOLDERS }, ({ folders }) => this.#applyFolders(folders))
-      .with({ type: CATALOG_TAGS_CHANGED }, ({ assetId, tags }) => this.emit(
-        "tags-changed",
-        assetId,
-        tags
-      ))
-      .with({ type: P.union(CATALOG_APPLIED, CATALOG_REJECTED) }, (reply) => this.#settle(reply))
-      .with({ type: CATALOG_PROGRESS }, ({ requestId, stage }) => {
-        this.#pending.get(requestId)?.onProgress?.(stage);
-      })
-      .exhaustive();
+    switch (message.type) {
+      case CATALOG_SNAPSHOT:
+        this.#applySnapshot(message);
+        break;
+      case CATALOG_CHANGED:
+        this.#applyChanges(message.changes);
+        break;
+      case CATALOG_FOLDERS:
+        this.#applyFolders(message.folders);
+        break;
+      case CATALOG_TAGS_CHANGED:
+        this.emit("tags-changed", message.assetId, message.tags);
+        break;
+      case CATALOG_APPLIED:
+      case CATALOG_REJECTED:
+        this.#settle(message);
+        break;
+      case CATALOG_PROGRESS:
+        this.#pending.get(message.requestId)?.onProgress?.(message.stage);
+        break;
+      default:
+        message satisfies never;
+    }
   };
 
   readonly #onRights = (): void => {
