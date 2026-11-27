@@ -56,3 +56,11 @@ An agent has your current role and never more. It shows in the peer lists under 
 Click the chat button at the top right, next to your avatar, to open or close the golem chat beside the editors. In the console, `/golem` opens it too, and `/golem <message>` opens it and sends the message. The pane lists the connected agents with what they are doing and in which asset, and the conversation, which every signed-in person and agent shares. Enter sends, Shift+Enter starts a new line. A role that only reads, such as `spectator`, sees the chat but cannot write in it, and share-link guests never see it.
 
 When an agent writes while the pane is closed, a notification shows its message. The studio keeps the last 200 messages in memory: restarting it empties the chat.
+
+## Audit
+
+Settings › Audit lists what happened in the project, newest first: edits, created, renamed, restored and deleted assets, folders, tags, settings changes, and, for admins, account activity. The server writes each row as it happens, so the audit starts the day the project runs this version; earlier edits are not listed.
+
+One person's edits to one asset less than 5 minutes apart make one row. The row keeps the asset's version before the first edit and after the last one, opened read-only with Open before and Open after, and says what changed for kinds that describe it, such as "12 pixels changed" or "blocks 4 placed, 1 removed". Edits by two people at the same time share these versions.
+
+Export CSV downloads every row the filters match. Settings › General › Audit retention deletes rows, and separately the versions they open, past an age in days; 0 keeps them forever. By default rows stay and versions go after 30 days. Tags people named are never deleted.

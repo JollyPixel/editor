@@ -170,7 +170,8 @@ Each project answers these paths at `/`, or under `/p/<slug>/` with
 - `/api/project/`: the signed-in account's rights, the project's settings and
   sections, and the archive download.
 - `/api/shares/`: share links, opened under `/view/`.
-- `/api/audit/`: the audit log.
+- `/api/audit/`: the audit log, the actors it names, and a CSV export of
+  the rows a filter matches.
 - `/api/game/`: game builds and exports.
 - `/api/preferences/`: the account's preferences, read at once and replaced
   one scope at a time.

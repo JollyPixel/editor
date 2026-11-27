@@ -238,9 +238,12 @@ export const catalogMessageProtocol = new MessageProtocol(
       }),
       appliedVariant(z.enum([
         CATALOG_CREATE_FOLDER,
-        CATALOG_MOVE_FOLDER,
         CATALOG_DELETE_FOLDER
       ]), {
+        path: kString
+      }),
+      appliedVariant(z.literal(CATALOG_MOVE_FOLDER), {
+        from: kString,
         path: kString
       }),
       appliedVariant(z.literal(CATALOG_EXPORT), {

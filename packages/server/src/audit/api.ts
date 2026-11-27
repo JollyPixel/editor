@@ -11,6 +11,14 @@ export const AUDIT_ROUTES = {
   page: {
     method: "GET",
     path: ""
+  },
+  actors: {
+    method: "GET",
+    path: "actors"
+  },
+  export: {
+    method: "GET",
+    path: "export"
   }
 } as const satisfies Record<string, ApiRoute>;
 export const AUDIT_CATEGORIES = [
@@ -20,11 +28,11 @@ export const AUDIT_CATEGORIES = [
   "settings"
 ] as const;
 export const ACCOUNTS_CATEGORY = "accounts";
+export const AUDIT_EXPORT_MIME_TYPE = "text/csv; charset=utf-8";
 
 export const auditCategorySchema = z.enum(AUDIT_CATEGORIES);
 
-export const auditQuerySchema = z.object({
-  cursor: z.string().optional(),
+export const auditFilterSchema = z.object({
   actor: z.string().optional(),
   asset: z.string().optional(),
   category: auditCategorySchema.optional(),
@@ -32,7 +40,13 @@ export const auditQuerySchema = z.object({
   to: z.coerce.number().optional()
 });
 
+export const auditQuerySchema = z.object({
+  ...auditFilterSchema.shape,
+  cursor: z.string().optional()
+});
+
 export const auditActorSchema = z.object({
+  key: z.string(),
   id: z.string().nullable(),
   name: z.string(),
   kind: z.enum(["user", "agent", "deleted", "share", "system"])
@@ -41,6 +55,11 @@ export const auditActorSchema = z.object({
 export const auditAssetSchema = z.object({
   id: z.string(),
   path: z.string().nullable()
+});
+
+export const auditVersionsSchema = z.object({
+  from: z.string(),
+  to: z.string()
 });
 
 export const auditAccountActivitySchema = z.discriminatedUnion("type", [
@@ -81,23 +100,35 @@ export const auditRowSchema = z.discriminatedUnion("type", [
     asset: auditAssetSchema,
     count: z.number(),
     from: z.number(),
-    to: z.number()
+    to: z.number(),
+    versions: auditVersionsSchema.nullable(),
+    summary: z.string().nullable()
   }),
   z.object({
     type: z.literal("asset"),
-    action: z.enum(["created", "renamed", "replaced", "deleted"]),
+    action: z.enum(["created", "renamed", "replaced", "restored", "deleted"]),
     actor: auditActorSchema,
     asset: auditAssetSchema,
     at: z.number(),
-    previousPath: z.string().optional()
+    previousPath: z.string().optional(),
+    tag: z.string().optional()
   }),
   z.object({
     type: z.literal("tag"),
+    action: z.enum(["created", "deleted"]),
     actor: auditActorSchema,
     asset: auditAssetSchema,
     at: z.number(),
     name: z.string(),
     message: z.string().optional()
+  }),
+  z.object({
+    type: z.literal("folder"),
+    action: z.enum(["created", "moved", "deleted"]),
+    actor: auditActorSchema,
+    at: z.number(),
+    path: z.string(),
+    previousPath: z.string().optional()
   }),
   z.object({
     type: z.literal("account"),
@@ -120,10 +151,14 @@ export const auditPageSchema = z.object({
   next: z.string().nullable()
 });
 
+export const auditActorsSchema = z.array(auditActorSchema);
+
 export type AuditCategory = z.infer<typeof auditCategorySchema>;
+export type AuditFilter = z.infer<typeof auditFilterSchema>;
 export type AuditQuery = z.infer<typeof auditQuerySchema>;
 export type AuditActor = z.infer<typeof auditActorSchema>;
 export type AuditAsset = z.infer<typeof auditAssetSchema>;
+export type AuditVersions = z.infer<typeof auditVersionsSchema>;
 export type AuditAccountActivity = z.infer<typeof auditAccountActivitySchema>;
 export type AuditRow = z.infer<typeof auditRowSchema>;
 export type AuditPage = z.infer<typeof auditPageSchema>;

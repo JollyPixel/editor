@@ -29,8 +29,7 @@ describe("ProjectSettings.replace with several sections", () => {
 
     assert.deepEqual(harness.project.file.data.kindFilter, { hidden: ["voxelmap"] });
     assert.deepEqual(harness.project.file.data.physics, physics);
-    const events = await harness.audit.store.reader.listAll();
-    assert.deepEqual(events.map(({ eventData }) => eventData), [
+    assert.deepEqual(harness.auditedSettings().map(({ change }) => change), [
       {
         section: "kindFilter",
         before: { hidden: [] },
@@ -75,7 +74,7 @@ describe("ProjectSettings.replace with several sections", () => {
       harness.project.file.kinds.get(kVoxelMapKinds),
       kinds[kVoxelMapKinds]
     );
-    assert.deepEqual(await harness.audit.store.reader.listAll(), []);
+    assert.deepEqual(harness.auditedSettings(), []);
   });
 
   test("refuses a batch read before another save, leaving the settings as saved", async() => {

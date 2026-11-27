@@ -73,7 +73,7 @@ const kPages = {
     tone: "coral",
     kind: "general",
     unsaved: (drafts) => drafts.changedIn(
-      ["kindFilter", "game", "physics", "snapshot"]
+      ["kindFilter", "game", "physics", "snapshot", "audit"]
     ) || drafts.section("access").differsIn(
       (access) => [access.defaultRole, access.join]
     )

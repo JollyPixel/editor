@@ -126,6 +126,13 @@ The tag a restore or a replace puts on the content it is about to overwrite,
 named `restore/<eventVersion>`. Restoring it undoes the restore or the
 replace.
 
+### History Point
+
+A tag the server's audit puts on a snapshot it keeps, named
+`history/<eventVersion>`, such as the content before and after a run of edits.
+Like a restore point, no client can create one, and an editor's Versions menu
+leaves it out. `TagName.isReserved` answers for both.
+
 ### Asset Room
 
 The collaboration space for one open, editable asset. Accepted editing

@@ -83,6 +83,7 @@ const kFrameMessageSchema = z.discriminatedUnion("type", [
 const kLaunchMessageSchema = z.object({
   type: z.literal("jolly-launch"),
   target: z.string(),
+  tag: z.catch(z.optional(z.string()), undefined),
   reveal: z.catch(z.optional(z.string()), undefined),
   appearance: z.catch(z.optional(kAppearanceSchema), undefined),
   identity: z.catch(z.nullable(kLaunchIdentitySchema), null),
@@ -105,6 +106,10 @@ const kShellMessageSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("jolly-reveal"),
     key: z.string()
+  }),
+  z.object({
+    type: z.literal("jolly-view"),
+    tag: z.nullable(z.string())
   })
 ]);
 

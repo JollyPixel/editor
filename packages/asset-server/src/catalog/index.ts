@@ -1,4 +1,5 @@
 export * from "./CatalogProjection.ts";
+export * from "./CatalogActivity.ts";
 export * from "./CatalogFolders.ts";
 export * from "./derived/AssetBuilds.ts";
 export * from "./derived/AssetPreviews.ts";

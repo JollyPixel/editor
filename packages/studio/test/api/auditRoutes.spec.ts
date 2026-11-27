@@ -78,6 +78,24 @@ describe("GET /api/audit", () => {
     assert.deepEqual(change.before, kinds);
   });
 
+  test("lists who acted and exports the rows as CSV", async() => {
+    await using backend = await serveBackend();
+    const admin = await signedIn(backend, "Alice");
+    await signedIn(backend, "Bob");
+
+    const actors = await admin.audit.actors();
+    const download = await admin.audit.export({ category: "accounts" });
+    const lines = (await download.blob.text()).trimEnd().split("\r\n");
+
+    assert.deepEqual(actors.map((actor) => actor.name), ["Alice", "Bob"]);
+    assert.equal(download.fileName, "audit.csv");
+    assert.equal(lines[0], "Started,Ended,Actor,Actor kind,Category,Event,Asset,Details");
+    assert.deepEqual(
+      lines.slice(1).map((line) => line.split(",").slice(2, 6).join(" ")),
+      ["Bob user accounts account registered", "Alice user accounts account registered"]
+    );
+  });
+
   test("refuses a role without studio.$audit", async() => {
     await using backend = await serveBackend();
     await signedIn(backend, "Alice");

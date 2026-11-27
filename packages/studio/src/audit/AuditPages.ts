@@ -1,5 +1,8 @@
 // Import Third-party Dependencies
-import type { AuditRow } from "@jolly-pixel/server";
+import type {
+  AuditActor,
+  AuditRow
+} from "@jolly-pixel/server";
 
 // Import Internal Dependencies
 import { RemoteState } from "../api/RemoteState.ts";
@@ -9,12 +12,13 @@ import {
   type AuditFiltersData
 } from "./AuditFilters.ts";
 
-export type AuditPageSource = Pick<AuditClient, "page">;
+export type AuditPageSource = Pick<AuditClient, "page" | "actors" | "export">;
 
 export class AuditPages extends RemoteState {
   #client: AuditPageSource;
   #filters = AuditFilters.NONE;
   #rows: readonly AuditRow[] = [];
+  #actors: readonly AuditActor[] = [];
   #next: string | null = null;
 
   constructor(
@@ -36,6 +40,17 @@ export class AuditPages extends RemoteState {
     return this.#next !== null;
   }
 
+  get actors(): readonly AuditActor[] {
+    return this.#actors;
+  }
+
+  async export(): Promise<void> {
+    await this.run(
+      () => this.#client.export(this.#filters.toQuery()),
+      (download) => download.save()
+    );
+  }
+
   filter(
     patch: AuditFiltersData
   ): Promise<void> {
@@ -46,6 +61,18 @@ export class AuditPages extends RemoteState {
 
   reload(): Promise<void> {
     return this.#load(undefined);
+  }
+
+  async refresh(): Promise<void> {
+    await Promise.all([
+      this.reload(),
+      this.run(
+        () => this.#client.actors(),
+        (actors) => {
+          this.#actors = actors;
+        }
+      )
+    ]);
   }
 
   more(): Promise<void> {

@@ -1,260 +1,155 @@
 // Import Node.js Dependencies
 import {
   describe,
-  test,
-  type TestContext
+  test
 } from "node:test";
 import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
-import * as EventStore from "@jolly-pixel/event-store";
-import {
-  ADMIN_ROLE,
-  type Member
-} from "@jolly-pixel/accounts";
-import { SNAPSHOT_ACTOR } from "@jolly-pixel/asset-server";
+import type { Member } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
-import { AssetLog } from "#src/audit/node/AssetLog.ts";
+import { accountEntry } from "#src/audit/node/AuditEntry.ts";
+import type { AuditFeedQuery } from "#src/audit/node/AuditFeed.ts";
 import {
-  AuditFeed,
-  type AuditFeedQuery
-} from "#src/audit/node/AuditFeed.ts";
-import { AuditLog } from "#src/audit/node/AuditLog.ts";
-import { ProjectAccess } from "#src/project/node/ProjectAccess.ts";
-import type { AuditRow } from "#src/audit/api.ts";
-
-// CONSTANTS
-const kMinute = 60_000;
-const kUsernames: Record<string, string> = {
-  alice: "Alice",
-  bob: "Bob"
-};
-const kAuditor = "auditor";
-const kAccess = ProjectAccess.from({
-  defaultRole: kAuditor,
-  roles: {
-    [kAuditor]: {
-      "studio.$audit": "read"
-    }
-  },
-  join: "open"
-}, "audit test");
-const kAdmin: Member = {
-  id: "alice",
-  username: "Alice",
-  role: ADMIN_ROLE,
-  owner: true
-};
-const kAuditorAccount: Member = {
-  id: "bob",
-  username: "Bob",
-  role: kAuditor,
-  owner: false
-};
-
-interface FeedHarness {
-  events: EventStore.EventStore;
-  audit: AuditLog;
-  feed: AuditFeed;
-  at(minutes: number): void;
-  edit(assetId: string, actorId: string): Promise<void>;
-}
-
-function feedHarness(
-  t: TestContext
-): FeedHarness {
-  t.mock.timers.enable({ apis: ["Date"], now: 0 });
-  const events = EventStore.persistence.memory();
-  const audit = new AuditLog(EventStore.persistence.memory());
-
-  return {
-    events,
-    audit,
-    feed: new AuditFeed({
-      project: {
-        access: kAccess
-      },
-      assets: new AssetLog(events),
-      audit,
-      account: (id) => (Object.hasOwn(kUsernames, id) ?
-        {
-          id,
-          username: kUsernames[id],
-          role: "member",
-          owner: false
-        } :
-        null),
-      agentToken: (subject) => (subject === "agent:builder" ?
-        {
-          id: "builder",
-          ownerId: "bob",
-          name: "Builder",
-          createdAt: 0
-        } :
-        null),
-      assetPath: (assetId) => `${assetId}.voxelmap.json`
-    }),
-    at: (minutes) => t.mock.timers.setTime(minutes * kMinute),
-    async edit(assetId, actorId) {
-      (await events.writer.append({
-        assetType: "voxelmap",
-        assetId,
-        eventType: "voxelmap.command",
-        eventData: {},
-        actor: {
-          type: "user",
-          id: actorId
-        }
-      })).unwrap();
-    }
-  };
-}
-
-function summary(
-  row: AuditRow
-): string {
-  return row.type === "edits" ?
-    `${row.actor.name} ${row.asset.id} x${row.count} ${row.from / kMinute}-${row.to / kMinute}` :
-    `${row.actor.name} ${row.type} ${row.at / kMinute}`;
-}
-
-async function allPages(
-  feed: AuditFeed,
-  query: AuditFeedQuery
-): Promise<string[][]> {
-  const pages: string[][] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await feed.page(kAdmin, { ...query, cursor });
-    pages.push(page.rows.map(summary));
-    cursor = page.next ?? undefined;
-  }
-  while (cursor !== undefined);
-
-  return pages;
-}
+  ADMIN,
+  AUDITOR,
+  MINUTE,
+  feedHarness,
+  summary
+} from "../../helpers/auditFeed.ts";
 
 describe("AuditFeed", () => {
-  test("folds one actor's edits on one asset less than 5 minutes apart, around other actors", async(t) => {
-    const harness = feedHarness(t);
-    harness.at(0);
-    await harness.edit("map", "alice");
-    harness.at(1);
-    await harness.edit("map", "bob");
-    harness.at(2);
-    await harness.edit("map", "alice");
-    harness.at(8);
-    await harness.edit("map", "alice");
-
-    const { rows, next } = await harness.feed.page(kAdmin, {});
-
-    assert.equal(next, null);
-    assert.deepEqual(rows.map(summary), [
-      "Alice map x1 8-8",
-      "Alice map x2 0-2",
-      "Bob map x1 1-1"
-    ]);
-  });
-
-  test("pages both stores newest first, without repeating or dropping a row", async(t) => {
-    const harness = feedHarness(t);
+  test("pages newest first, without repeating or dropping a row", async() => {
+    using harness = await feedHarness();
     for (let minute = 0; minute < 5; minute++) {
-      harness.at(minute * 10);
-      await harness.edit(`map-${minute}`, "alice");
-      harness.at(minute * 10 + 5);
-      await harness.audit.recordSettings("bob", {
-        section: "kinds",
-        before: {},
-        after: {}
-      });
+      harness.edits("alice", `map-${minute}`, [minute * 10, minute * 10]);
+      harness.settings("bob", minute * 10);
     }
 
-    const pages = await allPages(harness.feed, {
-      limit: 3
-    });
+    const pages: string[][] = [];
+    let cursor: string | undefined;
+    do {
+      const page = harness.feed.page(ADMIN, { limit: 3, cursor });
+      pages.push(page.rows.map(summary));
+      cursor = page.next ?? undefined;
+    }
+    while (cursor !== undefined);
 
     assert.deepEqual(pages.map((page) => page.length), [3, 3, 3, 1]);
     assert.deepEqual(pages.flat(), [
-      "Bob settings 45",
-      "Alice map-4 x1 40-40",
-      "Bob settings 35",
-      "Alice map-3 x1 30-30",
-      "Bob settings 25",
-      "Alice map-2 x1 20-20",
-      "Bob settings 15",
-      "Alice map-1 x1 10-10",
-      "Bob settings 5",
-      "Alice map-0 x1 0-0"
+      "Bob settings",
+      "Alice map-4 40-40",
+      "Bob settings",
+      "Alice map-3 30-30",
+      "Bob settings",
+      "Alice map-2 20-20",
+      "Bob settings",
+      "Alice map-1 10-10",
+      "Bob settings",
+      "Alice map-0 0-0"
     ]);
   });
 
-  test("keeps account rows for admins and filters by actor, asset and category", async(t) => {
-    const harness = feedHarness(t);
-    await harness.audit.recordAccount({
+  test("shows account rows and their actors to admins only, and filters rows", async() => {
+    using harness = await feedHarness();
+    harness.audit.record(accountEntry({
       type: "role-changed",
-      actorId: "alice",
+      actorId: "carol",
       accountId: "bob",
       username: "Bob",
       from: "member",
       to: "spectator"
-    });
-    harness.at(1);
-    await harness.edit("map", "bob");
-    await harness.edit("sky", "alice");
+    }));
+    harness.edits("bob", "map", [1, 4]);
+    harness.edits("alice", "sky", [6, 6]);
 
-    async function page(
+    function page(
       query: AuditFeedQuery,
-      viewer = kAuditorAccount
-    ): Promise<string[]> {
-      return (await harness.feed.page(viewer, query)).rows.map(summary);
+      viewer = AUDITOR
+    ): string[] {
+      return harness.feed.page(viewer, query).rows.map(summary);
     }
 
-    assert.deepEqual(await page({ category: "accounts" }, kAdmin), ["Alice account 0"]);
-    assert.deepEqual(await page({ category: "accounts" }), []);
-    assert.deepEqual(await page({ actor: "bob" }), ["Bob map x1 1-1"]);
-    assert.deepEqual(await page({ asset: "sky" }), ["Alice sky x1 1-1"]);
-    assert.deepEqual(await page({ to: kMinute - 1 }), []);
+    function actors(
+      viewer: Member
+    ): string[] {
+      return harness.feed.actors(viewer).map(({ key }) => key);
+    }
+
+    assert.equal(page({ category: "accounts" }, ADMIN).length, 1);
+    assert.deepEqual(page({ category: "accounts" }), []);
+    assert.deepEqual(actors(ADMIN), ["user:alice", "user:bob", "user:carol"]);
+    assert.deepEqual(actors(AUDITOR), ["user:alice", "user:bob"]);
+    assert.deepEqual(page({ actor: "user:bob" }), ["Bob map 1-4"]);
+    assert.deepEqual(page({ asset: "sky" }), ["Alice sky 6-6"]);
+    assert.deepEqual(page({ from: 3 * MINUTE, to: 5 * MINUTE }), ["Bob map 1-4"]);
   });
 
-  test("names a golem after its token and owner, and one whose token is gone", async(t) => {
-    const harness = feedHarness(t);
-    await harness.edit("map", "agent:builder");
-    await harness.edit("sky", "agent:gone");
+  test("names golems, removed accounts and system sources, and lists every actor once", async() => {
+    using harness = await feedHarness();
+    harness.edits("agent:builder", "map", [0, 0]);
+    harness.edits("agent:gone", "map", [1, 1]);
+    harness.edits("carol", "map", [2, 2]);
+    harness.edits("carol", "sky", [3, 3]);
+    harness.audit.record({
+      type: "asset",
+      at: 4 * MINUTE,
+      actor: {
+        type: "system",
+        source: "fs-watcher"
+      },
+      assetId: "gone",
+      action: "deleted",
+      path: "old.voxelmap.json"
+    });
 
-    const { rows } = await harness.feed.page(kAdmin, {});
-
-    assert.deepEqual(rows.map((row) => row.actor), [
+    assert.deepEqual(harness.feed.actors(ADMIN), [
       {
+        key: "user:agent:builder",
+        id: "agent:builder",
+        name: "Builder (Bob)",
+        kind: "agent"
+      },
+      {
+        key: "user:agent:gone",
         id: "agent:gone",
         name: "Deleted golem",
         kind: "deleted"
       },
       {
-        id: "agent:builder",
-        name: "Builder (Bob)",
-        kind: "agent"
+        key: "user:carol",
+        id: "carol",
+        name: "Deleted user",
+        kind: "deleted"
+      },
+      {
+        key: "system:fs-watcher",
+        id: null,
+        name: "Files on disk",
+        kind: "system"
       }
     ]);
+    const [deleted] = harness.feed.page(ADMIN, { category: "structure" }).rows;
+    assert.ok(deleted.type === "asset");
+    assert.deepEqual(deleted.asset, {
+      id: "gone",
+      path: "old.voxelmap.json"
+    });
   });
 
-  test("names a removed account and skips the server's own snapshots", async(t) => {
-    const harness = feedHarness(t);
-    await harness.edit("map", "carol");
-    (await harness.events.writer.append({
-      assetType: "voxelmap",
-      assetId: "map",
-      eventType: "asset.updated",
-      eventData: { path: "map.voxelmap.json" },
-      actor: SNAPSHOT_ACTOR
-    })).unwrap();
+  test("points an edit run at its history versions only once both ends are kept apart", async() => {
+    using harness = await feedHarness();
+    harness.edits("alice", "map", [0, 0], { from: 3, to: 9 });
+    harness.edits("alice", "map", [1, 1], { from: 9, to: 9 });
+    harness.edits("alice", "map", [2, 2], { from: 9, to: null });
 
-    const { rows } = await harness.feed.page(kAdmin, {});
+    const versions = harness.feed.page(ADMIN, {}).rows
+      .map((row) => (row.type === "edits" ? row.versions : undefined));
 
-    assert.deepEqual(rows.map((row) => row.actor), [{
-      id: "carol",
-      name: "Deleted user",
-      kind: "deleted"
+    assert.deepEqual(versions, [null, null, {
+      from: "history/3",
+      to: "history/9"
     }]);
   });
 });

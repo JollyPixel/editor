@@ -48,4 +48,17 @@ describe("TagName", () => {
     assert.ok(TagName.isRestorePoint(name));
     assert.ok(!TagName.isRestorePoint("v1"));
   });
+
+  test("a history point is named after its event version and reserved like a restore point", () => {
+    const name = TagName.historyPoint(7).value;
+
+    assert.strictEqual(name, "history/7");
+    assert.ok(TagName.isHistoryPoint(name));
+    assert.ok(!TagName.isRestorePoint(name));
+    assert.ok(!TagName.parse(name).ok);
+    assert.deepEqual(
+      [name, TagName.restorePoint(7).value, "v7"].map(TagName.isReserved),
+      [true, true, false]
+    );
+  });
 });

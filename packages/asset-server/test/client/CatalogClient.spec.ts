@@ -193,6 +193,7 @@ describe("CatalogClient", () => {
       type: CATALOG_APPLIED,
       requestId: room.requestId(1),
       command: CATALOG_MOVE_FOLDER,
+      from: "maps",
       path: "levels"
     });
     const removed = client.removeFolder("levels");

@@ -118,7 +118,7 @@ export class EditorTags extends Emitter<EditorTagsEvents> {
 
   * [Symbol.iterator](): IterableIterator<AssetTag> {
     yield* this.#newestFirst(
-      (tag) => !TagName.isRestorePoint(tag.name)
+      (tag) => !TagName.isReserved(tag.name)
     );
   }
 

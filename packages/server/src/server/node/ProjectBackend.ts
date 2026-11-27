@@ -24,13 +24,14 @@ import {
   ACCOUNTS_STATE_IGNORES,
   openProjectRealm
 } from "../../accounts/node/openServerAccounts.ts";
-import { AssetLog } from "../../audit/node/AssetLog.ts";
+import { accountEntry } from "../../audit/node/AuditEntry.ts";
 import { AuditFeed } from "../../audit/node/AuditFeed.ts";
 import {
   AUDIT_DATABASE_FILE,
   AUDIT_STATE_IGNORES,
   AuditLog
 } from "../../audit/node/AuditLog.ts";
+import { AuditRecorder } from "../../audit/node/AuditRecorder.ts";
 import {
   EditorPageFolders,
   type EditorPageSource
@@ -132,9 +133,7 @@ export class ProjectBackend implements AsyncDisposable {
         path.join(project.file.root, STATE_DIRECTORY, AUDIT_DATABASE_FILE)
     ));
     opening.defer(realm.watchActivity((activity) => {
-      audit.recordAccount(activity).catch((error: unknown) => {
-        console.error(error);
-      });
+      audit.record(accountEntry(activity));
     }));
     const assetServer = await AssetServer.open({
       root: project.file.root,
@@ -164,6 +163,19 @@ export class ProjectBackend implements AsyncDisposable {
     });
     opening.defer(() => assetServer.close());
     const { backend, network } = assetServer;
+    const recorder = new AuditRecorder({
+      audit,
+      eventStore: assetServer.eventStore,
+      summarize: async(assetId, from, to) => (
+        await backend.tags.summarize(assetId, from, to)
+      ).unwrapOr(null),
+      activity: backend.activity,
+      retention: project.audit
+    });
+    opening.defer(async() => {
+      await backend.flush();
+      await recorder[Symbol.asyncDispose]();
+    });
     const transport = opening.use(new WebsocketTransport({
       server: network,
       compression: options.compression === true ?
@@ -211,11 +223,11 @@ export class ProjectBackend implements AsyncDisposable {
         server: network,
         backend,
         audit,
+        retention: recorder,
         accountsPolicy: options.accountsPolicy
       }),
       audit: new AuditFeed({
         project,
-        assets: new AssetLog(assetServer.eventStore),
         audit,
         account: (accountId) => accounts.account(accountId),
         agentToken: (subject) => realm.agentTokens.bySubject(subject),

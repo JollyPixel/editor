@@ -15,7 +15,8 @@ import {
   CATALOG_DELETE_FOLDER,
   CATALOG_FOLDERS,
   CATALOG_MOVE_FOLDER,
-  CATALOG_REJECTED
+  CATALOG_REJECTED,
+  type CatalogActivityEntry
 } from "#src/index.ts";
 import { bytes } from "../helpers/bytes.ts";
 import { catalogCommands } from "../helpers/catalog.ts";
@@ -104,8 +105,37 @@ describe("catalog folder commands", () => {
       type: CATALOG_APPLIED,
       requestId: "r4",
       command: CATALOG_MOVE_FOLDER,
+      from: "maps",
       path: "levels/maps"
     });
+  });
+
+  test("reports each applied command with its actor, and no rejected one", async() => {
+    await using commands = await catalogCommands();
+    const reported: CatalogActivityEntry[] = [];
+    commands.activity.on("applied", (entry) => reported.push(entry));
+
+    await commands.send({
+      type: CATALOG_CREATE_FOLDER,
+      requestId: "r1",
+      path: "maps"
+    });
+    await commands.send({
+      type: CATALOG_CREATE_FOLDER,
+      requestId: "r2",
+      path: "../outside"
+    });
+
+    assert.deepEqual(reported, [{
+      applied: {
+        command: CATALOG_CREATE_FOLDER,
+        path: "maps"
+      },
+      actor: {
+        type: "user",
+        id: "alice-subject"
+      }
+    }]);
   });
 
   test("rejects a folder escaping the project root", async() => {

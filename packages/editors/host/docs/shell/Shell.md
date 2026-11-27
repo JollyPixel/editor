@@ -21,6 +21,14 @@ with `shell.onReveal(listener, signal)` once it is ready.
 - A channel has one reveal listener: a later `onReveal()` replaces the
   previous one, and aborting the signal removes it.
 
+## Tagged versions
+
+The shell can open an asset on one of its tags, read-only. For a frame it has
+not launched yet, it sends the tag in `jolly-launch`; a `tag` in the page URL
+wins over it. For a launched frame, it posts `jolly-view`, and the editor
+switches to that tag, or back to the current content for `null`, as the
+Versions menu does. `shell.onView(listener, signal)` hears each `jolly-view`.
+
 ## Messages
 
 ```ts
@@ -40,6 +48,7 @@ with `shell.onReveal(listener, signal)` once it is ready.
 {
   type: "jolly-launch",
   target: string,
+  tag?: string,
   reveal?: string,
   appearance?: Appearance,
   identity: { username: string; peerId: string; avatar?: string; } | null,
@@ -50,6 +59,7 @@ with `shell.onReveal(listener, signal)` once it is ready.
 { type: "jolly-preferences", scope: string, overrides: PreferenceOverrides }
 { type: "jolly-session-renewed" }
 { type: "jolly-reveal", key: string }
+{ type: "jolly-view", tag: string | null }
 ```
 
 The frame's list is the `FrameMessage` union. The shell's list is
@@ -60,7 +70,7 @@ one. `ShellCommand` is a `FrameMessage` other than `jolly-ready` and the
 notifications.
 
 - The frame posts `jolly-ready` and waits one second for `jolly-launch` from
-  an allowed origin. An invalid `reveal`, `appearance`, `identity`,
+  an allowed origin. An invalid `tag`, `reveal`, `appearance`, `identity`,
   `preferences` or `ports` field is dropped, not the whole launch.
 - The frame's page stays hidden while it waits, then shows in the launch
   appearance, so it never paints its own theme or density first. It also

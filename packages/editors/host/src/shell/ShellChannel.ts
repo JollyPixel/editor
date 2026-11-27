@@ -25,6 +25,7 @@ import {
 type ShellEvents = {
   appearance: (appearance: Appearance) => void;
   preferences: (scope: string, overrides: PreferenceOverrides) => void;
+  view: (tag: string | null) => void;
 };
 
 export interface RenewableClient {
@@ -233,6 +234,13 @@ export class ShellChannel implements Notifier {
     }
   }
 
+  onView(
+    listener: (tag: string | null) => void,
+    signal: AbortSignal
+  ): void {
+    this.#listen("view", listener, signal);
+  }
+
   #receive(
     message: ShellMessage
   ): void {
@@ -253,6 +261,9 @@ export class ShellChannel implements Notifier {
         break;
       case "jolly-reveal":
         this.#reveal(message.key);
+        break;
+      case "jolly-view":
+        this.#events.emit("view", message.tag);
         break;
       default: {
         const unhandled: never = message;

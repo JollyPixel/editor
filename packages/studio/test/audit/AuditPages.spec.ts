@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 
 // Import Third-party Dependencies
 import type {
+  AuditActor,
   AuditPage,
   AuditQuery,
   AuditRow
@@ -24,6 +25,7 @@ function settingsRow(
   return {
     type: "settings",
     actor: {
+      key: "user:alice-id",
       id: "alice-id",
       name: "Alice",
       kind: "user"
@@ -54,6 +56,14 @@ class PendingPages implements AuditPageSource {
     page: AuditPage
   ): void {
     this.#replies[index].resolve(page);
+  }
+
+  actors(): Promise<AuditActor[]> {
+    return Promise.resolve([]);
+  }
+
+  export(): Promise<never> {
+    return Promise.reject(new Error("no export in this fake"));
   }
 
   fail(

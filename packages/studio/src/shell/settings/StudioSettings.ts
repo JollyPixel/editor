@@ -52,6 +52,7 @@ import "./project/ProjectGeneral.ts";
 import "./project/ProjectKindPackage.ts";
 import "./project/ProjectNewAccounts.ts";
 import "./project/ProjectSnapshot.ts";
+import "./project/ProjectAuditRetention.ts";
 import "./project/OfflineGame.ts";
 
 // CONSTANTS
@@ -458,6 +459,10 @@ export class StudioSettings extends LitElement {
             .value=${drafts.section("snapshot").current}
             ?disabled=${disabled}
           ></studio-project-snapshot>
+          <studio-project-audit-retention
+            .value=${drafts.section("audit").current}
+            ?disabled=${disabled}
+          ></studio-project-audit-retention>
         `;
       case "kind-package":
         return html`${keyed(section.id, html`
