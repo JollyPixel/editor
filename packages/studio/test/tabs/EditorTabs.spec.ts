@@ -99,6 +99,19 @@ describe("EditorTabs", () => {
     assert.equal(tabs.size, 0);
   });
 
+  test("returns to home when it was activated after the other open tabs", async() => {
+    const { tabs, home } = harness();
+    await tabs.open(MAP_TAB);
+    tabs.focus(HOME_TAB_ID);
+    await tabs.open(MODEL_TAB);
+
+    tabs.close("model-1");
+
+    assert.equal(tabs.active, HOME_TAB_ID);
+    assert.equal(home.hidden, false);
+    assert.deepEqual(tabs.ids(), ["map-1"]);
+  });
+
   test("focusing home hides every frame and keeps them open", async() => {
     const { tabs, home, visibleFrames } = harness();
     await tabs.open(MAP_TAB);

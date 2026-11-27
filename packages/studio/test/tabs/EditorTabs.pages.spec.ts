@@ -12,6 +12,7 @@ import {
   disposeHarness,
   harness,
   MAP_TAB,
+  MODEL_TAB,
   PAGE_ID
 } from "../helpers/editorTabs.ts";
 
@@ -50,5 +51,23 @@ describe("EditorTabs pages", () => {
     assert.equal(page.hidden, true);
     assert.equal(tabs.focus(PAGE_ID), false);
     assert.equal(tabs.close(PAGE_ID), false);
+  });
+
+  test("closing the active tab returns to the tab activated before it, page or editor", async() => {
+    const { tabs, page, visibleFrames } = harness();
+    await tabs.open(MAP_TAB);
+    tabs.openPage(PAGE_ID);
+    await tabs.open(MODEL_TAB);
+
+    tabs.close("model-1");
+
+    assert.equal(tabs.active, PAGE_ID);
+    assert.equal(page.hidden, false);
+    assert.deepEqual(visibleFrames(), []);
+
+    tabs.close(PAGE_ID);
+
+    assert.equal(tabs.active, "map-1");
+    assert.equal(page.hidden, true);
   });
 });

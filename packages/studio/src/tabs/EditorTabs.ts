@@ -122,6 +122,7 @@ export class EditorTabs {
   #open = new Map<string, OpenTab>();
   #pages = new Map<string, PageEntry>();
   #active = HOME_TAB_ID;
+  #history: string[] = [];
   #listening = new AbortController();
   #idleWaiters: Array<() => void> = [];
 
@@ -297,9 +298,11 @@ export class EditorTabs {
       this.#frames.remove(id);
       this.#releaseIdleWaiters();
     }
+    this.#history = this.#history.filter((other) => other !== id);
     if (this.#active === id) {
       this.focus(
-        [...this.#open.keys()].at(-1) ?? HOME_TAB_ID
+        this.#history.findLast((other) => this.#findItem(other) !== null) ??
+        HOME_TAB_ID
       );
     }
     else {
@@ -413,6 +416,7 @@ export class EditorTabs {
       page.item.remove();
     }
     this.#active = HOME_TAB_ID;
+    this.#history = [];
     this.#releaseIdleWaiters();
   }
 
@@ -478,6 +482,10 @@ export class EditorTabs {
     id: string
   ): void {
     this.#active = id;
+    this.#history = [
+      ...this.#history.filter((other) => other !== id),
+      id
+    ];
     this.#strip.value = id;
     for (const [pageId, page] of this.#pages) {
       page.element.hidden = pageId !== id;
