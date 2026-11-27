@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/runtime",
-  "description": "Renderer-agnostic JollyPixel runtime shell for web browsers and electron applications: boot, overlay, session and metrics.",
+  "description": "Renderer-agnostic game runtime for browsers and Electron",
   "version": "7.0.1",
   "type": "module",
   "exports": {

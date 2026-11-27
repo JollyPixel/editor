@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.script",
-  "description": "Script assets",
+  "description": ".ts and .js scripts, .tsl.ts shaders and text files",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

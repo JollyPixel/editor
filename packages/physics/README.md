@@ -1,5 +1,7 @@
 # @jolly-pixel/physics
 
+Engine-neutral physics contract and ECS components
+
 An engine-neutral physics contract and the components that plug it into the
 JollyPixel engine. The simulation itself comes from a [backend](#backends).
 The three.js collider outline is `ColliderOutline` in

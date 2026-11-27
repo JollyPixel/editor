@@ -8,6 +8,7 @@ import { ROOT_DIR } from "./root.ts";
 
 export interface PackageManifest {
   name: string;
+  description?: string;
   private?: boolean;
   main?: string;
   types?: string;

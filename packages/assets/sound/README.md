@@ -1,3 +1,5 @@
+`.ogg` sounds
+
 ## 📌 About
 
 Private asset workspace for sounds (kind `sound`). A sound asset is an Ogg file (`.ogg`) that the sound editor plays.

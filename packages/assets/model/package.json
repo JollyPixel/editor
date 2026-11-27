@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.model",
-  "description": "3D model assets",
+  "description": ".glb, .gltf, .fbx and .obj models",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

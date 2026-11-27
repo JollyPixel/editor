@@ -1,3 +1,5 @@
+`.scene.json` scenes
+
 ## 📌 About
 
 Private asset workspace for `.scene.json` scenes (kind `scene`): a tree of actors whose components can reference other assets. Scenes are edited in `@jolly-pixel/editor.scene`.

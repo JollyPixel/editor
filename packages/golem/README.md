@@ -1,5 +1,7 @@
 # Golem
 
+Connects a local AI agent to a running studio as a peer
+
 `@jolly-pixel/golem` lets a local AI agent join a running studio the way a person does. A golem opens assets, appears in the peer lists under its token's name with a "via golem" badge, and sends the same commands an editor sends. People in the editor watch its edits land live.
 
 The package is private and runs from a checkout. It needs Node 24 and an agent token from the studio's Settings › You › Agents page.

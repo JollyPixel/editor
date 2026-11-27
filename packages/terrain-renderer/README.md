@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Heightfield terrain engine and renderer
+
 ## 📌 About
 
 Private workspace for heightfield terrains: the headless chunk data and surface queries, and a CDLOD `TerrainView` drawn with Three.js. Terrains are edited in `@jolly-pixel/editor.terrain`, whose design notes cover the data model and rendering.

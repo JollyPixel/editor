@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.environment",
-  "description": "Environment editor for JollyPixel environment assets",
+  "description": "Environment editor",
   "version": "0.1.0",
   "type": "module",
   "private": true,

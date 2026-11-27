@@ -1,3 +1,5 @@
+Sound player
+
 ## 📌 About
 
 Private editor workspace for `@jolly-pixel/asset.sound` sounds, booted through `@jolly-pixel/editor.host`.

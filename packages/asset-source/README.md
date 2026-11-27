@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Asset storage on the filesystem, in memory or in IndexedDB
+
 ## 💡 About 
 
 An `AssetSource` stores bytes under root-relative POSIX paths. It reads,

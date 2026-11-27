@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.voxel-animation",
-  "description": "Voxel animation set assets",
+  "description": ".voxelanim.json animation sets",
   "version": "1.0.0",
   "type": "module",
   "sideEffects": false,

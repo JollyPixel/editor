@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Renderer-agnostic actor, component and scene framework
+
 ## 📌 About
 
 Minimal and opinionated [ECS][ecs] inspired by [Superpowers][superpowers] and [Craftstudio][craftstudio].

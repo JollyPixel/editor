@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Renderer-agnostic game runtime for browsers and Electron
+
 ## 📌 About
 
 The renderer-agnostic runtime shell of JollyPixel. `RuntimeCore` drives a

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.pixel-art",
-  "description": "Pixel-art assets",
+  "description": ".pixelart textures",
   "version": "1.0.0",
   "type": "module",
   "sideEffects": false,

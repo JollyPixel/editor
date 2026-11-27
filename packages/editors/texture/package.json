@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.texture",
-  "description": "Read-only image viewer for JollyPixel texture assets",
+  "description": "Image viewer",
   "version": "0.1.0",
   "type": "module",
   "private": true,

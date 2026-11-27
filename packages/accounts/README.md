@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+User accounts and session tokens
+
 ## 💃 Getting Started
 
 ```bash

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/scripting",
-  "description": "Compiles, checks, outlines, links and loads JollyPixel scripts and shaders",
+  "description": "Compiles and loads game scripts and TSL shaders",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.scene",
-  "description": "Collaborative scene editor for JollyPixel",
+  "description": "Scene editor for actors and their components",
   "version": "0.1.0",
   "type": "module",
   "private": true,

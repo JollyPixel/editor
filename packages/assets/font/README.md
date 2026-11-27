@@ -1,3 +1,5 @@
+`.typeface.json` fonts
+
 ## 📌 About
 
 Private asset workspace for fonts (kind `font`). A font asset is a Three.js typeface JSON file (`.typeface.json`), the format the engine's `FontAssetLoader` reads and the scene editor's Text component draws with.

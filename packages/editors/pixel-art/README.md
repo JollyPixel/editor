@@ -2,6 +2,8 @@
   <img src="./docs/banner.png" alt="JollyPixel">
 </p>
 
+Pixel-art texture editor
+
 ## 📌 About
 
 `<pixel-draw-panel>` is the Lit UI for a [`PixelArtCanvas`][pixel-draw-renderer].

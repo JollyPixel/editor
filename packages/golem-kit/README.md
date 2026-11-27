@@ -1,3 +1,5 @@
+Golem intent contract for asset kinds
+
 ## 📌 About
 
 Private workspace holding the contract between the golem and an asset kind. An asset package implements it so golems can open its kind, without depending on `@jolly-pixel/golem`.

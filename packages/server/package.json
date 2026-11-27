@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/server",
-  "description": "JollyPixel server: a project's assets, accounts and HTTP API, and the contract its clients share",
+  "description": "HTTP and WebSocket server for projects and accounts",
   "version": "0.1.0",
   "type": "module",
   "private": true,

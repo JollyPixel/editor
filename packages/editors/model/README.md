@@ -1,3 +1,5 @@
+3D model viewer
+
 ## 📌 About
 
 Private editor workspace for `@jolly-pixel/asset.model` models, booted through `@jolly-pixel/editor.host`. It previews a `.glb`, `.gltf`, `.fbx` or `.obj` file and plays its animation clips; it never edits the model.

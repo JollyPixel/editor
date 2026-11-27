@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/color",
-  "description": "The color utilities for JollyPixel's editors",
+  "description": "Color parsing, palettes, color spaces and conversions",
   "version": "3.0.0",
   "type": "module",
   "exports": {

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/lantern",
-  "description": "Guided tours for JollyPixel's editors",
+  "description": "Guided tours for the editors",
   "version": "1.2.1",
   "type": "module",
   "imports": {

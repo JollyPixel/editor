@@ -1,3 +1,5 @@
+Environment editor
+
 ## 📌 About
 
 Private editor workspace for `@jolly-pixel/asset.environment` environments, booted through `@jolly-pixel/editor.host`.

@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/studio",
-  "description": "JollyPixel studio: one project, its assets and one editor per tab",
+  "description": "One project, its assets and one editor per tab",
   "version": "0.1.0",
   "type": "module",
   "private": true,

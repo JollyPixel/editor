@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/editor.model",
-  "description": "Read-only 3D model viewer for JollyPixel model assets",
+  "description": "3D model viewer",
   "version": "0.1.0",
   "type": "module",
   "private": true,

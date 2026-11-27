@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/e2e",
-  "description": "Shared Playwright config, locators and editor fixtures for JollyPixel e2e suites",
+  "description": "Playwright config, locators and editor fixtures for e2e suites",
   "version": "1.0.0",
   "type": "module",
   "private": true,

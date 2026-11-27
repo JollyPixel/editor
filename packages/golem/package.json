@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/golem",
-  "description": "Connects a local AI agent to a running JollyPixel studio as a peer",
+  "description": "Connects a local AI agent to a running studio as a peer",
   "version": "0.1.0",
   "type": "module",
   "private": true,

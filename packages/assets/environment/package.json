@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/asset.environment",
-  "description": "Environment assets",
+  "description": ".environment.json environments",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,
