@@ -10,7 +10,8 @@ import type {
 import { TreeSnapshot } from "../../src/data/tree/model.ts";
 import {
   TreeRowLayout,
-  type TreeRail
+  type TreeRailAnchor,
+  type TreeRailStroke
 } from "../../src/data/tree/TreeRowLayout.ts";
 import {
   FOLDER_TREE,
@@ -53,18 +54,29 @@ function createLayout(
   );
 }
 
-function readRails(
+function readStrokes(
   layout: TreeRowLayout,
+  ids: string[],
   scope: "all" | "selected"
-): (readonly TreeRail[])[] {
-  return kNestedIds.map((id) => layout.rails(id, scope));
+): TreeRailStroke[][] {
+  return ids.map(
+    (id) => layout.rails(id, scope).map((rail) => rail.stroke)
+  );
+}
+
+function readAnchors(
+  layout: TreeRowLayout,
+  id: string,
+  scope: "all" | "selected"
+): TreeRailAnchor[] {
+  return layout.rails(id, scope).map((rail) => rail.anchor);
 }
 
 describe("Data.TreeRowLayout", () => {
   test("rails carry one level per ancestor and end the line at the last child", () => {
     const layout = createLayout(kNested, ["root", "open"]);
 
-    assert.deepEqual(readRails(layout, "all"), [
+    assert.deepEqual(readStrokes(layout, kNestedIds, "all"), [
       ["start"],
       ["tee", "start"],
       ["line", "elbow"],
@@ -78,7 +90,7 @@ describe("Data.TreeRowLayout", () => {
     const layout = createLayout(kNested, ["root", "open", "last"]);
     layout.follow(["leaf"]);
 
-    assert.deepEqual(readRails(layout, "selected"), [
+    assert.deepEqual(readStrokes(layout, kNestedIds, "selected"), [
       ["start"],
       ["elbow", "start"],
       ["blank", "elbow"],
@@ -88,7 +100,7 @@ describe("Data.TreeRowLayout", () => {
     ]);
 
     layout.follow(["open", "tail"]);
-    assert.deepEqual(readRails(layout, "selected"), [
+    assert.deepEqual(readStrokes(layout, kNestedIds, "selected"), [
       ["start"],
       ["tee"],
       ["line", "blank"],
@@ -106,7 +118,7 @@ describe("Data.TreeRowLayout", () => {
     const layout = createLayout(OWNER_TREE, ["folder"]);
     const ids = ["folder", "file", "loose", "owner", "companion"];
 
-    assert.deepEqual(ids.map((id) => layout.rails(id, "all")), [
+    assert.deepEqual(readStrokes(layout, ids, "all"), [
       ["start"],
       ["elbow"],
       [],
@@ -114,13 +126,52 @@ describe("Data.TreeRowLayout", () => {
       ["blank", "elbow"]
     ]);
     layout.follow(["companion"]);
-    assert.deepEqual(ids.map((id) => layout.rails(id, "selected")), [
+    assert.deepEqual(readStrokes(layout, ids, "selected"), [
       [],
       [],
       [],
       ["blank", "start"],
       ["blank", "elbow"]
     ]);
+  });
+
+  test("a non-collapsible branch anchors its children's line under its icon", () => {
+    const nested: TreeNode[] = [
+      OWNER_TREE[0],
+      {
+        id: "owner",
+        label: "Owner",
+        collapsible: false,
+        children: [
+          {
+            id: "companion",
+            label: "Companion",
+            children: [{ id: "leaf", label: "Leaf" }]
+          }
+        ]
+      }
+    ];
+    const cases: [string, TreeNode[], TreeReserveToggle, TreeRailAnchor[]][] = [
+      ["level, beside a branch", OWNER_TREE, "level", ["toggle", "icon-after-step"]],
+      ["tree, beside a branch", OWNER_TREE, "tree", ["icon-after-spacer"]],
+      ["level, alone", OWNER_TREE.slice(2), "level", ["icon"]],
+      ["tree, alone", OWNER_TREE.slice(2), "tree", ["icon"]],
+      ["tree, child has a toggle", nested, "tree", ["toggle"]]
+    ];
+
+    for (const [label, nodes, reserveToggle, anchors] of cases) {
+      const layout = createLayout(nodes, ["folder"], reserveToggle);
+      layout.follow(["companion"]);
+
+      for (const scope of ["all", "selected"] as const) {
+        assert.deepEqual(readAnchors(layout, "owner", scope), anchors, label);
+        assert.deepEqual(readAnchors(layout, "companion", scope), anchors, label);
+      }
+    }
+    assert.deepEqual(
+      readAnchors(createLayout(OWNER_TREE, ["folder"]), "file", "all"),
+      ["toggle"]
+    );
   });
 
   test("a leaf reserves the toggle width only beside a branch sibling", () => {

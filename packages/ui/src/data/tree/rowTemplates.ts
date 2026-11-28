@@ -7,7 +7,10 @@ import {
 
 // Import Internal Dependencies
 import type { TreeBadge } from "./contract.ts";
-import type { TreeRail } from "./TreeRowLayout.ts";
+import type {
+  TreeRail,
+  TreeRailStroke
+} from "./TreeRowLayout.ts";
 import type { TreeRowView } from "./TreeRowView.ts";
 import "../../peer/avatar/Avatar.ts";
 import "../../feedback/Spinner.ts";
@@ -19,7 +22,7 @@ const kVerticalStroke = html`<svg class="stroke vertical"><line
 const kHorizontalStroke = html`<svg class="stroke horizontal"><line
   x1="0" y1="0.5" x2="100%" y2="0.5"
 ></line></svg>`;
-const kRailStrokes: Record<TreeRail, TemplateResult | typeof nothing> = {
+const kRailStrokes: Record<TreeRailStroke, TemplateResult | typeof nothing> = {
   line: kVerticalStroke,
   blank: nothing,
   tee: html`${kVerticalStroke}${kHorizontalStroke}`,
@@ -54,7 +57,11 @@ export function renderGuides(
 
   return html`
     <span class="guides" aria-hidden="true">${rails.map(
-      (rail) => html`<span class="rail" data-rail=${rail}>${kRailStrokes[rail]}</span>`
+      (rail) => html`<span
+        class="rail"
+        data-rail=${rail.stroke}
+        data-anchor=${rail.anchor === "toggle" ? nothing : rail.anchor}
+      >${kRailStrokes[rail.stroke]}</span>`
     )}</span>
   `;
 }

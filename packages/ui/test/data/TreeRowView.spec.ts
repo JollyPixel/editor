@@ -49,7 +49,12 @@ const kState: TreeRowState = {
   renaming: false,
   renameError: null,
   spacer: "inside",
-  rails: ["tee"],
+  rails: [
+    {
+      stroke: "tee",
+      anchor: "toggle"
+    }
+  ],
   swatchPosition: "end",
   reorderable: true,
   match: null,
@@ -151,7 +156,22 @@ describe("Data.TreeRowView", () => {
       { moveCursor: true },
       { renaming: true },
       { spacer: "outside" },
-      { rails: ["elbow"] },
+      {
+        rails: [
+          {
+            stroke: "elbow",
+            anchor: "toggle"
+          }
+        ]
+      },
+      {
+        rails: [
+          {
+            stroke: "tee",
+            anchor: "icon"
+          }
+        ]
+      },
       { swatchPosition: "start" },
       { reorderable: false },
       { match: { start: 0, end: 1 } }
