@@ -46,14 +46,15 @@ const kTokens = {
 function entry(
   id: string,
   author: { username: string; via?: string; },
-  text: string
+  text: string,
+  at = 0
 ): AgentChatEntry {
   return {
     id,
     clientId: `${author.username}-client`,
     ...author,
     text,
-    at: 0
+    at
   };
 }
 
@@ -112,8 +113,41 @@ describe("StudioAgentChat", () => {
 
     assert.deepEqual(readChips(notifications), ["info Builder: Starting"]);
     assert.deepEqual(
-      chat.lines.map((line) => line.entry.text),
+      chat.groups.flatMap((group) => group.entries.map(({ text }) => text)),
       ["Add a tower", "Make it red", "Starting", "Done"]
+    );
+  });
+
+  test("groups a sender's consecutive messages until another speaks or five minutes pass", () => {
+    const harness = chatRoomHarness();
+    using chat = new StudioAgentChat(
+      new AgentChatClient(harness.room),
+      new NotificationQueue(),
+      kTokens
+    );
+    const minute = 60_000;
+
+    harness.history([
+      entry("1", { username: "Alice" }, "Add a tower", 0),
+      entry("2", { username: "Alice" }, "Make it red", minute),
+      entry("3", kAgentProfile, "Starting", 2 * minute),
+      entry("4", kAgentProfile, "Placed the base", 3 * minute),
+      entry("5", kAgentProfile, "Done", 8 * minute),
+      entry("6", { username: "Alice" }, "Thanks", 9 * minute)
+    ]);
+
+    assert.deepEqual(
+      chat.groups.map(({ agent, entries }) => [
+        entries[0].username,
+        agent,
+        entries.map(({ id }) => id)
+      ]),
+      [
+        ["Alice", false, ["1", "2"]],
+        ["Builder", true, ["3", "4"]],
+        ["Builder", true, ["5"]],
+        ["Alice", false, ["6"]]
+      ]
     );
   });
 
@@ -138,15 +172,15 @@ describe("StudioAgentChat", () => {
     });
 
     assert.deepEqual(
-      chat.agents.map(({ username, ownerName, owned, bridge }) => [
+      chat.agents.map(({ username, ownerName, bridge, controls }) => [
         username,
         ownerName,
-        owned,
-        bridge?.clientId
+        bridge?.clientId,
+        controls?.clientId
       ]),
       [
-        ["Builder", "Alice", true, "builder-bridge"],
-        ["Helper", null, false, "helper-bridge"]
+        ["Builder", "Alice", "builder-bridge", "builder-bridge"],
+        ["Helper", null, "helper-bridge", undefined]
       ]
     );
     assert.equal(chat.stopOwnBridges(), 1);

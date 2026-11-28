@@ -20,13 +20,13 @@ The credential a golem connects with, created on the studio's Agents page. It ca
 
 ### MCP server
 
-The stdio server an agent registers to reach the studio through tools. It holds one golem, connected on the first tool call.
+The stdio server an agent registers to reach the studio through tools. It holds one golem, connected when the server starts.
 
 *In code:* `GolemMcpServer`, `jolly-golem mcp`.
 
 ### Bridge
 
-The process on the owner's machine that runs an agent over ACP and connects it to the golem chat: the owner's messages become prompts, and the agent's replies and permission requests come back to the chat pane. It starts the MCP server with `--bridged`.
+The process on the owner's machine that runs an agent over ACP and connects it to the golem chat: the owner's messages become prompts, and the agent's replies and permission requests come back to the chat pane. It starts the MCP server with `--chat bridged`.
 
 *In code:* `GolemBridge`, `jolly-golem bridge`, `AGENT_BRIDGE_PRESENCE_KEY` from `@jolly-pixel/server`.
 

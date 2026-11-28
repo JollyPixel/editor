@@ -6,7 +6,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 
 // Import Internal Dependencies
 import { Golem } from "../peer/Golem.ts";
-import { GolemMcpServer } from "../mcp/GolemMcpServer.ts";
+import {
+  GOLEM_CHAT_MODES,
+  GolemMcpServer
+} from "../mcp/GolemMcpServer.ts";
 import { runBridge } from "./runBridge.ts";
 
 // CONSTANTS
@@ -15,7 +18,7 @@ const kUsage = [
   "                   [--project <folder>]",
   "",
   "Commands:",
-  "  mcp [--bridged]                 run the MCP server on stdio",
+  "  mcp [--chat <mode>]             run the MCP server on stdio",
   "  bridge [--agent <agent>] [--cwd <folder>]",
   "                                  run an ACP agent for the token's owner",
   "  status                          connect once and print the studio status",
@@ -23,7 +26,9 @@ const kUsage = [
   "--url defaults to JOLLY_STUDIO_URL, --token to JOLLY_GOLEM_TOKEN.",
   "--project, where the project's kind packages resolve from, defaults to",
   "JOLLY_PROJECT, then the current folder.",
-  "--agent is claude (default), codex, or a command that speaks ACP on stdio."
+  "--agent is claude (default), codex, or a command that speaks ACP on stdio.",
+  "--chat is standalone (default), channel, which also pushes the owner's",
+  "chat messages to Claude Code as channel events, or bridged, for the bridge."
 ].join("\n");
 const kCommands = new Set(["mcp", "bridge", "status"]);
 
@@ -39,8 +44,9 @@ const { positionals, values } = parseArgs({
     project: {
       type: "string"
     },
-    bridged: {
-      type: "boolean"
+    chat: {
+      type: "string",
+      default: "standalone"
     },
     agent: {
       type: "string"
@@ -68,9 +74,13 @@ if (values.help || !kCommands.has(command)) {
 else {
   try {
     if (command === "mcp") {
+      const chat = GOLEM_CHAT_MODES.find((mode) => mode === values.chat);
+      if (chat === undefined) {
+        throw new TypeError(`Unknown chat mode: ${values.chat}`);
+      }
       const server = new GolemMcpServer({
         ...options,
-        bridged: values.bridged
+        chat
       });
       await server.connect(new StdioServerTransport());
     }

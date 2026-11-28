@@ -45,7 +45,8 @@ export const packageGroups: PackageGroup[] = [
     packages: [
       { dir: "network", text: "Network" },
       { dir: "history", text: "History" },
-      { dir: "golem", text: "Golem" }
+      { dir: "golem", text: "Golem" },
+      { dir: "golem-kit", text: "Golem Kit" }
     ]
   },
   {

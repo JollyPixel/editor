@@ -68,7 +68,7 @@ function agent(
     tokenId,
     ownerId,
     ownerName: null,
-    owned: false,
+    controls: null,
     username,
     color: "#123456",
     activity: activity === null ? null : {

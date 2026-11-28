@@ -65,3 +65,5 @@ Each kind's class comes from the `golem` entry of its asset package, which docum
 - `EnvironmentAsset`: `@jolly-pixel/asset.environment/golem`.
 
 Import a class or its types from there, such as `import type { SceneAsset } from "@jolly-pixel/asset.scene/golem"`.
+
+The golem looks up each kind package the studio's `project-manifest.json` lists in the `projectRoot` (`--project`), then in its own dependencies, then in the checkout's `packages/assets/`. A package without a `jollypixel.golem` export adds no kind. When a package fails to load, opening one of its kinds throws `UnsupportedKindError` with the load error as its `cause`.

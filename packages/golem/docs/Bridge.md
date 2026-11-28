@@ -1,6 +1,6 @@
 # Bridge
 
-`jolly-golem bridge` runs an agent on your machine and lets you drive it from the studio's golem chat pane. It joins the chat with your agent token, turns what you write into prompts, posts the agent's replies, and shows its permission requests as buttons only you can answer. The agent speaks ACP (Agent Client Protocol) on stdio and reaches the studio through `jolly-golem mcp --bridged`.
+`jolly-golem bridge` runs an agent on your machine and lets you drive it from the studio's golem chat pane. It joins the chat with your agent token, turns what you write into prompts, posts the agent's replies, and shows its permission requests as buttons only you can answer. The agent speaks ACP (Agent Client Protocol) on stdio and reaches the studio through `jolly-golem mcp --chat bridged`.
 
 ## Running it
 
@@ -51,7 +51,7 @@ await using bridge = await GolemBridge.open({
   agent: stream,
   mcp: {
     command: process.execPath,
-    args: ["<checkout>/packages/golem/dist/bin/jolly-golem.js", "mcp", "--bridged"]
+    args: ["<checkout>/packages/golem/dist/bin/jolly-golem.js", "mcp", "--chat", "bridged"]
   }
 });
 await bridge.closed;

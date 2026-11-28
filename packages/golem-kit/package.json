@@ -1,6 +1,6 @@
 {
   "name": "@jolly-pixel/golem.kit",
-  "description": "Golem intent contract for asset kinds",
+  "description": "Contract and test studio for asset kinds that support golems",
   "version": "0.1.0",
   "type": "module",
   "sideEffects": false,

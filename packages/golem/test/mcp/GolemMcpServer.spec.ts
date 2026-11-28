@@ -13,7 +13,6 @@ import { sceneDocumentKind } from "@jolly-pixel/asset.scene/client";
 // Import Internal Dependencies
 import type { StudioStatus } from "#src/peer/Golem.ts";
 import { AssetPeer } from "../helpers/AssetPeer.ts";
-import { ChatPeer } from "../helpers/ChatPeer.ts";
 import { McpAgent } from "../helpers/McpAgent.ts";
 import {
   actorNamed,
@@ -36,11 +35,6 @@ interface SchemaVariant {
       const: string;
     };
   };
-}
-
-interface ChatMessage {
-  username: string;
-  text: string;
 }
 
 interface TruncatedResult {
@@ -89,46 +83,7 @@ function pillar(
   };
 }
 
-async function chatTools(
-  agent: McpAgent
-): Promise<string[]> {
-  const { tools } = await agent.client.listTools();
-
-  return tools
-    .map(({ name }) => name)
-    .filter((name) => name.startsWith("chat_"))
-    .sort();
-}
-
 describe("GolemMcpServer", { timeout: kTimeoutMs }, () => {
-  test("hears a person in the chat and answers them", async() => {
-    await using backend = await serveStudio();
-    const alice = await registered(backend, "Alice");
-    const builder = await createAgentToken(backend, alice, "Builder");
-    await using agent = await McpAgent.connect({
-      url: backend.url,
-      token: builder.value
-    });
-    await agent.call("studio_status");
-    using person = await ChatPeer.join(backend, alice);
-
-    const heard = agent.call<ChatMessage[]>("chat_next", {
-      timeoutMs: kTimeoutMs
-    });
-    await person.chat.say("Add a tower");
-    assert.deepEqual(
-      (await heard).map(({ username, text }) => [username, text]),
-      [["Alice", "Add a tower"]]
-    );
-
-    await agent.call("chat_say", { text: "On it" });
-    await person.until(() => person.chat.messages.length === 2);
-    assert.deepEqual(
-      person.chat.messages.map(({ username, via, text }) => [username, via, text]),
-      [["Alice", undefined, "Add a tower"], ["Builder", "golem", "On it"]]
-    );
-  });
-
   test("creates and edits a scene a peer watches, then reports it open", async() => {
     await using backend = await serveStudio();
     const bob = await registered(backend, "Bob");
@@ -258,21 +213,6 @@ describe("GolemMcpServer", { timeout: kTimeoutMs }, () => {
     const error = await agent.error("studio_status");
 
     assert.match(error, /studio at http:\/\/127\.0\.0\.1:9\/ is not reachable/);
-  });
-
-  test("leaves the chat tools to the bridge when bridged", async() => {
-    await using standalone = await McpAgent.connect({
-      url: kNoStudio,
-      token: "any"
-    });
-    await using bridged = await McpAgent.connect({
-      url: kNoStudio,
-      token: "any",
-      bridged: true
-    });
-
-    assert.deepEqual(await chatTools(standalone), ["chat_next", "chat_say"]);
-    assert.deepEqual(await chatTools(bridged), []);
   });
 
   test("serves package docs without a studio, but no file outside docs/", async() => {

@@ -10,9 +10,22 @@ Build the package (`pnpm --filter @jolly-pixel/golem run build`), create a token
 claude mcp add jollypixel --env JOLLY_GOLEM_TOKEN=<token> -- node <checkout>/packages/golem/dist/bin/jolly-golem.js mcp --url <studio url>
 ```
 
-`--url` defaults to `JOLLY_STUDIO_URL` and `--token` to `JOLLY_GOLEM_TOKEN`. `--project` is the `projectRoot` the project's kind packages resolve from, `JOLLY_PROJECT` or the current folder by default: pass the studio's project folder when it has kind packages of its own. The server exits at once without a URL or a token. It connects on the first tool call, so it starts even when the studio is down: tools then answer with `StudioUnreachableError` until the studio is up.
+`--url` defaults to `JOLLY_STUDIO_URL` and `--token` to `JOLLY_GOLEM_TOKEN`. `--project` is the `projectRoot` the project's kind packages resolve from, `JOLLY_PROJECT` or the current folder by default: pass the studio's project folder when it has kind packages of its own. The server exits at once without a URL or a token. It connects to the studio as soon as it starts, so the golem hears the chat before the agent's first tool call. When the studio is down, the server still starts: tools answer with `StudioUnreachableError`, and each call tries to connect again.
 
-`jolly-golem mcp --bridged` leaves out `chat_say` and `chat_next`: the [bridge](./Bridge.md) starts the server that way, since it delivers the owner's messages as prompts and posts the agent's replies itself.
+`--chat` sets how the agent reads the golem chat: `standalone` (the default) polls it with `chat_next`, `channel` also pushes the owner's messages (see below), and `bridged` leaves out `chat_say` and `chat_next`: the [bridge](./Bridge.md) starts the server that way, since it delivers the owner's messages as prompts and posts the agent's replies itself.
+
+### Waking an idle Claude Code session
+
+Without the bridge, the agent reads the chat only when it calls `chat_next`, so a session waiting at the prompt never sees a message. `--chat channel` pushes each message the token's owner writes to Claude Code as a [channel](https://code.claude.com/docs/en/channels.md) event, which starts a turn:
+
+```sh
+claude mcp add jollypixel --env JOLLY_GOLEM_TOKEN=<token> -- node <checkout>/packages/golem/dist/bin/jolly-golem.js mcp --url <studio url> --chat channel
+claude --dangerously-load-development-channels server:jollypixel
+```
+
+- Channels are a Claude Code research preview. They need an interactive session (not `-p`), and on a Team or Enterprise plan an Owner must enable them first.
+- The event's content is the message text, with `username` and, when the message names an asset, `asset_id` as attributes. The agent answers with `chat_say`.
+- Only the owner's messages are pushed, since the golem acts with the owner's role. Other people's messages wait for `chat_next`.
 
 `jolly-golem status` connects once, prints the studio status as JSON and exits.
 
@@ -34,7 +47,7 @@ Tools answer with compact JSON. A result over 32,000 characters becomes `{ trunc
 - `presence_activity({ assetId, label, progress? })`: publishes the golem's activity on the asset.
 - `presence_clear()`: clears it.
 - `chat_say({ text, assetId? })`: writes in the golem chat and returns the message's `id` and `at`.
-- `chat_next({ timeoutMs? })`: what people wrote since the last call, as `{ username, text, assetId?, at }`. Waits up to `timeoutMs` (default 30,000, at most 120,000) when nothing is unread, then returns `[]`.
+- `chat_next({ timeoutMs? })`: what people wrote since the last call, as `{ username, text, assetId?, at }`. Waits up to `timeoutMs` (default 30,000, at most 120,000) when nothing is unread, then returns `[]`. Under `--chat channel`, the owner's messages arrive as channel events instead.
 - `script_run({ script, args?, timeoutMs? })`: runs `node <script>` from the package's `local/` folder, with `JOLLY_STUDIO_URL`, `JOLLY_GOLEM_TOKEN` and `JOLLY_PROJECT` set to the server's, so a script connects under the golem's name without the token reaching the agent. Answers `{ exitCode, timedOut, stdout, stderr }`, each output cut to its last 8,000 characters. A path outside `local/` fails. Stops the script after `timeoutMs` (default 120,000, at most 600,000).
 
 `asset_read`, `asset_apply`, `asset_intent` and `presence_activity` open the asset when it is not open yet.
@@ -58,4 +71,4 @@ await server.connect(transport);
 await server.close();
 ```
 
-`new GolemMcpServer(options?)` takes the [`Golem.connect` options](./Golem.md#options), plus `bridged` (default `false`) to leave the chat tools out, and throws `TypeError` when they and the environment give no URL or no token. `connect(transport)` serves MCP on any MCP SDK transport, and `close()` ends it and disconnects the golem. `mcp` is the underlying `McpServer`.
+`new GolemMcpServer(options?)` takes the [`Golem.connect` options](./Golem.md#options), plus `chat`, one of `GOLEM_CHAT_MODES` (`"standalone"` by default, `"channel"` or `"bridged"`, as `--chat` above). It throws `TypeError` when they and the environment give no URL or no token. `connect(transport)` serves MCP on any MCP SDK transport and starts connecting the golem, and `close()` ends it and disconnects the golem. `mcp` is the underlying `McpServer`.
