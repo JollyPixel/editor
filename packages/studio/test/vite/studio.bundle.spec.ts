@@ -34,6 +34,8 @@ const kHiddenAtStart = [
   /console[\\/]dist[\\/]element[\\/]index\.js$/,
   /lantern[\\/]dist[\\/]element[\\/]index\.js$/,
   /shell[\\/]settings[\\/]StudioSettings\.ts$/,
+  /shell[\\/]docs[\\/]StudioDocs\.ts$/,
+  /\.md\?jolly-docs$/,
   /shell[\\/]assets[\\/]dialogs[\\/]AssetDeleteDialog\.ts$/,
   /blocks[\\/]dialogs[\\/]BlockEditDialog\.ts$/,
   /blocksets[\\/]dialogs[\\/]AddBlocksetDialog\.ts$/,

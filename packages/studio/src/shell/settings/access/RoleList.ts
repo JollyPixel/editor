@@ -15,7 +15,7 @@ import "@jolly-pixel/ui/elements/icon";
 
 // Import Internal Dependencies
 import type { RoleSummary } from "../../../project/RoleSummary.ts";
-import { navRowStyles } from "../navRowStyles.ts";
+import { navRowStyles } from "../../navRowStyles.ts";
 
 export class RoleSelectEvent extends Event {
   readonly role: string;

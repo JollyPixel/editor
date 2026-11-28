@@ -10,6 +10,7 @@ import {
   ProjectManifest,
   PreferenceScopes
 } from "@jolly-pixel/server";
+import scriptDocs from "virtual:jolly-pixel/docs";
 
 // Import Internal Dependencies
 import { usersConsole } from "./accounts/usersConsole.ts";
@@ -28,6 +29,8 @@ import "./icons.ts";
 import { StudioAppearance } from "./preferences/StudioAppearance.ts";
 import { SettingsSections } from "./shell/settings/SettingsSections.ts";
 import { settingsConsole } from "./shell/settings/settingsConsole.ts";
+import { DocsLibrary } from "./shell/docs/DocsLibrary.ts";
+import { docsConsole } from "./shell/docs/docsConsole.ts";
 import { golemConsole } from "./shell/golem/golemConsole.ts";
 import type { Studio } from "./shell/Studio.ts";
 import "./shell/Studio.ts";
@@ -93,6 +96,7 @@ async function boot(): Promise<void> {
     kindPackages: manifest.kindPackages,
     kinds: editors.kindSet()
   });
+  const docs = new DocsLibrary(scriptDocs);
   const studio = required("jolly-studio");
   await studio.attach({
     console: editorConsole,
@@ -100,6 +104,7 @@ async function boot(): Promise<void> {
     user,
     scopes,
     settings,
+    docs,
     editors,
     confirmEvict: (tab, unsaved) => showConfirm({
       title: "Editor limit reached",
@@ -118,6 +123,7 @@ async function boot(): Promise<void> {
   });
 
   settingsConsole(editorConsole.commands, studio, settings);
+  docsConsole(editorConsole.commands, studio, docs);
   if (user.online) {
     if (user.rights.allows("manageAccess")) {
       usersConsole(editorConsole.commands, user.roster);

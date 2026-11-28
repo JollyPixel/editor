@@ -300,6 +300,22 @@ registerIcon("history", `
   />
 `);
 
+registerIcon("book", `
+  <path
+    class="tone-wash"
+    d="M4 5.5C6.5 4.5 9.5 4.5 12 6.5V20C9.5 18 6.5 18 4 19Z"
+  />
+  <path
+    class="tone-ink"
+    d="M12 6.5C9.5 4.5 6.5 4.5 4 5.5V19C6.5 18 9.5 18 12 20M12 6.5C14.5 4.5 17.5 4.5 20 5.5V19C17.5 18 14.5 18 12 20M12 6.5V20"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`, { tone: "amber" });
+
 registerIcon("chat", `
   <path
     class="tone-wash"

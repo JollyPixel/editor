@@ -51,7 +51,7 @@ describe("StudioSession tab persistence", () => {
     const storage = new MemoryStorageAdapter();
     const first = session(catalog, storage);
     await first.openAsset("map-1");
-    first.openSettings();
+    first.tabs.openPage(SETTINGS_TAB_ID);
     disposeSession();
 
     const second = session(catalog, storage);

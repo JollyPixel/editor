@@ -1,5 +1,6 @@
 // Import Node.js Dependencies
 import { existsSync } from "node:fs";
+import path from "node:path";
 import { loadEnvFile } from "node:process";
 
 if (existsSync(".env")) {
@@ -34,6 +35,7 @@ import {
 } from "./node/studioFiles.ts";
 import { backend } from "./vite/backend.ts";
 import { bootPreloads } from "./vite/bootPreloads.ts";
+import { scriptDocs } from "./vite/docs/scriptDocs.ts";
 import { EditorPageFiles } from "./vite/pages/EditorPageFiles.ts";
 import { editorPages } from "./vite/pages/editorPages.ts";
 import { offlinePlay } from "./vite/player/offlinePlay.ts";
@@ -102,6 +104,7 @@ export default defineConfig(async(env): Promise<UserConfig> => {
       projectContributions(project),
       projectManifest(project),
       bootPreloads(),
+      scriptDocs(path.join(STUDIO_ROOT, "..")),
       createProjectFileWatchPlugin(project.file),
       playerModules(),
       offlinePlay(),

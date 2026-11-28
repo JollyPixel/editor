@@ -11,3 +11,8 @@ declare module "virtual:jolly-pixel/contributions/runtime" {
   const contributions: readonly import("./play/runtimeContributions.ts").RuntimeContribution[];
   export default contributions;
 }
+
+declare module "virtual:jolly-pixel/docs" {
+  const books: readonly import("./shell/docs/DocsLibrary.ts").DocsBook[];
+  export default books;
+}

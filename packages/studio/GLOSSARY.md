@@ -36,8 +36,9 @@ kind handler or editor code.
 ### Header actions
 
 The `<studio-header-actions>` buttons between Play and the account, on every tab:
-Search opens the console, Export opens the export dialog, Settings opens the
-Settings tab, and the chat button toggles the golem chat. Offline, the chat
+Search opens the console, Export opens the export dialog, Docs opens the
+Docs tab, Settings opens the Settings tab, and the chat button toggles the
+golem chat. Offline, the chat
 button is gone.
 
 ### Export dialog
@@ -57,6 +58,14 @@ starts or fails.
 The fixed first tab and the `<studio-home>` page it shows: the asset browser
 in the asset dock, and the root `README.md` rendered as Markdown, or a button to
 create it when the project has none.
+
+### Docs tab
+
+The `<studio-docs>` page: the README and `docs/` pages of the packages a
+script imports, `@jolly-pixel/ecs` and `@jolly-pixel/backend.three`, built
+into the studio. A link to another of these pages opens it in the tab; a link
+to any other page does nothing. The last page read is kept per browser. The
+`docs open` console command opens it on a page.
 
 ### Asset browser
 

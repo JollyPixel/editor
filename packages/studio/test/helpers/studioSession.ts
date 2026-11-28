@@ -99,7 +99,8 @@ export function session(
   const frames = document.createElement("div");
   const home = document.createElement("section");
   const settings = document.createElement("section");
-  document.body.append(strip, frames, home, settings);
+  const docs = document.createElement("section");
+  document.body.append(strip, frames, home, settings, docs);
   current = new StudioSession({
     catalog,
     share: idleShare(),
@@ -117,7 +118,8 @@ export function session(
       frames,
       home,
       homeTab: createHomeTab(),
-      settings
+      settings,
+      docs
     },
     cap,
     browserState: new BrowserState(storage),
