@@ -4,7 +4,6 @@ import type {
   FastifyReply,
   FastifyRequest
 } from "fastify";
-import * as z from "zod";
 import {
   ACCOUNTS_ROUTES,
   AVATAR_MAX_BYTES,
@@ -19,7 +18,8 @@ import type {
   Accounts,
   AccountsRealm,
   MemberSignIn,
-  Requester
+  Requester,
+  StoredAvatar
 } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
@@ -28,11 +28,14 @@ import {
   sessionAccount,
   signedInAccount
 } from "../../http/node/authentication.ts";
+import {
+  BINARY_BODY_SCHEMA,
+  binaryUpload
+} from "../../http/node/binaryUpload.ts";
 import { ApiError } from "../../http/node/errors/ApiError.ts";
 import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 
 // CONSTANTS
-const kAvatarBodySchema = z.instanceof(Uint8Array);
 const kAvatarContentType = "image/webp";
 const kImmutable = "public, max-age=31536000, immutable";
 const kRevalidate = "no-cache";
@@ -58,13 +61,22 @@ interface ReplaceAvatarRoute {
   Body: Uint8Array;
 }
 
+interface AvatarVersion {
+  [AVATAR_VERSION_PARAM]?: string | string[];
+}
+
 interface AvatarRoute {
   Params: {
     accountId: string;
   };
-  Querystring: {
-    [AVATAR_VERSION_PARAM]?: string | string[];
+  Querystring: AvatarVersion;
+}
+
+interface AgentAvatarRoute {
+  Params: {
+    tokenId: string;
   };
+  Querystring: AvatarVersion;
 }
 
 export async function accountsRoutes(
@@ -151,20 +163,13 @@ export async function accountsRoutes(
   });
   avatarRoute(app, accounts);
 
-  await app.register(async(avatarUpload) => {
-    avatarUpload.addContentTypeParser(
-      "*",
-      {
-        parseAs: "buffer"
-      },
-      (_request, body, done) => done(null, body)
-    );
-    avatarUpload.route<ReplaceAvatarRoute>({
+  await binaryUpload(app, (upload) => {
+    upload.route<ReplaceAvatarRoute>({
       method: replaceAvatar.method,
       url: replaceAvatar.path,
       bodyLimit: AVATAR_MAX_BYTES,
       schema: {
-        body: kAvatarBodySchema
+        body: BINARY_BODY_SCHEMA
       },
       preParsing: signedIn,
       handler: async(request): Promise<AccountReply> => {
@@ -219,7 +224,7 @@ function avatarRoute(
   app: FastifyInstance,
   accounts: Accounts
 ): void {
-  const { avatar } = ACCOUNTS_ROUTES;
+  const { avatar, agentAvatar } = ACCOUNTS_ROUTES;
 
   app.route<AvatarRoute>({
     method: avatar.method,
@@ -229,19 +234,40 @@ function avatarRoute(
       if (stored === null) {
         throw new ApiError(404, "not-found", "the account has no avatar");
       }
-      const version = request.query[AVATAR_VERSION_PARAM];
 
-      return reply
-        .header("content-type", kAvatarContentType)
-        .header(
-          "cache-control",
-          version === stored.hash ? kImmutable : kRevalidate
-        )
-        .header("cross-origin-resource-policy", "same-origin")
-        .header("x-content-type-options", "nosniff")
-        .send(stored.bytes);
+      return sendAvatar(reply, stored, request.query);
     }
   });
+  app.route<AgentAvatarRoute>({
+    method: agentAvatar.method,
+    url: agentAvatar.path,
+    handler: (request, reply) => {
+      const stored = accounts.agentAvatar(request.params.tokenId);
+      if (stored === null) {
+        throw new ApiError(404, "not-found", "the agent has no avatar");
+      }
+
+      return sendAvatar(reply, stored, request.query);
+    }
+  });
+}
+
+function sendAvatar(
+  reply: FastifyReply,
+  stored: StoredAvatar,
+  query: AvatarVersion
+): FastifyReply {
+  const version = query[AVATAR_VERSION_PARAM];
+
+  return reply
+    .header("content-type", kAvatarContentType)
+    .header(
+      "cache-control",
+      version === stored.hash ? kImmutable : kRevalidate
+    )
+    .header("cross-origin-resource-policy", "same-origin")
+    .header("x-content-type-options", "nosniff")
+    .send(stored.bytes);
 }
 
 function requester(

@@ -11,12 +11,13 @@ import {
   state
 } from "lit/decorators.js";
 import type { AgentToken } from "@jolly-pixel/accounts";
+import "@jolly-pixel/ui/elements/avatar";
 import "@jolly-pixel/ui/elements/button";
-import "@jolly-pixel/ui/elements/icon";
 import "@jolly-pixel/ui/elements/toolbar";
 import { showConfirm } from "@jolly-pixel/ui/elements/dialog";
 import "@jolly-pixel/ui/elements/text";
 import "@jolly-pixel/ui/elements/message";
+import { pickFiles } from "@jolly-pixel/utils/dom";
 
 // Import Internal Dependencies
 import {
@@ -79,6 +80,10 @@ export class AgentTokensPane extends LitElement {
     code {
       overflow-wrap: anywhere;
       user-select: all;
+    }
+
+    ul.rows > li > jolly-avatar {
+      --jolly-avatar-size: 20px;
     }
   `];
 
@@ -192,11 +197,18 @@ export class AgentTokensPane extends LitElement {
   ): TemplateResult {
     return html`
       <li data-token=${token.id}>
-        <jolly-icon name="key"></jolly-icon>
+        <jolly-avatar
+          peer-id=${token.id}
+          image=${token.avatar ?? ""}
+        ></jolly-avatar>
         <div class="row-text">
           <span class="row-title">${token.name}</span>
           <span class="row-meta">Created on ${kDate.format(token.createdAt)}.</span>
         </div>
+        <jolly-button
+          data-action="change-avatar"
+          @click=${() => this.#changeAvatar(token)}
+        >Change avatar…</jolly-button>
         <jolly-button
           variant="danger"
           data-action="revoke"
@@ -251,6 +263,17 @@ export class AgentTokensPane extends LitElement {
   readonly #dismiss = (): void => {
     this._revealed = null;
   };
+
+  async #changeAvatar(
+    token: AgentToken
+  ): Promise<void> {
+    const [image] = await pickFiles({
+      accept: "image/*"
+    });
+    if (image !== undefined) {
+      await this.#tokens.current?.replaceAvatar(token.id, image);
+    }
+  }
 
   async #revoke(
     token: AgentToken

@@ -240,7 +240,8 @@ Whoever opens a share link: the built-in `guest` role, read-only, shown as
 A credential an account creates in Settings › You › Access keys for an AI agent on
 its own machine. The agent connects with its owner's current role, under the
 token's name with a "via golem" badge; its subject is `agent:<token id>`.
-Shown once, stored as a digest, never expires, revoked by its owner.
+Shown once, stored as a digest, never expires, revoked by its owner, who
+can give it an avatar.
 
 ### Golem
 

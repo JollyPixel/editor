@@ -76,6 +76,10 @@ Encodes `image` with [`AvatarImage.encode`](#avatarimageencodeinput), stores it 
 
 The stored avatar, `{ hash, bytes }`, or `null` when the account has none.
 
+### `agentAvatar(tokenId)`
+
+The stored avatar of an agent token, `{ hash, bytes }`, or `null` when it has none. It reads tokens of every realm, revoked or not.
+
 ### `preferences(accountId)`
 
 A `Map` from scope name to that scope's overrides, a JSON object. Scopes without overrides are absent. The accounts store the objects as given: the caller validates them.
@@ -160,7 +164,7 @@ A live agent token resolves to its owner's current role in the realm, under the 
   profile: {
     username: token.name,
     peerId: token.id,
-    avatar: null,
+    avatar: token.avatar ?? null,
     via: "golem",
     ownerId: owner.id
   }
@@ -201,7 +205,7 @@ A registration and a join are their own actor. A share link that expires reports
 
 ### `watchProfiles(listener)`
 
-Calls `listener` with the account id and its new `profile`, shaped as in `authenticate`, after a member's [`PUT avatar`](#put-avatar). It returns a function that stops the calls. The network server watches it and sends the profile to every room the account's connections are in, without reconnecting them.
+Calls `listener` with a subject and the profile patch `{ avatar }`: the account id after a member's [`PUT avatar`](#put-avatar), and `agent:<token id>` after an agent token's [`replaceAvatar`](#replaceavatarownerid-tokenid-image). It returns a function that stops the calls. The network server watches it and sends the patch to every room the subject's connections are in, without reconnecting them.
 
 ### `shareLinks`
 
@@ -296,6 +300,10 @@ Revokes a live token of `ownerId` and returns it. Its connections are [revoked](
 ### `disconnect(ownerId, tokenId)`
 
 Closes the connections of a live token of `ownerId` and returns the token. They are [disconnected](#watchdisconnectionslistener), not revoked: the agent stays offline until it connects again, with the same credential. Throws `AgentTokenNotFoundError` like `revoke`.
+
+### `replaceAvatar(ownerId, tokenId, image)`
+
+Encodes `image` with [`AvatarImage.encode`](#avatarimageencodeinput), stores it as the avatar of a live token of `ownerId` and resolves to the token with its new `avatar` path. The agent's open connections get the new avatar through [`watchProfiles`](#watchprofileslistener) without reconnecting. Throws `AgentTokenNotFoundError` like `revoke`, and `InvalidAvatarError` for bytes that are not an image.
 
 ## `AccountsDatabase`
 
@@ -409,6 +417,10 @@ The body is an image of at most 2 MiB (`AVATAR_MAX_BYTES`). It replaces the avat
 ### `GET <id>/avatar`
 
 Answers the account's avatar as `image/webp`, or 404 `not-found`. No session is needed: account ids are random UUIDs. When `?v=` names the current hash, the reply is cached as `immutable` for a year; otherwise it is `no-cache`. `Cross-Origin-Resource-Policy: same-origin` keeps other sites from embedding it.
+
+### `GET agents/<token id>/avatar`
+
+Answers the avatar of an agent token like `GET <id>/avatar`, from [`agentAvatar`](#agentavatartokenid). The host serves the upload itself: the studio takes it on `PUT /api/golem/tokens/<token id>/avatar`, for the token's owner only.
 
 > [!WARNING]
 > The pre-hash is still the credential: whoever reads it can sign in. Expose the routes over HTTPS only. Browsers also only provide `crypto.subtle` on HTTPS and localhost.

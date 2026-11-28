@@ -10,9 +10,11 @@ import type {
   Browser,
   ServedBackend
 } from "#src/testing.ts";
+import { AVATAR_PNG } from "../../helpers/avatarPng.ts";
 import { serveBackend } from "../../helpers/serverBackend.ts";
 import {
   GOLEM_TOKENS_URL_PATH,
+  agentTokenReplySchema,
   agentTokensReplySchema,
   createdAgentTokenReplySchema,
   type AgentTokensReply
@@ -95,6 +97,55 @@ describe("golem token routes", () => {
     });
     assert.equal(revoked.status, 204);
     assert.deepEqual(await listed(server, alice), []);
+  });
+
+  test("replaces the avatar of a token of the signed-in account only and serves it", async() => {
+    await using server = await serveBackend();
+    const [alice, bob] = [server.browser(), server.browser()];
+    await alice.client.register("Alice", kPassword);
+    await bob.client.register("Bob", kPassword);
+    const { token } = createdAgentTokenReplySchema.parse(
+      await (await createToken(server, alice, {})).json()
+    );
+    const avatarUrl = tokensUrl(server, `${token.id}/avatar`);
+    const upload = {
+      method: "PUT",
+      headers: {
+        "content-type": "image/png"
+      },
+      body: AVATAR_PNG
+    };
+
+    assert.equal((await bob.fetch(avatarUrl, upload)).status, 404);
+    const unreadable = await alice.fetch(avatarUrl, {
+      ...upload,
+      body: "not an image"
+    });
+    assert.equal(unreadable.status, 422);
+
+    const replaced = await alice.fetch(avatarUrl, upload);
+    assert.equal(replaced.status, 200);
+    const { avatar } = agentTokenReplySchema.parse(await replaced.json()).token;
+    assert.match(
+      avatar ?? "",
+      new RegExp(`^/api/accounts/agents/${token.id}/avatar\\?v=[0-9a-f]{16}$`)
+    );
+    assert.deepEqual(await listed(server, alice), [{
+      ...token,
+      avatar
+    }]);
+
+    const served = await fetch(new URL(avatar ?? "", server.url));
+    assert.equal(served.status, 200);
+    assert.equal(served.headers.get("content-type"), "image/webp");
+    assert.equal(
+      served.headers.get("cache-control"),
+      "public, max-age=31536000, immutable"
+    );
+    const missing = await fetch(
+      new URL("/api/accounts/agents/unknown/avatar", server.url)
+    );
+    assert.equal(missing.status, 404);
   });
 
   test("refuses a visitor without a session and a name out of bounds", async() => {

@@ -14,8 +14,8 @@
   `game/gameFailures.ts` does for offline Play.
   Lint lets only `routes.ts`, `src/http/node/` and `ServerApi` import Fastify.
 - `src/http/` is the transport shared by every concern: the wire contract in
-  `api.ts`, and in `node/` authentication, the error fallback, downloads and
-  the middleware helpers. It imports no other concern.
+  `api.ts`, and in `node/` authentication, the error fallback, downloads,
+  binary uploads and the middleware helpers. It imports no other concern.
 - `src/server/node/` only assembles: `ServerBackend` (server level),
   `ProjectBackend` (one open project), `JollyServer`, `ServerSettings` and
   `ServerApi`, the Fastify app. `src/projects/` is the server-level concern:

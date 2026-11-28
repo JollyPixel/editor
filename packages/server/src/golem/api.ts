@@ -26,6 +26,10 @@ export const GOLEM_TOKENS_ROUTES = {
   disconnect: {
     method: "POST",
     path: ":tokenId/disconnect"
+  },
+  replaceAvatar: {
+    method: "PUT",
+    path: ":tokenId/avatar"
   }
 } as const satisfies Record<string, ApiRoute>;
 
@@ -42,6 +46,11 @@ export const agentTokensReplySchema = z.object({
   tokens: z.array(agentTokenSchema)
 });
 
+export const agentTokenReplySchema = z.object({
+  token: agentTokenSchema
+});
+
 export type CreateAgentTokenBody = z.infer<typeof createAgentTokenBodySchema>;
 export type CreatedAgentTokenReply = z.infer<typeof createdAgentTokenReplySchema>;
 export type AgentTokensReply = z.infer<typeof agentTokensReplySchema>;
+export type AgentTokenReply = z.infer<typeof agentTokenReplySchema>;

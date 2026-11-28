@@ -88,10 +88,11 @@ interface AgentToken {
   ownerId: string;
   name: string;
   createdAt: number;
+  avatar?: string;
 }
 ```
 
-A credential that lets a local AI agent join one project as a peer, with the role the account `ownerId` holds there. `name` is the peer name the agent shows, and `createdAt` is epoch milliseconds. The value of the credential is not part of it. `agentTokenSchema` parses one and `agentTokenNameSchema` a name (1 to 32 characters once trimmed, `AGENT_TOKEN_NAME_MAX_LENGTH`). An agent is named `"Golem"` (`AGENT_TOKEN_DEFAULT_NAME`) unless its token says otherwise. Its peer subject is `agent:<token id>`: `agentTokenSubject(tokenId)` builds it, and `agentTokenId(subject)` reads the id back, or returns `null` for any other subject.
+A credential that lets a local AI agent join one project as a peer, with the role the account `ownerId` holds there. `name` is the peer name the agent shows, and `createdAt` is epoch milliseconds. The value of the credential is not part of it. `avatar` is the path of the image its owner uploaded with [`replaceAvatar`](./Server.md#replaceavatarownerid-tokenid-image), `/api/accounts/agents/<token id>/avatar?v=<hash>`, and is missing until then. `agentTokenSchema` parses one and `agentTokenNameSchema` a name (1 to 32 characters once trimmed, `AGENT_TOKEN_NAME_MAX_LENGTH`). An agent is named `"Golem"` (`AGENT_TOKEN_DEFAULT_NAME`) unless its token says otherwise. Its peer subject is `agent:<token id>`: `agentTokenSubject(tokenId)` builds it, and `agentTokenId(subject)` reads the id back, or returns `null` for any other subject.
 
 ## `AgentProfile`
 

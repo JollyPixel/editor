@@ -14,15 +14,9 @@ import {
 } from "@jolly-pixel/accounts";
 
 // Import Internal Dependencies
+import { AVATAR_PNG as kPng } from "../../helpers/avatarPng.ts";
 import { requestStatus } from "../../helpers/rawRequest.ts";
 import { serveBackend } from "../../helpers/serverBackend.ts";
-
-// CONSTANTS
-const kPng = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAA" +
-  "EklEQVQImWP4z8CAFWEXHbQSACj/P8FTKqelAAAAAElFTkSuQmCC",
-  "base64"
-);
 
 function activeAccount(
   result: RegistrationResult

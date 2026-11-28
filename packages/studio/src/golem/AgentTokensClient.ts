@@ -1,8 +1,10 @@
 // Import Third-party Dependencies
 import {
   GOLEM_TOKENS_ROUTES,
+  agentTokenReplySchema,
   agentTokensReplySchema,
   createdAgentTokenReplySchema,
+  type AgentTokenReply,
   type AgentTokensReply,
   type CreatedAgentTokenReply
 } from "@jolly-pixel/server";
@@ -58,5 +60,21 @@ export class AgentTokensClient {
         tokenId
       }
     });
+  }
+
+  replaceAvatar(
+    tokenId: string,
+    image: Blob
+  ): Promise<AgentTokenReply> {
+    return this.#endpoint.json(
+      GOLEM_TOKENS_ROUTES.replaceAvatar,
+      agentTokenReplySchema,
+      {
+        params: {
+          tokenId
+        },
+        body: image
+      }
+    );
   }
 }

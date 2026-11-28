@@ -1,13 +1,19 @@
 // Import Third-party Dependencies
 import type { FastifyInstance } from "fastify";
+import { AVATAR_MAX_BYTES } from "@jolly-pixel/accounts";
 import type { AccountsRealm } from "@jolly-pixel/accounts/node";
 
 // Import Internal Dependencies
 import { signedInAccount } from "../../http/node/authentication.ts";
+import {
+  BINARY_BODY_SCHEMA,
+  binaryUpload
+} from "../../http/node/binaryUpload.ts";
 import type { RequestScoped } from "../../http/node/RequestScoped.ts";
 import {
   GOLEM_TOKENS_ROUTES,
   createAgentTokenBodySchema,
+  type AgentTokenReply,
   type AgentTokensReply,
   type CreateAgentTokenBody,
   type CreatedAgentTokenReply
@@ -27,6 +33,10 @@ interface AgentTokenRoute {
   };
 }
 
+interface ReplaceAgentAvatarRoute extends AgentTokenRoute {
+  Body: Uint8Array;
+}
+
 export async function golemRoutes(
   app: FastifyInstance,
   options: GolemRoutesOptions
@@ -35,7 +45,8 @@ export async function golemRoutes(
     list,
     create,
     revoke,
-    disconnect
+    disconnect,
+    replaceAvatar
   } = GOLEM_TOKENS_ROUTES;
 
   app.route({
@@ -87,5 +98,25 @@ export async function golemRoutes(
 
       return reply.code(204).send();
     }
+  });
+
+  await binaryUpload(app, (upload) => {
+    upload.route<ReplaceAgentAvatarRoute>({
+      method: replaceAvatar.method,
+      url: replaceAvatar.path,
+      bodyLimit: AVATAR_MAX_BYTES,
+      schema: {
+        body: BINARY_BODY_SCHEMA
+      },
+      handler: async(request): Promise<AgentTokenReply> => {
+        return {
+          token: await options.realm(request).agentTokens.replaceAvatar(
+            signedInAccount(request).id,
+            request.params.tokenId,
+            request.body
+          )
+        };
+      }
+    });
   });
 }

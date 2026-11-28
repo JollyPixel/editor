@@ -4,7 +4,10 @@ import {
   parseAgentProfile
 } from "@jolly-pixel/accounts";
 import { parsePeerProfile } from "@jolly-pixel/network";
-import type { Peer } from "@jolly-pixel/network/client";
+import type {
+  Peer,
+  PeerMetadata
+} from "@jolly-pixel/network/client";
 import {
   AGENT_CHAT_SAY,
   parseAgentBridgeState,
@@ -45,6 +48,7 @@ export interface ChatAgent {
   ownerId: string;
   ownerName: string | null;
   username: string;
+  avatar: string | null;
   color: string;
   activity: ChatAgentActivity | null;
   bridge: ChatAgentBridge | null;
@@ -63,10 +67,12 @@ export interface ChatAgentActivity {
 interface AgentViewer {
   peerId: string | undefined;
   people: ReadonlyMap<string, string>;
+  avatars: ReadonlyMap<string, string>;
 }
 
 export interface ChatGroup {
   agent: boolean;
+  avatar: string | null;
   color: string;
   entries: [AgentChatEntry, ...AgentChatEntry[]];
 }
@@ -111,6 +117,7 @@ export class StudioAgentChat extends EventTarget implements Disposable {
   }
 
   get groups(): ChatGroup[] {
+    const avatars = this.#avatars();
     const groups: ChatGroup[] = [];
     let group: ChatGroup | null = null;
     for (const entry of this.#chat.messages) {
@@ -118,7 +125,7 @@ export class StudioAgentChat extends EventTarget implements Disposable {
         group.entries.push(entry);
       }
       else {
-        group = chatGroup(entry);
+        group = chatGroup(entry, avatars);
         groups.push(group);
       }
     }
@@ -130,7 +137,8 @@ export class StudioAgentChat extends EventTarget implements Disposable {
     const { peers, profile } = this.#chat.room;
     const viewer: AgentViewer = {
       peerId: parsePeerProfile(profile).peerId,
-      people: peopleByPeerId(peers.values())
+      people: peopleByPeerId(peers.values()),
+      avatars: this.#avatars()
     };
 
     const byToken = new Map<string, ChatAgent>();
@@ -217,6 +225,15 @@ export class StudioAgentChat extends EventTarget implements Disposable {
     this.dispose();
   }
 
+  #avatars(): Map<string, string> {
+    const { peers, profile } = this.#chat.room;
+
+    return avatarsByPeerId([
+      profile,
+      ...Array.from(peers.values(), (peer) => peer.profile)
+    ]);
+  }
+
   readonly #changed = (): void => {
     this.dispatchEvent(new Event(AGENT_CHAT_CHANGE));
   };
@@ -237,10 +254,16 @@ export class StudioAgentChat extends EventTarget implements Disposable {
 }
 
 function chatGroup(
-  entry: AgentChatEntry
+  entry: AgentChatEntry,
+  avatars: ReadonlyMap<string, string>
 ): ChatGroup {
+  const avatar = entry.peerId === undefined ?
+    undefined :
+    avatars.get(entry.peerId);
+
   return {
     agent: isAgentProfile(entry),
+    avatar: avatar ?? null,
     color: peerProfileColor(entry.clientId, entry),
     entries: [entry]
   };
@@ -255,6 +278,20 @@ function continuesGroup(
 
   return first.clientId === entry.clientId &&
     entry.at - last.at < AGENT_CHAT_GROUP_GAP_MS;
+}
+
+function avatarsByPeerId(
+  profiles: Iterable<PeerMetadata>
+): Map<string, string> {
+  const avatars = new Map<string, string>();
+  for (const metadata of profiles) {
+    const { peerId, avatar } = parsePeerProfile(metadata);
+    if (peerId !== undefined && avatar !== undefined) {
+      avatars.set(peerId, avatar);
+    }
+  }
+
+  return avatars;
 }
 
 function peopleByPeerId(
@@ -293,6 +330,7 @@ function chatAgent(
     ownerId: profile.ownerId,
     ownerName: viewer.people.get(profile.ownerId) ?? null,
     username: profile.username,
+    avatar: viewer.avatars.get(profile.peerId) ?? null,
     color: peerProfileColor(peer.clientId, peer.profile),
     activity: activity === null ? null : {
       label: formatPeerActivity(activity),

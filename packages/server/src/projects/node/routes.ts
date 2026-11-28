@@ -2,10 +2,13 @@
 import type { FastifyInstance } from "fastify";
 import type { Accounts } from "@jolly-pixel/accounts/node";
 import { DEFAULT_ARCHIVE_MAX_BYTES } from "@jolly-pixel/asset-server";
-import * as z from "zod";
 
 // Import Internal Dependencies
 import { sessionAccount } from "../../http/node/authentication.ts";
+import {
+  BINARY_BODY_SCHEMA,
+  binaryUpload
+} from "../../http/node/binaryUpload.ts";
 import {
   PROJECTS_ROUTES,
   projectRefSchema,
@@ -17,7 +20,6 @@ import type { ProjectIndex } from "./ProjectIndex.ts";
 import { requireServerOwner } from "./requireServerOwner.ts";
 
 // CONSTANTS
-const kArchiveBodySchema = z.instanceof(Uint8Array);
 const kNoContent = 204;
 
 export interface ProjectsRoutesOptions {
@@ -113,21 +115,14 @@ export async function projectsRoutes(
       return reply.code(kNoContent).send();
     }
   });
-  await app.register(async(archiveUpload) => {
-    archiveUpload.addContentTypeParser(
-      "*",
-      {
-        parseAs: "buffer"
-      },
-      (_request, body, done) => done(null, body)
-    );
-    archiveUpload.route<ImportProjectRoute>({
+  await binaryUpload(app, (upload) => {
+    upload.route<ImportProjectRoute>({
       method: importRoute.method,
       url: importRoute.path,
       bodyLimit: DEFAULT_ARCHIVE_MAX_BYTES,
       schema: {
         params: projectRefSchema,
-        body: kArchiveBodySchema
+        body: BINARY_BODY_SCHEMA
       },
       preParsing: async(request, _reply, payload) => {
         requireServerOwner(sessionAccount(accounts, request), "imports");

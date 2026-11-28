@@ -31,6 +31,10 @@ export const ACCOUNTS_ROUTES = {
   avatar: {
     method: "GET",
     path: ":accountId/avatar"
+  },
+  agentAvatar: {
+    method: "GET",
+    path: "agents/:tokenId/avatar"
   }
 } as const;
 export const ACCOUNTS_REQUEST_ERROR_CODES = [
@@ -53,6 +57,15 @@ export function avatarPath(
   hash: string
 ): string {
   const path = ACCOUNTS_ROUTES.avatar.path.replace(":accountId", accountId);
+
+  return `${ACCOUNTS_URL_PATH}${path}?${AVATAR_VERSION_PARAM}=${hash}`;
+}
+
+export function agentAvatarPath(
+  tokenId: string,
+  hash: string
+): string {
+  const path = ACCOUNTS_ROUTES.agentAvatar.path.replace(":tokenId", tokenId);
 
   return `${ACCOUNTS_URL_PATH}${path}?${AVATAR_VERSION_PARAM}=${hash}`;
 }

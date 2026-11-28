@@ -8,7 +8,7 @@ import type { AgentTokensClient } from "./AgentTokensClient.ts";
 
 export type AgentTokensSource = Pick<
   AgentTokensClient,
-  "list" | "create" | "revoke" | "disconnect"
+  "list" | "create" | "revoke" | "disconnect" | "replaceAvatar"
 >;
 
 export class StudioAgentTokens extends RemoteState {
@@ -52,5 +52,19 @@ export class StudioAgentTokens extends RemoteState {
     tokenId: string
   ): Promise<void> {
     return this.#client.disconnect(tokenId);
+  }
+
+  async replaceAvatar(
+    tokenId: string,
+    image: Blob
+  ): Promise<void> {
+    await this.run(
+      () => this.#client.replaceAvatar(tokenId, image),
+      ({ token }) => {
+        this.#tokens = this.#tokens.map(
+          (known) => (known.id === token.id ? token : known)
+        );
+      }
+    );
   }
 }
