@@ -140,6 +140,53 @@ test.describe("Tree", () => {
     expect(content.x).toBe(guides.x + guides.width);
   });
 
+  test("drops a non-collapsible branch's line from its icon", async({ page }) => {
+    const layouts = [
+      { reserveToggle: "level", iconSize: "12px", indent: "16px" },
+      { reserveToggle: "level", iconSize: "12px", indent: "24px" },
+      { reserveToggle: "tree", iconSize: "16px", indent: "16px" }
+    ] as const;
+    for (const layout of layouts) {
+      const label = `${layout.reserveToggle}, ${layout.indent} indent`;
+      await page.locator(TREE_SELECTOR).evaluate((
+        tree: HTMLElementTagNameMap["jolly-tree"],
+        sizes
+      ) => {
+        tree.reserveToggle = sizes.reserveToggle;
+        tree.style.setProperty("--jolly-tree-icon-size", sizes.iconSize);
+        tree.style.setProperty("--jolly-tree-indent", sizes.indent);
+        tree.nodes = [
+          {
+            id: "folder",
+            label: "Folder",
+            icon: "check",
+            children: [{ id: "file", label: "File" }]
+          },
+          {
+            id: "owner",
+            label: "Owner",
+            icon: "search",
+            collapsible: false,
+            children: [{ id: "companion", label: "Companion", icon: "info" }]
+          }
+        ];
+      }, layout);
+      const owner = findRow(page, "owner");
+      const [icon, start, elbow, companionIcon] = await Promise.all([
+        measureBox(owner.locator(".node-icon")),
+        measureBox(owner.locator(".rail[data-rail='start'] .vertical")),
+        measureBox(findRow(page, "companion").locator(".rail[data-rail='elbow'] .vertical")),
+        measureBox(findRow(page, "companion").locator(".node-icon"))
+      ]);
+      const iconCenter = icon.x + (icon.width / 2);
+
+      expect(Math.abs(start.x + 0.5 - iconCenter), label).toBeLessThanOrEqual(1);
+      expect(elbow.x, label).toBe(start.x);
+      expect(start.y, label).toBeGreaterThanOrEqual(icon.y + icon.height);
+      expect(companionIcon.x, label).toBeGreaterThan(elbow.x);
+    }
+  });
+
   test("announces a row avatar's presence", async({ page }) => {
     await page.locator(TREE_SELECTOR).evaluate((tree: HTMLElementTagNameMap["jolly-tree"]) => {
       tree.nodes = [

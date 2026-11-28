@@ -209,7 +209,11 @@ function sameRails(
     return false;
   }
 
-  return left.every((rail, level) => rail === right[level]);
+  return left.every((rail, level) => {
+    const other = right[level];
+
+    return rail.stroke === other.stroke && rail.anchor === other.anchor;
+  });
 }
 
 function sameSwatch(

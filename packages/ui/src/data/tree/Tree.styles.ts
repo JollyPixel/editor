@@ -23,6 +23,7 @@ export const treeStyles = css`
 
   .row {
     --toggle-size: 12px;
+    --toggle-span: calc(var(--toggle-size) + var(--jolly-space-1, 4px));
     --guide-inset: 5px;
 
     position: relative;
@@ -417,8 +418,30 @@ export const treeStyles = css`
   }
 
   .rail {
+    --rail-inset: var(--guide-inset);
+    --rail-drop: var(--guide-inset);
+
     position: relative;
     flex: 0 0 var(--jolly-tree-indent, 16px);
+  }
+
+  .rail[data-anchor] {
+    --icon-axis: calc(
+      var(--jolly-tree-row-padding-inline, var(--jolly-space-1, 4px)) +
+      var(--jolly-tree-icon-size, 12px) / 2 - 1px
+    );
+    --rail-drop: calc(var(--jolly-tree-icon-size, 12px) / 2);
+    --rail-inset: var(--icon-axis);
+  }
+
+  .rail[data-anchor="icon-after-spacer"] {
+    --rail-inset: calc(var(--toggle-span) + var(--icon-axis));
+  }
+
+  .rail[data-anchor="icon-after-step"] {
+    --rail-inset: calc(
+      var(--toggle-span) + var(--icon-axis) - var(--jolly-tree-indent, 16px)
+    );
   }
 
   .stroke {
@@ -432,7 +455,7 @@ export const treeStyles = css`
 
   .vertical {
     top: 0;
-    inset-inline-start: var(--guide-inset);
+    inset-inline-start: var(--rail-inset);
     width: 1px;
     height: 100%;
   }
@@ -442,20 +465,18 @@ export const treeStyles = css`
   }
 
   .rail[data-rail="start"] .vertical {
-    top: calc(50% + var(--guide-inset));
-    height: calc(50% - var(--guide-inset));
+    top: calc(50% + var(--rail-drop));
+    height: calc(50% - var(--rail-drop));
   }
 
   .horizontal {
     top: 50%;
-    inset-inline-start: var(--guide-inset);
-    width: calc(100% - var(--guide-inset));
+    inset-inline-start: var(--rail-inset);
+    width: calc(100% - var(--rail-inset));
     height: 1px;
   }
 
   .row[data-spacer="outside"] .horizontal {
-    width: calc(
-      100% - var(--guide-inset) + var(--toggle-size) + var(--jolly-space-1, 4px)
-    );
+    width: calc(100% - var(--rail-inset) + var(--toggle-span));
   }
 `;

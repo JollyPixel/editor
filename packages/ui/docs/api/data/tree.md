@@ -327,7 +327,8 @@ diacritics, plus their ancestors.
   leaf. Children of a `collapsible: false` branch then take a single step.
 - `indentGuides` draws a line from each parent to its children.
   `indentGuidesScope="selected"` draws only the lines leading to the selected
-  rows.
+  rows. Under a `collapsible: false` branch the line drops from its icon,
+  unless one of its children has a toggle in `reserveToggle="tree"` mode.
 
 ## Styling
 
