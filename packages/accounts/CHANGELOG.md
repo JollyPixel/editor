@@ -1,5 +1,16 @@
 # @jolly-pixel/accounts
 
+## 2.1.0
+
+### Minor Changes
+
+- [#1309](https://github.com/JollyPixel/editor/pull/1309) [`c3ed6b1`](https://github.com/JollyPixel/editor/commit/c3ed6b194b65a4df11bfc419d48a37fff9db9aab) Thanks [@fraxken](https://github.com/fraxken)! - Agent tokens can carry an avatar: `AgentTokens.replaceAvatar` stores one and `AgentToken.avatar` points at it. `watchProfiles` now reports `{ avatar }` patches, for agents as for members.
+
+### Patch Changes
+
+- Updated dependencies [[`07fc4f6`](https://github.com/JollyPixel/editor/commit/07fc4f6e8b72cb30cdd8cef5dd24223a96b3d64f), [`7aeedb0`](https://github.com/JollyPixel/editor/commit/7aeedb025f78af4aeee84c8bd461df6348aab0c0), [`af5c3cd`](https://github.com/JollyPixel/editor/commit/af5c3cd3d03230d86050ac3aa1555feb9d6a48a6)]:
+  - @jolly-pixel/network@8.0.0
+
 ## 2.0.1
 
 ### Patch Changes

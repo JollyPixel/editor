@@ -1,5 +1,19 @@
 # @jolly-pixel/network
 
+## 8.0.0
+
+### Major Changes
+
+- [#1295](https://github.com/JollyPixel/editor/pull/1295) [`7aeedb0`](https://github.com/JollyPixel/editor/commit/7aeedb025f78af4aeee84c8bd461df6348aab0c0) Thanks [@fraxken](https://github.com/fraxken)! - Readers can subscribe to parts, list tags and send a kind's `AssetRelaySchemas.queries`; `CatalogClient.can()` tells which commands a member may send, and `CommandSync` rolls back refused ones. Replace `Room.access` with `room.can(event)` or `RoomGrants`; custom rooms must emit `rights` and echo `requestId` in refusals.
+
+### Minor Changes
+
+- [#1290](https://github.com/JollyPixel/editor/pull/1290) [`af5c3cd`](https://github.com/JollyPixel/editor/commit/af5c3cd3d03230d86050ac3aa1555feb9d6a48a6) Thanks [@fraxken](https://github.com/fraxken)! - Add `RoomClaim` and ui's `DriveSession` so one peer can drive playback while others follow, `PeerFrustumSync.worldScale` to size peer frustums, and `FakeNetwork` from `@jolly-pixel/network/testing` for unit tests.
+
+### Patch Changes
+
+- [#1305](https://github.com/JollyPixel/editor/pull/1305) [`07fc4f6`](https://github.com/JollyPixel/editor/commit/07fc4f6e8b72cb30cdd8cef5dd24223a96b3d64f) Thanks [@fraxken](https://github.com/fraxken)! - Drop the `ts-pattern` dependency.
+
 ## 7.0.1
 
 ### Patch Changes

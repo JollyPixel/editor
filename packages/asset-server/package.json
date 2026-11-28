@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/asset-server",
   "description": "Event-sourced asset projection, reconciliation and catalog delivery",
-  "version": "7.0.1",
+  "version": "8.0.0",
   "type": "module",
   "sideEffects": false,
   "imports": {

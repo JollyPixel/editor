@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/runtime",
   "description": "Renderer-agnostic game runtime for browsers and Electron",
-  "version": "7.0.1",
+  "version": "7.1.0",
   "type": "module",
   "exports": {
     ".": {

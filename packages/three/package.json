@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/three",
   "description": "Three.js components shared by the editors",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "type": "module",
   "sideEffects": false,
   "exports": {

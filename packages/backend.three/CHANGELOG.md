@@ -1,5 +1,15 @@
 # @jolly-pixel/backend.three
 
+## 1.0.3
+
+### Patch Changes
+
+- [#1297](https://github.com/JollyPixel/editor/pull/1297) [`0164169`](https://github.com/JollyPixel/editor/commit/016416984dbc4246fa20cc6cdeb8f21bffbccad0) Thanks [@fraxken](https://github.com/fraxken)! - `runtime.compiledFrame()` now also covers the pipelines of a scene that `load()` just activated, instead of resolving before that scene first draws.
+- Updated dependencies [[`c8f48d9`](https://github.com/JollyPixel/editor/commit/c8f48d9dca675cd65c6b27d4e5d8603a70c60e77), [`af5c3cd`](https://github.com/JollyPixel/editor/commit/af5c3cd3d03230d86050ac3aa1555feb9d6a48a6), [`0164169`](https://github.com/JollyPixel/editor/commit/016416984dbc4246fa20cc6cdeb8f21bffbccad0)]:
+  - @jolly-pixel/ui@5.1.0
+  - @jolly-pixel/runtime@7.1.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 1.0.2
 
 ### Patch Changes

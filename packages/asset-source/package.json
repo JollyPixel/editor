@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/asset-source",
   "description": "Asset storage on the filesystem, in memory or in IndexedDB",
-  "version": "4.0.1",
+  "version": "5.0.0",
   "type": "module",
   "sideEffects": false,
   "imports": {

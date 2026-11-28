@@ -1,5 +1,12 @@
 # @jolly-pixel/voxel.renderer
 
+## 9.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`0164169`](https://github.com/JollyPixel/editor/commit/016416984dbc4246fa20cc6cdeb8f21bffbccad0)]:
+  - @jolly-pixel/backend.three@1.0.3
+
 ## 9.0.1
 
 ### Patch Changes

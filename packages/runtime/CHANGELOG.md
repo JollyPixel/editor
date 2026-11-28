@@ -1,5 +1,17 @@
 # @jolly-pixel/runtime
 
+## 7.1.0
+
+### Minor Changes
+
+- [#1297](https://github.com/JollyPixel/editor/pull/1297) [`0164169`](https://github.com/JollyPixel/editor/commit/016416984dbc4246fa20cc6cdeb8f21bffbccad0) Thanks [@fraxken](https://github.com/fraxken)! - `load()` without `maxFps` no longer benchmarks the GPU or requests unpkg.com: it renders at the display rate and halves it while frames keep missing. Pass `maxFps` to keep a fixed cap.
+
+### Patch Changes
+
+- Updated dependencies [[`c8f48d9`](https://github.com/JollyPixel/editor/commit/c8f48d9dca675cd65c6b27d4e5d8603a70c60e77), [`af5c3cd`](https://github.com/JollyPixel/editor/commit/af5c3cd3d03230d86050ac3aa1555feb9d6a48a6)]:
+  - @jolly-pixel/ui@5.1.0
+  - @jolly-pixel/loop@2.0.0
+
 ## 7.0.1
 
 ### Patch Changes
