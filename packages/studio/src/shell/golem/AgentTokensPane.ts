@@ -35,11 +35,12 @@ const kDate = new Intl.DateTimeFormat("en", {
 interface RevealedToken {
   id: string;
   name: string;
+  token: string;
   setupLine: string;
   bridgeLine: string;
 }
 
-type RevealedLine = "setupLine" | "bridgeLine";
+type RevealedValue = "token" | "setupLine" | "bridgeLine";
 
 @customElement("studio-agent-tokens")
 export class AgentTokensPane extends LitElement {
@@ -88,7 +89,7 @@ export class AgentTokensPane extends LitElement {
   declare _revealed: RevealedToken | null;
 
   @state()
-  declare _copied: RevealedLine | null;
+  declare _copied: RevealedValue | null;
 
   #tokens = new RemoteStateController<StudioAgentTokens>(this);
 
@@ -161,6 +162,7 @@ export class AgentTokensPane extends LitElement {
         </p>
         <code>${revealed.bridgeLine}</code>
         <jolly-toolbar label="Token actions">
+          ${this.#renderCopy("token", "Copy the token")}
           ${this.#renderCopy("setupLine", "Copy the MCP line")}
           ${this.#renderCopy("bridgeLine", "Copy the bridge line")}
           <jolly-button
@@ -173,15 +175,15 @@ export class AgentTokensPane extends LitElement {
   }
 
   #renderCopy(
-    line: RevealedLine,
+    value: RevealedValue,
     label: string
   ): TemplateResult {
     return html`
       <jolly-button
         variant="accent"
-        data-action=${`copy-${line}`}
-        @click=${() => this.#copy(line)}
-      >${this._copied === line ? "Copied" : label}</jolly-button>
+        data-action=${`copy-${value}`}
+        @click=${() => this.#copy(value)}
+      >${this._copied === value ? "Copied" : label}</jolly-button>
     `;
   }
 
@@ -224,21 +226,22 @@ export class AgentTokensPane extends LitElement {
     this._revealed = {
       id: created.token.id,
       name: created.token.name,
+      token: created.value,
       setupLine: agentSetupLine(lineOptions),
       bridgeLine: agentBridgeLine(lineOptions)
     };
   };
 
   async #copy(
-    line: RevealedLine
+    value: RevealedValue
   ): Promise<void> {
     if (this._revealed === null) {
       return;
     }
 
     try {
-      await navigator.clipboard.writeText(this._revealed[line]);
-      this._copied = line;
+      await navigator.clipboard.writeText(this._revealed[value]);
+      this._copied = value;
     }
     catch {
       this._copied = null;
