@@ -1,5 +1,11 @@
 # @jolly-pixel/asset-source
 
+## 5.0.0
+
+### Major Changes
+
+- [#1296](https://github.com/JollyPixel/editor/pull/1296) [`ef13b5b`](https://github.com/JollyPixel/editor/commit/ef13b5bf3f6e9c186078ca519bac386179e0d072) Thanks [@fraxken](https://github.com/fraxken)! - The content route picks brotli or gzip by q-values, and 8.3 short-name segments such as `sprite~1.png` are rejected as `reserved`. `resolveContentType` is removed: use `contentType(path, DEFAULT_CONTENT_TYPES)` from `@openally/servo`.
+
 ## 4.0.1
 
 ### Patch Changes

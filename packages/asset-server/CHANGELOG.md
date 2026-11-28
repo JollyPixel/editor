@@ -1,5 +1,24 @@
 # @jolly-pixel/asset-server
 
+## 8.0.0
+
+### Major Changes
+
+- [#1295](https://github.com/JollyPixel/editor/pull/1295) [`7aeedb0`](https://github.com/JollyPixel/editor/commit/7aeedb025f78af4aeee84c8bd461df6348aab0c0) Thanks [@fraxken](https://github.com/fraxken)! - Readers can subscribe to parts, list tags and send a kind's `AssetRelaySchemas.queries`; `CatalogClient.can()` tells which commands a member may send, and `CommandSync` rolls back refused ones. Replace `Room.access` with `room.can(event)` or `RoomGrants`; custom rooms must emit `rights` and echo `requestId` in refusals.
+
+### Minor Changes
+
+- [#1298](https://github.com/JollyPixel/editor/pull/1298) [`91c36aa`](https://github.com/JollyPixel/editor/commit/91c36aaa5108759232c758b402c6a025796ca3c0) Thanks [@fraxken](https://github.com/fraxken)! - Add a `summarizeChange` kind hook, `AssetTags.summarize`, reserved `history/` tags (`TagName.historyPoint`, `TagName.isReserved`) and `backend.activity`, which reports each applied catalog command with its actor. A move-folder reply now includes `from`.
+
+### Patch Changes
+
+- [#1305](https://github.com/JollyPixel/editor/pull/1305) [`07fc4f6`](https://github.com/JollyPixel/editor/commit/07fc4f6e8b72cb30cdd8cef5dd24223a96b3d64f) Thanks [@fraxken](https://github.com/fraxken)! - Drop the `ts-pattern` dependency.
+
+- [#1296](https://github.com/JollyPixel/editor/pull/1296) [`ef13b5b`](https://github.com/JollyPixel/editor/commit/ef13b5bf3f6e9c186078ca519bac386179e0d072) Thanks [@fraxken](https://github.com/fraxken)! - The content route picks brotli or gzip by q-values, and 8.3 short-name segments such as `sprite~1.png` are rejected as `reserved`. `resolveContentType` is removed: use `contentType(path, DEFAULT_CONTENT_TYPES)` from `@openally/servo`.
+- Updated dependencies [[`07fc4f6`](https://github.com/JollyPixel/editor/commit/07fc4f6e8b72cb30cdd8cef5dd24223a96b3d64f), [`7aeedb0`](https://github.com/JollyPixel/editor/commit/7aeedb025f78af4aeee84c8bd461df6348aab0c0), [`af5c3cd`](https://github.com/JollyPixel/editor/commit/af5c3cd3d03230d86050ac3aa1555feb9d6a48a6), [`ef13b5b`](https://github.com/JollyPixel/editor/commit/ef13b5bf3f6e9c186078ca519bac386179e0d072)]:
+  - @jolly-pixel/network@8.0.0
+  - @jolly-pixel/asset-source@5.0.0
+
 ## 7.0.1
 
 ### Patch Changes

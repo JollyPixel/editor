@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/backend.three",
   "description": "Three.js backend for the ECS",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "sideEffects": false,
   "exports": {

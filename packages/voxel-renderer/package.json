@@ -1,7 +1,7 @@
 {
   "name": "@jolly-pixel/voxel.renderer",
   "description": "Voxel engine and renderer",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "type": "module",
   "sideEffects": false,
   "exports": {

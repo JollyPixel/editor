@@ -1,5 +1,16 @@
 # @jolly-pixel/three
 
+## 6.1.0
+
+### Minor Changes
+
+- [#1290](https://github.com/JollyPixel/editor/pull/1290) [`af5c3cd`](https://github.com/JollyPixel/editor/commit/af5c3cd3d03230d86050ac3aa1555feb9d6a48a6) Thanks [@fraxken](https://github.com/fraxken)! - Add `RoomClaim` and ui's `DriveSession` so one peer can drive playback while others follow, `PeerFrustumSync.worldScale` to size peer frustums, and `FakeNetwork` from `@jolly-pixel/network/testing` for unit tests.
+
+### Patch Changes
+
+- Updated dependencies [[`07fc4f6`](https://github.com/JollyPixel/editor/commit/07fc4f6e8b72cb30cdd8cef5dd24223a96b3d64f), [`7aeedb0`](https://github.com/JollyPixel/editor/commit/7aeedb025f78af4aeee84c8bd461df6348aab0c0), [`af5c3cd`](https://github.com/JollyPixel/editor/commit/af5c3cd3d03230d86050ac3aa1555feb9d6a48a6)]:
+  - @jolly-pixel/network@8.0.0
+
 ## 6.0.0
 
 ### Major Changes
