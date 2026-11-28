@@ -42,6 +42,7 @@ import {
 
 // CONSTANTS
 export const SETTINGS_TAB_ID = "studio:settings";
+export const DOCS_TAB_ID = "studio:docs";
 
 export interface AssetOpenOptions extends EditorTabOpenOptions {
   /**
@@ -93,6 +94,7 @@ export interface StudioSessionSlots {
   home: HTMLElement;
   homeTab: TabItem;
   settings: HTMLElement;
+  docs: HTMLElement;
 }
 
 export interface StudioSessionOptions extends Pick<
@@ -173,6 +175,12 @@ export class StudioSession {
           label: "Settings",
           icon: "settings",
           element: slots.settings
+        },
+        {
+          id: DOCS_TAB_ID,
+          label: "Docs",
+          icon: "book",
+          element: slots.docs
         }
       ],
       cap: options.cap,
@@ -214,10 +222,6 @@ export class StudioSession {
 
   toggleConsole(): void {
     this.#console?.toggle();
-  }
-
-  openSettings(): void {
-    this.tabs.openPage(SETTINGS_TAB_ID);
   }
 
   async openAsset(

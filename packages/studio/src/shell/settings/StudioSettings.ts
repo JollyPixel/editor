@@ -32,7 +32,8 @@ import { AssetKindSet } from "../../catalog/AssetKindSet.ts";
 import type { ProjectDrafts } from "../../project/ProjectDrafts.ts";
 import { ChangeController } from "../ChangeController.ts";
 import { cardStyles } from "../cardStyles.ts";
-import { navRowStyles } from "./navRowStyles.ts";
+import { navMenuStyles } from "../navMenuStyles.ts";
+import { navRowStyles } from "../navRowStyles.ts";
 import {
   SettingsSections,
   type SettingsGroup,
@@ -68,7 +69,7 @@ type ProjectSection = Exclude<
 
 @customElement("studio-settings")
 export class StudioSettings extends LitElement {
-  static override styles = [cardStyles, navRowStyles, css`
+  static override styles = [cardStyles, navRowStyles, navMenuStyles, css`
     :host {
       display: flex;
       gap: var(--studio-gutter);
@@ -78,10 +79,6 @@ export class StudioSettings extends LitElement {
 
     :host([hidden]) {
       display: none;
-    }
-
-    .menu {
-      flex: 0 0 220px;
     }
 
     .menu jolly-tabs {
@@ -96,43 +93,10 @@ export class StudioSettings extends LitElement {
       flex: 1 1 0;
     }
 
-    nav {
-      flex: 1 1 auto;
-      min-height: 0;
-      padding-block: var(--jolly-space-2);
-      overflow-y: auto;
-    }
-
-    nav section + section {
-      margin-top: var(--jolly-space-3);
-    }
-
-    nav h3 {
-      margin: 0;
-      padding: var(--jolly-space-1) var(--jolly-space-3);
-      color: var(--jolly-text-muted);
-      font-size: 0.8em;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-
-    nav ul {
-      margin: 0;
-      padding: 0 var(--jolly-space-1);
-      list-style: none;
-    }
-
     nav button jolly-icon {
       flex: 0 0 auto;
       width: 16px;
       height: 16px;
-    }
-
-    nav button span {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
 
     nav button .unsaved {

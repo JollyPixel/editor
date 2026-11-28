@@ -37,6 +37,7 @@ import {
   type StudioUser
 } from "../accounts/StudioUser.ts";
 import {
+  DOCS_TAB_ID,
   SETTINGS_TAB_ID,
   StudioSession,
   type AssetOpenOptions,
@@ -44,6 +45,8 @@ import {
 } from "./StudioSession.ts";
 import { SettingsSections } from "./settings/SettingsSections.ts";
 import type { SettingsOpenEvent } from "./settings/SettingsOpenEvent.ts";
+import { DocsLibrary } from "./docs/DocsLibrary.ts";
+import type { StudioDocs } from "./docs/StudioDocs.ts";
 import type { StudioPlay } from "../play/StudioPlay.ts";
 import { BrowserState } from "../browser/BrowserState.ts";
 import type { StudioErrorEvent } from "./StudioErrorEvent.ts";
@@ -65,6 +68,7 @@ export interface StudioOptions extends Pick<
   share: CatalogShare;
   user: StudioUser;
   settings: SettingsSections;
+  docs: DocsLibrary;
 }
 
 @customElement("jolly-studio")
@@ -231,11 +235,11 @@ export class Studio extends LitElement implements GolemConsoleHost {
       display: none;
     }
 
-    #studio-settings {
+    .studio-page {
       height: 100%;
     }
 
-    #studio-settings[hidden] {
+    .studio-page[hidden] {
       display: none;
     }
 
@@ -249,6 +253,9 @@ export class Studio extends LitElement implements GolemConsoleHost {
 
   @state()
   declare _sections: SettingsSections;
+
+  @state()
+  declare _docsLibrary: DocsLibrary;
 
   @query("jolly-tabs")
   declare _strip: HTMLElementTagNameMap["jolly-tabs"] | null;
@@ -264,6 +271,12 @@ export class Studio extends LitElement implements GolemConsoleHost {
 
   @query("studio-settings")
   declare _settingsPage: StudioSettings | null;
+
+  @query("#studio-docs")
+  declare _docs: HTMLElement | null;
+
+  @query("studio-docs")
+  declare _docsPage: StudioDocs | null;
 
   @query("jolly-notifications")
   declare _notifications: HTMLElementTagNameMap["jolly-notifications"] | null;
@@ -286,6 +299,26 @@ export class Studio extends LitElement implements GolemConsoleHost {
     this,
     () => import("./settings/StudioSettings.ts")
   );
+  #docsPage = new LazyTemplate(
+    this,
+    () => import("./docs/StudioDocs.ts")
+  );
+  #lazyPages = new Map([
+    [
+      SETTINGS_TAB_ID,
+      {
+        label: "Settings",
+        template: this.#settingsPage
+      }
+    ],
+    [
+      DOCS_TAB_ID,
+      {
+        label: "Docs",
+        template: this.#docsPage
+      }
+    ]
+  ]);
   #notifications = new NotificationQueue();
   #user = new ChangeController<StudioUser>(
     this,
@@ -301,6 +334,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
     this._play = null;
     this._agentChat = null;
     this._sections = SettingsSections.EMPTY;
+    this._docsLibrary = DocsLibrary.EMPTY;
   }
 
   async attach(
@@ -313,7 +347,8 @@ export class Studio extends LitElement implements GolemConsoleHost {
       homeTab === undefined ||
       this._frames === null ||
       this._home === null ||
-      this._settings === null
+      this._settings === null ||
+      this._docs === null
     ) {
       throw new Error("The studio must be connected before it is attached.");
     }
@@ -335,7 +370,8 @@ export class Studio extends LitElement implements GolemConsoleHost {
         homeTab,
         frames: this._frames,
         home: this._home,
-        settings: this._settings
+        settings: this._settings,
+        docs: this._docs
       },
       browserState: this.#browserState,
       notifications: this.#notifications,
@@ -356,6 +392,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
     this._play = session.play;
     this.#scopes = options.scopes;
     this._sections = options.settings;
+    this._docsLibrary = options.docs;
     this.#user.attach(user);
     this._agentChat?.dispose();
     this.#presence?.dispose();
@@ -392,7 +429,17 @@ export class Studio extends LitElement implements GolemConsoleHost {
       this.#browserState.settingsSection = section;
       this._settingsPage?.requestUpdate();
     }
-    this.#session?.openSettings();
+    this.#session?.tabs.openPage(SETTINGS_TAB_ID);
+  }
+
+  openDocs(
+    page?: string
+  ): void {
+    if (page !== undefined) {
+      this.#browserState.docsPage = page;
+      this._docsPage?.requestUpdate();
+    }
+    this.#session?.tabs.openPage(DOCS_TAB_ID);
   }
 
   openGolemChat(
@@ -478,6 +525,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
             .agentChat=${this._agentChat}
             @console-toggle=${this.#toggleConsole}
             @settings-open=${this.#openSettings}
+            @docs-open=${this.#openDocs}
             @golem-chat-toggle=${this.#toggleGolemChat}
           ></studio-header-actions>
           ${account === null ? nothing : html`
@@ -507,6 +555,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
             ></studio-home>
             <div
               id="studio-settings"
+              class="studio-page"
               role="region"
               aria-label="Settings"
               hidden
@@ -521,6 +570,18 @@ export class Studio extends LitElement implements GolemConsoleHost {
                 @avatar-change=${this.#replaceAvatar}
                 @asset-open=${this.#onAssetOpen}
               ></studio-settings>
+            `)}</div>
+            <div
+              id="studio-docs"
+              class="studio-page"
+              role="region"
+              aria-label="Docs"
+              hidden
+            >${this.#docsPage.render(() => html`
+              <studio-docs
+                .library=${this._docsLibrary}
+                .browserState=${this.#browserState}
+              ></studio-docs>
             `)}</div>
           </div>
           <jolly-notifications></jolly-notifications>
@@ -571,10 +632,11 @@ export class Studio extends LitElement implements GolemConsoleHost {
     }
 
     this.#presence?.showTabs(tabs.ids(), tabs.active);
-    if (tabs.active === SETTINGS_TAB_ID) {
-      void this.#settingsPage.ready().catch((error: unknown) => {
+    const page = this.#lazyPages.get(tabs.active);
+    if (page !== undefined) {
+      void page.template.ready().catch((error: unknown) => {
         this.#fail(
-          `Settings failed to load: ${errorMessage(error)}`
+          `${page.label} failed to load: ${errorMessage(error)}`
         );
       });
     }
@@ -597,6 +659,10 @@ export class Studio extends LitElement implements GolemConsoleHost {
     event: SettingsOpenEvent
   ): void => {
     this.openSettings(event.section);
+  };
+
+  readonly #openDocs = (): void => {
+    this.openDocs();
   };
 
   readonly #onAssetOpen = (

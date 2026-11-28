@@ -131,6 +131,13 @@ export class HeaderActions extends LitElement {
         @click=${this.#export}
       ></jolly-button>
       <jolly-button
+        icon="book"
+        icon-only
+        label="Docs"
+        title="Docs"
+        @click=${this.#openDocs}
+      ></jolly-button>
+      <jolly-button
         icon="settings"
         icon-only
         label="Settings"
@@ -177,6 +184,10 @@ export class HeaderActions extends LitElement {
 
   readonly #openSettings = (): void => {
     this.dispatchEvent(new SettingsOpenEvent());
+  };
+
+  readonly #openDocs = (): void => {
+    this.dispatchEvent(new Event("docs-open"));
   };
 
   readonly #toggleGolemChat = (): void => {

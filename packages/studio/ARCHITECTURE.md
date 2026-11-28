@@ -30,6 +30,7 @@ flowchart TB
 
 - The shell never loads kind handler or editor code, and shares no objects with the frames.
 - `@jolly-pixel/server` exports the API contract from its root. `shared/` holds the seed, the shell's preference scopes and the editor page rebuild event: the only studio code that runs in both the browser and Node.js. `node/` and `vite/` never import `src/`.
+- The Docs tab reads `virtual:jolly-pixel/docs` (`vite/docs/scriptDocs.ts`): the page titles at boot, each page's Markdown as its own chunk when opened. Add a package to its list to document it. Each `docs/` subfolder is a section, `guides` first, led by the page named after the folder.
 - Code: `src/shell/`, `shared/`.
 
 ## Opening an asset
