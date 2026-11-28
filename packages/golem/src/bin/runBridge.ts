@@ -23,7 +23,7 @@ export async function runBridge(
     cwd: options.cwd,
     mcp: {
       command: process.execPath,
-      args: [options.script, "mcp", "--bridged"]
+      args: [options.script, "mcp", "--chat", "bridged"]
     }
   });
   console.error(

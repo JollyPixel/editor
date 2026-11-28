@@ -28,6 +28,7 @@ import type { StudioAgentTokens } from "./StudioAgentTokens.ts";
 // CONSTANTS
 export const AGENT_CHAT_CHANGE = "change";
 export const AGENT_CHAT_NOTIFICATION_SOURCE = "Golem chat";
+export const AGENT_CHAT_GROUP_GAP_MS = 5 * 60_000;
 const kRoomEvents = [
   "sync",
   "peer-joined",
@@ -43,11 +44,11 @@ export interface ChatAgent {
   tokenId: string;
   ownerId: string;
   ownerName: string | null;
-  owned: boolean;
   username: string;
   color: string;
   activity: ChatAgentActivity | null;
   bridge: ChatAgentBridge | null;
+  controls: ChatAgentBridge | null;
 }
 
 export interface ChatAgentBridge extends AgentBridgeState {
@@ -64,9 +65,10 @@ interface AgentViewer {
   people: ReadonlyMap<string, string>;
 }
 
-export interface ChatLine {
-  entry: AgentChatEntry;
+export interface ChatGroup {
+  agent: boolean;
   color: string;
+  entries: [AgentChatEntry, ...AgentChatEntry[]];
 }
 
 export class StudioAgentChat extends EventTarget implements Disposable {
@@ -108,13 +110,20 @@ export class StudioAgentChat extends EventTarget implements Disposable {
     return this.#chat.room.can(AGENT_CHAT_SAY) === "write";
   }
 
-  get lines(): ChatLine[] {
-    return this.#chat.messages.map((entry) => {
-      return {
-        entry,
-        color: peerProfileColor(entry.clientId, entry)
-      };
-    });
+  get groups(): ChatGroup[] {
+    const groups: ChatGroup[] = [];
+    let group: ChatGroup | null = null;
+    for (const entry of this.#chat.messages) {
+      if (group !== null && continuesGroup(group, entry)) {
+        group.entries.push(entry);
+      }
+      else {
+        group = chatGroup(entry);
+        groups.push(group);
+      }
+    }
+
+    return groups;
   }
 
   get agents(): ChatAgent[] {
@@ -135,7 +144,8 @@ export class StudioAgentChat extends EventTarget implements Disposable {
       byToken.set(agent.tokenId, known === undefined ? agent : {
         ...known,
         activity: known.activity ?? agent.activity,
-        bridge: known.bridge ?? agent.bridge
+        bridge: known.bridge ?? agent.bridge,
+        controls: known.controls ?? agent.controls
       });
     }
 
@@ -144,7 +154,7 @@ export class StudioAgentChat extends EventTarget implements Disposable {
 
   get ownBridges(): ChatAgentBridge[] {
     return this.agents.flatMap(
-      (agent) => (agent.owned && agent.bridge !== null ? [agent.bridge] : [])
+      (agent) => (agent.controls === null ? [] : [agent.controls])
     );
   }
 
@@ -226,6 +236,27 @@ export class StudioAgentChat extends EventTarget implements Disposable {
   };
 }
 
+function chatGroup(
+  entry: AgentChatEntry
+): ChatGroup {
+  return {
+    agent: isAgentProfile(entry),
+    color: peerProfileColor(entry.clientId, entry),
+    entries: [entry]
+  };
+}
+
+function continuesGroup(
+  group: ChatGroup,
+  entry: AgentChatEntry
+): boolean {
+  const [first] = group.entries;
+  const last = group.entries.at(-1) ?? first;
+
+  return first.clientId === entry.clientId &&
+    entry.at - last.at < AGENT_CHAT_GROUP_GAP_MS;
+}
+
 function peopleByPeerId(
   peers: Iterable<Peer>
 ): Map<string, string> {
@@ -250,23 +281,24 @@ function chatAgent(
   }
 
   const activity = parseAgentChatActivity(peer.presence);
-  const bridge = parseAgentBridgeState(peer.presence);
+  const state = parseAgentBridgeState(peer.presence);
+  const bridge = state === null ? null : {
+    ...state,
+    clientId: peer.clientId
+  };
 
   return {
     clientId: peer.clientId,
     tokenId: profile.peerId,
     ownerId: profile.ownerId,
     ownerName: viewer.people.get(profile.ownerId) ?? null,
-    owned: viewer.peerId === profile.ownerId,
     username: profile.username,
     color: peerProfileColor(peer.clientId, peer.profile),
     activity: activity === null ? null : {
       label: formatPeerActivity(activity),
       assetId: activity.assetId
     },
-    bridge: bridge === null ? null : {
-      ...bridge,
-      clientId: peer.clientId
-    }
+    bridge,
+    controls: viewer.peerId === profile.ownerId ? bridge : null
   };
 }

@@ -2,22 +2,34 @@
 import { Golem } from "../peer/Golem.ts";
 import type { GolemTarget } from "../peer/GolemConnectOptions.ts";
 
+export type GolemConnected = (golem: Golem) => void;
+
 export class GolemSession {
   #target: GolemTarget;
+  #connected: GolemConnected;
   #golem: Promise<Golem> | null = null;
 
   constructor(
-    target: GolemTarget
+    target: GolemTarget,
+    connected: GolemConnected
   ) {
     this.#target = target;
+    this.#connected = connected;
   }
 
   golem(): Promise<Golem> {
-    this.#golem ??= Golem.connect(this.#target).catch((error: unknown) => {
-      this.#golem = null;
+    this.#golem ??= Golem.connect(this.#target).then(
+      (golem) => {
+        this.#connected(golem);
 
-      throw error;
-    });
+        return golem;
+      },
+      (error: unknown) => {
+        this.#golem = null;
+
+        throw error;
+      }
+    );
 
     return this.#golem;
   }

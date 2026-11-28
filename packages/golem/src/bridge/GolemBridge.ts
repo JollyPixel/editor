@@ -34,7 +34,7 @@ export interface GolemBridgeOptions extends GolemConnectOptions {
   agent: acp.Stream;
   /**
    * How the agent starts the golem MCP server, such as
-   * `node jolly-golem.js mcp --bridged`. The bridge adds the studio URL and
+   * `node jolly-golem.js mcp --chat bridged`. The bridge adds the studio URL and
    * the token to its environment.
    */
   mcp: BridgedMcpCommand;

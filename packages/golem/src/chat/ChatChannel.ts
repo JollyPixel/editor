@@ -1,8 +1,12 @@
 // Import Third-party Dependencies
-import { isAgentProfile } from "@jolly-pixel/accounts";
+import {
+  isAgentProfile,
+  parseAgentProfile
+} from "@jolly-pixel/accounts";
 import type { AgentChatEntry } from "@jolly-pixel/server";
 import type {
   AgentChatClient,
+  AgentChatListener,
   AgentChatSayOptions
 } from "@jolly-pixel/server/client";
 
@@ -21,6 +25,7 @@ export class ChatChannel implements Disposable {
   #chat: AgentChatClient;
   #unread: AgentChatEntry[] = [];
   #arrivals = new Set<() => void>();
+  #ownerFollowers = new Set<AgentChatListener>();
   #unsubscribe: () => void;
 
   constructor(
@@ -55,8 +60,17 @@ export class ChatChannel implements Disposable {
     return this.#unread.splice(0);
   }
 
+  followOwner(
+    listener: AgentChatListener
+  ): () => void {
+    this.#ownerFollowers.add(listener);
+
+    return () => this.#ownerFollowers.delete(listener);
+  }
+
   dispose(): void {
     this.#unsubscribe();
+    this.#ownerFollowers.clear();
     for (const arrive of this.#arrivals) {
       arrive();
     }
@@ -104,10 +118,25 @@ export class ChatChannel implements Disposable {
     ) {
       return;
     }
+    if (this.#ownerFollowers.size > 0 && this.#fromOwner(entry)) {
+      for (const follow of this.#ownerFollowers) {
+        follow(entry);
+      }
+
+      return;
+    }
 
     this.#unread.push(entry);
     for (const arrive of this.#arrivals) {
       arrive();
     }
   };
+
+  #fromOwner(
+    entry: AgentChatEntry
+  ): boolean {
+    const agent = parseAgentProfile(this.#chat.room.profile);
+
+    return agent !== null && entry.peerId === agent.ownerId;
+  }
 }

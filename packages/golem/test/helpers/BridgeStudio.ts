@@ -22,7 +22,7 @@ import {
 // CONSTANTS
 export const BRIDGED_MCP = {
   command: "node",
-  args: ["jolly-golem.js", "mcp", "--bridged"]
+  args: ["jolly-golem.js", "mcp", "--chat", "bridged"]
 };
 
 export interface PendingPermission {

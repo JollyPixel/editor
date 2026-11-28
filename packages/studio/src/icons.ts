@@ -316,6 +316,22 @@ registerIcon("chat", `
   />
 `, { tone: "violet" });
 
+registerIcon("send", `
+  <path
+    class="tone-wash"
+    d="M4 4.5 20 12 4 19.5 6.5 12Z"
+  />
+  <path
+    class="tone-ink"
+    d="M4 4.5 20 12 4 19.5 6.5 12ZM6.5 12H12"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+`);
+
 registerIcon("web", `
   <path
     class="tone-wash"

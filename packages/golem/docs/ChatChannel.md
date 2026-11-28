@@ -36,6 +36,10 @@ Returns every message people wrote since the last call, oldest first. When there
 
 `options.signal` stops the wait: `next` then rejects with the signal's reason.
 
+### `followOwner(listener): () => void`
+
+Hands each message the token's owner writes to `listener` instead of keeping it for `next`, until the returned function is called. Other people's messages still wait for `next`. The MCP server's `--chat channel` mode uses it to push the owner's messages to Claude Code.
+
 ### `dispose(): void`
 
 Leaves the chat; a pending `next` returns what is unread. `golem.dispose()` calls it.

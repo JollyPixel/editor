@@ -532,6 +532,7 @@ export class Studio extends LitElement implements GolemConsoleHost {
             .chat=${this._agentChat}
             .catalog=${this._assets?.catalog ?? null}
             @settings-open=${this.#openSettings}
+            @asset-open=${this.#onAssetOpen}
           ></studio-golem-chat>
         `}
       </div>

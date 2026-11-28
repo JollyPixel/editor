@@ -59,13 +59,14 @@ flowchart TB
 
 ## MCP server
 
-`GolemMcpServer` resolves the URL and token when it is built, then registers each tool group on an `McpServer` and shares one `GolemSession`. The session connects a `Golem` on the first tool call and forgets a failed attempt so the next call retries. Tools hold no domain logic: they call the SDK and turn its answers into JSON results. Thrown errors become error results through the MCP SDK.
+`GolemMcpServer` resolves the URL and token when it is built, then registers each tool group on an `McpServer` and shares one `GolemSession`. `connect` starts the session's `Golem` once the transport is up, so the chat is heard before the first tool call; the session forgets a failed attempt so the next call retries. Tools hold no domain logic: they call the SDK and turn its answers into JSON results. Thrown errors become error results through the MCP SDK.
 
 - Tool schemas use classic `zod`: the MCP SDK needs `~standard.jsonSchema`, which `zod/mini` lacks. Kind command schemas and intent inputs stay `zod/mini` and go out through `z.toJSONSchema`.
 - No tool is tied to a kind: `asset_open` lists a kind's intents and guide, and `asset_intent` runs one, then waits for `settled()`. Tool registration does not depend on which kinds the studio has, and a new kind adds no tool to the agent's context.
 - The schema resource and its listing connect first, since only the studio's kind packages know the schemas.
 - `Golem.connect` gives the network client a `consoleLogger` on stderr: stdout carries the MCP protocol.
 - `WorkspaceDocs` indexes the checkout's `@jolly-pixel/*` workspaces that have a `docs/` folder once, on first use.
+- In the `channel` chat mode, the server declares Claude Code's `claude/channel` capability, and `GolemSession` hands each connected golem to `pushOwnerMessages`, which follows the owner on `golem.chat` and sends their messages as `notifications/claude/channel`. The SDK's plain `StdioServerTransport` keeps the 2025 handshake, the only one on which Claude Code accepts channel events.
 - `ScriptRunner` backs `script_run`: it spawns Node on a script under `local/` with the server's URL, token and project root in the child's environment. The token only reaches the MCP server's process, so an agent can script as the golem without holding it.
 - Code: `src/mcp/`, `src/bin/jolly-golem.ts`.
 
