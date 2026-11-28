@@ -121,7 +121,7 @@ Generic packages used by more than one sub-domain.
 ## 🤖 AI
 
 - [golem](./packages/golem) - Connects a local AI agent to a running studio as a peer
-- [golem.kit](./packages/golem-kit) - Golem intent contract for asset kinds
+- [golem.kit](./packages/golem-kit) - Contract and test studio for asset kinds that support golems
 
 ## 💃 Getting started
 

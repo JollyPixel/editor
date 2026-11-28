@@ -61,6 +61,7 @@
   concept.
 - These workspaces have an `AGENTS.md`; read it before changing them:
   `packages/asset-server`, `packages/cdp`, `packages/e2e`, `packages/ecs`,
+  `packages/golem`,
   `packages/network`, `packages/pixel-draw-renderer`, `packages/server`, `packages/studio`,
   `packages/three`,
   `packages/ui`,
