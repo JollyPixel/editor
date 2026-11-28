@@ -101,7 +101,11 @@ export class AccountsRealm implements AuthenticationProvider, Disposable {
     this.#closed = parts.closed;
     this.extension = new AccountsExtension(parts.members);
     this.shareLinks = new ShareLinks(parts.database.shareLinks, parts.members);
-    this.agentTokens = new AgentTokens(parts.database.agentTokens, parts.members);
+    this.agentTokens = new AgentTokens(
+      parts.database.agentTokens,
+      parts.database.agentAvatars,
+      parts.members
+    );
   }
 
   get roles(): AccountRoles {
@@ -236,11 +240,13 @@ export class AccountsRealm implements AuthenticationProvider, Disposable {
   }
 
   watchProfiles(
-    listener: (accountId: string, profile: PeerMetadata) => void
+    listener: (subject: string, profile: PeerMetadata) => void
   ): () => void {
     return this.#members.subscribe(
-      "profile",
-      (member) => listener(member.id, toPeerProfile(member))
+      "avatar",
+      (subject, avatar) => listener(subject, {
+        avatar
+      })
     );
   }
 
@@ -299,7 +305,7 @@ function toAgentIdentity(
     profile: {
       username: token.name,
       peerId: token.id,
-      avatar: null,
+      avatar: token.avatar ?? null,
       via: AGENT_TOKEN_VIA,
       ownerId: owner.id
     } satisfies PeerProfileMetadata & AgentProfile

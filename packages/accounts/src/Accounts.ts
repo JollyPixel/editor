@@ -194,6 +194,12 @@ export class Accounts implements Disposable {
     return this.#directory.avatar(accountId);
   }
 
+  agentAvatar(
+    tokenId: string
+  ): StoredAvatar | null {
+    return this.#database.agentAvatars.find(tokenId);
+  }
+
   preferences(
     accountId: string
   ): Map<string, PreferenceOverrides> {

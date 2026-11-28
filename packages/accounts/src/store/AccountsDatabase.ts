@@ -35,6 +35,7 @@ export class AccountsDatabase implements Disposable {
   readonly memberships: MembershipRepository;
   readonly sessions: SessionRepository;
   readonly avatars: AvatarRepository;
+  readonly agentAvatars: AvatarRepository;
   readonly shareLinks: ShareLinkRepository;
   readonly agentTokens: AgentTokenRepository;
   readonly preferences: PreferenceRepository;
@@ -50,7 +51,8 @@ export class AccountsDatabase implements Disposable {
     this.accounts = new AccountRepository(db);
     this.memberships = new MembershipRepository(db);
     this.sessions = new SessionRepository(db);
-    this.avatars = new AvatarRepository(db);
+    this.avatars = new AvatarRepository(db, "account");
+    this.agentAvatars = new AvatarRepository(db, "agent");
     this.shareLinks = new ShareLinkRepository(db);
     this.agentTokens = new AgentTokenRepository(db);
     this.preferences = new PreferenceRepository(db);

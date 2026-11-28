@@ -17,7 +17,8 @@ export const agentTokenSchema = z.object({
   id: z.string(),
   ownerId: z.string(),
   name: z.string(),
-  createdAt: z.number()
+  createdAt: z.number(),
+  avatar: z.string().optional()
 });
 
 export type AgentToken = z.infer<typeof agentTokenSchema>;

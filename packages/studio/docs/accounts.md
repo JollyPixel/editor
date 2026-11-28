@@ -47,13 +47,13 @@ A crown marks the server's owner. No admin can change the owner's role or remove
 
 ## Agent tokens
 
-An agent token lets an AI agent running on your machine (Claude Code, Codex, Cursor…) join the studio as a peer through `@jolly-pixel/golem`. Create one in Settings › You › Access keys. The page shows the token once, inside a `claude mcp add` line that points at the studio's URL; copy it before closing the panel, because only a digest is stored. Replace the line's `<checkout>` with the path of your clone of this repository.
+An agent token lets an AI agent running on your machine (Claude Code, Codex, Cursor…) join the studio as a peer through `@jolly-pixel/golem`. Create one in Settings › You › Access keys. The page shows the token once, inside a `claude mcp add` line that points at the studio's URL; copy it before closing the panel, because only a digest is stored. Replace the line's `<checkout>` with the path of your clone of this repository. To swap the token of an agent you already set up, copy the token alone with "Copy the token". "Change avatar…" on a token's row gives its agent a picture; connected agents switch to it at once.
 
 An agent has your current role and never more. It shows in the peer lists under the token's name with a "via golem" badge, and the audit names its edits after the token and you, "Golem (Alice)". Revoking the token disconnects it for good. A role change or a removal of your account reconnects or refuses your agents too; signing out does not. Tokens never expire.
 
 ### Golem chat
 
-Click the chat button at the top right, next to your avatar, to open or close the golem chat beside the editors. In the console, `/golem` opens it too, and `/golem <message>` opens it and sends the message. The pane lists the connected agents with what they are doing and in which asset, and the conversation, which every signed-in person and agent shares. Enter sends, Shift+Enter starts a new line. A role that only reads, such as `spectator`, sees the chat but cannot write in it, and share-link guests never see it.
+Click the chat button at the top right, next to your avatar, to open or close the golem chat beside the editors. In the console, `/golem` opens it too, and `/golem <message>` opens it and sends the message. The pane lists the connected agents with what they are doing and in which asset, and the conversation, which every signed-in person and agent shares. Each message shows its author's current avatar while they are connected. Enter sends, Shift+Enter starts a new line. A role that only reads, such as `spectator`, sees the chat but cannot write in it, and share-link guests never see it.
 
 When an agent writes while the pane is closed, a notification shows its message. The studio keeps the last 200 messages in memory: restarting it empties the chat.
 

@@ -134,7 +134,7 @@ describe("AccountsRealm.watchRevocations", () => {
 });
 
 describe("AccountsRealm.watchProfiles", () => {
-  test("reports the profile of a member whose avatar changed, until stopped", async() => {
+  test("reports the new avatar of a member, until stopped", async() => {
     using database = databaseWith("Alice", "Bob");
     const [alice, bob] = database.accounts;
     using accounts = createAccounts(database);
@@ -152,10 +152,46 @@ describe("AccountsRealm.watchProfiles", () => {
     assert.deepEqual(changes, [[
       alice.id,
       {
-        username: "Alice",
-        peerId: alice.id,
         avatar
       }
     ]]);
+  });
+
+  test("reports the avatar of an agent token under its subject, and on its next connection", async() => {
+    using database = databaseWith("Alice");
+    const [alice] = database.accounts;
+    using accounts = createAccounts(database);
+    const realm = createRealm(accounts);
+    const { token, value } = realm.agentTokens.create({
+      ownerId: alice.id
+    });
+    const changes: [string, PeerMetadata][] = [];
+    const stop = realm.watchProfiles(
+      (subject, profile) => changes.push([subject, profile])
+    );
+
+    const { avatar } = await realm.agentTokens.replaceAvatar(
+      alice.id,
+      token.id,
+      await solidPng(8, 8)
+    );
+    stop();
+
+    assert.deepEqual(changes, [[
+      `agent:${token.id}`,
+      {
+        avatar
+      }
+    ]]);
+    assert.equal(
+      realm.authenticate({
+        clientId: "client",
+        url: "/ws-sync",
+        headers: {},
+        defaultRole: "spectator",
+        credential: value
+      })?.profile?.avatar,
+      avatar
+    );
   });
 });

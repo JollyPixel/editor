@@ -70,6 +70,7 @@ function agent(
     ownerName: null,
     controls: null,
     username,
+    avatar: null,
     color: "#123456",
     activity: activity === null ? null : {
       label: activity,

@@ -60,6 +60,12 @@ CREATE TABLE IF NOT EXISTS agent_tokens (
 
 CREATE INDEX IF NOT EXISTS agent_tokens_by_owner ON agent_tokens (owner_id);
 
+CREATE TABLE IF NOT EXISTS agent_avatars (
+  token_id TEXT PRIMARY KEY REFERENCES agent_tokens (id) ON DELETE CASCADE,
+  hash TEXT NOT NULL,
+  bytes BLOB NOT NULL
+) STRICT;
+
 CREATE TABLE IF NOT EXISTS avatars (
   user_id TEXT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
   hash TEXT NOT NULL,

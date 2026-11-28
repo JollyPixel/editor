@@ -239,6 +239,7 @@ export class UsersTreeModel {
       label: agent.username,
       avatar: {
         peerId: agent.tokenId,
+        image: agent.avatar ?? undefined,
         presence: "online"
       },
       ...(owner === null ? {} : { detail: owner }),

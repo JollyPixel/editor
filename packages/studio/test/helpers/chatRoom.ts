@@ -25,6 +25,10 @@ export interface ChatRoomHarness {
     clientId: string,
     patch: PeerMetadata
   ): void;
+  patchProfile(
+    clientId: string,
+    patch: PeerMetadata
+  ): void;
   removePeer(
     clientId: string
   ): void;
@@ -110,6 +114,25 @@ export function chatRoomHarness(
         });
         emit("peer-presence", { clientId, patch });
       }
+    },
+    patchProfile(clientId, patch) {
+      const peer = peers.get(clientId);
+      if (peer !== undefined) {
+        peers.set(clientId, {
+          ...peer,
+          profile: {
+            ...peer.profile,
+            ...patch
+          }
+        });
+      }
+      else if (clientId === room.clientId) {
+        room.profile = {
+          ...room.profile,
+          ...patch
+        };
+      }
+      emit("peer-profile", { clientId, patch });
     },
     removePeer(clientId) {
       peers.delete(clientId);

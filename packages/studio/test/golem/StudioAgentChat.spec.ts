@@ -45,7 +45,11 @@ const kTokens = {
 
 function entry(
   id: string,
-  author: { username: string; via?: string; },
+  author: {
+    username: string;
+    via?: string;
+    peerId?: string;
+  },
   text: string,
   at = 0
 ): AgentChatEntry {
@@ -94,6 +98,46 @@ describe("StudioAgentChat", () => {
         ["Helper", "token-2", "alice-id", null]
       ]
     );
+  });
+
+  test("draws each connected author with their current avatar", () => {
+    const harness = chatRoomHarness("write", {
+      username: "Alice",
+      peerId: "alice-id",
+      avatar: "/alice?v=2"
+    });
+    using chat = new StudioAgentChat(
+      new AgentChatClient(harness.room),
+      new NotificationQueue(),
+      kTokens
+    );
+    harness.addPeer("builder", {
+      ...kAgentProfile,
+      avatar: "/builder?v=1"
+    });
+    harness.history([
+      entry("1", { username: "Alice", peerId: "alice-id" }, "Hi"),
+      entry("2", kAgentProfile, "Hello"),
+      entry("3", { username: "Bob", peerId: "bob-id" }, "Bye")
+    ]);
+
+    assert.deepEqual(
+      chat.groups.map(({ avatar }) => avatar),
+      ["/alice?v=2", "/builder?v=1", null]
+    );
+    assert.deepEqual(chat.agents.map(({ avatar }) => avatar), ["/builder?v=1"]);
+
+    let changes = 0;
+    chat.addEventListener("change", () => changes++);
+    harness.patchProfile("local", { avatar: "/alice?v=3" });
+    harness.patchProfile("builder", { avatar: "/builder?v=2" });
+
+    assert.equal(changes, 2);
+    assert.deepEqual(
+      chat.groups.map(({ avatar }) => avatar).slice(0, 2),
+      ["/alice?v=3", "/builder?v=2"]
+    );
+    assert.deepEqual(chat.agents.map(({ avatar }) => avatar), ["/builder?v=2"]);
   });
 
   test("notifies an agent's message only while the pane is hidden", () => {

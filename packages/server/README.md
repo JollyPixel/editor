@@ -177,7 +177,8 @@ Each project answers these paths at `/`, or under `/p/<slug>/` with
 - `/api/game/`: game builds and exports.
 - `/api/preferences/`: the account's preferences, read at once and replaced
   one scope at a time.
-- `/api/golem/tokens/`: tokens that let an AI agent join the project.
+- `/api/golem/tokens/`: tokens that let an AI agent join the project, and
+  their avatars.
 - `/project-manifest.json`, `/editors/<name>/` and `/play/`: the project's
   manifest and pages.
 

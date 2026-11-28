@@ -48,7 +48,7 @@ export type MemberDirectoryEventMap = {
   changed: () => void;
   revoked: (subject: string) => void;
   disconnected: (subject: string) => void;
-  profile: (member: Member) => void;
+  avatar: (subject: string, avatar: string | null) => void;
   activity: (activity: AccountActivity) => void;
 };
 
@@ -87,9 +87,8 @@ export class MemberDirectory extends Emitter<MemberDirectoryEventMap>
         (subject) => this.emit("revoked", subject)
       ),
       this.#accounts.subscribe("profile", (account) => {
-        const member = this.member(account.id);
-        if (member !== null) {
-          this.emit("profile", member);
+        if (this.member(account.id) !== null) {
+          this.reprofile(account.id, account.avatar ?? null);
         }
       })
     ];
@@ -495,6 +494,13 @@ export class MemberDirectory extends Emitter<MemberDirectoryEventMap>
     activity: AccountActivity
   ): void {
     this.emit("activity", activity);
+  }
+
+  reprofile(
+    subject: string,
+    avatar: string | null
+  ): void {
+    this.emit("avatar", subject, avatar);
   }
 
   * [Symbol.iterator](): IterableIterator<Member> {

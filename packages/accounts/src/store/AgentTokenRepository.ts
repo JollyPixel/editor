@@ -1,16 +1,19 @@
 // Import Internal Dependencies
 import type { AgentToken } from "../agent/AgentToken.ts";
+import { agentAvatarPath } from "../http/routes.ts";
 import type { SessionToken } from "../session/SessionToken.ts";
 import type { SqliteDatabase } from "./SqliteDatabase.ts";
 
 // CONSTANTS
-const kColumns = "id, owner_id, name, created_at";
+const kColumns = `id, owner_id, name, created_at,
+  (SELECT hash FROM agent_avatars WHERE token_id = agent_tokens.id) AS avatar_hash`;
 
 interface AgentTokenRow {
   id: string;
   owner_id: string;
   name: string;
   created_at: number;
+  avatar_hash: string | null;
 }
 
 export class AgentTokenRepository {
@@ -131,6 +134,9 @@ function toAgentToken(
     id: row.id,
     ownerId: row.owner_id,
     name: row.name,
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    ...(row.avatar_hash === null ? {} : {
+      avatar: agentAvatarPath(row.id, row.avatar_hash)
+    })
   };
 }

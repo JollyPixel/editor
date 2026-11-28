@@ -2,9 +2,12 @@
 import { randomUUID } from "node:crypto";
 
 // Import Internal Dependencies
+import { AvatarImage } from "../avatar/AvatarImage.ts";
+import { agentAvatarPath } from "../http/routes.ts";
 import type { MemberDirectory } from "../realm/MemberDirectory.ts";
 import { SessionToken } from "../session/SessionToken.ts";
 import type { AgentTokenRepository } from "../store/AgentTokenRepository.ts";
+import type { AvatarRepository } from "../store/AvatarRepository.ts";
 import {
   AGENT_TOKEN_DEFAULT_NAME,
   AGENT_TOKEN_NAME_MAX_LENGTH,
@@ -34,13 +37,16 @@ export interface CreatedAgentToken {
 
 export class AgentTokens {
   #repository: AgentTokenRepository;
+  #avatars: AvatarRepository;
   #members: MemberDirectory;
 
   constructor(
     repository: AgentTokenRepository,
+    avatars: AvatarRepository,
     members: MemberDirectory
   ) {
     this.#repository = repository;
+    this.#avatars = avatars;
     this.#members = members;
   }
 
@@ -135,12 +141,37 @@ export class AgentTokens {
     ownerId: string,
     tokenId: string
   ): AgentToken {
+    const token = this.#owned(ownerId, tokenId);
+    this.#members.disconnect(agentTokenSubject(token.id));
+
+    return token;
+  }
+
+  async replaceAvatar(
+    ownerId: string,
+    tokenId: string,
+    image: Uint8Array
+  ): Promise<AgentToken> {
+    const avatar = await AvatarImage.encode(image);
+    const token = this.#owned(ownerId, tokenId);
+    this.#avatars.replace(token.id, avatar);
+    const replaced = {
+      ...token,
+      avatar: agentAvatarPath(token.id, avatar.hash)
+    };
+    this.#members.reprofile(agentTokenSubject(token.id), replaced.avatar);
+
+    return replaced;
+  }
+
+  #owned(
+    ownerId: string,
+    tokenId: string
+  ): AgentToken {
     const token = this.ownedBy(ownerId).find((owned) => owned.id === tokenId);
     if (token === undefined) {
       throw new AgentTokenNotFoundError();
     }
-
-    this.#members.disconnect(agentTokenSubject(token.id));
 
     return token;
   }

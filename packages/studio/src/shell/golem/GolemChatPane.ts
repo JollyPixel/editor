@@ -173,6 +173,7 @@ export class GolemChatPane extends LitElement {
         <jolly-avatar
           peer-id=${agent.tokenId}
           color=${agent.color}
+          image=${agent.avatar ?? ""}
           presence="online"
         ></jolly-avatar>
         <span class="who">
@@ -224,6 +225,7 @@ export class GolemChatPane extends LitElement {
         <jolly-avatar
           peer-id=${first.peerId ?? first.clientId}
           color=${group.color}
+          image=${group.avatar ?? ""}
         ></jolly-avatar>
         <div class="body">
           <div class="meta">

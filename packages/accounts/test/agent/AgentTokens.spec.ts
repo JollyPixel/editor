@@ -15,8 +15,10 @@ import {
   insertAccount,
   name
 } from "../helpers/accounts.ts";
+import { solidPng } from "../helpers/avatar/images.ts";
 import { AccountEntity } from "#src/account/AccountEntity.ts";
 import { AgentTokens } from "#src/agent/AgentTokens.ts";
+import { InvalidAvatarError } from "#src/avatar/errors/InvalidAvatarError.ts";
 import { Membership } from "#src/realm/Membership.ts";
 import { AgentTokenNotFoundError } from "#src/agent/errors/AgentTokenNotFoundError.ts";
 import { AgentTokenRefusedError } from "#src/agent/errors/AgentTokenRefusedError.ts";
@@ -26,9 +28,11 @@ import { SqliteDatabase } from "#src/store/SqliteDatabase.ts";
 
 interface Harness extends Disposable {
   sqlite: DatabaseSync;
+  database: AccountsDatabase;
   tokens: AgentTokens;
   revoked: string[];
   disconnected: string[];
+  reprofiled: [string, string | null][];
   alice: string;
   bob: string;
 }
@@ -47,12 +51,23 @@ function harness(): Harness {
   members.on("revoked", (subject) => revoked.push(subject));
   const disconnected: string[] = [];
   members.on("disconnected", (subject) => disconnected.push(subject));
+  const reprofiled: [string, string | null][] = [];
+  members.on(
+    "avatar",
+    (subject, avatar) => reprofiled.push([subject, avatar])
+  );
 
   return {
     sqlite,
-    tokens: new AgentTokens(database.agentTokens, members),
+    database,
+    tokens: new AgentTokens(
+      database.agentTokens,
+      database.agentAvatars,
+      members
+    ),
     revoked,
     disconnected,
+    reprofiled,
     alice: alice.id,
     bob: bob.id,
     [Symbol.dispose]() {
@@ -134,6 +149,47 @@ describe("AgentTokens", () => {
     assert.deepEqual(h.disconnected, [`agent:${token.id}`]);
     assert.deepEqual(h.revoked, [`agent:${revoked.id}`]);
     assert.deepEqual(h.tokens.find(value), token);
+  });
+
+  test("replaces the avatar of a live token of its owner and points the token at it", async() => {
+    using h = harness();
+    const { token, value } = h.tokens.create({
+      ownerId: h.alice
+    });
+    const revoked = h.tokens.create({
+      ownerId: h.alice
+    }).token;
+    h.tokens.revoke(h.alice, revoked.id);
+    const image = await solidPng(8, 8);
+
+    for (const [ownerId, tokenId] of [
+      [h.bob, token.id],
+      [h.alice, revoked.id],
+      [h.alice, "unknown"]
+    ]) {
+      await assert.rejects(
+        h.tokens.replaceAvatar(ownerId, tokenId, image),
+        AgentTokenNotFoundError
+      );
+    }
+    await assert.rejects(
+      h.tokens.replaceAvatar(h.alice, token.id, new Uint8Array([1, 2, 3])),
+      InvalidAvatarError
+    );
+    assert.deepEqual(h.reprofiled, []);
+
+    const replaced = await h.tokens.replaceAvatar(h.alice, token.id, image);
+    const stored = h.database.agentAvatars.find(token.id);
+
+    assert.ok(stored !== null);
+    assert.equal(
+      replaced.avatar,
+      `/api/accounts/agents/${token.id}/avatar?v=${stored.hash}`
+    );
+    assert.deepEqual(h.reprofiled, [[`agent:${token.id}`, replaced.avatar]]);
+    assert.deepEqual(h.tokens.ownedBy(h.alice), [replaced]);
+    assert.deepEqual(h.tokens.find(value), replaced);
+    assert.equal(h.database.agentAvatars.find(revoked.id), null);
   });
 
   test("trims the name and refuses an empty or long name, and an unknown owner", () => {
